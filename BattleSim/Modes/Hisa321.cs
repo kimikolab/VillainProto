@@ -53,7 +53,7 @@ static class Hisa321Diag
     internal sealed record Ver(string Name, string Ascii, UnitDef Def);
     internal static readonly Ver[] Vers =
     {
-        new("規定", "base", UnitCatalog.Hisa),
+        new("規定", "base", UnitCatalog.HisaH321),
         new("HQ-a", "qa", UnitCatalog.HisaHQa),
         new("HQ-b", "qb", UnitCatalog.HisaHQb),
         new("HQ-a3", "qa3", UnitCatalog.HisaHQa3),
@@ -73,7 +73,7 @@ static class Hisa321Diag
 
     /// <summary>§2-5 の代表台（試遊・標のヒサ入り4台 ＋ 道中（見境改・ヒサはいない——版で動かないことの確かめ））。</summary>
     static (string Name, Formation F)[] Boards() => new[] { "試遊・標 守り型", "試遊・標 ボス台", "試遊・標 循環", "試遊・標 三人組", "試遊・標 道中" }
-        .Select(n => (n.Replace("試遊・", ""), Presets.Playtest.First(r => r.Name == n).F)).ToArray();
+        .Select(n => (n.Replace("試遊・", ""), Pin321(Presets.Playtest.First(r => r.Name == n).F))).ToArray();   // 第322期: 第321期の規定に固定
 
     // ---------------------------------------------------------------------------------
     // 1戦の計数
@@ -246,7 +246,7 @@ static class Hisa321Diag
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var vers = Pick(only);
-        var rows = CompareBuilds().ToArray();
+        var rows = CompareBuildsH321().ToArray();   // 第322期: 第321期の規定に固定
         int nw = EnemyCatalog.Stages.Count;
         double[,] Grid(UnitDef d)
         {
@@ -354,11 +354,11 @@ static class Hisa321Diag
         Console.WriteLine("| 項目 | 結果 | 備考 |");
         Console.WriteLine("|---|---|---|");
         {
-            bool a = UnitCatalog.HisaHQa.Traits.SequenceEqual(UnitCatalog.Hisa.Traits.Select(t => t == TraitId.CommandBall ? TraitId.CommandBurst3 : t));
-            bool b = UnitCatalog.HisaHQb.Traits.SequenceEqual(UnitCatalog.Hisa.Traits.Select(t => t == TraitId.CommandBall ? TraitId.CommandBurst1 : t));
-            bool outside = Vers.Skip(1).All(v => !UnitCatalog.All.Contains(v.Def) && !UnitCatalog.Retired.Contains(v.Def) && v.Def.PlusText != UnitCatalog.Hisa.PlusText);
-            bool none = UnitCatalog.All.All(d => !d.Traits.Contains(TraitId.CommandBurst3) && !d.Traits.Contains(TraitId.CommandBurst1));
-            Expect("定義: HQ-a ／ HQ-b ＝ 規定の号令の玉を あふれ3 ／ あふれ1 に差し替え・`All` ／ `Retired` の外・文面の差し替え・規定の駒は札を持たない", a && b && outside && none, $"HQ-a {a}・HQ-b {b}・外 {outside}・規定 {none}");
+            bool a = UnitCatalog.HisaHQa.Traits.SequenceEqual(UnitCatalog.HisaH321.Traits.Select(t => t == TraitId.CommandBall ? TraitId.CommandBurst3 : t));
+            bool b = UnitCatalog.HisaHQb.Traits.SequenceEqual(UnitCatalog.HisaH321.Traits.Select(t => t == TraitId.CommandBall ? TraitId.CommandBurst1 : t));
+            bool outside = Vers.Skip(1).All(v => !UnitCatalog.All.Contains(v.Def) && !UnitCatalog.Retired.Contains(v.Def) && v.Def.PlusText != UnitCatalog.HisaH321.PlusText);
+            bool none = UnitCatalog.All.All(d => ReferenceEquals(d, UnitCatalog.Hisa) || !d.Traits.Contains(TraitId.CommandBurst3) && !d.Traits.Contains(TraitId.CommandBurst1));   // 第322期: 規定のヒサ（HQ-a9）は あふれ3 を持つ
+            Expect("定義: HQ-a ／ HQ-b ＝ 規定の号令の玉を あふれ3 ／ あふれ1 に差し替え・`All` ／ `Retired` の外・文面の差し替え・規定の駒は札を持たない（第322期から規定のヒサ ＝ HQ-a9 を除く）", a && b && outside && none, $"HQ-a {a}・HQ-b {b}・外 {outside}・規定 {none}");
         }
         // HQ-a: 玉 3 つで3層・閉じた直後・羽を呼ぶ・端数は持ち越す・手番の号令は無い
         {
@@ -434,7 +434,7 @@ static class Hisa321Diag
         }
         // 戦の中: 規定は手番の号令・版はあふれだけ・捨てない・verbose の有無で同じ
         {
-            var bf = Presets.Playtest.First(r => r.Name == "試遊・標 ボス台").F;
+            var bf = Pin321(Presets.Playtest.First(r => r.Name == "試遊・標 ボス台").F);
             foreach (var v in Vers)
                 foreach (var w in new[] { WaveOf("boss"), WaveOf("guard"), WaveOf("2") })
                 {

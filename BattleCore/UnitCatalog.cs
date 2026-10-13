@@ -514,7 +514,11 @@ public static class UnitCatalog
     /// <summary>第303期の規定のヒサのマイナスの文面（第304期の規定 <see cref="Hisa"/> と旧の規定 <see cref="HisaH303"/> が共有する）。</summary>
     const string HisaMinus303 = HisaMinus301 + "。粛の下では声が出ない（叫びも指差しも庇いも止まる）";
 
-    public static readonly UnitDef Hisa = new()
+    /// <summary>
+    /// 囃し立てのヒサ（第304〜321期の規定・号令の玉 <see cref="TraitId.CommandBall"/>）。<b>第322期に HQ-a9（<see cref="Hisa"/>）を規定にしたので、旧の規定の定義を明示的に持つ</b>（第321期まで <see cref="Hisa"/> と同じ物だった）。
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。第321期の規定のヒサで測った器具はこれに固定する（`Common.Pin321`）。第321期の版（HQ-a ／ HQ-b ／ 上限の版）もこれから作る。
+    /// </summary>
+    public static readonly UnitDef HisaH321 = new()
     {
         Id = "hisa",
         Name = "囃し立てのヒサ",
@@ -541,6 +545,33 @@ public static class UnitCatalog
         MinusText = HisaMinus303,
         Flavor = "味方を矢面に立たせて生き延びた男。誰も隣に立ちたがらない。"
     };
+
+    /// <summary>
+    /// 囃し立てのヒサ（規定）。<b>第322期に HQ-a9 を規定にした</b>（ポンの判断・design/PHASE322_SHIGA_DISCHARGE_SPEC.md §2-2）——
+    /// 第304〜321期の規定（<see cref="HisaH321"/>）の号令の玉（<see cref="TraitId.CommandBall"/>）を <see cref="TraitId.CommandBurst3"/> に差し替え、末尾に <see cref="TraitId.CommandBurstCap9"/>。
+    /// 札は第321期の <see cref="HisaHQa9"/> と同じ（文面だけ叩き台に差し替えた）: 玉3つで3層を吐き出す・攻撃のまとまりが閉じた直後・1巡に9層まで・手番の号令なし・溢れを捨てない。
+    /// </summary>
+    public static readonly UnitDef Hisa = new()
+    {
+        Id = HisaH321.Id,
+        Name = HisaH321.Name,
+        MaxHp = HisaH321.MaxHp,
+        Attack = HisaH321.Attack,
+        Speed = HisaH321.Speed,
+        Advances = HisaH321.Advances,
+        Pattern = HisaH321.Pattern,
+        // 第322期: ポンの判断（第321期の案 Q4）で HQ-a9 を規定にした。旧の規定は `HisaH321`（指示書 design/PHASE322_SHIGA_DISCHARGE_SPEC.md §2-2）。
+        Traits = HisaH321.Traits.Select(t => t == TraitId.CommandBall ? TraitId.CommandBurst3 : t).Append(TraitId.CommandBurstCap9).ToArray(),
+        Actions = HisaH321.Actions,
+        PlusText = HisaH321.PlusText.Contains(HisaBallClause, StringComparison.Ordinal)
+            ? HisaH321.PlusText.Replace(HisaBallClause, HisaBallClause322, StringComparison.Ordinal)
+            : throw new InvalidOperationException("第322期: 旧の規定のヒサの文面に号令の句が見つからない"),
+        MinusText = HisaH321.MinusText,
+        Flavor = HisaH321.Flavor
+    };
+
+    /// <summary>第322期の規定（HQ-a9）の号令の句（叩き台・指示書 §2-2）。</summary>
+    public const string HisaBallClause322 = "。余った声援は玉になって溜まり、3つ溜まると敵を指差す号令になってあふれ出す（1巡に9回まで）";
 
     /// <summary>
     /// 旧ヒサ（第184〜295期の規定・矢面 ＋ 逃げ回る）。第296期に HK-b（あいつを狙え！）を規定にしたので、旧の規定の定義を明示的に持つ。
@@ -3401,11 +3432,13 @@ public static class UnitCatalog
     };
 
     /// <summary>
-    /// 電気鞭のシガ（規定）。<b>第319期に SG（打ち返し・<see cref="TraitId.BetrayBackswing"/>）を規定にした</b>（ポンの判断 R4・design/PHASE319_SOM_THROW_SPEC.md §2-2）——
+    /// 電気鞭のシガ（第319〜321期の規定・SF-AC ＋ SG）。<b>第319期に SG（打ち返し・<see cref="TraitId.BetrayBackswing"/>）を規定にした</b>（ポンの判断 R4・design/PHASE319_SOM_THROW_SPEC.md §2-2）——
     /// 第317〜318期の規定（SF-AC・<see cref="ShigaH318"/>）の末尾に札を1枚足した。札は第318期の <see cref="ShigaSG"/> と同じ。
     /// 打ち返しはソムの立った獣の雷しか読まないので、ソムのいない戦では第318期の規定と1ビットも違わない。
+    /// <para><b>第322期に SA（<see cref="Shiga"/>）を規定にしたので、旧の規定の定義を明示的に持つ</b>（第321期まで <see cref="Shiga"/> と同じ物だった）。
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。第321期の規定のシガで測った器具はこれに固定する（`Common.Pin321`）。第321期の版（SA ／ SA+ ／ SA+k）もこれから作る。</para>
     /// </summary>
-    public static readonly UnitDef Shiga = new()
+    public static readonly UnitDef ShigaH321 = new()
     {
         Id = ShigaH318.Id,
         Name = ShigaH318.Name,
@@ -3421,33 +3454,59 @@ public static class UnitCatalog
         Flavor = ShigaH318.Flavor
     };
 
+    /// <summary>
+    /// 電気鞭のシガ（規定）。<b>第322期に SA（育つ）を規定にした</b>（ポンの判断・design/PHASE322_SHIGA_DISCHARGE_SPEC.md §2-1）——
+    /// 第319〜321期の規定（<see cref="ShigaH321"/>）＋ <see cref="TraitId.ChargeUncapped"/>（蓄電の上限なし）＋ <see cref="TraitId.ChargeKeep"/>（割り込みで蓄電を使わない）。
+    /// 札は第321期の <see cref="ShigaSA"/> と同じ（文面だけ叩き台に差し替えた）。蓄電1つにつき攻撃力 +3 のまま。
+    /// </summary>
+    public static readonly UnitDef Shiga = new()
+    {
+        Id = ShigaH321.Id,
+        Name = ShigaH321.Name,
+        MaxHp = ShigaH321.MaxHp,
+        Attack = ShigaH321.Attack,
+        Speed = ShigaH321.Speed,
+        Advances = ShigaH321.Advances,
+        Pattern = ShigaH321.Pattern,
+        Traits = ShigaH321.Traits.Concat(new[] { TraitId.ChargeUncapped, TraitId.ChargeKeep }).ToArray(),
+        Actions = ShigaH321.Actions,
+        PlusText = ShigaH321.PlusText.Contains(ShigaChargeClause, StringComparison.Ordinal)
+            ? ShigaH321.PlusText.Replace(ShigaChargeClause, ShigaChargeClause322, StringComparison.Ordinal)
+            : throw new InvalidOperationException("第322期: 旧の規定のシガの文面に蓄電の句が見つからない"),
+        MinusText = ShigaH321.MinusText,
+        Flavor = ShigaH321.Flavor
+    };
+
+    /// <summary>第322期の規定（SA）の蓄電の句（叩き台・指示書 §2-1）。</summary>
+    public const string ShigaChargeClause322 = "帯電するたび電気が溜まり、溜まった分だけ鞭が重くなる（使っても減らない）。そばで感電が弾けるたび、割り込んで鞭を振るう";
+
     /// <summary>第318期 SG ／ 第319期の規定の文面の足し（叩き台）。</summary>
     public const string ShigaBackswingText = "。背いた獣の雷を浴びると、その場で打ち返す";
 
     // ---------------------------------------------------------------------------------
-    // 第321期 —— シガの蓄電が育つ版（指示書 design/PHASE321_SHIGA_CHARGE_HISA_BURST_SPEC.md §1-2）。規定（SF-AC ＋ SG）の末尾に札を足すだけ。
+    // 第321期 —— シガの蓄電が育つ版（指示書 design/PHASE321_SHIGA_CHARGE_HISA_BURST_SPEC.md §1-2）。規定（SF-AC ＋ SG・第322期から旧の規定 `ShigaH321`）の末尾に札を足すだけ。
     // 文面は規定の蓄電の句を差し替える（叩き台）。`All` にも `Retired` にも入れない。
     // ---------------------------------------------------------------------------------
 
     /// <summary>規定のシガの文面のうち、蓄電と割り込みの句（第321期の版はここを差し替える）。</summary>
-    const string ShigaChargeClause = "帯電するたび電気が溜まり、溜まった分だけ鞭が重くなる。そばで感電が弾けるたび、溜めた電気を1つ使って割り込み、鞭を振るう";
+    public const string ShigaChargeClause = "帯電するたび電気が溜まり、溜まった分だけ鞭が重くなる。そばで感電が弾けるたび、溜めた電気を1つ使って割り込み、鞭を振るう";
 
     static UnitDef ShigaOn321(TraitId[] add, string clause) => new()
     {
-        Id = Shiga.Id,
-        Name = Shiga.Name,
-        MaxHp = Shiga.MaxHp,
-        Attack = Shiga.Attack,
-        Speed = Shiga.Speed,
-        Advances = Shiga.Advances,
-        Pattern = Shiga.Pattern,
-        Traits = Shiga.Traits.Concat(add).ToArray(),
-        Actions = Shiga.Actions,
-        PlusText = Shiga.PlusText.Contains(ShigaChargeClause, StringComparison.Ordinal)
-            ? Shiga.PlusText.Replace(ShigaChargeClause, clause, StringComparison.Ordinal)
-            : throw new InvalidOperationException("第321期: 規定のシガの文面に蓄電の句が見つからない"),
-        MinusText = Shiga.MinusText,
-        Flavor = Shiga.Flavor
+        Id = ShigaH321.Id,
+        Name = ShigaH321.Name,
+        MaxHp = ShigaH321.MaxHp,
+        Attack = ShigaH321.Attack,
+        Speed = ShigaH321.Speed,
+        Advances = ShigaH321.Advances,
+        Pattern = ShigaH321.Pattern,
+        Traits = ShigaH321.Traits.Concat(add).ToArray(),
+        Actions = ShigaH321.Actions,
+        PlusText = ShigaH321.PlusText.Contains(ShigaChargeClause, StringComparison.Ordinal)
+            ? ShigaH321.PlusText.Replace(ShigaChargeClause, clause, StringComparison.Ordinal)
+            : throw new InvalidOperationException("第321期: 規定（第322期から旧の規定 `ShigaH321`）のシガの文面に蓄電の句が見つからない"),
+        MinusText = ShigaH321.MinusText,
+        Flavor = ShigaH321.Flavor
     };
 
     /// <summary>第321期 SA（育つ）。規定 ＋ <see cref="TraitId.ChargeUncapped"/>（蓄電の上限なし）＋ <see cref="TraitId.ChargeKeep"/>（割り込みで蓄電を使わない）。蓄電1つにつき攻撃力 +3 のまま。</summary>
@@ -3466,27 +3525,48 @@ public static class UnitCatalog
         "帯電するたび電気が溜まる。溜まった電気は、はじめ鞭を振る回数に、溢れたぶんは鞭の重さに変わる。そばで感電が弾けるたび、溜めた電気を1つ使って割り込み、鞭を振るう");
 
     // ---------------------------------------------------------------------------------
+    // 第322期 —— シガの鞭は感電を消さずに放電させる版（指示書 design/PHASE322_SHIGA_DISCHARGE_SPEC.md §3）。末尾に札を1枚足すだけ。
+    // 文面は PlusText の末尾に句を足す（叩き台）。`All` にも `Retired` にも入れない。
+    // ---------------------------------------------------------------------------------
+
+    /// <summary>第322期 SD の文面の足し（叩き台・指示書 §3-1）。</summary>
+    public const string ShigaDischargeText = "。鞭で弾けさせた敵の雷は、消えずに残る";
+
+    static UnitDef ShigaOn322(UnitDef b) => new()
+    {
+        Id = b.Id, Name = b.Name, MaxHp = b.MaxHp, Attack = b.Attack, Speed = b.Speed, Advances = b.Advances, Pattern = b.Pattern,
+        Traits = b.Traits.Append(TraitId.WhipDischarge).ToArray(), Actions = b.Actions,
+        PlusText = b.PlusText + ShigaDischargeText, MinusText = b.MinusText, Flavor = b.Flavor
+    };
+
+    /// <summary>第322期 SA-SD。規定のシガ（SA）＋ <see cref="TraitId.WhipDischarge"/>——鞭で弾けさせた敵の感電は消さない（放電だけ）。</summary>
+    public static readonly UnitDef ShigaSD = ShigaOn322(Shiga);
+
+    /// <summary>第322期 SA+-SD。第321期の SA+（<see cref="ShigaSAp"/>）＋ <see cref="TraitId.WhipDischarge"/>（連撃の各振りで起きる）。</summary>
+    public static readonly UnitDef ShigaSApSD = ShigaOn322(ShigaSAp);
+
+    // ---------------------------------------------------------------------------------
     // 第321期 —— ヒサの号令を「溜まったら吐く」版（指示書 §2-2）。規定の号令の玉（`CommandBall`）を差し替えるだけ。`All` にも `Retired` にも入れない。
     // ---------------------------------------------------------------------------------
 
-    const string HisaBallClause = "。余った声援は玉になって溜まり（3つまで）、自分の手番に敵を指差す号令に変わる";
+    public const string HisaBallClause = "。余った声援は玉になって溜まり（3つまで）、自分の手番に敵を指差す号令に変わる";
 
     static UnitDef HisaOn321(TraitId burst, string clause) => new()
     {
-        Id = Hisa.Id,
-        Name = Hisa.Name,
-        MaxHp = Hisa.MaxHp,
-        Attack = Hisa.Attack,
-        Speed = Hisa.Speed,
-        Advances = Hisa.Advances,
-        Pattern = Hisa.Pattern,
-        Traits = Hisa.Traits.Select(t => t == TraitId.CommandBall ? burst : t).ToArray(),
-        Actions = Hisa.Actions,
-        PlusText = Hisa.PlusText.Contains(HisaBallClause, StringComparison.Ordinal)
-            ? Hisa.PlusText.Replace(HisaBallClause, clause, StringComparison.Ordinal)
-            : throw new InvalidOperationException("第321期: 規定のヒサの文面に号令の句が見つからない"),
-        MinusText = Hisa.MinusText,
-        Flavor = Hisa.Flavor
+        Id = HisaH321.Id,
+        Name = HisaH321.Name,
+        MaxHp = HisaH321.MaxHp,
+        Attack = HisaH321.Attack,
+        Speed = HisaH321.Speed,
+        Advances = HisaH321.Advances,
+        Pattern = HisaH321.Pattern,
+        Traits = HisaH321.Traits.Select(t => t == TraitId.CommandBall ? burst : t).ToArray(),
+        Actions = HisaH321.Actions,
+        PlusText = HisaH321.PlusText.Contains(HisaBallClause, StringComparison.Ordinal)
+            ? HisaH321.PlusText.Replace(HisaBallClause, clause, StringComparison.Ordinal)
+            : throw new InvalidOperationException("第321期: 規定（第322期から旧の規定 `HisaH321`）のヒサの文面に号令の句が見つからない"),
+        MinusText = HisaH321.MinusText,
+        Flavor = HisaH321.Flavor
     };
 
     /// <summary>第321期 HQ-a（ポン案）。号令の玉を <see cref="TraitId.CommandBurst3"/> に差し替え——玉が3つ溜まった時点で、攻撃のまとまりが閉じた直後に3層まとめて吐き出す（手番の号令はしない・溢れは捨てない）。</summary>

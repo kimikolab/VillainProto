@@ -537,11 +537,11 @@ static class Hush304Diag
         Console.WriteLine();
         Console.WriteLine("| 項目 | 結果 | 備考 |");
         Console.WriteLine("|---|---|---|");
-        var hisa = UnitCatalog.Hisa; var old = UnitCatalog.HisaH303;
+        var hisa = UnitCatalog.HisaH321; var old = UnitCatalog.HisaH303;   // 第322期: 規定のヒサが HQ-a9 になったので、第304〜321期の規定（`HisaH321`）で確かめる
         Expect("(a) 段0 の定義: 規定のヒサ ＝ `HisaH303` ＋ `CoverSkipLethal`（＝ 第303期の HC-s と同じ札）・旧は `All` ／ `Everyone` の外・数値は旧のまま・旧の文面は第303期の規定のまま・第303期の版は旧から作る",
             hisa.Traits.SequenceEqual(old.Traits.Append(TraitId.CoverSkipLethal)) && hisa.Traits.SequenceEqual(UnitCatalog.HisaHCs.Traits) && hisa.MinusText == old.MinusText
             && hisa.PlusText.Contains("自分まで倒れる一撃なら立たない") && !old.PlusText.Contains("倒れる一撃なら") && old.PlusText == UnitCatalog.HisaH302.PlusText
-            && hisa.MaxHp == old.MaxHp && hisa.Speed == old.Speed && UnitCatalog.All.Contains(hisa) && !UnitCatalog.Everyone.Contains(old)
+            && hisa.MaxHp == old.MaxHp && hisa.Speed == old.Speed && UnitCatalog.All.Contains(UnitCatalog.Hisa) && ReferenceEquals(PinSH321(UnitCatalog.Hisa), hisa) && !UnitCatalog.Everyone.Contains(old)
             && UnitCatalog.HisaQ1.Traits.Contains(TraitId.HushGesture1) && !UnitCatalog.HisaQ1.Traits.Contains(TraitId.CoverSkipLethal) && UnitCatalog.HisaHCd.Traits.SequenceEqual(old.Traits.Append(TraitId.CoverSkipShoulder)));
 
         // (b) 段0: 自分が倒れる一撃では庇わない ／ 倒れない一撃は庇う ／ 見送りは1戦1度を使わない

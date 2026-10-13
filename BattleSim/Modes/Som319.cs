@@ -70,11 +70,11 @@ static class Som319Diag
 
     internal static readonly Ver[] Vers =
     {
-        new("規定", "base", UnitCatalog.SomH319, UnitCatalog.Shiga),
+        new("規定", "base", UnitCatalog.SomH319, UnitCatalog.ShigaH321),
         new("旧 BD-E2", "old", UnitCatalog.SomH318, UnitCatalog.ShigaH318),
-        new("WS-a", "WS-a", UnitCatalog.SomWSa, UnitCatalog.Shiga),
-        new("WS-a3", "WS-a3", UnitCatalog.SomWSa3, UnitCatalog.Shiga),
-        new("WS-b", "WS-b", UnitCatalog.SomWSb, UnitCatalog.Shiga),
+        new("WS-a", "WS-a", UnitCatalog.SomWSa, UnitCatalog.ShigaH321),
+        new("WS-a3", "WS-a3", UnitCatalog.SomWSa3, UnitCatalog.ShigaH321),
+        new("WS-b", "WS-b", UnitCatalog.SomWSb, UnitCatalog.ShigaH321),
     };
     static Ver V(string n) => Vers.First(v => v.Name == n || v.Ascii == n);
     static Ver[] Pick(string only) => (string.IsNullOrEmpty(only) ? Vers : new[] { Vers[0] }.Concat(only.Split(',').Select(V).Where(v => v != Vers[0]))).ToArray();
@@ -83,7 +83,7 @@ static class Som319Diag
     internal static Formation Apply(Formation f, Ver v)
     {
         var g = ReferenceEquals(v.Som, UnitCatalog.SomH319) ? f : S309.Swap(f, UnitCatalog.SomH319, v.Som);
-        return ReferenceEquals(v.Shiga, UnitCatalog.Shiga) ? g : S309.Swap(g, UnitCatalog.Shiga, v.Shiga);
+        return ReferenceEquals(v.Shiga, UnitCatalog.ShigaH321) ? g : S309.Swap(g, UnitCatalog.ShigaH321, v.Shiga);
     }
 
     internal static readonly S287.Wave[] Waves = S318.Waves;
@@ -91,9 +91,9 @@ static class Som319Diag
     static S287.Wave Wave2 => Waves[6];
 
     /// <summary>第318期の器具の台（第318期の規定に固定してある）を規定の駒に戻す。</summary>
-    static Formation Unpin(Formation f) => S309.Swap(S309.Swap(f, UnitCatalog.SomH318, UnitCatalog.SomH319), UnitCatalog.ShigaH318, UnitCatalog.Shiga);
+    static Formation Unpin(Formation f) => S309.Swap(S309.Swap(f, UnitCatalog.SomH318, UnitCatalog.SomH319), UnitCatalog.ShigaH318, UnitCatalog.ShigaH321);
     /// <summary>格子の候補（第317期までの器具が旧に固定した駒）を規定の駒に戻す。</summary>
-    static UnitDef Cur(UnitDef d) => ReferenceEquals(d, UnitCatalog.ShigaSWa) ? UnitCatalog.Shiga : ReferenceEquals(d, UnitCatalog.DohaH316) ? UnitCatalog.Doha : ReferenceEquals(d, UnitCatalog.SomH317) ? UnitCatalog.SomH319 : d;
+    static UnitDef Cur(UnitDef d) => ReferenceEquals(d, UnitCatalog.ShigaSWa) ? UnitCatalog.ShigaH321 : ReferenceEquals(d, UnitCatalog.DohaH316) ? UnitCatalog.Doha : ReferenceEquals(d, UnitCatalog.SomH317) ? UnitCatalog.SomH319 : d;
 
     /// <summary>§5-2 の代表台（第318期と同じ7台・席は同じ・駒は規定）。</summary>
     internal static (string Name, Formation F)[] Boards() => S318.Boards().Select(b => (b.Name, Unpin(b.F))).ToArray();
@@ -704,7 +704,7 @@ static class Som319Diag
         Console.WriteLine();
         Console.WriteLine("| 項目 | 結果 | 備考 |");
         Console.WriteLine("|---|---|---|");
-        UnitDef som = UnitCatalog.SomH319, shiga = UnitCatalog.Shiga, wsa = UnitCatalog.SomWSa, wsa3 = UnitCatalog.SomWSa3, wsb = UnitCatalog.SomWSb;
+        UnitDef som = UnitCatalog.SomH319, shiga = UnitCatalog.ShigaH321, wsa = UnitCatalog.SomWSa, wsa3 = UnitCatalog.SomWSa3, wsb = UnitCatalog.SomWSb;
 
         // (a) 段0: 規定のソム ＝ CR-b・規定のシガ ＝ SG・旧の定義（`SomH318` ／ `ShigaH318`）が残っている・固定の口
         {
@@ -718,11 +718,11 @@ static class Som319Diag
             bool ds = shiga.Traits.SequenceEqual(UnitCatalog.ShigaSG.Traits) && shiga.Traits.SequenceEqual(hs.Traits.Append(TraitId.BetrayBackswing))
                 && hs.Traits.SequenceEqual(UnitCatalog.ShigaSWa.Traits.Concat(new[] { TraitId.FearNoStun, TraitId.ScourgeDaunt }))
                 && shiga.PlusText == hs.PlusText + "。背いた獣の雷を浴びると、その場で打ち返す" && shiga.MinusText == hs.MinusText && shiga.MaxHp == 52 && shiga.Attack == 9 && shiga.Speed == 3;
-            bool roster = UnitCatalog.All.Contains(UnitCatalog.Som) && ReferenceEquals(PinS319(UnitCatalog.Som), som) && UnitCatalog.All.Contains(shiga) && UnitCatalog.All.Count == 52   // 第320期: 規定は WS-b・`som` は第319期の規定（`SomH319`）
+            bool roster = UnitCatalog.All.Contains(UnitCatalog.Som) && ReferenceEquals(PinS319(UnitCatalog.Som), som) && UnitCatalog.All.Contains(UnitCatalog.Shiga) && ReferenceEquals(PinS319(UnitCatalog.Shiga), shiga) && UnitCatalog.All.Count == 52   // 第320期: 規定は WS-b・`som` は第319期の規定（`SomH319`）
                 && new[] { h, hs, UnitCatalog.SomH317, wsa, wsa3, wsb, UnitCatalog.SomCRb, UnitCatalog.ShigaSG }.All(x => !UnitCatalog.Everyone.Contains(x));
-            bool pin = ReferenceEquals(PinSS318(som), h) && ReferenceEquals(PinSS318(shiga), hs)
-                && ReferenceEquals(PinS317(som), UnitCatalog.SomH317) && ReferenceEquals(PinS317(h), UnitCatalog.SomH317) && ReferenceEquals(PinS317(shiga), hs)
-                && ReferenceEquals(PinDS316(shiga), UnitCatalog.ShigaSWa) && ReferenceEquals(PinDS316(som), UnitCatalog.SomH317) && IsSomNow(h)
+            bool pin = ReferenceEquals(PinSS318(som), h) && ReferenceEquals(PinSS318(UnitCatalog.Shiga), hs)
+                && ReferenceEquals(PinS317(som), UnitCatalog.SomH317) && ReferenceEquals(PinS317(h), UnitCatalog.SomH317) && ReferenceEquals(PinS317(UnitCatalog.Shiga), hs)
+                && ReferenceEquals(PinDS316(UnitCatalog.Shiga), UnitCatalog.ShigaSWa) && ReferenceEquals(PinDS316(som), UnitCatalog.SomH317) && IsSomNow(h)
                 && Pin318(Presets.Playtest.First(r => r.Name == S309.Shield).F).Occupied().Any(o => ReferenceEquals(o.Def, h))
                 && CompareBuildsH318().First(r => r.Name == "感電 (シガ×カタ×ソム)").F.Occupied().Any(o => ReferenceEquals(o.Def, hs));
             Expect("(a) 段0: 規定のソム ＝ CR-b（札は第318期の `SomCRb` と同じ・文面は叩き台）・規定のシガ ＝ SG（札は `ShigaSG` と同じ）・旧の定義 `SomH318` ／ `ShigaH318` が `Everyone` の外に残り、第318期の版はそこから作る・`Pin318` が旧へ、`PinS317` ／ `PinDS316` がそれより前の旧へ替える",

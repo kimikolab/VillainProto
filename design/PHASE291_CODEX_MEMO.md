@@ -1265,7 +1265,7 @@ ShockGauge 怖くない  シガ#3 → シガ#3  Amount 2  Slot 0  相手 勇者#
 
 規定のシガの同じ場面は、最後の行が `Stun 痺れ`（シガ自身）と `ShockGauge 怖気` になり、次のターンの頭に `Stun 手番喪失` が出る。**画面の「痺れた」はこの怖気**（第316期 Phase 0: ポンのログの形の 95% が怖気・感電の痺れは 5%）。
 
-## 17. 第321期の追記 —— シガの連撃（`ShockGauge`「連撃」・**版のみ**）・ヒサの号令「あふれ」（`Command`「あふれ」・**版のみ**）
+## 17. 第321期の追記 —— シガの連撃（`ShockGauge`「連撃」・**版のみ**）・ヒサの号令「あふれ」（`Command`「あふれ」・**第322期から HQ-a9 が規定**）
 
 第321期の版（報告 `design/PHASE321_SHIGA_CHARGE_HISA_BURST.md`）。**規定のシガ ／ ヒサの台本は1行も変わらない**（どちらの版も採否はポン）。**新しい出来事の種類は足していない**——`ShockGauge` の `Text` を1つ（`ShockGaugeLabels.Flurry`「連撃」）、`Command` の `Text` を1つ（`CommandLabels.Burst`「あふれ」）足しただけ。
 
@@ -1316,7 +1316,7 @@ ShockGauge 連撃  シガ#3 → 勇者#5  Amount 2  Slot 3
 …（3振り目まで）
 ```
 
-### 17-2. ヒサの号令「あふれ」（HQ-a ／ HQ-b ／ 上限の版 HQ-a3 〜 HQ-b9）
+### 17-2. ヒサの号令「あふれ」（HQ-a ／ HQ-b ／ 上限の版 HQ-a3 〜 HQ-b9・**第322期から HQ-a9 が規定**——規定のヒサの台本にこの並びが出る（1巡に9層まで）・ほかは版のみ）
 
 | 出来事 | 欄 | 規定（第302期の玉）との違い |
 |---|---|---|
@@ -1353,3 +1353,49 @@ MarkRally   ヒサ#4 → ミサ#2  Amount 0  Slot 16
 ```
 
 上限の無い HQ-a の同じ場面（`hisa321 memo ボス台 boss 0 qa`・試遊・標 ボス台・勝ち T2）は、T1 の最初の閉じ目で `Command あふれ Amount 21`（玉 21 個 ＝ 21 層）→ 羽 21 本 → 羽の叫びで玉がまた数十個 → 次の「あふれ」… と続き、勇者は T2 に倒れる。
+
+## 18. 第322期の追記 —— シガ SA ／ ヒサ HQ-a9 が**規定**に・シガの鞭は感電を消さずに放電させる（`ShockSpent`「残る」・**版のみ**）
+
+報告 `design/PHASE322_SHIGA_DISCHARGE.md`。**新しい出来事の種類は足していない**——`ShockSpent` の `Text` に1つ（`ShockSpentLabels.Kept`「残る」）を足しただけ（規定の弾けは `Text` ＝ null のまま）。
+
+### 18-1. 段0 —— 規定が替わった（台本の並びへの影響）
+
+- **ヒサ ＝ HQ-a9 が規定**: §17-2 の「あふれ」（1巡に9層まで）が**規定のヒサの台本にそのまま出る**。規定の号令「手番」（`Command`「手番」）と「捨てる」は規定の台本には出なくなる（旧の規定 `HisaH321` で回した台本だけに出る）。
+- **シガ ＝ SA が規定**: 台本の**並び（出来事の種類と順）は変わらない**——「蓄電・使った」が出なくなり（割り込みで減らない）、蓄電が 4 を超えて伸びる（`ShockGauge 蓄電・増えた` の `Amount` が 5, 6, … と続く・`Attack` の `Amount` ＝ 9 ＋ 3 × 蓄電）だけ。「連撃」（§17-1）は SA+ の版にしか出ない（版のみのまま）。
+
+### 18-2. SD（シガの鞭で弾けた敵の感電は残る・SA-SD ／ SA+-SD・`WhipDischarge` の保持者だけ）
+
+| 出来事 | 欄 | 規定との違い |
+|---|---|---|
+| `ShockSpent` | `Text` ＝ **「残る」** ／ `ActorId` ＝ シガ ／ `TargetId` ＝ 弾けた敵 ／ `Slot` ＝ 0（起点） | 規定の起点の弾けは `Text` ＝ null で、その敵の帯電の印は消える。**「残る」の弾けは、弾けた後もその敵の帯電の印を消さない**（次のターン頭の `StatusSnapshot`「雷」にも残っている） |
+
+- 並びは **鞭の `Attack` → `Damage` → `ShockSpent`「残る」（起点）→ 隣の `Discharge` ／ 連鎖の `ShockSpent`（Text なし・こちらは消える）→ 痺れ ／ 萎縮の `StatusGain`（今のまま）**。放電・連鎖・痺れ ／ 萎縮・雷雲 ／ 光は規定と同じ形で並ぶ。
+- 同じ一振りの中で、連鎖の放電が「残る」の敵に戻っても、その振りではもう弾けない（`ShockSpent` は出ない・放電の `Damage` だけ）。
+- シガ以外の駒の一撃で弾けたとき・連鎖で弾けたときは、規定と同じく `Text` ＝ null（印は消える）。
+- SA+-SD は連撃の各振りで「残る」が出る（1手番で同じ敵に最大5回）。
+
+**1本の並び**（`shiga322 memo 鞭 boss 7 sd`・試遊・感電 光の盾 鞭 × ボス × seed 7・SA-SD・勝ち T10・T1〜T2 の抜粋）:
+
+```
+--- T1
+ShockGauge 割り込み  シガ#3 → 勇者#5  Amount 1  Slot 2
+ShockGauge 割り込み・倍率  シガ#3 → 勇者#5  Amount 3  Slot 2
+Attack   シガ#3 → 勇者#5  Amount 12  Slot 0  Reaction
+Damage   シガ#3 → 勇者#5  Amount 72  Slot 0  Reaction
+LiveWire   シガ#3 → シガ#3  Amount 1  Slot 0
+ShockGauge 蓄電・増えた  カタ#0 → シガ#3  Amount 2  Slot 1
+Attack   シガ#3 → 勇者#5  Amount 15  Slot 0                ← 手番の鞭（感電した勇者に2倍）
+Damage   シガ#3 → 勇者#5  Amount 30  Slot 0
+ShockSpent 残る  シガ#3 → 勇者#5  Amount 0  Slot 0        ← 弾けたが勇者の帯電の印は残る
+LiveWire   シガ#3 → シガ#3  Amount 1  Slot 0
+--- T2
+StatusSnapshot 雷  — → 勇者#5  Amount 1  Slot 0          ← 次のターン頭にも残っている
+ShockGauge 割り込み  シガ#3 → 勇者#5  Amount 2  Slot 3
+…
+Attack   シガ#3 → 勇者#5  Amount 18  Slot 0
+Damage   シガ#3 → 勇者#5  Amount 36  Slot 0
+ShockSpent 残る  シガ#3 → 勇者#5  Amount 0  Slot 0
+ShockGauge 怖くない  シガ#3 → シガ#3  Amount 1  Slot 0
+```
+
+**DemoApp へ**: `ShockSpent` の弾けの演出のあとで、`Text` が「残る」なら**その敵の帯電の印を消さない**（規定の弾けは印を消す）。版のみなので、演出は採用が決まってからでよい。

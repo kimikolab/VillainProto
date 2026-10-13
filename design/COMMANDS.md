@@ -1098,6 +1098,12 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 hisa321 compare [版,…]   # 第321期 段2 §2-7: `compare` 64 行 × 版（基準は規定のヒサ・(G2) つき・35 秒）
     dotnet run --project BattleSim -c Release 0 hisa321 memo <台の一部> <波> <seed> <版>   # 第321期 段2 §3: 吐き出しの台本（叫び → 玉 → まとまりが閉じる → 層 → 号令「あふれ」→ 羽）
     dotnet run --project BattleSim -c Release 0 hisa321 check        # 第321期 段2 自己検査（定義・閉じた直後に吐く ／ 内側では吐かない・羽を呼ぶ・捨てない・手番の号令なし・HQ-b・上限の版・痺れ ／ 粛で持ち越す・verbose）
+    dotnet run --project BattleSim -c Release 0 shiga322 p0          # 第322期 Phase 0: 規定のシガ（SA）× 代表台 5 × 10 波・鞭が感電した敵に入った回数（手番 ／ 割り込み ／ 打ち返し）・起点で弾けて消えた感電・ほかの駒の一撃が先に届いた割合・敵の痺れ ／ 失った手番 ／ 動けず倒れた・勇者の萎縮（数秒）。本体は `Modes/Shiga322.cs`
+    dotnet run --project BattleSim -c Release 0 shiga322 boards [版,…]   # 第322期 §5-2: 代表台 5 × 10 波 × 版（規定 ／ SA-SD ／ SA+ ／ SA+-SD・ASCII は base ／ sd ／ sap ／ sapsd）・倒しT・シガの与ダメと比・起爆の効き（弾け ／ 連鎖 ／ 雷雲 ／ 光）・ボス（勇者の萎縮 ／ 勇者 → 味方 ／ 味方 ÷ 回復）・縛りすぎの兆し・格子を回す版（10 秒）。**予測のファイル `.tmp/p322/predict.md` が無ければ走らない**（R397）
+    dotnet run --project BattleSim -c Release 0 shiga322 compare [版,…]  # 第322期 §5-3: `compare` 64 行 × 版（基準は規定のシガ ＝ SA・(G2) つき・20 秒）
+    dotnet run --project BattleSim -c Release 0 shiga322 grid <boss|guard> <版>   # 第322期 §5-4: シガのいる台の格子（第321期と同じ作り・固定枠 シガ ＋ カタ ＋ ソム・駒はいまの規定）
+    dotnet run --project BattleSim -c Release 0 shiga322 memo <台の一部> <波> <seed> <版>   # 第322期 §6: 鞭 → 弾ける（`ShockSpent 残る`）→ 次のターン頭の `StatusSnapshot 雷`
+    dotnet run --project BattleSim -c Release 0 shiga322 check       # 第322期 自己検査（段0 の規定化・旧の定義と固定・SD: 残る ／ 連鎖のほかは消える ／ ほかの一撃では消える ／ 1振り1回 ／ 割り込みの入れ子なし・SA+-SD の各振り・verbose・PickOne）
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）
     dotnet run --project BattleSim -c Release 0 shiga316 dgrid <boss|guard> [ps]   # 第316期 段0 G-c: 第297期の「ドハが要る台」の格子（第315期と同じ作り・基準は規定のドハ・1本 6〜9 分）

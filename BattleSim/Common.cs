@@ -314,20 +314,41 @@ public static UnitDef PinDS316(UnitDef d) =>
 
 /// <summary>第318期: 規定のソム（BD-E2）を第312〜317期の規定（`SomH317`）に替える。ほかの駒はそのまま返す。
 /// 第319期: 第318期の規定のソム（`SomH318`）も同じ旧へ。規定のシガ（SG）は第317〜318期の規定（`ShigaH318`）へ替える（第316期までの口は `PinDS316` が先に `ShigaSWa` へ替える）。
-/// 第320期: 第319期の規定のソム（`SomH319`）も同じ旧へ。</summary>
+/// 第320期: 第319期の規定のソム（`SomH319`）も同じ旧へ。
+/// 第322期: 規定のヒサ（HQ-a9）を第304〜321期の規定（`HisaH321`）へ替える（第316〜317期の器具の台のヒサ・`PinDS316` ／ `Pin316` を通る口も）。</summary>
 public static UnitDef PinS317(UnitDef d) =>
-    ReferenceEquals(d, UnitCatalog.Som) || ReferenceEquals(d, UnitCatalog.SomH318) || ReferenceEquals(d, UnitCatalog.SomH319) ? UnitCatalog.SomH317 : ReferenceEquals(d, UnitCatalog.Shiga) ? UnitCatalog.ShigaH318 : d;
+    ReferenceEquals(d, UnitCatalog.Som) || ReferenceEquals(d, UnitCatalog.SomH318) || ReferenceEquals(d, UnitCatalog.SomH319) ? UnitCatalog.SomH317 : ReferenceEquals(d, UnitCatalog.Shiga) ? UnitCatalog.ShigaH318
+    : ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaH321 : d;
 
 /// <summary>第318期: 規定のソムか、第312〜317期の規定（`SomH317`・`PinS317` を通った後）か。第311期までに固定する口（`Pin308`〜`Pin311` ほか）が使う。第319期: 第318期の規定（`SomH318`）も。第320期: 第319期の規定（`SomH319`）も。</summary>
 public static bool IsSomNow(UnitDef d) => ReferenceEquals(d, UnitCatalog.Som) || ReferenceEquals(d, UnitCatalog.SomH317) || ReferenceEquals(d, UnitCatalog.SomH318) || ReferenceEquals(d, UnitCatalog.SomH319);
 
 /// <summary>第319期: 規定のソム（CR-b）／ シガ（SG）を第318期の規定（`SomH318` ／ `ShigaH318`）に替える。ほかの駒はそのまま返す。
-/// 第320期: 第319期の規定のソム（`SomH319`）も同じ旧へ。</summary>
+/// 第320期: 第319期の規定のソム（`SomH319`）も同じ旧へ。第322期: 規定のヒサ（HQ-a9）を `HisaH321` へ。</summary>
 public static UnitDef PinSS318(UnitDef d) =>
-    ReferenceEquals(d, UnitCatalog.Som) || ReferenceEquals(d, UnitCatalog.SomH319) ? UnitCatalog.SomH318 : ReferenceEquals(d, UnitCatalog.Shiga) ? UnitCatalog.ShigaH318 : d;
+    ReferenceEquals(d, UnitCatalog.Som) || ReferenceEquals(d, UnitCatalog.SomH319) ? UnitCatalog.SomH318 : ReferenceEquals(d, UnitCatalog.Shiga) ? UnitCatalog.ShigaH318
+    : ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaH321 : d;
 
-/// <summary>第320期: 規定のソム（WS-b）を第319期の規定（`SomH319`・CR-b）に替える。ほかの駒はそのまま返す（シガは第319期から動いていない）。</summary>
-public static UnitDef PinS319(UnitDef d) => ReferenceEquals(d, UnitCatalog.Som) ? UnitCatalog.SomH319 : d;
+/// <summary>第322期: 規定のシガ（SA）／ ヒサ（HQ-a9）を第321期の規定（`ShigaH321` ／ `HisaH321`）に替える。ほかの駒はそのまま返す。</summary>
+public static UnitDef PinSH321(UnitDef d) => ReferenceEquals(d, UnitCatalog.Shiga) ? UnitCatalog.ShigaH321 : ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaH321 : d;
+
+/// <summary>第322期: シガ ＝ SA・ヒサ ＝ HQ-a9 を規定にした。第321期の規定の駒で測った器具（`shiga321` ／ `hisa321` ／ `som320`）はこれを通す。陣形とレリックは保つ。</summary>
+public static Formation Pin321(Formation f)
+{
+    var g = f.Clone();
+    foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinSH321(d);
+    return g;
+}
+
+/// <summary>第322期: `CompareBuilds()` のシガ ／ ヒサを第321期の規定に替えた写し。</summary>
+public static (string Name, Formation F)[] CompareBuildsH321() => CompareBuilds().Select(r => (r.Name, Pin321(r.F))).ToArray();
+
+/// <summary>第322期: `Presets.Playtest` のシガ ／ ヒサを第321期の規定に替えた写し（行の数と並びはそのまま）。</summary>
+public static (string Name, Formation F)[] PlaytestH321 => Presets.Playtest.Select(r => (r.Name, Pin321(r.F))).ToArray();
+
+/// <summary>第320期: 規定のソム（WS-b）を第319期の規定（`SomH319`・CR-b）に替える。ほかの駒はそのまま返す（シガは第319期から動いていない）。
+/// 第322期: シガ ／ ヒサも第321期の規定（`ShigaH321` ／ `HisaH321`・`PinSH321`）に替える。</summary>
+public static UnitDef PinS319(UnitDef d) => ReferenceEquals(d, UnitCatalog.Som) ? UnitCatalog.SomH319 : PinSH321(d);
 
 /// <summary>第320期: ソム ＝ WS-b を規定にした。第319期の規定の駒で測った器具（`som319`）はこれを通す。陣形とレリックは保つ。</summary>
 public static Formation Pin319(Formation f)

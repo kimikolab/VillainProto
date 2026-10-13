@@ -34,7 +34,7 @@ static class Som320Diag
         {
             case "cand": Table("§3 瓦礫の台の候補", Candidates()); return;
             case "boards": Table("§3 足した試遊の台", Added.Select(n => (n, Playtest(n))).ToArray()); return;
-            case "guide": Table("§4 既存の試遊の感電の台", Presets.Playtest.Where(r => r.Name.StartsWith("試遊・感電", StringComparison.Ordinal) && !Added.Contains(r.Name)).ToArray()); return;
+            case "guide": Table("§4 既存の試遊の感電の台", PlaytestH321.Where(r => r.Name.StartsWith("試遊・感電", StringComparison.Ordinal) && !Added.Contains(r.Name)).ToArray()); return;
             case "census": Census(); return;
             case "memo": Memo(A(3, "打ち返し"), A(4, "boss"), int.Parse(A(5, "0"))); return;
             case "check": Check(); return;
@@ -46,7 +46,7 @@ static class Som320Diag
     static string Seats(Formation f) => S307.Seats(f);
     static string Per1(long a, long n) => S307.Per1(a, n);
     static string Pct(long a, long n) => S307.Pct(a, n);
-    static Formation Playtest(string n) => Presets.Playtest.First(r => r.Name == n).F;
+    static Formation Playtest(string n) => Pin321(Presets.Playtest.First(r => r.Name == n).F);   // 第322期: シガ ／ ヒサを第321期の規定に固定
     static readonly S287.Wave[] Waves = S319.Waves;
     static S287.Wave WaveOf(string n) => n switch { "nine" => Waves[3], "nine2" => Waves[4], _ => S307.WaveOf(n) };
 
@@ -55,8 +55,8 @@ static class Som320Diag
     {
         ("光の盾 クビ→ツギ", S309.Swap(Playtest(S309.Shield), UnitCatalog.Kubi, UnitCatalog.Tsugi)),
         ("光の盾 重 クビ→ツギ", S309.Swap(Playtest(S309.ShieldHeavy), UnitCatalog.Kubi, UnitCatalog.Tsugi)),
-        ("ツギの勝ち台 ゴルム→ソム", S309.Swap(B283.Seat(S307.Order(S307.WinBoard).Select(d => ReferenceEquals(d, UnitCatalog.ShigaSWa) ? UnitCatalog.Shiga : d).ToArray()), UnitCatalog.Golm, UnitCatalog.Som)),
-        ("感電 行", Presets.Compare.First(r => r.Name == "感電 (シガ×カタ×ソム)").F),
+        ("ツギの勝ち台 ゴルム→ソム", S309.Swap(B283.Seat(S307.Order(S307.WinBoard).Select(d => ReferenceEquals(d, UnitCatalog.ShigaSWa) ? UnitCatalog.ShigaH321 : d).ToArray()), UnitCatalog.Golm, UnitCatalog.Som)),
+        ("感電 行", Pin321(Presets.Compare.First(r => r.Name == "感電 (シガ×カタ×ソム)").F)),
     };
 
     // ---------------------------------------------------------------------------------
@@ -186,7 +186,7 @@ static class Som320Diag
     static void Census()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var boards = Presets.Playtest.Where(r => r.Name.StartsWith("試遊・感電", StringComparison.Ordinal)).ToArray();
+        var boards = PlaytestH321.Where(r => r.Name.StartsWith("試遊・感電", StringComparison.Ordinal)).ToArray();
         static string Key(BattleEvent ev) => ev.Kind switch
         {
             BattleEventKind.BeastThrow => $"BeastThrow {ev.Text}",
@@ -232,7 +232,7 @@ static class Som320Diag
     // ---------------------------------------------------------------------------------
     static void Memo(string board, string wave, int seed)
     {
-        var (name, f) = Presets.Playtest.First(r => r.Name.Contains(board, StringComparison.Ordinal));
+        var (name, f) = PlaytestH321.First(r => r.Name.Contains(board, StringComparison.Ordinal));
         var w = WaveOf(wave);
         var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
         var e = w.Make();
@@ -288,7 +288,7 @@ static class Som320Diag
                 && UnitCatalog.SomWSa.Traits.SequenceEqual(h.Traits.Append(TraitId.BeastStandLate)) && UnitCatalog.SomWSa3.Traits.SequenceEqual(h.Traits.Append(TraitId.BeastStandLate3));
             bool roster = UnitCatalog.All.Contains(som) && UnitCatalog.All.Count == 52 && !UnitCatalog.Everyone.Contains(h) && !UnitCatalog.Everyone.Contains(UnitCatalog.SomWSb)
                 && UnitCatalog.Everyone.Where(x => x.Traits.Contains(TraitId.BeastThrowBackfire)).SequenceEqual(new[] { som });
-            bool pin = ReferenceEquals(PinS319(som), h) && ReferenceEquals(PinS319(UnitCatalog.Shiga), UnitCatalog.Shiga) && ReferenceEquals(PinSS318(som), UnitCatalog.SomH318) && ReferenceEquals(PinSS318(h), UnitCatalog.SomH318)
+            bool pin = ReferenceEquals(PinS319(som), h) && ReferenceEquals(PinS319(UnitCatalog.Shiga), UnitCatalog.ShigaH321) && ReferenceEquals(PinSS318(som), UnitCatalog.SomH318) && ReferenceEquals(PinSS318(h), UnitCatalog.SomH318)
                 && ReferenceEquals(PinS317(som), UnitCatalog.SomH317) && ReferenceEquals(PinS317(h), UnitCatalog.SomH317) && ReferenceEquals(PinDS316(som), UnitCatalog.SomH317) && IsSomNow(som) && IsSomNow(h)
                 && CompareBuildsH319().First(r => r.Name == "感電 (シガ×カタ×ソム)").F.Occupied().Any(o => ReferenceEquals(o.Def, h))
                 && Pin318(Presets.Playtest.First(r => r.Name == S309.Shield).F).Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.SomH318));
@@ -305,7 +305,7 @@ static class Som320Diag
             var (c2, s2, _, _) = S319.One(UnitCatalog.Golm, som, charged: true);
             S319.TurnStart(c2, s2);
             bool res = S319.T(c2, s2).CrFired == 1 && S319.T(c2, s2).WsBackfire == 0 && S319.Stood(c2, s2).Count == 0;
-            var (c3, s3, _, _) = S319.One(UnitCatalog.Shiga, som, charged: false);
+            var (c3, s3, _, _) = S319.One(UnitCatalog.ShigaH321, som, charged: false);
             S319.TurnStart(c3, s3);
             bool sg = S319.T(c3, s3).SgFired == 1 && S319.T(c3, s3).WsBackfire == 0 && S319.Stood(c3, s3).Count == 0;
             var (c4, s4, _, _) = S319.One(UnitCatalog.Golm, som, charged: true, wave: 1);
@@ -335,9 +335,9 @@ static class Som320Diag
         // (d) 足した3台の中身（下敷きどおり）
         {
             Formation sw = Playtest(Swing), pu = Playtest(Pursuit), sc = Playtest(Scrap);
-            var row = Presets.Compare.First(r => r.Name == "感電 (シガ×カタ×ソム)").F;
+            var row = Pin321(Presets.Compare.First(r => r.Name == "感電 (シガ×カタ×ソム)").F);
             bool Same(Formation a, Formation b) { var x = a.Occupied().ToList(); var y = b.Occupied().ToList(); return a.Shape == b.Shape && x.Count == y.Count && x.Zip(y).All(q => q.First.Slot == q.Second.Slot && ReferenceEquals(q.First.Def, q.Second.Def)); }
-            bool swOk = Same(sw, row) && sw.Occupied().Any(o => o.Slot == 0 && ReferenceEquals(o.Def, UnitCatalog.Shiga));
+            bool swOk = Same(sw, row) && sw.Occupied().Any(o => o.Slot == 0 && ReferenceEquals(o.Def, UnitCatalog.ShigaH321));
             bool puOk = Same(pu, S309.Swap(Playtest(S309.Shield), UnitCatalog.Kubi, UnitCatalog.Hagi));
             bool scOk = Same(sc, Candidates().First(c => c.Name == ScrapSource).F) && sc.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Tsugi));
             Expect($"(d) 打ち返し ＝ `compare` の `感電 (シガ×カタ×ソム)` と同じ駒と席（シガは前1）・追い打ち ＝ 光の盾のクビ → ハギ（席はそのまま）・瓦礫 ＝ {ScrapSource}",

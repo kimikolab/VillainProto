@@ -2023,6 +2023,14 @@ public sealed class UnitTally
     /// <c>SaLaterSwings</c> そのうち2振り目以降（溜まった電気が増やした振り・電気鞭も怖気もない）・<c>SaSwingMax</c> 1振りの与ダメの最大（入れ子の鞭の分を除く）・<c>SaChargePeak</c> 蓄電の最大。
     /// </summary>
     public long SaTurnSwings, SaIntSwings, SaBackSwings, SaLaterSwings, SaSwingMax, SaChargePeak;
+    /// <summary>
+    /// 第322期（<b>計数専用</b>・シガの鞭は感電を消さずに放電させる SD）。<b>鞭の持ち主（シガ）の側</b>: <c>SdHitShockTurn</c> ／ <c>SdHitShockInt</c> ／ <c>SdHitShockBack</c>
+    /// 鞭（手番 ／ 割り込み ／ 打ち返し）が当たる前に感電していた敵に入った延べ ／ <c>SdRootPops</c> 鞭の一撃で起点として弾けた敵（規定では感電が消える・SD では残る見込み）／
+    /// <c>SdKept</c> SD で感電を残した ／ <c>SdSkipped</c> 同じ一振りの中で残した敵にまた放電が届いた（弾けさせない）／
+    /// <c>SdWatch</c> 鞭で弾けた敵の見張りを始めた ／ <c>SdWatchOther</c> 次に鞭が入る前にほかの駒の一撃（HP に届いた・放電 ／ 雷 ／ 刻みを除く）が先に入った ／ <c>SdWatchShiga</c> 鞭が先に入った。
+    /// <b>どの駒の側でも</b>（鞭の保持者がいる戦だけ）: <c>TurnsDaunted322</c> 萎縮したまま迎えた手番。
+    /// </summary>
+    public long SdHitShockTurn, SdHitShockInt, SdHitShockBack, SdRootPops, SdKept, SdSkipped, SdWatch, SdWatchOther, SdWatchShiga, TurnsDaunted322;
 
     /// <summary>
     /// 第289期（<b>計数専用</b>）。<b>蓄電の保持者（シガ）の側</b>: <c>ChainIniHist</c>[起点] 敵の感電の連鎖（自分の一撃で起きたものを除く・0 トウ ／ 1 カタ ／ 3 ほかの味方 ／ 4 刻み・出どころ無し ／ 5 敵）／
@@ -3349,6 +3357,8 @@ public sealed class UnitTally
         BoltLoneNominal += o.BoltLoneNominal; BoltDealt += o.BoltDealt; BoltKills += o.BoltKills; BoltOnShocked += o.BoltOnShocked; BoltMuted += o.BoltMuted;
         SaTurnSwings += o.SaTurnSwings; SaIntSwings += o.SaIntSwings; SaBackSwings += o.SaBackSwings; SaLaterSwings += o.SaLaterSwings;   // 第321期
         SaSwingMax = Math.Max(SaSwingMax, o.SaSwingMax); SaChargePeak = Math.Max(SaChargePeak, o.SaChargePeak);
+        SdHitShockTurn += o.SdHitShockTurn; SdHitShockInt += o.SdHitShockInt; SdHitShockBack += o.SdHitShockBack; SdRootPops += o.SdRootPops; SdKept += o.SdKept; SdSkipped += o.SdSkipped;   // 第322期
+        SdWatch += o.SdWatch; SdWatchOther += o.SdWatchOther; SdWatchShiga += o.SdWatchShiga; TurnsDaunted322 += o.TurnsDaunted322;
         AddHist(ref ChargeBySrc, o.ChargeBySrc);
         // 第289期
         ChainOwn += o.ChainOwn; SwAsked += o.SwAsked; SwNoCharge += o.SwNoCharge; SwNoTarget += o.SwNoTarget; SwNested += o.SwNested;
@@ -4390,6 +4400,13 @@ public static class ShockGaugeLabels
     /// <summary>第316期（SF-C ／ SF-D・<b>版のみ</b>）: シガが動ける主目標に怖気づかなかった。<c>ActorId</c> ＝ <c>TargetId</c> ＝ シガ ／ <c>PartnerId</c> ＝ 主目標 ／
     /// <c>Amount</c> 1 ＝ 萎縮していたから（SF-C）／ 2 ＝ 感電していたから（SF-D）。直前にシガの鞭の <c>Attack</c> ／ <c>Damage</c>（「怖気」の代わりに並ぶ）。</summary>
     public const string Unafraid = "怖くない";
+}
+
+/// <summary>第322期（SD・<b>版のみ</b>）: 感電が弾けた（<see cref="BattleEventKind.ShockSpent"/>）の <c>Text</c>。<b>表示専用。</b>規定の弾けは <c>Text</c> ＝ null のまま。</summary>
+public static class ShockSpentLabels
+{
+    /// <summary>シガの鞭で弾けたが、その敵の感電は残った（放電だけ・SD）。<c>ActorId</c> ＝ シガ ／ <c>TargetId</c> ＝ 弾けた敵 ／ <c>Slot</c> ＝ 0（起点）。この後もその敵の帯電の印は残る。</summary>
+    public const string Kept = "残る";
 }
 
 /// <summary>ミサの羽の札（第291期・<see cref="BattleEventKind.Feather"/> の <c>Text</c>）。<b>表示専用。</b>羽の枚数 ＝ 1 ＋ 増えた分。</summary>

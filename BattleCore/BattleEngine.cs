@@ -1222,6 +1222,8 @@ public sealed class BattleContext
         public int PrimBits { get; set; }
         /// <summary>第321期（<b>計数のみ</b>）: 振り始めの与ダメの累計 ／ この振りの中で入れ子に振った同じ駒の鞭の与ダメ（1振りの最大から外す）。</summary>
         public long Dmg0, Nested;
+        /// <summary>第322期（SD）: この一振りで感電を残して弾けた敵（同じ一振りの中ではもう弾けない）。保持者のいない戦では null のまま。</summary>
+        public List<UnitState>? Kept;
     }
 
     /// <summary>
@@ -1229,6 +1231,15 @@ public sealed class BattleContext
     /// 呼び出し側が立てて、鞭の枠（<c>PerformAttackBody</c>）が最初に読んで消す（呼び出し側も振り終えたら消す）。
     /// </summary>
     UnitState? _flurryLater;
+
+    /// <summary>第322期（SD）: 放電だけ（<see cref="TraitId.WhipDischarge"/>）の保持者が戦闘に出たか。<b>いなければ起爆は比較1つで今どおり。</b></summary>
+    bool _sdLive;
+    /// <summary>第322期: 次の <c>ApplyDamage</c> が鞭の一振りの一撃か（鞭の枠が立て、<c>ApplyDamageBody</c> の最初で読んで消す・SD と計数が読む）。</summary>
+    bool _whipHitNext;
+    /// <summary>第322期（SD）: 次の起爆の起点の感電を残す（<c>ApplyDamageBody</c> が立て、<see cref="ShockTrigger"/> の最初の行で読んで消す）。</summary>
+    UnitState? _sdKeepRoot;
+    /// <summary>第322期・<b>計数のみ</b>: 鞭の一撃で起点として弾けた敵の見張り（InstanceId → 鞭の持ち主）。次に鞭が入る前に、ほかの駒の一撃が先に届いたか。</summary>
+    readonly Dictionary<int, UnitState> _sdWatch = new();
 
     /// <summary>第321期: 割り込み ／ 打ち返しの鞭を何回振るか（溜まった電気は回数に `ChargeFlurry` の保持者だけ 1 ＋ 蓄電（4 まで）・ほかは 1）。</summary>
     int FlurryHits(UnitState h) => _chargeLive && h.HasTrait(TraitId.ChargeFlurry) ? 1 + ChargeFlurryTrait.ToHits(h) : 1;
@@ -1497,6 +1508,12 @@ public sealed class BattleContext
         w.Hits.Add(t);
         UnitTally wt = TallyOf(w.Actor);
         wt.WhipHits++;
+        // 第322期・計数のみ: 当たる前に感電していた敵に入った鞭（手番 ／ 割り込み ／ 打ち返し）。
+        if (t.TeamId != w.Actor.TeamId && t.RawCounter(StatusKeys.Shock) > 0)
+        {
+            if (_shockWhipActor == w.Actor) { if (_backswingNow) wt.SdHitShockBack++; else wt.SdHitShockInt++; }
+            else wt.SdHitShockTurn++;
+        }
         if (_chargeLive)
         {
             wt.WhipBase += amount;   // 第288期・計数のみ
@@ -1808,6 +1825,8 @@ public sealed class BattleContext
     /// <param name="rootKind">根の種類（計数のみ）: 0 攻撃などの一撃 ／ 1 刻み ／ 2 出どころの無い削り。</param>
     internal void ShockTrigger(UnitState u, UnitState? initiator, int rootKind, IReadOnlyList<UnitState>? moreRoots = null)
     {
+        UnitState? sdKeep = _sdKeepRoot;   // 第322期（SD）: 起点の感電を残す札（1回の呼び出しにだけ効く・最初の行で読んで消す）
+        _sdKeepRoot = null;
         if (_shockChaining)
         {
             _shockQueue.Enqueue((u, _shockDepth + 1, initiator));
@@ -1829,7 +1848,11 @@ public sealed class BattleContext
             {
                 var (x, d, ini) = _shockQueue.Dequeue();
                 if (x.RawCounter(StatusKeys.Shock) <= 0) continue;   // 既に放電した（1つの駒は1回しか放電しない）
-                x.SetCounter(StatusKeys.Shock, 0);
+                // 第322期（SD）: この鞭の一振りで感電を残して弾けた敵は、同じ一振りの中ではもう弾けない（放電が届いても受けるだけ）。保持者がいなければ比較1つで抜ける。
+                if (_sdLive && _whip?.Kept is { } sdk && sdk.Contains(x)) { TallyOf(_whip.Actor).SdSkipped++; continue; }
+                bool sdKept = sdKeep is not null && d == 0 && x == sdKeep && _whip is not null;
+                if (sdKept) { (_whip!.Kept ??= new List<UnitState>()).Add(x); TallyOf(_whip.Actor).SdKept++; }
+                else x.SetCounter(StatusKeys.Shock, 0);
                 size++;
                 popped?.Add(x);
                 if (_fearSpent.Count > 0) _fearSpent.Remove(x.InstanceId);   // 第316期・計数のみ
@@ -1840,8 +1863,9 @@ public sealed class BattleContext
                 {
                     Kind = BattleEventKind.ShockSpent, Turn = _turn, ActorId = ini?.InstanceId, TargetId = x.InstanceId,
                     Slot = d, HpAfter = Math.Max(0, x.Hp), Team = x.TeamId,
+                    Text = sdKept ? ShockSpentLabels.Kept : null,   // 第322期（SD・表示専用）: 弾けたが感電は残った
                 });
-                Log($"    {x.Name} の感電が弾けた（{(d == 0 ? "起点" : d + " 段目")}）", LogKind.Trigger);
+                Log(sdKept ? $"    {x.Name} の感電が弾けた（起点）——鞭の雷は消えずに残る" : $"    {x.Name} の感電が弾けた（{(d == 0 ? "起点" : d + " 段目")}）", LogKind.Trigger);
                 // 第317期（BD）: 立っている獣の感電が弾けたら、獣は消えて敵の死に数える（連鎖の後に読み手へ渡す）。保持者がいなければ比較1つで抜ける。
                 if (_bdLive && x.IsAlive && BetrayedTrait.IsFodder(x) && StandOwnerOf(x) is { } bso && bso.HasTrait(TraitId.BeastDeathCount))
                 {
@@ -8603,6 +8627,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.LightningRod) || u.HasTrait(TraitId.LightningRodAll)) _rodLive = true;   // 第317期（避雷針）
         if (u.HasTrait(TraitId.BeastDeathCount)) _bdLive = true;           // 第317期（獣の死）
         if (u.HasTrait(TraitId.StoredCharge)) _chargeLive = true;          // 第288期（蓄電の口・雷霆の枠）
+        if (u.HasTrait(TraitId.WhipDischarge)) _sdLive = true;             // 第322期（SD・放電だけ）
         if (u.HasTrait(TraitId.StoredCharge) || u.HasTrait(TraitId.Thunder)) _chainReaders.Add(u);   // 第289期（連鎖の後の口）
         if (IsSparkHolder(u)) { _sparkLive = true; _chainReaders.Add(u); }   // 第307期（ソムの光・連鎖の後の口）
         if (u.HasTrait(TraitId.SparkVeil)) _veilLive = true;              // 第308期（光の衣の計数）
@@ -12025,7 +12050,9 @@ public sealed class BattleContext
         if (whip is not null) first = WhipAmount(whip, target, first);   // 第217期（当てる前の2倍）
         UnitState firstRecv = shield is null ? target : ShieldRecv(shield, target, ref first);
         if (_fireLvLive) NoteFireContact(actor, firstRecv);   // 第242期（燃え広がりの控え・当てる前）
+        if (whip is not null) _whipHitNext = true;          // 第322期（鞭の一撃の札・`ApplyDamageBody` が最初に読んで消す）
         ApplyDamage(firstRecv, first, actor, singleHit: pattern == AttackPattern.Single, pattern: pattern);
+        _whipHitNext = false;
 
         // 適用順を混ぜる。同じ一振りで2体以上落ちるとき、死亡順（墓守の層・破裂の連鎖）が
         // 席番号で決まっていた。巻き込む相手の顔ぶれは変わらない——順番だけ。
@@ -12045,7 +12072,9 @@ public sealed class BattleContext
             if (whip is not null) share = WhipAmount(whip, extra, share);   // 第217期（当てる前の2倍・当たる駒ごと）
             UnitState recv = shield is null ? extra : ShieldRecv(shield, extra, ref share);
             if (_fireLvLive) NoteFireContact(actor, recv);   // 第242期
+            if (whip is not null) _whipHitNext = true;     // 第322期
             ApplyDamage(recv, share, actor, pattern: pattern);
+            _whipHitNext = false;
         }
 
         // 第217期・自己検査用（計数のみ）: 札が「動けるか」を読む時点の値を控える。
@@ -12348,6 +12377,8 @@ public sealed class BattleContext
         // 第214期: 感電の札（1回の呼び出しにだけ効く）。**ここで読んで消す**（逸らしの札と同じ作法）。
         byte shockNote = _shockNext;
         _shockNext = 0;
+        bool whipHit = _whipHitNext;   // 第322期: 鞭の一振りの一撃（1回の呼び出しにだけ効く・ここで読んで消す）
+        _whipHitNext = false;
         bool kuguHeldAtEntry = _grappleLive && target.HasTrait(TraitId.Grapple) && KuguHeld(target);   // 第290期・計数のみ
         bool shockKillerSet = _shockKillerSet;
         UnitState? shockKiller = _shockKiller;
@@ -13448,6 +13479,12 @@ public sealed class BattleContext
         // 第214期: 感電の起爆。**HP に届いた一撃**（この一撃で倒れた駒も）だけがここまで来る——破片が受け切った一撃・受け流し・
         // `lethal: false` で 0 になった一撃は上で返っている。**雷（1）は起爆しない。刻み（2 と `burnTick`）は K2 のときだけ。**
         // 感電が1度も書かれていない戦闘は `_shockLive` の比較1つで抜ける。
+        // 第322期・計数のみ: 鞭で弾けた敵の見張り——次に鞭が入る前に、ほかの駒の一撃（HP に届いた・放電 ／ 雷 ／ 刻みを除く）が先に届いたか。見張りが無ければ件数の比較1つで抜ける。
+        if (_sdWatch.Count > 0 && source is not null && source.TeamId != target.TeamId && shockNote == 0 && !burnTick && _sdWatch.TryGetValue(target.InstanceId, out UnitState? sdw))
+        {
+            if (source != sdw) { TallyOf(sdw).SdWatchOther++; _sdWatch.Remove(target.InstanceId); }
+            else if (whipHit) { TallyOf(sdw).SdWatchShiga++; _sdWatch.Remove(target.InstanceId); }
+        }
         if (_shockLive && target.RawCounter(StatusKeys.Shock) > 0)
         {
             bool tick = shockNote == 2 || burnTick;
@@ -13464,6 +13501,15 @@ public sealed class BattleContext
                     kt.KuguPopHit++;
                     if (source is not null && source.TeamId != target.TeamId) kt.KuguPopHitFoe++;
                     if (kuguHeldAtEntry) kt.KuguPopHitHeld++;
+                }
+                // 第322期: 鞭の一撃で起点として弾けた（計数のみ）。SD の保持者なら、その敵自身の感電を残す札を立てる（`ShockTrigger` が最初の行で読んで消す）。
+                if (whipHit && !tick && source is not null && source.TeamId != target.TeamId && _whip is { } wf && wf.Actor == source)
+                {
+                    UnitTally swt = TallyOf(source);
+                    swt.SdRootPops++;
+                    swt.SdWatch++;
+                    _sdWatch[target.InstanceId] = source;
+                    if (_sdLive && source.HasTrait(TraitId.WhipDischarge)) _sdKeepRoot = target;
                 }
                 ShockTrigger(target, shockKillerSet ? shockKiller : tick ? null : source, tick ? 1 : source is null ? 2 : 0);
             }
@@ -13631,6 +13677,7 @@ public sealed class BattleContext
         if (_rallyLive) BundlePush(actor, outOfTurn: false);   // 第295期（手番の攻撃 ＝ 1つのまとまり・羽が何枚でも1回）
         UnitTally tt = TallyOf(actor);
         tt.TurnsTaken++;
+        if (_whipLive && actor.RawCounter(StatusKeys.Daunted) > 0) tt.TurnsDaunted322++;   // 第322期・計数のみ（萎縮したまま迎えた手番）
         int handEv0 = _events.Count;   // 第239期・**計数のみ**（手番の枠。verbose のときだけ `Hands` に積む）
         try
         {

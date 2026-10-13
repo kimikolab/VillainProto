@@ -61,7 +61,7 @@ static class Shiga321Diag
     internal sealed record Ver(string Name, string Ascii, UnitDef Def);
     internal static readonly Ver[] Vers =
     {
-        new("規定", "base", UnitCatalog.Shiga),
+        new("規定", "base", UnitCatalog.ShigaH321),
         new("SA", "sa", UnitCatalog.ShigaSA),
         new("SA+", "sap", UnitCatalog.ShigaSAp),
         new("SA+k", "sapk", UnitCatalog.ShigaSApk),
@@ -75,8 +75,8 @@ static class Shiga321Diag
     internal static S287.Wave WaveOf(string n) => n switch { "nine" => Waves[3], "nine2" => Waves[4], _ => S307.WaveOf(n) };
     static bool IsElite(S287.Wave w) => w.Name is "近衛" or "大隊" || w.Name.StartsWith("九体", StringComparison.Ordinal);
 
-    static Formation Playtest(string n) => Presets.Playtest.First(r => r.Name == n).F;
-    static Formation Row(string n) => CompareBuilds().First(r => r.Name == n).F;
+    static Formation Playtest(string n) => Pin321(Presets.Playtest.First(r => r.Name == n).F);   // 第322期: シガ ／ ヒサを第321期の規定に固定
+    static Formation Row(string n) => CompareBuildsH321().First(r => r.Name == n).F;
 
     /// <summary>§1-5 の代表台（いまの規定の駒・席は出典のまま）。</summary>
     internal static (string Name, Formation F)[] Boards() => new (string, Formation)[]
@@ -337,7 +337,7 @@ static class Shiga321Diag
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var vers = Pick(only);
-        var rows = CompareBuilds().ToArray();
+        var rows = CompareBuildsH321().ToArray();   // 第322期: 第321期の規定に固定
         int nw = EnemyCatalog.Stages.Count;
         double[,] Grid(UnitDef d)
         {
@@ -374,8 +374,8 @@ static class Shiga321Diag
     {
         var w = WaveOf(waveKey);
         var v = V(ver);
-        var fixedU = new[] { UnitCatalog.Shiga, UnitCatalog.Kata, UnitCatalog.Som };
-        UnitDef Now(UnitDef d) => UnitCatalog.All.FirstOrDefault(x => x.Id == d.Id) ?? d;
+        var fixedU = new[] { UnitCatalog.ShigaH321, UnitCatalog.Kata, UnitCatalog.Som };
+        UnitDef Now(UnitDef d) => PinSH321(UnitCatalog.All.FirstOrDefault(x => x.Id == d.Id) ?? d);   // 第322期: 第321期の規定に固定
         var heal = S287.Heal.Select(d => d.Id).ToHashSet();
         var pool = S287.Pool.Select(Now).Append(UnitCatalog.Tou).Where(d => d.Id is not ("shiga" or "kata" or "som")).GroupBy(d => d.Id).Select(g => g.First()).ToArray();
         var sw = System.Diagnostics.Stopwatch.StartNew();
@@ -513,21 +513,21 @@ static class Shiga321Diag
 
         // ---- 定義
         {
-            bool sa = UnitCatalog.ShigaSA.Traits.SequenceEqual(UnitCatalog.Shiga.Traits.Concat(new[] { TraitId.ChargeUncapped, TraitId.ChargeKeep }));
-            bool sap = UnitCatalog.ShigaSAp.Traits.SequenceEqual(UnitCatalog.Shiga.Traits.Concat(new[] { TraitId.ChargeUncapped, TraitId.ChargeKeep, TraitId.ChargeFlurry }));
-            bool sapk = UnitCatalog.ShigaSApk.Traits.SequenceEqual(UnitCatalog.Shiga.Traits.Concat(new[] { TraitId.ChargeUncapped, TraitId.ChargeFlurry }));
+            bool sa = UnitCatalog.ShigaSA.Traits.SequenceEqual(UnitCatalog.ShigaH321.Traits.Concat(new[] { TraitId.ChargeUncapped, TraitId.ChargeKeep }));
+            bool sap = UnitCatalog.ShigaSAp.Traits.SequenceEqual(UnitCatalog.ShigaH321.Traits.Concat(new[] { TraitId.ChargeUncapped, TraitId.ChargeKeep, TraitId.ChargeFlurry }));
+            bool sapk = UnitCatalog.ShigaSApk.Traits.SequenceEqual(UnitCatalog.ShigaH321.Traits.Concat(new[] { TraitId.ChargeUncapped, TraitId.ChargeFlurry }));
             bool stats = Vers.All(v => v.Def.Id == "shiga" && v.Def.MaxHp == 52 && v.Def.Attack == 9 && v.Def.Speed == 3);
             bool outside = Vers.Skip(1).All(v => !UnitCatalog.All.Contains(v.Def) && !UnitCatalog.Retired.Contains(v.Def));
-            bool texts = Vers.Skip(1).All(v => v.Def.PlusText != UnitCatalog.Shiga.PlusText && v.Def.MinusText == UnitCatalog.Shiga.MinusText);
-            bool none = UnitCatalog.All.All(d => !d.Traits.Contains(TraitId.ChargeUncapped) && !d.Traits.Contains(TraitId.ChargeKeep) && !d.Traits.Contains(TraitId.ChargeFlurry));
+            bool texts = Vers.Skip(1).All(v => v.Def.PlusText != UnitCatalog.ShigaH321.PlusText && v.Def.MinusText == UnitCatalog.ShigaH321.MinusText);
+            bool none = UnitCatalog.All.All(d => (ReferenceEquals(d, UnitCatalog.Shiga) || !d.Traits.Contains(TraitId.ChargeUncapped) && !d.Traits.Contains(TraitId.ChargeKeep)) && !d.Traits.Contains(TraitId.ChargeFlurry));   // 第322期: 規定のシガ（SA）は上限なし ＋ 使わないを持つ
             Expect("定義: SA ＝ 規定 ＋ 上限なし ＋ 使わない ／ SA+ ＝ ＋ 回数に ／ SA+k ＝ 上限なし ＋ 回数に・数値は規定のまま・`All` ／ `Retired` の外・文面の差し替え", sa && sap && sapk && stats && outside && texts, $"SA {sa}・SA+ {sap}・SA+k {sapk}・数値 {stats}・外 {outside}・文面 {texts}");
-            Expect("規定の駒（`All`）は新しい札を1枚も持たない（規定は動かさない）", none, "");
+            Expect("規定の駒（`All`）は新しい札を1枚も持たない（第322期から規定のシガ ＝ SA の2枚を除く）", none, "");
         }
 
         // ---- 攻撃力と回数（蓄電の値ごと）
         {
             var rows = new List<string>(); bool ok = true;
-            foreach (var (def, tag) in new[] { (UnitCatalog.Shiga, "規定"), (UnitCatalog.ShigaSA, "SA"), (UnitCatalog.ShigaSAp, "SA+"), (UnitCatalog.ShigaSApk, "SA+k") })
+            foreach (var (def, tag) in new[] { (UnitCatalog.ShigaH321, "規定"), (UnitCatalog.ShigaSA, "SA"), (UnitCatalog.ShigaSAp, "SA+"), (UnitCatalog.ShigaSApk, "SA+k") })
                 foreach (int c in new[] { 0, 1, 4, 5, 9 })
                 {
                     var u = BattleEngine.Materialize(Formation.Build(front1: def), BattleContext.PlayerTeam)[0];
@@ -543,7 +543,7 @@ static class Shiga321Diag
 
         // ---- 上限なしと割り込みで使わない
         {
-            foreach (var (def, tag, cap) in new[] { (UnitCatalog.Shiga, "規定", true), (UnitCatalog.ShigaSA, "SA", false) })
+            foreach (var (def, tag, cap) in new[] { (UnitCatalog.ShigaH321, "規定", true), (UnitCatalog.ShigaSA, "SA", false) })
             {
                 var ctx = Ctx(Formation.Build(front1: def), Formation.Build(front1: Wall), out var p, out var e);
                 var sh = p[0];
@@ -551,7 +551,7 @@ static class Shiga321Diag
                 int c = StoredChargeTrait.Of(sh);
                 Expect($"{tag}: 感電が7回新しく付くと蓄電 {(cap ? "4（上限・3回は捨てる）" : "7（上限なし）")}", cap ? c == 4 && Tal(ctx, "shiga").ChargeCapped == 3 : c == 7 && Tal(ctx, "shiga").ChargeCapped == 0, $"蓄電 {c}・捨てた {Tal(ctx, "shiga").ChargeCapped}");
             }
-            foreach (var (def, tag, spend) in new[] { (UnitCatalog.Shiga, "規定", true), (UnitCatalog.ShigaSA, "SA", false), (UnitCatalog.ShigaSAp, "SA+", false), (UnitCatalog.ShigaSApk, "SA+k", true) })
+            foreach (var (def, tag, spend) in new[] { (UnitCatalog.ShigaH321, "規定", true), (UnitCatalog.ShigaSA, "SA", false), (UnitCatalog.ShigaSAp, "SA+", false), (UnitCatalog.ShigaSApk, "SA+k", true) })
             {
                 var ctx = Ctx(Formation.Build(back1: def), Formation.Build(front1: Wall, front3: Wall, center: Wall), out var p, out var e);
                 var sh = p[0];
@@ -609,7 +609,7 @@ static class Shiga321Diag
 
         // ---- 打ち返しにも同じ回数
         {
-            foreach (var (def, tag) in new[] { (UnitCatalog.Shiga, "規定"), (UnitCatalog.ShigaSAp, "SA+") })
+            foreach (var (def, tag) in new[] { (UnitCatalog.ShigaH321, "規定"), (UnitCatalog.ShigaSAp, "SA+") })
             {
                 var ctx = Ctx(Formation.Build(front1: def, back3: UnitCatalog.Som), Formation.Build(front1: Wall, front3: Wall, center: Wall), out var p, out var e);
                 var sh = p.First(u => u.Def.Id == "shiga"); var som = p.First(u => u.Def.Id == "som");

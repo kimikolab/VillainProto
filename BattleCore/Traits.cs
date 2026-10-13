@@ -790,7 +790,7 @@ public enum TraitId
     BeastStandLate3,   // 序盤は立たない・T3 まで（WS-a3・ソム・`BeastStand` と組む）: `BeastStandLate` の境を T3 に（T4 から立つ）
     BeastThrowBackfire, // 投げて暴発（WS-b・ソム・`BeastBetray` と組む）: 立った獣が投げた雷を誰も受け止めなかったら（共鳴返し ／ 打ち返し ／ 避雷針のどれにもならなかったら）、雷を今のまま処理した直後に、投げた獣がその場で暴発する（起こし手はソム・光になる・獣の死に数える・倒れた扱いにしない）（engine の `Backfire`）
 
-    // --- 第321期で足した札（シガの版 `UnitCatalog.ShigaSA` ／ `ShigaSAp` ／ `ShigaSApk`・ヒサの版 `HisaHQa` ／ `HisaHQb`・指示書 design/PHASE321_SHIGA_CHARGE_HISA_BURST_SPEC.md）。保持者 0 枚 ---
+    // --- 第321期で足した札（シガの版 `UnitCatalog.ShigaSA` ／ `ShigaSAp` ／ `ShigaSApk`・ヒサの版 `HisaHQa` ／ `HisaHQb`・指示書 design/PHASE321_SHIGA_CHARGE_HISA_BURST_SPEC.md）。第322期から `ChargeUncapped` ／ `ChargeKeep` は規定のシガ、`CommandBurst3` ／ `CommandBurstCap9` は規定のヒサが持つ ---
     ChargeUncapped,    // 蓄電に上限なし（SA〜・シガ・`StoredCharge` と組む）: 蓄電の上限 4 を外す（**札そのものは挙動を持たない**・engine の `GainCharge`）
     ChargeKeep,        // 割り込みで蓄電を使わない（SA ／ SA+・シガ・`ShockWhipFlurry` と組む）: 割り込みの条件「蓄電 1 以上」はそのまま、振り終えても蓄電を減らさない（**札そのものは挙動を持たない**・engine の `ShockWhip`）
     ChargeFlurry,      // 溜まった電気は回数に（SA+ ／ SA+k・シガ・`StoredCharge` と組む）: 蓄電の 1〜4 個目は1つにつき鞭を振る回数 +1、5 個目からは1つにつき攻撃力 +3。手番は `ModifyHitCount`、割り込み ／ 打ち返しは engine の `FlurryHits`。2振り目からは電気鞭も怖気の判定もない
@@ -799,6 +799,9 @@ public enum TraitId
     CommandBurstCap3,  // あふれの上限3（HQ-a ／ HQ-b に足す・壊れの兆しを見て足した版）: 1巡（戦のターン）に吐き出す層は 3 まで。超えた玉は次の巡へ持ち越す（**札そのものは挙動を持たない**・engine の `CommandBurstFire`）
     CommandBurstCap6,  // あふれの上限6: 1巡に 6 層まで
     CommandBurstCap9,  // あふれの上限9: 1巡に 9 層まで
+
+    // --- 第322期で足した札（シガの版 `UnitCatalog.ShigaSD` ／ `ShigaSApSD`・指示書 design/PHASE322_SHIGA_DISCHARGE_SPEC.md）。保持者 0 枚 ---
+    WhipDischarge,     // 放電だけ（SD・シガ・`Scourge` と組む）: 鞭の1振り（手番 ／ 割り込み ／ 打ち返し・連撃の各振り）が当たる前に感電していた敵に入って弾けたら、その敵自身の感電は消さない（放電・連鎖・痺れ ／ 萎縮・連鎖の後の読み手は今のまま・連鎖で弾けたほかの敵は消える・同じ一振りの中ではもう弾けない）（**札そのものは挙動を持たない**・engine の `ShockTrigger`）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -17480,6 +17483,7 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.CommandBurstCap3),          // 第321期（あふれの上限3・印だけ）
         new MarkOnlyTrait(TraitId.CommandBurstCap6),          // 第321期（あふれの上限6・印だけ）
         new MarkOnlyTrait(TraitId.CommandBurstCap9),          // 第321期（あふれの上限9・印だけ）
+        new MarkOnlyTrait(TraitId.WhipDischarge),             // 第322期（放電だけ SD・印だけ）
         new SharePushTrait(TraitId.ShareSin),                 // 第313期（ドハ DP-c の手番）
         new AmplifierTrait(),
         new ContagionTrait(),

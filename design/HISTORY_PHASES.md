@@ -8,6 +8,8 @@ description: 第259期に `CLAUDE.md` の「現状値」節を**逐語で**移�
 
 ## 現状値
 
+**第322期は段0 でシガ ＝ SA・ヒサ ＝ HQ-a9 を規定にした**（指示書は design/PHASE322_SHIGA_DISCHARGE_SPEC.md・報告は design/PHASE322_SHIGA_DISCHARGE.md）。`compare` の規定の列は 0 セル（`docs/balance.md` 差分 0・第321期の SA ／ HQ-a9 の列と一致）——全64行 100 / 91.0 / 89.4 / 83.3 / 83.6・主判定19行の第五波 81.6・歯止めの余裕 +48.4pt・情報セル 77 ／ 27 のまま。旧の規定は `ShigaH321` ／ `HisaH321`（`Common.Pin321` ／ `PinSH321`）。本体のシガの鞭は感電を消さずに放電させる版（SA-SD ／ SA+-SD・`WhipDischarge`）の `compare` は SA-SD 1行2セル・SA+-SD 2行5セル（どれも上がる向き）。
+
 **第321期は版だけの期で、規定は動かしていない**（指示書は design/PHASE321_SHIGA_CHARGE_HISA_BURST_SPEC.md・報告は design/PHASE321_SHIGA_CHARGE_HISA_BURST.md）。`compare` の規定の列は第320期と同じ（`docs/balance.md` 差分 0）——全64行 100 / 91.0 / 89.4 / 83.3 / 83.6・主判定19行の第五波 81.6・歯止めの余裕 +48.4pt・情報セル 77 ／ 27 のまま。段1 のシガの版（SA ／ SA+ ／ SA+k）の `compare` は SA 0 セル・SA+ ／ SA+k 2行4セル（上がる向き）、段2 のヒサの版（HQ-a ／ HQ-b ／ 上限の版6つ）はどれも 0 セル。
 
 ### 第320期まで `CLAUDE.md` の「現状値」にあった索引の段落（第321期に逐語で移した）
