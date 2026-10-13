@@ -1534,3 +1534,15 @@ Discharge   糸玉#14 → 勇者#5  Amount 64  Slot 3  ReceiverDensity 7
 ```
 
 **DemoApp へ**: 段0 は規定（「怖気」が減るだけ・新しい表示は要らない）。DR は版のみ——ポンが G1〜G3 を選んだら規定になる。
+
+## 23. 第327期の追記 —— トウ ＝ DR-a（**規定**）と、粉塵爆発（DX）・電池・隣帯電（**版のみ**）
+
+報告 `design/PHASE327_DUST_BURST.md`。**新しい出来事の種類は足していない。** `ShockGauge` の札を1つ足した（`粉塵爆発`・版だけ）。
+
+- **段0（規定）**: 規定のトウが第326期の DR-a になった——**規定の台本の `Discharge` に `ReceiverDensity`（受け手の濃さ）が入るようになった**（§22 の「規定の台本では常に null」は第327期から成り立たない）。`Amount` は 8 ×（1 ＋ 受け手の濃さ）。
+- **DX（版のみ・`TouDX`）**: 濃さ n の駒か糸玉に放電が届くと、その `Discharge`（と受け手の `Damage`）の**直後**に `ShockGauge 粉塵爆発`（`ActorId` ＝ 放電した駒・`TargetId` ＝ 受け手・`Amount` ＝ 隣1体あたり 8 × n・`Slot` ＝ n）、続いて受け手の隣の駒それぞれの `Damage`（`ActorId` ＝ 受け手——糸玉のこともある）。爆発の `Damage` の後に `ShockSpent` は出ない（爆発は感電を弾けさせない）。受け手が糸玉なら、糸玉は `Damage` を受けず、隣（勇者など）に `Damage` が出る。
+- **糸玉に粉（DX）**: トウの粉が主目標の隣の糸玉にも落ちる——糸玉の `StatusGain`（感電・`PowderRoute` ＝ `Spread`・乾いていた糸玉だけ）と、手番の頭に帯電していた糸玉なら `ShockGauge 濃さ`（`TargetId` ＝ 糸玉）。
+- **電池（版のみ・`KuguBat`）**: 連鎖の後に `SilkBall`（`Text` ＝ `帯電し直した`・`ActorId` ＝ クグ・`Amount` ＝ 個数・`TargetId` なし）。ターンの頭の帯電し直しと同じ札。
+- **隣帯電（版のみ・`SomBc`）**: 背いた召喚獣の `Discharge` の後に、浴びた敵の `StatusGain`（感電・書き手 ＝ ソム）。その敵は同じ連鎖では `ShockSpent` が出ない。
+
+**DemoApp へ**: 段0 は規定（`ReceiverDensity` が規定の台本に出る・第326期の DR の表示をそのまま使える）。DX ／ 電池 ／ 隣帯電は版のみ——試遊の一覧の「版・」の4台（`Presets.Versions`・93〜96 番）で触れる。ポンが X1〜X4 を選んだら規定になる。

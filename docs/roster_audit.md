@@ -35,10 +35,10 @@
 | 8 | 熾のホタ | +0.00 | +1.44 | 転生 | 3 | 0 | 37.0 | 化ける | 左下（送り先を選べば働く） |  | Pyre / PyreStage / PyreBurnout / PyreEmbers / CallFire / PyreLance / PyreCritical / PyreMend / EmbersChain / PyreOverflow / PyreFed / BurnoutHeavy |
 | 9 | 疫みのラウ | +0.00 | +1.47 | 転生 | 3 | 0 | 13.0 | どこでも同じ | 右下（選んでも働かない） |  | Contagion / Touch / TouchLeak |
 | 10 | 移り木のシオ | +0.00 | +8.54 | 残す | 1 | 0 | 11.0 | どこでも同じ | 上（単独で強い） |  | Drifter / Regroup / DrifterMend / RegroupTend / RegroupTendSelf / ShioStage / Retreat / DriftSurge / RetreatHalf |
-| 11 | 錯乱のササ | +0.00 | +10.02 | 残す | 1 | 0 | 20.0 | 化ける | 上（単独で強い） |  | Brace |
+| 11 | 錯乱のササ | +0.00 | +10.02 | 残す | 1 | 0 | 19.0 | 化ける | 上（単独で強い） |  | Brace |
 | 12 | 見境なしのミサ | +0.42 | +1.55 | 残す | 3 | 0 | 25.0 | 化ける | 上（単独で強い） |  | Rupture / RuptureScar / RuptureKeep / Feathers / FeatherLoss / FeatherMarkLayer |
 | 13 | 泥人形ムド | +1.14 | +16.35 | 残す | 8 | 0 | 18.0 | 化ける | 上（単独で強い） |  | Erupt / Smear / Hex |
-| 14 | 痺れ粉のトウ | +1.50 | +3.87 | 残す | 2 | 0 | 21.0 | 化ける | 上（単独で強い） |  | ChargedPowder / ChargedPowderLeak / ShockStunHalf / ChargedPowderSpread / ShockDaunt / PowderDense / PowderDenseKeep / PowderDenseBurn / PowderContagion / PowderMarkFoeOnly |
+| 14 | 痺れ粉のトウ | +1.50 | +3.87 | 残す | 2 | 0 | 21.0 | 化ける | 上（単独で強い） |  | ChargedPowder / ChargedPowderLeak / ShockStunHalf / ChargedPowderSpread / ShockDaunt / PowderDense / PowderDenseKeep / PowderDenseBurn / PowderContagion / PowderMarkFoeOnly / DenseConduct |
 | 15 | 電気鞭のシガ | +3.88 | — | — | 3 | 1 | 14.0 | どこでも同じ | — |  | Scourge / Shame / Lash / LiveWire / ScourgeShock / StoredCharge / ShockWhipFlurry / ShockWhipChain / FearNoStun / ScourgeDaunt / BetrayBackswing / ChargeUncapped / ChargeKeep / ScourgeFearDoubled |
 | 16 | 逃亡兵セロ | +4.54 | +1.42 | 転生 | 12 | 0 | 11.0 | どこでも同じ | 右下（選んでも働かない） | +0.3pt | Evade / EvadeSwap / EvadeQuick / EvadeDrift / LastDodge / Decoy / EvadeMoveShot |
 | 17 | 軋みのヨミ | +4.58 | +10.38 | 残す | 3 | 0 | 16.0 | どこでも同じ | 上（単独で強い） |  | Displaced / CreakSweep / KillImpact / ImpactTailwind |
@@ -48,16 +48,16 @@
 | 21 | 毒吐きのスィド | +5.00 | +15.82 | 残す | 4 | 0 | 13.0 | どこでも同じ | 上（単独で強い） |  | Spew / VenomHeavy / Numb |
 | 22 | 萎縮のクビ | +5.25 | -12.52 | 転生 | 2 | 0 | 27.0 | 化ける | 左下（送り先を選べば働く） | +2.3pt | Huddle / Daunt / DauntLeak |
 | 23 | 火選りのヒヨ | +5.53 | -12.35 | 転生 | 4 | 0 | 19.0 | 化ける | 左下（送り先を選べば働く） |  | Favor / FireConvert / FireStoke / TurnGift / StokeStageAtk / GiftQuiet / SparkCatch / SparkUnleash / FavorLevel / GiftHoard / GiftOrder |
-| 24 | 廃棄聖騎士ガルド | +5.59 | +15.59 | 残す | 37 | 0 | 11.0 | どこでも同じ | 上（単独で強い） |  | Guardian / Stoic / Parry / LastStandHold |
+| 24 | 廃棄聖騎士ガルド | +5.60 | +15.59 | 残す | 37 | 0 | 11.0 | どこでも同じ | 上（単独で強い） |  | Guardian / Stoic / Parry / LastStandHold |
 | 25 | 澱み喰いのヴィオ | +6.00 | +2.62 | 残す | 2 | 0 | 19.0 | 化ける | 上（単独で強い） |  | Blightfed / Spit |
 | 26 | 鱗のウロ | +7.29 | +4.52 | 残す | 3 | 1 | 9.0 | どこでも同じ | 上（単独で強い） |  | Scale |
 | 27 | 背かれのソム | +7.38 | -13.43 | 転生 | 1 | 1 | 14.0 | どこでも同じ | 右下（選んでも働かない） |  | BetrayedShockNoThunder / SparkRain / SparkVeil / BeastBurstAlways / SwarmCall / EmergencyCall / EmergencyFocus / BeastDeathCount / BeastStand / BeastBetray / BeastResonance / BeastResonanceArc / BeastThrowBackfire |
-| 28 | 毒喰らいのベニ | +8.06 | +2.11 | 残す | 2 | 0 | 9.0 | どこでも同じ | 上（単独で強い） |  | Inverse / Guren / Kindle / Taint / InverseLeak / GurenOpeningBurn |
-| 29 | 分かちのドハ | +8.35 | +9.03 | 残す | 5 | 1 | 27.0 | 化ける | 上（単独で強い） |  | Sharer / SharerArmored / ShareBack / SharerNoDull / SharePush / SharePushPower / SharePushStrikers |
+| 28 | 分かちのドハ | +8.35 | +9.03 | 残す | 5 | 1 | 27.0 | 化ける | 上（単独で強い） |  | Sharer / SharerArmored / ShareBack / SharerNoDull / SharePush / SharePushPower / SharePushStrikers |
+| 29 | 毒喰らいのベニ | +8.69 | +2.11 | 残す | 2 | 0 | 9.0 | どこでも同じ | 上（単独で強い） |  | Inverse / Guren / Kindle / Taint / InverseLeak / GurenOpeningBurn |
 | 30 | 禍導のカタ | +9.38 | — | — | 1 | 1 | 14.0 | どこでも同じ | — |  | Thunder / ThunderLeak / ThunderPath / ShockStunHalf / Thundercloud / ThundercloudKeep / ThundercloudUncapped / ShockDaunt / ThunderPowderReturn |
 | 31 | 突き返しのハネ | +9.50 | -3.59 | 転生 | 1 | 0 | 42.0 | 化ける | 左下（送り先を選べば働く） | 対照 0.0pt | Rebound / Overrun / Disarray / Blast / Spring / Tailwind / TailwindFighter / SpringGuard / SpringStay / SpringRow / Landing / SpringStrike / SpringDaunt / BlastReach / BlastStay |
 | 32 | 縛めのクグ | +9.71 | +5.91 | 残す | 3 | 0 | 26.0 | 化ける | 上（単独で強い） |  | Grapple / Thread / ThreadCharge / WebCharge / ThreadPowderFlow |
-| 33 | 刻みのノミ | +11.50 | +12.05 | 残す | 7 | 2 | 6.0 | どこでも同じ | 上（単独で強い） |  | Pellet / Carve / CarveOnce / Fixate |
+| 33 | 刻みのノミ | +11.50 | +12.05 | 残す | 7 | 2 | 7.0 | どこでも同じ | 上（単独で強い） |  | Pellet / Carve / CarveOnce / Fixate |
 | 34 | 焼け残りのボルグ | +11.56 | -4.51 | 転生 | 13 | 0 | 51.0 | 化ける | 左下（送り先を選べば働く） | 0.0pt | Splash / FireFeed / Cinder / FireArmor / FireSplash / SelfKindle / FireMend / FireWardAll / FireLevel / CinderWide / FireKeep / FireSpreadCap / FireUnleash / FoeFireLevel / FoeFireTick / FoeFireBrittle / FoeFireSpread / AllyFireTick / RadiateCall / CallFull / UnleashBlaze / BlazeSolo / KindleGuard / BlazeHoard / KindleOpen / BlazeFoeSurgeMax |
 | 35 | 瘴気袋のグザ | +12.64 | +21.36 | 残す | 8 | 0 | 10.0 | どこでも同じ | 上（単独で強い） |  | Miasma |
 | 36 | 鬨の号令ガン | +14.47 | +20.85 | 残す | 10 | 2 | 9.0 | どこでも同じ | 上（単独で強い） | −1.0pt | Rally / Reveille |
@@ -84,4 +84,4 @@
 - `checkup ideal` が値を返した駒: 51 / 52 （返さないのは `CompareBuilds()` に在席 0 枠の駒だけ）
 - `stage catalog` が引けた駒: 51 / 52
 
-所要 763.2 秒（うち `stage catalog` が 723.8 秒）。
+所要 581.2 秒（うち `stage catalog` が 546.6 秒）。

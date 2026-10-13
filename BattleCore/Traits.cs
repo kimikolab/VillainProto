@@ -821,6 +821,11 @@ public enum TraitId
     DenseConduct,       // 濃い駒は雷をよく通す（DR-a・トウ・`PowderDense` と組む）: 放電1回の量は 8 ×（1 ＋ 受け手の濃さ）——出し手の濃さは量に効かない（焼は今のまま）（**札そのものは挙動を持たない**・engine の `Discharge`）
     DenseConductBoth,   // 濃さは出し手にも受け手にも（DR-b・トウ・`PowderDense` と組む）: 放電1回の量は 8 ×（1 ＋ 出し手の濃さ ＋ 受け手の濃さ）（**札そのものは挙動を持たない**・engine の `Discharge`）
 
+    // --- 第327期で足した札（指示書 design/PHASE327_DUST_BURST_SPEC.md）。DX はトウ、電池はクグ、隣帯電はソムの版（保持者 0 枚） ---
+    DustBurst,          // 粉塵爆発（DX・トウ・`PowderDense` と組む）: 放電が濃さ n ≧ 1 の駒か糸玉に届くと、受け手の隣の駒すべてに 8 × n（敵味方を問わない・受け手自身には入れない・爆発は感電を弾けさせない・爆発は爆発を呼ばない）。粉は主目標の隣の糸玉にも落ちる（**札そのものは挙動を持たない**・engine の `Discharge` ／ `ChargedPowderTrait`）
+    SilkBattery,        // 電池（クグ・糸玉の持ち主）: クグが帯電している間、連鎖で弾けたクグの糸玉をその連鎖が終わった直後に帯電し直す（クグの帯電は消費しない）（**札そのものは挙動を持たない**・engine の `ShockTrigger`）
+    BeastChargeSpread,  // 隣帯電（ソム・生きている間）: 背いた召喚獣が弾けた放電は、帯電していない隣の駒も帯電させる（新しく帯電した駒は同じ連鎖では弾けない・第323期の伝染と同じ形）（**札そのものは挙動を持たない**・engine の `Discharge`）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -5743,6 +5748,8 @@ public sealed class ChargedPowderTrait : Trait
                     }
                     ctx.PowderFell(self, n, PowderRoute.Spread);   // 第323期
                 }
+        // 第327期（DX）: 舞う粉は主目標の隣の糸玉にも落ちる。保持者がいなければ札の問い1つで抜ける。
+        if (self.HasTrait(TraitId.ChargedPowderSpread) && self.HasTrait(TraitId.DustBurst)) ctx.PowderOnBalls(self, target);
         if (!self.HasTrait(TraitId.ChargedPowderLeak)) return;
         foreach (UnitState a in ctx.LivingMembers(self.TeamId))
             if (a != self && FormationRules.AreAdjacent(self, a))
@@ -17531,6 +17538,9 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.ScourgeFearDoubled),        // 第326期（段0 2倍で入れた的は怖くない・印だけ）
         new MarkOnlyTrait(TraitId.DenseConduct),              // 第326期（濃い駒は雷をよく通す DR-a・印だけ）
         new MarkOnlyTrait(TraitId.DenseConductBoth),          // 第326期（濃さは出し手にも受け手にも DR-b・印だけ）
+        new MarkOnlyTrait(TraitId.DustBurst),                 // 第327期（粉塵爆発 DX・印だけ）
+        new MarkOnlyTrait(TraitId.SilkBattery),               // 第327期（電池・クグ・印だけ）
+        new MarkOnlyTrait(TraitId.BeastChargeSpread),         // 第327期（隣帯電・ソム・印だけ）
         new SharePushTrait(TraitId.ShareSin),                 // 第313期（ドハ DP-c の手番）
         new AmplifierTrait(),
         new ContagionTrait(),

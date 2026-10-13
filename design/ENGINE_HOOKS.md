@@ -1313,3 +1313,15 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **表示専用**: `BattleEvent.ReceiverDensity`（`Discharge` の受け手の濃さ・`_drLive` のときだけ・0 なら null）。並びは `design/PHASE291_CODEX_MEMO.md` §22。
 - **計数のみ**: シガの `Fear326Judged` ／ `Fear326PreOnly` ／ `Fear326PostOnly` ／ `Fear326Both` ／ `Fear326PreWhy[64]` ／ `Fear326PostWhy[64]`（怖気の判定の入口で、主目標の当たる前 ／ 当たった後の「動けない」の中身 `BoundWhy`）・`Fear326CowerDoubled` ／ `Fear326CowerDoubledShock`（2倍の後に怖気づいた）・`Fear326DoubledSpared`。トウの側の `Dr326N` ／ `Nom` ／ `Dealt` ／ `RecvDens` ／ `RecvDense` ／ `SendDens`［受け手 3 × 出し手 4］・`Dr326Inverted` ／ `Dr326Max`（HP を減らす放電1本ごと・`NoteDr326`・`_powderLive` の戦だけ）。
 - 器具: `dense326`。乱数の口は足していない（`PickOne(` の数は第325期と同じ）。
+
+## 第327期 —— 段0（DR-a をトウの規定に）／ 粉塵爆発（DX）・電池・隣帯電（版）
+
+- **段0**: 規定のトウ `UnitCatalog.Tou` ＝ `TouH326`（第325〜326期の規定を明示の定義に）＋ `DenseConduct`。engine は変えていない（第326期の `_drLive` ／ `_drRecvOnly` の口がそのまま規定の戦で立つ）。第326期の版 `TouDRa` ／ `TouDRb` は `TouH326` から作る。
+- **`_shockNext` ＝ 5（粉塵爆発）**: `ApplyDamageBody` の起爆の段は雷霆（4）と同じく何もしない（**爆発は感電を弾けさせない**）。`BurnHitEligible` も放電（3）と同じく外す。
+- **DX の札 `DustBurst`**（`MarkOnlyTrait`・`TouDX`・保持者 0 枚）: `NotePowderHolder` が `_dxLive` を立てる（`ChargedPowder` も持つ駒だけ）。`Discharge`（受け手を糸の先へ移した**後**・DR の量を決めた後）／ `ThreadDischarge` ／ `SilkBallDischarge` が、届いた時点の受け手の濃さ n を控え、受け手の分を入れた**後**に `DustExplode(出し手, 受け手, n, 起こし手)` を1回呼ぶ（ベニの反転で回復になった放電でも呼ぶ）。`DustExplode` は受け手の隣の生きている駒すべてに `ApplyDamage(隣, 8 × n, 受け手, isFriendlyFire: true)`（撃破者 ＝ 連鎖を起こした一撃の主・結界の内側は `InverseHeal`）。受け手自身には入れない。爆発は放電ではないので爆発を呼ばない。
+- **糸玉に粉**: `ChargedPowderTrait` が粉を舞わせた後、`DustBurst` の保持者なら `ctx.PowderOnBalls(トウ, 主目標)`——主目標と同じ陣営で隣の糸玉に `MarkShock`（経路 `Spread`）＋ `PowderFell`。`PowderHead` は `_dxLive` の戦だけ糸玉も控える（トウの手番の頭に帯電していた糸玉は濃さ +1）。`PowderPopAfter` の焼は糸玉を外す（HP が無い）。
+- **電池の札 `SilkBattery`**（`KuguBat`）: `_batLive`。`ShockTrigger` の外側の1回で弾けた糸玉を控え、連鎖の後（`finally` の直後）に `SilkBatteryRecharge`——持ち主のクグが札を持ち、生きていて帯電していれば糸玉を帯電し直す（クグの帯電は消費しない）。
+- **隣帯電の札 `BeastChargeSpread`**（`SomBc`）: `_bcHolder`（最初の保持者）。`Discharge` で出し手が背いた召喚獣（保持者と違う陣営）で保持者が生きていれば、浴びる前に帯電していなかった受け手が生きていれば `BeastChargeNeighbor`（`MarkShock(受け手, ソム)`・`_bcFresh` に入れて同じ連鎖では弾けない・第323期の `_tpFresh` と同じ形）。
+- **表示専用**: `ShockGaugeLabels.DustBurst`（「粉塵爆発」）。電池の帯電し直しは既存の `SilkBall` ／ `SilkBallLabels.Recharge`（`ActorId` ＝ クグ・`TargetId` なし）。並びは `design/PHASE291_CODEX_MEMO.md` §23。
+- **計数のみ**: トウの `Dx327N[4]` ／ `Dx327Dens[4]` ／ `Dx327Dealt[12]` ／ `Dx327Hits[12]` ／ `Dx327Kills[3]` ／ `Dx327Max` ／ `Dx327Inverted` ／ `Dx327BallPowder` ／ `Dx327BallThick` ／ `Dx327BallCharged` ／ `Dx327BallDensMax`・クグの `Bat327Recharged` ／ `Bat327Chains` ／ `Bat327Dry`・ソムの `Bc327New[3]` ／ `Bc327FreshSkip` ／ `Bc327Popped`。
+- 器具: `dust327`。乱数の口は足していない（`PickOne(` の数は第326期と同じ）。

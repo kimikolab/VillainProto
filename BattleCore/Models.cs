@@ -2060,6 +2060,17 @@ public sealed class UnitTally
     /// </summary>
     public long[]? Dr326N, Dr326Nom, Dr326Dealt, Dr326RecvDens, Dr326RecvDense, Dr326SendDens;
     public long Dr326Inverted, Dr326Max;
+    /// <summary>
+    /// 第327期（<b>計数専用</b>・粉の保持者（トウ）の側・粉塵爆発 DX ／ 電池 ／ 隣帯電）。誰も読んで分岐しない。
+    /// <c>Dx327N</c>[受け手] 爆発の回数（受け手 0 味方 ／ 1 敵（喚ばれたもの・糸玉を除く）／ 2 背いた召喚獣 ／ 3 糸玉）／ <c>Dx327Dens</c>[受け手] 爆ぜた濃さの和 ／
+    /// <c>Dx327Dealt</c>[受け手 × 3 ＋ 浴びた駒] 爆発で減らした HP（浴びた駒 0 味方 ／ 1 敵（喚ばれたもの・糸玉を除く）／ 2 背いた召喚獣）／ <c>Dx327Hits</c>[同じ添字] 浴びた回数 ／
+    /// <c>Dx327Inverted</c> ベニの反転で回復になった爆発の1発 ／ <c>Dx327Max</c> 1回の爆発（受け手1つぶんの合計）の最大 ／ <c>Dx327Kills</c> 爆発で倒れた駒（味方 ／ 敵 ／ 召喚獣）。
+    /// <c>Dx327BallPowder</c> 糸玉に落ちた粉 ／ <c>Dx327BallThick</c> そのうち濃さ +1 ／ <c>Dx327BallCharged</c> そのうち乾いていた糸玉を帯電させた ／ <c>Dx327BallDensMax</c> 糸玉の濃さの最大。
+    /// <c>Bat327Recharged</c> 電池で帯電し直した糸玉 ／ <c>Bat327Chains</c> 電池が働いた連鎖 ／ <c>Bat327Dry</c> 弾けた糸玉があったがクグが帯電していなかった連鎖。
+    /// <c>Bc327New</c>[0 味方 ／ 1 敵 ／ 2 召喚獣] 隣帯電で新しく帯電した駒 ／ <c>Bc327FreshSkip</c> 同じ連鎖で弾けずに飛ばした ／ <c>Bc327Popped</c> 隣帯電で帯電した敵が後で弾けた。
+    /// </summary>
+    public long[]? Dx327N, Dx327Dens, Dx327Dealt, Dx327Hits, Dx327Kills, Bc327New;
+    public long Dx327Inverted, Dx327Max, Dx327BallPowder, Dx327BallThick, Dx327BallCharged, Dx327BallDensMax, Bat327Recharged, Bat327Chains, Bat327Dry, Bc327FreshSkip, Bc327Popped;
 
     /// <summary>
     /// 第289期（<b>計数専用</b>）。<b>蓄電の保持者（シガ）の側</b>: <c>ChainIniHist</c>[起点] 敵の感電の連鎖（自分の一撃で起きたものを除く・0 トウ ／ 1 カタ ／ 3 ほかの味方 ／ 4 刻み・出どころ無し ／ 5 敵）／
@@ -3405,6 +3416,9 @@ public sealed class UnitTally
         TdKataMoves += o.TdKataMoves; TdKataMoved += o.TdKataMoved; TdKataDry += o.TdKataDry; TdKuguFlowed += o.TdKuguFlowed; TdKuguKept += o.TdKuguKept;
         AddHist(ref Dr326N, o.Dr326N); AddHist(ref Dr326Nom, o.Dr326Nom); AddHist(ref Dr326Dealt, o.Dr326Dealt); AddHist(ref Dr326RecvDens, o.Dr326RecvDens);   // 第326期
         AddHist(ref Dr326RecvDense, o.Dr326RecvDense); AddHist(ref Dr326SendDens, o.Dr326SendDens); Dr326Inverted += o.Dr326Inverted; Dr326Max = Math.Max(Dr326Max, o.Dr326Max);
+        AddHist(ref Dx327N, o.Dx327N); AddHist(ref Dx327Dens, o.Dx327Dens); AddHist(ref Dx327Dealt, o.Dx327Dealt); AddHist(ref Dx327Hits, o.Dx327Hits); AddHist(ref Dx327Kills, o.Dx327Kills); AddHist(ref Bc327New, o.Bc327New);   // 第327期
+        Dx327Inverted += o.Dx327Inverted; Dx327Max = Math.Max(Dx327Max, o.Dx327Max); Dx327BallPowder += o.Dx327BallPowder; Dx327BallThick += o.Dx327BallThick; Dx327BallCharged += o.Dx327BallCharged; Dx327BallDensMax = Math.Max(Dx327BallDensMax, o.Dx327BallDensMax);
+        Bat327Recharged += o.Bat327Recharged; Bat327Chains += o.Bat327Chains; Bat327Dry += o.Bat327Dry; Bc327FreshSkip += o.Bc327FreshSkip; Bc327Popped += o.Bc327Popped;
         AddHist(ref ChargeBySrc, o.ChargeBySrc);
         // 第289期
         ChainOwn += o.ChainOwn; SwAsked += o.SwAsked; SwNoCharge += o.SwNoCharge; SwNoTarget += o.SwNoTarget; SwNested += o.SwNested;
@@ -4461,6 +4475,11 @@ public static class ShockGaugeLabels
     public const string DensePop = "濃さ・弾けた";
     /// <summary>濃い雷が弾けた本人も焼いた（焼の版）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ 弾けた駒 ／ <c>Amount</c> ＝ 量（8 × n）／ <c>Slot</c> ＝ 濃さ n。直後に本人の <c>Damage</c>。</summary>
     public const string DenseBurn = "濃さ・焼いた";
+    /// <summary>
+    /// 第327期（粉塵爆発 DX・<b>版のみ</b>）: 放電が濃さ n（≧1）の駒か糸玉に届き、その粉が爆ぜた。<c>ActorId</c> ＝ 放電した駒 ／ <c>TargetId</c> ＝ 受け手（爆ぜた駒・糸玉）／
+    /// <c>Amount</c> ＝ 隣1体あたりの量（8 × n）／ <c>Slot</c> ＝ 濃さ n。直前に受け手への <c>Discharge</c>、直後に受け手の隣の駒それぞれの <c>Damage</c>（爆発は感電を弾けさせない）。
+    /// </summary>
+    public const string DustBurst = "粉塵爆発";
     /// <summary>粉の印が付いた（TP の版だけ・倒れるまで残る）。<c>ActorId</c> ＝ トウ（TP-b で伝染から付いたときは放電した駒）／ <c>TargetId</c> ＝ 印の付いた駒。</summary>
     public const string PowderMark = "粉の印";
     /// <summary>粉の印のある駒の放電で、帯電していない隣が帯電した（TP）。<c>ActorId</c> ＝ 放電した駒 ／ <c>TargetId</c> ＝ 新しく帯電した駒。直前にその駒の感電の <c>StatusGain</c>（<c>SpreadFromId</c> ＝ 放電した駒）。同じ連鎖ではもう弾けない。</summary>

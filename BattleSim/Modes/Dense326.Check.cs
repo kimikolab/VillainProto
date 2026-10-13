@@ -35,13 +35,13 @@ static partial class Dense326Diag
                 && S.Id == O.Id && S.MaxHp == O.MaxHp && S.Attack == O.Attack && S.Speed == O.Speed && S.Flavor == O.Flavor;
             bool sap = UnitCatalog.ShigaSApF.Traits.SequenceEqual(UnitCatalog.ShigaSAp.Traits.Append(TraitId.ScourgeFearDoubled)) && UnitCatalog.ShigaSApF.MinusText.Contains(UnitCatalog.ShigaDoubledBoundClause, StringComparison.Ordinal);
             bool sd = UnitCatalog.ShigaSD.Traits.SequenceEqual(O.Traits.Append(TraitId.WhipDischarge));
-            var T = UnitCatalog.Tou;
+            var T = UnitCatalog.TouH326;   // 第327期: 第326期の規定のトウ（DR-a の前）
             bool dra = UnitCatalog.TouDRa.Traits.SequenceEqual(T.Traits.Append(TraitId.DenseConduct)) && UnitCatalog.TouDRa.PlusText.Contains("濃い駒は浴びる雷が重くなり、弾けた本人も焼く", StringComparison.Ordinal);
             bool drb = UnitCatalog.TouDRb.Traits.SequenceEqual(T.Traits.Append(TraitId.DenseConductBoth)) && UnitCatalog.TouDRb.PlusText.Contains("濃い駒は放つ雷も浴びる雷も重くなり、弾けた本人も焼く", StringComparison.Ordinal);
             bool body = new[] { UnitCatalog.TouDRa, UnitCatalog.TouDRb }.All(d => d.Id == T.Id && d.MaxHp == T.MaxHp && d.Attack == T.Attack && d.Speed == T.Speed && d.MinusText == T.MinusText);
             var vs = new[] { O, UnitCatalog.ShigaSApF, UnitCatalog.TouDRa, UnitCatalog.TouDRb };
-            bool outside = vs.All(d => !UnitCatalog.Everyone.Contains(d)) && UnitCatalog.All.Contains(S) && UnitCatalog.All.Contains(T) && UnitCatalog.All.Count == 52
-                && UnitCatalog.Everyone.Where(d => d != S).All(d => !d.Traits.Contains(TraitId.ScourgeFearDoubled)) && UnitCatalog.Everyone.All(d => !d.Traits.Contains(TraitId.DenseConduct) && !d.Traits.Contains(TraitId.DenseConductBoth));
+            bool outside = vs.All(d => !UnitCatalog.Everyone.Contains(d)) && UnitCatalog.All.Contains(S) && UnitCatalog.All.Contains(UnitCatalog.Tou) && UnitCatalog.All.Count == 52
+                && UnitCatalog.Everyone.Where(d => d != S).All(d => !d.Traits.Contains(TraitId.ScourgeFearDoubled)) && UnitCatalog.Everyone.All(d => (d == UnitCatalog.Tou || !d.Traits.Contains(TraitId.DenseConduct)) && !d.Traits.Contains(TraitId.DenseConductBoth));   // 第327期: 規定のトウが DR-a の札を持つ
             Expect("定義: 規定のシガ ＝ 第325期の規定（`ShigaH325`）＋ 段0 の札・文面はマイナスの括弧だけ・SA+（段0 入り）・SA-SD は旧の規定から・DR-a ／ DR-b ＝ 規定のトウ ＋ 札（濃さの句を差し替え）・版は `Everyone` の外・`All` 52 枚",
                 shiga && sap && sd && dra && drb && body && outside, $"シガ {shiga}・SA+ {sap}・SD {sd}・DR-a {dra}・DR-b {drb}・体 {body}・外 {outside}");
         }
@@ -51,7 +51,7 @@ static partial class Dense326Diag
             var S = UnitCatalog.Shiga;
             bool pin = ReferenceEquals(PinS325(S), UnitCatalog.ShigaH325) && ReferenceEquals(PinS325(UnitCatalog.Tou), UnitCatalog.Tou)
                 && ReferenceEquals(Pin324(Formation.Build(front1: S, front3: UnitCatalog.Tou))[0], UnitCatalog.ShigaH325) && ReferenceEquals(Pin324(Formation.Build(front1: S, front3: UnitCatalog.Tou))[1], UnitCatalog.TouH324)
-                && ReferenceEquals(Pin325(Formation.Build(front1: S, front3: UnitCatalog.Tou))[1], UnitCatalog.Tou)
+                && ReferenceEquals(Pin325(Formation.Build(front1: S, front3: UnitCatalog.Tou))[1], UnitCatalog.TouH326)   // 第327期: `Pin325` はトウも第326期の規定へ
                 && ReferenceEquals(PinSH321(S), UnitCatalog.ShigaH321) && ReferenceEquals(PinSS318(S), UnitCatalog.ShigaH318) && ReferenceEquals(PinS317(S), UnitCatalog.ShigaH318) && ReferenceEquals(PinDS316(S), UnitCatalog.ShigaSWa)
                 && CompareBuildsH325().Select(r => r.F).SelectMany(f => f.Occupied()).All(o => !ReferenceEquals(o.Def, S))
                 && PlaytestH324.Select(r => r.F).SelectMany(f => f.Occupied()).All(o => !ReferenceEquals(o.Def, S));
@@ -91,7 +91,7 @@ static partial class Dense326Diag
         //      敵: 前1（出し手・帯電・濃さ s）と中央（受け手・乾いている・濃さ r）。味方: 後3 にトウの版（保持者）。前1 を味方の一撃で弾けさせる。
         {
             const int s = 3, r = 5;
-            foreach (var (def, tag, want) in new[] { (UnitCatalog.Tou, "規定", 8 * (1 + s)), (UnitCatalog.TouDRa, "DR-a", 8 * (1 + r)), (UnitCatalog.TouDRb, "DR-b", 8 * (1 + s + r)) })
+            foreach (var (def, tag, want) in new[] { (UnitCatalog.TouH326, "規定", 8 * (1 + s)), (UnitCatalog.TouDRa, "DR-a", 8 * (1 + r)), (UnitCatalog.TouDRb, "DR-b", 8 * (1 + s + r)) })
             {
                 var ctx = T323.Ctx(Formation.Build(back3: def, front1: Mate), Formation.Build(front1: Wall, center: Wall), out var p, out var e);
                 var ef = T323.Seat(e, 0); var ec = T323.Seat(e, 2);
@@ -109,7 +109,7 @@ static partial class Dense326Diag
                     $"放電 {string.Join(",", d)}・焼 {burned}・帳簿 {H(tt.Dr326N, 7)} 本 ／ 受け手の濃さ {H(tt.Dr326RecvDens, 7)}・表示 {string.Join(",", rds.Select(x => x?.ToString() ?? "null"))}");
             }
             // 味方の側（敵味方を問わない）: 味方の前1（帯電・濃さ s）が敵の一撃で弾けて、味方の中央（濃さ r）へ
-            foreach (var (def, tag, want) in new[] { (UnitCatalog.Tou, "規定", 8 * (1 + s)), (UnitCatalog.TouDRa, "DR-a", 8 * (1 + r)), (UnitCatalog.TouDRb, "DR-b", 8 * (1 + s + r)) })
+            foreach (var (def, tag, want) in new[] { (UnitCatalog.TouH326, "規定", 8 * (1 + s)), (UnitCatalog.TouDRa, "DR-a", 8 * (1 + r)), (UnitCatalog.TouDRb, "DR-b", 8 * (1 + s + r)) })
             {
                 var ctx = T323.Ctx(Formation.Build(back1: def, front1: Mate, center: Mate), Formation.Build(front1: Wall), out var p, out var e);
                 var af = T323.Seat(p, 0); var ac = T323.Seat(p, 2);
@@ -121,7 +121,7 @@ static partial class Dense326Diag
                 Expect($"{tag}（味方の側）: 濃さ {s} の味方が弾けて、濃さ {r} の隣の味方へ放電 {want}（敵味方を問わない）", d.Count == 1 && d[0] == want, $"放電 {string.Join(",", d)}");
             }
             // 糸: クグ（帯電・濃さ s）の放電は糸の先の敵（濃さ r）へ——DR では糸の先の敵の濃さが乗る
-            foreach (var (def, tag, want) in new[] { (UnitCatalog.Tou, "規定", 8 * (1 + s)), (UnitCatalog.TouDRa, "DR-a", 8 * (1 + r)), (UnitCatalog.TouDRb, "DR-b", 8 * (1 + s + r)) })
+            foreach (var (def, tag, want) in new[] { (UnitCatalog.TouH326, "規定", 8 * (1 + s)), (UnitCatalog.TouDRa, "DR-a", 8 * (1 + r)), (UnitCatalog.TouDRb, "DR-b", 8 * (1 + s + r)) })
             {
                 var ctx = T323.Ctx(Formation.Build(back3: def, front1: UnitCatalog.Kugu), Formation.Build(front1: Wall, front3: Wall), out var p, out var e);
                 var kugu = T323.Seat(p, 0); var e3 = T323.Seat(e, 1);

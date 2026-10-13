@@ -68,8 +68,8 @@ static partial class Dense326Diag
     /// <summary>版。トウとシガを Id で差し替える（いない台では何もしない）。</summary>
     internal sealed record Ver(string Name, string Ascii, UnitDef Tou, UnitDef Shiga);
 
-    internal static readonly Ver Base = new("規定", "base", UnitCatalog.Tou, UnitCatalog.Shiga);
-    internal static readonly Ver Old = new("段0 前", "h325", UnitCatalog.Tou, UnitCatalog.ShigaH325);
+    internal static readonly Ver Base = new("規定", "base", UnitCatalog.TouH326, UnitCatalog.Shiga);   // 第327期: 第326期の規定のトウ（DR-a の前）
+    internal static readonly Ver Old = new("段0 前", "h325", UnitCatalog.TouH326, UnitCatalog.ShigaH325);
     internal static readonly Ver[] Vers =
     {
         Base,
@@ -82,10 +82,10 @@ static partial class Dense326Diag
     internal static Formation Apply(Formation f, Ver v) => S316.SwapId(S316.SwapId(f, "tou", v.Tou), "shiga", v.Shiga);
 
     /// <summary>ポンの台（指示書 §0 ／ §5-1）: 前1 カタ・前3 シガ・中央 トウ・後1 クグ・後3 ソム（試遊・感電 光の盾 鞭 を改変）。駒はいまの規定。試遊には足さない（決めたこと）。</summary>
-    internal static Formation PonBoard() => Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Shiga, center: UnitCatalog.Tou, back1: UnitCatalog.Kugu, back3: UnitCatalog.Som);
+    internal static Formation PonBoard() => Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Shiga, center: UnitCatalog.TouH326, back1: UnitCatalog.Kugu, back3: UnitCatalog.Som);   // 第327期: トウは第326期の規定
 
-    static Formation Playtest(string n) => Presets.Playtest.First(r => r.Name == n).F;
-    static Formation Row(string n) => CompareBuilds().First(r => r.Name == n).F;
+    static Formation Playtest(string n) => PlaytestH326.First(r => r.Name == n).F;   // 第327期: トウを第326期の規定に固定
+    static Formation Row(string n) => CompareBuildsH326().First(r => r.Name == n).F;   // 第327期
 
     /// <summary>§5-1 の代表台（駒はいまの規定）。ポンの台を最初に。</summary>
     internal static (string Name, Formation F)[] Boards() => new (string, Formation)[]
@@ -144,6 +144,12 @@ static partial class Dense326Diag
         var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
         var e = w.Make();
         var r = BattleEngine.Run(p, e, seed, verbose: true);
+        return CountZ(p, e, r, w);
+    }
+
+    /// <summary>1戦の計数（第327期に <see cref="Fight"/> から切り出した・`dust327` が使い回す）。</summary>
+    internal static Z CountZ(List<UnitState> p, List<UnitState> e, BattleResult r, S287.Wave w)
+    {
         var z = new Z { Base = T323.Count(p, e, r) };
         if (r.TallyByUnit.TryGetValue("shiga", out var st)) { z.S.Add(st); z.ShigaN = 1; }
         if (w.Boss && e.Count == 1)
@@ -212,7 +218,7 @@ static partial class Dense326Diag
     /// 勇者の回復を与ダメが上回り始めたターン: 1ターンの与ダメ（生きている戦の平均）が勇者の回復の上限（最大HP の 40% ＝ 1,200）に初めて届いたターン。
     /// 回復は「減った分まで」なので、与ダメが上限に届くまでは毎ターン全部戻される（生きている戦が 1/4 以上のターンだけ・届かなければ —）。
     /// </summary>
-    static string Cross(Z z)
+    internal static string Cross(Z z)
     {
         if (z.HeroN == 0 || z.HealCap == 0) return "—";
         double cap = (double)z.HealCap / z.HeroN;

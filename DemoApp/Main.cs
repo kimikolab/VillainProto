@@ -134,7 +134,7 @@ public partial class Main : Control
     private static (string Name, Formation F)[]? _presetRows;
 
     private static (string Name, Formation F)[] PresetRows() =>
-        _presetRows ??= Presets.Compare.Concat(Presets.Cross).Concat(Presets.Playtest).ToArray();   // 第291期: 試遊の行を末尾に
+        _presetRows ??= Presets.Compare.Concat(Presets.Cross).Concat(Presets.Playtest).Concat(Presets.Versions).ToArray();   // 第291期: 試遊の行を末尾に・第327期: 版の台（「版・」）をさらに後ろに
 
     private int _presetIndex;
     private bool _presetDirty;
@@ -927,7 +927,9 @@ public partial class Main : Control
             ? $"compare {_presetIndex + 1}/{Presets.Compare.Length}"
             : _presetIndex < Presets.Compare.Length + Presets.Cross.Length
             ? $"交差帯 {_presetIndex - Presets.Compare.Length + 1}/{Presets.Cross.Length}"
-            : $"試遊 {_presetIndex - Presets.Compare.Length - Presets.Cross.Length + 1}/{Presets.Playtest.Length}";   // 第291期
+            : _presetIndex < Presets.Compare.Length + Presets.Cross.Length + Presets.Playtest.Length
+            ? $"試遊 {_presetIndex - Presets.Compare.Length - Presets.Cross.Length + 1}/{Presets.Playtest.Length}"   // 第291期
+            : $"版 {_presetIndex - Presets.Compare.Length - Presets.Cross.Length - Presets.Playtest.Length + 1}/{Presets.Versions.Length}";   // 第327期
         _presetState.Text = _presetDirty
             ? $"{band}・プリセットから変更あり"
             : $"{band}・プリセット通り（全 {rows.Length} 行）";

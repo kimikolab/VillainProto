@@ -1129,6 +1129,12 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 dense326 memo [波] [seed] [版]    # 第326期 §6: ポンの台の放電の並び（`ReceiverDensity`）
     dotnet run --project BattleSim -c Release 0 dense326 log [波] [seed] [版]     # 第326期: ポンの台の1戦のログ
     dotnet run --project BattleSim -c Release 0 dense326 check       # 第326期 自己検査（段0 の札・固定の口・感電 ／ 萎縮 ／ 動ける主目標の怖気・DR の量（敵 ／ 味方 ／ 糸）と表示の欄・verbose・PickOne）
+    dotnet run --project BattleSim -c Release 0 dust327 p0           # 第327期 §3 Phase 0: ポンの台 × ボスの勇者の隣の糸玉（ターンごと）・粉は糸玉に落ちるか（DX の確かめ）（1 秒）
+    dotnet run --project BattleSim -c Release 0 dust327 boards [版,…]   # 第327期 §5: 代表台 5 × 5 波（ボス ／ 近衛 ／ 大隊 ／ 本編 第2 ／ 5波）× 版（規定 ／ DX ／ DX＋電池 ／ DX＋隣帯電 ／ DX＋全部）・seed 0..99（軽い期）・勇者が浴びたダメージの内訳・糸玉の濃さ・強すぎの兆し（3 秒）。予測のファイルが無ければ走らない
+    dotnet run --project BattleSim -c Release 0 dust327 compare [版,…]  # 第327期 §5: `compare` 64 行 × 版（基準は規定 ＝ DR-a・21 秒）
+    dotnet run --project BattleSim -c Release 0 dust327 log [波] [seed] [版]     # 第327期: ポンの台の1戦のログ（版 base ／ dx ／ dxb ／ dxn ／ dxall）
+    dotnet run --project BattleSim -c Release 0 dust327 check        # 第327期 自己検査（定義と固定の口・爆発の量と行き先（敵 ／ 味方 ／ 糸玉）・爆発で弾けない ／ 爆発は爆発を呼ばない・糸玉に粉・電池・隣帯電・verbose・PickOne）
+    powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）
     dotnet run --project BattleSim -c Release 0 shiga316 dgrid <boss|guard> [ps]   # 第316期 段0 G-c: 第297期の「ドハが要る台」の格子（第315期と同じ作り・基準は規定のドハ・1本 6〜9 分）

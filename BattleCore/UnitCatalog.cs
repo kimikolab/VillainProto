@@ -1240,12 +1240,14 @@ public static class UnitCatalog
     public const string TouStunDauntText = "。弾けた駒は半々の確率で痺れて次の手番を失う" + ShockDauntText;
 
     /// <summary>
-    /// 痺れ粉のトウ（規定）。<b>第325期に E3（TD-b焼 × TP-e）を規定にした</b>（ポンの判断・design/PHASE325_TOU_SETTLE_SPEC.md §2）——
+    /// 痺れ粉のトウ（第325〜326期の規定）。<b>第325期に E3（TD-b焼 × TP-e）を規定にした</b>（ポンの判断・design/PHASE325_TOU_SETTLE_SPEC.md §2）——
     /// 第312〜324期の規定（<see cref="TouH324"/>）＋ 濃さ（<see cref="TraitId.PowderDense"/>・倒れるまで残る <see cref="TraitId.PowderDenseKeep"/>）＋ 焼（<see cref="TraitId.PowderDenseBurn"/>）
     /// ＋ 伝染（<see cref="TraitId.PowderContagion"/>・印は敵にだけ <see cref="TraitId.PowderMarkFoeOnly"/>）。札は第324期の <see cref="TouTDbBTPe"/> と同じ。
     /// 文面は第324期の叩き台（<see cref="TouStackText"/>）の末尾に痺れ ／ 萎縮の句（<see cref="TouStunDauntText"/>）を戻したもの。カタ ／ クグは返す働きつき（<see cref="Kata"/> ／ <see cref="Kugu"/>）。
+    /// <para><b>第327期に DR-a（<see cref="Tou"/>）を規定にしたので、旧の規定の定義を明示的に持つ</b>（第326期まで <see cref="Tou"/> と同じ物だった）。
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。第325〜326期の規定のトウで測った器具はこれに固定する（`Common.PinT326`）。第326期の版（DR-a ／ DR-b）もこれから作る。</para>
     /// </summary>
-    public static readonly UnitDef Tou = new()
+    public static readonly UnitDef TouH326 = new()
     {
         Id = TouH324.Id,
         Name = TouH324.Name,
@@ -1259,6 +1261,29 @@ public static class UnitCatalog
         PlusText = TouStackText + TouStunDauntText,
         MinusText = TouH324.MinusText.Replace(TouLeakClause, TouLeakDenseClause),
         Flavor = TouH324.Flavor
+    };
+
+    /// <summary>
+    /// 痺れ粉のトウ（規定）。<b>第327期に第326期の DR-a を規定にした</b>（design/PHASE327_DUST_BURST_SPEC.md §1-2）——
+    /// 第325〜326期の規定（<see cref="TouH326"/>）＋ <see cref="TraitId.DenseConduct"/>（放電1回の量は 8 ×（1 ＋ 受け手の濃さ）・出し手の濃さは量に効かない・焼は今のまま）。
+    /// 札と文面は第326期の <see cref="TouDRa"/> と同じ（濃さの句を「濃い駒は浴びる雷が重くなり」に差し替えた叩き台）。
+    /// </summary>
+    public static readonly UnitDef Tou = new()
+    {
+        Id = TouH326.Id,
+        Name = TouH326.Name,
+        MaxHp = TouH326.MaxHp,
+        Attack = TouH326.Attack,
+        Speed = TouH326.Speed,
+        Advances = TouH326.Advances,
+        Pattern = TouH326.Pattern,
+        Traits = TouH326.Traits.Append(TraitId.DenseConduct).ToArray(),
+        Actions = TouH326.Actions,
+        PlusText = TouH326.PlusText.Contains(TouDenseHeavyClause, StringComparison.Ordinal)
+            ? TouH326.PlusText.Replace(TouDenseHeavyClause, TouDenseRecvClause, StringComparison.Ordinal)
+            : throw new InvalidOperationException("第327期: 第326期の規定のトウの文面に濃さの句が見つからない"),
+        MinusText = TouH326.MinusText,
+        Flavor = TouH326.Flavor
     };
 
     // 第311期 —— 萎縮の規則の版（§3-3）。痺れの規則の札（`ShockStunHalf`）を持つ駒に規則の札 <see cref="TraitId.ShockDaunt"/> を足すだけ。`All` にも `Retired` にも入れない。
@@ -3736,20 +3761,46 @@ public static class UnitCatalog
     /// <summary>第326期 DR-b の濃さの句（叩き台・指示書 §3-1）。</summary>
     public const string TouDenseBothClause = "濃い駒は放つ雷も浴びる雷も重くなり";
 
-    static UnitDef TouOn326(TraitId add, string clause) => new()
+    static UnitDef TouOn326(TraitId add, string clause) => new()   // 第327期: 規定が DR-a になったので、第326期の規定（`TouH326`）から作る
     {
-        Id = Tou.Id, Name = Tou.Name, MaxHp = Tou.MaxHp, Attack = Tou.Attack, Speed = Tou.Speed, Advances = Tou.Advances, Pattern = Tou.Pattern,
-        Traits = Tou.Traits.Append(add).ToArray(), Actions = Tou.Actions,
-        PlusText = Tou.PlusText.Contains(TouDenseHeavyClause, StringComparison.Ordinal)
-            ? Tou.PlusText.Replace(TouDenseHeavyClause, clause, StringComparison.Ordinal)
+        Id = TouH326.Id, Name = TouH326.Name, MaxHp = TouH326.MaxHp, Attack = TouH326.Attack, Speed = TouH326.Speed, Advances = TouH326.Advances, Pattern = TouH326.Pattern,
+        Traits = TouH326.Traits.Append(add).ToArray(), Actions = TouH326.Actions,
+        PlusText = TouH326.PlusText.Contains(TouDenseHeavyClause, StringComparison.Ordinal)
+            ? TouH326.PlusText.Replace(TouDenseHeavyClause, clause, StringComparison.Ordinal)
             : throw new InvalidOperationException("第326期: 規定のトウの文面に濃さの句が見つからない"),
-        MinusText = Tou.MinusText, Flavor = Tou.Flavor
+        MinusText = TouH326.MinusText, Flavor = TouH326.Flavor
     };
 
     /// <summary>第326期 DR-a。規定のトウ（E3）＋ <see cref="TraitId.DenseConduct"/>——放電1回の量は 8 ×（1 ＋ 受け手の濃さ）（出し手の濃さは量に効かない・焼は今のまま）。</summary>
     public static readonly UnitDef TouDRa = TouOn326(TraitId.DenseConduct, TouDenseRecvClause);
     /// <summary>第326期 DR-b。規定のトウ（E3）＋ <see cref="TraitId.DenseConductBoth"/>——放電1回の量は 8 ×（1 ＋ 出し手の濃さ ＋ 受け手の濃さ）。</summary>
     public static readonly UnitDef TouDRb = TouOn326(TraitId.DenseConductBoth, TouDenseBothClause);
+
+    // ---------------------------------------------------------------------------------
+    // 第327期 —— 粉塵爆発（DX）と、電池（クグ）・隣帯電（ソム）（指示書 design/PHASE327_DUST_BURST_SPEC.md §2）。規定（DR-a 入り）の末尾に札を1枚足し、文面の末尾に句を足す（叩き台）。
+    // `All` にも `Retired` にも入れない。
+    // ---------------------------------------------------------------------------------
+
+    /// <summary>第327期 DX の文面の足し（叩き台・指示書 §2-1）。</summary>
+    public const string TouDustText = "。粉の積もった駒に雷が届くと、粉が爆ぜて隣にも飛び火する";
+    /// <summary>第327期 電池の文面の足し（叩き台・決めたこと）。</summary>
+    public const string KuguBatteryText = "。クグが帯電している間、弾けた糸玉は連鎖の後すぐ帯電し直す";
+    /// <summary>第327期 隣帯電の文面の足し（叩き台・決めたこと）。</summary>
+    public const string SomBeastChargeText = "。背いた召喚獣が弾けると、その雷が帯電していない隣も帯電させる";
+
+    static UnitDef On327(UnitDef b, TraitId add, string plus) => new()
+    {
+        Id = b.Id, Name = b.Name, MaxHp = b.MaxHp, Attack = b.Attack, Speed = b.Speed, Advances = b.Advances, Pattern = b.Pattern,
+        Traits = b.Traits.Append(add).ToArray(), Actions = b.Actions,
+        PlusText = b.PlusText + plus, MinusText = b.MinusText, Flavor = b.Flavor
+    };
+
+    /// <summary>第327期 DX。規定のトウ（DR-a 入り）＋ <see cref="TraitId.DustBurst"/>——放電が濃さ n の駒か糸玉に届くと、受け手の隣すべてに 8 × n。粉は主目標の隣の糸玉にも落ちる。</summary>
+    public static readonly UnitDef TouDX = On327(Tou, TraitId.DustBurst, TouDustText);
+    /// <summary>第327期 電池。規定のクグ ＋ <see cref="TraitId.SilkBattery"/>——クグが帯電している間、連鎖で弾けた糸玉を連鎖の直後に帯電し直す。</summary>
+    public static readonly UnitDef KuguBat = On327(Kugu, TraitId.SilkBattery, KuguBatteryText);
+    /// <summary>第327期 隣帯電。規定のソム ＋ <see cref="TraitId.BeastChargeSpread"/>——背いた召喚獣の放電が、帯電していない隣も帯電させる（同じ連鎖では弾けない）。</summary>
+    public static readonly UnitDef SomBc = On327(Som, TraitId.BeastChargeSpread, SomBeastChargeText);
 
     /// <summary>第323期 カタの版（返す）。規定のカタ ＋ <see cref="TraitId.ThunderPowderReturn"/>（濃さの保持者がいない戦では何も起きない）。</summary>
     public static readonly UnitDef KataTDR = On323(KataH324, new[] { TraitId.ThunderPowderReturn }, KataPowderReturnText);

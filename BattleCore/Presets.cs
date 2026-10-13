@@ -891,4 +891,19 @@ public static class Presets
         // 隣なし: トウが後3（隣はベニとソム）——漏れた濃さは返す駒に落ちないので、敵の濃さが育たない（ボスの敵の焼 202・近衛 74.5%）。
         ("試遊・感電 粉 隣なし", Formation.Build(front1: UnitCatalog.Kugu, front3: UnitCatalog.Beni, center: UnitCatalog.Som, back1: UnitCatalog.Kata, back3: UnitCatalog.Tou)),
     };
+
+    /// <summary>
+    /// <b>版の台（第327期・design/MEASURE_LIGHT.md §4）。</b> 名前の頭は「版・」。DemoApp のプリセットの一覧の末尾（試遊の行の後）に連結するだけの一覧。
+    ///
+    /// <para><b><see cref="Compare"/> にも <see cref="Playtest"/> にも入れない</b>——BattleSim の器具はこの一覧を数えないので、期ごとに中身を入れ替えてよい
+    /// （その期に測った版を試遊で触るための口。版の駒は `UnitCatalog` の版の定義をそのまま使う）。</para>
+    /// <para>第327期: 粉塵爆発（DX）の4つの版を、第326期のポンの台の並び（前1 カタ・前3 シガ・中央 トウ・後1 クグ・後3 ソム）で。</para>
+    /// </summary>
+    public static (string Name, Formation F)[] Versions => new (string, Formation)[]
+    {
+        ("版・DX ポンの台", Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Shiga, center: UnitCatalog.TouDX, back1: UnitCatalog.Kugu, back3: UnitCatalog.Som)),
+        ("版・DX＋電池 ポンの台", Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Shiga, center: UnitCatalog.TouDX, back1: UnitCatalog.KuguBat, back3: UnitCatalog.Som)),
+        ("版・DX＋隣帯電 ポンの台", Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Shiga, center: UnitCatalog.TouDX, back1: UnitCatalog.Kugu, back3: UnitCatalog.SomBc)),
+        ("版・DX＋全部 ポンの台", Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Shiga, center: UnitCatalog.TouDX, back1: UnitCatalog.KuguBat, back3: UnitCatalog.SomBc)),
+    };
 }

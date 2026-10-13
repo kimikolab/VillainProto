@@ -1478,6 +1478,7 @@ public sealed class BattleContext
         });
         Log($"    {from.Name} から糸玉へ放電", LogKind.Status);
         if (ball.RawCounter(StatusKeys.Shock) > 0) _shockQueue.Enqueue((ball, depth + 1, ini));
+        if (_dxLive && DensityOf(ball) is int dxN && dxN > 0) DustExplode(from, ball, dxN, ini);   // 第327期（DX）: 糸玉の粉が爆ぜて隣（勇者など）へ飛び火する
     }
 
     /// <summary>手番の頭のクグの帳簿（第290期・<b>計数のみ</b>・盤面は読むだけ）: 生きている手番・帯電していた・組み付いていた・両方・組んだ相手に組み付きが立っていた。</summary>
@@ -1676,7 +1677,7 @@ public sealed class BattleContext
 
     /// <summary>
     /// 次の <c>ApplyDamage</c> 1回にだけ効く札（逸らしの <c>_deflectFrom</c> と同じ作法・<c>ApplyDamageBody</c> の最初の行で読んで消す）。
-    /// 0 通常 ／ 1 雷（起爆しない）／ 2 刻み（K2 のときだけ起爆する）／ 3 放電 ／ 4 雷霆（第288期・起爆しない）。
+    /// 0 通常 ／ 1 雷（起爆しない）／ 2 刻み（K2 のときだけ起爆する）／ 3 放電 ／ 4 雷霆（第288期・起爆しない）／ 5 粉塵爆発（第327期・起爆しない）。
     /// </summary>
     byte _shockNext;
 
@@ -1877,6 +1878,7 @@ public sealed class BattleContext
         bool threadRoot = false;
         List<UnitState>? popped = _chainReaders.Count > 0 ? new List<UnitState>() : null;   // 第289期（連鎖の後の口）
         List<(UnitState Beast, UnitState? Ini, UnitState Som)>? bdPopped = null;   // 第317期（BD・立っている獣が弾けた）
+        List<UnitState>? batBalls = null;   // 第327期（電池・この連鎖で弾けた糸玉）
         try
         {
             while (_shockQueue.Count > 0)
@@ -1885,6 +1887,8 @@ public sealed class BattleContext
                 if (x.RawCounter(StatusKeys.Shock) <= 0) continue;   // 既に放電した（1つの駒は1回しか放電しない）
                 // 第323期（TP）: 伝染でこの連鎖の中で新しく帯電した駒は、同じ連鎖では弾けない（次の一撃を待つ）。保持者がいなければ件数の比較1つで抜ける。
                 if (_tpFresh.Count > 0 && _tpFresh.Contains(x.InstanceId)) { TallyOf(_powderHolder!).TpFreshSkip++; continue; }
+                // 第327期（隣帯電）: 召喚獣の放電でこの連鎖の中で新しく帯電した駒は、同じ連鎖では弾けない。保持者がいなければ件数の比較1つで抜ける。
+                if (_bcFresh.Count > 0 && _bcFresh.Contains(x.InstanceId)) { TallyOf(_bcHolder!).Bc327FreshSkip++; continue; }
                 // 第322期（SD）: この鞭の一振りで感電を残して弾けた敵は、同じ一振りの中ではもう弾けない（放電が届いても受けるだけ）。保持者がいなければ比較1つで抜ける。
                 if (_sdLive && _whip?.Kept is { } sdk && sdk.Contains(x)) { TallyOf(_whip.Actor).SdSkipped++; continue; }
                 bool sdKept = sdKeep is not null && d == 0 && x == sdKeep && _whip is not null;
@@ -1911,6 +1915,8 @@ public sealed class BattleContext
                     (bdPopped ??= new List<(UnitState, UnitState?, UnitState)>()).Add((x, ini, bso));
                 }
                 bool ball = _silkBalls.Count > 0 && IsSilkBall(x);   // 第292期（糸玉が無ければ比較1つ）
+                if (ball && _batLive) (batBalls ??= new List<UnitState>()).Add(x);   // 第327期（電池）
+                if (_bcInfected.Count > 0 && _bcInfected.Remove(x.InstanceId)) TallyOf(_bcHolder!).Bc327Popped++;   // 第327期・計数のみ
                 if (_webLive && x.RawCounter(StatusKeys.Web) > 0 && WebOwner(x) is { } wo) TallyOf(wo).WebPops++;   // 第293期・計数のみ
                 if (ball)
                 {
@@ -1940,7 +1946,8 @@ public sealed class BattleContext
                 if (tdN > 0) PowderPopAfter(x, tdN, ini);   // 第323期（焼 ／ TD-a は濃さ 0）
             }
         }
-        finally { _shockChaining = false; _shockDepth = 0; if (_tpFresh.Count > 0) _tpFresh.Clear(); if (_tpPopped.Count > 0) _tpPopped.Clear(); }
+        finally { _shockChaining = false; _shockDepth = 0; if (_tpFresh.Count > 0) _tpFresh.Clear(); if (_tpPopped.Count > 0) _tpPopped.Clear(); if (_bcFresh.Count > 0) _bcFresh.Clear(); }
+        if (batBalls is not null) SilkBatteryRecharge(batBalls);   // 第327期（電池）: 連鎖が終わった直後
 
         UnitTally rt = TallyOf(u);
         rt.ChainRoots++;
@@ -2855,6 +2862,7 @@ public sealed class BattleContext
             if (via is not null) { if (_drLive) amt = DrAmount(sendN, to); ThreadDischarge(from, via, to, amt, depth, ini); return; }
         }
         if (_drLive) amt = DrAmount(sendN, to);   // 第326期（DR）: 受け手の濃さも足す（糸の先へ移したなら糸の先の敵の濃さ）
+        int dxN = _dxLive ? DensityOf(to) : 0;    // 第327期（DX）: 受け手の濃さ（届いた時点）
         UnitTally ft = TallyOf(from), tt = TallyOf(to);
         ft.DischargeHits++;
         UnitState? inv = InvertsTick(to);
@@ -2875,11 +2883,14 @@ public sealed class BattleContext
             InverseHeal(inv, to, amt, 3, "放電");
             tt.DischargeInvertedIn += to.Hp - hb;
             if (carry) MireCarryTo(to, from);
+            if (dxN > 0) DustExplode(from, to, dxN, ini);   // 第327期（DX）
             return;
         }
         Log($"    {from.Name} から {to.Name} へ放電（{amt}）", LogKind.Status);
         bool tpFrom = _tpLive && _pwTouched.Contains(from.InstanceId);   // 第323期（TP）: 粉の印のある駒の放電
         bool tpWas = tpFrom && to.RawCounter(StatusKeys.Shock) > 0;
+        bool bcFrom = _bcHolder is not null && BetrayedTrait.IsFodder(from) && from.TeamId != _bcHolder.TeamId && _bcHolder.IsAlive;   // 第327期（隣帯電）: ソムが生きている間の、背いた召喚獣の放電
+        bool bcWas = bcFrom && to.RawCounter(StatusKeys.Shock) > 0;
         int before = to.Hp;
         _shockNext = 3;
         _shockKillerSet = true;
@@ -2897,7 +2908,9 @@ public sealed class BattleContext
         if (before > 0 && !to.IsAlive) tt.DischargeDeaths++;
         if (_powderLive) { NoteDischargeDealt(from, to, removed, tdN); NoteDr326(from, to, amt, removed, fromBall ? 1 : BetrayedTrait.IsFodder(from) ? 0 : 3); }   // 第323期 ／ 第326期・計数のみ
         if (tpFrom && !tpWas && to.IsAlive && !(_tpDry && _tpPopped.Contains(to.InstanceId))) PowderInfect(from, to);   // 第323期（TP）: 帯電していない隣も帯電させる（TP-a′ は同じ連鎖で先に弾けた駒を除く）
+        if (bcFrom && !bcWas && to.IsAlive) BeastChargeNeighbor(to);   // 第327期（隣帯電）
         if (carry) MireCarryTo(to, from);
+        if (dxN > 0) DustExplode(from, to, dxN, ini);   // 第327期（DX）: 受け手の分（DR-a）の後に、受け手の粉が隣へ爆ぜる
     }
 
     /// <summary>
@@ -2908,6 +2921,7 @@ public sealed class BattleContext
     void ThreadDischarge(UnitState from, UnitState via, UnitState to, int amt, int depth, UnitState? ini)
     {
         UnitTally vt = TallyOf(via), tt = TallyOf(to);
+        int dxN = _dxLive ? DensityOf(to) : 0;   // 第327期（DX）
         _lastThreadKugu = via;
         if (from == via) vt.ThreadSelf++; else vt.ThreadRelay++;
         TallyOf(from).DischargeHits++;
@@ -2945,6 +2959,7 @@ public sealed class BattleContext
             to.SetCounter(ThreadMarkKey, 1);   // 計数専用（そこから起きた連鎖）
             Log($"    {to.Name} は糸の電気を浴びて帯電した", LogKind.Status);
         }
+        if (dxN > 0) DustExplode(via, to, dxN, ini);   // 第327期（DX）: 糸の先の敵の粉が爆ぜる
     }
 
     // =================================================================================
@@ -2960,6 +2975,14 @@ public sealed class BattleContext
     bool _tdLive, _tdKeep, _tdBurn, _tpLive, _tpSpread, _tpDry, _tpFoeOnly;
     /// <summary>第326期: 濃い駒は雷をよく通す（DR-a ＝ 受け手だけ ／ DR-b ＝ 出し手 ＋ 受け手）の保持者が戦に出たか。<b>いなければ放電の量は比較1つで今どおり。</b></summary>
     bool _drLive, _drRecvOnly;
+    /// <summary>第327期: 粉塵爆発（DX）／ 電池の保持者が戦に出たか。<b>いなければ比較1つで今どおり。</b></summary>
+    bool _dxLive, _batLive;
+    /// <summary>第327期: 隣帯電の保持者（ソム・最初の1体）。いなければ null（比較1つで今どおり）。</summary>
+    UnitState? _bcHolder;
+    /// <summary>第327期（隣帯電）: いまの連鎖の中で召喚獣の放電で新しく帯電した駒（同じ連鎖では弾けない・連鎖の外側の1回の終わりで空にする）。</summary>
+    readonly HashSet<int> _bcFresh = new();
+    /// <summary>第327期・計数のみ: 隣帯電で帯電した駒（次に弾けるまで見張る）。</summary>
+    readonly HashSet<int> _bcInfected = new();
     /// <summary>最初に出た粉の保持者（計数の帰属先・トウ）。</summary>
     UnitState? _powderHolder;
     /// <summary>トウの手番の頭に帯電していた駒（<see cref="PowderHead"/> が控える・<see cref="PowderFell"/> が読む）。</summary>
@@ -2995,6 +3018,9 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.PowderMarkFoeOnly)) _tpFoeOnly = true;   // 第324期（TP-e）
         if (u.HasTrait(TraitId.DenseConduct)) { _drLive = true; _drRecvOnly = true; }   // 第326期（DR-a）
         if (u.HasTrait(TraitId.DenseConductBoth)) _drLive = true;                       // 第326期（DR-b）
+        if (u.HasTrait(TraitId.DustBurst) && u.HasTrait(TraitId.ChargedPowder)) _dxLive = true;   // 第327期（DX・粉の保持者だけ）
+        if (u.HasTrait(TraitId.SilkBattery)) _batLive = true;                          // 第327期（電池）
+        if (u.HasTrait(TraitId.BeastChargeSpread)) _bcHolder ??= u;                    // 第327期（隣帯電）
     }
 
     /// <summary>トウの手番の頭（<c>TakeTurnFramed</c>）: 帯電している生きている駒を控える。<b>読むだけ。</b></summary>
@@ -3003,6 +3029,7 @@ public sealed class BattleContext
         _pwHead.Clear();
         _pwHeadActor = tou;
         foreach (UnitState u in _units) if (u.IsAlive && u.RawCounter(StatusKeys.Shock) > 0) _pwHead.Add(u.InstanceId);
+        if (_dxLive) foreach (UnitState b in _silkBalls) if (b.RawCounter(StatusKeys.Shock) > 0) _pwHead.Add(b.InstanceId);   // 第327期（DX）: 糸玉にも粉が積もる
     }
 
     /// <summary>組み付いている生きている敵（第323期・クグの濃さの流れ先）。<see cref="GrappleTrait.TargetKey"/> だけを読む（ほどけた相手は含めない）。</summary>
@@ -3141,7 +3168,7 @@ public sealed class BattleContext
     /// <summary>濃さ n の駒が放電し終えた（第323期）: 焼の版は本人にも 8 × n、TD-a は濃さを 0 に戻す。</summary>
     void PowderPopAfter(UnitState x, int n, UnitState? ini)
     {
-        if (_tdBurn && x.IsAlive) PowderSelfBurn(x, n, ini);
+        if (_tdBurn && x.IsAlive && !(_dxLive && IsSilkBall(x))) PowderSelfBurn(x, n, ini);   // 第327期（DX）: 糸玉は HP が無いので焼かない
         if (!_tdKeep) { _density.Remove(x.InstanceId); _densityRet.Remove(x.InstanceId); }
     }
 
@@ -3172,6 +3199,109 @@ public sealed class BattleContext
 
     /// <summary>第326期（DR）: 放電1本の量 ＝ 8 ×（1 ＋ 出し手の濃さ（DR-a は 0）＋ 受け手の濃さ）。<b>乱数を引かない。</b></summary>
     int DrAmount(int sendN, UnitState to) => ShockRule.Discharge * (1 + sendN + DensityOf(to));
+
+    // =================================================================================
+    // 第327期 —— 粉塵爆発（DX）・電池・隣帯電（指示書 design/PHASE327_DUST_BURST_SPEC.md §2）。
+    // **保持者がいなければ `_dxLive` ／ `_batLive` ／ `_bcHolder` の比較1つで今どおり。** 乱数を引かない。
+    // =================================================================================
+
+    /// <summary>受け手の種類（第327期・計数のみ）: 0 味方（トウの側）／ 1 敵（喚ばれたもの・糸玉を除く）／ 2 背いた召喚獣 ／ 3 糸玉。</summary>
+    int Dx327Kind(UnitState u) => IsSilkBall(u) ? 3 : BetrayedTrait.IsFodder(u) ? 2 : u.TeamId == _powderHolder!.TeamId ? 0 : 1;
+
+    /// <summary>
+    /// 粉塵爆発（DX）: 放電が濃さ <paramref name="n"/>（≧1）の受け手に届いた後、受け手の隣の生きている駒すべてに 8 × n（敵味方を問わない）。
+    /// 受け手自身には入れない（受け手の分は DR-a のまま）。放電と同じ扱いのダメージ（出どころ ＝ 受け手・撃破者 ＝ 連鎖を起こした一撃の主・ベニの結界の内側なら回復に反転）だが、
+    /// <b>感電を弾けさせない</b>（`_shockNext` ＝ 5）。爆発は放電ではないので爆発を呼ばない。1本の放電につき1回（呼び出し側）。
+    /// </summary>
+    void DustExplode(UnitState from, UnitState recv, int n, UnitState? ini)
+    {
+        UnitTally t = TallyOf(_powderHolder!);
+        int amt = ShockRule.Discharge * n, rk = Dx327Kind(recv);
+        (t.Dx327N ??= new long[4])[rk]++;
+        (t.Dx327Dens ??= new long[4])[rk] += n;
+        EmitShockGauge(ShockGaugeLabels.DustBurst, from, recv, amt, n);   // 表示専用（直後に隣の駒の `Damage`）
+        Log($"    {recv.Name} に積もった粉が爆ぜた（濃さ {n}）——隣へ {amt}", LogKind.Trigger);
+        long sum = 0;
+        foreach (UnitState v in LivingMembers(recv.TeamId))
+        {
+            if (v == recv || !FormationRules.AreAdjacent(recv, v)) continue;
+            int vk = BetrayedTrait.IsFodder(v) ? 2 : v.TeamId == _powderHolder!.TeamId ? 0 : 1;
+            UnitState? inv = InvertsTick(v);
+            if (inv is not null) { t.Dx327Inverted++; InverseHeal(inv, v, amt, 3, "爆発"); continue; }
+            int before = v.Hp;
+            _shockNext = 5;
+            _shockKillerSet = true;
+            _shockKiller = ini;
+            _dischargeDepth++;
+            ApplyDamage(v, amt, recv, isFriendlyFire: true);
+            _dischargeDepth--;
+            _shockNext = 0;
+            _shockKillerSet = false;
+            _shockKiller = null;
+            int removed = before - Math.Max(0, v.Hp);
+            sum += removed;
+            (t.Dx327Dealt ??= new long[12])[rk * 3 + vk] += removed;
+            (t.Dx327Hits ??= new long[12])[rk * 3 + vk]++;
+            if (before > 0 && !v.IsAlive) (t.Dx327Kills ??= new long[3])[vk]++;
+        }
+        if (sum > t.Dx327Max) t.Dx327Max = sum;
+    }
+
+    /// <summary>
+    /// DX: トウの粉が主目標の隣の糸玉にも落ちる（<see cref="ChargedPowderTrait"/> だけが呼ぶ・<paramref name="near"/> ＝ 主目標）。
+    /// 帯電させ（駒と同じ <c>MarkShock</c>）、粉が落ちた（<see cref="PowderFell"/>: トウの手番の頭に帯電していれば濃さ +1・印は敵の側として付く）。
+    /// </summary>
+    public void PowderOnBalls(UnitState tou, UnitState near)
+    {
+        if (!_dxLive || _silkBalls.Count == 0) return;
+        UnitTally t = TallyOf(tou);
+        foreach (UnitState b in _silkBalls.ToList())
+        {
+            if (b.TeamId != near.TeamId || !FormationRules.AreAdjacent(near, b)) continue;
+            if (MarkShock(b, tou, PowderRoute.Spread, near)) { t.Dx327BallCharged++; Log("    粉が舞って糸玉にも付いた（帯電）", LogKind.Status); }
+            int n0 = DensityOf(b);
+            PowderFell(tou, b, PowderRoute.Spread);
+            t.Dx327BallPowder++;
+            int n1 = DensityOf(b);
+            if (n1 > n0) { t.Dx327BallThick++; if (n1 > t.Dx327BallDensMax) t.Dx327BallDensMax = n1; }
+        }
+    }
+
+    /// <summary>電池: 連鎖で弾けた糸玉を、持ち主のクグ（電池の札・生きていて帯電している）がいれば帯電し直す（クグの帯電は消費しない）。<b>連鎖の外側の1回の直後。</b></summary>
+    void SilkBatteryRecharge(List<UnitState> balls)
+    {
+        var byOwner = new Dictionary<UnitState, int>();
+        foreach (UnitState b in balls)
+        {
+            UnitState k = _silkOwner[b];
+            if (!k.HasTrait(TraitId.SilkBattery)) continue;
+            if (!k.IsAlive || k.RawCounter(StatusKeys.Shock) <= 0) { byOwner.TryAdd(k, 0); continue; }
+            if (b.RawCounter(StatusKeys.Shock) > 0) continue;
+            b.SetCounter(StatusKeys.Shock, 1);
+            byOwner[k] = byOwner.GetValueOrDefault(k) + 1;
+        }
+        foreach (var (k, n) in byOwner)
+        {
+            UnitTally kt = TallyOf(k);
+            if (n == 0) { kt.Bat327Dry++; continue; }
+            kt.Bat327Chains++;
+            kt.Bat327Recharged += n;
+            Log($"    {k.Name} の電気で糸玉が帯電し直した（{n} 個）", LogKind.Status);
+            if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.SilkBall, Turn = _turn, ActorId = k.InstanceId, Amount = n, Text = SilkBallLabels.Recharge });
+        }
+    }
+
+    /// <summary>隣帯電: 背いた召喚獣の放電を浴びて生きている、帯電していなかった駒を帯電させる（同じ連鎖では弾けない）。書き手はソム。</summary>
+    void BeastChargeNeighbor(UnitState to)
+    {
+        UnitState som = _bcHolder!;
+        if (!MarkShock(to, som)) return;
+        _bcFresh.Add(to.InstanceId);
+        _bcInfected.Add(to.InstanceId);
+        UnitTally st = TallyOf(som);
+        (st.Bc327New ??= new long[3])[BetrayedTrait.IsFodder(to) ? 2 : to.TeamId == som.TeamId ? 0 : 1]++;
+        Log($"    召喚獣の雷が {to.Name} も帯電させた", LogKind.Status);
+    }
 
     /// <summary>放電1本の受け手と出し手（第326期・<b>計数のみ</b>）。<paramref name="sender"/>: 0 背いた召喚獣 ／ 1 糸玉 ／ 2 糸 ／ 3 ほか。添字は <see cref="UnitTally.Dr326N"/>。</summary>
     void NoteDr326(UnitState from, UnitState to, int nominal, int removed, int sender)
@@ -10732,7 +10862,7 @@ public sealed class BattleContext
     bool BurnHitEligible(UnitState target, UnitState? source, bool burnTick, bool relayed, bool hexShare, bool levy)
     {
         if (source is null || source == target || burnTick || levy || relayed || hexShare) return false;
-        if (_deflectFrom is not null || _shockNext == 3 || _burstHitNext) return false;
+        if (_deflectFrom is not null || _shockNext is 3 or 5 || _burstHitNext) return false;
         if (!target.IsAlive || target.RawCounter(StatusKeys.Burn) <= 0) return false;
         return true;
     }
@@ -13818,7 +13948,7 @@ public sealed class BattleContext
         {
             bool tick = shockNote == 2 || burnTick;
             bool thunderPop = shockNote == 1 && _thunderPopLive && target.RawCounter(BetrayedShockTrait.ThunderPopKey) > 0;   // 第276期（S1p）
-            if (shockNote == 4) { }                                                            // 第288期: 雷霆は起爆しない（計数は `Thunderclap` の側）
+            if (shockNote is 4 or 5) { }                                                       // 第288期: 雷霆は起爆しない（計数は `Thunderclap` の側）・第327期: 粉塵爆発も
             else if (shockNote == 1 && !thunderPop) TallyOf(target).ShockThunderMuted++;          // 計数のみ（自己検査: 雷は起爆しない）
             else if (tick && !_shockTickLive) TallyOf(target).ShockTickMuted++; // 計数のみ（自己検査: K1 の刻みは起爆しない）
             else

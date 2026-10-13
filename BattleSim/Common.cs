@@ -338,7 +338,8 @@ public static UnitDef PinSH321(UnitDef d) => ReferenceEquals(d, UnitCatalog.Shig
 /// 古い固定の口（`PinS317` ／ `PinSS318` ／ `PinSH321`）の最後もここを通すので、第324期までのどの器具の台も3体とも旧の規定になる（第322期の `guard294` の漏れの再発を防ぐ）。
 /// </summary>
 public static UnitDef PinTKK324(UnitDef d) =>
-    ReferenceEquals(d, UnitCatalog.Tou) ? UnitCatalog.TouH324 : ReferenceEquals(d, UnitCatalog.Kata) ? UnitCatalog.KataH324 : ReferenceEquals(d, UnitCatalog.Kugu) ? UnitCatalog.KuguH324 : d;
+    ReferenceEquals(d, UnitCatalog.Tou) || ReferenceEquals(d, UnitCatalog.TouH326) ? UnitCatalog.TouH324   // 第327期: 第325〜326期の規定（`TouH326`・`PinT326` が先に替えた駒）も
+    : ReferenceEquals(d, UnitCatalog.Kata) ? UnitCatalog.KataH324 : ReferenceEquals(d, UnitCatalog.Kugu) ? UnitCatalog.KuguH324 : d;
 
 /// <summary>第325期: トウ ／ カタ ／ クグ ＝ E3 を規定にした。第324期の規定の駒で測った器具（`tou323` ／ `tou324` ／ `shiga322`）はこれを通す。陣形とレリックは保つ。
 /// 第326期: シガも第322〜325期の規定（`ShigaH325`）へ替える（`PinS325`・第324期の規定のシガは第325期の規定と同じ物）。</summary>
@@ -355,13 +356,34 @@ public static Formation Pin324(Formation f)
 /// </summary>
 public static UnitDef PinS325(UnitDef d) => ReferenceEquals(d, UnitCatalog.Shiga) ? UnitCatalog.ShigaH325 : d;
 
-/// <summary>第326期: シガの段0 を規定にした。第325期の規定の駒で測った器具（`tou325`）はこれを通す（トウ ／ カタ ／ クグは E3 のまま）。陣形とレリックは保つ。</summary>
+/// <summary>第326期: シガの段0 を規定にした。第325期の規定の駒で測った器具（`tou325`）はこれを通す（トウ ／ カタ ／ クグは E3 のまま）。陣形とレリックは保つ。
+/// 第327期: トウも第325〜326期の規定（`TouH326`）へ替える（`PinT326`）。</summary>
 public static Formation Pin325(Formation f)
 {
     var g = f.Clone();
-    foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinS325(d);
+    foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinS325(PinT326(d));
     return g;
 }
+
+/// <summary>
+/// 第327期: 規定のトウ（DR-a）を第325〜326期の規定（`TouH326`・E3）に替える。ほかの駒はそのまま返す。
+/// 古い固定の口は `PinTKK324`（規定のトウも `TouH326` も `TouH324` へ）を終端に通すので、ここを足す必要はない。
+/// </summary>
+public static UnitDef PinT326(UnitDef d) => ReferenceEquals(d, UnitCatalog.Tou) ? UnitCatalog.TouH326 : d;
+
+/// <summary>第327期: トウの DR-a を規定にした。第326期の規定の駒で測った器具（`dense326`）はこれを通す（シガは第326期の規定のまま）。陣形とレリックは保つ。</summary>
+public static Formation Pin326(Formation f)
+{
+    var g = f.Clone();
+    foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinT326(d);
+    return g;
+}
+
+/// <summary>第327期: `CompareBuilds()` のトウを第326期の規定に替えた写し。</summary>
+public static (string Name, Formation F)[] CompareBuildsH326() => CompareBuilds().Select(r => (r.Name, Pin326(r.F))).ToArray();
+
+/// <summary>第327期: `Presets.Playtest` のトウを第326期の規定に替えた写し（行の数と並びはそのまま）。</summary>
+public static (string Name, Formation F)[] PlaytestH326 => Presets.Playtest.Select(r => (r.Name, Pin326(r.F))).ToArray();
 
 /// <summary>第326期: `CompareBuilds()` のシガを第325期の規定に替えた写し。</summary>
 public static (string Name, Formation F)[] CompareBuildsH325() => CompareBuilds().Select(r => (r.Name, Pin325(r.F))).ToArray();

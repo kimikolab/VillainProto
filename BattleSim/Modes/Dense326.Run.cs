@@ -322,7 +322,7 @@ static partial class Dense326Diag
     static void Grid(string waveKey, Ver v)
     {
         var w = WaveOf(waveKey);
-        var fixedU = w.Boss ? new[] { UnitCatalog.Tou, UnitCatalog.Kata, UnitCatalog.Som } : new[] { UnitCatalog.Tou, UnitCatalog.Kata };
+        var fixedU = w.Boss ? new[] { UnitCatalog.TouH326, UnitCatalog.Kata, UnitCatalog.Som } : new[] { UnitCatalog.TouH326, UnitCatalog.Kata };   // 第327期: 第326期の規定のトウ
         int free = 5 - fixedU.Length;
         UnitDef Now(UnitDef d) => UnitCatalog.All.FirstOrDefault(x => x.Id == d.Id) ?? d;
         var heal = S287.Heal.Select(d => d.Id).ToHashSet();
