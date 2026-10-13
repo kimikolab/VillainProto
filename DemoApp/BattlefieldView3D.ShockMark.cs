@@ -20,6 +20,7 @@ public partial class BattlefieldView3D
     {
         EndWhipPresentation();
         EndSomPresentation();
+        EndTouPowder();
         EndHushPresentation();
         EndMarkRallyPresentation();
         foreach (var pawn in _pawns.Values) pawn.EndShockMark();

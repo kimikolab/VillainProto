@@ -5,6 +5,7 @@ public partial class Main
 {
     private async Task<bool> PlayShockMark(BattleEvent e, int index, BattlePawn3D? actor, BattlePawn3D? target)
     {
+        if (await PlayTouPowder(e, index, target)) return true;
         if (e.Kind == BattleEventKind.Web)
         {
             _battleField.ShowWeb(e, _speed);

@@ -24,6 +24,7 @@ public partial class Main
 
     private void IndexThunder(IReadOnlyList<BattleEvent> events)
     {
+        _touPowder = TouPowderPresentation.Build(events);
         _shockStages.Clear(); _shockStageMembers.Clear(); _electricDeaths.Clear(); _thunderPrevious.Clear();
         int? previous = null;
         for (int i = 0; i < events.Count; i++)
@@ -65,11 +66,13 @@ public partial class Main
         }
         if (e.Kind == BattleEventKind.Thunder)
         {
+            bool powderReturn = _touPowder.ThunderReturns.ContainsKey(index);
+            if (powderReturn) _battleField.LiftThunderPowder(actor, _speed);
             _battleField.LaunchThunderStake(actor, target, _speed);
             await Delay(0.18);
             if (token != _playToken || !_battleMode) return true;
             _battleField.StrikeThunder(_battleField.FindPawn(_thunderPrevious.GetValueOrDefault(index)),
-                target, e.Slot, e.StatusRemaining ?? 0, _speed, actor);
+                target, e.Slot, e.StatusRemaining ?? 0, _speed, actor, powderReturn);
             if (target is not null) FireHitContact(index, target);
             _fireFastEvent |= _fireHits.Contacts.ContainsKey(index);
             await Delay(0.12);
@@ -111,6 +114,8 @@ public partial class Main
         }
         if (e.Kind == BattleEventKind.StatusGain && e.Text == StatusKeys.Shock)
         {
+            // 伝染は直後の札で粒が届いてから帯電を表示。同陣営の「漏れ雷」にしない。
+            if (_touPowder.ContagionGains.Contains(index)) return true;
             if (e.Amount > 0 && e.PowderRoute is { } powder)
             {
                 await _battleField.ShowPowder(actor, _battleField.FindPawn(e.SpreadFromId), target, powder, _speed);
@@ -138,6 +143,7 @@ public partial class Main
 
     private void ShowScriptDischarge(BattleEvent e)
     {
+        _battleField.ShowHeavyPowderDischarge(e, _speed);
         if (_battleField.ShowSomBeastDischarge(e.ActorId, e.TargetId, _speed)) return;
         if (_battleField.ShowSilkBallDischarge(e.ActorId, e.TargetId, _speed)) return;
         if (e.SourceTrait == TraitId.Thread)

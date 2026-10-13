@@ -17,7 +17,7 @@ public partial class BattlefieldView3D
         tween.TweenCallback(Callable.From(stake.QueueFree));
     }
 
-    public void StrikeThunder(BattlePawn3D? previous, BattlePawn3D? target, int hop, int kinds, double speed, BattlePawn3D? actor = null)
+    public void StrikeThunder(BattlePawn3D? previous, BattlePawn3D? target, int hop, int kinds, double speed, BattlePawn3D? actor = null, bool powderReturn = false)
     {
         if (target is null) return;
         ThunderPlays++;
@@ -27,7 +27,9 @@ public partial class BattlefieldView3D
         Color tint = ThunderFx.Cyan;
         if (target.HasStatusIcon(BattleCore.StatusKeys.Poison)) tint = tint.Lerp(new Color("8ce9a1"), 0.35f);
         if (target.HasStatusIcon(BattleCore.StatusKeys.Burn)) tint = tint.Lerp(new Color("ffbb77"), 0.30f);
+        if (powderReturn) tint = ShockMarkFx.Gold;
         var to = target.FxPoint;
+        if (powderReturn) PowderEffect(TouPowderFxKind.Settle, to + Vector3.Up * 3.5f, to, speed, actor?.PowderDensity ?? 1);
         ThunderFx.Arc(_fxRoot, previous?.FxPoint ?? to + Vector3.Up * 5.5f, to,
             0.022f + power * 0.014f + cloud * 0.019f, 0.36 / speed, color: tint);
         if (cloud > 0)

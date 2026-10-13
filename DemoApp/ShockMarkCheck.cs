@@ -21,9 +21,12 @@ public partial class ShockMarkCheck : Control
             bool hisa = OS.GetCmdlineUserArgs().Contains("--hisa");
             bool hush = OS.GetCmdlineUserArgs().Contains("--hush");
             bool doha = OS.GetCmdlineUserArgs().Contains("--doha");
+            bool powder = OS.GetCmdlineUserArgs().Contains("--powder");
             if (!OS.GetCmdlineUserArgs().Contains("--replay-only"))
             {
-                if (doha) { await CheckDohaPortraits(); await CheckDohaBatches(); }
+                if (OS.GetCmdlineUserArgs().Contains("--powder-readability")) await CheckTouPowderReadability();
+                else if (powder) { await CheckTouPowderAudio(); await CheckTouPowderVisuals(); await CheckTouPowderReadability(); }
+                else if (doha) { await CheckDohaPortraits(); await CheckDohaBatches(); }
                 else if (hush) await CheckHushVisuals();
                 else if (hisa) await CheckHisaVisuals();
                 else if (loop) await CheckMarkLoopVisuals();
@@ -33,7 +36,15 @@ public partial class ShockMarkCheck : Control
                 else if (web) await CheckWebVisuals();
                 else await CheckVisuals();
             }
-            if (doha && OS.GetCmdlineUserArgs().Contains("--verify"))
+            if (powder && OS.GetCmdlineUserArgs().Contains("--verify"))
+            {
+                if (OS.GetCmdlineUserArgs().Contains("--powder-live"))
+                    await ReplayTouPowder("試遊・感電 粉 隣あり", 1, 0);
+                else
+                    foreach (string preset in new[] { "試遊・感電 粉 隣あり", "試遊・感電 粉 隣なし" })
+                        foreach (int stage in new[] { 0, 1, 2 }) await ReplayTouPowder(preset, stage, 0);
+            }
+            else if (doha && OS.GetCmdlineUserArgs().Contains("--verify"))
             {
                 for (int stage = 0; stage < 3; stage++) await Replay("試遊・標 守り型", stage, 0);
                 // 添付ログと同じ勇者候補・審問官・槍騎兵を含む第五波でも、ゴルムとの連鎖を追う。
@@ -205,6 +216,7 @@ public partial class ShockMarkCheck : Control
         {
             for (int k = 0; k < 1200 && (bool)Read("_playing")!; k++) await Wait(0.05);
             Require(!(bool)Read("_playing")!, "実戦の再生完走");
+            CheckTouPowderReplay(field, result);
             Require(field.CommandPlays == Count(BattleEventKind.Command)
                 && field.CommandBallPlays == Count(BattleEventKind.CommandBall)
                 && field.CoverPlays == Count(BattleEventKind.Cover), "号令・玉・庇いが台本件数と一致");

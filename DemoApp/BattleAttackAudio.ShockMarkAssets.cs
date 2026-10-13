@@ -138,6 +138,7 @@ public partial class BattleAttackAudio
 
     private void ReleaseShockPanBuses()
     {
+        StopPowderBurn();
         StopShockMarkAssets();
         foreach (var bus in _shockPanBuses.Values)
         {

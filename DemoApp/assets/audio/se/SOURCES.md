@@ -360,3 +360,34 @@ SHA-256: `EE595A4C0D4DDE8FF2AB7D246209FBC4FE8B5A8DDC2F0B7BA8F4BC907CE84DB1`。
 往路の放出と体表の共鳴で別枠から重ねて再生する。-11 dB、原音程、100ms以内の群れの同種音はまとめる。
 粛で止まる分岐は既存の無効化音、打ち返しは既存の割り込み音と電撃鞭音、暴発は既存のソムの破裂音を再利用。
 一時停止・終了・中断・再戦は既存の `PauseSomSounds`／`StopSomSounds` に従う。
+
+## トウ・粉焼（2026-10-13）
+
+ユーザー指定のHelton Yan's Pixel Combatの `DSGNImpt_EXPLOSION-Phoenix Spark_HY_PC-001/002/003.wav`。
+原本から `tou_powder_spark_1/2/3.wav` へ無加工でコピー。全て96kHz / 24bit / stereo / 2.5秒。
+火花の連続閃光と共通の段階で選ぶ：粉の濃さ1〜2は001（小）、3〜14は002（中）、15以上は003（大）。
+
+| 原本の末尾 | 配置名 | SHA-256 |
+|---|---|---|
+| 001 | tou_powder_spark_1.wav | `93F249B4B648B19689806AF3106845BA28C03A7E9AB8FCFDB28B0A456C1C975C` |
+| 002 | tou_powder_spark_2.wav | `F58F2030A679DF6B692076E4586EA978D94FFBC200C348725A4DF880CB972FD0` |
+| 003 | tou_powder_spark_3.wav | `6714C1A672EAB63E23F63432FAD1C29B3F89B7ABAB53E10D486C76440BDC2295` |
+
+先に指定されたSand Impact 001（`tou_powder_burn.wav`、SHA-256 `C2E466AD19D7B87D03A6BAC743A09A8F39D54AF45CF0F5159EAF972A6D11ECFA`）は差し替え済みで再生しない。原本・既存配置は保存する。
+
+配置コマンド（購入音源はGitに含めない）：
+
+```powershell
+1..3 | ForEach-Object {
+    Copy-Item -LiteralPath ("D:\Assets\SE\Helton Yan's Pixel Combat - Single Files\DSGNImpt_EXPLOSION-Phoenix Spark_HY_PC-00{0}.wav" -f $_) -Destination ("DemoApp/assets/audio/se/tou_powder_spark_{0}.wav" -f $_)
+}
+```
+
+`ShockGauge` の「濃さ・焼いた」で、本人の点火と同時に再生。
+小-6 / 中-4 / 大-2 dB、専用3枠、原音程。1倍速の上限は小0.45 / 中0.55 / 大0.65秒、倍速でも最低0.30秒。
+末尾28%をフェードし、同じフレームまたは85ms以内の発動は最大段階の1音にまとめる。小が先なら同じ枠を大に差し替える。左右定位は採用した音の焼ける駒の画面位置。
+通常の散粉・放電・濃さの加算では鳴らさない。一時停止は音とフェードを止め、再開時の速度変更にも追従。
+終了・再戦・画面離脱では全枠を停止する。未配置の環境では無音で演出を続ける。
+`res://ShockMarkCheck.tscn -- --powder` で3音源の復号、段階の境界、点火時の選択、密集時の大の優先、原音程、一時停止・再戦を確認する。
+音量は当初の小-16 / 中-14 / 大-12 dBから各10 dB増加。倍速の最低尺も0.18秒から0.30秒へ延ばす。
+`--powder --powder-mix` で小・中・大×左右×1・2・4倍速のMaster出力を測定し、ピーク約0.35〜0.62を確認する。

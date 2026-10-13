@@ -324,6 +324,7 @@ public partial class BattlefieldView3D : Control
         ResetSuperFlash();
         ResetBindings();
         ResetShockWeb();
+        ResetTouPowder();
         ResetSomPresentation();
         ResetSeals();
         ResetPopups();

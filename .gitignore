@@ -36,3 +36,9 @@ obj/
 
 # 購入素材は各開発環境で用意する（素材単体の再配布を避ける）。
 /DemoApp/PolyBlocks/
+
+# ユーザー指定の購入SE。配置元は DemoApp/assets/audio/se/SOURCES.md。
+/DemoApp/assets/audio/se/tou_powder_burn.wav
+/DemoApp/assets/audio/se/tou_powder_spark_1.wav
+/DemoApp/assets/audio/se/tou_powder_spark_2.wav
+/DemoApp/assets/audio/se/tou_powder_spark_3.wav

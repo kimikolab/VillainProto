@@ -231,6 +231,8 @@ uniform float guren_flash = 0.0;
 uniform vec4 fire_tint : source_color = vec4(1.0,0.3,0.03,1.0);
 uniform float fire_heat = 0.0;
 uniform float fire_damage = 0.0;
+uniform float powder_burn_heat = 0.0;
+uniform float powder_burn_char = 0.0;
 void fragment() {
     vec4 c = texture(portrait_texture, UV);
     vec4 top_left = texture(portrait_texture, vec2(0.02, 0.02));
@@ -266,6 +268,12 @@ void fragment() {
     float fire_crack = pow(max(0.0,1.0-abs(sin(UV.y*61.0+sin(UV.x*39.0)*2.0))),24.0);
     ALBEDO *= 1.0-fire_damage*heat_zone*0.22;
     EMISSION += fire_tint.rgb*heat_zone*(metal_edge*fire_heat*0.35+fire_crack*fire_damage*0.65);
+    // 粉焼は立ち絵そのものの胴を中心に赤く光らせる。透過部分には出さない。
+    float powder_zone = smoothstep(0.24,0.36,UV.y)*(1.0-smoothstep(0.72,0.88,UV.y));
+    float powder_vein = pow(max(0.0,1.0-abs(sin(UV.x*73.0+sin(UV.y*49.0)*2.0))),10.0);
+    ALBEDO = mix(ALBEDO,vec3(1.0,0.08,0.14),powder_zone*powder_burn_heat*0.65);
+    ALBEDO *= 1.0-powder_zone*powder_burn_char*0.40;
+    EMISSION += vec3(1.0,0.10,0.16)*powder_zone*powder_burn_heat*(0.45+powder_vein*1.1);
     ALPHA = alpha;
 }"
         };
@@ -449,6 +457,7 @@ void fragment() {
 
     public void AnimateDeath()
     {
+        ClearTouPowder();
         SetDecoyShown(false);
         ClearMovementPortrait();
         if (!_alive) return;

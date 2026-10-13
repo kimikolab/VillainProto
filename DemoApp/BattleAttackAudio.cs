@@ -379,6 +379,7 @@ public partial class BattleAttackAudio : Node
 
     public void StopAll()
     {
+        StopPowderBurn();
         StopSomSounds();
         StopHisaSounds();
         StopShockMarkSounds();
