@@ -182,7 +182,7 @@ static partial class Settle336Diag
         {
             var v = Presets.Versions;
             Expect("試遊の台: `Presets.Versions` ＝ 「試遊・感電 ポンの台」1台（第335期の「版・」の4台は外した）・`Playtest` は 17 台のまま",
-                v.Length >= 1 && v[0].Name == "試遊・感電 ポンの台" && v.Skip(1).All(r => r.Name.StartsWith("版・", StringComparison.Ordinal)) && Presets.Playtest.Length == 17);   // 第337期: 1行目だけを見る（見出しは第336期のまま）
+                v.Length >= 1 && v[0].Name == "試遊・感電 ポンの台" && v.Skip(1).All(r => r.Name.StartsWith("版・", StringComparison.Ordinal) || r.Name.StartsWith("試遊・", StringComparison.Ordinal))   /* 第340期: 「試遊・ミサ 書き手なし」も */ && Presets.Playtest.Length == 17);   // 第337期: 1行目だけを見る（見出しは第336期のまま）
         }
         {
             long nNew = 0, nOld = 0; int diff = 0, n = 0;

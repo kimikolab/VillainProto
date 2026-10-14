@@ -463,7 +463,7 @@ public static (string Name, Formation F)[] PlaytestH332 => Presets.Playtest.Sele
 /// それより前の固定の口（`PinS332` ／ `PinTK331` ／ `PinT328` ／ `PinTK327` ／ `PinT326` ／ 古い口の終端 `PinTKK324`）も最後にここを通す（第299〜333期はミサが変わっていない）。
 /// `Pin299` は先に規定のミサを第286〜298期の規定（`TomeMb`）へ替えるので届かない。
 /// </summary>
-public static UnitDef PinM333(UnitDef d) => ReferenceEquals(d, UnitCatalog.Tome) ? UnitCatalog.TomeH333 : PinZ334(d);   // 第335期: 規定のザンも（古い口の終端）
+public static UnitDef PinM333(UnitDef d) => ReferenceEquals(d, UnitCatalog.Tome) || ReferenceEquals(d, UnitCatalog.TomeH339) ? UnitCatalog.TomeH333 : PinZ334(d);   // 第340期: 第334〜339期の規定（`TomeH339`・`Pin334` などが先に替えた駒）も   // 第335期: 規定のザンも（古い口の終端）
 
 /// <summary>
 /// 第335期: 規定のザン（ZC-a・中継では出ない）を第301〜334期の規定（`ZanH334`）に替える。ほかの駒はそのまま返す。
@@ -484,7 +484,7 @@ public static UnitDef PinD335(UnitDef d) => ReferenceEquals(d, UnitCatalog.Doha)
 /// 古い口の終端（`PinM333` → `PinZ334` → `PinD335` → ここ）なので、`PinM333` を最後に通す口すべて（`Pin333` ／ `Pin334` ／ `Pin335` ／ `PinS332` ／ `PinTK331` ／ `PinT328` ／ `PinTK327` ／ `PinT326` ／ `PinTKK324`）もここを通る。
 /// ヒサをもっと古い規定へ替える口（`Pin299`〜`Pin304` ／ `PinS317` ／ `PinSS318` ／ `PinSH321` ／ `guard294` ／ `kugu292` ／ `markheal295` ／ `misa285` ほか）は `IsHisaNow` で `HisaH337` も受ける。
 /// </summary>
-public static UnitDef PinH337(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaH337 : d;
+public static UnitDef PinH337(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaH337 : PinM339(d);   // 第340期: 規定のミサも（古い口の終端）
 
 /// <summary>第338期: 規定のヒサか、第322〜337期の規定（`HisaH337`・`PinH337` を通った後）か。</summary>
 public static bool IsHisaNow(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hisa) || ReferenceEquals(d, UnitCatalog.HisaH337);
@@ -502,6 +502,27 @@ public static (string Name, Formation F)[] CompareBuildsH337() => CompareBuilds(
 
 /// <summary>第338期: `Presets.Playtest` のヒサを第322〜337期の規定に替えた写し（行の数と並びはそのまま）。</summary>
 public static (string Name, Formation F)[] PlaytestH337 => Presets.Playtest.Select(r => (r.Name, Pin337(r.F))).ToArray();
+
+/// <summary>
+/// 第340期: 規定のミサ（FG-b・標が無いと羽が増えていく）を第334〜339期の規定（`TomeH339`）に替える。ほかの駒はそのまま返す。
+/// 古い口の終端（`PinM333` → `PinZ334` → `PinD335` → `PinH337` → ここ）なので、`PinM333` を最後に通す口すべてもここを通る（`PinM333` は先に規定のミサを `TomeH333` へ替えるので、第333期までの口には届かない）。
+/// ミサをもっと古い規定へ替える口（`Pin299` ／ `guard294` ／ `kugu292` ／ `markheal295`）は `IsMisaNow` で `TomeH339` も受ける。
+/// </summary>
+public static UnitDef PinM339(UnitDef d) => ReferenceEquals(d, UnitCatalog.Tome) ? UnitCatalog.TomeH339 : d;
+
+/// <summary>第340期: ミサの FG-b を規定にした。第334〜339期の規定のミサで測った器具（`grow339` の「規定」）はこれを通す。陣形とレリックは保つ。</summary>
+public static Formation Pin339(Formation f)
+{
+    var g = f.Clone();
+    foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinM339(d);
+    return g;
+}
+
+/// <summary>第340期: `CompareBuilds()` のミサを第334〜339期の規定に替えた写し。</summary>
+public static (string Name, Formation F)[] CompareBuildsH339() => CompareBuilds().Select(r => (r.Name, Pin339(r.F))).ToArray();
+
+/// <summary>第340期: `Presets.Playtest` のミサを第334〜339期の規定に替えた写し（行の数と並びはそのまま）。</summary>
+public static (string Name, Formation F)[] PlaytestH339 => Presets.Playtest.Select(r => (r.Name, Pin339(r.F))).ToArray();
 
 /// <summary>第336期: 規定のドハか、第317〜335期の規定（`DohaH335`・`PinD335` を通った後）か。</summary>
 public static bool IsDohaNow(UnitDef d) => ReferenceEquals(d, UnitCatalog.Doha) || ReferenceEquals(d, UnitCatalog.DohaH335);
@@ -538,7 +559,7 @@ public static (string Name, Formation F)[] CompareBuildsH334() => CompareBuilds(
 public static (string Name, Formation F)[] PlaytestH334 => Presets.Playtest.Select(r => (r.Name, Pin334(r.F))).ToArray();
 
 /// <summary>第334期: 規定のミサか、第299〜333期の規定（`TomeH333`・`PinM333` を通った後）か。ミサを第298期までの規定（`TomeMb`）へ替える口（`Pin299` ／ `guard294` ／ `kugu292` ／ `markheal295` の固定）が使う——内側の口（`PlaytestH316` など）が先に `TomeH333` へ替えるため。</summary>
-public static bool IsMisaNow(UnitDef d) => ReferenceEquals(d, UnitCatalog.Tome) || ReferenceEquals(d, UnitCatalog.TomeH333);
+public static bool IsMisaNow(UnitDef d) => ReferenceEquals(d, UnitCatalog.Tome) || ReferenceEquals(d, UnitCatalog.TomeH333) || ReferenceEquals(d, UnitCatalog.TomeH339);   // 第340期: 第334〜339期の規定（`TomeH339`）も
 
 /// <summary>第334期: ミサの爪痕をレリックへ移した。第299〜333期の規定のミサで測った器具はこれを通す。陣形とレリックは保つ。</summary>
 public static Formation Pin333(Formation f)

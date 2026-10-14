@@ -5462,8 +5462,10 @@ public static class UnitCatalog
     ///
     /// <para>HP58・攻12・速6 は探索段階の初期値。<b>掃引の対象は
     /// <c>FinisherRule.Multiplier</c> だけ</b>で、HP・攻・速は振らない。</para>
+    /// <para><b>第340期に FG-b（標が無いと羽が増えていく）を規定にしたので、第334〜339期の規定はこの <see cref="TomeH339"/> として明示的に持つ。</b>
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。第334〜339期の規定のミサで測った過去の器具はこちらに固定する（`Common.PinM339` ほか）。第337〜339期の版（＋羽 ／ FG-a）はこちらから作る。</para>
     /// </summary>
-    public static readonly UnitDef Tome = new()
+    public static readonly UnitDef TomeH339 = new()
     {
         Id = "tome",
         Name = "見境なしのミサ",
@@ -5481,6 +5483,31 @@ public static class UnitCatalog
         MinusText = "追う標が無い羽は、敵味方構わず飛んで、戻ってこない。味方が指差されても、撃つ",
         Flavor = "狙うのは得意。見分けるのが苦手。"
     };
+
+    /// <summary>
+    /// 見境なしのミサ（規定）。<b>第340期に FG-b（標を追えない間、羽が毎ターン3枚ずつ増えていく）を規定にした</b>（ポンの判断・design/PHASE340_MISA_GROW_SETTLE_SPEC.md §2）——
+    /// 第334〜339期の規定（<see cref="TomeH339"/>）から <see cref="TraitId.FeatherLoss"/>（乱射した数だけ羽を失う）を外し、末尾に <see cref="TraitId.FeatherGrowUnmarked"/>。
+    /// 札と文面は第339期の版 FG-b（<c>TomeFGb</c>）と同じ。
+    /// </summary>
+    public static readonly UnitDef Tome = new()
+    {
+        Id = TomeH339.Id,
+        Name = TomeH339.Name,
+        MaxHp = TomeH339.MaxHp,
+        Attack = TomeH339.Attack,
+        Speed = TomeH339.Speed,
+        Advances = TomeH339.Advances,
+        Pattern = TomeH339.Pattern,
+        // 第340期: ポンの判断（第339期の案 F2）で FG-b を規定にした。旧の規定は `TomeH339`（指示書 design/PHASE340_MISA_GROW_SETTLE_SPEC.md §2）。
+        Traits = TomeH339.Traits.Where(t => t != TraitId.FeatherLoss).Append(TraitId.FeatherGrowUnmarked).ToArray(),
+        Actions = TomeH339.Actions,
+        PlusText = TomeH339.PlusText,
+        MinusText = TomeMinus340,
+        Flavor = TomeH339.Flavor
+    };
+
+    /// <summary>第340期の規定（FG-b）のミサのマイナスの文面（第339期の叩き台・「戻ってこない」を外した）。</summary>
+    public const string TomeMinus340 = "標を追えない間、羽は毎ターン3枚ずつ増えていく。追う標が無い羽は、敵味方構わず飛ぶ。味方が指差されても、撃つ";
 
     /// <summary>
     /// 第299〜333期の規定のミサ（MF-b・爪痕あり）。第334期に爪痕（<see cref="TraitId.RuptureScar"/>）をレリック「抉りの鏃」へ移したので、旧の規定の定義を明示的に持つ。
@@ -5520,7 +5547,7 @@ public static class UnitCatalog
     public static readonly UnitDef HisaMIa = With337(HisaH337, TraitId.MarkInheritOne, "。標を付けられた敵が倒れると、その恨みは隣の敵が背負う");
 
     /// <summary>第337期 MI-b ＋ 羽 の、ミサの側。規定のミサ ＋ <see cref="TraitId.MarkInheritFeathers"/>（引き継ぎで移った層の数だけ羽が増える）。ヒサは <see cref="HisaMIb"/> と組む。</summary>
-    public static readonly UnitDef MisaMIf = With337(Tome, TraitId.MarkInheritFeathers, "。散った恨みの数だけ、羽も増える");
+    public static readonly UnitDef MisaMIf = With337(TomeH339, TraitId.MarkInheritFeathers, "。散った恨みの数だけ、羽も増える");
 
     // ---------------------------------------------------------------------------------
     // 第339期（指示書 design/PHASE339_MISA_FEATHER_GROW_SPEC.md §2）—— ミサの羽が毎ターン増える（FG）。規定のミサから `FeatherLoss`（乱射した数だけ羽を失う）を外し、札を1枚足す。
@@ -5533,11 +5560,12 @@ public static class UnitCatalog
         PlusText = b.PlusText, MinusText = minus, Flavor = b.Flavor,
     };
 
-    /// <summary>第339期 FG-a（毎ターン増える）。規定のミサ − <see cref="TraitId.FeatherLoss"/> ＋ <see cref="TraitId.FeatherGrow"/>（手番の頭に羽が3枚増える・標の有無を問わない・乱射しても減らない）。</summary>
-    public static readonly UnitDef TomeFGa = With339(Tome, TraitId.FeatherGrow, "羽は毎ターン3枚ずつ増えていく。追う標が無い羽は、敵味方構わず飛ぶ。味方が指差されても、撃つ");
+    /// <summary>第339期 FG-a（毎ターン増える）。規定のミサ − <see cref="TraitId.FeatherLoss"/> ＋ <see cref="TraitId.FeatherGrow"/>（手番の頭に羽が3枚増える・標の有無を問わない・乱射しても減らない）。
+    /// 第340期: FG-b を規定にしたので、旧の規定（<see cref="TomeH339"/>）から作り直した（中身は第339期のまま）。＋羽（<see cref="MisaMIf"/>）／ FG-b も同じ。</summary>
+    public static readonly UnitDef TomeFGa = With339(TomeH339, TraitId.FeatherGrow, "羽は毎ターン3枚ずつ増えていく。追う標が無い羽は、敵味方構わず飛ぶ。味方が指差されても、撃つ");
 
     /// <summary>第339期 FG-b（標が無いときだけ増える）。規定のミサ − <see cref="TraitId.FeatherLoss"/> ＋ <see cref="TraitId.FeatherGrowUnmarked"/>（手番の頭に、敵に標持ちが1体もいなければ羽が3枚増える・乱射しても減らない）。</summary>
-    public static readonly UnitDef TomeFGb = With339(Tome, TraitId.FeatherGrowUnmarked, "標を追えない間、羽は毎ターン3枚ずつ増えていく。追う標が無い羽は、敵味方構わず飛ぶ。味方が指差されても、撃つ");
+    public static readonly UnitDef TomeFGb = With339(TomeH339, TraitId.FeatherGrowUnmarked, TomeMinus340);
 
     /// <summary>第285期 M-b（乱射した数だけ羽を失う・下限 1）。<see cref="TomeMa"/> ＋ <see cref="TraitId.FeatherLoss"/> の1札だけが違う。<b>第286〜298期の規定</b>。
     /// 第299期に MF-b を規定にしたので、旧の規定の定義を明示的に持つ（第298期までは <c>TomeMb = Tome</c> の別名だった）。過去の器具はこちらに固定する。

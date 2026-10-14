@@ -40,22 +40,21 @@ static partial class Grow339Diag
 
         // ---- 版の定義と試遊の台
         {
-            UnitDef M = UnitCatalog.Tome, A = UnitCatalog.TomeFGa, B = UnitCatalog.TomeFGb;
+            UnitDef M = UnitCatalog.TomeH339, A = UnitCatalog.TomeFGa, B = UnitCatalog.TomeFGb;   // 第340期: 版は第334〜339期の規定のミサから作り直した
             var baseT = M.Traits.Where(t => t != TraitId.FeatherLoss).ToArray();
             bool def = M.Traits.Contains(TraitId.FeatherLoss) && A.Traits.SequenceEqual(baseT.Append(TraitId.FeatherGrow)) && B.Traits.SequenceEqual(baseT.Append(TraitId.FeatherGrowUnmarked))
                 && A.PlusText == M.PlusText && B.PlusText == M.PlusText
                 && A.MinusText == "羽は毎ターン3枚ずつ増えていく。追う標が無い羽は、敵味方構わず飛ぶ。味方が指差されても、撃つ"
                 && B.MinusText == "標を追えない間、羽は毎ターン3枚ずつ増えていく。追う標が無い羽は、敵味方構わず飛ぶ。味方が指差されても、撃つ"
                 && !UnitCatalog.Everyone.Contains(A) && !UnitCatalog.Everyone.Contains(B)
-                && UnitCatalog.Everyone.All(d => !d.Traits.Any(t => t is TraitId.FeatherGrow or TraitId.FeatherGrowUnmarked));
+                && UnitCatalog.Everyone.All(d => !d.Traits.Contains(TraitId.FeatherGrow))
+                && UnitCatalog.Everyone.Where(d => d.Traits.Contains(TraitId.FeatherGrowUnmarked)).SequenceEqual(new[] { UnitCatalog.Tome });   // 第340期: FG-b は規定のミサの札
             Expect("版の定義: FG-a ／ FG-b ＝ 規定のミサ − `FeatherLoss` ＋ 札1枚（マイナスの文面は叩き台・「戻ってこない」を外した）・`Everyone` の外・保持者 0", def);
-            var v = Presets.Versions; var g = Presets.Playtest.First(r => r.Name == GuardRow).F; var nw = NoWriterBoard();
-            (string Name, Formation Base, UnitDef Misa)[] want = { ("版・FG-a 守り型", g, A), ("版・FG-b 守り型", g, B), ("版・FG-a 書き手なし", nw, A) };
-            bool rows = v.Length == 4 && v[0].Name == "試遊・感電 ポンの台" && Presets.Playtest.Length == 17
-                && want.Select((x, i) => (x, i)).All(y => v[y.i + 1].Name == y.x.Name
-                    && v[y.i + 1].F.Occupied().Select(o => o.Def).SequenceEqual(y.x.Base.Occupied().Select(o => o.Def.Id == "tome" ? y.x.Misa : o.Def))
-                    && v[y.i + 1].F.Occupied().Select(o => o.Slot).SequenceEqual(y.x.Base.Occupied().Select(o => o.Slot)));
-            Expect("試遊の台: `Presets.Versions` ＝ 「試遊・感電 ポンの台」＋「版・FG-a 守り型 ／ FG-b 守り型 ／ FG-a 書き手なし」（並びはそれぞれの台でミサだけ版）・`Playtest` は 17 台のまま", rows);
+            // 第340期: FG-b を規定にしたので「版・FG」の3台を外した——1行目（ポンの台）と、FG の版が試遊の台に残っていないことだけを見る
+            var v = Presets.Versions;
+            bool rows = v.Length >= 1 && v[0].Name == "試遊・感電 ポンの台" && Presets.Playtest.Length == 17
+                && v.SelectMany(r => r.F.Occupied()).All(o => !ReferenceEquals(o.Def, A) && !ReferenceEquals(o.Def, B));
+            Expect("試遊の台: `Presets.Versions` の1行目は「試遊・感電 ポンの台」・第339期の「版・FG」の3台は第340期に外した・`Playtest` は 17 台のまま", rows);
         }
 
         // ---- FG-a: 手番の頭に 3 枚・標の有無を問わない・乱射しても減らない・1ラウンドに1度
@@ -85,7 +84,7 @@ static partial class Grow339Diag
 
         // ---- 規定のミサ（対照）: 増えない・乱射した数だけ減る（下限 1）
         {
-            var (ctx, m, _) = Board(UnitCatalog.Tome);
+            var (ctx, m, _) = Board(UnitCatalog.TomeH339);   // 第340期: 第334〜339期の規定のミサ
             m.SetCounter(FeathersTrait.ExtraKey, 3);
             Swing(ctx, m, 1);
             Expect("規定のミサ（対照）: 羽は増えず、乱射した数だけ失う（4 → 1）", Fe(m) == 1 && T323.Tal(ctx, "tome").Fg339Grows == 0, $"羽 4 → {Fe(m)}");

@@ -15,6 +15,7 @@ using T323 = Tou323Diag;
 //     dotnet run --project BattleSim -c Release 0 grow339 log [台] [波] [seed] [版] # 1戦のログ
 //     dotnet run --project BattleSim -c Release 0 grow339 check                   # §8 自己検査
 //
+// 第340期: FG-b を規定にしたので、「規定」（base）は第334〜339期の規定のミサ（`TomeH339`・`Common.Pin339`）に固定した。
 // 版の名前（ASCII）: base（規定）／ a（FG-a）／ b（FG-b）。波: boss ／ guard ／ bat ／ 2 ／ 5。台: 守り型 ／ ボス台 ／ 三人組 ／ 標経済 ／ 書き手なし（ASCII は guard ／ nowriter）。
 // **予測のファイルが無ければ本測定（boards ／ compare）を走らせない**（R397・`.tmp/p339/predict.md`）。
 // =====================================================================================
@@ -66,7 +67,7 @@ static partial class Grow339Diag
     };
     static Ver V(string n) => Vers.First(v => v.Name == n || v.Ascii == n);
     static Ver[] Pick(string only) => (string.IsNullOrEmpty(only) ? Vers : new[] { Vers[0] }.Concat(only.Split(',').Select(V).Where(v => v != Vers[0]))).ToArray();
-    internal static Formation Apply(Formation f, Ver v) => v.Misa is null ? f : S316.SwapId(f, "tome", v.Misa);
+    internal static Formation Apply(Formation f, Ver v) => v.Misa is null ? Pin339(f) : S316.SwapId(f, "tome", v.Misa);   // 第340期: 「規定」は第334〜339期の規定のミサ（`TomeH339`）に固定
 
     internal const string GuardRow = "試遊・標 守り型";
     internal const string NoWriter = "書き手なし";
@@ -161,7 +162,7 @@ static partial class Grow339Diag
     static void P0()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var nw = Boards()[4].F; var g = Boards()[0].F;
+        var nw = Pin339(Boards()[4].F); var g = Pin339(Boards()[0].F);   // 第340期: 第334〜339期の規定のミサ
         Console.WriteLine($"# {Tag} §3 Phase 0 —— 規定・seed 0..{Seeds - 1}・1戦あたり");
         Console.WriteLine();
         Console.WriteLine($"## 1. 書き手のいない台「{NoWriter}」（{S307.Seats(nw)}）——守り型のザン ／ ヒサ（標の書き手）をドルガ ／ バンに替えた");

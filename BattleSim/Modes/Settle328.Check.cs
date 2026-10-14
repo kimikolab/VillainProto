@@ -88,7 +88,7 @@ static partial class Settle328Diag
             var pl = Presets.Playtest;
             var rows = Presets.Compare.Concat(Presets.Cross).Concat(pl).Concat(v).ToArray();
             // 第329期: `Versions` は期ごとに「版・」の台を入れ替えるので、1行目（ポンの台）だけを見る（後ろの行は「版・」で始まること・第327期の DX の版の台は無いこと）。見出しの文は第328期のまま。
-            bool ok = v.Length >= 1 && v[0].Name == "試遊・感電 ポンの台" && v.Skip(1).All(r => r.Name.StartsWith("版・", StringComparison.Ordinal)) && !v.Any(r => r.Name.StartsWith("版・DX", StringComparison.Ordinal))
+            bool ok = v.Length >= 1 && v[0].Name == "試遊・感電 ポンの台" && v.Skip(1).All(r => r.Name.StartsWith("版・", StringComparison.Ordinal) || r.Name.StartsWith("試遊・", StringComparison.Ordinal))   /* 第340期: 「試遊・ミサ 書き手なし」も */ && !v.Any(r => r.Name.StartsWith("版・DX", StringComparison.Ordinal))
                 && v[0].F.Occupied().Select(o => o.Def).SequenceEqual(new[] { UnitCatalog.Kata, UnitCatalog.Shiga, UnitCatalog.Tou, UnitCatalog.Kugu, UnitCatalog.Som })
                 && Enumerable.Range(0, 5).Select(i => v[0].F[i]?.Id).SequenceEqual(new[] { "kata", "shiga", "tou", "kugu", "som" })
                 && pl.Length == 17 && !pl.Any(r => r.Name == v[0].Name)

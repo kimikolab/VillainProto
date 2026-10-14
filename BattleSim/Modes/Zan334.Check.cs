@@ -38,14 +38,14 @@ static partial class Zan334Diag
         Console.WriteLine();
         Console.WriteLine("| 項目 | 結果 | 備考 |");
         Console.WriteLine("|---|---|---|");
-        UnitDef M = UnitCatalog.Tome, MO = UnitCatalog.TomeH333, Z = UnitCatalog.ZanH334;   // 第335期: 版の土台は第301〜334期の規定のザン（いまの規定は ZC-a）
+        UnitDef M = UnitCatalog.TomeH339, MO = UnitCatalog.TomeH333, Z = UnitCatalog.ZanH334;   // 第340期: 第334〜339期の規定のミサ（`TomeH339`・いまの規定は FG-b）で見る   // 第335期: 版の土台は第301〜334期の規定のザン（いまの規定は ZC-a）
 
         // ---- 段0: 定義・レリック・固定の口
         {
             var old = new[] { TraitId.Rupture, TraitId.RuptureScar, TraitId.RuptureKeep, TraitId.Feathers, TraitId.FeatherLoss, TraitId.FeatherMarkLayer };   // 第299〜333期の規定のミサの札
             bool def = MO.Traits.SequenceEqual(old) && M.Traits.SequenceEqual(old.Where(t => t != TraitId.RuptureScar)) && M.Id == MO.Id && M.MaxHp == MO.MaxHp && M.Attack == MO.Attack && M.Speed == MO.Speed
                 && MO.PlusText.Contains("抉った傷は塞がらない", StringComparison.Ordinal) && !M.PlusText.Contains("塞がらない", StringComparison.Ordinal) && M.MinusText == MO.MinusText && M.Flavor == MO.Flavor
-                && UnitCatalog.All.Contains(M) && !UnitCatalog.Everyone.Contains(MO) && UnitCatalog.All.Count == 52 && UnitCatalog.Everyone.All(d => !d.Traits.Contains(TraitId.RuptureScar));
+                && UnitCatalog.All.Contains(UnitCatalog.Tome) && !UnitCatalog.Everyone.Contains(MO) && UnitCatalog.All.Count == 52 && UnitCatalog.Everyone.All(d => !d.Traits.Contains(TraitId.RuptureScar));
             Expect("段0 定義: 規定のミサ ＝ 第299〜333期の規定（`TomeH333`）から爪痕（`RuptureScar`）だけを外した札・文面から「抉った傷は塞がらない」を外した・旧は `Everyone` の外・`Everyone` に爪痕の保持者 0・`All` 52 枚", def);
             bool relic = RelicCatalog.IsRelic(TraitId.RuptureScar) && RelicCatalog.Info(TraitId.RuptureScar).Name == "抉りの鏃" && RelicCatalog.Added334.Count == 1
                 && RelicCatalog.All.Count == 12 && RelicCatalog.All.All(r => r.Id != TraitId.RuptureScar) && Formation.Build(back1: M).WithRelic(3, TraitId.RuptureScar).RelicAt(3) == TraitId.RuptureScar;
@@ -92,7 +92,7 @@ static partial class Zan334Diag
             Expect("版の定義: ZC-a ／ b ／ c ／ d ＝ 規定のザン ＋ 札1枚（文面は指示書の叩き台）・`Everyone` の外・`Everyone` に新しい札の保持者 0", vers);
             var v = Presets.Versions;
             // 第335期: `Versions` は期ごとに「版・」の台を入れ替えるので、1行目（ポンの台）だけを見る（後ろの行は「版・」で始まること）。見出しの文は第334期のまま。
-            bool rows = v.Length >= 1 && v[0].Name == "試遊・感電 ポンの台" && v.Skip(1).All(r => r.Name.StartsWith("版・", StringComparison.Ordinal)) && Presets.Playtest.Length == 17;
+            bool rows = v.Length >= 1 && v[0].Name == "試遊・感電 ポンの台" && v.Skip(1).All(r => r.Name.StartsWith("版・", StringComparison.Ordinal) || r.Name.StartsWith("試遊・", StringComparison.Ordinal)) && Presets.Playtest.Length == 17;   /* 第340期: 「試遊・ミサ 書き手なし」も */
             Expect("試遊の台: `Presets.Versions` ＝ 「試遊・感電 ポンの台」＋「版・ZC-a〜d 守り型」（守り型の並びでザンだけ版）・`Playtest` は 17 台のまま", rows);
         }
 

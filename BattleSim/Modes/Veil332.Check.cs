@@ -106,7 +106,7 @@ static partial class Veil332Diag
             UnitDef[] soms = { UnitCatalog.Som, UnitCatalog.SomLVc332, UnitCatalog.SomLVd332 };   // 第333期: 1行目は規定のソム（LV-c）
             var rows = Presets.Compare.Concat(Presets.Cross).Concat(Presets.Playtest).Concat(v).ToArray();
             // 第333期: `Versions` は期ごとに「版・」の台を入れ替えるので、1行目（ポンの台・規定の駒）だけを見る（後ろの行は「版・」で始まること）。見出しの文は第332期のまま。
-            bool ok = v.Length >= 1 && v[0].Name == names[0] && v.Skip(1).All(r => r.Name.StartsWith("版・", StringComparison.Ordinal))
+            bool ok = v.Length >= 1 && v[0].Name == names[0] && v.Skip(1).All(r => r.Name.StartsWith("版・", StringComparison.Ordinal) || r.Name.StartsWith("試遊・", StringComparison.Ordinal))   /* 第340期: 「試遊・ミサ 書き手なし」も */
                 && v[0].F.Occupied().Select(o => o.Def).SequenceEqual(new[] { UnitCatalog.Kata, UnitCatalog.Shiga, UnitCatalog.Tou, UnitCatalog.Kugu, soms[0] })
                 && Presets.Playtest.Length == 17 && Presets.Playtest.Any(r => r.Name == SomTsugiRow) && rows.First(r => r.Name.Contains(names[0], StringComparison.Ordinal)).Name == names[0];
             Expect("試遊の台: `Presets.Versions` ＝ 「試遊・感電 ポンの台」（規定の駒・段0 入り）＋「版・LV-c ／ LV-d ポンの台」（ソムだけ版）・第331期の「版・ST」の3台は外した・ソム ＋ ツギの台は試遊の「試遊・感電 瓦礫」", ok);

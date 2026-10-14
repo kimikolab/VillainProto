@@ -1399,3 +1399,7 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 
 - `FeatherVolley` の頭に `FeatherGrow`（`_featherGrowLive` で短絡）: 札 `FeatherGrow`（FG-a）は羽が `FeatherGrowTrait.Gain`（3）枚増える・`FeatherGrowUnmarked`（FG-b）は敵に標持ちが1体もいないときだけ。**1ラウンドに1度**（私有キー `FeatherGrowTrait.RoundKey` にターンを書く・再行動の2回目の一振りでは増えない・`OnCarryOver` で捨てる）。乱数を引かない。版は `FeatherLoss` を外す（乱射しても減らない）。
 - 表示は既存の `Feather`「増えた」（`ActorId` ＝ `TargetId` ＝ ミサ・`PartnerId` なし・`Slot` ＝ 3）。計数のみ `UnitTally.Fg339UnmarkedHeads`（敵に標持ちのいない一振りの頭・規定でも数える）／ `Fg339Grows` ／ `NoteSpray339`（乱射のターンごとの発 ／ 味方に当たった発 ／ 味方が減らした HP・`SprayShot` の中・遅延確保の配列）。版 `TomeFGa` ／ `TomeFGb`。器具: `grow339`。
+
+## 第340期 —— ミサの羽は標が無いと増えていく（FG-b）を規定に
+
+- engine は第339期のまま（窓口は足していない）。規定のミサ `UnitCatalog.Tome` ＝ `TomeH339`（第334〜339期の規定・明示の定義に）− `FeatherLoss` ＋ `FeatherGrowUnmarked`——規定の戦で `_featherGrowLive` が立つ。固定の口 `Common.PinM339` ／ `Pin339` ／ `CompareBuildsH339` ／ `PlaytestH339`（古い口の終端 `PinH337` の最後に `PinM339`）・`IsMisaNow` は `TomeH339` も受ける。器具: `settle340`。

@@ -46,7 +46,7 @@ static partial class Settle338Diag
     static string Per2(long a, long n) => n == 0 ? "—" : ((double)a / n).ToString("F2");
 
     /// <summary>§4 の代表台（`mark337` と同じ5台・駒はいまの規定）。旧は <see cref="Pin337"/> を通す。</summary>
-    internal static (string Name, Formation F)[] Boards() => M337.Boards();
+    internal static (string Name, Formation F)[] Boards() => M337.Boards().Select(b => (b.Name, Pin339(b.F))).ToArray();   // 第340期: ミサは第334〜339期の規定（`TomeH339`）に固定
     internal static readonly S287.Wave[] Waves = M337.Waves;
 
     static string Cell(M337.St z) => $"{F1(z.Win)}%・{Per(z.WinT, z.Wins)}T・倒 {Per2(z.AllyDeaths, z.N)}";
@@ -118,7 +118,7 @@ static partial class Settle338Diag
         {
             bool def = H.Traits.SequenceEqual(O.Traits.Append(TraitId.MarkInheritSpread)) && H.Traits.SequenceEqual(UnitCatalog.HisaMIb.Traits) && H.PlusText == UnitCatalog.HisaMIb.PlusText
                 && H.PlusText.EndsWith("。標を付けられた敵が倒れると、その恨みが周りの敵に散る", StringComparison.Ordinal) && H.MinusText == O.MinusText
-                && UnitCatalog.HisaMIa.Traits.SequenceEqual(O.Traits.Append(TraitId.MarkInheritOne)) && UnitCatalog.MisaMIf.Traits.SequenceEqual(UnitCatalog.Tome.Traits.Append(TraitId.MarkInheritFeathers))
+                && UnitCatalog.HisaMIa.Traits.SequenceEqual(O.Traits.Append(TraitId.MarkInheritOne)) && UnitCatalog.MisaMIf.Traits.SequenceEqual(UnitCatalog.TomeH339.Traits.Append(TraitId.MarkInheritFeathers))
                 && UnitCatalog.All.Contains(H) && !UnitCatalog.Everyone.Contains(O) && UnitCatalog.All.Count == 52
                 && UnitCatalog.Everyone.Where(d => d.Traits.Contains(TraitId.MarkInheritSpread)).SequenceEqual(new[] { H });
             Expect("定義: 規定のヒサ ＝ 第322〜337期の規定（`HisaH337`）＋ `MarkInheritSpread`（札と文面は第337期の `HisaMIb` と同じ）・MI-a は旧から作り直した・旧は `Everyone` の外・札の保持者は規定のヒサ1枚", def);
@@ -135,7 +135,7 @@ static partial class Settle338Diag
         {
             var v = Presets.Versions;
             Expect("試遊の台: `Presets.Versions` ＝ 「試遊・感電 ポンの台」1台（第337期の「版・MI」の3台は外した）・`Playtest` は 17 台のまま",
-                v.Length >= 1 && v[0].Name == "試遊・感電 ポンの台" && v.Skip(1).All(r => r.Name.StartsWith("版・", StringComparison.Ordinal))
+                v.Length >= 1 && v[0].Name == "試遊・感電 ポンの台" && v.Skip(1).All(r => r.Name.StartsWith("版・", StringComparison.Ordinal) || r.Name.StartsWith("試遊・", StringComparison.Ordinal))   /* 第340期: 「試遊・ミサ 書き手なし」も */
                 && v.SelectMany(r => r.F.Occupied()).All(o => o.Def.Id != "hisa" || ReferenceEquals(o.Def, H)) && Presets.Playtest.Length == 17);
         }
         {

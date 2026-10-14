@@ -181,7 +181,7 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.RuptureKeep] = (HcPlusL,  "炸裂の後に層を消さないだけ（第282期・T1n）。外せば T1"),
         [TraitId.Spray]       = (HcMinusL, "敵に標持ちがいない手番は敵味方構わず乱射するだけ（第281期・炸裂の代金）"),
         [TraitId.Feathers]    = (HcBothL,  "標が書かれるたび羽が増えて連射が厚くなるのと、追う標が尽きた羽が敵味方構わず飛ぶのが1つの在庫の表と裏（第285期・M-a ／ M-b）"),
-        [TraitId.FeatherLoss] = (HcMinusL, "乱射した羽の数だけ羽を失うだけ（第285期・M-b）。外せば M-a"),
+        [TraitId.FeatherLoss] = (HcMinusL, "乱射した羽の数だけ羽を失うだけ（第285期・M-b）。外せば M-a。第340期に規定のミサから外した（FG-b と入れ替え）"),
         // 第132期 段0-a: 第128期に `GradeStep` を ドルガ に載せたとき、この表に足さなかったので
         // `checkup` が「分類の無い札がある」で**3期ぶん止まっていた**（第131期に判明）。
         // 分類は積み過ぎ（`Overload`）と同じ——読む値も閾値も共有し、違うのは上がる先の段だけ。
@@ -476,7 +476,7 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.MarkInheritOne]     = (HcPlusL,  "隣へ全部（第337期・ヒサ MI-a）: 標の付いた敵が倒れると、層をすべて、隣の層の最も多い1体へ（同じなら席の若い方）。保持者 0 枚"),
         [TraitId.MarkInheritFeathers] = (HcPlusL, "散った恨みの羽（第337期・ミサ）: 引き継ぎで移った層の数だけ羽が増える（在庫だけ）。保持者 0 枚"),
         [TraitId.FeatherGrow]        = (HcMinusL, "羽が毎ターン増える（第339期・ミサ FG-a）: 手番の頭に羽が3枚増える（標の有無を問わない・1ラウンドに1度）。版は `FeatherLoss` を外す（乱射しても減らない）。保持者 0 枚"),
-        [TraitId.FeatherGrowUnmarked] = (HcMinusL, "標が無いときだけ増える（第339期・ミサ FG-b）: 手番の頭に、敵に標持ちが1体もいなければ羽が3枚増える（1ラウンドに1度）。版は `FeatherLoss` を外す。保持者 0 枚"),
+        [TraitId.FeatherGrowUnmarked] = (HcMinusL, "標が無いときだけ増える（第339期・ミサ FG-b）: 手番の頭に、敵に標持ちが1体もいなければ羽が3枚増える（1ラウンドに1度）。`FeatherLoss` を外す。第340期からミサの規定"),
         [TraitId.MireSlam]        = (HcPlusL,  "濃縮の手番の最後に寄せ先（感電している敵を優先）へ攻撃力ぶんの一撃（第218期・M1・保持者 0 枚）"),
         [TraitId.MireConduct]     = (HcPlusL,  "叩きつける相手が感電していれば、同じ一撃が印を持つ敵すべてへ走る（第218期・M2・保持者 0 枚）"),
         [TraitId.MireDull]        = (HcPlusL,  "印を持つ敵の与ダメが印1つにつき −10%（上限 −40%）（第218期・M3・保持者 0 枚）"),

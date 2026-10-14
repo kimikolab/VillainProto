@@ -78,7 +78,7 @@ static partial class Doha335Diag
             Expect("版の定義: DM-a ／ DM-c ＝ 規定のドハ ＋ 札1枚（マイナスの「味方が多いほど早く尽きる」を新しい句に置き換え）・ゴルム（飲み干す ／ GL）＝ 規定のゴルム ＋ 札1枚・`Everyone` の外・保持者 0", vers);
             var v = Presets.Versions;
             // 第336期: `Versions` は期ごとに「版・」の台を入れ替えるので、1行目（ポンの台）だけを見る（後ろの行は「版・」で始まること）。見出しの文は第335期のまま。
-            bool rows = v.Length >= 1 && v[0].Name == "試遊・感電 ポンの台" && v.Skip(1).All(r => r.Name.StartsWith("版・", StringComparison.Ordinal)) && Presets.Playtest.Length == 17;
+            bool rows = v.Length >= 1 && v[0].Name == "試遊・感電 ポンの台" && v.Skip(1).All(r => r.Name.StartsWith("版・", StringComparison.Ordinal) || r.Name.StartsWith("試遊・", StringComparison.Ordinal))   /* 第340期: 「試遊・ミサ 書き手なし」も */ && Presets.Playtest.Length == 17;
             Expect("試遊の台: `Presets.Versions` ＝ 「試遊・感電 ポンの台」＋「版・DM-a ／ DM-c ／ DM-c＋ゴルム ／ GL 守り型」（守り型の並びでドハ ／ ゴルムだけ版）・第334期の「版・ZC」の4台は外した・`Playtest` は 17 台のまま", rows);
         }
 

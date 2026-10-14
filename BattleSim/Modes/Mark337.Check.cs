@@ -44,7 +44,7 @@ static partial class Mark337Diag
 
         // ---- 版の定義と試遊の台
         {
-            UnitDef H = UnitCatalog.HisaH337, M = UnitCatalog.Tome;   // 第338期: 版は第322〜337期の規定のヒサから作り直した
+            UnitDef H = UnitCatalog.HisaH337, M = UnitCatalog.TomeH339;   // 第338期: 版は第322〜337期の規定のヒサから作り直した・第340期: ミサも第334〜339期の規定から
             bool vers = UnitCatalog.HisaMIb.Traits.SequenceEqual(H.Traits.Append(TraitId.MarkInheritSpread)) && UnitCatalog.HisaMIa.Traits.SequenceEqual(H.Traits.Append(TraitId.MarkInheritOne))
                 && UnitCatalog.MisaMIf.Traits.SequenceEqual(M.Traits.Append(TraitId.MarkInheritFeathers))
                 && UnitCatalog.HisaMIb.PlusText.EndsWith("。標を付けられた敵が倒れると、その恨みが周りの敵に散る", StringComparison.Ordinal)

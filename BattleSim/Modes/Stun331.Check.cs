@@ -107,7 +107,7 @@ static partial class Stun331Diag
             var tk = new[] { (UnitCatalog.Tou, UnitCatalog.Kata), (UnitCatalog.TouSTa, UnitCatalog.KataSTa), (UnitCatalog.TouSTb, UnitCatalog.KataSTb), (UnitCatalog.TouSTc, UnitCatalog.KataSTc) };
             var rows = Presets.Compare.Concat(Presets.Cross).Concat(Presets.Playtest).Concat(v).ToArray();
             // 第332期: `Versions` は期ごとに「版・」の台を入れ替えるので、1行目（ポンの台・規定の駒）だけを見る（後ろの行は「版・」で始まること）。見出しの文は第331期のまま。
-            bool ok = v.Length >= 1 && v[0].Name == names[0] && v.Skip(1).All(r => r.Name.StartsWith("版・", StringComparison.Ordinal))
+            bool ok = v.Length >= 1 && v[0].Name == names[0] && v.Skip(1).All(r => r.Name.StartsWith("版・", StringComparison.Ordinal) || r.Name.StartsWith("試遊・", StringComparison.Ordinal))   /* 第340期: 「試遊・ミサ 書き手なし」も */
                 && v[0].F.Occupied().Select(o => o.Def).SequenceEqual(new[] { UnitCatalog.Kata, UnitCatalog.Shiga, UnitCatalog.Tou, UnitCatalog.Kugu, UnitCatalog.Som })
                 && Presets.Playtest.Length == 17 && rows.First(r => r.Name.Contains(names[0], StringComparison.Ordinal)).Name == names[0];
             Expect("試遊の台: `Presets.Versions` ＝ 「試遊・感電 ポンの台」＋「版・ST-a ／ ST-b ／ ST-c ポンの台」（並びはポンの台・トウ ／ カタだけ版）・`Playtest` は 17 台のまま・`--demo-preset=` の部分一致で自分に当たる", ok);
