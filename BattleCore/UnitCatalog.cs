@@ -2437,11 +2437,13 @@ public static class UnitCatalog
     };
 
     /// <summary>
-    /// 背かれのソム（規定）。<b>第320期に WS-b（投げて暴発）を規定にした</b>（ポンの判断 W2・design/PHASE320_SOM_SETTLE_SPEC.md §2）——
+    /// 背かれのソム（第320〜332期の規定）。<b>第320期に WS-b（投げて暴発）を規定にした</b>（ポンの判断 W2・design/PHASE320_SOM_SETTLE_SPEC.md §2）——
     /// 第319期の規定（<see cref="SomH319"/>・CR-b）に <see cref="TraitId.BeastThrowBackfire"/> を足した。札は第319期の <see cref="SomWSb"/> と同じ。
     /// 立った獣が投げた雷を誰も受け止めなければ（共鳴返し ／ 打ち返しにならなければ）、投げた直後にその場で暴発する——立った獣は投げた手番の中で必ず盤から消える。
+    /// <para><b>第333期に LV-c（光の衣の上限・<see cref="Som"/>）を規定にしたので、旧の規定の定義を明示的に持つ</b>（第332期まで <see cref="Som"/> と同じ物だった）。
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。第320〜332期の規定のソムで測った器具はこれに固定する（`Common.PinS332` ほか）。第327期 ／ 第332期の版もこれから作る。</para>
     /// </summary>
-    public static readonly UnitDef Som = new()
+    public static readonly UnitDef SomH332 = new()
     {
         Id = SomH319.Id,
         Name = SomH319.Name,
@@ -2455,6 +2457,29 @@ public static class UnitCatalog
         PlusText = SomH319.PlusText,
         MinusText = SomH319.MinusText + SomBackfireText,
         Flavor = SomH319.Flavor
+    };
+
+    /// <summary>
+    /// 背かれのソム（規定）。<b>第333期に第332期の LV-c（光の衣の上限）を規定にした</b>（ポンの判断 V1・design/PHASE333_SOM_VEIL_CAP_SETTLE_SPEC.md §2）——
+    /// 第320〜332期の規定（<see cref="SomH332"/>）＋ <see cref="TraitId.SparkVeilCap"/>（第308期の札: 衣で足せるのは、その味方の破片（ほかの書き手を合算）が最大HPの 4 割になるまで・超えた分は捨てる）。
+    /// 札と文面は第332期の <see cref="SomLVc332"/> と同じ（衣の句を <see cref="SomVeilCapClause"/> に差し替えた）。
+    /// </summary>
+    public static readonly UnitDef Som = new()
+    {
+        Id = SomH332.Id,
+        Name = SomH332.Name,
+        MaxHp = SomH332.MaxHp,
+        Attack = SomH332.Attack,
+        Speed = SomH332.Speed,
+        Advances = SomH332.Advances,
+        Pattern = SomH332.Pattern,
+        Traits = SomH332.Traits.Append(TraitId.SparkVeilCap).ToArray(),
+        Actions = SomH332.Actions,
+        PlusText = SomH332.PlusText.Contains(SomVeilClause, StringComparison.Ordinal)
+            ? SomH332.PlusText.Replace(SomVeilClause, SomVeilCapClause, StringComparison.Ordinal)
+            : throw new InvalidOperationException("第333期: 第320〜332期の規定のソムの文面に光の衣の句が見つからない"),
+        MinusText = SomH332.MinusText,
+        Flavor = SomH332.Flavor
     };
 
     // 第294期 —— ソムの守りの版（指示書 design/PHASE294_GUARD_SPEC.md §3-3）。規定（喚び出し）の上に札を足すだけ。`All` にも `Retired` にも入れない（採否はポン）。
@@ -3918,7 +3943,7 @@ public static class UnitCatalog
     /// <summary>第327期 電池。規定のクグ ＋ <see cref="TraitId.SilkBattery"/>——クグが帯電している間、連鎖で弾けた糸玉を連鎖の直後に帯電し直す。</summary>
     public static readonly UnitDef KuguBat = On327(KuguH327, TraitId.SilkBattery, KuguBatteryText);   // 第328期: 第327期の規定から作る（中身は規定と同じ）
     /// <summary>第327期 隣帯電。規定のソム ＋ <see cref="TraitId.BeastChargeSpread"/>——背いた召喚獣の放電が、帯電していない隣も帯電させる（同じ連鎖では弾けない）。</summary>
-    public static readonly UnitDef SomBc = On327(Som, TraitId.BeastChargeSpread, SomBeastChargeText);
+    public static readonly UnitDef SomBc = On327(SomH332, TraitId.BeastChargeSpread, SomBeastChargeText);   // 第333期: 規定が LV-c になったので第320〜332期の規定から作る（中身は第327期と同じ）
 
     // ---------------------------------------------------------------------------------
     // 第329期 —— 精鋭でも爆竹に: 粉の付いた駒は爆ぜる（PB）（指示書 design/PHASE329_POWDER_FUSE_SPEC.md §2）。規定のトウ（DX 入り）の末尾に札を足し、文面の句を差し替える（叩き台）。
@@ -4010,14 +4035,14 @@ public static class UnitCatalog
     /// <summary>第332期 LV-d の衣の句（叩き台）。</summary>
     public const string SomVeilTempClause = "次に光を降らせるまでの光の衣になって、一撃を受け止める";
 
-    static UnitDef SomOn332(TraitId add, string clause) => new()
+    static UnitDef SomOn332(TraitId add, string clause) => new()   // 第333期: 規定が LV-c になったので、第320〜332期の規定（`SomH332`）から作る
     {
-        Id = Som.Id, Name = Som.Name, MaxHp = Som.MaxHp, Attack = Som.Attack, Speed = Som.Speed, Advances = Som.Advances, Pattern = Som.Pattern,
-        Traits = Som.Traits.Append(add).ToArray(), Actions = Som.Actions,
-        PlusText = Som.PlusText.Contains(SomVeilClause, StringComparison.Ordinal)
-            ? Som.PlusText.Replace(SomVeilClause, clause, StringComparison.Ordinal)
+        Id = SomH332.Id, Name = SomH332.Name, MaxHp = SomH332.MaxHp, Attack = SomH332.Attack, Speed = SomH332.Speed, Advances = SomH332.Advances, Pattern = SomH332.Pattern,
+        Traits = SomH332.Traits.Append(add).ToArray(), Actions = SomH332.Actions,
+        PlusText = SomH332.PlusText.Contains(SomVeilClause, StringComparison.Ordinal)
+            ? SomH332.PlusText.Replace(SomVeilClause, clause, StringComparison.Ordinal)
             : throw new InvalidOperationException("第332期: 規定のソムの文面に光の衣の句が見つからない"),
-        MinusText = Som.MinusText, Flavor = Som.Flavor
+        MinusText = SomH332.MinusText, Flavor = SomH332.Flavor
     };
 
     /// <summary>第332期 LV-c。規定のソム ＋ <see cref="TraitId.SparkVeilCap"/>（第308期の札）——衣で足せるのは、その味方の破片（ほかの書き手を合算）が最大HPの 4 割になるまで。</summary>

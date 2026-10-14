@@ -72,7 +72,7 @@ static class Tou325Diag
     {
         const int n = 40;
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var partners = new[] { UnitCatalog.Kubi, UnitCatalog.Som, UnitCatalog.ShigaH325, UnitCatalog.Hagi, UnitCatalog.Tsugi, UnitCatalog.Gan, UnitCatalog.Sora, UnitCatalog.Gald, UnitCatalog.Beni, UnitCatalog.Doha };
+        var partners = new[] { UnitCatalog.Kubi, UnitCatalog.SomH332, UnitCatalog.ShigaH325, UnitCatalog.Hagi, UnitCatalog.Tsugi, UnitCatalog.Gan, UnitCatalog.Sora, UnitCatalog.Gald, UnitCatalog.Beni, UnitCatalog.Doha };
         var pairs = new List<(UnitDef A, UnitDef B)>();
         for (int i = 0; i < partners.Length; i++) for (int j = i + 1; j < partners.Length; j++) pairs.Add((partners[i], partners[j]));
         var waves = CandWaves.Select(W).ToArray();

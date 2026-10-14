@@ -277,7 +277,7 @@ static class Som320Diag
         Console.WriteLine();
         Console.WriteLine("| 項目 | 結果 | 備考 |");
         Console.WriteLine("|---|---|---|");
-        UnitDef som = UnitCatalog.Som, h = UnitCatalog.SomH319;
+        UnitDef som = UnitCatalog.SomH332, h = UnitCatalog.SomH319;   // 第333期: 第320〜332期の規定のソム
 
         // (a) 段0: 規定のソム ＝ WS-b（第319期の規定 ＋ `BeastThrowBackfire`）・旧の定義 `SomH319` ＝ 第319期の規定（CR-b）・第319期の版は旧の上
         {
@@ -286,8 +286,8 @@ static class Som320Diag
                 && som.MinusText == h.MinusText + "。受け止める者がいなければ、召喚獣は投げた雷の残りで暴発する" && som.MinusText == UnitCatalog.SomWSb.MinusText && som.PlusText == h.PlusText
                 && som.MaxHp == h.MaxHp && som.Attack == h.Attack && som.Speed == h.Speed && ReferenceEquals(som.Actions, h.Actions) && som.Id == h.Id && som.Name == h.Name
                 && UnitCatalog.SomWSa.Traits.SequenceEqual(h.Traits.Append(TraitId.BeastStandLate)) && UnitCatalog.SomWSa3.Traits.SequenceEqual(h.Traits.Append(TraitId.BeastStandLate3));
-            bool roster = UnitCatalog.All.Contains(som) && UnitCatalog.All.Count == 52 && !UnitCatalog.Everyone.Contains(h) && !UnitCatalog.Everyone.Contains(UnitCatalog.SomWSb)
-                && UnitCatalog.Everyone.Where(x => x.Traits.Contains(TraitId.BeastThrowBackfire)).SequenceEqual(new[] { som });
+            bool roster = UnitCatalog.All.Contains(UnitCatalog.Som) && !UnitCatalog.Everyone.Contains(som) && UnitCatalog.All.Count == 52   // 第333期: `som` は第320〜332期の規定（`SomH332`） && !UnitCatalog.Everyone.Contains(h) && !UnitCatalog.Everyone.Contains(UnitCatalog.SomWSb)
+                && UnitCatalog.Everyone.Where(x => x.Traits.Contains(TraitId.BeastThrowBackfire)).SequenceEqual(new[] { UnitCatalog.Som });
             bool pin = ReferenceEquals(PinS319(som), h) && ReferenceEquals(PinS319(UnitCatalog.Shiga), UnitCatalog.ShigaH321) && ReferenceEquals(PinSS318(som), UnitCatalog.SomH318) && ReferenceEquals(PinSS318(h), UnitCatalog.SomH318)
                 && ReferenceEquals(PinS317(som), UnitCatalog.SomH317) && ReferenceEquals(PinS317(h), UnitCatalog.SomH317) && ReferenceEquals(PinDS316(som), UnitCatalog.SomH317) && IsSomNow(som) && IsSomNow(h)
                 && CompareBuildsH319().First(r => r.Name == "感電 (シガ×カタ×ソム)").F.Occupied().Any(o => ReferenceEquals(o.Def, h))
@@ -325,7 +325,7 @@ static class Som320Diag
             var pl = Presets.Playtest.Take(15).ToArray();   // 第325期: 試遊の末尾に2行（粉 隣あり ／ 隣なし）を足した——第324期までの15行で見る
             var old12 = S309.Playtest308.Concat(new[] { S309.Shield, S309.ShieldHeavy, S312.Whip, S312.WhipHeavy }).ToArray();
             bool shape = pl.Length == 15 && pl.Take(12).Select(r => r.Name).SequenceEqual(old12) && pl.Skip(12).Select(r => r.Name).SequenceEqual(Added)
-                && pl.Skip(12).All(r => r.F.Shape == FormationShape.X && !r.F.HasRelics && r.F.Occupied().Count() == 5 && r.F.Occupied().All(o => o.Slot < 5 && UnitCatalog.All.Contains(o.Def)) && r.F.Occupied().Any(o => ReferenceEquals(o.Def, som)))
+                && pl.Skip(12).All(r => r.F.Shape == FormationShape.X && !r.F.HasRelics && r.F.Occupied().Count() == 5 && r.F.Occupied().All(o => o.Slot < 5 && UnitCatalog.All.Contains(o.Def)) && r.F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Som)))
                 && Presets.Compare.Length == 64 && Presets.Cross.Length == 12 && pl.Select(r => r.Name).Distinct().Count() == pl.Length && pl.All(r => !Presets.Compare.Any(c => c.Name == r.Name));
             var demoRows = Presets.Compare.Concat(Presets.Cross).Concat(Presets.Playtest).ToArray();
             bool demo = Added.All(n => demoRows.First(r => r.Name.Contains(n, StringComparison.Ordinal)).Name == n);

@@ -37,7 +37,7 @@ static partial class Dust327Diag
             bool old = O.Traits.SequenceEqual(UnitCatalog.TouH324.Traits.Concat(new[] { TraitId.PowderDense, TraitId.PowderDenseKeep, TraitId.PowderDenseBurn, TraitId.PowderContagion, TraitId.PowderMarkFoeOnly }))
                 && UnitCatalog.TouDRb.Traits.SequenceEqual(O.Traits.Append(TraitId.DenseConductBoth));
             bool vers = UnitCatalog.TouDX.Traits.SequenceEqual(T.Traits.Append(TraitId.DustBurst)) && UnitCatalog.TouDX.PlusText == T.PlusText + UnitCatalog.TouDustText
-                && UnitCatalog.KuguBat.Traits.SequenceEqual(UnitCatalog.KuguH327.Traits.Append(TraitId.SilkBattery)) && UnitCatalog.SomBc.Traits.SequenceEqual(UnitCatalog.Som.Traits.Append(TraitId.BeastChargeSpread));
+                && UnitCatalog.KuguBat.Traits.SequenceEqual(UnitCatalog.KuguH327.Traits.Append(TraitId.SilkBattery)) && UnitCatalog.SomBc.Traits.SequenceEqual(UnitCatalog.SomH332.Traits.Append(TraitId.BeastChargeSpread));
             var vs = new[] { O, UnitCatalog.TouDX, UnitCatalog.KuguBat, UnitCatalog.SomBc };
             bool outside = vs.All(d => !UnitCatalog.Everyone.Contains(d)) && UnitCatalog.All.Contains(UnitCatalog.Tou) && !UnitCatalog.Everyone.Contains(T) && UnitCatalog.All.Count == 52
                 && UnitCatalog.Everyone.All(d => (d == UnitCatalog.Tou || !d.Traits.Contains(TraitId.DustBurst)) && (d == UnitCatalog.Kugu || !d.Traits.Contains(TraitId.SilkBattery)) && !d.Traits.Contains(TraitId.BeastChargeSpread));   // 第328期: 規定のトウ ／ クグが DX ／ 電池の札を持つ
@@ -150,7 +150,7 @@ static partial class Dust327Diag
 
         // ---- 隣帯電: 敵の前1 に背いた召喚獣（帯電）、中央に乾いた壁。召喚獣が弾けて中央へ放電 → 中央が帯電（同じ連鎖では弾けない）→ 次の一撃で弾ける
         {
-            foreach (var (def, tag) in new[] { (UnitCatalog.Som, "規定のソム"), (UnitCatalog.SomBc, "隣帯電") })
+            foreach (var (def, tag) in new[] { (UnitCatalog.SomH332, "規定のソム"), (UnitCatalog.SomBc, "隣帯電") })
             {
                 var ctx = T323.Ctx(Formation.Build(back3: def), Formation.Build(front1: UnitCatalog.Fodder, center: Wall), out var p, out var e);
                 var fo = T323.Seat(e, 0); var ec = T323.Seat(e, 2); var som = T323.Seat(p, 4);

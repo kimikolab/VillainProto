@@ -39,11 +39,11 @@ static partial class Veil332Diag
             bool kata = UnitCatalog.Kata.Traits.SequenceEqual(UnitCatalog.KataH331.Traits.Append(TraitId.ShockStunOnce)) && UnitCatalog.Kata.Traits.SequenceEqual(UnitCatalog.KataSTc.Traits)
                 && UnitCatalog.Kata.PlusText == UnitCatalog.KataSTc.PlusText && UnitCatalog.KataH331.Traits.SequenceEqual(UnitCatalog.KataH324.Traits.Append(TraitId.ThunderPowderReturn));
             bool vers = UnitCatalog.TouSTa.Traits.SequenceEqual(UnitCatalog.TouH331.Traits.Append(TraitId.LiveWireGuard)) && UnitCatalog.KataSTb.Traits.SequenceEqual(UnitCatalog.KataH331.Traits.Concat(new[] { TraitId.LiveWireGuard, TraitId.ShockGuardDaunt }))
-                && UnitCatalog.SomLVc332.Traits.SequenceEqual(UnitCatalog.Som.Traits.Append(TraitId.SparkVeilCap)) && UnitCatalog.SomLVd332.Traits.SequenceEqual(UnitCatalog.Som.Traits.Append(TraitId.SparkVeilTemp))
+                && UnitCatalog.SomLVc332.Traits.SequenceEqual(UnitCatalog.SomH332.Traits.Append(TraitId.SparkVeilCap)) && UnitCatalog.SomLVd332.Traits.SequenceEqual(UnitCatalog.SomH332.Traits.Append(TraitId.SparkVeilTemp))
                 && UnitCatalog.SomLVc332.PlusText.Contains(UnitCatalog.SomVeilCapClause, StringComparison.Ordinal) && UnitCatalog.SomLVd332.PlusText.Contains(UnitCatalog.SomVeilTempClause, StringComparison.Ordinal);
             var old = new[] { UnitCatalog.TouH331, UnitCatalog.KataH331, UnitCatalog.SomLVc332, UnitCatalog.SomLVd332, UnitCatalog.TouSTa, UnitCatalog.KataSTa };
             bool outside = old.All(d => !UnitCatalog.Everyone.Contains(d)) && UnitCatalog.All.Contains(UnitCatalog.Tou) && UnitCatalog.All.Contains(UnitCatalog.Kata) && UnitCatalog.All.Count == 52
-                && UnitCatalog.Everyone.All(d => (d == UnitCatalog.Tou || d == UnitCatalog.Kata || !d.Traits.Contains(TraitId.ShockStunOnce)) && !d.Traits.Contains(TraitId.SparkVeilCap) && !d.Traits.Contains(TraitId.SparkVeilTemp));
+                && UnitCatalog.Everyone.All(d => (d == UnitCatalog.Tou || d == UnitCatalog.Kata || !d.Traits.Contains(TraitId.ShockStunOnce)) && (d == UnitCatalog.Som || !d.Traits.Contains(TraitId.SparkVeilCap)) && !d.Traits.Contains(TraitId.SparkVeilTemp));   // 第333期: 規定のソムが LV-c の札を持つ
             Expect("定義: 規定のトウ ／ カタ ＝ 第330〜331期の規定（`TouH331` ／ `KataH331`）＋ ST-c（札と文面は第331期の `TouSTc` ／ `KataSTc` と同じ）・第331期の版は旧から・LV-c ＝ 規定のソム ＋ `SparkVeilCap`・LV-d ＝ ＋ `SparkVeilTemp`・旧と版は `Everyone` の外・`All` 52 枚",
                 tou && kata && vers && outside, $"トウ {tou}・カタ {kata}・版 {vers}・外 {outside}");
             bool pin = ReferenceEquals(PinTK331(UnitCatalog.Tou), UnitCatalog.TouH331) && ReferenceEquals(PinTK331(UnitCatalog.Kata), UnitCatalog.KataH331)
@@ -71,7 +71,7 @@ static partial class Veil332Diag
         }
 
         // ---- 衣（LV-a ／ LV-c ／ LV-d）: 味方（最大HP 100・満タン・ほかの書き手の破片 30）に光 10（＝ 70）が降る → 溢れ 70
-        foreach (var (som, tag) in new[] { (UnitCatalog.Som, "規定（LV-a）"), (UnitCatalog.SomLVc332, "LV-c"), (UnitCatalog.SomLVd332, "LV-d") })
+        foreach (var (som, tag) in new[] { (UnitCatalog.SomH332, "規定（LV-a）"), (UnitCatalog.SomLVc332, "LV-c"), (UnitCatalog.SomLVd332, "LV-d") })
         {
             var ctx = T323.Ctx(Formation.Build(front1: Pal, back3: som, back1: UnitCatalog.Susu), Formation.Build(front1: Dummy), out var p, out var e);
             var a = T323.Seat(p, 0); var s = T323.Seat(p, 4); var susu = T323.Seat(p, 3);
@@ -103,11 +103,12 @@ static partial class Veil332Diag
         {
             var v = Presets.Versions;
             string[] names = { "試遊・感電 ポンの台", "版・LV-c ポンの台", "版・LV-d ポンの台" };
-            UnitDef[] soms = { UnitCatalog.Som, UnitCatalog.SomLVc332, UnitCatalog.SomLVd332 };
+            UnitDef[] soms = { UnitCatalog.Som, UnitCatalog.SomLVc332, UnitCatalog.SomLVd332 };   // 第333期: 1行目は規定のソム（LV-c）
             var rows = Presets.Compare.Concat(Presets.Cross).Concat(Presets.Playtest).Concat(v).ToArray();
-            bool ok = v.Select(r => r.Name).SequenceEqual(names)
-                && Enumerable.Range(0, 3).All(i => v[i].F.Occupied().Select(o => o.Def).SequenceEqual(new[] { UnitCatalog.Kata, UnitCatalog.Shiga, UnitCatalog.Tou, UnitCatalog.Kugu, soms[i] }))
-                && Presets.Playtest.Length == 17 && Presets.Playtest.Any(r => r.Name == SomTsugiRow) && names.All(n => rows.First(r => r.Name.Contains(n, StringComparison.Ordinal)).Name == n);
+            // 第333期: `Versions` は期ごとに「版・」の台を入れ替えるので、1行目（ポンの台・規定の駒）だけを見る（後ろの行は「版・」で始まること）。見出しの文は第332期のまま。
+            bool ok = v.Length >= 1 && v[0].Name == names[0] && v.Skip(1).All(r => r.Name.StartsWith("版・", StringComparison.Ordinal))
+                && v[0].F.Occupied().Select(o => o.Def).SequenceEqual(new[] { UnitCatalog.Kata, UnitCatalog.Shiga, UnitCatalog.Tou, UnitCatalog.Kugu, soms[0] })
+                && Presets.Playtest.Length == 17 && Presets.Playtest.Any(r => r.Name == SomTsugiRow) && rows.First(r => r.Name.Contains(names[0], StringComparison.Ordinal)).Name == names[0];
             Expect("試遊の台: `Presets.Versions` ＝ 「試遊・感電 ポンの台」（規定の駒・段0 入り）＋「版・LV-c ／ LV-d ポンの台」（ソムだけ版）・第331期の「版・ST」の3台は外した・ソム ＋ ツギの台は試遊の「試遊・感電 瓦礫」", ok);
         }
 

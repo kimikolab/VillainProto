@@ -72,8 +72,8 @@ static partial class Stun331Diag
     internal static Formation Apply(Formation f, Ver v) => S316.SwapId(S316.SwapId(f, "tou", v.Tou), "kata", v.Kata);
 
     /// <summary>ポンの台（第326〜330期と同じ席）。駒はいまの規定。</summary>
-    internal static Formation PonBoard() => Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Shiga, center: UnitCatalog.Tou, back1: UnitCatalog.Kugu, back3: UnitCatalog.Som);
-    static Formation Playtest(string n) => Presets.Playtest.First(r => r.Name == n).F;
+    internal static Formation PonBoard() => Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Shiga, center: UnitCatalog.Tou, back1: UnitCatalog.Kugu, back3: UnitCatalog.SomH332);
+    static Formation Playtest(string n) => PlaytestH331.First(r => r.Name == n).F;   // 第333期: ソム（ほか）を第332期までの規定に固定（トウ ／ カタは版で差し替える）
 
     /// <summary>§5 の代表台（駒はいまの規定）。ポンの台を最初に。</summary>
     internal static (string Name, Formation F)[] Boards() => new (string, Formation)[]
@@ -82,7 +82,7 @@ static partial class Stun331Diag
         ("光の盾 鞭", Playtest("試遊・感電 光の盾 鞭")),
         ("光の盾", Playtest("試遊・感電 光の盾")),
         ("粉 隣あり", Playtest("試遊・感電 粉 隣あり")),
-        ("感電", CompareBuilds().First(r => r.Name == "感電 (シガ×カタ×ソム)").F),
+        ("感電", CompareBuildsH331().First(r => r.Name == "感電 (シガ×カタ×ソム)").F),
     };
 
     internal static readonly S287.Wave[] Waves = new[] { "boss", "guard", "bat", "2", "5" }.Select(T323.WaveOf).ToArray();

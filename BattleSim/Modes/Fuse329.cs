@@ -74,7 +74,7 @@ static partial class Fuse329Diag
     internal static Formation Apply(Formation f, Ver v) => S316.SwapId(f, "tou", v.Tou);
 
     /// <summary>ポンの台（第326〜328期と同じ席）: 前1 カタ・前3 シガ・中央 トウ・後1 クグ・後3 ソム。第330期: トウは第328〜329期の規定（`TouH328`）に固定。</summary>
-    internal static Formation PonBoard() => Formation.Build(front1: UnitCatalog.KataH331, front3: UnitCatalog.Shiga, center: UnitCatalog.TouH328, back1: UnitCatalog.Kugu, back3: UnitCatalog.Som);
+    internal static Formation PonBoard() => Formation.Build(front1: UnitCatalog.KataH331, front3: UnitCatalog.Shiga, center: UnitCatalog.TouH328, back1: UnitCatalog.Kugu, back3: UnitCatalog.SomH332);
 
     static Formation Playtest(string n) => PlaytestH328.First(r => r.Name == n).F;   // 第332期: カタを第325〜331期の規定に固定（トウは版で差し替える）
 

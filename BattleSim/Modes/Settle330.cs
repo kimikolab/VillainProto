@@ -54,7 +54,7 @@ static partial class Settle330Diag
     static string Short(UnitDef d) => S307.Short(d);
 
     /// <summary>ポンの台（第326〜329期と同じ席）。駒はいまの規定。</summary>
-    internal static Formation PonBoard() => Formation.Build(front1: UnitCatalog.KataH331, front3: UnitCatalog.Shiga, center: UnitCatalog.TouH331, back1: UnitCatalog.Kugu, back3: UnitCatalog.Som);   // 第332期: 第330〜331期の規定に固定
+    internal static Formation PonBoard() => Formation.Build(front1: UnitCatalog.KataH331, front3: UnitCatalog.Shiga, center: UnitCatalog.TouH331, back1: UnitCatalog.Kugu, back3: UnitCatalog.SomH332);   // 第332期: 第330〜331期の規定に固定
     static Formation Playtest(string n) => PlaytestH331.First(r => r.Name == n).F;   // 第332期: トウ ／ カタを第330〜331期の規定に固定
     static Formation Row(string n) => CompareBuildsH331().First(r => r.Name == n).F;
 

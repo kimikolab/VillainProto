@@ -1363,3 +1363,8 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **計数のみ**: ソムの `Lv332Expired` ／ `Lv332ExpireHits`、だれの側でも `Lv332ArmorLost`（破片が減った延べ・`NoteArmorLost` の入口・消えた衣は数えない）。
 - 器具: `veil332`。乱数の口は足していない（`PickOne(` の数は第331期と同じ）。
 
+## 第333期 —— ソムの光の衣の上限（LV-c）の規定化（engine は変えていない）
+
+- 規定のソム `UnitCatalog.Som` ＝ `SomH332`（第320〜332期の規定・明示の定義に）＋ `SparkVeilCap`。第308期の口（`SparkTrait.Veil` の上限・`VeilCapPercent` ＝ 40）がそのまま規定の戦で立つ。第327期の `SomBc`・第332期の `SomLVc332` ／ `SomLVd332` は旧から作り直した（札は1枚ずつ）。
+- 固定の口 `Common.PinS332` ／ `Pin332` ／ `CompareBuildsH332` ／ `PlaytestH332`。第325〜332期の口（`PinTK331` ／ `PinT328` ／ `PinTK327` ／ `PinT326`）と古い口の終端 `PinTKK324` も規定のソムを `SomH332` へ、`PinS319` ／ `PinSS318` ／ `PinS317` ／ `IsSomNow` は `SomH332` も受ける。器具: `settle333`。
+

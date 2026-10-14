@@ -35,7 +35,7 @@ static partial class Settle328Diag
             bool kugu = K.Traits.SequenceEqual(KO.Traits.Append(TraitId.SilkBattery)) && K.Traits.SequenceEqual(UnitCatalog.KuguBat.Traits) && K.PlusText == KO.PlusText + UnitCatalog.KuguBatteryText
                 && K.MinusText == KO.MinusText && K.Id == KO.Id && K.MaxHp == KO.MaxHp && KO.Traits.SequenceEqual(UnitCatalog.KuguH324.Traits.Append(TraitId.ThreadPowderFlow));
             bool outside = new[] { TO, KO, UnitCatalog.TouDX, UnitCatalog.KuguBat, UnitCatalog.SomBc }.All(d => !UnitCatalog.Everyone.Contains(d)) && UnitCatalog.All.Contains(UnitCatalog.Tou) && !UnitCatalog.Everyone.Contains(T) && UnitCatalog.All.Contains(K)
-                && UnitCatalog.All.Count == 52 && UnitCatalog.Everyone.All(d => !d.Traits.Contains(TraitId.BeastChargeSpread)) && UnitCatalog.Som.Traits.SequenceEqual(UnitCatalog.SomBc.Traits.Take(UnitCatalog.Som.Traits.Count));
+                && UnitCatalog.All.Count == 52 && UnitCatalog.Everyone.All(d => !d.Traits.Contains(TraitId.BeastChargeSpread)) && UnitCatalog.SomH332.Traits.SequenceEqual(UnitCatalog.SomBc.Traits.Take(UnitCatalog.SomH332.Traits.Count));
             Expect("定義: 規定のトウ ＝ 第327期の規定（`TouH327`）＋ DX の札・規定のクグ ＝ `KuguH327` ＋ 電池の札（札と文面は第327期の `TouDX` ／ `KuguBat` と同じ）・旧は `Everyone` の外・隣帯電は規定にしない・`All` 52 枚",
                 tou && kugu && outside, $"トウ {tou}・クグ {kugu}・外 {outside}");
             bool pin = ReferenceEquals(PinTK327(T), TO) && ReferenceEquals(PinTK327(K), KO) && ReferenceEquals(Pin327(Formation.Build(front1: T, front3: K))[1], KO)

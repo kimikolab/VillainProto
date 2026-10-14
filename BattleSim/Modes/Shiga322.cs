@@ -405,7 +405,7 @@ static class Shiga322Diag
     {
         var w = WaveOf(waveKey);
         var v = V(ver);
-        var fixedU = new[] { UnitCatalog.ShigaH325, UnitCatalog.KataH324, UnitCatalog.Som };   // 第326期: シガは第325期の規定
+        var fixedU = new[] { UnitCatalog.ShigaH325, UnitCatalog.KataH324, UnitCatalog.SomH332 };   // 第326期: シガは第325期の規定
         UnitDef Now(UnitDef d) => PinTKK324(UnitCatalog.All.FirstOrDefault(x => x.Id == d.Id) ?? d);   // 第325期: トウ ／ カタ ／ クグを第324期の規定に固定
         var heal = S287.Heal.Select(d => d.Id).ToHashSet();
         var pool = S287.Pool.Select(Now).Append(UnitCatalog.TouH324).Where(d => d.Id is not ("shiga" or "kata" or "som")).GroupBy(d => d.Id).Select(g => g.First()).ToArray();

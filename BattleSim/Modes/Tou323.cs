@@ -518,7 +518,7 @@ static class Tou323Diag
     internal static void GridWith(string waveKey, Ver v, string tag)
     {
         var w = WaveOf(waveKey);
-        var fixedU = w.Boss ? new[] { UnitCatalog.TouH324, UnitCatalog.KataH324, UnitCatalog.Som } : new[] { UnitCatalog.TouH324, UnitCatalog.KataH324 };
+        var fixedU = w.Boss ? new[] { UnitCatalog.TouH324, UnitCatalog.KataH324, UnitCatalog.SomH332 } : new[] { UnitCatalog.TouH324, UnitCatalog.KataH324 };
         int free = 5 - fixedU.Length;
         UnitDef Now(UnitDef d) => PinS325(PinTKK324(UnitCatalog.All.FirstOrDefault(x => x.Id == d.Id) ?? d));   // 第325期: トウ ／ カタ ／ クグを第324期の規定に固定・第326期: シガも第325期の規定に
         var heal = S287.Heal.Select(d => d.Id).ToHashSet();

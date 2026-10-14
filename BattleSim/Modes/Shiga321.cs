@@ -374,7 +374,7 @@ static class Shiga321Diag
     {
         var w = WaveOf(waveKey);
         var v = V(ver);
-        var fixedU = new[] { UnitCatalog.ShigaH321, UnitCatalog.KataH324, UnitCatalog.Som };
+        var fixedU = new[] { UnitCatalog.ShigaH321, UnitCatalog.KataH324, UnitCatalog.SomH332 };
         UnitDef Now(UnitDef d) => PinSH321(UnitCatalog.All.FirstOrDefault(x => x.Id == d.Id) ?? d);   // 第322期: 第321期の規定に固定
         var heal = S287.Heal.Select(d => d.Id).ToHashSet();
         var pool = S287.Pool.Select(Now).Append(UnitCatalog.TouH324).Where(d => d.Id is not ("shiga" or "kata" or "som")).GroupBy(d => d.Id).Select(g => g.First()).ToArray();
@@ -611,7 +611,7 @@ static class Shiga321Diag
         {
             foreach (var (def, tag) in new[] { (UnitCatalog.ShigaH321, "規定"), (UnitCatalog.ShigaSAp, "SA+") })
             {
-                var ctx = Ctx(Formation.Build(front1: def, back3: UnitCatalog.Som), Formation.Build(front1: Wall, front3: Wall, center: Wall), out var p, out var e);
+                var ctx = Ctx(Formation.Build(front1: def, back3: UnitCatalog.SomH332), Formation.Build(front1: Wall, front3: Wall, center: Wall), out var p, out var e);
                 var sh = p.First(u => u.Def.Id == "shiga"); var som = p.First(u => u.Def.Id == "som");
                 sh.SetCounter(StoredChargeTrait.Key, 2);
                 int from = ctx.Events.Count;

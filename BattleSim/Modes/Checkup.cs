@@ -403,7 +403,7 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.SparkHalf]       = (HcPlusL,  "光の量 × 0.5（第307期・対照）。保持者 0 枚"),
         [TraitId.SparkDouble]     = (HcPlusL,  "光の量 × 2（第307期・対照）。保持者 0 枚"),
         [TraitId.SparkVeil]       = (HcPlusL,  "光の衣（第308期・ソム LV-a）: 降る光の溢れを、その味方の破片に足す（上限なし）（第309期からソムの規定）"),
-        [TraitId.SparkVeilCap]    = (HcPlusL,  "光の衣の上限（第308期・ソム LV-c）: 衣で足せるのは、その味方の破片が最大HPの 4 割になるまで。保持者 0 枚"),
+        [TraitId.SparkVeilCap]    = (HcPlusL,  "光の衣の上限（第308期・ソム LV-c）: 衣で足せるのは、その味方の破片が最大HPの 4 割になるまで。第333期からソムの規定"),
         [TraitId.SparkFocus]      = (HcPlusL,  "寄せる光（第308期・ソム FO・参考）: 光1つにつき 35 を最も傷ついた味方1体に・光ごとに選び直す。保持者 0 枚"),
         [TraitId.BeastBurstCharged] = (HcPlusL, "弾ける獣（第310期・ソム E1）: 喚んだとき湧く席の隣に帯電した敵がいれば、獣は立たずにその場で弾けて消える（倒れた扱いにしない・起点はソム）。保持者 0 枚"),
         [TraitId.BeastBurstAlways]  = (HcPlusL, "弾ける獣（第310期・ソム E2）: 獣はいつも喚んだ瞬間に弾けて消える（第311期からソムの規定）"),

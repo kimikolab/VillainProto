@@ -61,7 +61,7 @@ static partial class Veil332Diag
 
     internal static readonly Ver[] Vers =
     {
-        new("規定（LV-a）", "base", UnitCatalog.Som),
+        new("規定（LV-a）", "base", UnitCatalog.SomH332),   // 第333期: 第320〜332期の規定に固定（いまの規定は LV-c）
         new("LV-c", "c", UnitCatalog.SomLVc332),
         new("LV-d", "d", UnitCatalog.SomLVd332),
     };
@@ -72,17 +72,17 @@ static partial class Veil332Diag
     /// <summary>Phase 0 の参考（版ではない）: 規定のソムから光の衣の札（`SparkVeil`）だけを外した駒。「衣に頼っているか」を測るためだけに器具の中で組む。</summary>
     internal static readonly UnitDef SomNoVeil = new()
     {
-        Id = UnitCatalog.Som.Id, Name = UnitCatalog.Som.Name, MaxHp = UnitCatalog.Som.MaxHp, Attack = UnitCatalog.Som.Attack, Speed = UnitCatalog.Som.Speed,
-        Advances = UnitCatalog.Som.Advances, Pattern = UnitCatalog.Som.Pattern, Traits = UnitCatalog.Som.Traits.Where(t => t != TraitId.SparkVeil).ToArray(),
-        Actions = UnitCatalog.Som.Actions, PlusText = UnitCatalog.Som.PlusText, MinusText = UnitCatalog.Som.MinusText, Flavor = UnitCatalog.Som.Flavor,
+        Id = UnitCatalog.SomH332.Id, Name = UnitCatalog.SomH332.Name, MaxHp = UnitCatalog.SomH332.MaxHp, Attack = UnitCatalog.SomH332.Attack, Speed = UnitCatalog.SomH332.Speed,
+        Advances = UnitCatalog.SomH332.Advances, Pattern = UnitCatalog.SomH332.Pattern, Traits = UnitCatalog.SomH332.Traits.Where(t => t != TraitId.SparkVeil).ToArray(),
+        Actions = UnitCatalog.SomH332.Actions, PlusText = UnitCatalog.SomH332.PlusText, MinusText = UnitCatalog.SomH332.MinusText, Flavor = UnitCatalog.SomH332.Flavor,
     };
 
     /// <summary>ポンの台（第326〜331期と同じ席）。駒はいまの規定（段0 入り）。</summary>
-    internal static Formation PonBoard() => Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Shiga, center: UnitCatalog.Tou, back1: UnitCatalog.Kugu, back3: UnitCatalog.Som);
-    static Formation Playtest(string n) => Presets.Playtest.First(r => r.Name == n).F;
+    internal static Formation PonBoard() => Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Shiga, center: UnitCatalog.Tou, back1: UnitCatalog.Kugu, back3: UnitCatalog.SomH332);
+    static Formation Playtest(string n) => PlaytestH332.First(r => r.Name == n).F;   // 第333期
 
     /// <summary>ソムのいる候補（`compare` の行 ＋ 試遊の台）。Phase 0 の §4-1 はここから選ぶ。</summary>
-    internal static (string Name, Formation F)[] SomRows() => CompareBuilds().Concat(Presets.Playtest).Where(r => r.F.Occupied().Any(o => o.Def.Id == "som")).ToArray();
+    internal static (string Name, Formation F)[] SomRows() => CompareBuilds().Concat(Presets.Playtest).Where(r => r.F.Occupied().Any(o => o.Def.Id == "som")).Select(r => (r.Name, Pin332(r.F))).ToArray();   // 第333期: ソムを第320〜332期の規定に固定
 
     /// <summary>§4-1 で選んだ台（Phase 0 の結果・衣を外すとボスの勝率がいちばん落ちる3台）。</summary>
     internal static readonly string[] VeilBossRows = { "感電 (シガ×カタ×ソム)", "試遊・感電 粉 隣あり", "試遊・感電 光の盾 重 鞭" };   // `試遊・感電 打ち返し` は `感電` と同じ並びなので外した

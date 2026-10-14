@@ -64,9 +64,9 @@ static partial class Dust327Diag
 
     internal static readonly Ver[] Vers =
     {
-        new("規定", "base", UnitCatalog.TouH327, UnitCatalog.KuguH327, UnitCatalog.Som),
-        new("DX", "dx", UnitCatalog.TouDX, UnitCatalog.KuguH327, UnitCatalog.Som),
-        new("DX＋電池", "dxb", UnitCatalog.TouDX, UnitCatalog.KuguBat, UnitCatalog.Som),
+        new("規定", "base", UnitCatalog.TouH327, UnitCatalog.KuguH327, UnitCatalog.SomH332),
+        new("DX", "dx", UnitCatalog.TouDX, UnitCatalog.KuguH327, UnitCatalog.SomH332),
+        new("DX＋電池", "dxb", UnitCatalog.TouDX, UnitCatalog.KuguBat, UnitCatalog.SomH332),
         new("DX＋隣帯電", "dxn", UnitCatalog.TouDX, UnitCatalog.KuguH327, UnitCatalog.SomBc),
         new("DX＋全部", "dxall", UnitCatalog.TouDX, UnitCatalog.KuguBat, UnitCatalog.SomBc),
     };
@@ -75,7 +75,7 @@ static partial class Dust327Diag
     internal static Formation Apply(Formation f, Ver v) => S316.SwapId(S316.SwapId(S316.SwapId(f, "tou", v.Tou), "kugu", v.Kugu), "som", v.Som);
 
     /// <summary>ポンの台（第326期の `PonBoard` と同じ席）: 前1 カタ・前3 シガ・中央 トウ・後1 クグ・後3 ソム。駒はいまの規定（トウは DR-a）。</summary>
-    internal static Formation PonBoard() => Formation.Build(front1: UnitCatalog.KataH331, front3: UnitCatalog.Shiga, center: UnitCatalog.TouH327, back1: UnitCatalog.KuguH327, back3: UnitCatalog.Som);
+    internal static Formation PonBoard() => Formation.Build(front1: UnitCatalog.KataH331, front3: UnitCatalog.Shiga, center: UnitCatalog.TouH327, back1: UnitCatalog.KuguH327, back3: UnitCatalog.SomH332);
 
     static Formation Playtest(string n) => PlaytestH327.First(r => r.Name == n).F;   // 第328期: トウ ／ クグを第327期の規定に固定
 
