@@ -79,8 +79,8 @@ static partial class Doha335Diag
 
     internal const string GuardRow = "試遊・標 守り型";
     internal const string NoGolmRow = "試遊・感電 雷の型";   // ドハがいてゴルムがいない台（第313期〜）
-    static Formation Playtest(string n) => Presets.Playtest.First(r => r.Name == n).F;
-    static Formation Row(string n) => CompareBuilds().First(r => r.Name == n).F;
+    static Formation Playtest(string n) => PlaytestH335.First(r => r.Name == n).F;   // 第336期: ドハを第317〜335期の規定に固定（いまの規定は DM-a）
+    static Formation Row(string n) => CompareBuildsH335().First(r => r.Name == n).F;
 
     /// <summary>§6 の代表台（駒はいまの規定・段0 入り）。守り型を最初に。</summary>
     internal static (string Name, Formation F)[] Boards() => new (string, Formation)[]

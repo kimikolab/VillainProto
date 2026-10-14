@@ -1380,3 +1380,8 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - `ApplyDamageBody`: 本体の頭で `_dmPieceNext` を読んで消す（欠片 ／ 溢れの一撃は巨躯 ／ 分かちを通さない）。肩代わりの族の最後（分かちの後・破片の前）に DM-a の等分（`DohaSplit`・`_dmSplitLive` で短絡）。分かちの2か所で `NoteShareLoad`（名目の累計・DM-c の帳簿 `DohaOverflowTrait.LoadKey`）。巨躯の吐き戻しで GL の返り先（`StrikerFor`・`_glLive` で短絡）。
 - `BattleContext.DohaOverflow`（DM-c・`DohaOverflowTrait.OnDeath` だけが呼ぶ）・`InDohaPiece`（欠片 ／ 溢れの一撃の間だけ真・`VendettaTrait.OnAllyDamaged` が読んで出ない）。札 `DohaSplit` ／ `DohaOverflow` ／ `ColossusDrink` ／ `ColossusToStriker`（保持者 0 枚・版 `DohaDMa` ／ `DohaDMc` ／ `GolmDrink` ／ `GolmGL` だけ）。
 - 計数のみ: `UnitTally.ShareLoad335` ／ `Dm335*` ／ `Gl335*`（`_sharerLive` で短絡）。器具: `doha335`。
+
+## 第336期 —— ドハの等分（DM-a）の規定化 ／ 等分の再入の止め
+
+- 規定のドハ `UnitCatalog.Doha` ＝ `DohaH335`（第317〜335期の規定・明示の定義に）＋ `DohaSplit`。`DohaDMa` ／ `DohaDMc` は旧から作り直した。固定の口 `Common.PinD335` ／ `Pin335` ／ `CompareBuildsH335` ／ `PlaytestH335`（古い口の終端 `PinZ334` の最後に `PinD335`）・`IsDohaNow`（`PinDS316` ／ `markheal295`）。
+- **等分の再入の止め**（第335期の DM-a に足した）: 欠片の一撃の連鎖の中（`InDohaPiece`）でドハに戻ってきた一撃は等分せず、いつもどおり受ける（計数 `UnitTally.Dm336Reentry`・ログ1行）。欠片 → カド → 棘の巻き込み → ドハ → 等分 → … の連鎖が `ablate` で無限になった（スタック溢れ）。計数のみ `Dm336PieceDeaths`（欠片で倒れた駒の側）。器具: `settle336`。

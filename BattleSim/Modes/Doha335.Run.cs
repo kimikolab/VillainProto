@@ -176,7 +176,7 @@ static partial class Doha335Diag
     static void CompareAll(Ver[] vers)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = CompareBuilds().ToArray();
+        var rows = CompareBuildsH335().ToArray();   // 第336期: ドハを第317〜335期の規定に固定
         int nw = EnemyCatalog.Stages.Count;
         double[,] Grid(Ver v)
         {

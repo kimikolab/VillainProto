@@ -310,7 +310,7 @@ public static UnitDef PinKataTou311(UnitDef d) =>
 /// <summary>第317期: 規定のドハ（DP-s）／ シガ（SF-AC）を第316期までの規定（`DohaH316` ／ `ShigaSWa`）に替える。ほかの駒はそのまま返す。
 /// 第318期: ソムも第317期までの規定（`SomH317`）に替える（`PinS317`・第316期までの規定のソムは第317期の規定と同じ物）。</summary>
 public static UnitDef PinDS316(UnitDef d) =>
-    ReferenceEquals(d, UnitCatalog.Doha) ? UnitCatalog.DohaH316 : ReferenceEquals(d, UnitCatalog.Shiga) ? UnitCatalog.ShigaSWa : PinS317(d);
+    IsDohaNow(d) ? UnitCatalog.DohaH316 : ReferenceEquals(d, UnitCatalog.Shiga) ? UnitCatalog.ShigaSWa : PinS317(d);   // 第336期: `DohaH335` も
 
 /// <summary>第318期: 規定のソム（BD-E2）を第312〜317期の規定（`SomH317`）に替える。ほかの駒はそのまま返す。
 /// 第319期: 第318期の規定のソム（`SomH318`）も同じ旧へ。規定のシガ（SG）は第317〜318期の規定（`ShigaH318`）へ替える（第316期までの口は `PinDS316` が先に `ShigaSWa` へ替える）。
@@ -470,7 +470,31 @@ public static UnitDef PinM333(UnitDef d) => ReferenceEquals(d, UnitCatalog.Tome)
 /// それより前の固定の口（`PinM333` を最後に通す口すべて＝ `PinS332` ／ `PinTK331` ／ `PinT328` ／ `PinTK327` ／ `PinT326` ／ `PinTKK324`）もここを通る（第301〜334期はザンが変わっていない）。
 /// ザンをもっと古い規定へ替える口（`Pin299` ／ `Pin300` ／ `Pin301` ／ `guard294` ほか）は `IsZanNow` で `ZanH334` も受ける。
 /// </summary>
-public static UnitDef PinZ334(UnitDef d) => ReferenceEquals(d, UnitCatalog.Zan) ? UnitCatalog.ZanH334 : d;
+public static UnitDef PinZ334(UnitDef d) => ReferenceEquals(d, UnitCatalog.Zan) ? UnitCatalog.ZanH334 : PinD335(d);   // 第336期: 規定のドハも（古い口の終端）
+
+/// <summary>
+/// 第336期: 規定のドハ（DM-a・等分）を第317〜335期の規定（`DohaH335`）に替える。ほかの駒はそのまま返す。
+/// 古い口の終端（`PinM333` → `PinZ334` → ここ）なので、`PinM333` を最後に通す口すべて（`Pin333` ／ `Pin334` ／ `PinS332` ／ `PinTK331` ／ `PinT328` ／ `PinTK327` ／ `PinT326` ／ `PinTKK324`）もここを通る。
+/// ドハをもっと古い規定へ替える口（`PinDS316` ／ `markheal295`）は `IsDohaNow` で `DohaH335` も受ける。
+/// </summary>
+public static UnitDef PinD335(UnitDef d) => ReferenceEquals(d, UnitCatalog.Doha) ? UnitCatalog.DohaH335 : d;
+
+/// <summary>第336期: 規定のドハか、第317〜335期の規定（`DohaH335`・`PinD335` を通った後）か。</summary>
+public static bool IsDohaNow(UnitDef d) => ReferenceEquals(d, UnitCatalog.Doha) || ReferenceEquals(d, UnitCatalog.DohaH335);
+
+/// <summary>第336期: ドハの DM-a を規定にした。第317〜335期の規定のドハで測った器具（`doha335`）はこれを通す。陣形とレリックは保つ。</summary>
+public static Formation Pin335(Formation f)
+{
+    var g = f.Clone();
+    foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinD335(d);
+    return g;
+}
+
+/// <summary>第336期: `CompareBuilds()` のドハを第317〜335期の規定に替えた写し。</summary>
+public static (string Name, Formation F)[] CompareBuildsH335() => CompareBuilds().Select(r => (r.Name, Pin335(r.F))).ToArray();
+
+/// <summary>第336期: `Presets.Playtest` のドハを第317〜335期の規定に替えた写し（行の数と並びはそのまま）。</summary>
+public static (string Name, Formation F)[] PlaytestH335 => Presets.Playtest.Select(r => (r.Name, Pin335(r.F))).ToArray();
 
 /// <summary>第335期: 規定のザンか、第301〜334期の規定（`ZanH334`・`PinZ334` を通った後）か。</summary>
 public static bool IsZanNow(UnitDef d) => ReferenceEquals(d, UnitCatalog.Zan) || ReferenceEquals(d, UnitCatalog.ZanH334);

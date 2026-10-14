@@ -13579,8 +13579,12 @@ public sealed class BattleContext
 
         // 第335期（DM-a・`DohaSplit`）: 分かちの持ち主が直に受ける一撃（出どころあり・刻み ／ 徴収 ／ 中継 ／ 共有でない）は、自分を除く生きている味方に等分する（肩代わりの族の最後・破片の前）。
         // **保持者がいなければ比較1つで抜ける。乱数を引かない。**
-        if (_dmSplitLive && !dmPiece && source is not null && !relayed && !levy && !burnTick && !hexShare && target.HasTrait(TraitId.DohaSplit)
-            && DohaSplit(target, amount, source)) return;
+        // 第336期: 欠片の一撃の連鎖の中（`InDohaPiece`）でドハに戻ってきた一撃は等分しない（いつもどおり受ける）——等分の再入を止める（`ablate` で欠片 → … → ドハ → 欠片 の無限の連鎖が出た）。
+        if (_dmSplitLive && !dmPiece && source is not null && !relayed && !levy && !burnTick && !hexShare && target.HasTrait(TraitId.DohaSplit))
+        {
+            if (InDohaPiece) { TallyOf(target).Dm336Reentry++; Log($"    {target.Name} への一撃（{amount}・{source.Name}）は等分の欠片の連鎖の中なので、等分せずに受ける", LogKind.Trigger); }   // 計数のみ
+            else if (DohaSplit(target, amount, source)) return;
+        }
 
         // 破片（アーマー）は HP の前に削られる。
         //
@@ -15581,7 +15585,7 @@ public sealed class BattleContext
                 else ApplyDamage(a, piece, source, isFriendlyFire: true, relayed: true);
             }
             finally { _dmPieceNext = false; InDohaPiece = prev; }
-            if (!a.IsAlive) kills++;
+            if (!a.IsAlive) { kills++; if (!levy) TallyOf(a).Dm336PieceDeaths++; }   // 第336期（計数のみ・等分の欠片で倒れた駒の側）
         }
         return kills;
     }

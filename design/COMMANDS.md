@@ -1171,6 +1171,9 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 doha335 compare [版,…]  # 第335期 §6: `compare` 64 行 × 版（基準は段0 入りの規定・39 秒）
     dotnet run --project BattleSim -c Release 0 doha335 log [台] [波] [seed] [版]   # 第335期: 1戦のログ（台は guard か代表台の名前・波 boss ／ guard ／ bat ／ 2 ／ 5 ／ sguard ／ sbat・版 base ／ a ／ c ／ cg ／ gl）
     dotnet run --project BattleSim -c Release 0 doha335 check         # 第335期 自己検査（段0 の定義 ／ 固定の口 ／ 中継で仇討ちしない・DM-a ／ DM-c ／ 飲み干す ／ GL の規則を盤を直に組んで・試遊の台・verbose・PickOne）
+    dotnet run --project BattleSim -c Release 0 settle336 boards      # 第336期 §4: 代表台 4（守り型 ／ 雷の型 ／ 反撃改 ／ 反撃改2）× 5 波 × 旧（`DohaH335`）／ 新（DM-a）・seed 0..99・勝率 ／ 決着T ／ 倒れた味方・等分の回数 ／ 量 ／ 欠片で倒れた駒（1 秒）。予測のファイルが無ければ走らない
+    dotnet run --project BattleSim -c Release 0 settle336 log [台] [波] [seed] [old|new]   # 第336期: 1戦のログ
+    dotnet run --project BattleSim -c Release 0 settle336 check       # 第336期 自己検査（定義と固定の口・試遊の台・規定で等分が起き旧で起きない・再入の止め・verbose・PickOne）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

@@ -468,7 +468,7 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.VendettaRoundCap3]  = (HcMinusL, "1ターン3回まで（第334期・ザン ZC-b）: 割り込み（仇討ち ＋ 濡れ衣の仇討ち）は1ラウンドに3回まで。手番の仇巡りは数えない。保持者 0 枚"),
         [TraitId.RecoilLethal]       = (HcMinusL, "返り血で倒れる（第334期・ザン ZC-c）: 返り血（1回 3）が HP 1 で止まらない。保持者 0 枚"),
         [TraitId.VendettaFrameOnce]  = (HcMinusL, "濡れ衣は1ターン1回（第334期・ザン ZC-d）: 濡れ衣の仇討ちは1ラウンドに1回まで。ヒサの指差しは今のまま。保持者 0 枚"),
-        [TraitId.DohaSplit]          = (HcMinusL, "等分（第335期・ドハ DM-a）: 自分が直に受ける一撃は、自分を除く生きている味方に等分される（自分は受けない・欠片は中継で合図にならない）。保持者 0 枚"),
+        [TraitId.DohaSplit]          = (HcMinusL, "等分（第335期・ドハ DM-a）: 自分が直に受ける一撃は、自分を除く生きている味方に等分される（自分は受けない・欠片は中継で合図にならない）。第336期からドハの規定"),
         [TraitId.DohaOverflow]       = (HcMinusL, "溢れる（第335期・ドハ DM-c）: 倒れたとき、肩代わりした痛みの累計の5割が生きている味方全員に等分される（徴収・倒れうる・1戦に1度）。保持者 0 枚"),
         [TraitId.ColossusDrink]      = (HcPlusL,  "飲み干す（第335期・ゴルム）: DM-c の溢れを生きていればすべて飲み（ダメージなし）、巨躯と同じ換算で自分の攻撃力に変える。保持者 0 枚"),
         [TraitId.ColossusToStriker]  = (HcPlusL,  "力は殴る味方へ（第335期・ゴルム GL）: 吐き戻しの返り先が手番で殴らない駒なら、攻撃力の最も高い殴る味方へ返す。保持者 0 枚"),

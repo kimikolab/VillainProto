@@ -1961,6 +1961,25 @@ public static class UnitCatalog
         MaxHp = 104,
         Attack = 4,
         Speed = 3,
+        // 第336期: ポンの判断（第335期の案 D1）で DM-a（等分・`DohaSplit`）を規定にした。旧の規定は `DohaH335`（指示書 design/PHASE336_DOHA_SPLIT_SETTLE_SPEC.md §2）。
+        Traits = new[] { TraitId.Sharer, TraitId.SharerArmored, TraitId.ShareBack, TraitId.SharerNoDull, TraitId.SharePush, TraitId.SharePushPower, TraitId.SharePushStrikers, TraitId.DohaSplit },
+        Actions = DohaPushActions,
+        PlusText = DohaPlusH316 + "。手番で、いちばん痛みを肩代わりした仲間（殴る仲間だけ）の背を押してもう一度動かし、自分に宿った力も渡す",
+        MinusText = "自分は強くならず、自分が受ける痛みは、仲間に等しく分かれる",
+        Flavor = "頼まれてもいない痛みを喰う。礼を言われたことは、一度もない。"
+    };
+
+    /// <summary>
+    /// 第317〜335期の規定のドハ（DP-s・自分が直に受ける一撃はそのまま受ける）。第336期に DM-a を規定にしたので、旧の規定の定義を明示的に持つ。
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。第317〜335期の規定のドハで測った過去の器具はこちらに固定する（`Common.PinD335` ほか）。第335期の版（DM-a ／ DM-c）はこちらから作る。
+    /// </summary>
+    public static readonly UnitDef DohaH335 = new()
+    {
+        Id = "doha",
+        Name = "分かちのドハ",
+        MaxHp = 104,
+        Attack = 4,
+        Speed = 3,
         Traits = new[] { TraitId.Sharer, TraitId.SharerArmored, TraitId.ShareBack, TraitId.SharerNoDull, TraitId.SharePush, TraitId.SharePushPower, TraitId.SharePushStrikers },
         Actions = DohaPushActions,
         PlusText = DohaPlusH316 + "。手番で、いちばん痛みを肩代わりした仲間（殴る仲間だけ）の背を押してもう一度動かし、自分に宿った力も渡す",
@@ -1983,7 +2002,7 @@ public static class UnitCatalog
         Speed = Doha.Speed,
         Traits = new[] { TraitId.Sharer, TraitId.SharerArmored, TraitId.ShareBack, TraitId.SharerNoDull },
         PlusText = DohaPlusH316,
-        MinusText = Doha.MinusText,
+        MinusText = DohaH335.MinusText,   // 第336期: 規定のドハのマイナスが替わった——第335期までの文面
         Flavor = Doha.Flavor
     };
 
@@ -2006,10 +2025,10 @@ public static class UnitCatalog
     }
 
     /// <summary>第335期 DM-a（等分）。規定のドハ ＋ <see cref="TraitId.DohaSplit"/>（自分が直に受ける一撃は、自分を除く生きている味方に等分・自分は受けない）。</summary>
-    public static readonly UnitDef DohaDMa = With335(Doha, TraitId.DohaSplit, minusFrom: "味方が多いほど早く尽きる", minusTo: "自分が受ける痛みは、仲間に等しく分かれる");
+    public static readonly UnitDef DohaDMa = With335(DohaH335, TraitId.DohaSplit, minusFrom: "味方が多いほど早く尽きる", minusTo: "自分が受ける痛みは、仲間に等しく分かれる");
 
     /// <summary>第335期 DM-c（溢れる）。規定のドハ ＋ <see cref="TraitId.DohaOverflow"/>（倒れたとき、肩代わりの累計の5割を生きている味方全員に等分・1戦に1度）。</summary>
-    public static readonly UnitDef DohaDMc = With335(Doha, TraitId.DohaOverflow, minusFrom: "味方が多いほど早く尽きる", minusTo: "倒れると、背負ってきた痛みの半分が仲間に溢れる");
+    public static readonly UnitDef DohaDMc = With335(DohaH335, TraitId.DohaOverflow, minusFrom: "味方が多いほど早く尽きる", minusTo: "倒れると、背負ってきた痛みの半分が仲間に溢れる");
 
     /// <summary>第335期 DM-c ＋ ゴルムが飲む の、ゴルムの側。規定のゴルム ＋ <see cref="TraitId.ColossusDrink"/>（ドハの溢れを生きていればすべて飲み、巨躯と同じ換算で自分の攻撃力に）。ドハは <see cref="DohaDMc"/> と組む。</summary>
     public static readonly UnitDef GolmDrink = With335(Golm, TraitId.ColossusDrink, plusFrom: "（1戦に1度）", plusTo: "（1戦に1度）／ドハが溢れさせた痛みを飲み干し、自分の力にする");

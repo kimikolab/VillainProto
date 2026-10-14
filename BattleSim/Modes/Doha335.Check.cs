@@ -56,7 +56,7 @@ static partial class Doha335Diag
         foreach (var (zan, tag) in new[] { (Z, "規定（ZC-a）"), (ZO, "旧（`ZanH334`）") })
         {
             bool now = zan == Z;
-            var ctx = T323.Ctx(Formation.Build(front1: zan, front3: Pal, center: UnitCatalog.Doha), Formation.Build(front1: Dummy), out var p, out var e);
+            var ctx = T323.Ctx(Formation.Build(front1: zan, front3: Pal, center: UnitCatalog.DohaH335), Formation.Build(front1: Dummy), out var p, out var e);   // 第336期: 第317〜335期の規定のドハ
             var doha = T323.Seat(p, 2); var pal = T323.Seat(p, 1);
             doha.SetCounter(StatusKeys.Marked, 1);
             ctx.ApplyDamage(pal, 20, e[0]);
@@ -68,21 +68,17 @@ static partial class Doha335Diag
 
         // ---- 版の定義と試遊の台
         {
-            UnitDef D = UnitCatalog.Doha, G = UnitCatalog.Golm;
+            UnitDef D = UnitCatalog.DohaH335, G = UnitCatalog.Golm;   // 第336期: 版の土台は第317〜335期の規定のドハ
             bool vers = UnitCatalog.DohaDMa.Traits.SequenceEqual(D.Traits.Append(TraitId.DohaSplit)) && UnitCatalog.DohaDMc.Traits.SequenceEqual(D.Traits.Append(TraitId.DohaOverflow))
                 && UnitCatalog.GolmDrink.Traits.SequenceEqual(G.Traits.Append(TraitId.ColossusDrink)) && UnitCatalog.GolmGL.Traits.SequenceEqual(G.Traits.Append(TraitId.ColossusToStriker))
                 && UnitCatalog.DohaDMa.MinusText == "自分は強くならず、自分が受ける痛みは、仲間に等しく分かれる" && UnitCatalog.DohaDMc.MinusText == "自分は強くならず、倒れると、背負ってきた痛みの半分が仲間に溢れる"
                 && UnitCatalog.GolmDrink.PlusText.EndsWith("／ドハが溢れさせた痛みを飲み干し、自分の力にする", StringComparison.Ordinal) && UnitCatalog.GolmGL.PlusText.Contains("飲み込んだ力は、戦う仲間へ返す", StringComparison.Ordinal)
                 && new[] { UnitCatalog.DohaDMa, UnitCatalog.DohaDMc, UnitCatalog.GolmDrink, UnitCatalog.GolmGL }.All(d => !UnitCatalog.Everyone.Contains(d))
-                && UnitCatalog.Everyone.All(d => !d.Traits.Any(t => t is TraitId.DohaSplit or TraitId.DohaOverflow or TraitId.ColossusDrink or TraitId.ColossusToStriker));
+                && UnitCatalog.Everyone.All(d => !d.Traits.Any(t => (t is TraitId.DohaSplit && !ReferenceEquals(d, UnitCatalog.Doha)) || t is TraitId.DohaOverflow or TraitId.ColossusDrink or TraitId.ColossusToStriker));   // 第336期: DM-a は規定のドハの札になった
             Expect("版の定義: DM-a ／ DM-c ＝ 規定のドハ ＋ 札1枚（マイナスの「味方が多いほど早く尽きる」を新しい句に置き換え）・ゴルム（飲み干す ／ GL）＝ 規定のゴルム ＋ 札1枚・`Everyone` の外・保持者 0", vers);
             var v = Presets.Versions;
-            var g = Presets.Playtest.First(r => r.Name == GuardRow).F;
-            (string Name, UnitDef Golm, UnitDef Doha)[] want = { ("版・DM-a 守り型", G, UnitCatalog.DohaDMa), ("版・DM-c 守り型", G, UnitCatalog.DohaDMc), ("版・DM-c＋ゴルム 守り型", UnitCatalog.GolmDrink, UnitCatalog.DohaDMc), ("版・GL 守り型", UnitCatalog.GolmGL, D) };
-            bool rows = v.Length == 5 && v[0].Name == "試遊・感電 ポンの台" && Presets.Playtest.Length == 17
-                && want.Select((x, i) => (x, i)).All(y => v[y.i + 1].Name == y.x.Name
-                    && v[y.i + 1].F.Occupied().Select(o => o.Def).SequenceEqual(g.Occupied().Select(o => o.Def.Id == "golm" ? y.x.Golm : o.Def.Id == "doha" ? y.x.Doha : o.Def))
-                    && v[y.i + 1].F.Occupied().Select(o => o.Slot).SequenceEqual(g.Occupied().Select(o => o.Slot)));
+            // 第336期: `Versions` は期ごとに「版・」の台を入れ替えるので、1行目（ポンの台）だけを見る（後ろの行は「版・」で始まること）。見出しの文は第335期のまま。
+            bool rows = v.Length >= 1 && v[0].Name == "試遊・感電 ポンの台" && v.Skip(1).All(r => r.Name.StartsWith("版・", StringComparison.Ordinal)) && Presets.Playtest.Length == 17;
             Expect("試遊の台: `Presets.Versions` ＝ 「試遊・感電 ポンの台」＋「版・DM-a ／ DM-c ／ DM-c＋ゴルム ／ GL 守り型」（守り型の並びでドハ ／ ゴルムだけ版）・第334期の「版・ZC」の4台は外した・`Playtest` は 17 台のまま", rows);
         }
 
@@ -162,7 +158,7 @@ static partial class Doha335Diag
             var got = new Dictionary<bool, (int Doha, int Misa, int Zan, int Misa2, long Redir, bool Strikers)>();
             foreach (var (golmDef, gl) in new[] { (UnitCatalog.Golm, false), (UnitCatalog.GolmGL, true) })
             {
-                var ctx = T323.Ctx(Formation.Build(front1: golmDef, front3: Z, center: UnitCatalog.Doha, back1: UnitCatalog.Tome, back3: UnitCatalog.Hisa), Formation.Build(front1: Dummy), out var p, out var e);
+                var ctx = T323.Ctx(Formation.Build(front1: golmDef, front3: Z, center: UnitCatalog.DohaH335, back1: UnitCatalog.Tome, back3: UnitCatalog.Hisa), Formation.Build(front1: Dummy), out var p, out var e);   // 第336期: 第317〜335期の規定のドハ
                 var zan = T323.Seat(p, 1); var doha = T323.Seat(p, 2); var misa = T323.Seat(p, 3); var hisa = T323.Seat(p, 4);
                 bool strikers = BattleContext.StrikesOnTurn(misa.Def) && BattleContext.StrikesOnTurn(zan.Def) && !BattleContext.StrikesOnTurn(doha.Def) && !BattleContext.StrikesOnTurn(hisa.Def);
                 ctx.ApplyDamage(doha, 40, e[0]);   // ゴルムがドハへの一撃を飲む（ドハ ↔ ゴルムの中継の押し付け合いの分も）

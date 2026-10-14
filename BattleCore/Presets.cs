@@ -902,14 +902,11 @@ public static class Presets
     /// design/PHASE328_DUST_BATTERY_SETTLE_SPEC.md §6）。名前は「試遊・」で始まるが、置き場所はこの一覧。</para>
     /// <para>第329期: ポンの台は残し、粉の付いた駒は爆ぜる（PB）の4つの版を「版・」の台として足した。第330期: PB-a ＋ b を規定にしたので4台を外した（ポンの台は規定の駒のまま残す）。第331期: 感電の痺れの ST の3つの版を「版・」の台として足した。第332期: ST-c を規定にしたので3台を外し、ソムの光の衣の LV-c ／ LV-d の2台を足した。第333期: LV-c を規定にしたので2台を外した（ポンの台は規定の駒のまま残す）。
     /// 第334期: ザンの割り込みの回数（ZC-a ／ b ／ c ／ d）の4つの版を「版・」の台として足した（並びは「試遊・標 守り型」・ザンだけを版に替える）。
-    /// 第335期: ZC-a を規定にしたので4台を外し、ドハのマイナス ／ ゴルムの力の行き先（DM-a ／ DM-c ／ DM-c＋ゴルム ／ GL）の4台を足した（並びは守り型）。</para>
+    /// 第335期: ZC-a を規定にしたので4台を外し、ドハのマイナス ／ ゴルムの力の行き先（DM-a ／ DM-c ／ DM-c＋ゴルム ／ GL）の4台を足した（並びは守り型）。
+    /// 第336期: DM-a を規定にしたので4台を外した（ポンの台は規定の駒のまま残す）。</para>
     /// </summary>
     public static (string Name, Formation F)[] Versions => new (string, Formation)[]
     {
         ("試遊・感電 ポンの台", Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Shiga, center: UnitCatalog.Tou, back1: UnitCatalog.Kugu, back3: UnitCatalog.Som)),
-        ("版・DM-a 守り型", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Zan, center: UnitCatalog.DohaDMa, back1: UnitCatalog.Tome, back3: UnitCatalog.Hisa)),
-        ("版・DM-c 守り型", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Zan, center: UnitCatalog.DohaDMc, back1: UnitCatalog.Tome, back3: UnitCatalog.Hisa)),
-        ("版・DM-c＋ゴルム 守り型", Formation.Build(front1: UnitCatalog.GolmDrink, front3: UnitCatalog.Zan, center: UnitCatalog.DohaDMc, back1: UnitCatalog.Tome, back3: UnitCatalog.Hisa)),
-        ("版・GL 守り型", Formation.Build(front1: UnitCatalog.GolmGL, front3: UnitCatalog.Zan, center: UnitCatalog.Doha, back1: UnitCatalog.Tome, back3: UnitCatalog.Hisa)),
     };
 }

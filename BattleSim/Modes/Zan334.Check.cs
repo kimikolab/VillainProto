@@ -101,7 +101,7 @@ static partial class Zan334Diag
         {
             bool a = zan != Z;
             // ドハ: 中央のドハ（標）が前3 の木偶の痛みを肩代わり → 中継の一撃
-            var ctx = T323.Ctx(Formation.Build(front1: zan, front3: Pal, center: UnitCatalog.Doha), Formation.Build(front1: Dummy), out var p, out var e);
+            var ctx = T323.Ctx(Formation.Build(front1: zan, front3: Pal, center: UnitCatalog.DohaH335), Formation.Build(front1: Dummy), out var p, out var e);   // 第336期: 第317〜335期の規定のドハ
             var doha = T323.Seat(p, 2); var pal = T323.Seat(p, 1); var foe = e[0];
             doha.SetCounter(StatusKeys.Marked, 1);
             ctx.ApplyDamage(pal, 20, foe);

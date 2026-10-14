@@ -103,7 +103,7 @@ static class Som317Diag
     static Formation Playtest(string n) => PlaytestH317.First(r => r.Name == n).F;
     static Formation RowF(string n) => CompareBuildsH317().First(r => r.Name == n).F;
     /// <summary>第316期までの器具（`S307.Order` ／ `S307.BossPool` ほか）は第317期にドハ ／ シガを旧に固定したので、この器具は規定の駒に戻して使う。</summary>
-    static UnitDef Cur(UnitDef d) => ReferenceEquals(d, UnitCatalog.ShigaSWa) ? UnitCatalog.ShigaH318 : ReferenceEquals(d, UnitCatalog.DohaH316) ? UnitCatalog.Doha : d;   // 第319期: シガは第317〜318期の規定（`ShigaH318`）へ
+    static UnitDef Cur(UnitDef d) => ReferenceEquals(d, UnitCatalog.ShigaSWa) ? UnitCatalog.ShigaH318 : ReferenceEquals(d, UnitCatalog.DohaH316) ? UnitCatalog.DohaH335 : d;   // 第336期: 第317〜335期の規定のドハ（`DohaH335`）・第319期: シガは第317〜318期の規定（`ShigaH318`）へ
     static Formation WinSeat() => B283.Seat(S307.Order(S307.WinBoard).Select(Cur).ToArray());
     internal const string HagiBoard = "光の盾 クビ→ハギ";
 
@@ -792,13 +792,13 @@ static class Som317Diag
 
         // (a) 段0: 規定のドハ ＝ DP-s・規定のシガ ＝ SF-AC・旧の定義が残っている
         {
-            var doha = UnitCatalog.Doha; var h316 = UnitCatalog.DohaH316; var dps = UnitCatalog.DohaDPs;
+            var doha = UnitCatalog.DohaH335; var h316 = UnitCatalog.DohaH316; var dps = UnitCatalog.DohaDPs;
             bool d = doha.Traits.SequenceEqual(dps.Traits) && doha.Actions is { Count: 1 } && doha.Actions[0].Kind == ActionKind.Skill && ReferenceEquals(doha.Actions, dps.Actions)
                 && doha.PlusText == dps.PlusText && doha.MinusText == dps.MinusText && doha.MaxHp == 104 && doha.Attack == 4 && doha.Speed == 3
                 && h316.Traits.SequenceEqual(new[] { TraitId.Sharer, TraitId.SharerArmored, TraitId.ShareBack, TraitId.SharerNoDull }) && h316.Actions is null
                 && dps.Traits.SequenceEqual(h316.Traits.Concat(new[] { TraitId.SharePush, TraitId.SharePushPower, TraitId.SharePushStrikers }))
                 && UnitCatalog.DohaDPb.Traits.SequenceEqual(h316.Traits.Concat(new[] { TraitId.SharePush, TraitId.SharePushPower }))
-                && UnitCatalog.All.Contains(doha) && !UnitCatalog.Everyone.Contains(h316) && !UnitCatalog.Everyone.Contains(dps);
+                && UnitCatalog.All.Contains(UnitCatalog.Doha) && !UnitCatalog.Everyone.Contains(h316) && !UnitCatalog.Everyone.Contains(dps);
             var sh = UnitCatalog.ShigaH318; var swa = UnitCatalog.ShigaSWa;   // 第319期: 第317〜318期の規定のシガは `ShigaH318`
             bool s = sh.Traits.SequenceEqual(swa.Traits.Concat(new[] { TraitId.FearNoStun, TraitId.ScourgeDaunt })) && sh.MaxHp == 52 && sh.Attack == 9 && sh.Speed == 3 && sh.Pattern == AttackPattern.Sweep
                 && sh.PlusText == swa.PlusText + "。自分の雷では痺れない" && sh.MinusText == "感電していないとき、動ける敵を主目標に打つと、怖気づいて自分が1ターン動けなくなる（萎縮した敵は動けない敵とみなす）"

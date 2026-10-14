@@ -2319,6 +2319,10 @@ public sealed class UnitTally
     /// </summary>
     public long ShareLoad335, Dm335Direct, Dm335DirectSingle, Dm335Walled, Dm335Splits, Dm335SplitAmt, Dm335SplitKills, Dm335Overflows, Dm335OverflowAmt, Dm335OverflowKills,
                 Dm335Drank, Dm335DrankGain, Dm335DrinkTurn, Dm335DealtAtDrink, Gl335Redirects, Gl335Amt;
+    /// <summary>第336期（<b>計数のみ</b>）: DM-a の等分の欠片で倒れた（倒れた駒の側）。</summary>
+    public long Dm336PieceDeaths;
+    /// <summary>第336期（<b>計数のみ</b>）: 等分の欠片の連鎖の中でドハに戻ってきた一撃（再入を止めて、等分せずに受けた）。</summary>
+    public long Dm336Reentry;
     /// <summary>
     /// 第297期（<b>計数専用</b>・分かち）: <c>SharedAway</c> この駒の痛みを分かちが引き受けた実額（相手ごとの内訳・痛みをくれた側に付く）／ <c>ShareTakenHits</c> ドハが中継の一撃を受けた回数（ドハの側）。
     /// 版（DH-a ／ DH-b ／ DH-t）: ドハ ＝ <c>ShareGives</c> ／ <c>ShareGiven</c> 力を配った回数・量 ／ <c>ShareGiftAccrued</c> 累計に入れた量 ／ <c>ShareGifts</c> 控えた手番 ／
@@ -3544,6 +3548,7 @@ public sealed class UnitTally
         ShareLoad335 += o.ShareLoad335; Dm335Direct += o.Dm335Direct; Dm335DirectSingle += o.Dm335DirectSingle; Dm335Walled += o.Dm335Walled; Dm335Splits += o.Dm335Splits; Dm335SplitAmt += o.Dm335SplitAmt;   // 第335期
         Dm335SplitKills += o.Dm335SplitKills; Dm335Overflows += o.Dm335Overflows; Dm335OverflowAmt += o.Dm335OverflowAmt; Dm335OverflowKills += o.Dm335OverflowKills; Dm335Drank += o.Dm335Drank;
         Dm335DrankGain += o.Dm335DrankGain; Dm335DrinkTurn += o.Dm335DrinkTurn; Dm335DealtAtDrink += o.Dm335DealtAtDrink; Gl335Redirects += o.Gl335Redirects; Gl335Amt += o.Gl335Amt;
+        Dm336PieceDeaths += o.Dm336PieceDeaths; Dm336Reentry += o.Dm336Reentry;   // 第336期
         SharedAway += o.SharedAway; ShareTakenHits += o.ShareTakenHits; ShareGives += o.ShareGives; ShareGiven += o.ShareGiven; ShareGiftAccrued += o.ShareGiftAccrued;   // 第297期
         ShareGifts += o.ShareGifts; ShareGiftCapped += o.ShareGiftCapped; ShareGiftNoTarget += o.ShareGiftNoTarget; ShareGiftSkipped += o.ShareGiftSkipped;
         ShareGot += o.ShareGot; ShareGiftGot += o.ShareGiftGot; ShareGiftTurns += o.ShareGiftTurns; ShareGiftAttacks += o.ShareGiftAttacks;
