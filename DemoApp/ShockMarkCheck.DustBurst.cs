@@ -37,9 +37,14 @@ public partial class ShockMarkCheck
                         Text = ShockGaugeLabels.DustBurst, Amount = density * 8, Slot = density });
                     events.Add(new() { Turn = 8, Kind = BattleEventKind.Damage, ActorId = id, TargetId = heroId,
                         Amount = density * 8, HpAfter = 1000, FriendlyFire = true });
+                    // 着弾後に粉が降っても、次の放電を別の連鎖へ切り離さない。
+                    events.Add(new() { Turn = 8, Kind = BattleEventKind.ShockGauge, ActorId = id, TargetId = heroId,
+                        Text = ShockGaugeLabels.DustFall, Amount = 1 });
                 }
                 events.Add(new() { Turn = 8, Kind = BattleEventKind.SilkBall, ActorId = kuguId, Text = SilkBallLabels.Recharge, Amount = 8 });
-                var plan = DustBurstPresentation.Build(events); var chain = plan.Starts.Single().Value;
+                var plan = DustBurstPresentation.Build(events);
+                Require(plan.Starts.Count == 1, "着弾ごとに粉が降っても8つの爆発は1つの連鎖のまま");
+                var chain = plan.Starts.Single().Value;
                 Require(plan.DamageMembers.Count == 8 && chain.Totals[heroId] == density * 8 * 8, "台本の8着弾を勇者の1合計へ束ねる");
                 Require(field.BallPowderCount == 8 && field.FindPawn(heroId)!.PowderDensity == 0, "糸玉の濃さを本人のHPや粉から独立して表示する");
                 field.BeginDustBurstChain(chain, events, 1);

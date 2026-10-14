@@ -22,7 +22,7 @@ internal sealed class DustBurstPresentation
         BattleEventKind.BeastBurst => e.Text == BeastBurstLabels.Popped,
         BattleEventKind.SilkBall => e.Text is SilkBallLabels.Pop or SilkBallLabels.Recharge,
         BattleEventKind.ShockGauge => e.Text is ShockGaugeLabels.DensePop or ShockGaugeLabels.DenseBurn
-            or ShockGaugeLabels.DustBurst or ShockGaugeLabels.Contagion or ShockGaugeLabels.PowderMark
+            or ShockGaugeLabels.DustBurst or ShockGaugeLabels.DustFall or ShockGaugeLabels.Contagion or ShockGaugeLabels.PowderMark
             or ShockGaugeLabels.Cloud or ShockGaugeLabels.ChargeGain or ShockGaugeLabels.ChargeSpent,
         _ => false,
     };
