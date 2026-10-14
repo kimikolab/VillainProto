@@ -396,6 +396,7 @@ SHA-256: `EE595A4C0D4DDE8FF2AB7D246209FBC4FE8B5A8DDC2F0B7BA8F4BC907CE84DB1`。
 
 ユーザー指定により `DSGNImpt_EXPLOSION-Bit Bomb_HY_PC-001.wav` へ差し替え。原本を `tou_dust_burst.wav` に無加工でコピー（96kHz / 24bit / stereo / 2.5秒）。SHA-256: `376F7A914533A9F8EEF7FEF1A5CF7EB326C43CDDD1E486E04FE408A3D0EE0717`。
 `BattleAttackAudio.DustBurst.cs` がこの専用音源を短い破裂として再生する。通常の粉焼はPhoenix Spark 001〜003を引き続き使う。
+音源は起動時に復号しておき、最初の爆発での読み込み待ちを避ける。
 
 配置コマンド（購入音源はGitに含めない）：
 
@@ -403,8 +404,10 @@ SHA-256: `EE595A4C0D4DDE8FF2AB7D246209FBC4FE8B5A8DDC2F0B7BA8F4BC907CE84DB1`。
 Copy-Item -LiteralPath "D:\Assets\SE\Helton Yan's Pixel Combat - Single Files\DSGNImpt_EXPLOSION-Bit Bomb_HY_PC-001.wav" -Destination "DemoApp/assets/audio/se/tou_dust_burst.wav"
 ```
 
-粉の濃さの段階は粉焼と共通。小-13 / 中-11 / 大-9 dB、4枠、原音程。
-冒頭0.15秒（倍速時も最低0.09秒）、末尾45%をフェードする。35ms未満・同じフレームの発火は集約する。
+粉の濃さの段階は粉焼と共通。小-5 / 中-4 / 大-3 dB、8枠、原音程。従来から6〜8dB上げ、連続発生でも余韻を他の破裂で早く切らない。
+冒頭0.40秒（倍速時も最低0.30秒）、末尾28%をフェードする。35ms未満・同じフレームの発火は集約する。
+専用の定位バスから爆発用ミックスバスを通ってMasterへ送る。粛のこもりフィルターで可視の爆発音を消さず、専用のHardLimiter（上限-3dB）で連続発生時の音割れを抑える。バスは離脱時に削除する。
 再生時刻は0.60秒の連鎖の時計で予約し、後半ほど間隔を詰める。通常の大きな粉焼SEとの二重再生を避ける。
 一時停止・途中の速度変更・離脱・再戦は音とフェードにも反映。原本・購入素材本体は変更しない。
 `--dust-burst` で粉の印だけ・濃さ1・12・30×1・2・4倍速のMaster実出力、複数回の再生と単発のクリップなしを確認する。
+初期の単発音は左右・中央、1・2・4倍速、粛あり／なしで余韻と実効音量を確認する。鞭・標のSEとの同時再生も確認し、`--dust-audio-dir=<絶対パス>` でMasterの単発・連続・同時再生をWAVへ保存できる。

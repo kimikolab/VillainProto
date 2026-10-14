@@ -19,6 +19,7 @@ public partial class ShockMarkCheck
                 .Invoke(audio, new object[] { BattleAttackAudio.DustBurstFile })!;
             Require(bomb is AudioStreamWav && Math.Abs(bomb.GetLength() - 2.5) < .01,
                 "指定のBit Bomb WAVを復号");
+            await CheckDustAudible(field, audio, capture);
             var formation = Presets.Versions.Single(p => p.Name == "試遊・感電 ポンの台").F;
             var players = BattleEngine.Materialize(formation, 0);
             var enemy = BattleEngine.MaterializeEnemy(EnemyCatalog.BossRegularWave, EnemyScaleRule.None);
@@ -107,11 +108,78 @@ public partial class ShockMarkCheck
                     Require(peak > .04f && peak < .95f && audio.DustCracklePlays - played >= 2,
                         "倍速でも軽い連続破裂音が最終出力まで複数回届き、クリップしない");
                     GD.Print($"DUST_BURST_MIX_OK density={density} speed={speed} peak={peak:F3} sounds={audio.DustCracklePlays - played}");
+                    if (density == 0 && speed == 2) SaveDustAudioPreview(frames, "chain");
                 }
                 GD.Print($"DUST_BURST_VISUAL_OK density={density} bursts=8 branches=8");
             }
         }
         finally { audio.StopAll(); AudioServer.RemoveBusEffect(0, effect); field.QueueFree(); }
         await Wait(.1);
+        Require(!Enumerable.Range(0, AudioServer.BusCount).Any(i => AudioServer.GetBusName(i).ToString().StartsWith("DustBurst_")),
+            "離脱で専用の爆発音バスと定位・リミッターを残さない");
+    }
+
+    private async Task CheckDustAudible(BattlefieldView3D field, BattleAttackAudio audio, AudioEffectCapture capture)
+    {
+        var hush = typeof(BattlefieldView3D).GetMethod("SetHushAtmosphere", Flags)!;
+        try
+        {
+            foreach (bool muted in new[] { false, true })
+            foreach (double speed in new[] { 1.0, 2.0, 4.0 })
+            foreach (float pan in new[] { -.65f, 0f, .65f })
+            {
+                hush.Invoke(field, new object[] { muted });
+                audio.StopAll(); await Wait(.12); capture.ClearBuffer();
+                Require(audio.PlayDustCrackle(0, pan, speed), "初期の単発爆発を再生");
+                await Wait(.17);
+                var voices = (AudioStreamPlayer?[])typeof(BattleAttackAudio).GetField("_dustVoices", Flags)!.GetValue(audio)!;
+                Require(voices.OfType<AudioStreamPlayer>().Any(v => v.Playing),
+                    "倍速でも0.17秒時点に爆発の芯と余韻が残る");
+                await Wait(.20);
+                var frames = capture.GetBuffer(capture.GetFramesAvailable());
+                float peak = frames.Length == 0 ? 0 : frames.Max(v => Math.Max(Math.Abs(v.X), Math.Abs(v.Y)));
+                double rms = frames.Length == 0 ? 0 : Math.Sqrt(frames.Average(v => ((double)v.X * v.X + (double)v.Y * v.Y) / 2));
+                Require(peak > .24f && peak < .75f && rms > .024,
+                    "粉の印だけの単発音が、左右・倍速・粛の下でも聞き取れる強さでMasterへ届く");
+                GD.Print($"DUST_AUDIBLE_OK hush={muted} speed={speed} pan={pan} peak={peak:F3} rmsDb={20 * Math.Log10(rms):F1}");
+                if (!muted && speed == 2 && pan == 0) SaveDustAudioPreview(frames, "single");
+            }
+            hush.Invoke(field, new object[] { false });
+            audio.StopAll(); await Wait(.12); capture.ClearBuffer();
+            var mixBus = (StringName)typeof(BattleAttackAudio).GetField("_dustMixBus", Flags)!.GetValue(audio)!;
+            int bus = AudioServer.GetBusIndex(mixBus), effect = AudioServer.GetBusEffectCount(bus);
+            var dustCapture = new AudioEffectCapture { BufferLength = 2 }; AudioServer.AddBusEffect(bus, dustCapture);
+            try
+            {
+                audio.PlayShockMark(ShockMarkSound.ElectricWhip, 0, 2);
+                audio.PlayShockMark(ShockMarkSound.MarkAdd, 0, 2);
+                await Wait(.06); audio.PlayDustCrackle(0, .65f, 2); await Wait(.35);
+                var dust = dustCapture.GetBuffer(dustCapture.GetFramesAvailable());
+                double rms = Math.Sqrt(dust.Average(v => ((double)v.X * v.X + (double)v.Y * v.Y) / 2));
+                var mixed = capture.GetBuffer(capture.GetFramesAvailable());
+                float peak = mixed.Max(v => Math.Max(Math.Abs(v.X), Math.Abs(v.Y)));
+                Require(rms > .024 && peak < .95f, "鞭・標の音と同時でも初期の爆発音は減衰せず、Masterで音割れしない");
+                GD.Print($"DUST_AUDIO_BATTLE_MIX_OK peak={peak:F3} dustRmsDb={20 * Math.Log10(rms):F1}");
+                SaveDustAudioPreview(mixed, "battle-mix");
+            }
+            finally { AudioServer.RemoveBusEffect(bus, effect); }
+        }
+        finally { hush.Invoke(field, new object[] { false }); audio.StopAll(); }
+    }
+
+    private static void SaveDustAudioPreview(Vector2[] frames, string name)
+    {
+        string? argument = OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--dust-audio-dir="));
+        if (argument is null) return;
+        var data = new byte[frames.Length * 4];
+        for (int i = 0; i < frames.Length; i++)
+        for (int channel = 0; channel < 2; channel++)
+        {
+            short sample = (short)(Math.Clamp(channel == 0 ? frames[i].X : frames[i].Y, -1, 1) * short.MaxValue);
+            System.Buffers.Binary.BinaryPrimitives.WriteInt16LittleEndian(data.AsSpan(i * 4 + channel * 2, 2), sample);
+        }
+        var wav = new AudioStreamWav { Format = AudioStreamWav.FormatEnum.Format16Bits,
+            MixRate = (int)AudioServer.GetMixRate(), Stereo = true, Data = data };
+        Require(wav.SaveToWav(argument["--dust-audio-dir=".Length..] + $"/dust-{name}.wav") == Error.Ok, "Masterの爆発音を保存");
     }
 }

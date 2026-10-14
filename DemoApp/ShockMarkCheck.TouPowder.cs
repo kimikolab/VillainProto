@@ -147,6 +147,12 @@ public partial class ShockMarkCheck
             }
             Require(!(bool)Read("_playing")!, "粉の実台本を完走");
             CheckTouPowderReplay(field, result);
+            if (dustLive)
+            {
+                var audio = (BattleAttackAudio)typeof(BattlefieldView3D).GetField("_attackAudio", Flags)!.GetValue(field)!;
+                Require(audio.DustCracklePlays > 0, "実戦の台本から爆発SEが再生される");
+                GD.Print($"DUST_AUDIO_LIVE_OK sounds={audio.DustCracklePlays}");
+            }
             foreach (var pawn in field.Pawns.Values)
             {
                 var hp = result.Events.LastOrDefault(e => e.TargetId == pawn.InstanceId
