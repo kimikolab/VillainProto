@@ -2324,6 +2324,12 @@ public sealed class UnitTally
     /// <summary>第336期（<b>計数のみ</b>）: 等分の欠片の連鎖の中でドハに戻ってきた一撃（再入を止めて、等分せずに受けた）。</summary>
     public long Dm336Reentry;
     /// <summary>
+    /// 第337期（<b>計数のみ</b>・標の引き継ぎ）。誰も読んで分岐しない。ヒサ ＝ <c>Mi337MarkedDeaths</c> 標の付いた敵が倒れた ／ <c>Mi337DeadLayers</c> ／ <c>Mi337DeadLayerMax</c> そのときの層の和 ／ 最大 ／
+    /// <c>Mi337DeadNeighbors</c> 隣の生きている敵の数の和（規定でも数える）。版（札の保持者）＝ <c>Mi337Fires</c> 引き継いだ ／ <c>Mi337Recipients</c> 標が移った先の延べ ／ <c>Mi337Layers</c> 移った層の和 ／
+    /// <c>Mi337Lost</c> 隣がいなくて消えた層 ／ <c>Mi337ChainMax</c> 連鎖の長さ（引き継いだ標の敵が倒れてまた引き継いだ段数の最大）。ミサ ＝ <c>Mi337Feathers</c> 引き継ぎで増えた羽。
+    /// </summary>
+    public long Mi337MarkedDeaths, Mi337DeadLayers, Mi337DeadLayerMax, Mi337DeadNeighbors, Mi337Fires, Mi337Recipients, Mi337Layers, Mi337Lost, Mi337ChainMax, Mi337Feathers;
+    /// <summary>
     /// 第297期（<b>計数専用</b>・分かち）: <c>SharedAway</c> この駒の痛みを分かちが引き受けた実額（相手ごとの内訳・痛みをくれた側に付く）／ <c>ShareTakenHits</c> ドハが中継の一撃を受けた回数（ドハの側）。
     /// 版（DH-a ／ DH-b ／ DH-t）: ドハ ＝ <c>ShareGives</c> ／ <c>ShareGiven</c> 力を配った回数・量 ／ <c>ShareGiftAccrued</c> 累計に入れた量 ／ <c>ShareGifts</c> 控えた手番 ／
     /// <c>ShareGiftCapped</c> 1ターン1回で止まった ／ <c>ShareGiftNoTarget</c> 相手がいない ／ <c>ShareGiftSkipped</c> 控えた相手が倒れていた ／
@@ -3549,6 +3555,8 @@ public sealed class UnitTally
         Dm335SplitKills += o.Dm335SplitKills; Dm335Overflows += o.Dm335Overflows; Dm335OverflowAmt += o.Dm335OverflowAmt; Dm335OverflowKills += o.Dm335OverflowKills; Dm335Drank += o.Dm335Drank;
         Dm335DrankGain += o.Dm335DrankGain; Dm335DrinkTurn += o.Dm335DrinkTurn; Dm335DealtAtDrink += o.Dm335DealtAtDrink; Gl335Redirects += o.Gl335Redirects; Gl335Amt += o.Gl335Amt;
         Dm336PieceDeaths += o.Dm336PieceDeaths; Dm336Reentry += o.Dm336Reentry;   // 第336期
+        Mi337MarkedDeaths += o.Mi337MarkedDeaths; Mi337DeadLayers += o.Mi337DeadLayers; Mi337DeadLayerMax = Math.Max(Mi337DeadLayerMax, o.Mi337DeadLayerMax); Mi337DeadNeighbors += o.Mi337DeadNeighbors;   // 第337期
+        Mi337Fires += o.Mi337Fires; Mi337Recipients += o.Mi337Recipients; Mi337Layers += o.Mi337Layers; Mi337Lost += o.Mi337Lost; Mi337ChainMax = Math.Max(Mi337ChainMax, o.Mi337ChainMax); Mi337Feathers += o.Mi337Feathers;
         SharedAway += o.SharedAway; ShareTakenHits += o.ShareTakenHits; ShareGives += o.ShareGives; ShareGiven += o.ShareGiven; ShareGiftAccrued += o.ShareGiftAccrued;   // 第297期
         ShareGifts += o.ShareGifts; ShareGiftCapped += o.ShareGiftCapped; ShareGiftNoTarget += o.ShareGiftNoTarget; ShareGiftSkipped += o.ShareGiftSkipped;
         ShareGot += o.ShareGot; ShareGiftGot += o.ShareGiftGot; ShareGiftTurns += o.ShareGiftTurns; ShareGiftAttacks += o.ShareGiftAttacks;
@@ -4346,6 +4354,21 @@ public enum BattleEventKind
     /// <c>Text</c> ＝ <see cref="BeastThrowLabels"/>。<b>どの規則も読まない。</b> 規定のソムには出ない。
     /// </summary>
     BeastThrow,
+
+    /// <summary>
+    /// 標の引き継ぎ（第337期・ヒサの版 MI-b ／ MI-a・<b>表示専用</b>）。倒れた駒の <c>Death</c> の後に並ぶ。見出し1件（<c>Text</c> ＝ <see cref="MarkInheritLabels.Spread"/> ／ <see cref="MarkInheritLabels.One"/>・
+    /// <c>ActorId</c> ＝ 札の保持者（ヒサ）・<c>TargetId</c> ＝ 倒れた駒・<c>Amount</c> ＝ 倒れた駒の層・<c>Slot</c> ＝ 移った先の数）の直後に、移った先ごとに1件
+    /// （<c>Text</c> ＝ <see cref="MarkInheritLabels.Receive"/>・<c>ActorId</c> ＝ 倒れた駒・<c>TargetId</c> ＝ 移った先・<c>Amount</c> ＝ 足した層・<c>Slot</c> ＝ その後の層）と、その層の <c>MarkLayer</c>。
+    /// ＋ 羽なら最後にミサの <c>Feather</c>「増えた」。隣がいなければ出ない。<b>どの規則も読まない。</b> 規定のヒサには出ない。
+    /// </summary>
+    MarkInherit,
+}
+/// <summary>`MarkInherit`（第337期）の <c>Text</c>。</summary>
+public static class MarkInheritLabels
+{
+    public const string Spread = "散る";
+    public const string One = "背負う";
+    public const string Receive = "受ける";
 }
 
 /// <summary>`BeastThrow`（第317期）の <c>Text</c>。</summary>

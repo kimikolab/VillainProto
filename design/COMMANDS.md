@@ -1174,6 +1174,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 settle336 boards      # 第336期 §4: 代表台 4（守り型 ／ 雷の型 ／ 反撃改 ／ 反撃改2）× 5 波 × 旧（`DohaH335`）／ 新（DM-a）・seed 0..99・勝率 ／ 決着T ／ 倒れた味方・等分の回数 ／ 量 ／ 欠片で倒れた駒（1 秒）。予測のファイルが無ければ走らない
     dotnet run --project BattleSim -c Release 0 settle336 log [台] [波] [seed] [old|new]   # 第336期: 1戦のログ
     dotnet run --project BattleSim -c Release 0 settle336 check       # 第336期 自己検査（定義と固定の口・試遊の台・規定で等分が起き旧で起きない・再入の止め・verbose・PickOne）
+    dotnet run --project BattleSim -c Release 0 mark337 p0            # 第337期 §3 Phase 0: 守り型 × 近衛 ／ 大隊 ／ 第2波 ／ 第5波 の標の付いた敵が倒れた回数 ／ 層 ／ 隣・標を追えずに飛んだ羽（1 秒）
+    dotnet run --project BattleSim -c Release 0 mark337 boards [版,…]   # 第337期 §5: 代表台 5 × 5 波（守り型は ＋ 強くした近衛 ／ 大隊）× 版（規定 ／ MI-b ／ MI-b＋羽 ／ MI-a）・seed 0..99・仇の連鎖の量・羽・勝率 ／ 決着T・壊れの兆し（3 秒）。予測のファイルが無ければ走らない
+    dotnet run --project BattleSim -c Release 0 mark337 compare [版,…]  # 第337期 §5: `compare` 64 行 × 版（16 秒）
+    dotnet run --project BattleSim -c Release 0 mark337 log [台] [波] [seed] [版]   # 第337期: 1戦のログ（版 base ／ b ／ bf ／ a）
+    dotnet run --project BattleSim -c Release 0 mark337 check         # 第337期 自己検査（版の定義と試遊の台・MI-b ／ ＋羽 ／ MI-a の規則を盤を直に組んで・割り込みにならない・verbose・PickOne）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

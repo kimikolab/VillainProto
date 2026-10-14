@@ -850,6 +850,11 @@ public enum TraitId
     ColossusDrink,      // 飲み干す（DM-c ＋ ゴルム）: DM-c の溢れを、生きていればすべて飲む（ダメージを受けない）。飲んだ量を巨躯と同じ換算で自分の攻撃力に変える（**札そのものは挙動を持たない**・engine の `DohaOverflow`）
     ColossusToStriker,  // 力は殴る味方へ（GL・ゴルム）: 巨躯の吐き戻しの返り先が手番で殴らない駒なら、生きている殴る味方のうち攻撃力の最も高い駒へ返す（**札そのものは挙動を持たない**・engine の巨躯の分岐）
 
+    // --- 第337期で足した札（指示書 design/PHASE337_MARK_INHERIT_SPEC.md §2）。MI はヒサ（標の書き手）／ ミサの版（保持者 0 枚） ---
+    MarkInheritSpread,  // 周りへ散る（MI-b・ヒサ）: 標（層 ≧ 1）の付いた敵が倒れると、その層の半分（切り上げ）を隣の生きている敵それぞれに足す（隣がいなければ消える・攻撃ではない＝合図にならない・ミサの羽は増えない）（**札そのものは挙動を持たない**・engine の `MarkInherit`）
+    MarkInheritOne,     // 隣へ全部（MI-a・ヒサ）: 標の付いた敵が倒れると、その層をすべて、隣の生きている敵のうち層の最も多い1体へ移す（同じなら席の若い方）（**札そのものは挙動を持たない**・engine の `MarkInherit`）
+    MarkInheritFeathers,// 散った恨みの羽（MI-b ＋ 羽・ミサ）: 引き継ぎで移った層の数だけ、ミサの羽が増える（羽の在庫だけ・標が付いた瞬間の羽は飛ばない）（**札そのものは挙動を持たない**・engine の `MarkInherit`）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -17655,6 +17660,9 @@ public static class TraitCatalog
         new DohaOverflowTrait(),                              // 第335期（溢れる DM-c・ドハ）
         new MarkOnlyTrait(TraitId.ColossusDrink),             // 第335期（飲み干す・ゴルム・印だけ）
         new MarkOnlyTrait(TraitId.ColossusToStriker),         // 第335期（力は殴る味方へ GL・ゴルム・印だけ）
+        new MarkOnlyTrait(TraitId.MarkInheritSpread),         // 第337期（周りへ散る MI-b・ヒサ・印だけ）
+        new MarkOnlyTrait(TraitId.MarkInheritOne),            // 第337期（隣へ全部 MI-a・ヒサ・印だけ）
+        new MarkOnlyTrait(TraitId.MarkInheritFeathers),       // 第337期（散った恨みの羽・ミサ・印だけ）
         new SharePushTrait(TraitId.ShareSin),                 // 第313期（ドハ DP-c の手番）
         new AmplifierTrait(),
         new ContagionTrait(),

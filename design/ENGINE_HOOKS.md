@@ -1385,3 +1385,8 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 
 - 規定のドハ `UnitCatalog.Doha` ＝ `DohaH335`（第317〜335期の規定・明示の定義に）＋ `DohaSplit`。`DohaDMa` ／ `DohaDMc` は旧から作り直した。固定の口 `Common.PinD335` ／ `Pin335` ／ `CompareBuildsH335` ／ `PlaytestH335`（古い口の終端 `PinZ334` の最後に `PinD335`）・`IsDohaNow`（`PinDS316` ／ `markheal295`）。
 - **等分の再入の止め**（第335期の DM-a に足した）: 欠片の一撃の連鎖の中（`InDohaPiece`）でドハに戻ってきた一撃は等分せず、いつもどおり受ける（計数 `UnitTally.Dm336Reentry`・ログ1行）。欠片 → カド → 棘の巻き込み → ドハ → 等分 → … の連鎖が `ablate` で無限になった（スタック溢れ）。計数のみ `Dm336PieceDeaths`（欠片で倒れた駒の側）。器具: `settle336`。
+
+## 第337期 —— 標の引き継ぎ（MI-b ／ MI-b ＋ 羽 ／ MI-a・版）
+
+- `HandleDeath`（延焼の後）に `MarkInherit`（`_miLive` で短絡）: 標（層 ≧ 1）の付いた駒が倒れると、相手の陣営の札 `MarkInheritSpread`（MI-b）／ `MarkInheritOne`（MI-a）を持つ生きているヒサが層を隣の生きている駒へ移す（`SetCounter` を直に・`LayerMark` を通さない）。`_miWriting` の間は `NoteStatusGain` が標が付いた瞬間の羽（MF）を積まない。札 `MarkInheritFeathers`（ミサ）は移った層の数だけ羽の在庫を増やす。乱数を引かない。
+- 表示専用の出来事 `BattleEventKind.MarkInherit`（`MarkInheritLabels` 散る ／ 背負う ／ 受ける）。計数のみ `UnitTally.Mi337*`（標の付いた敵の死はヒサの帳簿で規定でも数える）。版 `HisaMIb` ／ `HisaMIa` ／ `MisaMIf`。器具: `mark337`。

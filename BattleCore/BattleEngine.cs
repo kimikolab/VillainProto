@@ -5008,7 +5008,7 @@ public sealed class BattleContext
             // 第147期（表示専用）: 混乱が付いた瞬間。**計数（NoteCarry）は足していない**
             // ——`UnitTally.CarryKeys` を増やすと過去の期の帳簿が動く。書き手は Mark.Owner。
             case StatusKeys.Confused: EmitConfused(u, ConfusedLabels.Lost, Mark.Owner); break;
-            case StatusKeys.Marked: NoteCarry(u, UnitTally.CarryMark, 1); NoteMarkWrite(u, delta); if (_mfLive) QueueFeatherMark(u, delta); break;   // 第298期（MF・保持者がいなければ比較1つで抜ける）
+            case StatusKeys.Marked: NoteCarry(u, UnitTally.CarryMark, 1); NoteMarkWrite(u, delta); if (_mfLive && !_miWriting) QueueFeatherMark(u, delta); break;   // 第337期: 引き継ぎで移った標では羽は飛ばない   // 第298期（MF・保持者がいなければ比較1つで抜ける）
             case StatusKeys.Wound: NoteCarry(u, UnitTally.CarryWound, 1); break;
             case StatusKeys.IdleTurn: NoteCarry(u, UnitTally.CarryIdle, 1); break;
         }
@@ -9205,6 +9205,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Sharer)) _sharerLive = true;            // 第335期（ドハの肩代わりの累計・直の一撃の計数）
         if (u.HasTrait(TraitId.DohaSplit)) _dmSplitLive = true;        // 第335期（DM-a・等分）
         if (u.HasTrait(TraitId.ColossusToStriker)) _glLive = true;     // 第335期（GL・力は殴る味方へ）
+        if (u.HasTrait(TraitId.MarkInheritSpread) || u.HasTrait(TraitId.MarkInheritOne)) _miLive = true;   // 第337期（MI・標の引き継ぎ）
         if (u.HasTrait(TraitId.CommandNow)) _commandNowLive = true;    // 第301期（HL-i・まとまりで叩かれた標の敵を控える）
         if (CommandTrait.BurstUnit(u) > 0) { _burstLive = true; _burstHolders.Add(u); }   // 第321期（HQ-a ／ HQ-b・溜まったら吐く）
         if (u.HasTrait(TraitId.HisaCover)) _coverHolders.Add(u);       // 第301期（HC・庇い）
@@ -15551,6 +15552,87 @@ public sealed class BattleContext
     // **保持者がいなければ比較1つで抜ける。乱数を引かない**（等分の端数は席の若い順）。
     bool _sharerLive, _dmSplitLive, _glLive, _dmPieceNext;
 
+    // ---- 第337期（指示書 design/PHASE337_MARK_INHERIT_SPEC.md §2）—— 標の引き継ぎ（MI-b 周りへ散る ／ MI-a 隣へ全部 ／ ＋ 羽）。
+    // 標（層 ≧ 1）の付いた駒が倒れたとき、その相手の陣営に札の保持者（ヒサ）が生きていれば、層を隣の生きている駒へ移す（`HandleDeath` の延焼の後）。
+    // 書き込みは `SetCounter` を直に（`LayerMark` は通さない＝羽が増えない・書き手の計数に乗らない）。`_miWriting` の間は標が付いた瞬間の羽（MF）を積まない。
+    // 攻撃ではない（`ApplyDamage` を呼ばない）ので仇討ち ／ 指差し ／ 割り込みの合図にならない。**保持者がいなければ比較1つで抜ける。乱数を引かない。**
+    bool _miLive, _miWriting;
+    /// <summary>引き継いだ標の世代（駒の番号 → 何段目の引き継ぎで付いた標か・**計数専用**・連鎖の長さ）。</summary>
+    readonly Dictionary<int, int> _miGen = new();
+
+    void MarkInherit(UnitState dead)
+    {
+        int n = dead.RawCounter(StatusKeys.Marked);
+        if (n <= 0) return;
+        UnitState? holder = null;
+        foreach (UnitState u in LivingMembers(Opponent(dead.TeamId)))
+            if ((u.HasTrait(TraitId.MarkInheritSpread) || u.HasTrait(TraitId.MarkInheritOne)) && (holder is null || u.Slot < holder.Slot)) holder = u;
+        if (holder is null) return;
+        bool spread = holder.HasTrait(TraitId.MarkInheritSpread);
+        UnitTally ht = TallyOf(holder);
+        var nb = LivingMembers(dead.TeamId).Where(u => u != dead && FormationRules.AreAdjacent(dead, u)).OrderBy(u => u.Slot).ToList();
+        if (nb.Count == 0) { ht.Mi337Lost += n; Log($"    {dead.Name} の恨み（層 {n}）は背負う者がいなくて消えた", LogKind.Status); return; }
+        var to = new List<(UnitState U, int Add)>();
+        if (spread) { int add = (n + 1) / 2; foreach (UnitState u in nb) to.Add((u, add)); }
+        else
+        {
+            UnitState pick = nb[0];
+            foreach (UnitState u in nb) if (u.RawCounter(StatusKeys.Marked) > pick.RawCounter(StatusKeys.Marked)) pick = u;   // 同じなら席の若い方（nb は席順）
+            to.Add((pick, n));
+        }
+        int gen = _miGen.GetValueOrDefault(dead.InstanceId) + 1;
+        ht.Mi337Fires++;
+        if (gen > ht.Mi337ChainMax) ht.Mi337ChainMax = gen;
+        if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.MarkInherit, Turn = _turn, ActorId = holder.InstanceId, TargetId = dead.InstanceId, Amount = n, Slot = to.Count, Text = spread ? MarkInheritLabels.Spread : MarkInheritLabels.One, Team = dead.TeamId });
+        Log(spread ? $"    {dead.Name} の恨み（層 {n}）が周りの {to.Count} 体に散った（各 +{to[0].Add}）" : $"    {dead.Name} の恨み（層 {n}）を {to[0].U.Name} が背負った", LogKind.Trigger);
+        int moved = 0;
+        _miWriting = true;
+        try
+        {
+            foreach (var (u, add) in to)
+            {
+                int cur = u.RawCounter(StatusKeys.Marked);
+                int next = _ruptureLive && u.TeamId != PlayerTeam ? cur + add : 1;   // 層が意味を持たない戦は「付く」だけ（`LayerMark` と同じ）
+                if (next > TallyOf(u).MarkPeak) TallyOf(u).MarkPeak = next;
+                u.SetCounter(StatusKeys.Marked, next);
+                moved += next - cur;
+                ht.Mi337Recipients++;
+                if (gen > _miGen.GetValueOrDefault(u.InstanceId)) _miGen[u.InstanceId] = gen;
+                if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.MarkInherit, Turn = _turn, ActorId = dead.InstanceId, TargetId = u.InstanceId, Amount = add, Slot = next, Text = MarkInheritLabels.Receive, Team = u.TeamId });
+                EmitMarkLayer(holder, u, cur, next);   // 第291期の層の表示（表示専用）
+            }
+        }
+        finally { _miWriting = false; }
+        ht.Mi337Layers += moved;
+        // MI-b ＋ 羽: 移った層の数だけ、札を持つ羽の保持者の羽が増える（在庫だけ・標が付いた瞬間の羽は飛ばない）
+        if (moved > 0)
+            foreach (UnitState m in LivingMembers(holder.TeamId))
+            {
+                if (!m.HasTrait(TraitId.Feathers) || !m.HasTrait(TraitId.MarkInheritFeathers)) continue;
+                m.SetCounter(FeathersTrait.ExtraKey, m.RawCounter(FeathersTrait.ExtraKey) + moved);
+                UnitTally mt = TallyOf(m);
+                mt.FeatherGained += moved; mt.Mi337Feathers += moved;
+                int f = FeathersTrait.Count(m);
+                if (f > mt.FeatherMax) mt.FeatherMax = f;
+                Log($"    散った恨みの数だけ {m.Name} の羽が増えた（+{moved} → {f} 枚）", LogKind.Trigger);
+                EmitFeather(FeatherLabels.Gain, holder, m, f, partner: dead);   // 表示専用
+            }
+    }
+
+    /// <summary>第337期 Phase 0（<b>計数のみ</b>）: 標の付いた駒が倒れた（ヒサの側の帳簿・層と隣の生きている駒の数）。</summary>
+    void NoteMarkedDeath337(UnitState dead)
+    {
+        UnitState? hisa = null;
+        foreach (UnitState h in _beckonHolders) if (h.IsAlive && h.TeamId != dead.TeamId) { hisa = h; break; }
+        if (hisa is null) return;
+        int n = dead.RawCounter(StatusKeys.Marked);
+        UnitTally t = TallyOf(hisa);
+        t.Mi337MarkedDeaths++;
+        t.Mi337DeadLayers += n;
+        if (n > t.Mi337DeadLayerMax) t.Mi337DeadLayerMax = n;
+        foreach (UnitState u in LivingMembers(dead.TeamId)) if (u != dead && FormationRules.AreAdjacent(dead, u)) t.Mi337DeadNeighbors++;
+    }
+
     /// <summary>第335期: いま解決中の一撃が DM-a の欠片か DM-c の溢れか（仇指しはこの一撃では出ない）。</summary>
     public bool InDohaPiece { get; private set; }
 
@@ -16437,6 +16519,8 @@ public sealed class BattleContext
         }
 
         if (_foeFireLive && _foeSpreadTeams[dead.TeamId]) FoeFireSpread(dead);   // 第245期（延焼）: 札が無ければ比較1つで抜ける
+        if (_beckonHolders.Count > 0 && dead.RawCounter(StatusKeys.Marked) > 0) NoteMarkedDeath337(dead);   // 第337期 Phase 0（**計数のみ**）
+        if (_miLive) MarkInherit(dead);   // 第337期（MI・標の引き継ぎ）: 札が無ければ比較1つで抜ける
 
         // 逸らし（第50期）。**撃破順が本命の指標**なので、敵の駒ごとに倒れたターンを記録する。
         // 標に依存しない切り方なので、素体の対照とそのまま引き算できる。

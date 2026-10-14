@@ -5473,6 +5473,26 @@ public static class UnitCatalog
         Flavor = "狙うのは得意。見分けるのが苦手。"
     };
 
+    // ---------------------------------------------------------------------------------
+    // 第337期（指示書 design/PHASE337_MARK_INHERIT_SPEC.md §2）—— 標の引き継ぎ（MI）。規定のヒサ（標の書き手）／ ミサに札を1枚ずつ足す。
+    // 対照（`All` ／ `Retired` ／ `Presets` の `Compare` ／ `Playtest` に入れない・`Presets.Versions` の「版・」の台だけが使う・採否はポン）。文面は末尾に足すだけ。
+    // ---------------------------------------------------------------------------------
+    static UnitDef With337(UnitDef b, TraitId card, string plusTail) => new()
+    {
+        Id = b.Id, Name = b.Name, MaxHp = b.MaxHp, Attack = b.Attack, Speed = b.Speed, Advances = b.Advances, Pattern = b.Pattern,
+        Traits = b.Traits.Append(card).ToArray(), Actions = b.Actions,
+        PlusText = b.PlusText + plusTail, MinusText = b.MinusText, Flavor = b.Flavor,
+    };
+
+    /// <summary>第337期 MI-b（周りへ散る）。規定のヒサ ＋ <see cref="TraitId.MarkInheritSpread"/>（標の付いた敵が倒れると、層の半分（切り上げ）を隣の生きている敵それぞれへ）。</summary>
+    public static readonly UnitDef HisaMIb = With337(Hisa, TraitId.MarkInheritSpread, "。標を付けられた敵が倒れると、その恨みが周りの敵に散る");
+
+    /// <summary>第337期 MI-a（隣へ全部）。規定のヒサ ＋ <see cref="TraitId.MarkInheritOne"/>（標の付いた敵が倒れると、層をすべて、隣の層の最も多い1体へ）。</summary>
+    public static readonly UnitDef HisaMIa = With337(Hisa, TraitId.MarkInheritOne, "。標を付けられた敵が倒れると、その恨みは隣の敵が背負う");
+
+    /// <summary>第337期 MI-b ＋ 羽 の、ミサの側。規定のミサ ＋ <see cref="TraitId.MarkInheritFeathers"/>（引き継ぎで移った層の数だけ羽が増える）。ヒサは <see cref="HisaMIb"/> と組む。</summary>
+    public static readonly UnitDef MisaMIf = With337(Tome, TraitId.MarkInheritFeathers, "。散った恨みの数だけ、羽も増える");
+
     /// <summary>第285期 M-b（乱射した数だけ羽を失う・下限 1）。<see cref="TomeMa"/> ＋ <see cref="TraitId.FeatherLoss"/> の1札だけが違う。<b>第286〜298期の規定</b>。
     /// 第299期に MF-b を規定にしたので、旧の規定の定義を明示的に持つ（第298期までは <c>TomeMb = Tome</c> の別名だった）。過去の器具はこちらに固定する。
     /// 第298期の版（MF-a ／ MF-b）はこちらから作る（静的初期化の順で、版より前に置く）。</summary>
