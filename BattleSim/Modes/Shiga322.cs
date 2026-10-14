@@ -543,9 +543,9 @@ static class Shiga322Diag
                 && UnitCatalog.ShigaH321.Traits.SequenceEqual(UnitCatalog.ShigaH318.Traits.Append(TraitId.BetrayBackswing))
                 && UnitCatalog.ShigaH325.PlusText.Contains(UnitCatalog.ShigaChargeClause322, StringComparison.Ordinal) && !UnitCatalog.ShigaH325.PlusText.Contains(UnitCatalog.ShigaChargeClause, StringComparison.Ordinal)
                 && UnitCatalog.ShigaH321.PlusText.Contains(UnitCatalog.ShigaChargeClause, StringComparison.Ordinal) && UnitCatalog.ShigaH325.MinusText == UnitCatalog.ShigaH321.MinusText;
-            bool hisa = UnitCatalog.Hisa.Traits.SequenceEqual(UnitCatalog.HisaHQa9.Traits)
-                && UnitCatalog.HisaH321.Traits.Contains(TraitId.CommandBall) && !UnitCatalog.Hisa.Traits.Contains(TraitId.CommandBall)
-                && UnitCatalog.Hisa.PlusText.Contains(UnitCatalog.HisaBallClause322, StringComparison.Ordinal) && UnitCatalog.HisaH321.PlusText.Contains(UnitCatalog.HisaBallClause, StringComparison.Ordinal)
+            bool hisa = UnitCatalog.HisaH337.Traits.SequenceEqual(UnitCatalog.HisaHQa9.Traits)   // 第338期: 第322〜337期の規定のヒサ（`HisaH337`）で見る
+                && UnitCatalog.HisaH321.Traits.Contains(TraitId.CommandBall) && !UnitCatalog.HisaH337.Traits.Contains(TraitId.CommandBall)
+                && UnitCatalog.HisaH337.PlusText.Contains(UnitCatalog.HisaBallClause322, StringComparison.Ordinal) && UnitCatalog.HisaH321.PlusText.Contains(UnitCatalog.HisaBallClause, StringComparison.Ordinal)
                 && UnitCatalog.HisaHQa9.Traits.SequenceEqual(UnitCatalog.HisaH321.Traits.Select(t => t == TraitId.CommandBall ? TraitId.CommandBurst3 : t).Append(TraitId.CommandBurstCap9));
             bool outside = !UnitCatalog.Everyone.Contains(UnitCatalog.ShigaH321) && !UnitCatalog.Everyone.Contains(UnitCatalog.HisaH321)
                 && UnitCatalog.All.Contains(UnitCatalog.Shiga) && UnitCatalog.All.Contains(UnitCatalog.Hisa) && UnitCatalog.All.Count == 52;

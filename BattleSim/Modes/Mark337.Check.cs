@@ -44,22 +44,21 @@ static partial class Mark337Diag
 
         // ---- 版の定義と試遊の台
         {
-            UnitDef H = UnitCatalog.Hisa, M = UnitCatalog.Tome;
+            UnitDef H = UnitCatalog.HisaH337, M = UnitCatalog.Tome;   // 第338期: 版は第322〜337期の規定のヒサから作り直した
             bool vers = UnitCatalog.HisaMIb.Traits.SequenceEqual(H.Traits.Append(TraitId.MarkInheritSpread)) && UnitCatalog.HisaMIa.Traits.SequenceEqual(H.Traits.Append(TraitId.MarkInheritOne))
                 && UnitCatalog.MisaMIf.Traits.SequenceEqual(M.Traits.Append(TraitId.MarkInheritFeathers))
                 && UnitCatalog.HisaMIb.PlusText.EndsWith("。標を付けられた敵が倒れると、その恨みが周りの敵に散る", StringComparison.Ordinal)
                 && UnitCatalog.HisaMIa.PlusText.EndsWith("。標を付けられた敵が倒れると、その恨みは隣の敵が背負う", StringComparison.Ordinal)
                 && UnitCatalog.MisaMIf.PlusText.EndsWith("。散った恨みの数だけ、羽も増える", StringComparison.Ordinal)
                 && new[] { UnitCatalog.HisaMIb, UnitCatalog.HisaMIa, UnitCatalog.MisaMIf }.All(d => !UnitCatalog.Everyone.Contains(d))
-                && UnitCatalog.Everyone.All(d => !d.Traits.Any(t => t is TraitId.MarkInheritSpread or TraitId.MarkInheritOne or TraitId.MarkInheritFeathers));
+                && UnitCatalog.Everyone.All(d => !d.Traits.Any(t => t is TraitId.MarkInheritOne or TraitId.MarkInheritFeathers))
+                && UnitCatalog.Everyone.Where(d => d.Traits.Contains(TraitId.MarkInheritSpread)).SequenceEqual(new[] { UnitCatalog.Hisa });   // 第338期: MI-b は規定のヒサの札
             Expect("版の定義: MI-b ／ MI-a ＝ 規定のヒサ ＋ 札1枚・＋ 羽 ＝ 規定のミサ ＋ 札1枚（文面は末尾に叩き台）・`Everyone` の外・保持者 0", vers);
-            var v = Presets.Versions; var g = Presets.Playtest.First(r => r.Name == GuardRow).F;
-            (string Name, UnitDef Hisa, UnitDef Misa)[] want = { ("版・MI-b 守り型", UnitCatalog.HisaMIb, M), ("版・MI-b＋羽 守り型", UnitCatalog.HisaMIb, UnitCatalog.MisaMIf), ("版・MI-a 守り型", UnitCatalog.HisaMIa, M) };
-            bool rows = v.Length == 4 && v[0].Name == "試遊・感電 ポンの台" && Presets.Playtest.Length == 17
-                && want.Select((x, i) => (x, i)).All(y => v[y.i + 1].Name == y.x.Name
-                    && v[y.i + 1].F.Occupied().Select(o => o.Def).SequenceEqual(g.Occupied().Select(o => o.Def.Id == "hisa" ? y.x.Hisa : o.Def.Id == "tome" ? y.x.Misa : o.Def))
-                    && v[y.i + 1].F.Occupied().Select(o => o.Slot).SequenceEqual(g.Occupied().Select(o => o.Slot)));
-            Expect("試遊の台: `Presets.Versions` ＝ 「試遊・感電 ポンの台」＋「版・MI-b ／ MI-b＋羽 ／ MI-a 守り型」（守り型の並びでヒサ ／ ミサだけ版）・`Playtest` は 17 台のまま", rows);
+            // 第338期: MI-b を規定にしたので「版・MI」の3台を外した——1行目（ポンの台）と、MI の版が試遊の台に残っていないことだけを見る
+            var v = Presets.Versions;
+            bool rows = v.Length >= 1 && v[0].Name == "試遊・感電 ポンの台" && Presets.Playtest.Length == 17
+                && v.SelectMany(r => r.F.Occupied()).All(o => !ReferenceEquals(o.Def, UnitCatalog.HisaMIb) && !ReferenceEquals(o.Def, UnitCatalog.HisaMIa) && !ReferenceEquals(o.Def, UnitCatalog.MisaMIf));
+            Expect("試遊の台: `Presets.Versions` の1行目は「試遊・感電 ポンの台」・第337期の「版・MI」の3台は第338期に外した・`Playtest` は 17 台のまま", rows);
         }
 
         // ---- MI-b: 層 3 の敵（前1）が倒れると、隣の生きている敵それぞれに ⌈3/2⌉ ＝ 2・隣でない敵は変わらない・羽は増えない

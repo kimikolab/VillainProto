@@ -79,7 +79,7 @@ static class Hush304Diag
         Presets.Playtest.Where(r => r.Name.StartsWith("試遊・標", StringComparison.Ordinal) && r.F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Hisa))).Select(r => (r.Name, Pin334(r.F)))   /* 第335期: ザンを第301〜334期の規定に固定 */
             .Append((Econ, CompareRow(Econ)))
             .Append((Hisa301Diag.NoZanName, Hisa301Diag.NoZan)).ToArray();
-    internal static (string Name, Formation F)[] HisaRows() => CompareBuildsH334().Where(r => r.F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Hisa))).ToArray();   // 第335期: ザンを第301〜334期の規定に固定
+    internal static (string Name, Formation F)[] HisaRows() => CompareBuildsH334().Where(r => r.F.Occupied().Any(o => IsHisaNow(o.Def))).ToArray();   // 第335期: ザンを第301〜334期の規定に固定
     internal static (string Name, Formation F)[] MarkRows() => Boards().Concat(HisaRows().Where(r => r.Name != Econ)).ToArray();
 
     /// <summary>範囲 ／ 貫きの駒（手番の攻撃型が単体でない駒）がいる編成か。§7 の「楽すぎる台」の候補。</summary>

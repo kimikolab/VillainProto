@@ -472,7 +472,7 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.DohaOverflow]       = (HcMinusL, "溢れる（第335期・ドハ DM-c）: 倒れたとき、肩代わりした痛みの累計の5割が生きている味方全員に等分される（徴収・倒れうる・1戦に1度）。保持者 0 枚"),
         [TraitId.ColossusDrink]      = (HcPlusL,  "飲み干す（第335期・ゴルム）: DM-c の溢れを生きていればすべて飲み（ダメージなし）、巨躯と同じ換算で自分の攻撃力に変える。保持者 0 枚"),
         [TraitId.ColossusToStriker]  = (HcPlusL,  "力は殴る味方へ（第335期・ゴルム GL）: 吐き戻しの返り先が手番で殴らない駒なら、攻撃力の最も高い殴る味方へ返す。保持者 0 枚"),
-        [TraitId.MarkInheritSpread]  = (HcPlusL,  "周りへ散る（第337期・ヒサ MI-b）: 標の付いた敵が倒れると、層の半分（切り上げ）を隣の生きている敵それぞれへ（攻撃ではない・羽は増えない）。保持者 0 枚"),
+        [TraitId.MarkInheritSpread]  = (HcPlusL,  "周りへ散る（第337期・ヒサ MI-b）: 標の付いた敵が倒れると、層の半分（切り上げ）を隣の生きている敵それぞれへ（攻撃ではない・羽は増えない）。第338期からヒサの規定"),
         [TraitId.MarkInheritOne]     = (HcPlusL,  "隣へ全部（第337期・ヒサ MI-a）: 標の付いた敵が倒れると、層をすべて、隣の層の最も多い1体へ（同じなら席の若い方）。保持者 0 枚"),
         [TraitId.MarkInheritFeathers] = (HcPlusL, "散った恨みの羽（第337期・ミサ）: 引き継ぎで移った層の数だけ羽が増える（在庫だけ）。保持者 0 枚"),
         [TraitId.MireSlam]        = (HcPlusL,  "濃縮の手番の最後に寄せ先（感電している敵を優先）へ攻撃力ぶんの一撃（第218期・M1・保持者 0 枚）"),

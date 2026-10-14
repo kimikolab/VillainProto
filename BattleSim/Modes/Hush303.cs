@@ -72,7 +72,7 @@ static class Hush303Diag
     static Formation With(Formation f, UnitDef hisa)
     {
         var g = f.Clone();
-        foreach ((int slot, UnitDef d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Hisa)) g[slot] = hisa;
+        foreach ((int slot, UnitDef d) in f.Occupied()) if (IsHisaNow(d)) g[slot] = hisa;
         return g;
     }
     const string Econ = "標経済 (ヒサ×ザン×ミサ)";
@@ -80,7 +80,7 @@ static class Hush303Diag
         Presets.Playtest.Where(r => r.Name.StartsWith("試遊・標", StringComparison.Ordinal) && r.F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Hisa))).Select(r => (r.Name, Pin334(r.F)))   /* 第335期: ザンを第301〜334期の規定に固定 */
             .Append((Econ, CompareRow(Econ)))
             .Append((Hisa301Diag.NoZanName, Hisa301Diag.NoZan)).ToArray();
-    static (string Name, Formation F)[] HisaRows() => CompareBuildsH334().Where(r => r.F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Hisa))).ToArray();   // 第335期: ザンを第301〜334期の規定に固定
+    static (string Name, Formation F)[] HisaRows() => CompareBuildsH334().Where(r => r.F.Occupied().Any(o => IsHisaNow(o.Def))).ToArray();   // 第335期: ザンを第301〜334期の規定に固定
     static (string Name, Formation F)[] MarkRows() => Boards().Concat(HisaRows().Where(r => r.Name != Econ)).ToArray();
     static Formation RowOf(string n) => n == Hisa301Diag.NoZanName ? Hisa301Diag.NoZan : n.StartsWith("試遊", StringComparison.Ordinal) ? Playtest(n) : CompareRow(n);
 

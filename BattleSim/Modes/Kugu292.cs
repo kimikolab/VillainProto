@@ -67,7 +67,7 @@ static class Kugu292Diag
         foreach (var (slot, d) in f.Occupied())
             g[slot] = ReferenceEquals(d, UnitCatalog.KuguH324) || ReferenceEquals(d, UnitCatalog.KuguH327) || ReferenceEquals(d, UnitCatalog.Kugu) ? UnitCatalog.KuguKGb : ReferenceEquals(PinDS316(d), UnitCatalog.ShigaSWa) ? UnitCatalog.ShigaSIb
                     : ReferenceEquals(d, UnitCatalog.Sora) ? UnitCatalog.SoraSR0   // 第295期: ソラも（規定は SR-b・旧は `SoraSR0`）
-                    : ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaHK0   // 第296期: ヒサも（規定は HK-b・旧は `HisaHK0`）
+                    : IsHisaNow(d) ? UnitCatalog.HisaHK0   // 第296期: ヒサも（規定は HK-b・旧は `HisaHK0`）
                     : ReferenceEquals(PinDS316(d), UnitCatalog.DohaH316) ? UnitCatalog.DohaD0   // 第298期: ドハも（規定は DH-a なまりなし・旧は `DohaD0`）・第317期: 規定 ／ 第316期までの規定のどちらでも
                     : IsMisaNow(d) ? UnitCatalog.TomeMb : IsZanNow(d) ? UnitCatalog.ZanZN0 : PinTKK324(d);   // 第335期: ザンは `ZanH334` も   // 第334期: ミサは `TomeH333` も   // 第325期: 規定のトウ ／ カタも第324期までの規定へ（クグは前で `KuguKGb` へ）・第299期: ミサ ／ ザンも（規定は MF-b ／ ZN-b・旧は `TomeMb` ／ `ZanZN0`）
         return g;

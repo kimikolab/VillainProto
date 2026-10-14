@@ -76,7 +76,7 @@ static class Hisa302Diag
     static Formation With(Formation f, UnitDef hisa)
     {
         var g = f.Clone();
-        foreach ((int slot, UnitDef d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Hisa)) g[slot] = hisa;
+        foreach ((int slot, UnitDef d) in f.Occupied()) if (IsHisaNow(d)) g[slot] = hisa;
         return g;
     }
     const string Econ = "標経済 (ヒサ×ザン×ミサ)";

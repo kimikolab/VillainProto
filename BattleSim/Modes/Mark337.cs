@@ -16,6 +16,7 @@ using T323 = Tou323Diag;
 //     dotnet run --project BattleSim -c Release 0 mark337 log [台] [波] [seed] [版] # 1戦のログ
 //     dotnet run --project BattleSim -c Release 0 mark337 check                   # §8 自己検査
 //
+// 第338期: MI-b を規定にしたので、「規定」（base）は第322〜337期の規定のヒサ（`HisaH337`・`Common.Pin337`）に固定した。
 // 版の名前（ASCII）: base（規定）／ b（MI-b）／ bf（MI-b ＋ 羽）／ a（MI-a）。波: boss ／ guard ／ bat ／ 2 ／ 5 ／ sguard ／ sbat。
 // **予測のファイルが無ければ本測定（boards ／ compare）を走らせない**（R397・`.tmp/p337/predict.md`）。
 // =====================================================================================
@@ -70,7 +71,7 @@ static partial class Mark337Diag
     static Ver[] Pick(string only) => (string.IsNullOrEmpty(only) ? Vers : new[] { Vers[0] }.Concat(only.Split(',').Select(V).Where(v => v != Vers[0]))).ToArray();
     internal static Formation Apply(Formation f, Ver v)
     {
-        var g = f;
+        var g = Pin337(f);   // 第338期: MI-b を規定にした——「規定」の列は第322〜337期の規定のヒサ（`HisaH337`）のまま
         if (v.Hisa is not null) g = S316.SwapId(g, "hisa", v.Hisa);
         if (v.Misa is not null) g = S316.SwapId(g, "tome", v.Misa);
         return g;
@@ -166,7 +167,7 @@ static partial class Mark337Diag
     static void P0()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var g = Boards()[0].F;
+        var g = Pin337(Boards()[0].F);   // 第338期: 第322〜337期の規定のヒサ
         var ws = new[] { "guard", "bat", "2", "5" }.Select(WaveOf).ToArray();
         Console.WriteLine($"# {Tag} §3 Phase 0 —— 規定・`{GuardRow}`（{S307.Seats(g)}）・seed 0..{Seeds - 1}・1戦あたり");
         Console.WriteLine();

@@ -59,7 +59,7 @@ static class MarkHeal295Diag
     internal static Formation Pin296(Formation f)
     {
         var g = f.Clone();
-        foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Hisa)) g[slot] = UnitCatalog.HisaHK0;
+        foreach (var (slot, d) in f.Occupied()) if (IsHisaNow(d)) g[slot] = UnitCatalog.HisaHK0;
         foreach (var (slot, d) in f.Occupied()) if (IsDohaNow(d)) g[slot] = UnitCatalog.DohaD0;   // 第336期: `DohaH335` も   // 第298期
         foreach (var (slot, d) in f.Occupied()) if (IsMisaNow(d)) g[slot] = UnitCatalog.TomeMb;   // 第334期: `TomeH333` も・第299期: ミサ ／ ザンも旧の規定に
         foreach (var (slot, d) in f.Occupied()) if (IsZanNow(d)) g[slot] = UnitCatalog.ZanZN0;   // 第335期: `ZanH334` も

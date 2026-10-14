@@ -45,13 +45,14 @@ static partial class Settle336Diag
     static string Per(long a, long n) => n == 0 ? "—" : F1((double)a / n);
     static string Per2(long a, long n) => n == 0 ? "—" : ((double)a / n).ToString("F2");
 
-    /// <summary>§4 の代表台（駒はいまの規定）。旧は <see cref="Pin335"/> を通す。</summary>
+    /// <summary>§4 の代表台（駒はいまの規定）。旧は <see cref="Pin335"/> を通す。
+    /// 第338期: ヒサは第322〜337期の規定（`HisaH337`・`Pin337`）に固定した（この期の数字を保つ）。</summary>
     internal static (string Name, Formation F)[] Boards() => new (string, Formation)[]
     {
-        ("守り型", Presets.Playtest.First(r => r.Name == "試遊・標 守り型").F),
-        ("雷の型", Presets.Playtest.First(r => r.Name == "試遊・感電 雷の型").F),
-        ("反撃改 (ドハ×カド)", CompareBuilds().First(r => r.Name == "反撃改 (ドハ×カド)").F),
-        ("反撃改2 (ガン×カド)", CompareBuilds().First(r => r.Name == "反撃改2 (ガン×カド)").F),
+        ("守り型", Pin337(Presets.Playtest.First(r => r.Name == "試遊・標 守り型").F)),
+        ("雷の型", Pin337(Presets.Playtest.First(r => r.Name == "試遊・感電 雷の型").F)),
+        ("反撃改 (ドハ×カド)", Pin337(CompareBuilds().First(r => r.Name == "反撃改 (ドハ×カド)").F)),
+        ("反撃改2 (ガン×カド)", Pin337(CompareBuilds().First(r => r.Name == "反撃改2 (ガン×カド)").F)),
     };
 
     internal static readonly S287.Wave[] Waves = new[] { "boss", "guard", "bat", "2", "5" }.Select(T323.WaveOf).ToArray();

@@ -79,7 +79,7 @@ static class Guard294Diag
     {
         var g = f.Clone();
         foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Sora)) g[slot] = UnitCatalog.SoraSR0;
-        foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Hisa) || ReferenceEquals(d, UnitCatalog.HisaH321)) g[slot] = UnitCatalog.HisaHK0;   // 第296期: ヒサも旧の規定（`HisaHK0`）に。第323期: 第322期から `Pin316`（`PinS317`）が先にヒサを `HisaH321` に替えるので、それも
+        foreach (var (slot, d) in f.Occupied()) if (IsHisaNow(d) || ReferenceEquals(d, UnitCatalog.HisaH321)) g[slot] = UnitCatalog.HisaHK0;   // 第296期: ヒサも旧の規定（`HisaHK0`）に。第323期: 第322期から `Pin316`（`PinS317`）が先にヒサを `HisaH321` に替えるので、それも
         foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.DohaH316)) g[slot] = UnitCatalog.DohaD0;   // 第298期: ドハも旧の規定（`DohaD0`）に
         foreach (var (slot, d) in f.Occupied()) if (IsMisaNow(d)) g[slot] = UnitCatalog.TomeMb;   // 第334期: `TomeH333` も・第299期: ミサ ／ ザンも旧の規定（`TomeMb` ／ `ZanZN0`）に
         foreach (var (slot, d) in f.Occupied()) if (IsZanNow(d)) g[slot] = UnitCatalog.ZanZN0;   // 第335期: `ZanH334` も

@@ -550,8 +550,10 @@ public static class UnitCatalog
     /// 囃し立てのヒサ（規定）。<b>第322期に HQ-a9 を規定にした</b>（ポンの判断・design/PHASE322_SHIGA_DISCHARGE_SPEC.md §2-2）——
     /// 第304〜321期の規定（<see cref="HisaH321"/>）の号令の玉（<see cref="TraitId.CommandBall"/>）を <see cref="TraitId.CommandBurst3"/> に差し替え、末尾に <see cref="TraitId.CommandBurstCap9"/>。
     /// 札は第321期の <see cref="HisaHQa9"/> と同じ（文面だけ叩き台に差し替えた）: 玉3つで3層を吐き出す・攻撃のまとまりが閉じた直後・1巡に9層まで・手番の号令なし・溢れを捨てない。
+    /// <b>第338期に MI-b（標の引き継ぎ・<see cref="TraitId.MarkInheritSpread"/>）を規定にしたので、第322〜337期の規定はこの <see cref="HisaH337"/> として明示的に持つ。</b>
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。第322〜337期の規定のヒサで測った過去の器具はこちらに固定する（`Common.PinH337` ほか）。第337期の版（MI-b ＋ 羽 ／ MI-a）はこちらから作る。
     /// </summary>
-    public static readonly UnitDef Hisa = new()
+    public static readonly UnitDef HisaH337 = new()
     {
         Id = HisaH321.Id,
         Name = HisaH321.Name,
@@ -569,6 +571,31 @@ public static class UnitCatalog
         MinusText = HisaH321.MinusText,
         Flavor = HisaH321.Flavor
     };
+
+    /// <summary>
+    /// 囃し立てのヒサ（規定）。<b>第338期に MI-b（標の引き継ぎ）を規定にした</b>（ポンの判断・design/PHASE338_MARK_INHERIT_SETTLE_SPEC.md §2）——
+    /// 第322〜337期の規定（<see cref="HisaH337"/>）の末尾に <see cref="TraitId.MarkInheritSpread"/>（標の付いた敵が倒れると、層の半分（切り上げ）を隣の生きている敵それぞれへ・移った層では羽は増えず合図にもならない）。
+    /// 札と文面は第337期の版 MI-b（<c>HisaMIb</c>）と同じ。
+    /// </summary>
+    public static readonly UnitDef Hisa = new()
+    {
+        Id = HisaH337.Id,
+        Name = HisaH337.Name,
+        MaxHp = HisaH337.MaxHp,
+        Attack = HisaH337.Attack,
+        Speed = HisaH337.Speed,
+        Advances = HisaH337.Advances,
+        Pattern = HisaH337.Pattern,
+        // 第338期: ポンの判断（第337期の I1）で MI-b（`MarkInheritSpread`）を規定にした。旧の規定は `HisaH337`（指示書 design/PHASE338_MARK_INHERIT_SETTLE_SPEC.md §2）。
+        Traits = HisaH337.Traits.Append(TraitId.MarkInheritSpread).ToArray(),
+        Actions = HisaH337.Actions,
+        PlusText = HisaH337.PlusText + HisaInheritClause338,
+        MinusText = HisaH337.MinusText,
+        Flavor = HisaH337.Flavor
+    };
+
+    /// <summary>第338期の規定（MI-b）の引き継ぎの句（第337期の叩き台・指示書 §2-3）。</summary>
+    public const string HisaInheritClause338 = "。標を付けられた敵が倒れると、その恨みが周りの敵に散る";
 
     /// <summary>第322期の規定（HQ-a9）の号令の句（叩き台・指示書 §2-2）。</summary>
     public const string HisaBallClause322 = "。余った声援は玉になって溜まり、3つ溜まると敵を指差す号令になってあふれ出す（1巡に9回まで）";
@@ -5484,11 +5511,13 @@ public static class UnitCatalog
         PlusText = b.PlusText + plusTail, MinusText = b.MinusText, Flavor = b.Flavor,
     };
 
-    /// <summary>第337期 MI-b（周りへ散る）。規定のヒサ ＋ <see cref="TraitId.MarkInheritSpread"/>（標の付いた敵が倒れると、層の半分（切り上げ）を隣の生きている敵それぞれへ）。</summary>
-    public static readonly UnitDef HisaMIb = With337(Hisa, TraitId.MarkInheritSpread, "。標を付けられた敵が倒れると、その恨みが周りの敵に散る");
+    /// <summary>第337期 MI-b（周りへ散る）。規定のヒサ ＋ <see cref="TraitId.MarkInheritSpread"/>（標の付いた敵が倒れると、層の半分（切り上げ）を隣の生きている敵それぞれへ）。
+    /// 第338期: MI-b を規定にしたので、旧の規定（<see cref="HisaH337"/>）から作り直した（中身は第337期のまま・札と文面は規定のヒサと同じ）。</summary>
+    public static readonly UnitDef HisaMIb = With337(HisaH337, TraitId.MarkInheritSpread, HisaInheritClause338);
 
-    /// <summary>第337期 MI-a（隣へ全部）。規定のヒサ ＋ <see cref="TraitId.MarkInheritOne"/>（標の付いた敵が倒れると、層をすべて、隣の層の最も多い1体へ）。</summary>
-    public static readonly UnitDef HisaMIa = With337(Hisa, TraitId.MarkInheritOne, "。標を付けられた敵が倒れると、その恨みは隣の敵が背負う");
+    /// <summary>第337期 MI-a（隣へ全部）。規定のヒサ ＋ <see cref="TraitId.MarkInheritOne"/>（標の付いた敵が倒れると、層をすべて、隣の層の最も多い1体へ）。
+    /// 第338期: 旧の規定（<see cref="HisaH337"/>）から作り直した（中身は第337期のまま）。</summary>
+    public static readonly UnitDef HisaMIa = With337(HisaH337, TraitId.MarkInheritOne, "。標を付けられた敵が倒れると、その恨みは隣の敵が背負う");
 
     /// <summary>第337期 MI-b ＋ 羽 の、ミサの側。規定のミサ ＋ <see cref="TraitId.MarkInheritFeathers"/>（引き継ぎで移った層の数だけ羽が増える）。ヒサは <see cref="HisaMIb"/> と組む。</summary>
     public static readonly UnitDef MisaMIf = With337(Tome, TraitId.MarkInheritFeathers, "。散った恨みの数だけ、羽も増える");
