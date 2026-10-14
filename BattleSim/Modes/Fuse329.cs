@@ -63,7 +63,7 @@ static partial class Fuse329Diag
 
     internal static readonly Ver[] Vers =
     {
-        new("規定", "base", UnitCatalog.Tou),
+        new("規定", "base", UnitCatalog.TouH328),   // 第330期: 第328〜329期の規定に固定（いまの規定は PB-a ＋ b）
         new("PB-a", "a", UnitCatalog.TouPBa),
         new("PB-a＋b", "ab", UnitCatalog.TouPBab),
         new("PB-c", "c", UnitCatalog.TouPBc),
@@ -73,8 +73,8 @@ static partial class Fuse329Diag
     static Ver[] Pick(string only) => (string.IsNullOrEmpty(only) ? Vers : new[] { Vers[0] }.Concat(only.Split(',').Select(V).Where(v => v != Vers[0]))).ToArray();
     internal static Formation Apply(Formation f, Ver v) => S316.SwapId(f, "tou", v.Tou);
 
-    /// <summary>ポンの台（第326〜328期と同じ席）: 前1 カタ・前3 シガ・中央 トウ・後1 クグ・後3 ソム。駒はいまの規定（`Presets.Versions` の「試遊・感電 ポンの台」と同じ）。</summary>
-    internal static Formation PonBoard() => Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Shiga, center: UnitCatalog.Tou, back1: UnitCatalog.Kugu, back3: UnitCatalog.Som);
+    /// <summary>ポンの台（第326〜328期と同じ席）: 前1 カタ・前3 シガ・中央 トウ・後1 クグ・後3 ソム。第330期: トウは第328〜329期の規定（`TouH328`）に固定。</summary>
+    internal static Formation PonBoard() => Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Shiga, center: UnitCatalog.TouH328, back1: UnitCatalog.Kugu, back3: UnitCatalog.Som);
 
     static Formation Playtest(string n) => Presets.Playtest.First(r => r.Name == n).F;
 

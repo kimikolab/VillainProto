@@ -100,7 +100,7 @@ static partial class Settle328Diag
     static void Grid()
     {
         var w = WaveOf("boss");
-        var fixedU = new[] { UnitCatalog.Tou, UnitCatalog.Kugu };
+        var fixedU = new[] { UnitCatalog.TouH328, UnitCatalog.Kugu };   // 第330期: トウは第328〜329期の規定に固定
         int free = 5 - fixedU.Length;
         UnitDef Now(UnitDef d) => UnitCatalog.All.FirstOrDefault(x => x.Id == d.Id) ?? d;
         var heal = S287.Heal.Select(d => d.Id).ToHashSet();

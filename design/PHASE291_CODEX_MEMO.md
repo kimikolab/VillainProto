@@ -1559,3 +1559,9 @@ Discharge   糸玉#14 → 勇者#5  Amount 64  Slot 3  ReceiverDensity 7
 - **PB-b（版のみ・`TouPBab`）**: 爆発の隣の `Damage`（ベニの結界の内側なら `Heal`）が**すべて並び終えた後**に、浴びた駒のうち敵の側で生きていて、まだ粉の印が無かった駒の数だけ `ShockGauge 粉が降る`（`ActorId` ＝ 爆ぜた受け手（糸玉のこともある）・`TargetId` ＝ 印の付いた駒・`Amount` ＝ 1）。帯電はしない（`StatusGain` は出ない）・濃さは上がらない。同じ放電でその駒が爆ぜることはない（次に放電が届いたとき PB-a で `粉塵爆発` が出る）。**爆発1つの着弾（`粉塵爆発` → 隣の `Damage` の並び）は崩していない**——ただし `DustBurstPresentation.InChain` は `粉が降る` を連鎖の中に数えないので、PB-b の版の台本では連鎖の束がそこで切れる（1つの連鎖が2つ以上の束に分かれて再生される）。版を規定にするときは `InChain` の `ShockGauge` の札に `ShockGaugeLabels.DustFall` を足すとよい（Codex の担当・この期は触っていない）。
 - **PB-c（版のみ・`TouPBc`）**: 粉の一撃の後、1歩目（主目標の隣）の `StatusGain 感電`（経路 `Spread`）に続いて、**2歩目の敵**にも同じ `StatusGain 感電`（経路 `Spread`・`SpreadFromId` ＝ 間の1歩目の駒）が出る。糸玉への粉は1歩目のまま。
 - 試遊の一覧の末尾（`Presets.Versions`）に「版・PB-a ポンの台」「版・PB-a＋b ポンの台」「版・PB-c ポンの台」「版・PB-全部 ポンの台」（94〜97 番・「試遊・感電 ポンの台」は 93 番のまま）。
+
+## 26. 第330期の追記 —— 粉の導火線（PB-a ＋ b）は規定
+
+報告 `design/PHASE330_POWDER_FUSE_SETTLE.md`。**第330期から PB-a ＋ b は規定の台本に出る**——濃さ 0 の `粉塵爆発`（`Slot` ＝ 0・`Amount` ＝ 8）と `粉が降る` が、トウのいる試遊のすべての台で出る（並びは §25 のまま・PB-c の2歩目は版のみで規定の台本には出ない）。第329期の「版・PB」の4台は一覧から外した（「試遊・感電 ポンの台」93 番は残る）。
+
+- **Codex の担当**: `DustBurstPresentation.InChain` の `ShockGauge` の札に `ShockGaugeLabels.DustFall` を足すこと。足さないと、`粉が降る` のところで連鎖の束が切れて、1つの連鎖が2つ以上の束に分かれて再生される（爆発1つの着弾の並び ＝ `粉塵爆発` → 隣の `Damage` は崩していない）。**この期は DemoApp を触っていない。**

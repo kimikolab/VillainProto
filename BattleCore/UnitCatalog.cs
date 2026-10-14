@@ -1289,11 +1289,13 @@ public static class UnitCatalog
     };
 
     /// <summary>
-    /// 痺れ粉のトウ（規定）。<b>第328期に第327期の DX（粉塵爆発）を規定にした</b>（ポンの判断 X2・design/PHASE328_DUST_BATTERY_SETTLE_SPEC.md §2）——
+    /// 痺れ粉のトウ（第328〜329期の規定）。<b>第328期に第327期の DX（粉塵爆発）を規定にした</b>（ポンの判断 X2・design/PHASE328_DUST_BATTERY_SETTLE_SPEC.md §2）——
     /// 第327期の規定（<see cref="TouH327"/>・DR-a 入り）＋ <see cref="TraitId.DustBurst"/>（放電が濃さ n の駒か糸玉に届くと隣すべてに 8 × n・粉は主目標の隣の糸玉にも落ちる）。
     /// 札と文面は第327期の <see cref="TouDX"/> と同じ（PlusText の末尾に <see cref="TouDustText"/>）。クグは電池つき（<see cref="Kugu"/>）。
+    /// <para><b>第330期に PB-a ＋ b（<see cref="Tou"/>）を規定にしたので、旧の規定の定義を明示的に持つ</b>（第329期まで <see cref="Tou"/> と同じ物だった）。
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。第328〜329期の規定のトウで測った器具はこれに固定する（`Common.PinT328`）。第329期の版（PB）もこれから作る。</para>
     /// </summary>
-    public static readonly UnitDef Tou = new()
+    public static readonly UnitDef TouH328 = new()
     {
         Id = TouH327.Id,
         Name = TouH327.Name,
@@ -1307,6 +1309,29 @@ public static class UnitCatalog
         PlusText = TouH327.PlusText + TouDustText,
         MinusText = TouH327.MinusText,
         Flavor = TouH327.Flavor
+    };
+
+    /// <summary>
+    /// 痺れ粉のトウ（規定）。<b>第330期に第329期の PB-a ＋ b（粉の導火線）を規定にした</b>（ポンの判断 Q2・design/PHASE330_POWDER_FUSE_SETTLE_SPEC.md §2）——
+    /// 第328〜329期の規定（<see cref="TouH328"/>・DX 入り）＋ <see cref="TraitId.PowderBurstMarked"/>（粉の印のある敵は濃さ 0 でも爆ぜる・量は 8 ×（1 ＋ n））
+    /// ＋ <see cref="TraitId.PowderBurstFall"/>（爆発を浴びた敵に粉の印が降る）。札は第329期の <see cref="TouPBab"/> と同じ。文面は粉塵爆発の句を <see cref="TouFuseSettleText"/> に差し替えた。
+    /// </summary>
+    public static readonly UnitDef Tou = new()
+    {
+        Id = TouH328.Id,
+        Name = TouH328.Name,
+        MaxHp = TouH328.MaxHp,
+        Attack = TouH328.Attack,
+        Speed = TouH328.Speed,
+        Advances = TouH328.Advances,
+        Pattern = TouH328.Pattern,
+        Traits = TouH328.Traits.Concat(new[] { TraitId.PowderBurstMarked, TraitId.PowderBurstFall }).ToArray(),
+        Actions = TouH328.Actions,
+        PlusText = TouH328.PlusText.EndsWith(TouDustText, StringComparison.Ordinal)
+            ? TouH328.PlusText[..^TouDustText.Length] + TouFuseSettleText
+            : throw new InvalidOperationException("第330期: 第328〜329期の規定のトウの文面の末尾に粉塵爆発の句が見つからない"),
+        MinusText = TouH328.MinusText,
+        Flavor = TouH328.Flavor
     };
 
     // 第311期 —— 萎縮の規則の版（§3-3）。痺れの規則の札（`ShockStunHalf`）を持つ駒に規則の札 <see cref="TraitId.ShockDaunt"/> を足すだけ。`All` にも `Retired` にも入れない。
@@ -3857,21 +3882,23 @@ public static class UnitCatalog
     public const string TouFuseText = "。粉の付いた駒に雷が届くと、粉が爆ぜて隣にも飛び火する（濃いほど激しい）";
     /// <summary>第329期 PB-a ＋ b の粉塵爆発の句（叩き台）。</summary>
     public const string TouFuseFallText = "。粉の付いた駒に雷が届くと、粉が爆ぜて隣にも飛び火し、飛び火した先にも粉が降りかかる（濃いほど激しい）";
+    /// <summary>第330期 規定のトウ（PB-a ＋ b）の粉塵爆発の句（指示書 §2-4 のまま）。</summary>
+    public const string TouFuseSettleText = "。粉の付いた駒に雷が届くと、粉が爆ぜて隣にも飛び火する（濃いほど激しい）。飛び火した先にも粉が降りかかる";
     /// <summary>規定のトウの粉の舞う範囲の句（PB-c はここを差し替える）。</summary>
     public const string TouSpreadClause = "攻撃した相手とその隣の敵に帯電の粉を付ける";
     /// <summary>第329期 PB-c の粉の舞う範囲の句（叩き台）。</summary>
     public const string TouSpreadFarClause = "攻撃した相手とその周り2歩の敵に帯電の粉を付ける";
 
-    static UnitDef TouOn329(TraitId[] add, string dust, bool far) => new()   // 規定のトウ（`Tou`・DX 入り）から作る
+    static UnitDef TouOn329(TraitId[] add, string dust, bool far) => new()   // 第330期: 規定が PB-a ＋ b になったので、第328〜329期の規定（`TouH328`・DX 入り）から作る
     {
-        Id = Tou.Id, Name = Tou.Name, MaxHp = Tou.MaxHp, Attack = Tou.Attack, Speed = Tou.Speed, Advances = Tou.Advances, Pattern = Tou.Pattern,
-        Traits = Tou.Traits.Concat(add).ToArray(), Actions = Tou.Actions,
-        PlusText = FusePlus(dust, far), MinusText = Tou.MinusText, Flavor = Tou.Flavor
+        Id = TouH328.Id, Name = TouH328.Name, MaxHp = TouH328.MaxHp, Attack = TouH328.Attack, Speed = TouH328.Speed, Advances = TouH328.Advances, Pattern = TouH328.Pattern,
+        Traits = TouH328.Traits.Concat(add).ToArray(), Actions = TouH328.Actions,
+        PlusText = FusePlus(dust, far), MinusText = TouH328.MinusText, Flavor = TouH328.Flavor
     };
 
     static string FusePlus(string dust, bool far)
     {
-        string p = Tou.PlusText;
+        string p = TouH328.PlusText;
         if (!p.EndsWith(TouDustText, StringComparison.Ordinal) || !p.Contains(TouSpreadClause, StringComparison.Ordinal))
             throw new InvalidOperationException("第329期: 規定のトウの文面に粉塵爆発 ／ 粉の舞う句が見つからない");
         p = p[..^TouDustText.Length] + dust;

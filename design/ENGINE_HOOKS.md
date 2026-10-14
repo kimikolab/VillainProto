@@ -1340,3 +1340,8 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **表示専用**: `ShockGaugeLabels.DustFall`（「粉が降る」）。並びは `design/PHASE291_CODEX_MEMO.md` §25。
 - **計数のみ**（トウの帳簿）: `Pb329Heads` ／ `Pb329HeadByTurn[16]` ／ `Pb329MarkedByTurn[16]`（`PowderHead`・規定の戦でも数える）・`Pb329PopDens[9]` ／ `Pb329PopMarked`（`PowderPop`・弾けた敵の濃さ 0 を含む）・`Pb329Chains` ／ `Pb329ChainRecv` ／ `Pb329ChainMax`（`ShockTrigger` の外側の1回の後・`_dxChainRecv`）・`Pb329Fall` ／ `Pb329FarFell` ／ `Pb329FarNew`。
 - 器具: `fuse329`。乱数の口は足していない（`PickOne(` の数は第328期と同じ）。規定の `compare` は 0 セル（`docs/balance.md` 差分 0）。
+
+## 第330期 —— 粉の導火線（PB-a ＋ b）の規定化（engine は変えていない）
+
+- 規定のトウ `UnitCatalog.Tou` ＝ `TouH328`（第328〜329期の規定・DX 入り）＋ `PowderBurstMarked` ＋ `PowderBurstFall`。第329期の口（`_pbMarked` ／ `_pbFall` ／ `DustK` ／ `DustFall`）がそのまま規定の戦で立つ。PB-c（`PowderSpreadFar` ／ `PowderFar`）は版のまま。
+- 第329期の版の定義 `TouPBa` ／ `TouPBab` ／ `TouPBc` ／ `TouPBabc` は旧の規定（`TouH328`）から作り直した（DX の札は1枚）。固定の口 `Common.PinT328` ／ `Pin328`。器具: `settle330`。

@@ -57,10 +57,10 @@ static partial class Settle328Diag
     static long H(long[]? h, int i) => T323.H(h, i);
     static string Short(UnitDef d) => S307.Short(d);
 
-    /// <summary>ポンの台（第326〜327期と同じ席）。駒はいまの規定。</summary>
-    internal static Formation PonBoard() => Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Shiga, center: UnitCatalog.Tou, back1: UnitCatalog.Kugu, back3: UnitCatalog.Som);
-    static Formation Playtest(string n) => Presets.Playtest.First(r => r.Name == n).F;
-    static Formation Row(string n) => CompareBuilds().First(r => r.Name == n).F;
+    /// <summary>ポンの台（第326〜327期と同じ席）。駒はいまの規定。第330期: トウは第328〜329期の規定（`TouH328`）に固定。</summary>
+    internal static Formation PonBoard() => Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Shiga, center: UnitCatalog.TouH328, back1: UnitCatalog.Kugu, back3: UnitCatalog.Som);
+    static Formation Playtest(string n) => PlaytestH328.First(r => r.Name == n).F;   // 第330期: トウを第328〜329期の規定に固定
+    static Formation Row(string n) => CompareBuildsH328().First(r => r.Name == n).F;
 
     /// <summary>§5 の代表台（駒はいまの規定）。旧は <see cref="Pin327"/> を通す。</summary>
     internal static (string Name, string Ascii, Formation F)[] Boards() => new (string, string, Formation)[]

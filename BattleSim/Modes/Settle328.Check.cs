@@ -25,7 +25,7 @@ static partial class Settle328Diag
         Console.WriteLine("| 項目 | 結果 | 備考 |");
         Console.WriteLine("|---|---|---|");
         var Wall = T323.Wall;
-        UnitDef T = UnitCatalog.Tou, TO = UnitCatalog.TouH327, K = UnitCatalog.Kugu, KO = UnitCatalog.KuguH327;
+        UnitDef T = UnitCatalog.TouH328, TO = UnitCatalog.TouH327, K = UnitCatalog.Kugu, KO = UnitCatalog.KuguH327;   // 第330期: 「規定」のトウは第328〜329期の規定（`TouH328`）に固定
 
         // ---- 定義と固定の口
         {
@@ -34,7 +34,7 @@ static partial class Settle328Diag
                 && TO.Traits.SequenceEqual(UnitCatalog.TouH326.Traits.Append(TraitId.DenseConduct));
             bool kugu = K.Traits.SequenceEqual(KO.Traits.Append(TraitId.SilkBattery)) && K.Traits.SequenceEqual(UnitCatalog.KuguBat.Traits) && K.PlusText == KO.PlusText + UnitCatalog.KuguBatteryText
                 && K.MinusText == KO.MinusText && K.Id == KO.Id && K.MaxHp == KO.MaxHp && KO.Traits.SequenceEqual(UnitCatalog.KuguH324.Traits.Append(TraitId.ThreadPowderFlow));
-            bool outside = new[] { TO, KO, UnitCatalog.TouDX, UnitCatalog.KuguBat, UnitCatalog.SomBc }.All(d => !UnitCatalog.Everyone.Contains(d)) && UnitCatalog.All.Contains(T) && UnitCatalog.All.Contains(K)
+            bool outside = new[] { TO, KO, UnitCatalog.TouDX, UnitCatalog.KuguBat, UnitCatalog.SomBc }.All(d => !UnitCatalog.Everyone.Contains(d)) && UnitCatalog.All.Contains(UnitCatalog.Tou) && !UnitCatalog.Everyone.Contains(T) && UnitCatalog.All.Contains(K)
                 && UnitCatalog.All.Count == 52 && UnitCatalog.Everyone.All(d => !d.Traits.Contains(TraitId.BeastChargeSpread)) && UnitCatalog.Som.Traits.SequenceEqual(UnitCatalog.SomBc.Traits.Take(UnitCatalog.Som.Traits.Count));
             Expect("定義: 規定のトウ ＝ 第327期の規定（`TouH327`）＋ DX の札・規定のクグ ＝ `KuguH327` ＋ 電池の札（札と文面は第327期の `TouDX` ／ `KuguBat` と同じ）・旧は `Everyone` の外・隣帯電は規定にしない・`All` 52 枚",
                 tou && kugu && outside, $"トウ {tou}・クグ {kugu}・外 {outside}");

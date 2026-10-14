@@ -30,7 +30,7 @@ static partial class Fuse329Diag
         Console.WriteLine("| 項目 | 結果 | 備考 |");
         Console.WriteLine("|---|---|---|");
         var Wall = T323.Wall;
-        var T = UnitCatalog.Tou;
+        var T = UnitCatalog.TouH328;   // 第330期: 第328〜329期の規定（版はここから作る）
 
         // ---- 定義
         {
@@ -43,9 +43,9 @@ static partial class Fuse329Diag
                 && UnitCatalog.TouPBc.PlusText.EndsWith(UnitCatalog.TouDustText, StringComparison.Ordinal) && UnitCatalog.TouPBc.PlusText.Contains(UnitCatalog.TouSpreadFarClause, StringComparison.Ordinal)
                 && UnitCatalog.TouPBabc.PlusText.Contains(UnitCatalog.TouSpreadFarClause, StringComparison.Ordinal) && UnitCatalog.TouPBabc.PlusText.EndsWith(UnitCatalog.TouFuseFallText, StringComparison.Ordinal)
                 && vs.All(d => d.Id == T.Id && d.MaxHp == T.MaxHp && d.Attack == T.Attack && d.Speed == T.Speed && d.MinusText == T.MinusText && !d.PlusText.Contains(UnitCatalog.TouDustText + "。", StringComparison.Ordinal));
-            bool outside = vs.All(d => !UnitCatalog.Everyone.Contains(d)) && UnitCatalog.All.Contains(T) && UnitCatalog.All.Count == 52
-                && UnitCatalog.Everyone.All(d => !d.Traits.Contains(TraitId.PowderBurstMarked) && !d.Traits.Contains(TraitId.PowderBurstFall) && !d.Traits.Contains(TraitId.PowderSpreadFar));
-            Expect("定義: PB-a ／ PB-a＋b ／ PB-c ／ 全部 ＝ 規定のトウ（DX）＋ 札（文面は粉塵爆発の句 ／ 粉の舞う句を差し替え）・版は `Everyone` の外・`All` 52 枚・規定の駒は PB の札を持たない",
+            bool outside = vs.All(d => !UnitCatalog.Everyone.Contains(d)) && UnitCatalog.All.Contains(UnitCatalog.Tou) && !UnitCatalog.Everyone.Contains(T) && UnitCatalog.All.Count == 52
+                && UnitCatalog.Everyone.All(d => (d == UnitCatalog.Tou || !d.Traits.Contains(TraitId.PowderBurstMarked) && !d.Traits.Contains(TraitId.PowderBurstFall)) && !d.Traits.Contains(TraitId.PowderSpreadFar));   // 第330期: 規定のトウが PB-a ／ PB-b を持つ
+            Expect("定義: PB-a ／ PB-a＋b ／ PB-c ／ 全部 ＝ 第328〜329期の規定のトウ（`TouH328`・DX）＋ 札（文面は粉塵爆発の句 ／ 粉の舞う句を差し替え）・版は `Everyone` の外・`All` 52 枚・PB の札を持つ駒は規定のトウだけ（PB-a ／ PB-b・第330期から）",
                 a && ab && c && abc && text && outside, $"a {a}・ab {ab}・c {c}・abc {abc}・文面 {text}・外 {outside}");
         }
 
@@ -166,14 +166,13 @@ static partial class Fuse329Diag
 
         // ---- 試遊の台
         {
+            // 第330期: PB-a ＋ b を規定にしたので「版・」の4台は外した（`Presets.Versions` はポンの台1台・規定の駒）。
             var v = Presets.Versions;
-            string[] names = { "試遊・感電 ポンの台", "版・PB-a ポンの台", "版・PB-a＋b ポンの台", "版・PB-c ポンの台", "版・PB-全部 ポンの台" };
-            UnitDef[] tous = { T, UnitCatalog.TouPBa, UnitCatalog.TouPBab, UnitCatalog.TouPBc, UnitCatalog.TouPBabc };
             var rows = Presets.Compare.Concat(Presets.Cross).Concat(Presets.Playtest).Concat(v).ToArray();
-            bool ok = v.Length == 5 && v.Select(r => r.Name).SequenceEqual(names)
-                && Enumerable.Range(0, 5).All(i => v[i].F.Occupied().Select(o => o.Def).SequenceEqual(new[] { UnitCatalog.Kata, UnitCatalog.Shiga, tous[i], UnitCatalog.Kugu, UnitCatalog.Som }))
-                && Presets.Playtest.Length == 17 && names.All(n => rows.First(r => r.Name.Contains(n, StringComparison.Ordinal)).Name == n);
-            Expect("試遊の台: `Presets.Versions` ＝ 「試遊・感電 ポンの台」＋「版・」の4台（並びはポンの台・トウだけ版）・`Playtest` は 17 台のまま・DemoApp の `--demo-preset=` の部分一致で自分に当たる", ok);
+            bool ok = v.Length == 1 && v[0].Name == "試遊・感電 ポンの台"
+                && v[0].F.Occupied().Select(o => o.Def).SequenceEqual(new[] { UnitCatalog.Kata, UnitCatalog.Shiga, UnitCatalog.Tou, UnitCatalog.Kugu, UnitCatalog.Som })
+                && !v.Any(r => r.Name.StartsWith("版・PB", StringComparison.Ordinal)) && Presets.Playtest.Length == 17 && rows.First(r => r.Name.Contains(v[0].Name, StringComparison.Ordinal)).Name == v[0].Name;
+            Expect("試遊の台: `Presets.Versions` ＝ 「試遊・感電 ポンの台」1台（規定の駒）・第329期の「版・PB」の4台は第330期に外した・`Playtest` は 17 台のまま・DemoApp の `--demo-preset=` の部分一致で自分に当たる", ok);
         }
 
         // ---- 戦の中で: verbose の有無で勝敗 ／ 決着T が同じ（ポンの台 × ボス ／ 近衛 × 5 版 × seed 0..9）

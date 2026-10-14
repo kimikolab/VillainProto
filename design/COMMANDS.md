@@ -1144,6 +1144,10 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 fuse329 compare [版,…]  # 第329期 §5: `compare` 64 行 × 版（基準は規定・21 秒）
     dotnet run --project BattleSim -c Release 0 fuse329 log [波] [seed] [版]     # 第329期: ポンの台の1戦のログ（版 base ／ a ／ ab ／ c ／ abc）
     dotnet run --project BattleSim -c Release 0 fuse329 check         # 第329期 自己検査（定義・PB-a の量と条件（敵 ／ 味方 ／ 糸玉）・PB-b の印（帯電しない・同じ放電で二度爆ぜない・次の放電で爆ぜる）・PB-c の2歩目・印は弾けても残る・試遊の台・verbose・PickOne）
+    dotnet run --project BattleSim -c Release 0 settle330 boards      # 第330期 §4: 代表台 5 × 10 波 × 旧（`TouH328`）／ 新（PB-a ＋ b）・seed 0..199・爆竹の量・ボス・勝率 ／ 決着T・強すぎの兆し（5 秒）。予測のファイルが無ければ走らない
+    dotnet run --project BattleSim -c Release 0 settle330 grid        # 第330期 §4: 格子1本（近衛・固定枠 トウ ＋ カタ・探索枠3・席 30）・1T 決着 5% 以上の台・決着T の上位10台
+    dotnet run --project BattleSim -c Release 0 settle330 log [台] [波] [seed] [old|new]   # 第330期: 1戦のログ（台 pon ／ whip ／ shield ／ near ／ torment）
+    dotnet run --project BattleSim -c Release 0 settle330 check       # 第330期 自己検査（定義と固定の口・規定のトウで PB-a ／ PB-b・旧（`TouH328`）では起きない・試遊の台・verbose・PickOne）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）
