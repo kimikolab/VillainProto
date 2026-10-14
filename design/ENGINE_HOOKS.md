@@ -1330,3 +1330,13 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 
 - 規定のトウ `UnitCatalog.Tou` ＝ `TouH327` ＋ `DustBurst`、規定のクグ `UnitCatalog.Kugu` ＝ `KuguH327` ＋ `SilkBattery`。第327期の口（`_dxLive` ／ `DustExplode` ／ `PowderOnBalls` ／ `_batLive` ／ `SilkBatteryRecharge`）がそのまま規定の戦で立つ。隣帯電（`BeastChargeSpread` ／ `_bcHolder`）は版のまま（`SomBc`）。
 - 版の定義 `TouDX` ／ `KuguBat` は旧の規定から作り直した（中身は規定と同じ）。器具: `settle328`。
+
+## 第329期 —— 粉の付いた駒は爆ぜる（PB・版のみ）
+
+- **PB-a の札 `PowderBurstMarked`**（`MarkOnlyTrait`・`TouPBa` ／ `TouPBab` ／ `TouPBabc`・保持者 0 枚）: `NotePowderHolder` が `_pbMarked` を立てる（`DustBurst` ＋ `ChargedPowder` も持つ駒だけ）。`Discharge` ／ `ThreadDischarge` ／ `SilkBallDischarge` の爆発の条件を `DustK(受け手)` の1箇所に寄せた——規定（`_pbMarked` が偽）は濃さ n をそのまま返す（第327期と同じ）、PB-a は「濃さ n ≧ 1、または敵の側で粉の印（`_pwTouched`）」なら 1 ＋ n。`DustExplode(出し手, 受け手, n, k, 起こし手)` の量は 8 × k（表示の `Slot` は濃さ n のまま）。
+- **PB-b の札 `PowderBurstFall`**: `_pbFall`。`DustExplode` が隣の駒すべてに `ApplyDamage`（または `InverseHeal`）を終えた**後**に、浴びた駒ごとに `DustFall`——敵の側で生きていて印が無ければ `_pwTouched` に足す（帯電させない・濃さは上げない）。爆発のダメージは感電を弾けさせず放電も呼ばないので、ループの中で付けても後で付けても盤面は同じ（後にしたのは台本の並びのため）。爆発は放電ではないので同じ放電で二度は爆ぜない。
+- **PB-c の札 `PowderSpreadFar`**: `ChargedPowderTrait` が1歩目に粉を舞わせた後、`ctx.PowderFar(トウ, 主目標)`——主目標の生きている隣（1歩目）のどれかの隣で、主目標とも1歩目とも違う生きている敵に `MarkShock`（経路 `Spread`・`spreadFrom` ＝ 間の1歩目）＋ `PowderFell`。糸玉は1歩目のまま（`PowderOnBalls`）。
+- **粉の印（`_pwTouched`）は Add だけ**（Remove ／ Clear の口が無い）——弾けても残る（倒れた駒は放電が届かないので読まれない）。PB でも変えていない。
+- **表示専用**: `ShockGaugeLabels.DustFall`（「粉が降る」）。並びは `design/PHASE291_CODEX_MEMO.md` §25。
+- **計数のみ**（トウの帳簿）: `Pb329Heads` ／ `Pb329HeadByTurn[16]` ／ `Pb329MarkedByTurn[16]`（`PowderHead`・規定の戦でも数える）・`Pb329PopDens[9]` ／ `Pb329PopMarked`（`PowderPop`・弾けた敵の濃さ 0 を含む）・`Pb329Chains` ／ `Pb329ChainRecv` ／ `Pb329ChainMax`（`ShockTrigger` の外側の1回の後・`_dxChainRecv`）・`Pb329Fall` ／ `Pb329FarFell` ／ `Pb329FarNew`。
+- 器具: `fuse329`。乱数の口は足していない（`PickOne(` の数は第328期と同じ）。規定の `compare` は 0 セル（`docs/balance.md` 差分 0）。

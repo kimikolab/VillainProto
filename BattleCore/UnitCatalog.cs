@@ -3848,6 +3848,45 @@ public static class UnitCatalog
     /// <summary>第327期 隣帯電。規定のソム ＋ <see cref="TraitId.BeastChargeSpread"/>——背いた召喚獣の放電が、帯電していない隣も帯電させる（同じ連鎖では弾けない）。</summary>
     public static readonly UnitDef SomBc = On327(Som, TraitId.BeastChargeSpread, SomBeastChargeText);
 
+    // ---------------------------------------------------------------------------------
+    // 第329期 —— 精鋭でも爆竹に: 粉の付いた駒は爆ぜる（PB）（指示書 design/PHASE329_POWDER_FUSE_SPEC.md §2）。規定のトウ（DX 入り）の末尾に札を足し、文面の句を差し替える（叩き台）。
+    // `All` にも `Retired` にも入れない。
+    // ---------------------------------------------------------------------------------
+
+    /// <summary>第329期 PB-a の粉塵爆発の句（叩き台・指示書 §2）。規定の <see cref="TouDustText"/> と差し替える。</summary>
+    public const string TouFuseText = "。粉の付いた駒に雷が届くと、粉が爆ぜて隣にも飛び火する（濃いほど激しい）";
+    /// <summary>第329期 PB-a ＋ b の粉塵爆発の句（叩き台）。</summary>
+    public const string TouFuseFallText = "。粉の付いた駒に雷が届くと、粉が爆ぜて隣にも飛び火し、飛び火した先にも粉が降りかかる（濃いほど激しい）";
+    /// <summary>規定のトウの粉の舞う範囲の句（PB-c はここを差し替える）。</summary>
+    public const string TouSpreadClause = "攻撃した相手とその隣の敵に帯電の粉を付ける";
+    /// <summary>第329期 PB-c の粉の舞う範囲の句（叩き台）。</summary>
+    public const string TouSpreadFarClause = "攻撃した相手とその周り2歩の敵に帯電の粉を付ける";
+
+    static UnitDef TouOn329(TraitId[] add, string dust, bool far) => new()   // 規定のトウ（`Tou`・DX 入り）から作る
+    {
+        Id = Tou.Id, Name = Tou.Name, MaxHp = Tou.MaxHp, Attack = Tou.Attack, Speed = Tou.Speed, Advances = Tou.Advances, Pattern = Tou.Pattern,
+        Traits = Tou.Traits.Concat(add).ToArray(), Actions = Tou.Actions,
+        PlusText = FusePlus(dust, far), MinusText = Tou.MinusText, Flavor = Tou.Flavor
+    };
+
+    static string FusePlus(string dust, bool far)
+    {
+        string p = Tou.PlusText;
+        if (!p.EndsWith(TouDustText, StringComparison.Ordinal) || !p.Contains(TouSpreadClause, StringComparison.Ordinal))
+            throw new InvalidOperationException("第329期: 規定のトウの文面に粉塵爆発 ／ 粉の舞う句が見つからない");
+        p = p[..^TouDustText.Length] + dust;
+        return far ? p.Replace(TouSpreadClause, TouSpreadFarClause, StringComparison.Ordinal) : p;
+    }
+
+    /// <summary>第329期 PB-a。規定のトウ ＋ <see cref="TraitId.PowderBurstMarked"/>——粉の印のある敵（濃さ 0 でも）に放電が届くと爆ぜ、隣すべてに 8 ×（1 ＋ n）。</summary>
+    public static readonly UnitDef TouPBa = TouOn329(new[] { TraitId.PowderBurstMarked }, TouFuseText, far: false);
+    /// <summary>第329期 PB-a ＋ b。PB-a ＋ <see cref="TraitId.PowderBurstFall"/>——爆発を浴びた敵に粉の印が付く。</summary>
+    public static readonly UnitDef TouPBab = TouOn329(new[] { TraitId.PowderBurstMarked, TraitId.PowderBurstFall }, TouFuseFallText, far: false);
+    /// <summary>第329期 PB-c。規定のトウ ＋ <see cref="TraitId.PowderSpreadFar"/>——粉は主目標から2歩の敵にも舞う（爆発の条件は規定のまま）。</summary>
+    public static readonly UnitDef TouPBc = TouOn329(new[] { TraitId.PowderSpreadFar }, TouDustText, far: true);
+    /// <summary>第329期 PB-a ＋ b ＋ c（全部）。</summary>
+    public static readonly UnitDef TouPBabc = TouOn329(new[] { TraitId.PowderBurstMarked, TraitId.PowderBurstFall, TraitId.PowderSpreadFar }, TouFuseFallText, far: true);
+
     /// <summary>第323期 カタの版（返す）。規定のカタ ＋ <see cref="TraitId.ThunderPowderReturn"/>（濃さの保持者がいない戦では何も起きない）。</summary>
     public static readonly UnitDef KataTDR = On323(KataH324, new[] { TraitId.ThunderPowderReturn }, KataPowderReturnText);
     /// <summary>第323期 クグの版（返す）。規定のクグ ＋ <see cref="TraitId.ThreadPowderFlow"/>。</summary>

@@ -8,6 +8,14 @@ description: 第259期に `CLAUDE.md` の「現状値」節を**逐語で**移�
 
 ## 現状値
 
+**第329期は軽い期で、規定は動かしていない**（指示書は design/PHASE329_POWDER_FUSE_SPEC.md・報告は design/PHASE329_POWDER_FUSE.md）。トウの版 PB-a ／ PB-a＋b ／ PB-c ／ PB-全部だけを足した。`compare` の規定の列は 0 セル（`docs/balance.md` 差分 0）——全64行 100 / 91.1 / 89.4 / 83.3 / 83.6・主判定19行の第五波 81.6・歯止めの余裕 +48.4pt・情報セル 74 ／ 26 のまま。版の `compare` も4つとも 0 セル。
+
+### 第328期まで `CLAUDE.md` の「現状値」にあった索引の段落（第329期に逐語で移した）
+
+**最後に動かした期: 第328期**（**重い期・規定化だけ**。**トウ ＝ 粉塵爆発（DX）・クグ ＝ 電池を規定にした**（ポンの判断 X2・旧の規定は `TouH327` ／ `KuguH327`・隣帯電 `SomBc` は版のまま残置）。ポンの台 × ボス 8.3T → 5.0T・精鋭 ／ 本編 ±0.5pt・強すぎの兆しなし。試遊の台「試遊・感電 ポンの台」は `Presets.Versions` に置いた（第327期の「版・」の4台は外した）。器具 `settle328`・報告は `design/PHASE328_DUST_BATTERY_SETTLE.md`）。**期ごとの報告ファイルの索引と、第319期までの過去の器具の固定の一覧は `design/HISTORY_PHASES.md` の冒頭**（第320期までこの節にあった段落を第321期に逐語で移した・第327期までの2段落は第328期に移した）。
+
+**最後に `compare` が動いた期: 第326期**（段0 で1行1セル: `感電 (シガ×カタ×ソム)` 第3波 90.5 → 91.0。第327期の DR-a ／ 第328期の DX ＋ 電池の規定化はどちらも 0 セル）。**過去の器具の固定**: 第327期までのトウ ／ クグは `TouH327` ／ `KuguH327`（`Common.PinTK327` ／ `Pin327` ／ `CompareBuildsH327` ／ `PlaytestH327`・`dust327`）。第326期までのトウは `TouH326`（`Common.PinT326` ／ `Pin326` ／ `CompareBuildsH326` ／ `PlaytestH326`・`dense326`。`Pin325` も・`tou325`。`PinT326` は `TouH327` も `TouH326` へ、規定のクグを `KuguH327` へ）。`PinTKK324` は規定のトウ ／ `TouH326` ／ `TouH327` を `TouH324` へ、規定のクグ ／ `KuguH327` を `KuguH324` へ替えるので、古い口の終端はそのまま。第325期までのシガは `ShigaH325`（`Common.PinS325` ／ `Pin325` ／ `CompareBuildsH325` ／ `PlaytestH325`）。それより前の固定は `design/HISTORY_PHASES.md`。
+
 **第328期は重い期で、規定化だけ: トウ ＝ 第327期の DX（粉塵爆発）・クグ ＝ 電池を規定にした**（ポンの判断 X2・指示書は design/PHASE328_DUST_BATTERY_SETTLE_SPEC.md・報告は design/PHASE328_DUST_BATTERY_SETTLE.md）。規定のトウ ＝ 第327期の規定（`TouH327`）＋ `DustBurst`、規定のクグ ＝ 第325〜327期の規定（`KuguH327`）＋ `SilkBattery`。`compare` の規定の列は 0 セル（`docs/balance.md` 差分 0・第327期の X2 の列と一致）——全64行 100 / 91.1 / 89.4 / 83.3 / 83.6・主判定19行の第五波 81.6・歯止めの余裕 +48.4pt・情報セル 74 ／ 26 のまま。
 
 ### 第327期まで `CLAUDE.md` の「現状値」にあった索引の段落（第328期に逐語で移した）

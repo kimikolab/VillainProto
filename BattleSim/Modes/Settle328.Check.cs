@@ -87,10 +87,11 @@ static partial class Settle328Diag
             var v = Presets.Versions;
             var pl = Presets.Playtest;
             var rows = Presets.Compare.Concat(Presets.Cross).Concat(pl).Concat(v).ToArray();
-            bool ok = v.Length == 1 && v[0].Name == "試遊・感電 ポンの台"
+            // 第329期: `Versions` は期ごとに「版・」の台を入れ替えるので、1行目（ポンの台）だけを見る（後ろの行は「版・」で始まること・第327期の DX の版の台は無いこと）。見出しの文は第328期のまま。
+            bool ok = v.Length >= 1 && v[0].Name == "試遊・感電 ポンの台" && v.Skip(1).All(r => r.Name.StartsWith("版・", StringComparison.Ordinal)) && !v.Any(r => r.Name.StartsWith("版・DX", StringComparison.Ordinal))
                 && v[0].F.Occupied().Select(o => o.Def).SequenceEqual(new[] { UnitCatalog.Kata, UnitCatalog.Shiga, UnitCatalog.Tou, UnitCatalog.Kugu, UnitCatalog.Som })
                 && Enumerable.Range(0, 5).Select(i => v[0].F[i]?.Id).SequenceEqual(new[] { "kata", "shiga", "tou", "kugu", "som" })
-                && pl.Length == 17 && !pl.Any(r => r.Name == v[0].Name) && !v.Any(r => r.Name.StartsWith("版・", StringComparison.Ordinal))
+                && pl.Length == 17 && !pl.Any(r => r.Name == v[0].Name)
                 && rows.First(r => r.Name.Contains(v[0].Name, StringComparison.Ordinal)).Name == v[0].Name;
             Expect("試遊の台: `Presets.Versions` ＝ 「試遊・感電 ポンの台」1台（前1 カタ・前3 シガ・中央 トウ・後1 クグ・後3 ソム・規定の駒）・第327期の「版・」の4台は外した・`Playtest` は 17 台のまま・DemoApp の `--demo-preset=` の部分一致で自分に当たる", ok);
         }

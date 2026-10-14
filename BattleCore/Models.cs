@@ -2071,6 +2071,15 @@ public sealed class UnitTally
     /// </summary>
     public long[]? Dx327N, Dx327Dens, Dx327Dealt, Dx327Hits, Dx327Kills, Bc327New;
     public long Dx327Inverted, Dx327Max, Dx327BallPowder, Dx327BallThick, Dx327BallCharged, Dx327BallDensMax, Bat327Recharged, Bat327Chains, Bat327Dry, Bc327FreshSkip, Bc327Popped;
+    /// <summary>
+    /// 第329期（<b>計数専用</b>・粉の保持者（トウ）の側・PB）。誰も読んで分岐しない。
+    /// <c>Pb329Heads</c> トウの手番の頭 ／ <c>Pb329HeadByTurn</c>[ターン] そのターンの手番の頭 ／ <c>Pb329MarkedByTurn</c>[ターン] 手番の頭の、粉の印のある生きている敵（糸玉を除く）の和 ／
+    /// <c>Pb329PopDens</c>[濃さ 0〜8] 弾けた敵の濃さ（0 を含む）／ <c>Pb329PopMarked</c> そのうち粉の印があった ／
+    /// <c>Pb329Chains</c> 爆発が1回以上あった連鎖 ／ <c>Pb329ChainRecv</c> その連鎖で爆ぜた受け手（異なる駒・糸玉）の和 ／ <c>Pb329ChainMax</c> その最大 ／
+    /// <c>Pb329Fall</c> 爆ぜた粉が降って新しく印が付いた敵（PB-b）／ <c>Pb329FarFell</c> 2歩目に舞った粉（PB-c）／ <c>Pb329FarNew</c> そのうち新しく帯電させた。
+    /// </summary>
+    public long[]? Pb329HeadByTurn, Pb329MarkedByTurn, Pb329PopDens;
+    public long Pb329Heads, Pb329PopMarked, Pb329Chains, Pb329ChainRecv, Pb329ChainMax, Pb329Fall, Pb329FarFell, Pb329FarNew;
 
     /// <summary>
     /// 第289期（<b>計数専用</b>）。<b>蓄電の保持者（シガ）の側</b>: <c>ChainIniHist</c>[起点] 敵の感電の連鎖（自分の一撃で起きたものを除く・0 トウ ／ 1 カタ ／ 3 ほかの味方 ／ 4 刻み・出どころ無し ／ 5 敵）／
@@ -3419,6 +3428,8 @@ public sealed class UnitTally
         AddHist(ref Dx327N, o.Dx327N); AddHist(ref Dx327Dens, o.Dx327Dens); AddHist(ref Dx327Dealt, o.Dx327Dealt); AddHist(ref Dx327Hits, o.Dx327Hits); AddHist(ref Dx327Kills, o.Dx327Kills); AddHist(ref Bc327New, o.Bc327New);   // 第327期
         Dx327Inverted += o.Dx327Inverted; Dx327Max = Math.Max(Dx327Max, o.Dx327Max); Dx327BallPowder += o.Dx327BallPowder; Dx327BallThick += o.Dx327BallThick; Dx327BallCharged += o.Dx327BallCharged; Dx327BallDensMax = Math.Max(Dx327BallDensMax, o.Dx327BallDensMax);
         Bat327Recharged += o.Bat327Recharged; Bat327Chains += o.Bat327Chains; Bat327Dry += o.Bat327Dry; Bc327FreshSkip += o.Bc327FreshSkip; Bc327Popped += o.Bc327Popped;
+        AddHist(ref Pb329HeadByTurn, o.Pb329HeadByTurn); AddHist(ref Pb329MarkedByTurn, o.Pb329MarkedByTurn); AddHist(ref Pb329PopDens, o.Pb329PopDens);   // 第329期
+        Pb329Heads += o.Pb329Heads; Pb329PopMarked += o.Pb329PopMarked; Pb329Chains += o.Pb329Chains; Pb329ChainRecv += o.Pb329ChainRecv; Pb329ChainMax = Math.Max(Pb329ChainMax, o.Pb329ChainMax); Pb329Fall += o.Pb329Fall; Pb329FarFell += o.Pb329FarFell; Pb329FarNew += o.Pb329FarNew;
         AddHist(ref ChargeBySrc, o.ChargeBySrc);
         // 第289期
         ChainOwn += o.ChainOwn; SwAsked += o.SwAsked; SwNoCharge += o.SwNoCharge; SwNoTarget += o.SwNoTarget; SwNested += o.SwNested;
@@ -4480,6 +4491,11 @@ public static class ShockGaugeLabels
     /// <c>Amount</c> ＝ 隣1体あたりの量（8 × n）／ <c>Slot</c> ＝ 濃さ n。直前に受け手への <c>Discharge</c>、直後に受け手の隣の駒それぞれの <c>Damage</c>（爆発は感電を弾けさせない）。
     /// </summary>
     public const string DustBurst = "粉塵爆発";
+    /// <summary>
+    /// 第329期（PB-b・<b>版のみ</b>）: 爆ぜた粉が隣に降り、敵の側の駒に粉の印が付いた（帯電はしない・濃さは上がらない）。<c>ActorId</c> ＝ 爆ぜた受け手 ／ <c>TargetId</c> ＝ 印の付いた駒 ／ <c>Amount</c> ＝ 1。
+    /// その爆発の隣の駒すべての <c>Damage</c>（ベニの結界の内側なら <c>Heal</c>）が並び終えた後に、印の付いた駒の数だけ続けて出る。粉塵爆発の出来事（<see cref="DustBurst"/>）の形は変えない。
+    /// </summary>
+    public const string DustFall = "粉が降る";
     /// <summary>粉の印が付いた（TP の版だけ・倒れるまで残る）。<c>ActorId</c> ＝ トウ（TP-b で伝染から付いたときは放電した駒）／ <c>TargetId</c> ＝ 印の付いた駒。</summary>
     public const string PowderMark = "粉の印";
     /// <summary>粉の印のある駒の放電で、帯電していない隣が帯電した（TP）。<c>ActorId</c> ＝ 放電した駒 ／ <c>TargetId</c> ＝ 新しく帯電した駒。直前にその駒の感電の <c>StatusGain</c>（<c>SpreadFromId</c> ＝ 放電した駒）。同じ連鎖ではもう弾けない。</summary>

@@ -826,6 +826,11 @@ public enum TraitId
     SilkBattery,        // 電池（クグ・糸玉の持ち主）: クグが帯電している間、連鎖で弾けたクグの糸玉をその連鎖が終わった直後に帯電し直す（クグの帯電は消費しない）（**札そのものは挙動を持たない**・engine の `ShockTrigger`）
     BeastChargeSpread,  // 隣帯電（ソム・生きている間）: 背いた召喚獣が弾けた放電は、帯電していない隣の駒も帯電させる（新しく帯電した駒は同じ連鎖では弾けない・第323期の伝染と同じ形）（**札そのものは挙動を持たない**・engine の `Discharge`）
 
+    // --- 第329期で足した札（指示書 design/PHASE329_POWDER_FUSE_SPEC.md）。PB はトウの版（保持者 0 枚・`DustBurst` と組む） ---
+    PowderBurstMarked,  // 粉が付いていれば爆ぜる（PB-a）: 粉塵爆発の条件を「濃さ n ≧ 1」から「敵の側で粉の印がある、または濃さ n ≧ 1」に広げ、量を隣すべてに 8 ×（1 ＋ n）にする（味方は濃さ ≧ 1 のときだけ）（**札そのものは挙動を持たない**・engine の `Discharge`）
+    PowderBurstFall,    // 爆ぜた粉が隣に降る（PB-b）: 粉塵爆発を浴びた敵の側の生きている駒に粉の印を付ける（帯電させない・濃さは上げない・同じ放電で二度は爆ぜない）（**札そのものは挙動を持たない**・engine の `DustExplode`）
+    PowderSpreadFar,    // 粉の舞う範囲を広げる（PB-c）: 粉が主目標の隣に舞うとき、その隣（主目標から2歩・主目標と1歩目の駒を除く）の敵にも舞う（帯電 ／ 濃さ ／ 印は1歩目と同じ規則・糸玉は1歩目のまま）（**札そのものは挙動を持たない**・engine の `PowderFar`）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -5750,6 +5755,8 @@ public sealed class ChargedPowderTrait : Trait
                 }
         // 第327期（DX）: 舞う粉は主目標の隣の糸玉にも落ちる。保持者がいなければ札の問い1つで抜ける。
         if (self.HasTrait(TraitId.ChargedPowderSpread) && self.HasTrait(TraitId.DustBurst)) ctx.PowderOnBalls(self, target);
+        // 第329期（PB-c）: 粉はさらにその隣（主目標から2歩）の敵にも舞う。保持者がいなければ札の問い1つで抜ける。
+        if (self.HasTrait(TraitId.ChargedPowderSpread) && self.HasTrait(TraitId.PowderSpreadFar)) ctx.PowderFar(self, target);
         if (!self.HasTrait(TraitId.ChargedPowderLeak)) return;
         foreach (UnitState a in ctx.LivingMembers(self.TeamId))
             if (a != self && FormationRules.AreAdjacent(self, a))
@@ -17541,6 +17548,9 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.DustBurst),                 // 第327期（粉塵爆発 DX・印だけ）
         new MarkOnlyTrait(TraitId.SilkBattery),               // 第327期（電池・クグ・印だけ）
         new MarkOnlyTrait(TraitId.BeastChargeSpread),         // 第327期（隣帯電・ソム・印だけ）
+        new MarkOnlyTrait(TraitId.PowderBurstMarked),         // 第329期（粉が付いていれば爆ぜる PB-a・印だけ）
+        new MarkOnlyTrait(TraitId.PowderBurstFall),           // 第329期（爆ぜた粉が隣に降る PB-b・印だけ）
+        new MarkOnlyTrait(TraitId.PowderSpreadFar),           // 第329期（粉の舞う範囲を広げる PB-c・印だけ）
         new SharePushTrait(TraitId.ShareSin),                 // 第313期（ドハ DP-c の手番）
         new AmplifierTrait(),
         new ContagionTrait(),
