@@ -9218,6 +9218,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Pellet)) _pelletLive = true;   // 第277期（豆鉄砲の一振り・1発の打点・再行動の上限）
         if (u.HasTrait(TraitId.Rupture)) _ruptureLive = true; // 第281期（炸裂の標の段・打点・乱射・敵の標の層）
         if (u.HasTrait(TraitId.Feathers)) _featherLive = true; // 第285期（羽の一振り・羽の書き込み・1発の打点）
+        if (u.HasTrait(TraitId.FeatherGrow) || u.HasTrait(TraitId.FeatherGrowUnmarked)) _featherGrowLive = true;   // 第339期（羽が毎ターン増える FG-a ／ FG-b）
         if (u.HasTrait(TraitId.FireArmor) || u.HasTrait(TraitId.Smolder)
             || u.HasTrait(TraitId.FireMend) || u.HasTrait(TraitId.FireFeed)) _fireArmorLive = true;   // 第234期（火の鎧・焼け残り）・第235期（火の癒し・焼き返し）
         if (u.HasTrait(TraitId.FireWard) || u.HasTrait(TraitId.FireWardAll)) _fireWardHolders.Add(u);             // 第238期（盾の配り）
@@ -16332,6 +16333,7 @@ public sealed class BattleContext
             int lost = Math.Max(0, before - Math.Max(0, pick.Hp));
             if (ally) { t.SprayAlly++; t.SprayAllyDealt += lost; if (!pick.IsAlive) t.SprayAllyKills++; }
             else { t.SprayFoe++; t.SprayFoeDealt += lost; }
+            t.NoteSpray339(_turn, ally, lost, ally && !pick.IsAlive);   // 第339期（計数のみ・ターンごとの乱射）
         }
         return true;
     }
@@ -16341,6 +16343,8 @@ public sealed class BattleContext
     // **保持者がいなければ `_featherLive` の比較1つで全部抜ける。** 標を追う発は乱数を引かない（標の段の `Preferred` の同値割りだけ）。乱射の発だけが引く。
     // =====================================================================================
     bool _featherLive;
+    /// <summary>第339期: 羽が増える札（FG-a ／ FG-b）の保持者がいる戦か。偽なら <see cref="FeatherGrow"/> は比較1つで抜ける。</summary>
+    bool _featherGrowLive;
     /// <summary>直前の羽の1発の的（流れた発の計数だけが読む・<b>計数専用</b>）。</summary>
     UnitState? _featherLast;
 
@@ -16369,6 +16373,8 @@ public sealed class BattleContext
     void FeatherVolley(UnitState actor)
     {
         UnitTally t = TallyOf(actor);
+        if (!AnyMarkedFoe(actor)) t.Fg339UnmarkedHeads++;   // 第339期（計数のみ・敵に標持ちのいない一振りの頭）
+        if (_featherGrowLive) FeatherGrow(actor, t);   // 第339期（FG-a ／ FG-b・手番の頭に羽が増える）
         int f = FeathersTrait.Count(actor);
         t.FeatherVolleys++;
         t.FeatherShots += f;
@@ -16428,6 +16434,25 @@ public sealed class BattleContext
                 Log($"    {actor.Name} の羽が {lost} 枚戻らなかった（{FeathersTrait.Count(actor)} 枚）", LogKind.Trigger);
             }
         }
+    }
+
+    /// <summary>
+    /// 第339期 FG-a ／ FG-b: ミサの手番の頭（羽の一振りの頭）に羽が <see cref="FeatherGrowTrait.Gain"/> 枚増える。FG-b は敵に標持ちが1体もいないときだけ。
+    /// <b>1ラウンドに1度</b>——そのラウンドの最初の一振りで増やすかを決め（私有キー <see cref="FeatherGrowTrait.RoundKey"/> にターンを書く）、再行動の2回目の一振りでは増えない。乱数を引かない。
+    /// </summary>
+    void FeatherGrow(UnitState actor, UnitTally t)
+    {
+        bool every = actor.HasTrait(TraitId.FeatherGrow);
+        if (!every && !actor.HasTrait(TraitId.FeatherGrowUnmarked)) return;
+        if (actor.RawCounter(FeatherGrowTrait.RoundKey) == _turn) return;
+        actor.SetCounter(FeatherGrowTrait.RoundKey, _turn);
+        if (!every && AnyMarkedFoe(actor)) return;
+        actor.SetCounter(FeathersTrait.ExtraKey, actor.RawCounter(FeathersTrait.ExtraKey) + FeatherGrowTrait.Gain);
+        int f = FeathersTrait.Count(actor);
+        t.Fg339Grows++;
+        if (f > t.FeatherMax) t.FeatherMax = f;
+        Log($"  {actor.Name} の羽が {FeatherGrowTrait.Gain} 枚増えた（{f} 枚）", LogKind.Trigger);
+        EmitFeather(FeatherLabels.Gain, actor, actor, f, slot: FeatherGrowTrait.Gain);   // 第339期・表示専用（書き手 ＝ ミサ自身・PartnerId なし・Slot ＝ 増えた枚数）
     }
 
     sealed class Volley

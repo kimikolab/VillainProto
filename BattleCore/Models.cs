@@ -2330,6 +2330,31 @@ public sealed class UnitTally
     /// </summary>
     public long Mi337MarkedDeaths, Mi337DeadLayers, Mi337DeadLayerMax, Mi337DeadNeighbors, Mi337Fires, Mi337Recipients, Mi337Layers, Mi337Lost, Mi337ChainMax, Mi337Feathers;
     /// <summary>
+    /// 第339期（<b>計数のみ</b>・羽が増える FG）。誰も読んで分岐しない。ミサ ＝ <c>Fg339UnmarkedHeads</c> 敵に標持ちのいない一振りの頭（規定でも数える）／ <c>Fg339Grows</c> 羽が増えた回数（版）／
+    /// 乱射のターンごとの内訳 <c>Fg339Spray</c>（発）／ <c>Fg339AllyHits</c>（味方に当たった発）／ <c>Fg339AllyDmg</c>（味方が減らした HP）——添字はターン（1..30・初めて書くときに作る）／
+    /// <c>Fg339AllyKillTurnSum</c> 乱射で味方が倒れたターンの和（倒れた数は <c>SprayAllyKills</c>）。
+    /// </summary>
+    public long Fg339UnmarkedHeads, Fg339Grows, Fg339AllyKillTurnSum;
+    public long[]? Fg339Spray, Fg339AllyHits, Fg339AllyDmg;
+    /// <summary>第339期（計数のみ）: 乱射の1発をターンごとに数える（羽の乱射 ／ 乱射の札の両方）。</summary>
+    public void NoteSpray339(int turn, bool ally, int lost, bool killed)
+    {
+        int i = Math.Clamp(turn, 0, Fg339Len - 1);
+        (Fg339Spray ??= new long[Fg339Len])[i]++;
+        if (!ally) return;
+        (Fg339AllyHits ??= new long[Fg339Len])[i]++;
+        (Fg339AllyDmg ??= new long[Fg339Len])[i] += lost;
+        if (killed) Fg339AllyKillTurnSum += turn;
+    }
+    public const int Fg339Len = 32;
+    static long[]? AddArr(long[]? a, long[]? b)
+    {
+        if (b is null) return a;
+        a ??= new long[b.Length];
+        for (int i = 0; i < b.Length; i++) a[i] += b[i];
+        return a;
+    }
+    /// <summary>
     /// 第297期（<b>計数専用</b>・分かち）: <c>SharedAway</c> この駒の痛みを分かちが引き受けた実額（相手ごとの内訳・痛みをくれた側に付く）／ <c>ShareTakenHits</c> ドハが中継の一撃を受けた回数（ドハの側）。
     /// 版（DH-a ／ DH-b ／ DH-t）: ドハ ＝ <c>ShareGives</c> ／ <c>ShareGiven</c> 力を配った回数・量 ／ <c>ShareGiftAccrued</c> 累計に入れた量 ／ <c>ShareGifts</c> 控えた手番 ／
     /// <c>ShareGiftCapped</c> 1ターン1回で止まった ／ <c>ShareGiftNoTarget</c> 相手がいない ／ <c>ShareGiftSkipped</c> 控えた相手が倒れていた ／
@@ -3557,6 +3582,8 @@ public sealed class UnitTally
         Dm336PieceDeaths += o.Dm336PieceDeaths; Dm336Reentry += o.Dm336Reentry;   // 第336期
         Mi337MarkedDeaths += o.Mi337MarkedDeaths; Mi337DeadLayers += o.Mi337DeadLayers; Mi337DeadLayerMax = Math.Max(Mi337DeadLayerMax, o.Mi337DeadLayerMax); Mi337DeadNeighbors += o.Mi337DeadNeighbors;   // 第337期
         Mi337Fires += o.Mi337Fires; Mi337Recipients += o.Mi337Recipients; Mi337Layers += o.Mi337Layers; Mi337Lost += o.Mi337Lost; Mi337ChainMax = Math.Max(Mi337ChainMax, o.Mi337ChainMax); Mi337Feathers += o.Mi337Feathers;
+        Fg339UnmarkedHeads += o.Fg339UnmarkedHeads; Fg339Grows += o.Fg339Grows; Fg339AllyKillTurnSum += o.Fg339AllyKillTurnSum;   // 第339期
+        Fg339Spray = AddArr(Fg339Spray, o.Fg339Spray); Fg339AllyHits = AddArr(Fg339AllyHits, o.Fg339AllyHits); Fg339AllyDmg = AddArr(Fg339AllyDmg, o.Fg339AllyDmg);
         SharedAway += o.SharedAway; ShareTakenHits += o.ShareTakenHits; ShareGives += o.ShareGives; ShareGiven += o.ShareGiven; ShareGiftAccrued += o.ShareGiftAccrued;   // 第297期
         ShareGifts += o.ShareGifts; ShareGiftCapped += o.ShareGiftCapped; ShareGiftNoTarget += o.ShareGiftNoTarget; ShareGiftSkipped += o.ShareGiftSkipped;
         ShareGot += o.ShareGot; ShareGiftGot += o.ShareGiftGot; ShareGiftTurns += o.ShareGiftTurns; ShareGiftAttacks += o.ShareGiftAttacks;

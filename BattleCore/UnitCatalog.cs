@@ -5522,6 +5522,23 @@ public static class UnitCatalog
     /// <summary>第337期 MI-b ＋ 羽 の、ミサの側。規定のミサ ＋ <see cref="TraitId.MarkInheritFeathers"/>（引き継ぎで移った層の数だけ羽が増える）。ヒサは <see cref="HisaMIb"/> と組む。</summary>
     public static readonly UnitDef MisaMIf = With337(Tome, TraitId.MarkInheritFeathers, "。散った恨みの数だけ、羽も増える");
 
+    // ---------------------------------------------------------------------------------
+    // 第339期（指示書 design/PHASE339_MISA_FEATHER_GROW_SPEC.md §2）—— ミサの羽が毎ターン増える（FG）。規定のミサから `FeatherLoss`（乱射した数だけ羽を失う）を外し、札を1枚足す。
+    // 対照（`All` ／ `Retired` ／ `Presets` の `Compare` ／ `Playtest` に入れない・`Presets.Versions` の「版・」の台だけが使う・採否はポン）。文面はマイナスだけを差し替える（叩き台）。
+    // ---------------------------------------------------------------------------------
+    static UnitDef With339(UnitDef b, TraitId card, string minus) => new()
+    {
+        Id = b.Id, Name = b.Name, MaxHp = b.MaxHp, Attack = b.Attack, Speed = b.Speed, Advances = b.Advances, Pattern = b.Pattern,
+        Traits = b.Traits.Where(t => t != TraitId.FeatherLoss).Append(card).ToArray(), Actions = b.Actions,
+        PlusText = b.PlusText, MinusText = minus, Flavor = b.Flavor,
+    };
+
+    /// <summary>第339期 FG-a（毎ターン増える）。規定のミサ − <see cref="TraitId.FeatherLoss"/> ＋ <see cref="TraitId.FeatherGrow"/>（手番の頭に羽が3枚増える・標の有無を問わない・乱射しても減らない）。</summary>
+    public static readonly UnitDef TomeFGa = With339(Tome, TraitId.FeatherGrow, "羽は毎ターン3枚ずつ増えていく。追う標が無い羽は、敵味方構わず飛ぶ。味方が指差されても、撃つ");
+
+    /// <summary>第339期 FG-b（標が無いときだけ増える）。規定のミサ − <see cref="TraitId.FeatherLoss"/> ＋ <see cref="TraitId.FeatherGrowUnmarked"/>（手番の頭に、敵に標持ちが1体もいなければ羽が3枚増える・乱射しても減らない）。</summary>
+    public static readonly UnitDef TomeFGb = With339(Tome, TraitId.FeatherGrowUnmarked, "標を追えない間、羽は毎ターン3枚ずつ増えていく。追う標が無い羽は、敵味方構わず飛ぶ。味方が指差されても、撃つ");
+
     /// <summary>第285期 M-b（乱射した数だけ羽を失う・下限 1）。<see cref="TomeMa"/> ＋ <see cref="TraitId.FeatherLoss"/> の1札だけが違う。<b>第286〜298期の規定</b>。
     /// 第299期に MF-b を規定にしたので、旧の規定の定義を明示的に持つ（第298期までは <c>TomeMb = Tome</c> の別名だった）。過去の器具はこちらに固定する。
     /// 第298期の版（MF-a ／ MF-b）はこちらから作る（静的初期化の順で、版より前に置く）。</summary>

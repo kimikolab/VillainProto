@@ -855,6 +855,10 @@ public enum TraitId
     MarkInheritOne,     // 隣へ全部（MI-a・ヒサ）: 標の付いた敵が倒れると、その層をすべて、隣の生きている敵のうち層の最も多い1体へ移す（同じなら席の若い方）（**札そのものは挙動を持たない**・engine の `MarkInherit`）
     MarkInheritFeathers,// 散った恨みの羽（MI-b ＋ 羽・ミサ）: 引き継ぎで移った層の数だけ、ミサの羽が増える（羽の在庫だけ・標が付いた瞬間の羽は飛ばない）（**札そのものは挙動を持たない**・engine の `MarkInherit`）
 
+    // --- 第339期で足した札（指示書 design/PHASE339_MISA_FEATHER_GROW_SPEC.md §2）。FG はミサの版（保持者 0 枚）。版は `FeatherLoss` を外して足す ---
+    FeatherGrow,        // 羽が毎ターン増える（FG-a・ミサ）: ミサの手番の頭に羽が3枚増える（標の有無を問わない・1ラウンドに1度）（engine の `FeatherVolley` の頭）
+    FeatherGrowUnmarked,// 標が無いときだけ増える（FG-b・ミサ）: ミサの手番の頭に、敵に標持ちが1体もいなければ羽が3枚増える（1ラウンドに1度）（engine の `FeatherVolley` の頭）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -5040,6 +5044,26 @@ public sealed class FeathersTrait : Trait
 
     /// <summary>部隊戦の境界で羽を初期に戻す（標は境界で消えるので、羽だけを持ち越すと書き込みの無い在庫が残る）。</summary>
     public override void OnCarryOver(UnitState self) => self.SetCounter(ExtraKey, 0);
+}
+
+/// <summary>
+/// 羽が増える（第339期・FG-a ／ FG-b・ミサの版）。<b>増やすのは engine</b>（<c>FeatherVolley</c> の頭・<c>FeatherGrow</c>）——札は数値と私有の帳簿だけを持つ。
+/// FG-a（<see cref="TraitId.FeatherGrow"/>）はミサの手番の頭に羽が <see cref="Gain"/> 枚増える・FG-b（<see cref="TraitId.FeatherGrowUnmarked"/>）は敵に標持ちが1体もいないときだけ。
+/// <b>1ラウンドに1度</b>（再行動で2回目の一振りが来ても増えない・私有キー <see cref="RoundKey"/> にその手番のターンを持つ）。部隊戦の境界で帳簿を捨てる（羽は <see cref="FeathersTrait.OnCarryOver"/> が初期に戻す）。
+/// </summary>
+public sealed class FeatherGrowTrait : Trait
+{
+    readonly TraitId _id;
+    public FeatherGrowTrait(TraitId id) => _id = id;
+    public override TraitId Id => _id;
+
+    /// <summary>1回に増える羽（指示書 §2）。</summary>
+    public const int Gain = 3;
+
+    /// <summary>増やすかを決めたターン（私有キー・`StatusKeys.All` に入れない）。</summary>
+    public const string RoundKey = "featherGrowTurn";
+
+    public override void OnCarryOver(UnitState self) => self.SetCounter(RoundKey, 0);
 }
 
 /// <summary>羽を失う（第285期・M-b）。<b>札そのものは挙動を持たない</b>（engine の <c>FeatherVolley</c> が保持を読む）。外せば M-a。</summary>
@@ -17663,6 +17687,8 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.MarkInheritSpread),         // 第337期（周りへ散る MI-b・ヒサ・印だけ）
         new MarkOnlyTrait(TraitId.MarkInheritOne),            // 第337期（隣へ全部 MI-a・ヒサ・印だけ）
         new MarkOnlyTrait(TraitId.MarkInheritFeathers),       // 第337期（散った恨みの羽・ミサ・印だけ）
+        new FeatherGrowTrait(TraitId.FeatherGrow),            // 第339期（羽が毎ターン増える FG-a・ミサ）
+        new FeatherGrowTrait(TraitId.FeatherGrowUnmarked),    // 第339期（標が無いときだけ増える FG-b・ミサ）
         new SharePushTrait(TraitId.ShareSin),                 // 第313期（ドハ DP-c の手番）
         new AmplifierTrait(),
         new ContagionTrait(),

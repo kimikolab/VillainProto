@@ -1390,3 +1390,12 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 
 - `HandleDeath`（延焼の後）に `MarkInherit`（`_miLive` で短絡）: 標（層 ≧ 1）の付いた駒が倒れると、相手の陣営の札 `MarkInheritSpread`（MI-b）／ `MarkInheritOne`（MI-a）を持つ生きているヒサが層を隣の生きている駒へ移す（`SetCounter` を直に・`LayerMark` を通さない）。`_miWriting` の間は `NoteStatusGain` が標が付いた瞬間の羽（MF）を積まない。札 `MarkInheritFeathers`（ミサ）は移った層の数だけ羽の在庫を増やす。乱数を引かない。
 - 表示専用の出来事 `BattleEventKind.MarkInherit`（`MarkInheritLabels` 散る ／ 背負う ／ 受ける）。計数のみ `UnitTally.Mi337*`（標の付いた敵の死はヒサの帳簿で規定でも数える）。版 `HisaMIb` ／ `HisaMIa` ／ `MisaMIf`。器具: `mark337`。
+
+## 第338期 —— 標の引き継ぎ（MI-b）を規定に
+
+- engine は第337期のまま（窓口は足していない）。規定のヒサ `UnitCatalog.Hisa` ＝ `HisaH337`（第322〜337期の規定・明示の定義に）＋ `MarkInheritSpread`。固定の口 `Common.PinH337` ／ `Pin337` ／ `CompareBuildsH337` ／ `PlaytestH337`（古い口の終端 `PinD335` の最後に `PinH337`）・`IsHisaNow`。器具: `settle338`。
+
+## 第339期 —— ミサの羽が毎ターン増える（FG-a ／ FG-b・版）
+
+- `FeatherVolley` の頭に `FeatherGrow`（`_featherGrowLive` で短絡）: 札 `FeatherGrow`（FG-a）は羽が `FeatherGrowTrait.Gain`（3）枚増える・`FeatherGrowUnmarked`（FG-b）は敵に標持ちが1体もいないときだけ。**1ラウンドに1度**（私有キー `FeatherGrowTrait.RoundKey` にターンを書く・再行動の2回目の一振りでは増えない・`OnCarryOver` で捨てる）。乱数を引かない。版は `FeatherLoss` を外す（乱射しても減らない）。
+- 表示は既存の `Feather`「増えた」（`ActorId` ＝ `TargetId` ＝ ミサ・`PartnerId` なし・`Slot` ＝ 3）。計数のみ `UnitTally.Fg339UnmarkedHeads`（敵に標持ちのいない一振りの頭・規定でも数える）／ `Fg339Grows` ／ `NoteSpray339`（乱射のターンごとの発 ／ 味方に当たった発 ／ 味方が減らした HP・`SprayShot` の中・遅延確保の配列）。版 `TomeFGa` ／ `TomeFGb`。器具: `grow339`。

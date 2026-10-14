@@ -905,10 +905,14 @@ public static class Presets
     /// 第335期: ZC-a を規定にしたので4台を外し、ドハのマイナス ／ ゴルムの力の行き先（DM-a ／ DM-c ／ DM-c＋ゴルム ／ GL）の4台を足した（並びは守り型）。
     /// 第336期: DM-a を規定にしたので4台を外した（ポンの台は規定の駒のまま残す）。
     /// 第337期: 標の引き継ぎ（MI-b ／ MI-b＋羽 ／ MI-a）の3台を足した（並びは「試遊・標 守り型」・ヒサ ／ ミサだけ版）。
-    /// 第338期: MI-b を規定にしたので3台を外した（ポンの台は規定の駒のまま残す）。</para>
+    /// 第338期: MI-b を規定にしたので3台を外した（ポンの台は規定の駒のまま残す）。
+    /// 第339期: ミサの羽が毎ターン増える（FG-a ／ FG-b）の3台を足した（守り型の並びでミサだけ版・「書き手なし」は守り型のザン ／ ヒサをドルガ ／ バンに替えた標の書き手のいない台）。</para>
     /// </summary>
     public static (string Name, Formation F)[] Versions => new (string, Formation)[]
     {
         ("試遊・感電 ポンの台", Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Shiga, center: UnitCatalog.Tou, back1: UnitCatalog.Kugu, back3: UnitCatalog.Som)),
+        ("版・FG-a 守り型", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Zan, center: UnitCatalog.Doha, back1: UnitCatalog.TomeFGa, back3: UnitCatalog.Hisa)),
+        ("版・FG-b 守り型", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Zan, center: UnitCatalog.Doha, back1: UnitCatalog.TomeFGb, back3: UnitCatalog.Hisa)),
+        ("版・FG-a 書き手なし", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Dolga, center: UnitCatalog.Doha, back1: UnitCatalog.TomeFGa, back3: UnitCatalog.Ban)),
     };
 }
