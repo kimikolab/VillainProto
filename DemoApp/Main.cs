@@ -2225,7 +2225,8 @@ public partial class Main : Control
         {
             BattleEvent e = events[i];
             bool rangeShield = e.Kind == BattleEventKind.Intercept && e.Text == InterceptLabels.RangeShield;
-            bool off = e.Reaction || e.Relayed || (e.Kind == BattleEventKind.Intercept && !rangeShield);
+            bool off = e.Reaction && !IsElectricEffectDamage(i)
+                || e.Relayed || (e.Kind == BattleEventKind.Intercept && !rangeShield);
 
             if (e.Kind == BattleEventKind.TurnStart)
             {
@@ -2403,9 +2404,11 @@ public partial class Main : Control
     /// </summary>
     private bool StartsDirectReaction(int eventIndex, BattleEvent damage)
     {
+        if (IsElectricEffectDamage(eventIndex)) return false;
         for (int i = eventIndex - 1; i >= 0; i--)
         {
             BattleEvent previous = _result!.Events[i];
+            if (IsElectricEffectDamage(i)) continue;
             if (previous.Kind == BattleEventKind.TurnStart) return true;
             if (previous.Kind == BattleEventKind.Attack)
                 return !(previous.Reaction && previous.ActorId == damage.ActorId);

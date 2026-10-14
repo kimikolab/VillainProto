@@ -6,6 +6,28 @@ public partial class Main
     private DustBurstPresentation _dustBurst = new();
     private bool _dustChainFastEvent;
 
+    // 反撃の中で発生した放電・粉の着弾もReactionを引き継ぐ。
+    // 爆発の出どころを追加攻撃の発動者としてカットインさせない。
+    private bool IsElectricEffectDamage(int index)
+    {
+        var events = _result!.Events;
+        var hit = events[index];
+        if (hit.Kind != BattleEventKind.Damage) return false;
+        if (_dustBurst.DamageMembers.Contains(index) || DischargePresentation.Cause(events, index) is not null)
+            return true;
+        for (int i = index - 1; i >= 0; i--)
+        {
+            var cue = events[i];
+            if (cue.Kind == BattleEventKind.ShockGauge)
+                return cue.Text == ShockGaugeLabels.DenseBurn
+                    && cue.TargetId == hit.ActorId && cue.TargetId == hit.TargetId;
+            if (cue.Kind is BattleEventKind.Damage or BattleEventKind.Parry or BattleEventKind.Heal
+                or BattleEventKind.HealBlocked or BattleEventKind.Discharge or BattleEventKind.ShockSpent
+                or BattleEventKind.Attack or BattleEventKind.Skill or BattleEventKind.TurnStart) break;
+        }
+        return false;
+    }
+
     private void StartDustBurst(int index)
     {
         _dustChainFastEvent = _dustBurst.Members.Contains(index);

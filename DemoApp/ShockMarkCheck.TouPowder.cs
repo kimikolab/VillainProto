@@ -108,6 +108,8 @@ public partial class ShockMarkCheck
             seed, stage, name });
         var result = (BattleResult)Read("_result")!;
         var field = (BattlefieldView3D)Read("_battleField")!;
+        bool dustReaction = OS.GetCmdlineUserArgs().Contains("--dust-reaction");
+        if (dustReaction) CheckDustReactionPlan(main, result);
         bool adjacent = name.EndsWith("隣あり") || name == "試遊・感電 ポンの台";
         if (stage == 0)
         {
@@ -121,6 +123,11 @@ public partial class ShockMarkCheck
         {
             for (int k = 0; k < 2400 && (bool)Read("_playing")!; k++)
             {
+                if (dustReaction && field.DustChain is not null && !field.DustBurstCompletion.IsCompleted)
+                {
+                    var cutIn = (Control)typeof(BattlefieldView3D).GetField("_bonusAttackCutIn", Flags)!.GetValue(field)!;
+                    Require(!cutIn.Visible, "粉塵連鎖中は敵の追加攻撃カットインで止めない");
+                }
                 if (live && !checkedPause && (dustLive ? field.DustChain is not null && !field.DustBurstCompletion.IsCompleted : !field.PowderArrival.IsCompleted))
                 {
                     var arrival = dustLive ? field.DustBurstCompletion : field.PowderArrival;
@@ -151,6 +158,32 @@ public partial class ShockMarkCheck
         }
         if (live) Require(checkedPause, "実台本の粉の到着待ちで停止を確認");
         main.QueueFree(); await Wait(.2);
+    }
+
+    private static void CheckDustReactionPlan(Main main, BattleResult result)
+    {
+        var effect = typeof(Main).GetMethod("IsElectricEffectDamage", Flags)!;
+        var direct = typeof(Main).GetMethod("StartsDirectReaction", Flags)!;
+        var beats = (System.Collections.IList)typeof(Main).GetField("_beatByIndex", Flags)!.GetValue(main)!;
+        int effects = 0, attacks = 0;
+        for (int i = 0; i < result.Events.Count; i++)
+        {
+            var e = result.Events[i];
+            if (!e.Reaction) continue;
+            if ((bool)effect.Invoke(main, new object[] { i })!)
+            {
+                Require(!(bool)direct.Invoke(main, new object[] { i, e })!, "粉・放電の着弾は追加攻撃を発動しない");
+                Require(beats[i]!.ToString() != "OffTurn", "粉・放電の着弾に追加攻撃の帯を出さない");
+                effects++;
+            }
+            if (e.Kind == BattleEventKind.Attack)
+            {
+                Require(beats[i]!.ToString() == "OffTurn", "実際の追加攻撃は割り込みのまま");
+                attacks++;
+            }
+        }
+        Require(effects > 0 && attacks > 0, "seed 7に反撃由来の粉塵連鎖と本物の追加攻撃が共存する");
+        GD.Print($"DUST_REACTION_PLAN_OK effects={effects} attacks={attacks}");
     }
 
     private static void CheckTouPowderReplay(BattlefieldView3D field, BattleResult result)
