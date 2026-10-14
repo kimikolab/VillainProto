@@ -55,18 +55,19 @@ public partial class DustBurstChain3D : Node3D
         var process = (ParticleProcessMaterial)particles.ProcessMaterial.Duplicate(true);
         particles.ProcessMaterial = process; process.Gravity = Vector3.Zero;
         float level = PowderBurnBurst3D.Level(density);
-        process.InitialVelocityMin = 1.0f; process.InitialVelocityMax = 1.6f + level * .15f;
-        process.ScaleMin = .045f; process.ScaleMax = .075f + level * .006f;
+        process.InitialVelocityMin = 2.8f; process.InitialVelocityMax = 5.2f + level * .30f;
+        process.ScaleMin = .10f; process.ScaleMax = .17f + level * .012f;
         process.Color = ally ? new Color(.75f, .75f, .75f) : Colors.White;
         process.ColorRamp = new GradientTexture1D { Gradient = new Gradient {
             Offsets = new[] { 0f, .25f, 1f },
-            Colors = new[] { new Color("ffd1d8"), new Color("ff3045"), new Color("a20b2700") },
+            Colors = new[] { new Color("ffe7e1"), new Color("ff3a26"), new Color("d80d2f00") },
         } };
         particles.MaterialOverride = new StandardMaterial3D {
             ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, VertexColorUseAsAlbedo = true,
-            Transparency = BaseMaterial3D.TransparencyEnum.Alpha, NoDepthTest = true, RenderPriority = 2,
+            VertexColorIsSrgb = true,
+            Transparency = BaseMaterial3D.TransparencyEnum.Alpha, NoDepthTest = true, RenderPriority = 4,
         };
-        particles.Amount = 6 + (int)(level * 2); particles.Lifetime = .15; particles.OneShot = true;
+        particles.Amount = 18 + (int)(level * 4); particles.Lifetime = .23; particles.OneShot = true;
         particles.Emitting = false; particles.LocalCoords = true; particles.UseFixedSeed = true; particles.Seed = 328;
         AddChild(particles); particles.GlobalPosition = point; particles.Hide();
         _particles.Add((at, particles, false));

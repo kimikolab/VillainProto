@@ -88,6 +88,7 @@ public partial class ShockMarkCheck
                     await Wait(.6 / speed + .15);
                     var frames = capture.GetBuffer(capture.GetFramesAvailable());
                     float peak = frames.Length == 0 ? 0 : frames.Max(v => Math.Max(Math.Abs(v.X), Math.Abs(v.Y)));
+                    GD.Print($"DUST_BURST_MIX density={density} speed={speed} peak={peak:F3} sounds={audio.DustCracklePlays - played} fps={Engine.GetFramesPerSecond()}");
                     Require(peak > .04f && peak < .95f && audio.DustCracklePlays - played >= 2,
                         "倍速でも軽い連続破裂音が最終出力まで複数回届き、クリップしない");
                     GD.Print($"DUST_BURST_MIX_OK density={density} speed={speed} peak={peak:F3} sounds={audio.DustCracklePlays - played}");

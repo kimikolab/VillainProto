@@ -25,8 +25,8 @@ public partial class PowderBurnBurst3D : Node3D
         _compact = compact;
         _right = camera.GlobalBasis.X; _up = camera.GlobalBasis.Y; _front = camera.GlobalBasis.Z;
         float level = Level(density);
-        Radius = compact ? .20f + level * .055f : .62f + level * .23f;
-        RayCount = compact ? 8 + (int)(level * 3) : 16 + (int)(level * 7);
+        Radius = compact ? .60f + level * .17f : .62f + level * .23f;
+        RayCount = compact ? 22 + (int)(level * 6) : 16 + (int)(level * 7);
         PulseCount = compact ? 1 + Math.Min(3, (int)(level / 1.5f)) : SizeTier(density);
         Duration = compact ? .15f + (PulseCount - 1) * .045f : DurationFor(density);
         AddChild(new MeshInstance3D {
@@ -34,13 +34,15 @@ public partial class PowderBurnBurst3D : Node3D
             MaterialOverride = new StandardMaterial3D {
                 ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
                 Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
-                BlendMode = BaseMaterial3D.BlendModeEnum.Add,
-                VertexColorUseAsAlbedo = true, CullMode = BaseMaterial3D.CullModeEnum.Disabled,
-                NoDepthTest = true, RenderPriority = 2,
+                // 爆竹の外縁は加算で白く薄めず、草原と青い雷の上でも赤を残す。
+                BlendMode = compact ? BaseMaterial3D.BlendModeEnum.Mix : BaseMaterial3D.BlendModeEnum.Add,
+                VertexColorUseAsAlbedo = true, VertexColorIsSrgb = compact,
+                CullMode = BaseMaterial3D.CullModeEnum.Disabled,
+                NoDepthTest = true, RenderPriority = compact ? 4 : 2,
             }, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
         });
         _flash = ShockMarkFx.Sprite(this, GlobalPosition, ShockMarkFx.Halo,
-            compact ? .25f + level * .035f : .72f + level * .10f, Colors.White);
+            compact ? .95f + level * .16f : .72f + level * .10f, Colors.White);
         _flash.NoDepthTest = true; _flash.RenderPriority = 3;
     }
 
@@ -57,7 +59,7 @@ public partial class PowderBurnBurst3D : Node3D
             if (elapsed < 0 || elapsed > .68f) continue;
             float life = _compact ? .15f : .46f + pulse * .035f;
             float fade = Math.Max(0, 1 - elapsed / life);
-            flash += MathF.Exp(-elapsed * (_compact ? 30 : 13)) * (pulse == 0 ? 1 : .65f);
+            flash += MathF.Exp(-elapsed * (_compact ? 18 : 13)) * (pulse == 0 ? 1 : .65f);
             for (int i = 0; i < RayCount; i++)
             {
                 float rayAge = elapsed - i % 7 * .004f;
@@ -66,37 +68,56 @@ public partial class PowderBurnBurst3D : Node3D
                 float varied = Variation(i + pulse * 71);
                 Vector3 direction = _right * Mathf.Cos(angle) + _up * Mathf.Sin(angle);
                 float length = Radius * (.38f + varied * .82f) * (i % 9 == 0 ? 1.25f : 1);
-                float head = .08f + length * (1 - MathF.Exp(-rayAge * 15));
+                float head = .08f + length * (1 - MathF.Exp(-rayAge * (_compact ? 48 : 15)));
                 float tail = Math.Max(.07f, head - length * (.70f - Math.Min(.5f, rayAge * .60f)));
                 float brightness = fade * (.65f + varied * .35f) * Brightness;
+                if (_compact && fade > 0) brightness = Math.Min(1, fade / .35f) * Brightness;
                 if (brightness <= 0) continue;
                 Vector3 a = center + direction * tail;
                 Vector3 b = center + direction * head;
-                float width = (i % 9 == 0 ? .020f : .008f) * (1 + Radius * .16f) * (_compact ? .65f : 1);
+                float width = (i % 9 == 0 ? .020f : .008f) * (1 + Radius * .16f) * (_compact ? 1.65f : 1);
                 // 外縁は深紅、針は朱赤、細い芯は赤みの白。麻痺の黄色と区別する。
-                Needle(a, b, width * 3.0f, new Color(new Color("d81935"), brightness * .24f));
-                Needle(a, b, width, new Color(new Color("ff3045"), brightness));
-                Needle(a, b, width * .28f, new Color(new Color("ffd1d8"), brightness * .95f));
-                if (i % 3 == 0)
+                Needle(a, b, width * 3.0f, new Color(new Color(_compact ? "e50c27" : "d81935"),
+                    brightness * (_compact ? .80f : .24f)));
+                Needle(a, b, width, new Color(new Color(_compact ? "ff3a26" : "ff3045"), brightness));
+                if (!_compact || i % 4 == 0)
+                    Needle(a, b, width * (_compact ? .16f : .28f),
+                        new Color(new Color(_compact ? "ffe7e1" : "ffd1d8"), brightness * .95f));
+                if (i % (_compact ? 2 : 3) == 0)
                 {
                     Vector3 grain = center + direction * (head + .10f);
-                    Diamond(grain, .018f + varied * .016f, new Color(new Color("ff596a"), brightness));
+                    Diamond(grain, (_compact ? .035f : .018f) + varied * .016f,
+                        new Color(new Color(_compact ? "ff4020" : "ff596a"), brightness));
+                    if (_compact && i % 4 == 0)
+                    {
+                        // 飛び散る粒にも短い十字の輝きを添えて、赤い粉の破裂を読ませる。
+                        Needle(grain - _up * .08f, grain + _up * .08f, .012f,
+                            new Color(new Color("fff0ec"), brightness));
+                    }
                 }
             }
             // 薄い衝撃の輪が胴から広がり、発火点と広がりを一緒に読めるようにする。
-            float ringRadius = Radius * (.16f + elapsed * .75f);
-            float ringFade = Math.Max(0, 1 - elapsed / (_compact ? .12f : .32f)) * .48f * Brightness;
+            float ringRadius = Radius * (.16f + elapsed * (_compact ? 3.5f : .75f));
+            float ringFade = Math.Max(0, 1 - elapsed / (_compact ? .12f : .32f))
+                * (_compact ? .85f : .48f) * Brightness;
             if (ringFade > 0)
                 for (int i = 0; i < 64; i++)
                 {
                     Vector3 Point(int k) => center + (_right * Mathf.Cos(k * Mathf.Tau / 64)
                         + _up * Mathf.Sin(k * Mathf.Tau / 64)) * ringRadius;
-                    Needle(Point(i), Point(i + 1), .006f, new Color(new Color("ff3045"), ringFade));
+                    Needle(Point(i), Point(i + 1), _compact ? .018f : .006f,
+                        new Color(new Color("ff3045"), ringFade));
                 }
+            if (_compact)
+            {
+                float core = Math.Max(0, 1 - elapsed / .09f) * Brightness;
+                Diamond(center, Radius * (.13f + core * .09f), new Color(new Color("ff3a26"), core));
+                Diamond(center, Radius * .05f, new Color(new Color("fff0ec"), core));
+            }
         }
         if (_drawing) _mesh.SurfaceEnd();
         _flash.GlobalPosition = center;
-        _flash.Modulate = new Color(new Color("ffaaa8"), Math.Min(.95f, flash) * Brightness);
+        _flash.Modulate = new Color(new Color(_compact ? "ff1f35" : "ffaaa8"), Math.Min(.95f, flash) * Brightness);
         _flash.Scale = Vector3.One * (1 + Math.Min(age, .20f) * 1.8f);
     }
 
