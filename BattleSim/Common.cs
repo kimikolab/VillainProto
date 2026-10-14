@@ -184,7 +184,7 @@ public static Formation Pin299(Formation f)
 {
     var g = f.Clone();
     foreach ((int slot, UnitDef d) in f.Occupied())
-        g[slot] = IsMisaNow(d) ? UnitCatalog.TomeMb : ReferenceEquals(d, UnitCatalog.Zan) ? UnitCatalog.ZanZN0 : ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaHKb   // 第334期: 第299〜333期の規定（`TomeH333`・内側の口が先に替えた駒）も
+        g[slot] = IsMisaNow(d) ? UnitCatalog.TomeMb : IsZanNow(d) ? UnitCatalog.ZanZN0 : ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaHKb   // 第335期: ザンは `ZanH334` も・第334期: 第299〜333期の規定（`TomeH333`・内側の口が先に替えた駒）も
                   : ReferenceEquals(d, UnitCatalog.Sora) ? UnitCatalog.SoraSRs : PinDS316(d);   // 第301期: ソラも（矢面は剥がさない の前）・第317期: ドハ ／ シガも
     return g;
 }
@@ -197,7 +197,7 @@ public static Formation Pin300(Formation f)
 {
     var g = f.Clone();
     foreach ((int slot, UnitDef d) in f.Occupied())
-        g[slot] = ReferenceEquals(d, UnitCatalog.Zan) ? UnitCatalog.ZanZNb : ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaHKs
+        g[slot] = IsZanNow(d) ? UnitCatalog.ZanZNb : ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaHKs   // 第335期: ザンは `ZanH334` も
                   : ReferenceEquals(d, UnitCatalog.Sora) ? UnitCatalog.SoraSRs : PinDS316(d);   // 第301期: ソラも（矢面は剥がさない の前）・第317期: ドハ ／ シガも
     return g;
 }
@@ -210,7 +210,7 @@ public static Formation Pin301(Formation f)
 {
     var g = f.Clone();
     foreach ((int slot, UnitDef d) in f.Occupied())
-        g[slot] = ReferenceEquals(d, UnitCatalog.Zan) ? UnitCatalog.ZanZMa : ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaHKf
+        g[slot] = IsZanNow(d) ? UnitCatalog.ZanZMa : ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaHKf   // 第335期: ザンは `ZanH334` も
                   : ReferenceEquals(d, UnitCatalog.Sora) ? UnitCatalog.SoraSRs : PinDS316(d);   // 第317期: ドハ ／ シガも
     return g;
 }
@@ -463,7 +463,31 @@ public static (string Name, Formation F)[] PlaytestH332 => Presets.Playtest.Sele
 /// それより前の固定の口（`PinS332` ／ `PinTK331` ／ `PinT328` ／ `PinTK327` ／ `PinT326` ／ 古い口の終端 `PinTKK324`）も最後にここを通す（第299〜333期はミサが変わっていない）。
 /// `Pin299` は先に規定のミサを第286〜298期の規定（`TomeMb`）へ替えるので届かない。
 /// </summary>
-public static UnitDef PinM333(UnitDef d) => ReferenceEquals(d, UnitCatalog.Tome) ? UnitCatalog.TomeH333 : d;
+public static UnitDef PinM333(UnitDef d) => ReferenceEquals(d, UnitCatalog.Tome) ? UnitCatalog.TomeH333 : PinZ334(d);   // 第335期: 規定のザンも（古い口の終端）
+
+/// <summary>
+/// 第335期: 規定のザン（ZC-a・中継では出ない）を第301〜334期の規定（`ZanH334`）に替える。ほかの駒はそのまま返す。
+/// それより前の固定の口（`PinM333` を最後に通す口すべて＝ `PinS332` ／ `PinTK331` ／ `PinT328` ／ `PinTK327` ／ `PinT326` ／ `PinTKK324`）もここを通る（第301〜334期はザンが変わっていない）。
+/// ザンをもっと古い規定へ替える口（`Pin299` ／ `Pin300` ／ `Pin301` ／ `guard294` ほか）は `IsZanNow` で `ZanH334` も受ける。
+/// </summary>
+public static UnitDef PinZ334(UnitDef d) => ReferenceEquals(d, UnitCatalog.Zan) ? UnitCatalog.ZanH334 : d;
+
+/// <summary>第335期: 規定のザンか、第301〜334期の規定（`ZanH334`・`PinZ334` を通った後）か。</summary>
+public static bool IsZanNow(UnitDef d) => ReferenceEquals(d, UnitCatalog.Zan) || ReferenceEquals(d, UnitCatalog.ZanH334);
+
+/// <summary>第335期: ザンの ZC-a を規定にした。第301〜334期の規定のザンで測った器具（`zan334`）はこれを通す。陣形とレリックは保つ。</summary>
+public static Formation Pin334(Formation f)
+{
+    var g = f.Clone();
+    foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinZ334(d);
+    return g;
+}
+
+/// <summary>第335期: `CompareBuilds()` のザンを第301〜334期の規定に替えた写し。</summary>
+public static (string Name, Formation F)[] CompareBuildsH334() => CompareBuilds().Select(r => (r.Name, Pin334(r.F))).ToArray();
+
+/// <summary>第335期: `Presets.Playtest` のザンを第301〜334期の規定に替えた写し（行の数と並びはそのまま）。</summary>
+public static (string Name, Formation F)[] PlaytestH334 => Presets.Playtest.Select(r => (r.Name, Pin334(r.F))).ToArray();
 
 /// <summary>第334期: 規定のミサか、第299〜333期の規定（`TomeH333`・`PinM333` を通った後）か。ミサを第298期までの規定（`TomeMb`）へ替える口（`Pin299` ／ `guard294` ／ `kugu292` ／ `markheal295` の固定）が使う——内側の口（`PlaytestH316` など）が先に `TomeH333` へ替えるため。</summary>
 public static bool IsMisaNow(UnitDef d) => ReferenceEquals(d, UnitCatalog.Tome) || ReferenceEquals(d, UnitCatalog.TomeH333);

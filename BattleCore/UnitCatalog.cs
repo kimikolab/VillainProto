@@ -1987,6 +1987,36 @@ public static class UnitCatalog
         Flavor = Doha.Flavor
     };
 
+    // ---------------------------------------------------------------------------------
+    // 第335期（指示書 design/PHASE335_DOHA_MINUS_GOLM_SPEC.md §4）—— ドハのマイナス（DM-a ／ DM-c）とゴルムの力の行き先（飲み干す ／ GL）。
+    // 規定の `Doha` ／ `Golm` に札を1枚ずつ足す。対照（`All` ／ `Retired` ／ `Presets` の `Compare` ／ `Playtest` に入れない・`Presets.Versions` の「版・」の台だけが使う・採否はポン）。
+    // ドハのマイナスの文面は「味方が多いほど早く尽きる」を新しいマイナスに置き換える（「自分は強くならず」は残す）。
+    // ---------------------------------------------------------------------------------
+    static UnitDef With335(UnitDef b, TraitId card, string? plusFrom = null, string? plusTo = null, string? minusFrom = null, string? minusTo = null)
+    {
+        static string Swap(string text, string? from, string? to) => from is null ? text
+            : text.Contains(from, StringComparison.Ordinal) ? text.Replace(from, to, StringComparison.Ordinal)
+            : throw new InvalidOperationException($"第335期: 規定の文面に「{from}」が見つからない");
+        return new UnitDef
+        {
+            Id = b.Id, Name = b.Name, MaxHp = b.MaxHp, Attack = b.Attack, Speed = b.Speed, Advances = b.Advances, Pattern = b.Pattern,
+            Traits = b.Traits.Append(card).ToArray(), Actions = b.Actions,
+            PlusText = Swap(b.PlusText, plusFrom, plusTo), MinusText = Swap(b.MinusText, minusFrom, minusTo), Flavor = b.Flavor,
+        };
+    }
+
+    /// <summary>第335期 DM-a（等分）。規定のドハ ＋ <see cref="TraitId.DohaSplit"/>（自分が直に受ける一撃は、自分を除く生きている味方に等分・自分は受けない）。</summary>
+    public static readonly UnitDef DohaDMa = With335(Doha, TraitId.DohaSplit, minusFrom: "味方が多いほど早く尽きる", minusTo: "自分が受ける痛みは、仲間に等しく分かれる");
+
+    /// <summary>第335期 DM-c（溢れる）。規定のドハ ＋ <see cref="TraitId.DohaOverflow"/>（倒れたとき、肩代わりの累計の5割を生きている味方全員に等分・1戦に1度）。</summary>
+    public static readonly UnitDef DohaDMc = With335(Doha, TraitId.DohaOverflow, minusFrom: "味方が多いほど早く尽きる", minusTo: "倒れると、背負ってきた痛みの半分が仲間に溢れる");
+
+    /// <summary>第335期 DM-c ＋ ゴルムが飲む の、ゴルムの側。規定のゴルム ＋ <see cref="TraitId.ColossusDrink"/>（ドハの溢れを生きていればすべて飲み、巨躯と同じ換算で自分の攻撃力に）。ドハは <see cref="DohaDMc"/> と組む。</summary>
+    public static readonly UnitDef GolmDrink = With335(Golm, TraitId.ColossusDrink, plusFrom: "（1戦に1度）", plusTo: "（1戦に1度）／ドハが溢れさせた痛みを飲み干し、自分の力にする");
+
+    /// <summary>第335期 GL（力は殴る味方へ）。規定のゴルム ＋ <see cref="TraitId.ColossusToStriker"/>（吐き戻しの返り先が手番で殴らない駒なら、攻撃力の最も高い殴る味方へ）。</summary>
+    public static readonly UnitDef GolmGL = With335(Golm, TraitId.ColossusToStriker, plusFrom: "飲み込んだ力をその味方へ返す", plusTo: "飲み込んだ力は、戦う仲間へ返す");
+
     /// <summary>第297期までの規定のドハ（分かち ＋ 破片の後ろ・自分の攻撃力が上がる・なまりあり）。対照（<see cref="All"/> に入れない）。第297期の版（<see cref="DohaDHa"/> ほか）はこちらから作る。</summary>
     public static readonly UnitDef DohaD0 = new()
     {
@@ -4382,6 +4412,27 @@ public static class UnitCatalog
         // 第300期: ポンの判断（第299期の案 R1）で ZM-a（手番の仇巡り・`VendettaRound`）を規定にした。第299期の規定は `ZanZNb`（同じ札・文面）（指示書 design/PHASE300_ROUND_GUARD_SPEC.md §2）。
         // 第301期: ポンの決めで仇討ち（濡れ衣を含む）は仇の標を付けてから斬る（`VendettaMarkFirst`）。第300期の規定は `ZanZMa`（同じ札・文面）（指示書 design/PHASE301_HISA_COMMAND_SPEC.md §2-2）。
         // 第301期 段0-3: 「あいつがやった！」をヒサの札（`FrameAccuse`）に移した。文面は「仇の標を付けてから斬る」「ヒサが指差した敵を斬る」に合わせた（札は段0-2 のまま）。
+        // 第335期: ポンの判断（第334期の案 Z1）で ZC-a（中継では出ない・`VendettaDirectOnly`）を規定にした。旧の規定は `ZanH334`（指示書 design/PHASE335_DOHA_MINUS_GOLM_SPEC.md §2）。
+        Traits = new[] { TraitId.Vendetta, TraitId.Recoil, TraitId.VendettaFrameAll, TraitId.VendettaRound, TraitId.VendettaMarkFirst, TraitId.VendettaDirectOnly },
+        PlusText = "標を付けられた味方が直に殴られるたび、殴った者を仇として指差し（標を付けられた敵は受けるダメージが5割増える）、割り込んで倍の刃を返す。仲間を撃った者が誰であれ、ヒサが指差した敵を斬る。手番では、仇を巡って斬る。深く指差された仇ほど、何度も斬る",
+        MinusText = "刃を返すたびに自分も傷つく（それで倒れはしない）",
+        Flavor = "仲間が傷つくと、刃を抜かずにはいられない。返した刃は、いつも自分の手も裂いている。"
+    };
+
+    /// <summary>第301〜334期の規定のザン（ZM-a ＋ 標を付けてから斬る・中継の一撃でも仇討ちする）。第335期に ZC-a を規定にしたので、旧の規定の定義を明示的に持つ。
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。第301〜334期の規定のザンで測った過去の器具はこちらに固定する（`Common.PinZ334` ほか）。第334期の版（ZC-b ／ c ／ d）はこちらから作る。</summary>
+    public static readonly UnitDef ZanH334 = new()
+    {
+        Id = "zan",
+        Name = "仇討ちのザン",
+        MaxHp = 56,
+        Attack = 10,
+        Speed = 5,
+        // **第184期に転生**（旧 `Avenge` は定義だけ残す）。仇指し（倍返し＋敵に標）と、その代金の返り血。
+        // 第299期: ポンの判断（第298期の案 Z2）で ZN-b（濡れ衣の仇討ち・同士討ち全般）を規定にした。旧の規定は `ZanZN0`（指示書 design/PHASE299_ZAN_ROUND_SPEC.md §2）。
+        // 第300期: ポンの判断（第299期の案 R1）で ZM-a（手番の仇巡り・`VendettaRound`）を規定にした。第299期の規定は `ZanZNb`（同じ札・文面）（指示書 design/PHASE300_ROUND_GUARD_SPEC.md §2）。
+        // 第301期: ポンの決めで仇討ち（濡れ衣を含む）は仇の標を付けてから斬る（`VendettaMarkFirst`）。第300期の規定は `ZanZMa`（同じ札・文面）（指示書 design/PHASE301_HISA_COMMAND_SPEC.md §2-2）。
+        // 第301期 段0-3: 「あいつがやった！」をヒサの札（`FrameAccuse`）に移した。文面は「仇の標を付けてから斬る」「ヒサが指差した敵を斬る」に合わせた（札は段0-2 のまま）。
         Traits = new[] { TraitId.Vendetta, TraitId.Recoil, TraitId.VendettaFrameAll, TraitId.VendettaRound, TraitId.VendettaMarkFirst },
         PlusText = "標を付けられた味方が殴られるたび、殴った者を仇として指差し（標を付けられた敵は受けるダメージが5割増える）、割り込んで倍の刃を返す。仲間を撃った者が誰であれ、ヒサが指差した敵を斬る。手番では、仇を巡って斬る。深く指差された仇ほど、何度も斬る",
         MinusText = "刃を返すたびに自分も傷つく（それで倒れはしない）",
@@ -4485,6 +4536,7 @@ public static class UnitCatalog
     // ---------------------------------------------------------------------------------
     static UnitDef ZanOn334(TraitId card, string? plusFrom = null, string? plusTo = null, string? minusTo = null)
     {
+        UnitDef Zan = ZanH334;   // 第335期: 規定のザンは ZC-a になった——版は第301〜334期の規定（`ZanH334`）から作る（ZC-a は規定の `Zan` と同じ札の並び）
         string plus = Zan.PlusText;
         if (plusFrom is not null)
             plus = plus.Contains(plusFrom, StringComparison.Ordinal) ? plus.Replace(plusFrom, plusTo, StringComparison.Ordinal)

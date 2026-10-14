@@ -61,7 +61,7 @@ static partial class Zan334Diag
 
     internal static readonly Ver[] Vers =
     {
-        new("規定", "base", UnitCatalog.Zan),
+        new("規定", "base", UnitCatalog.ZanH334),   // 第335期: 第301〜334期の規定に固定（いまの規定は ZC-a）
         new("ZC-a", "a", UnitCatalog.ZanZCa),
         new("ZC-b", "b", UnitCatalog.ZanZCb),
         new("ZC-c", "c", UnitCatalog.ZanZCc),
@@ -72,8 +72,8 @@ static partial class Zan334Diag
     internal static Formation Apply(Formation f, Ver v) => S316.SwapId(f, "zan", v.Zan);
 
     internal const string GuardRow = "試遊・標 守り型";
-    static Formation Playtest(string n) => Presets.Playtest.First(r => r.Name == n).F;
-    static Formation Row(string n) => CompareBuilds().First(r => r.Name == n).F;
+    static Formation Playtest(string n) => PlaytestH334.First(r => r.Name == n).F;   // 第335期: ザンを第301〜334期の規定に固定
+    static Formation Row(string n) => CompareBuildsH334().First(r => r.Name == n).F;
 
     /// <summary>§6 の代表台（駒はいまの規定・段0 入り）。守り型を最初に。</summary>
     internal static (string Name, Formation F)[] Boards() => new (string, Formation)[]

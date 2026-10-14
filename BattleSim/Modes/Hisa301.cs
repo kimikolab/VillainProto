@@ -79,7 +79,7 @@ static class Hisa301Diag
     static Formation St(Formation f, int k) => k switch
     {
         0 => Pin301(f),
-        1 => Map(f, (UnitCatalog.Zan, UnitCatalog.ZanZMa), (UnitCatalog.Hisa, UnitCatalog.HisaHKf)),
+        1 => Map(f, (UnitCatalog.Zan, UnitCatalog.ZanZMa), (UnitCatalog.ZanH334, UnitCatalog.ZanZMa), (UnitCatalog.Hisa, UnitCatalog.HisaHKf)),   // 第335期: `ZanH334` も
         2 => Map(f, (UnitCatalog.Hisa, UnitCatalog.HisaHKf)),
         _ => f,
     };
@@ -764,7 +764,7 @@ static class Hisa301Diag
         Console.WriteLine("| 項目 | 結果 | 備考 |");
         Console.WriteLine("|---|---|---|");
 
-        var sora = UnitCatalog.Sora; var zan = UnitCatalog.Zan; var hisa = UnitCatalog.HisaH301;   // 第302期: ヒサは第301期の規定に固定
+        var sora = UnitCatalog.Sora; var zan = UnitCatalog.ZanH334; var hisa = UnitCatalog.HisaH301;   // 第302期: ヒサは第301期の規定に固定・第335期: ザンは第301〜334期の規定（`ZanH334`）
         Expect("(a) 定義: ソラ ＝ `SoraSRs` ＋ `DivertKeepBeckon`・ザン ＝ `ZanZMa` ＋ `VendettaMarkFirst`・ヒサ ＝ `HisaHKf` ＋ `FrameAccuse`・旧はすべて `All` ／ `Everyone` の外・数値と手番は旧のまま",
             sora.Traits.SequenceEqual(UnitCatalog.SoraSRs.Traits.Append(TraitId.DivertKeepBeckon)) && sora.PlusText == UnitCatalog.SoraSRs.PlusText
             && zan.Traits.SequenceEqual(UnitCatalog.ZanZMa.Traits.Append(TraitId.VendettaMarkFirst)) && zan.MinusText == UnitCatalog.ZanZMa.MinusText && zan.MaxHp == 56 && zan.Attack == 10 && zan.Speed == 5
@@ -772,7 +772,7 @@ static class Hisa301Diag
             && hisa.Traits.SequenceEqual(UnitCatalog.HisaHKf.Traits.Append(TraitId.FrameAccuse)) && hisa.PlusText.StartsWith(UnitCatalog.HisaHKf.PlusText, StringComparison.Ordinal)
             && hisa.PlusText.Contains("あいつがやった！") && hisa.MinusText == UnitCatalog.HisaHKf.MinusText && hisa.MaxHp == 44 && hisa.Speed == 10 && hisa.Actions!.SequenceEqual(UnitCatalog.HisaHKf.Actions!)
             && UnitCatalog.HisaHKf.Traits.SequenceEqual(UnitCatalog.HisaHKs.Traits.Append(TraitId.BeckonFeather))
-            && new[] { sora, zan, UnitCatalog.Hisa }.All(UnitCatalog.All.Contains) && !new[] { UnitCatalog.SoraSRs, UnitCatalog.ZanZMa, UnitCatalog.HisaHKf }.Any(UnitCatalog.Everyone.Contains));
+            && new[] { sora, UnitCatalog.Zan, UnitCatalog.Hisa }.All(UnitCatalog.All.Contains) && !new[] { UnitCatalog.SoraSRs, UnitCatalog.ZanZMa, UnitCatalog.HisaHKf }.Any(UnitCatalog.Everyone.Contains));
         Expect("(b) 段1 の版は規定のヒサの末尾に札を足しただけ・`All` ／ `Everyone` の外・文面は末尾に足しただけ",
             UnitCatalog.HisaHLi.Traits.SequenceEqual(hisa.Traits.Append(TraitId.CommandNow)) && UnitCatalog.HisaHLt3.Traits.SequenceEqual(hisa.Traits.Append(TraitId.CommandTurn3))
             && UnitCatalog.HisaHLt8.Traits.SequenceEqual(hisa.Traits.Append(TraitId.CommandTurn8)) && UnitCatalog.HisaHC.Traits.SequenceEqual(hisa.Traits.Append(TraitId.HisaCover))

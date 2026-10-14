@@ -1373,3 +1373,10 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - 規定のミサ `UnitCatalog.Tome` ＝ `TomeH333`（第299〜333期の規定・明示の定義に）から `RuptureScar` を外した。レリック「抉りの鏃」＝ 札 `RuptureScar` そのもの（`RelicCatalog.Added334`・`All` の 12 枚には入れない）。engine の `RuptureAfter` が保持を読むだけなので、働くのは炸裂の保持者だけ。
 - 仇指し（`VendettaTrait`）の3つの入口に版の門: `VendettaDirectOnly`（ZC-a・`Hit.Relayed` なら出ない）・`VendettaCapTrait.Allows`（ZC-b `VendettaRoundCap3` ＝ 割り込み 1ラウンド 3 回 ／ ZC-d `VendettaFrameOnce` ＝ 濡れ衣 1ラウンド 1 回・帳簿はザンの私有カウンタ・`OnCarryOver` で消す）・返り血の `lethal` を `RecoilLethal`（ZC-c）で替える。保持者 0 枚（版 `ZanZCa`〜`ZanZCd` だけ）。
 - 計数のみ: `BattleContext.NoteZc334`（割り込みの出どころ 5 種 ／ 1ラウンドの最多）・`UnitTally.Zc334*` ／ `RecoilDeaths`。固定の口 `Common.PinM333` ／ `Pin333` ／ `CompareBuildsH333` ／ `PlaytestH333` ／ `IsMisaNow`。器具: `zan334`。
+
+## 第335期 —— 段0: ザンの ZC-a の規定化 ／ ドハのマイナス（DM-a ／ DM-c）とゴルムの力の行き先（飲み干す ／ GL・版）
+
+- 規定のザン `UnitCatalog.Zan` ＝ `ZanH334`（第301〜334期の規定・明示の定義に）＋ `VendettaDirectOnly`。固定の口 `Common.PinZ334` ／ `Pin334` ／ `CompareBuildsH334` ／ `PlaytestH334`（古い口の終端 `PinM333` の最後に `PinZ334`）・`IsZanNow`。
+- `ApplyDamageBody`: 本体の頭で `_dmPieceNext` を読んで消す（欠片 ／ 溢れの一撃は巨躯 ／ 分かちを通さない）。肩代わりの族の最後（分かちの後・破片の前）に DM-a の等分（`DohaSplit`・`_dmSplitLive` で短絡）。分かちの2か所で `NoteShareLoad`（名目の累計・DM-c の帳簿 `DohaOverflowTrait.LoadKey`）。巨躯の吐き戻しで GL の返り先（`StrikerFor`・`_glLive` で短絡）。
+- `BattleContext.DohaOverflow`（DM-c・`DohaOverflowTrait.OnDeath` だけが呼ぶ）・`InDohaPiece`（欠片 ／ 溢れの一撃の間だけ真・`VendettaTrait.OnAllyDamaged` が読んで出ない）。札 `DohaSplit` ／ `DohaOverflow` ／ `ColossusDrink` ／ `ColossusToStriker`（保持者 0 枚・版 `DohaDMa` ／ `DohaDMc` ／ `GolmDrink` ／ `GolmGL` だけ）。
+- 計数のみ: `UnitTally.ShareLoad335` ／ `Dm335*` ／ `Gl335*`（`_sharerLive` で短絡）。器具: `doha335`。

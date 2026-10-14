@@ -844,6 +844,12 @@ public enum TraitId
     RecoilLethal,       // 返り血で倒れる（ZC-c・`Recoil` と組む）: 返り血（1回 3）が HP 1 で止まらない（**札そのものは挙動を持たない**・`VendettaTrait.Avenge`）
     VendettaFrameOnce,  // 濡れ衣は1ターン1回（ZC-d）: 濡れ衣の仇討ち（味方の攻撃から「あいつがやった！」で起きる分）は1ラウンドに1回まで。ヒサの指差し（敵に標）は今のまま（帳簿はザンの私有・`OnCarryOver` で消す）
 
+    // --- 第335期で足した札（指示書 design/PHASE335_DOHA_MINUS_GOLM_SPEC.md §4）。DM はドハ ／ GL・飲む はゴルムの版（保持者 0 枚） ---
+    DohaSplit,          // 等分（DM-a・ドハ）: 自分が直に受ける一撃（中継でない）は、自分を除く生きている味方に等分される（自分は受けない・端数は席の若い方へ）。欠片は中継（巨躯 ／ 分かち ／ 仇討ちの合図に乗らない）。直に殴られたこと自体は味方に1回知らせる（**札そのものは挙動を持たない**・engine の `DohaSplit`）
+    DohaOverflow,       // 溢れる（DM-c・ドハ）: 倒れたとき、それまでに肩代わりした痛み（分かちの名目の累計）の5割を生きている味方全員に等分する（徴収・倒れうる・1戦に1度）（engine の `DohaOverflow`）
+    ColossusDrink,      // 飲み干す（DM-c ＋ ゴルム）: DM-c の溢れを、生きていればすべて飲む（ダメージを受けない）。飲んだ量を巨躯と同じ換算で自分の攻撃力に変える（**札そのものは挙動を持たない**・engine の `DohaOverflow`）
+    ColossusToStriker,  // 力は殴る味方へ（GL・ゴルム）: 巨躯の吐き戻しの返り先が手番で殴らない駒なら、生きている殴る味方のうち攻撃力の最も高い駒へ返す（**札そのものは挙動を持たない**・engine の巨躯の分岐）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -12780,6 +12786,7 @@ public sealed class VendettaTrait : Trait
                                        int dmg, UnitState? source)
     {
         if (ally == self) return;
+        if (ctx.InDohaPiece) return;                                    // 第335期: ドハの等分の欠片 ／ 溢れは合図にならない
         if (ally.Counter(StatusKeys.Marked) <= 0) return;               // 標を持つ味方だけ
         // 第298期（ZN-a ／ ZN-b）: 味方による同士討ち。ヒサが敵を指差し、その敵へ仇討ちする（濡れ衣）。札が無ければ下の行で今までどおり返る。
         if (source is not null && source.TeamId == self.TeamId && source != self
@@ -13319,6 +13326,27 @@ public sealed class RecoilTrait : Trait
 /// 帳簿はザンの私有カウンタ（ラウンドの番号 ＋ 1 と回数）で、<b>会戦の境界で消す</b>（次の戦のターンの番号が同じでも持ち越さない）。<b>乱数を引かない。</b>
 /// ZC-d で止まっても、ヒサの指差し（敵に標を1つ）は engine の <c>FrameAccuse</c> が先に済ませている。
 /// </summary>
+/// <summary>
+/// 溢れる（第335期・ドハの版 DM-c）。<b>倒れたとき、それまでに肩代わりした痛み（分かちの名目の累計・<see cref="LoadKey"/>）の <see cref="Percent"/>% を生きている味方全員に等分する</b>（本体は engine の <see cref="BattleContext.DohaOverflow"/>）。
+/// 帳簿はドハの私有カウンタ（engine の分かちの段が積む）で、会戦の境界で消す。1戦に1度（<see cref="DoneKey"/>・蘇生で戻っても二度は溢れない）。
+/// </summary>
+public sealed class DohaOverflowTrait : Trait
+{
+    /// <summary>溢れる割合（指示書が<b>測る前に固定</b>した値）。</summary>
+    public const int Percent = 50;
+    public const string LoadKey = "dmLoad", DoneKey = "dmDone";
+
+    public override TraitId Id => TraitId.DohaOverflow;
+
+    public override void OnDeath(BattleContext ctx, UnitState self) => ctx.DohaOverflow(self);
+
+    public override void OnCarryOver(UnitState self)
+    {
+        self.SetCounter(LoadKey, 0);
+        self.SetCounter(DoneKey, 0);
+    }
+}
+
 public sealed class VendettaCapTrait : Trait
 {
     /// <summary>ZC-b の1ラウンドの上限（指示書が<b>測る前に固定</b>した値）。</summary>
@@ -17623,6 +17651,10 @@ public static class TraitCatalog
         new VendettaCapTrait(TraitId.VendettaRoundCap3),      // 第334期（1ターン3回まで ZC-b・ザン）
         new MarkOnlyTrait(TraitId.RecoilLethal),              // 第334期（返り血で倒れる ZC-c・ザン・印だけ）
         new VendettaCapTrait(TraitId.VendettaFrameOnce),      // 第334期（濡れ衣は1ターン1回 ZC-d・ザン）
+        new MarkOnlyTrait(TraitId.DohaSplit),                 // 第335期（等分 DM-a・ドハ・印だけ）
+        new DohaOverflowTrait(),                              // 第335期（溢れる DM-c・ドハ）
+        new MarkOnlyTrait(TraitId.ColossusDrink),             // 第335期（飲み干す・ゴルム・印だけ）
+        new MarkOnlyTrait(TraitId.ColossusToStriker),         // 第335期（力は殴る味方へ GL・ゴルム・印だけ）
         new SharePushTrait(TraitId.ShareSin),                 // 第313期（ドハ DP-c の手番）
         new AmplifierTrait(),
         new ContagionTrait(),

@@ -90,7 +90,7 @@ static partial class Zan334Diag
         Console.WriteLine();
         Console.WriteLine("ミサのいる台（試遊の台 ＋ `compare` の行）。勝率・倒しT（勝った戦の決着T）・爪痕で削った最大HP（旧・1戦あたり）。");
         Console.WriteLine();
-        var misaRows = Presets.Playtest.Where(r => r.F.Occupied().Any(o => o.Def.Id == "tome")).Concat(CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id == "tome"))).ToArray();
+        var misaRows = PlaytestH334.Where(r => r.F.Occupied().Any(o => o.Def.Id == "tome")).Concat(CompareBuildsH334().Where(r => r.F.Occupied().Any(o => o.Def.Id == "tome"))).ToArray();   // 第335期: ザンを第301〜334期の規定に固定
         Console.WriteLine("| 台 | 波 | 旧 | 規定 | 勝率の差 | 倒しT の差 | 爪痕（旧） |");
         Console.WriteLine("|---|---|---|---|--:|--:|--:|");
         foreach (var (n, f) in misaRows)

@@ -67,8 +67,8 @@ static class Hush303Diag
     static Doha297Diag.Wave[] AllWaves() => Enumerable.Range(1, StagesH305.Count).Select(i => WaveOf(i.ToString())).Concat(new[] { "guard", "bat", "boss" }.Select(WaveOf)).ToArray();
     static Doha297Diag.Wave[] MainWaves() => new[] { "2", "3", "4", "5", "guard", "bat", "boss" }.Select(WaveOf).ToArray();
     static string Short(UnitDef d) { var m = System.Text.RegularExpressions.Regex.Match(d.Name, @"[ァ-ヴー]+$"); return m.Success ? m.Value : d.Name; }
-    static Formation Playtest(string n) => Presets.Playtest.First(r => r.Name == n).F;
-    static Formation CompareRow(string n) => CompareBuilds().First(r => r.Name == n).F;
+    static Formation Playtest(string n) => PlaytestH334.First(r => r.Name == n).F;   // 第335期: ザンを第301〜334期の規定に固定
+    static Formation CompareRow(string n) => CompareBuildsH334().First(r => r.Name == n).F;   // 第335期: ザンを第301〜334期の規定に固定
     static Formation With(Formation f, UnitDef hisa)
     {
         var g = f.Clone();
@@ -77,10 +77,10 @@ static class Hush303Diag
     }
     const string Econ = "標経済 (ヒサ×ザン×ミサ)";
     static (string Name, Formation F)[] Boards() =>
-        Presets.Playtest.Where(r => r.Name.StartsWith("試遊・標", StringComparison.Ordinal) && r.F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Hisa))).Select(r => (r.Name, r.F))
+        Presets.Playtest.Where(r => r.Name.StartsWith("試遊・標", StringComparison.Ordinal) && r.F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Hisa))).Select(r => (r.Name, Pin334(r.F)))   /* 第335期: ザンを第301〜334期の規定に固定 */
             .Append((Econ, CompareRow(Econ)))
             .Append((Hisa301Diag.NoZanName, Hisa301Diag.NoZan)).ToArray();
-    static (string Name, Formation F)[] HisaRows() => CompareBuilds().Where(r => r.F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Hisa))).ToArray();
+    static (string Name, Formation F)[] HisaRows() => CompareBuildsH334().Where(r => r.F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Hisa))).ToArray();   // 第335期: ザンを第301〜334期の規定に固定
     static (string Name, Formation F)[] MarkRows() => Boards().Concat(HisaRows().Where(r => r.Name != Econ)).ToArray();
     static Formation RowOf(string n) => n == Hisa301Diag.NoZanName ? Hisa301Diag.NoZan : n.StartsWith("試遊", StringComparison.Ordinal) ? Playtest(n) : CompareRow(n);
 

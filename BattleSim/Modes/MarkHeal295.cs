@@ -62,7 +62,7 @@ static class MarkHeal295Diag
         foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Hisa)) g[slot] = UnitCatalog.HisaHK0;
         foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Doha)) g[slot] = UnitCatalog.DohaD0;   // 第298期
         foreach (var (slot, d) in f.Occupied()) if (IsMisaNow(d)) g[slot] = UnitCatalog.TomeMb;   // 第334期: `TomeH333` も・第299期: ミサ ／ ザンも旧の規定に
-        foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Zan)) g[slot] = UnitCatalog.ZanZN0;
+        foreach (var (slot, d) in f.Occupied()) if (IsZanNow(d)) g[slot] = UnitCatalog.ZanZN0;   // 第335期: `ZanH334` も
         foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Sora)) g[slot] = UnitCatalog.SoraSRs;   // 第301期: ソラも旧の規定（矢面は剥がさない の前）に
         foreach (var (slot, d) in g.Occupied().ToList()) g[slot] = PinTKK324(d);   // 第325期: トウ ／ カタ ／ クグも第324期までの規定に
         return g;

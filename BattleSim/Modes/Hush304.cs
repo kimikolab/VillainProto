@@ -73,13 +73,13 @@ static class Hush304Diag
     static Doha297Diag.Wave[] Waves() => Doha297Diag.Waves();
     internal static Doha297Diag.Wave WaveOf(string k) => Waves().First(w => w.Key == k);
     internal static string Short(UnitDef d) { var m = System.Text.RegularExpressions.Regex.Match(d.Name, @"[ァ-ヴー]+$"); return m.Success ? m.Value : d.Name; }
-    static Formation CompareRow(string n) => CompareBuilds().First(r => r.Name == n).F;
+    static Formation CompareRow(string n) => CompareBuildsH334().First(r => r.Name == n).F;   // 第335期: ザンを第301〜334期の規定に固定
     const string Econ = "標経済 (ヒサ×ザン×ミサ)";
     internal static (string Name, Formation F)[] Boards() =>
-        Presets.Playtest.Where(r => r.Name.StartsWith("試遊・標", StringComparison.Ordinal) && r.F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Hisa))).Select(r => (r.Name, r.F))
+        Presets.Playtest.Where(r => r.Name.StartsWith("試遊・標", StringComparison.Ordinal) && r.F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Hisa))).Select(r => (r.Name, Pin334(r.F)))   /* 第335期: ザンを第301〜334期の規定に固定 */
             .Append((Econ, CompareRow(Econ)))
             .Append((Hisa301Diag.NoZanName, Hisa301Diag.NoZan)).ToArray();
-    internal static (string Name, Formation F)[] HisaRows() => CompareBuilds().Where(r => r.F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Hisa))).ToArray();
+    internal static (string Name, Formation F)[] HisaRows() => CompareBuildsH334().Where(r => r.F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Hisa))).ToArray();   // 第335期: ザンを第301〜334期の規定に固定
     internal static (string Name, Formation F)[] MarkRows() => Boards().Concat(HisaRows().Where(r => r.Name != Econ)).ToArray();
 
     /// <summary>範囲 ／ 貫きの駒（手番の攻撃型が単体でない駒）がいる編成か。§7 の「楽すぎる台」の候補。</summary>

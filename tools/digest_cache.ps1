@@ -72,7 +72,9 @@ $Cmds = @(
     # 第333期に足した（この期の器具）
     "settle333 check",
     # 第334期に足した（この期の器具）
-    "zan334 check"
+    "zan334 check",
+    # 第335期に足した（この期の器具）
+    "doha335 check"
 )
 # ソースの行番号などを出す（差は「ずれ」と数えない）
 $Volatile = @("derive check")
@@ -87,7 +89,7 @@ foreach ($f in $srcFiles) { $srcText[$f.FullName] = [System.IO.File]::ReadAllTex
 function FilesOfClass([string]$cls) {
     $srcText.Keys | Where-Object { $srcText[$_] -match "class\s+$cls\b" }
 }
-$unitNames = @{ tou = "Tou"; kata = "Kata"; kugu = "Kugu"; som = "Som"; shiga = "Shiga"; hisa = "Hisa"; doha = "Doha"; beni = "Beni"; tome = "Tome"; zan = "Zan" }
+$unitNames = @{ tou = "Tou"; kata = "Kata"; kugu = "Kugu"; som = "Som"; shiga = "Shiga"; hisa = "Hisa"; doha = "Doha"; beni = "Beni"; tome = "Tome"; zan = "Zan"; golm = "Golm" }   # 第335期: golm を足した
 function UnitsOfMode([string]$mode) {
     $m = [regex]::Match($prog, 'focusId == "' + [regex]::Escape($mode) + '"\)[^;]*?(\w+Diag)\.Run', 'Singleline')
     if (-not $m.Success) { return @("?") }

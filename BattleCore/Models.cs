@@ -2311,6 +2311,15 @@ public sealed class UnitTally
     public long[]? Zc334Kind, Zc334KindDealt;
     public long Zc334RoundMax, Zc334RoundPeak, Zc334RoundTurn, Zc334RoundN, Zc334RelaySkipped, Zc334Capped, Zc334FrameCapped, RecoilDeaths, RecoilDeathTurn;
     /// <summary>
+    /// 第335期（<b>計数のみ</b>・ドハ ／ ゴルム）。誰も読んで分岐しない。ドハ ＝ <c>ShareLoad335</c> 分かちで肩代わりした名目の累計（規定でも数える）／
+    /// <c>Dm335Direct</c> 敵の一撃を直に受けた（刻み・徴収・中継・共有を除く・主目標と巻き込み）・うち <c>Dm335DirectSingle</c> 単体の主目標 ／ <c>Dm335Walled</c> うち巨躯が引き受けた ／
+    /// DM-a <c>Dm335Splits</c> ／ <c>Dm335SplitAmt</c> ／ <c>Dm335SplitKills</c> 等分した一撃・量・欠片で倒れた味方 ／ DM-c <c>Dm335Overflows</c> ／ <c>Dm335OverflowAmt</c> ／ <c>Dm335OverflowKills</c>。
+    /// ゴルム ＝ <c>Dm335Drank</c> ／ <c>Dm335DrankGain</c> 飲んだ溢れ・上がった攻撃力 ／ <c>Dm335DrinkTurn</c> ／ <c>Dm335DealtAtDrink</c> 飲んだときのターンと、その時点の敵への与ダメ ／
+    /// GL <c>Gl335Redirects</c> ／ <c>Gl335Amt</c> 殴る味方へ回した吐き戻し（回・攻撃力）。
+    /// </summary>
+    public long ShareLoad335, Dm335Direct, Dm335DirectSingle, Dm335Walled, Dm335Splits, Dm335SplitAmt, Dm335SplitKills, Dm335Overflows, Dm335OverflowAmt, Dm335OverflowKills,
+                Dm335Drank, Dm335DrankGain, Dm335DrinkTurn, Dm335DealtAtDrink, Gl335Redirects, Gl335Amt;
+    /// <summary>
     /// 第297期（<b>計数専用</b>・分かち）: <c>SharedAway</c> この駒の痛みを分かちが引き受けた実額（相手ごとの内訳・痛みをくれた側に付く）／ <c>ShareTakenHits</c> ドハが中継の一撃を受けた回数（ドハの側）。
     /// 版（DH-a ／ DH-b ／ DH-t）: ドハ ＝ <c>ShareGives</c> ／ <c>ShareGiven</c> 力を配った回数・量 ／ <c>ShareGiftAccrued</c> 累計に入れた量 ／ <c>ShareGifts</c> 控えた手番 ／
     /// <c>ShareGiftCapped</c> 1ターン1回で止まった ／ <c>ShareGiftNoTarget</c> 相手がいない ／ <c>ShareGiftSkipped</c> 控えた相手が倒れていた ／
@@ -3532,6 +3541,9 @@ public sealed class UnitTally
         RoundBack += o.RoundBack; RoundDealt += o.RoundDealt; AddHist(ref RoundSlashHist, o.RoundSlashHist);
         AddHist(ref Zc334Kind, o.Zc334Kind); AddHist(ref Zc334KindDealt, o.Zc334KindDealt); Zc334RoundMax += o.Zc334RoundMax; Zc334RoundPeak = Math.Max(Zc334RoundPeak, o.Zc334RoundPeak);   // 第334期
         Zc334RelaySkipped += o.Zc334RelaySkipped; Zc334Capped += o.Zc334Capped; Zc334FrameCapped += o.Zc334FrameCapped; RecoilDeaths += o.RecoilDeaths; RecoilDeathTurn += o.RecoilDeathTurn;
+        ShareLoad335 += o.ShareLoad335; Dm335Direct += o.Dm335Direct; Dm335DirectSingle += o.Dm335DirectSingle; Dm335Walled += o.Dm335Walled; Dm335Splits += o.Dm335Splits; Dm335SplitAmt += o.Dm335SplitAmt;   // 第335期
+        Dm335SplitKills += o.Dm335SplitKills; Dm335Overflows += o.Dm335Overflows; Dm335OverflowAmt += o.Dm335OverflowAmt; Dm335OverflowKills += o.Dm335OverflowKills; Dm335Drank += o.Dm335Drank;
+        Dm335DrankGain += o.Dm335DrankGain; Dm335DrinkTurn += o.Dm335DrinkTurn; Dm335DealtAtDrink += o.Dm335DealtAtDrink; Gl335Redirects += o.Gl335Redirects; Gl335Amt += o.Gl335Amt;
         SharedAway += o.SharedAway; ShareTakenHits += o.ShareTakenHits; ShareGives += o.ShareGives; ShareGiven += o.ShareGiven; ShareGiftAccrued += o.ShareGiftAccrued;   // 第297期
         ShareGifts += o.ShareGifts; ShareGiftCapped += o.ShareGiftCapped; ShareGiftNoTarget += o.ShareGiftNoTarget; ShareGiftSkipped += o.ShareGiftSkipped;
         ShareGot += o.ShareGot; ShareGiftGot += o.ShareGiftGot; ShareGiftTurns += o.ShareGiftTurns; ShareGiftAttacks += o.ShareGiftAttacks;

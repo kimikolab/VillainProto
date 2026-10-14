@@ -9202,6 +9202,9 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.MarkRally) || u.HasTrait(TraitId.MarkRallyWide)) { _rallyLive = true; _rallyHolders.Add(u); }   // 第295期（HK・攻撃のひとまとまり）
         if (u.HasTrait(TraitId.FeatherMark) || u.HasTrait(TraitId.FeatherMarkLayer)) { _mfLive = true; _mfHolders.Add(u); }   // 第298期（MF・標が付いた瞬間の羽）
         if (u.HasTrait(TraitId.Vendetta)) _vendettaTurnLive = true;   // 第299期（ザンの手番の計数・仇巡り）
+        if (u.HasTrait(TraitId.Sharer)) _sharerLive = true;            // 第335期（ドハの肩代わりの累計・直の一撃の計数）
+        if (u.HasTrait(TraitId.DohaSplit)) _dmSplitLive = true;        // 第335期（DM-a・等分）
+        if (u.HasTrait(TraitId.ColossusToStriker)) _glLive = true;     // 第335期（GL・力は殴る味方へ）
         if (u.HasTrait(TraitId.CommandNow)) _commandNowLive = true;    // 第301期（HL-i・まとまりで叩かれた標の敵を控える）
         if (CommandTrait.BurstUnit(u) > 0) { _burstLive = true; _burstHolders.Add(u); }   // 第321期（HQ-a ／ HQ-b・溜まったら吐く）
         if (u.HasTrait(TraitId.HisaCover)) _coverHolders.Add(u);       // 第301期（HC・庇い）
@@ -13018,6 +13021,8 @@ public sealed class BattleContext
         _wideNext = false;
         bool coverHit = _coverHitNext;   // 第301期（HC）: ヒサが庇って受ける一撃。肩代わりの族（SR-a・巨躯・分かち）を通さない（ここで読んで消す）
         _coverHitNext = false;
+        bool dmPiece = _dmPieceNext;     // 第335期（DM-a の欠片 ／ DM-c の溢れ）: 巨躯 ／ 分かちを通さない（ここで読んで消す）
+        _dmPieceNext = false;
 
         if (!target.IsAlive || amount <= 0) return;
         int rawAmount301 = amount;   // 第301期（HC）: 庇いでヒサが受ける「元の一撃」の量（この駒の側の増減の前）
@@ -13443,7 +13448,10 @@ public sealed class BattleContext
         // （横に並んでいるだけの駒を守れると、前列に3枚並べるだけで壁が3重になる）。
         // 壁自身への攻撃は自分より前に自分がいないので自然に外れ、
         // 壁が複数いても HasTrait(Colossus) で受け側を除外しているため多段の肩代わりは起きない。
-        if (!target.HasTrait(TraitId.Colossus) && !coverHit)
+        // 第335期 Phase 0（**計数のみ**）: 分かちの持ち主（ドハ）が敵の一撃を直に受けた（刻み・徴収・中継・共有を除く）。保持者がいなければ比較1つで抜ける。
+        bool dohaCensus = _sharerLive && !relayed && !levy && !burnTick && !hexShare && source is not null && source.TeamId != target.TeamId && target.HasTrait(TraitId.Sharer);
+        if (dohaCensus) { UnitTally dc = TallyOf(target); dc.Dm335Direct++; if (pattern == AttackPattern.Single) dc.Dm335DirectSingle++; }
+        if (!target.HasTrait(TraitId.Colossus) && !coverHit && !dmPiece)
         {
             int targetDepth = FormationRules.DepthOf(target.Row);
             // **壁自身が出どころのダメージは肩代わりしない。** 自分で殴っておいて
@@ -13471,6 +13479,7 @@ public sealed class BattleContext
                     wall.SetCounter(ColossusTrait.BellyKey,
                                     wall.RawCounter(ColossusTrait.BellyKey) + blocked);
                     TallyOf(wall).Swallowed += blocked;
+                    if (dohaCensus) TallyOf(target).Dm335Walled++;   // 第335期 Phase 0（計数のみ）
 
                     // 吐き戻し: 飲み込んだ分を、庇った相手の力に変える。
                     // **肩代わりは価値を消さず、経路を変えるだけ**にするのが狙い。
@@ -13496,6 +13505,12 @@ public sealed class BattleContext
                         // 宛先が空（隣接する生存者がいない拡散持ち）なら何も起きていない。
                         // ログも出さない——「返した」と書いてあるのに数字が動かない行になる。
                         IReadOnlyList<UnitState> back = SupportTargets(target);
+                        // 第335期（GL・`ColossusToStriker`）: 返り先が手番で殴らない駒なら、生きている殴る味方のうち攻撃力の最も高い駒へ（同じなら席の若い方・ゴルム自身は除く）。乱数を引かない。
+                        if (_glLive && wall.HasTrait(TraitId.ColossusToStriker) && !StrikesOnTurn(target.Def) && StrikerFor(wall) is UnitState gl)
+                        {
+                            back = SupportTargets(gl);
+                            UnitTally gt = TallyOf(wall); gt.Gl335Redirects++; gt.Gl335Amt += Math.Max(1, blocked / Colossus.DamagePerGain);
+                        }
                         if (back.Count > 0)
                         {
                             int gain = Math.Max(1, blocked / Colossus.DamagePerGain);
@@ -13525,7 +13540,7 @@ public sealed class BattleContext
         // ドハはカドの代金（敵からの被弾）だけを4割肩代わりして守り、収入源（味方への巻き込み）は
         // 満額通していた。都合のいい側だけを助ける形になっていたので条件を外した。
         // 肩代わり先が自分自身になる再帰は下の HasTrait(Sharer) で止まる。
-        if (!target.HasTrait(TraitId.Sharer) && !coverHit)
+        if (!target.HasTrait(TraitId.Sharer) && !coverHit && !dmPiece)
         {
             UnitState? sharer = PickOne(
                 teammates.Where(u => u.HasTrait(TraitId.Sharer) && u != target).ToList());
@@ -13540,6 +13555,7 @@ public sealed class BattleContext
                     amount -= taken;
                     Log($"    {sharer.Name} が {target.Name} の痛みを引き受けた", LogKind.Trigger);
                     if (deepBite) TallyOf(target).DeepBiteRelayed++;   // 第93期 §1-2 の 3（計数のみ）
+                    NoteShareLoad(sharer, taken);   // 第335期（肩代わりの累計・DM-c の帳簿と計数）
                     _shareFrom = target;   // 第297期（中継の札・呼び出しの頭で読んで消す）
                     ApplyDamage(sharer, taken, source, isFriendlyFire: true, burnTick: burnTick, relayed: true, levy: levy);
                     _shareFrom = null;
@@ -13560,6 +13576,11 @@ public sealed class BattleContext
                 }
             }
         }
+
+        // 第335期（DM-a・`DohaSplit`）: 分かちの持ち主が直に受ける一撃（出どころあり・刻み ／ 徴収 ／ 中継 ／ 共有でない）は、自分を除く生きている味方に等分する（肩代わりの族の最後・破片の前）。
+        // **保持者がいなければ比較1つで抜ける。乱数を引かない。**
+        if (_dmSplitLive && !dmPiece && source is not null && !relayed && !levy && !burnTick && !hexShare && target.HasTrait(TraitId.DohaSplit)
+            && DohaSplit(target, amount, source)) return;
 
         // 破片（アーマー）は HP の前に削られる。
         //
@@ -13680,6 +13701,7 @@ public sealed class BattleContext
                 TallyOf(lateSharer).SharerLate++;
                 Log($"    {lateSharer.Name} が {target.Name} の痛みを引き受けた", LogKind.Trigger);
                 if (deepBite) TallyOf(target).DeepBiteRelayed++;
+                NoteShareLoad(lateSharer, taken);   // 第335期（肩代わりの累計・DM-c の帳簿と計数）
                 _shareFrom = target;   // 第297期（中継の札・呼び出しの頭で読んで消す）
                 ApplyDamage(lateSharer, taken, source, isFriendlyFire: true, burnTick: burnTick, relayed: true, levy: levy);
                 _shareFrom = null;
@@ -15519,6 +15541,113 @@ public sealed class BattleContext
     // 標を消費しない・新しい標を書かない（太刀は普通の攻撃）・返り血は付かない（仇討ちの代金のまま）。手番の枠（`TakeTurnFramed`）の中なので、叫びは1手番に1回。
     // 巡る順と的は手番の頭で決める（層は手番の頭の値）。**乱数を引かない。** 規定（札なし）は数えるだけ。
     bool _vendettaTurnLive;
+
+    // ---- 第335期（指示書 design/PHASE335_DOHA_MINUS_GOLM_SPEC.md §4）—— ドハのマイナス（DM-a 等分 ／ DM-c 溢れる）とゴルムの力の行き先（DM-c ＋ ゴルムが飲む ／ GL）。
+    // 欠片 ／ 溢れの一撃は `_dmPieceNext` の札で巨躯 ／ 分かちを通さず（本体の頭で読んで消す）、呼び出しの間 `InDohaPiece` が立つ（仇指しの合図に乗らない）。
+    // **保持者がいなければ比較1つで抜ける。乱数を引かない**（等分の端数は席の若い順）。
+    bool _sharerLive, _dmSplitLive, _glLive, _dmPieceNext;
+
+    /// <summary>第335期: いま解決中の一撃が DM-a の欠片か DM-c の溢れか（仇指しはこの一撃では出ない）。</summary>
+    public bool InDohaPiece { get; private set; }
+
+    /// <summary>分かちで肩代わりした量（名目）を、持ち主の帳簿（DM-c の溢れの元・保持者だけ）と計数に積む。</summary>
+    void NoteShareLoad(UnitState sharer, int taken)
+    {
+        TallyOf(sharer).ShareLoad335 += taken;   // 計数のみ（規定でも数える）
+        if (sharer.HasTrait(TraitId.DohaOverflow)) sharer.SetCounter(DohaOverflowTrait.LoadKey, sharer.RawCounter(DohaOverflowTrait.LoadKey) + taken);
+    }
+
+    /// <summary>
+    /// <paramref name="total"/> を <paramref name="from"/> を除く生きている味方に等分して当てる（端数は席の若い順に 1 ずつ）。
+    /// 一撃は巨躯 ／ 分かちを通さない。<paramref name="levy"/> なら徴収（DM-c）、でなければ中継（DM-a）。倒した数を返す。
+    /// </summary>
+    int DohaPieces(UnitState from, int total, UnitState source, bool levy)
+    {
+        var allies = LivingMembers(from.TeamId).Where(u => u != from).OrderBy(u => u.Slot).ToList();
+        int n = allies.Count, kills = 0;
+        if (n == 0 || total <= 0) return 0;
+        int each = total / n, rem = total % n;
+        bool prev = InDohaPiece;
+        for (int i = 0; i < n; i++)
+        {
+            int piece = each + (i < rem ? 1 : 0);
+            UnitState a = allies[i];
+            if (piece <= 0 || !a.IsAlive) continue;
+            InDohaPiece = true;
+            _dmPieceNext = true;
+            try
+            {
+                if (levy) ApplyDamage(a, piece, source, isFriendlyFire: true, levy: true);
+                else ApplyDamage(a, piece, source, isFriendlyFire: true, relayed: true);
+            }
+            finally { _dmPieceNext = false; InDohaPiece = prev; }
+            if (!a.IsAlive) kills++;
+        }
+        return kills;
+    }
+
+    /// <summary>DM-a: ドハへの直の一撃を味方に等分し、ドハ自身は受けない。標の付いたドハなら、直に殴られたこと自体を味方に1回知らせる（量 0）。等分できる味方がいなければ偽（いつもどおり受ける）。</summary>
+    bool DohaSplit(UnitState doha, int amount, UnitState source)
+    {
+        if (!LivingMembers(doha.TeamId).Any(u => u != doha)) return false;
+        UnitTally t = TallyOf(doha);
+        t.Dm335Splits++;
+        t.Dm335SplitAmt += amount;
+        Log($"    {doha.Name} が受けた痛み（{amount}）は仲間に等しく分かれた", LogKind.FriendlyFire);
+        t.Dm335SplitKills += DohaPieces(doha, amount, source, levy: false);
+        // 直に殴られたこと自体の合図（仇指し ／ 「あいつがやった！」はこの一撃の札で判定する——中継ではない）
+        foreach (UnitState ally in LivingMembers(doha.TeamId))
+        {
+            if (ally == doha) continue;
+            foreach (Trait tr in ally.Traits.ToList())
+            {
+                TraitMark m = this.BeginTrait(tr.Id, ally);
+                tr.OnAllyDamaged(this, ally, doha, 0, source);
+                this.EndTrait(m);
+            }
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// DM-c（<see cref="DohaOverflowTrait.OnDeath"/> だけが呼ぶ）: 倒れたドハの肩代わりの累計の <see cref="DohaOverflowTrait.Percent"/>% を、生きている味方全員に等分する（徴収・倒れうる・1戦に1度）。
+    /// 札 <see cref="TraitId.ColossusDrink"/> を持つ生きている味方（ゴルム）がいれば、溢れはすべてそちらが飲み（ダメージなし）、巨躯と同じ換算で自分の攻撃力に変える（自己強化なので <c>AtkBonus</c> を直に足す）。
+    /// </summary>
+    public void DohaOverflow(UnitState doha)
+    {
+        if (doha.RawCounter(DohaOverflowTrait.DoneKey) > 0) return;
+        doha.SetCounter(DohaOverflowTrait.DoneKey, 1);
+        int load = doha.RawCounter(DohaOverflowTrait.LoadKey);
+        doha.SetCounter(DohaOverflowTrait.LoadKey, 0);
+        int total = load * DohaOverflowTrait.Percent / 100;
+        if (total <= 0) return;
+        UnitTally t = TallyOf(doha);
+        UnitState? golm = null;
+        foreach (UnitState u in LivingMembers(doha.TeamId))
+            if (u != doha && u.HasTrait(TraitId.ColossusDrink) && (golm is null || u.Slot < golm.Slot)) golm = u;
+        if (golm is not null)
+        {
+            int gain = Math.Max(1, total / Colossus.DamagePerGain);
+            golm.AtkBonus += gain;
+            UnitTally gt = TallyOf(golm);
+            gt.Dm335Drank += total; gt.Dm335DrankGain += gain; gt.Dm335DrinkTurn = _turn; gt.Dm335DealtAtDrink = gt.DamageToEnemy;
+            Log($"    {doha.Name} が背負ってきた痛み（{total}）を {golm.Name} が飲み干した（攻撃 +{gain} → {golm.CurrentAttack}）", LogKind.Highlight);
+            return;
+        }
+        t.Dm335Overflows++;
+        t.Dm335OverflowAmt += total;
+        Log($"    {doha.Name} が背負ってきた痛みの半分（{total}）が仲間に溢れた", LogKind.Highlight);
+        t.Dm335OverflowKills += DohaPieces(doha, total, doha, levy: true);
+    }
+
+    /// <summary>GL: 生きている殴る味方（<see cref="StrikesOnTurn"/>・<paramref name="wall"/> を除く）のうち現在攻撃力の最も高い駒（同じなら席の若い方）。</summary>
+    UnitState? StrikerFor(UnitState wall)
+    {
+        UnitState? best = null;
+        foreach (UnitState u in LivingMembers(wall.TeamId))
+            if (u != wall && StrikesOnTurn(u.Def) && (best is null || u.CurrentAttack > best.CurrentAttack || (u.CurrentAttack == best.CurrentAttack && u.Slot < best.Slot))) best = u;
+        return best;
+    }
 
     long FoeHpLeft(UnitState actor)
     {

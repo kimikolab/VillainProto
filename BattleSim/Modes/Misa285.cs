@@ -51,7 +51,7 @@ static class Misa285Diag
     {
         var g = f.Clone();   // 陣形・レリックを保つ
         foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Hisa)) g[slot] = UnitCatalog.HisaHK0;
-        foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Zan)) g[slot] = UnitCatalog.ZanZN0;   // 第299期: ザンも旧の規定（ZN-b の前・`ZanZN0`）に
+        foreach (var (slot, d) in f.Occupied()) if (IsZanNow(d)) g[slot] = UnitCatalog.ZanZN0;   // 第335期: `ZanH334` も   // 第299期: ザンも旧の規定（ZN-b の前・`ZanZN0`）に
         foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Sora)) g[slot] = UnitCatalog.SoraSRs;   // 第301期: ソラも旧の規定（矢面は剥がさない の前）に
         return g;
     }

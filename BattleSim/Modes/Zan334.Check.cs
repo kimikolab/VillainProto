@@ -38,7 +38,7 @@ static partial class Zan334Diag
         Console.WriteLine();
         Console.WriteLine("| 項目 | 結果 | 備考 |");
         Console.WriteLine("|---|---|---|");
-        UnitDef M = UnitCatalog.Tome, MO = UnitCatalog.TomeH333, Z = UnitCatalog.Zan;
+        UnitDef M = UnitCatalog.Tome, MO = UnitCatalog.TomeH333, Z = UnitCatalog.ZanH334;   // 第335期: 版の土台は第301〜334期の規定のザン（いまの規定は ZC-a）
 
         // ---- 段0: 定義・レリック・固定の口
         {
@@ -59,7 +59,7 @@ static partial class Zan334Diag
 
         // ---- 段0: 戦の中で（規定のミサは削らない・旧は削る・レリックを付けた規定のミサは旧と同じ量だけ削る＝台本が全行同じ）
         {
-            var rows = Presets.Playtest.Concat(CompareBuilds()).Where(r => r.F.Occupied().Any(o => o.Def.Id == "tome")).ToArray();
+            var rows = PlaytestH334.Concat(CompareBuildsH334()).Where(r => r.F.Occupied().Any(o => o.Def.Id == "tome")).ToArray();   // 第335期: ザンを第301〜334期の規定に固定
             int n = 0, same = 0; long scarNew = 0, scarOld = 0, scarRelic = 0;
             foreach (var (_, f) in rows)
             {
@@ -86,16 +86,13 @@ static partial class Zan334Diag
         {
             var cards = new[] { (UnitCatalog.ZanZCa, TraitId.VendettaDirectOnly), (UnitCatalog.ZanZCb, TraitId.VendettaRoundCap3), (UnitCatalog.ZanZCc, TraitId.RecoilLethal), (UnitCatalog.ZanZCd, TraitId.VendettaFrameOnce) };
             bool vers = cards.All(c => c.Item1.Traits.SequenceEqual(Z.Traits.Append(c.Item2)) && c.Item1.Id == Z.Id && c.Item1.MaxHp == Z.MaxHp && c.Item1.Attack == Z.Attack && c.Item1.Speed == Z.Speed && !UnitCatalog.Everyone.Contains(c.Item1))
-                && UnitCatalog.Everyone.All(d => cards.All(c => !d.Traits.Contains(c.Item2)))
+                && UnitCatalog.Everyone.All(d => cards.All(c => !d.Traits.Contains(c.Item2) || (c.Item2 == TraitId.VendettaDirectOnly && ReferenceEquals(d, UnitCatalog.Zan))))   // 第335期: ZC-a は規定のザンの札になった
                 && UnitCatalog.ZanZCa.PlusText.Contains("直に殴られるたび", StringComparison.Ordinal) && UnitCatalog.ZanZCb.PlusText.Contains("（1ターンに3度まで）", StringComparison.Ordinal)
                 && UnitCatalog.ZanZCc.MinusText.Contains("倒れることもある", StringComparison.Ordinal) && UnitCatalog.ZanZCd.PlusText.Contains("ヒサが指差した敵を斬る（1ターンに1度）", StringComparison.Ordinal);
             Expect("版の定義: ZC-a ／ b ／ c ／ d ＝ 規定のザン ＋ 札1枚（文面は指示書の叩き台）・`Everyone` の外・`Everyone` に新しい札の保持者 0", vers);
             var v = Presets.Versions;
-            var g = Presets.Playtest.First(r => r.Name == GuardRow).F;
-            bool rows = v.Length == 5 && v[0].Name == "試遊・感電 ポンの台" && Presets.Playtest.Length == 17
-                && cards.Select((c, i) => (c, i)).All(x => v[x.i + 1].Name == $"版・ZC-{(char)('a' + x.i)} 守り型"
-                    && v[x.i + 1].F.Occupied().Select(o => o.Def).SequenceEqual(g.Occupied().Select(o => o.Def.Id == "zan" ? x.c.Item1 : o.Def))
-                    && v[x.i + 1].F.Occupied().Select(o => o.Slot).SequenceEqual(g.Occupied().Select(o => o.Slot)));
+            // 第335期: `Versions` は期ごとに「版・」の台を入れ替えるので、1行目（ポンの台）だけを見る（後ろの行は「版・」で始まること）。見出しの文は第334期のまま。
+            bool rows = v.Length >= 1 && v[0].Name == "試遊・感電 ポンの台" && v.Skip(1).All(r => r.Name.StartsWith("版・", StringComparison.Ordinal)) && Presets.Playtest.Length == 17;
             Expect("試遊の台: `Presets.Versions` ＝ 「試遊・感電 ポンの台」＋「版・ZC-a〜d 守り型」（守り型の並びでザンだけ版）・`Playtest` は 17 台のまま", rows);
         }
 

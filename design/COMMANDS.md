@@ -1166,6 +1166,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 zan334 compare [版,…]   # 第334期 §6: `compare` 64 行 × 版（基準は段0 入りの規定・32 秒）
     dotnet run --project BattleSim -c Release 0 zan334 log [台] [波] [seed] [版]   # 第334期: 1戦のログ（台は guard か代表台の名前・波 boss ／ guard ／ bat ／ 2 ／ 5 ／ sguard ／ sbat・版 base ／ a ／ b ／ c ／ d）
     dotnet run --project BattleSim -c Release 0 zan334 check          # 第334期 自己検査（段0 の定義 ／ 鏃 ／ 固定の口・鏃は旧と台本が全行同じ・ZC-a ／ b ／ c ／ d の規則を盤を直に組んで・試遊の台・verbose・PickOne）
+    dotnet run --project BattleSim -c Release 0 doha335 p0            # 第335期 §3 Phase 0: 守り型 × 5 波（＋ 強くした近衛 ／ 大隊）のドハが倒れる割合 ／ 倒れた時点の肩代わりの累計・ドハへの直の一撃（ゴルムが引き受けた分）・ゴルムの力の行き先（1 秒）
+    dotnet run --project BattleSim -c Release 0 doha335 boards [版,…]   # 第335期 §6: 代表台 6 × 5 波（守り型は ＋ 強くした近衛 ／ 大隊）× 版（規定 ／ DM-a ／ DM-c ／ DM-c＋ゴルム ／ GL）・seed 0..99（5 秒）。予測のファイルが無ければ走らない
+    dotnet run --project BattleSim -c Release 0 doha335 compare [版,…]  # 第335期 §6: `compare` 64 行 × 版（基準は段0 入りの規定・39 秒）
+    dotnet run --project BattleSim -c Release 0 doha335 log [台] [波] [seed] [版]   # 第335期: 1戦のログ（台は guard か代表台の名前・波 boss ／ guard ／ bat ／ 2 ／ 5 ／ sguard ／ sbat・版 base ／ a ／ c ／ cg ／ gl）
+    dotnet run --project BattleSim -c Release 0 doha335 check         # 第335期 自己検査（段0 の定義 ／ 固定の口 ／ 中継で仇討ちしない・DM-a ／ DM-c ／ 飲み干す ／ GL の規則を盤を直に組んで・試遊の台・verbose・PickOne）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）
