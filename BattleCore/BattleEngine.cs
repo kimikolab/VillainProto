@@ -1827,6 +1827,7 @@ public sealed class BattleContext
         {
             Kind = BattleEventKind.Thunder, Turn = _turn, ActorId = kata.InstanceId, TargetId = target.InstanceId,
             Amount = amount, Slot = hop, StatusRemaining = kinds, Team = target.TeamId,
+            SourceTrait = _ktRodBolt ? TraitId.KataRod : null,   // 第342期・表示専用（避雷針の逆雷の印）
             // 表示専用: 数えた状態の表示名（命中の前）。
             Text = string.Join(",", ThunderTrait.CountedKeys.Where(k => target.RawCounter(k) > 0).Select(StatusKeys.LabelOf)),
         });
@@ -1840,8 +1841,55 @@ public sealed class BattleContext
         kt.ThunderDealt += before - Math.Max(0, target.Hp);
         if (before > 0 && !target.IsAlive) kt.ThunderKills++;
         // 第323期（カタの版）: 雷が最初に当たった敵へ、カタ自身の濃さを全部移す（的が倒れていれば移さない）。保持者がいなければ比較1つで抜ける。
-        if (_tdLive && hop == 1 && target.IsAlive && kata.HasTrait(TraitId.ThunderPowderReturn)) PowderReturn(kata, target);
+        if (_tdLive && hop == 1 && !_ktRodBolt && target.IsAlive && kata.HasTrait(TraitId.ThunderPowderReturn)) PowderReturn(kata, target);   // 第342期: 逆雷（避雷針）では返さない
         MarkShock(target, kata);
+    }
+
+    /// <summary>第342期: いま落としているのが避雷針の逆雷か（<see cref="RodBolt"/> の間だけ真）。<see cref="StrikeThunder"/> が読む（返すをしない・表示の印）。</summary>
+    bool _ktRodBolt;
+    /// <summary>第342期: 避雷針（KT-r・カタの逆雷）の保持者が戦闘に出たか。<b>いなければ比較1つで今どおり。</b>第317期の避雷針（`LightningRod`・投げを引き寄せる・`_rodLive`）とは別の札。</summary>
+    bool _ktRodLive;
+
+    /// <summary>
+    /// 第342期（避雷針・KT-r）: カタの感電が弾けたとき（<see cref="ShockTrigger"/> の列の中・隣の味方への放電の代わり）、敵へ逆雷を落とす。
+    /// 的: 連鎖を起こした一撃の主が生きている敵ならその敵、そうでなければ手番の雷と同じ選び方の最初の的（帯びた敵・種類が多い順・席番号の順）、それもいなければ候補の席番号の若い駒（<b>乱数を引かない</b>）。
+    /// 量 ＝ 現在攻撃力 ×（1 ＋ 帯びた種類 ＋ 雷雲）。<b>雷雲は消費しない</b>。<see cref="TraitId.KataRodChain"/> なら手番の雷と同じく帯びた隣の敵へ跳ねる。雷は感電を弾けさせない（<see cref="StrikeThunder"/>）。
+    /// </summary>
+    void RodBolt(UnitState kata, UnitState? ini)
+    {
+        var pool = TargetPool(kata);
+        UnitState? first = ini is { IsAlive: true } && ini.TeamId != kata.TeamId && !IsSilkBall(ini) ? ini : null;
+        UnitTally kt = TallyOf(kata);
+        kt.Kt342RodFires++;
+        if (first is not null) kt.Kt342RodOnAttacker++;
+        bool path = kata.HasTrait(TraitId.ThunderPath) || kata.HasTrait(TraitId.ThunderPathHop);
+        if (first is null && pool.Count > 0)
+            first = ThunderTrait.Pick(pool, LivingMembers(pool[0].TeamId), new HashSet<UnitState>(), path && !kata.HasTrait(TraitId.ThunderPathHop)) ?? pool.OrderBy(u => u.Slot).First();
+        if (first is null) { kt.Kt342RodNoTarget++; return; }
+        int cloud = ThundercloudTrait.Of(kata);
+        long dealt0 = kt.ThunderDealt;
+        Log($"    {kata.Name} の感電は避雷針を伝って {first.Name} に落ちる", LogKind.Trigger);
+        _ktRodBolt = true;
+        try
+        {
+            var struck = new HashSet<UnitState>();
+            UnitState? cur = first;
+            int hits = 0;
+            while (cur is not null)
+            {
+                int k = ThunderTrait.KindsOf(cur);
+                struck.Add(cur);
+                hits++;
+                StrikeThunder(kata, cur, kata.CurrentAttack * (1 + k + cloud), hits, k);
+                if (!kata.HasTrait(TraitId.KataRodChain)) break;
+                UnitState from = cur;
+                var team = LivingMembers(from.TeamId);
+                cur = ThunderTrait.Pick(team.Where(u => !struck.Contains(u) && FormationRules.AreAdjacent(from, u)), team, struck, path);
+            }
+            kt.Kt342RodHits += hits;
+        }
+        finally { _ktRodBolt = false; }
+        kt.Kt342RodDealt += kt.ThunderDealt - dealt0;
     }
 
     /// <summary>雷を落とし終えた（<b>計数のみ</b>）。</summary>
@@ -1934,7 +1982,8 @@ public sealed class BattleContext
                     if (u.TeamId == x.TeamId) ot.SilkPopsHeroRoot++;
                     if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.SilkBall, Turn = _turn, ActorId = ini?.InstanceId, TargetId = x.InstanceId, Slot = x.Slot, Team = x.TeamId, Text = SilkBallLabels.Pop });
                 }
-                if (_shockStun != 0 && !ball) StunByShock(x, d, ini);   // 第216期（S1〜S3・保持者がいなければ比較1つで抜ける）。第292期: 糸玉は痺れない（乱数も引かない）
+                bool rod = _ktRodLive && x.IsAlive && x.HasTrait(TraitId.KataRod) && x.HasTrait(TraitId.Thunder);   // 第342期（避雷針）: 保持者がいなければ比較1つで抜ける
+                if (_shockStun != 0 && !ball && !rod) StunByShock(x, d, ini);   // 第216期（S1〜S3・保持者がいなければ比較1つで抜ける）。第292期: 糸玉は痺れない（乱数も引かない）。第342期: 避雷針のカタは痺れない ／ 萎縮しない
                 if (x.TeamId != u.TeamId) cross++;                // 第290期・計数のみ（糸を伝って敵の陣で弾けた）
                 if (_grappleLive && d > 0 && x.HasTrait(TraitId.Grapple)) { UnitTally kt = TallyOf(x); kt.KuguPopChain++; if (KuguHeld(x)) kt.KuguPopChainHeld++; }   // 第290期・計数のみ
                 if (_threadLive && d == 0 && x.RawCounter(ThreadMarkKey) > 0) { x.SetCounter(ThreadMarkKey, 0); threadRoot = true; }   // 第290期・計数のみ（KG-b の印の駒が起点）
@@ -1942,7 +1991,8 @@ public sealed class BattleContext
                 if (_tpLive) _tpPopped.Add(x.InstanceId);   // 第323期・計数のみ（この連鎖で先に弾けた駒）
                 int tdN = _powderLive ? PowderPop(x, ini) : 0;   // 第323期（濃さ n の駒の放電は 8 ×（1 ＋ n）・ほかは計数だけ）
                 UnitState? th = _threadLive ? ThreadTarget(x) : null;
-                if (th is not null) Discharge(x, th, d, ini);
+                if (rod) RodBolt(x, ini);   // 第342期（避雷針）: 隣の味方へ放電する代わりに、敵へ逆雷
+                else if (th is not null) Discharge(x, th, d, ini);
                 else
                 {
                     foreach (UnitState n in LivingMembers(x.TeamId))
@@ -2004,6 +2054,17 @@ public sealed class BattleContext
     /// 連鎖の後の口（第289期）。<see cref="ShockTrigger"/> の外側の1回が終わった直後に1度だけ呼ぶ。<paramref name="popped"/> はその連鎖で弾けた駒（すべて <paramref name="team"/> の側）。
     /// 雷雲（カタ・KR）と、蓄電の保持者の計数と、割り込み（シガ・SI）。<b>乱数を引かない。</b>
     /// </summary>
+    /// <summary>雷雲を弾けた数だけ育てる（第289期の本体・第342期に切り出した＝KT-b が味方の側の弾けでも呼ぶ）。雷雲の札の保持者でなければ何もしない。</summary>
+    void GrowCloud(UnitState h, List<UnitState> popped)
+    {
+        if (!h.HasTrait(TraitId.Thundercloud)) return;
+        int c0 = ThundercloudTrait.Of(h);
+        int c = c0 + popped.Count;
+        if (h.HasTrait(TraitId.ThundercloudKeep) && !h.HasTrait(TraitId.ThundercloudUncapped)) c = Math.Min(ThundercloudTrait.KeepCap, c);   // 第292期: KR-∞ は上限なし
+        h.SetCounter(ThundercloudTrait.Key, c);
+        if (c != c0) EmitShockGauge(ShockGaugeLabels.Cloud, popped.Count > 0 ? popped[0] : null, h, c, c0, remaining: popped.Count);   // 第291期・表示専用
+    }
+
     void AfterChain(int team, List<UnitState> popped, UnitState? ini)
     {
         foreach (UnitState h in _chainReaders.ToList())
@@ -2011,6 +2072,11 @@ public sealed class BattleContext
             if (h.TeamId == team)
             {
                 if (_sparkLive && IsSparkHolder(h)) TallyOf(h).SparkAllyPops += popped.Count;   // 第307期・計数のみ（味方の側の弾けは光にならない）
+                if (h.HasTrait(TraitId.Thunder))
+                {
+                    TallyOf(h).Kt342AllyPops += popped.Count;   // 第342期・計数のみ（味方の側で弾けた数・KT-b の見込み）
+                    if (h.HasTrait(TraitId.ThundercloudAllyPops)) GrowCloud(h, popped);   // 第342期（KT-b）: 味方（カタ自身を含む）の弾けも雷雲に
+                }
                 continue;
             }
             if (_swarmLive && h.HasTrait(TraitId.SwarmCall)) NoteSwarmPops(h, popped.Count);   // 第311期（群れ・保持者がいなければ比較1つ）
@@ -2019,14 +2085,7 @@ public sealed class BattleContext
             if (h.HasTrait(TraitId.Thunder))
             {
                 ht.ThunderPopsPending += popped.Count;   // 計数のみ（雷を落とすまでに弾けた敵の数）
-                if (h.HasTrait(TraitId.Thundercloud))
-                {
-                    int c0 = ThundercloudTrait.Of(h);
-                    int c = c0 + popped.Count;
-                    if (h.HasTrait(TraitId.ThundercloudKeep) && !h.HasTrait(TraitId.ThundercloudUncapped)) c = Math.Min(ThundercloudTrait.KeepCap, c);   // 第292期: KR-∞ は上限なし
-                    h.SetCounter(ThundercloudTrait.Key, c);
-                    if (c != c0) EmitShockGauge(ShockGaugeLabels.Cloud, popped.Count > 0 ? popped[0] : null, h, c, c0, remaining: popped.Count);   // 第291期・表示専用
-                }
+                GrowCloud(h, popped);
                 continue;
             }
             if (ini == h) { ht.ChainOwn++; continue; }   // シガ自身の一撃で起きた連鎖では割り込まない
@@ -2845,6 +2904,7 @@ public sealed class BattleContext
         }
         if (x.RawCounter(StatusKeys.Stun) > 0) { t.ShockStunAlready++; return; }
         t.ShockStunned++;
+        if (x.HasTrait(TraitId.Thunder)) (t.Kt342StunCause ??= new long[3])[depth == 0 && ini is not null && ini.TeamId != x.TeamId ? 0 : depth > 0 ? 1 : 2]++;   // 第342期・計数のみ（カタが痺れたきっかけ: 敵の一撃 ／ 連鎖の放電 ／ ほか）
         // 第218期・**計数のみ**: そのターンの手番をまだ終えていなかったか（＝動く前に止めた）。ミオの一撃が起こした連鎖はミオの帳簿にも。
         bool early = x.TakenTurn < _turn;
         if (early) t.ShockStunnedEarly++;
@@ -9235,6 +9295,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Rupture)) _ruptureLive = true; // 第281期（炸裂の標の段・打点・乱射・敵の標の層）
         if (u.HasTrait(TraitId.Feathers)) _featherLive = true; // 第285期（羽の一振り・羽の書き込み・1発の打点）
         if (u.HasTrait(TraitId.FeatherGrow) || u.HasTrait(TraitId.FeatherGrowUnmarked)) _featherGrowLive = true;   // 第339期（羽が毎ターン増える FG-a ／ FG-b）
+        if (u.HasTrait(TraitId.KataRod) && u.HasTrait(TraitId.Thunder)) _ktRodLive = true;   // 第342期（避雷針 KT-r）
         if (u.HasTrait(TraitId.FireArmor) || u.HasTrait(TraitId.Smolder)
             || u.HasTrait(TraitId.FireMend) || u.HasTrait(TraitId.FireFeed)) _fireArmorLive = true;   // 第234期（火の鎧・焼け残り）・第235期（火の癒し・焼き返し）
         if (u.HasTrait(TraitId.FireWard) || u.HasTrait(TraitId.FireWardAll)) _fireWardHolders.Add(u);             // 第238期（盾の配り）

@@ -148,7 +148,7 @@ static partial class Settle340Diag
         }
         {
             var v = Presets.Versions; var nw = G339.NoWriterBoard();
-            bool rows = v.Length == 2 && v[0].Name == "試遊・感電 ポンの台" && v[1].Name == "試遊・ミサ 書き手なし"
+            bool rows = v.Length >= 2 && v[0].Name == "試遊・感電 ポンの台" && v[1].Name == "試遊・ミサ 書き手なし" && v.Skip(2).All(r => r.Name.StartsWith("版・", StringComparison.Ordinal))   /* 第342期: 後ろの「版・」の台は期ごとに入れ替わる */
                 && v[1].F.Occupied().Select(o => o.Def).SequenceEqual(nw.Occupied().Select(o => o.Def)) && v[1].F.Occupied().Select(o => o.Slot).SequenceEqual(nw.Occupied().Select(o => o.Slot))
                 && v[1].F.Occupied().Any(o => ReferenceEquals(o.Def, M)) && Presets.Playtest.Length == 17
                 && Presets.Compare.Concat(Presets.Cross).Concat(Presets.Playtest).Concat(v).First(r => r.Name.Contains("試遊・ミサ 書き手なし", StringComparison.Ordinal)).Name == "試遊・ミサ 書き手なし";

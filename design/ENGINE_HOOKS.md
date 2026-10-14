@@ -1407,3 +1407,9 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 ## 第341期 —— 戦績の「仕掛け」の列（計数のみ）
 
 - `NoteCredit341`（計数のみ・盤面を変えない・乱数を引かない）: `DustExplode`（隣の駒が実際に減らした HP）と `PowderSelfBurn`（焼）は粉の持ち主（`_powderHolder`・トウ）、`Discharge` ／ `ThreadDischarge` の糸玉発の放電は糸玉の持ち主（`_silkOwner`・クグ）の帳簿へ。陣営は仕掛けた駒から見る（`UnitTally.CreditToEnemy` ／ `CreditToAlly`・内訳 `Credit341Dust` ／ `Credit341Burn` ／ `Credit341Ball`・受けた側 `Credit341Taken`）。回復に反転した分は呼ばない。糸玉の粉が爆ぜた爆発はトウに入れる（クグには入れない）。爆ぜた駒の `DamageToEnemy` ／ `DamageToAlly` ／ `TakenFromAlly` はそのまま（二重は放電の列と同じ扱い）。戦績パネル（`DemoApp/ScorePanel.cs`）の「仕掛け(敵)」「仕掛け(味)」。器具: `credit341`。
+
+## 第342期 —— カタの見せ場: 味方の弾けも雷雲に（KT-b）／ 避雷針（KT-r・版）
+
+- `AfterChain` の雷雲を `GrowCloud` に切り出した。札 `ThundercloudAllyPops`（KT-b）の保持者は、自分の陣営の連鎖（カタ自身の弾けを含む）でも雷雲が育つ。計数のみ `UnitTally.Kt342AllyPops`（規定でも数える）。
+- `ShockTrigger` の列の中で、札 `KataRod` を持つ生きているカタが弾けたら（`_ktRodLive` で短絡）、痺れの判定（`StunByShock`・萎縮も）を飛ばし、隣の味方 ／ 糸 ／ 糸玉への放電の代わりに `RodBolt`（逆雷）: 的は連鎖を起こした一撃の主が生きている敵ならその敵、そうでなければ手番の雷と同じ選び方の最初の的、それもいなければ候補の席番号の若い駒（乱数を引かない）。量 ＝ 攻 ×（1 ＋ 種類 ＋ 雷雲）・雷雲は消費しない・`StrikeThunder` を通る（感電を弾けさせない・当てた敵に感電）。`_ktRodBolt` の間は返す（`PowderReturn`）をしない。`KataRodChain` は手番の雷と同じく帯びた隣の敵へ跳ねる。表示は既存の `Thunder` に `SourceTrait = KataRod`。**第317期の避雷針（`LightningRod`・投げを引き寄せる・`_rodLive`）とは別の札。**
+- 計数のみ `Kt342StunCause`（カタが感電で痺れたきっかけ）／ `Kt342RodFires` ／ `Kt342RodOnAttacker` ／ `Kt342RodHits` ／ `Kt342RodDealt` ／ `Kt342RodNoTarget`。版 `KataKTb` ／ `KataKTr1` ／ `KataKTrJ`。器具: `kata342`。

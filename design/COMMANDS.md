@@ -1193,6 +1193,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 credit341 seed7 [seed]  # 第341期 §3: 「試遊・感電 ポンの台」× ボス × seed 7（ポンが見た戦）の駒ごとの与 ／ 被 ／ 仕掛け(敵) ／ 仕掛け(味) ／ 仕掛けで受けた（1 秒）
     dotnet run --project BattleSim -c Release 0 credit341 avg         # 第341期 §3: 同じ台 × 近衛 ／ 大隊（seed 0..99）の駒ごとの与(敵) と仕掛け(敵)・割合（1 秒）
     dotnet run --project BattleSim -c Release 0 credit341 check       # 第341期 自己検査（爆発 ／ 焼を盤を直に組んで・戦の中で既存の計数と合う・トウ ／ クグのいない台で 0・verbose・PickOne）
+    dotnet run --project BattleSim -c Release 0 kata342 p0            # 第342期 §3 Phase 0: ポンの台 ／ 光の盾 鞭 × 近衛 ／ 大隊 ／ ボスのカタの痺れ（割合・きっかけ）／ 雷雲 ／ 味方の弾け（0 秒）
+    dotnet run --project BattleSim -c Release 0 kata342 boards [版,…]   # 第342期 §5: 代表台 4（ポンの台 ／ 光の盾 鞭 ／ 光の盾 ／ 感電）× 5 波 × 版（規定 ／ KT-b ／ ＋避雷針1発 ／ ＋避雷針跳ね）・seed 0..99・カタの働き ／ 駒ごとの割合 ／ 勝率 ／ 壊れの兆し（3 秒）。予測のファイルが無ければ走らない
+    dotnet run --project BattleSim -c Release 0 kata342 compare [版,…]  # 第342期 §5: `compare` 64 行 × 版（16 秒）
+    dotnet run --project BattleSim -c Release 0 kata342 log [台] [波] [seed] [版]   # 第342期: 1戦のログ（台 pon ／ whip ／ shield か台の名前・版 base ／ b ／ r1 ／ rj）
+    dotnet run --project BattleSim -c Release 0 kata342 check         # 第342期 自己検査（版の定義と試遊の台・KT-b ／ 避雷針 ／ 跳ねるを盤を直に組んで・verbose・PickOne）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

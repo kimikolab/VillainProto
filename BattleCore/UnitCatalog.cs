@@ -5567,6 +5567,35 @@ public static class UnitCatalog
     /// <summary>第339期 FG-b（標が無いときだけ増える）。規定のミサ − <see cref="TraitId.FeatherLoss"/> ＋ <see cref="TraitId.FeatherGrowUnmarked"/>（手番の頭に、敵に標持ちが1体もいなければ羽が3枚増える・乱射しても減らない）。</summary>
     public static readonly UnitDef TomeFGb = With339(TomeH339, TraitId.FeatherGrowUnmarked, TomeMinus340);
 
+    // ---------------------------------------------------------------------------------
+    // 第342期（指示書 design/PHASE342_KATA_ROD_SPEC.md §2）—— カタの見せ場: 味方の弾けも雷雲に（KT-b）／ 避雷針（KT-r）。規定のカタに札を足す。
+    // 対照（`All` ／ `Retired` ／ `Presets` の `Compare` ／ `Playtest` に入れない・`Presets.Versions` の「版・」の台だけが使う・採否はポン）。文面は叩き台。
+    // ---------------------------------------------------------------------------------
+    /// <summary>第342期 KT-b の句（プラスの末尾）。</summary>
+    public const string KataAllyCloudClause342 = "。味方の感電が弾けても雷雲は育つ";
+    /// <summary>第342期 避雷針の句（プラスの末尾）。</summary>
+    public const string KataRodClause342 = "。感電した身で殴られると、雷は避雷針を伝って敵に落ちる（自分は痺れない）";
+
+    static UnitDef With342(UnitDef b, TraitId[] cards, string plusTail, bool rod) => new()
+    {
+        Id = b.Id, Name = b.Name, MaxHp = b.MaxHp, Attack = b.Attack, Speed = b.Speed, Advances = b.Advances, Pattern = b.Pattern,
+        Traits = b.Traits.Concat(cards).ToArray(), Actions = b.Actions,
+        PlusText = b.PlusText + plusTail,
+        MinusText = !rod ? b.MinusText
+            : b.MinusText.Contains("その味方が半々の確率で痺れる", StringComparison.Ordinal) ? b.MinusText.Replace("その味方が半々の確率で痺れる", "その味方（自分を除く）が半々の確率で痺れる", StringComparison.Ordinal)
+            : throw new InvalidOperationException("第342期: カタのマイナスに痺れの句が見つからない"),
+        Flavor = b.Flavor,
+    };
+
+    /// <summary>第342期 KT-b。規定のカタ ＋ <see cref="TraitId.ThundercloudAllyPops"/>（敵味方を問わず、感電が1体弾けるたび雷雲 +1・カタ自身を含む）。</summary>
+    public static readonly UnitDef KataKTb = With342(Kata, new[] { TraitId.ThundercloudAllyPops }, KataAllyCloudClause342, rod: false);
+
+    /// <summary>第342期 KT-b ＋ 避雷針（1発）。<see cref="KataKTb"/> ＋ <see cref="TraitId.KataRod"/>（カタの感電が弾けたら隣の味方へ放電せず、敵へ逆雷1発・雷雲は消費しない・カタは痺れない ／ 萎縮しない）。</summary>
+    public static readonly UnitDef KataKTr1 = With342(Kata, new[] { TraitId.ThundercloudAllyPops, TraitId.KataRod }, KataAllyCloudClause342 + KataRodClause342, rod: true);
+
+    /// <summary>第342期 KT-b ＋ 避雷針（跳ねる）。<see cref="KataKTr1"/> ＋ <see cref="TraitId.KataRodChain"/>（逆雷が手番の雷と同じく帯びた隣の敵へ跳ねる）。</summary>
+    public static readonly UnitDef KataKTrJ = With342(Kata, new[] { TraitId.ThundercloudAllyPops, TraitId.KataRod, TraitId.KataRodChain }, KataAllyCloudClause342 + KataRodClause342, rod: true);
+
     /// <summary>第285期 M-b（乱射した数だけ羽を失う・下限 1）。<see cref="TomeMa"/> ＋ <see cref="TraitId.FeatherLoss"/> の1札だけが違う。<b>第286〜298期の規定</b>。
     /// 第299期に MF-b を規定にしたので、旧の規定の定義を明示的に持つ（第298期までは <c>TomeMb = Tome</c> の別名だった）。過去の器具はこちらに固定する。
     /// 第298期の版（MF-a ／ MF-b）はこちらから作る（静的初期化の順で、版より前に置く）。</summary>

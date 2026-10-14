@@ -859,6 +859,11 @@ public enum TraitId
     FeatherGrow,        // 羽が毎ターン増える（FG-a・ミサ）: ミサの手番の頭に羽が3枚増える（標の有無を問わない・1ラウンドに1度）（engine の `FeatherVolley` の頭）
     FeatherGrowUnmarked,// 標が無いときだけ増える（FG-b・ミサ）: ミサの手番の頭に、敵に標持ちが1体もいなければ羽が3枚増える（1ラウンドに1度）（engine の `FeatherVolley` の頭）
 
+    // --- 第342期で足した札（指示書 design/PHASE342_KATA_ROD_SPEC.md §2）。KT はカタの版（保持者 0 枚） ---
+    ThundercloudAllyPops,// 味方の弾けも雷雲に（KT-b・カタ）: 雷雲 +1 を、敵味方を問わず感電が1体弾けるたびに（カタ自身を含む）（**札そのものは挙動を持たない**・engine の `AfterChain`）
+    KataRod,            // 避雷針（KT-r・カタ）: カタの感電が弾けたら、隣の味方へ放電する代わりに敵へ逆雷を1発（殴った敵が生きていればその敵・いなければ手番の雷の最初の的）。雷雲は消費しない。カタはこの弾けで痺れない ／ 萎縮しない（**札そのものは挙動を持たない**・engine の `ShockTrigger` ／ `RodBolt`）
+    KataRodChain,       // 避雷針の逆雷は跳ねる（KT-r 跳ね・カタ）: 逆雷が手番の雷と同じく、帯びた隣の敵へ跳ねる（**札そのものは挙動を持たない**・engine の `RodBolt`）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -17689,6 +17694,9 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.MarkInheritFeathers),       // 第337期（散った恨みの羽・ミサ・印だけ）
         new FeatherGrowTrait(TraitId.FeatherGrow),            // 第339期（羽が毎ターン増える FG-a・ミサ）
         new FeatherGrowTrait(TraitId.FeatherGrowUnmarked),    // 第339期（標が無いときだけ増える FG-b・ミサ）
+        new MarkOnlyTrait(TraitId.ThundercloudAllyPops),      // 第342期（味方の弾けも雷雲に KT-b・カタ・印だけ）
+        new MarkOnlyTrait(TraitId.KataRod),                   // 第342期（避雷針 KT-r・カタ・印だけ）
+        new MarkOnlyTrait(TraitId.KataRodChain),              // 第342期（避雷針の逆雷は跳ねる・カタ・印だけ）
         new SharePushTrait(TraitId.ShareSin),                 // 第313期（ドハ DP-c の手番）
         new AmplifierTrait(),
         new ContagionTrait(),
