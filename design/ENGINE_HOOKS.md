@@ -1368,3 +1368,8 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - 規定のソム `UnitCatalog.Som` ＝ `SomH332`（第320〜332期の規定・明示の定義に）＋ `SparkVeilCap`。第308期の口（`SparkTrait.Veil` の上限・`VeilCapPercent` ＝ 40）がそのまま規定の戦で立つ。第327期の `SomBc`・第332期の `SomLVc332` ／ `SomLVd332` は旧から作り直した（札は1枚ずつ）。
 - 固定の口 `Common.PinS332` ／ `Pin332` ／ `CompareBuildsH332` ／ `PlaytestH332`。第325〜332期の口（`PinTK331` ／ `PinT328` ／ `PinTK327` ／ `PinT326`）と古い口の終端 `PinTKK324` も規定のソムを `SomH332` へ、`PinS319` ／ `PinSS318` ／ `PinS317` ／ `IsSomNow` は `SomH332` も受ける。器具: `settle333`。
 
+## 第334期 —— 段0: ミサの爪痕をレリック「抉りの鏃」へ ／ ザンの割り込みの回数（ZC・版）
+
+- 規定のミサ `UnitCatalog.Tome` ＝ `TomeH333`（第299〜333期の規定・明示の定義に）から `RuptureScar` を外した。レリック「抉りの鏃」＝ 札 `RuptureScar` そのもの（`RelicCatalog.Added334`・`All` の 12 枚には入れない）。engine の `RuptureAfter` が保持を読むだけなので、働くのは炸裂の保持者だけ。
+- 仇指し（`VendettaTrait`）の3つの入口に版の門: `VendettaDirectOnly`（ZC-a・`Hit.Relayed` なら出ない）・`VendettaCapTrait.Allows`（ZC-b `VendettaRoundCap3` ＝ 割り込み 1ラウンド 3 回 ／ ZC-d `VendettaFrameOnce` ＝ 濡れ衣 1ラウンド 1 回・帳簿はザンの私有カウンタ・`OnCarryOver` で消す）・返り血の `lethal` を `RecoilLethal`（ZC-c）で替える。保持者 0 枚（版 `ZanZCa`〜`ZanZCd` だけ）。
+- 計数のみ: `BattleContext.NoteZc334`（割り込みの出どころ 5 種 ／ 1ラウンドの最多）・`UnitTally.Zc334*` ／ `RecoilDeaths`。固定の口 `Common.PinM333` ／ `Pin333` ／ `CompareBuildsH333` ／ `PlaytestH333` ／ `IsMisaNow`。器具: `zan334`。

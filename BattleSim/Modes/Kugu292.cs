@@ -69,7 +69,7 @@ static class Kugu292Diag
                     : ReferenceEquals(d, UnitCatalog.Sora) ? UnitCatalog.SoraSR0   // 第295期: ソラも（規定は SR-b・旧は `SoraSR0`）
                     : ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaHK0   // 第296期: ヒサも（規定は HK-b・旧は `HisaHK0`）
                     : ReferenceEquals(PinDS316(d), UnitCatalog.DohaH316) ? UnitCatalog.DohaD0   // 第298期: ドハも（規定は DH-a なまりなし・旧は `DohaD0`）・第317期: 規定 ／ 第316期までの規定のどちらでも
-                    : ReferenceEquals(d, UnitCatalog.Tome) ? UnitCatalog.TomeMb : ReferenceEquals(d, UnitCatalog.Zan) ? UnitCatalog.ZanZN0 : PinTKK324(d);   // 第325期: 規定のトウ ／ カタも第324期までの規定へ（クグは前で `KuguKGb` へ）・第299期: ミサ ／ ザンも（規定は MF-b ／ ZN-b・旧は `TomeMb` ／ `ZanZN0`）
+                    : IsMisaNow(d) ? UnitCatalog.TomeMb : ReferenceEquals(d, UnitCatalog.Zan) ? UnitCatalog.ZanZN0 : PinTKK324(d);   // 第334期: ミサは `TomeH333` も   // 第325期: 規定のトウ ／ カタも第324期までの規定へ（クグは前で `KuguKGb` へ）・第299期: ミサ ／ ザンも（規定は MF-b ／ ZN-b・旧は `TomeMb` ／ `ZanZN0`）
         return g;
     }
 

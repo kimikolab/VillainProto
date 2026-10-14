@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using BattleCore;
 using static Common;
 
@@ -434,7 +434,7 @@ static class Zan299Diag
         Console.WriteLine("|---|---|---|");
 
         // (a) 段0-1: 規定のミサ ＝ 旧（M-b `TomeMb`）＋ MF-b の札 ／ 規定のザン ＝ 旧（`ZanZN0`）＋ ZN-b の札・文面・旧は `All` の外
-        var misa = UnitCatalog.Tome; var zan = UnitCatalog.ZanZNb;   // 第300期: 規定のザンは ZM-a になった——第299期の規定（`ZanZNb`）を見る
+        var misa = UnitCatalog.TomeH333; var zan = UnitCatalog.ZanZNb;   // 第334期: 規定のミサは爪痕をレリックへ移した——第299〜333期の規定（`TomeH333`）を見る   // 第300期: 規定のザンは ZM-a になった——第299期の規定（`ZanZNb`）を見る
         Expect("(a) 段0-1: 規定のミサ ＝ `TomeMb` ＋ `FeatherMarkLayer`（＝ 第298期の MF-b）・規定のザン ＝ `ZanZN0` ＋ `VendettaFrameAll`（＝ ZN-b）・文面は第298期の版のまま・旧は `All` ／ `Everyone` の外・第298期の版は旧から作る",
             misa.Traits.SequenceEqual(UnitCatalog.TomeMb.Traits.Append(TraitId.FeatherMarkLayer)) && misa.Traits.SequenceEqual(UnitCatalog.MisaMFb.Traits)
             && misa.PlusText == UnitCatalog.MisaMFb.PlusText && misa.MinusText == UnitCatalog.MisaMFb.MinusText && misa.Flavor == UnitCatalog.TomeMb.Flavor
@@ -442,7 +442,7 @@ static class Zan299Diag
             && zan.Traits.SequenceEqual(UnitCatalog.ZanZN0.Traits.Append(TraitId.VendettaFrameAll)) && zan.Traits.SequenceEqual(UnitCatalog.ZanZNb.Traits)
             && zan.PlusText == UnitCatalog.ZanZNb.PlusText && zan.PlusText.EndsWith("。仲間を撃った者が誰であれ、指差された敵を斬る", StringComparison.Ordinal) && zan.MinusText == UnitCatalog.ZanZN0.MinusText
             && misa.MaxHp == 58 && misa.Attack == 12 && misa.Speed == 6 && zan.MaxHp == 56 && zan.Attack == 10 && zan.Speed == 5
-            && UnitCatalog.All.Contains(misa) && UnitCatalog.All.Contains(UnitCatalog.Zan) && !UnitCatalog.Everyone.Contains(UnitCatalog.TomeMb) && !UnitCatalog.Everyone.Contains(UnitCatalog.ZanZN0)
+            && UnitCatalog.All.Contains(UnitCatalog.Tome) && UnitCatalog.All.Contains(UnitCatalog.Zan) && !UnitCatalog.Everyone.Contains(UnitCatalog.TomeMb) && !UnitCatalog.Everyone.Contains(UnitCatalog.ZanZN0)
             && UnitCatalog.MisaMFa.Traits.SequenceEqual(UnitCatalog.TomeMb.Traits.Append(TraitId.FeatherMark)) && UnitCatalog.ZanZNa.Traits.SequenceEqual(UnitCatalog.ZanZN0.Traits.Append(TraitId.VendettaFrame)));
         // (b) 段0-2: 規定のヒサ ＝ 旧（`HisaHKb`）＋ `MarkRallySelf`・文面は変えない
         var hisa = UnitCatalog.HisaHKs;   // 第300期: 規定のヒサは矢面が羽も半分になった——第299期の規定（`HisaHKs`）を見る

@@ -900,10 +900,15 @@ public static class Presets
     /// <para>第327期: 粉塵爆発（DX）の4つの版を、第326期のポンの台の並び（前1 カタ・前3 シガ・中央 トウ・後1 クグ・後3 ソム）で。</para>
     /// <para>第328期: DX ＋ 電池を規定にしたので4つの版を外し、<b>ポンの台（規定の駒）を試遊の台として</b>ここに置いた（`Playtest` に足すと試遊の台を数える器具の出力が動くため・
     /// design/PHASE328_DUST_BATTERY_SETTLE_SPEC.md §6）。名前は「試遊・」で始まるが、置き場所はこの一覧。</para>
-    /// <para>第329期: ポンの台は残し、粉の付いた駒は爆ぜる（PB）の4つの版を「版・」の台として足した。第330期: PB-a ＋ b を規定にしたので4台を外した（ポンの台は規定の駒のまま残す）。第331期: 感電の痺れの ST の3つの版を「版・」の台として足した。第332期: ST-c を規定にしたので3台を外し、ソムの光の衣の LV-c ／ LV-d の2台を足した。第333期: LV-c を規定にしたので2台を外した（ポンの台は規定の駒のまま残す）。</para>
+    /// <para>第329期: ポンの台は残し、粉の付いた駒は爆ぜる（PB）の4つの版を「版・」の台として足した。第330期: PB-a ＋ b を規定にしたので4台を外した（ポンの台は規定の駒のまま残す）。第331期: 感電の痺れの ST の3つの版を「版・」の台として足した。第332期: ST-c を規定にしたので3台を外し、ソムの光の衣の LV-c ／ LV-d の2台を足した。第333期: LV-c を規定にしたので2台を外した（ポンの台は規定の駒のまま残す）。
+    /// 第334期: ザンの割り込みの回数（ZC-a ／ b ／ c ／ d）の4つの版を「版・」の台として足した（並びは「試遊・標 守り型」・ザンだけを版に替える）。</para>
     /// </summary>
     public static (string Name, Formation F)[] Versions => new (string, Formation)[]
     {
         ("試遊・感電 ポンの台", Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Shiga, center: UnitCatalog.Tou, back1: UnitCatalog.Kugu, back3: UnitCatalog.Som)),
+        ("版・ZC-a 守り型", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.ZanZCa, center: UnitCatalog.Doha, back1: UnitCatalog.Tome, back3: UnitCatalog.Hisa)),
+        ("版・ZC-b 守り型", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.ZanZCb, center: UnitCatalog.Doha, back1: UnitCatalog.Tome, back3: UnitCatalog.Hisa)),
+        ("版・ZC-c 守り型", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.ZanZCc, center: UnitCatalog.Doha, back1: UnitCatalog.Tome, back3: UnitCatalog.Hisa)),
+        ("版・ZC-d 守り型", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.ZanZCd, center: UnitCatalog.Doha, back1: UnitCatalog.Tome, back3: UnitCatalog.Hisa)),
     };
 }

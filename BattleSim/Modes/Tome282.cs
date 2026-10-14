@@ -442,7 +442,7 @@ static class Tome282Diag
         Expect("(a) `TomeT1n` は T1n（炸裂・爪痕・乱射・層を残す）を明示的に持つ・規定（第286期から M-b）とも `TomeT1` とも別の物",
             UnitCatalog.TomeT1n.Traits.SequenceEqual(new[] { TraitId.Rupture, TraitId.RuptureScar, TraitId.Spray, TraitId.RuptureKeep })
             && !ReferenceEquals(UnitCatalog.TomeT1n, UnitCatalog.Tome) && !ReferenceEquals(UnitCatalog.TomeT1, UnitCatalog.Tome)
-            && UnitCatalog.Tome.Traits.SequenceEqual(UnitCatalog.TomeMb.Traits.Append(TraitId.FeatherMarkLayer)));   // 第299期: 規定は M-b ＋ MF-b（`TomeMb` は M-b の明示の定義）
+            && UnitCatalog.TomeH333.Traits.SequenceEqual(UnitCatalog.TomeMb.Traits.Append(TraitId.FeatherMarkLayer)));   // 第334期: 第299〜333期の規定は `TomeH333` が明示的に持つ（規定は爪痕をレリックへ移した）・第299期: 規定は M-b ＋ MF-b（`TomeMb` は M-b の明示の定義）
         Expect("(b) T0 は旧トメ（止め）・T1n は T1 ＋ 層を残す の1札だけが違う",
             UnitCatalog.TomeT0.Traits.SequenceEqual(new[] { TraitId.Finisher })
             && UnitCatalog.TomeT1n.Traits.Except(UnitCatalog.TomeT1.Traits).SequenceEqual(new[] { TraitId.RuptureKeep })

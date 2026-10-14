@@ -2300,6 +2300,17 @@ public sealed class UnitTally
                 RoundTurns, RoundFoes, RoundSlashes, RoundCapped, RoundCrossed, RoundBack, RoundDealt;
     public long[]? RoundSlashHist;
     /// <summary>
+    /// 第334期（<b>計数のみ</b>・ザンの割り込みの出どころ・規定でも数える）。誰も読んで分岐しない。
+    /// <c>Zc334Kind</c>[k] ／ <c>Zc334KindDealt</c>[k] 仇討ち（割り込み）の回数 ／ 実際に削った HP。k ＝ 0 敵が標の味方を直に殴った ／ 1 ドハ（分かち）の肩代わりの中継 ／
+    /// 2 ゴルム（巨躯）の肩代わりの中継 ／ 3 そのほかの中継 ／ 4 濡れ衣（味方の攻撃から・ヒサの「あいつがやった！」）。
+    /// <c>Zc334RoundMax</c> 1ラウンド（戦のターン）の割り込みの最多（戦ごと・<c>Merge</c> は和 ＝ 戦ごとの最多の和）／ <c>Zc334RoundPeak</c> 同じく最大（<c>Merge</c> は最大）／
+    /// <c>Zc334RoundTurn</c> ／ <c>Zc334RoundN</c> いまのラウンドとその回数（帳簿・<c>Merge</c> しない）。
+    /// 版: <c>Zc334RelaySkipped</c> ZC-a が中継で止めた ／ <c>Zc334Capped</c> ZC-b が上限で止めた ／ <c>Zc334FrameCapped</c> ZC-d が止めた ／
+    /// <c>RecoilDeaths</c> ／ <c>RecoilDeathTurn</c> ZC-c で返り血で倒れた（回・そのターンの和）。
+    /// </summary>
+    public long[]? Zc334Kind, Zc334KindDealt;
+    public long Zc334RoundMax, Zc334RoundPeak, Zc334RoundTurn, Zc334RoundN, Zc334RelaySkipped, Zc334Capped, Zc334FrameCapped, RecoilDeaths, RecoilDeathTurn;
+    /// <summary>
     /// 第297期（<b>計数専用</b>・分かち）: <c>SharedAway</c> この駒の痛みを分かちが引き受けた実額（相手ごとの内訳・痛みをくれた側に付く）／ <c>ShareTakenHits</c> ドハが中継の一撃を受けた回数（ドハの側）。
     /// 版（DH-a ／ DH-b ／ DH-t）: ドハ ＝ <c>ShareGives</c> ／ <c>ShareGiven</c> 力を配った回数・量 ／ <c>ShareGiftAccrued</c> 累計に入れた量 ／ <c>ShareGifts</c> 控えた手番 ／
     /// <c>ShareGiftCapped</c> 1ターン1回で止まった ／ <c>ShareGiftNoTarget</c> 相手がいない ／ <c>ShareGiftSkipped</c> 控えた相手が倒れていた ／
@@ -3519,6 +3530,8 @@ public sealed class UnitTally
         ZanPlanA += o.ZanPlanA; ZanPlan1 += o.ZanPlan1; ZanPlanACapped += o.ZanPlanACapped; ZanPlan1Capped += o.ZanPlan1Capped; ZanTurnDealt += o.ZanTurnDealt;
         RoundTurns += o.RoundTurns; RoundFoes += o.RoundFoes; RoundSlashes += o.RoundSlashes; RoundCapped += o.RoundCapped; RoundCrossed += o.RoundCrossed;
         RoundBack += o.RoundBack; RoundDealt += o.RoundDealt; AddHist(ref RoundSlashHist, o.RoundSlashHist);
+        AddHist(ref Zc334Kind, o.Zc334Kind); AddHist(ref Zc334KindDealt, o.Zc334KindDealt); Zc334RoundMax += o.Zc334RoundMax; Zc334RoundPeak = Math.Max(Zc334RoundPeak, o.Zc334RoundPeak);   // 第334期
+        Zc334RelaySkipped += o.Zc334RelaySkipped; Zc334Capped += o.Zc334Capped; Zc334FrameCapped += o.Zc334FrameCapped; RecoilDeaths += o.RecoilDeaths; RecoilDeathTurn += o.RecoilDeathTurn;
         SharedAway += o.SharedAway; ShareTakenHits += o.ShareTakenHits; ShareGives += o.ShareGives; ShareGiven += o.ShareGiven; ShareGiftAccrued += o.ShareGiftAccrued;   // 第297期
         ShareGifts += o.ShareGifts; ShareGiftCapped += o.ShareGiftCapped; ShareGiftNoTarget += o.ShareGiftNoTarget; ShareGiftSkipped += o.ShareGiftSkipped;
         ShareGot += o.ShareGot; ShareGiftGot += o.ShareGiftGot; ShareGiftTurns += o.ShareGiftTurns; ShareGiftAttacks += o.ShareGiftAttacks;

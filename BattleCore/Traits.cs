@@ -838,6 +838,12 @@ public enum TraitId
     // --- 第332期で足した札（指示書 design/PHASE332_STUN_ONCE_SOM_VEIL_SPEC.md）。LV-d はソムの版（保持者 0 枚）。LV-c は第308期の `SparkVeilCap` をそのまま使う ---
     SparkVeilTemp,      // 一時の衣（LV-d・`SparkVeil` と組む）: 衣で足した破片（`SparkTrait.VeilKey` の帳簿の残り）は、ソムの次の光の雨の頭で消える（ほかの書き手の破片は消さない・上限なし）（**札そのものは挙動を持たない**・`SparkTrait.Rain` ／ `RainOn` が engine の `VeilExpire` を呼ぶ）
 
+    // --- 第334期で足した札（指示書 design/PHASE334_MARK_ZAN_SPEC.md §4）。ZC はザンの版（保持者 0 枚・`Vendetta` と組む） ---
+    VendettaDirectOnly, // 中継では出ない（ZC-a）: 標の味方への一撃が肩代わりの中継（`Hit.Relayed`・ドハの分かち ／ ゴルムの巨躯が引き受けた分）なら仇討ちしない。標の味方が直に殴られたとき（肩代わりの残り）だけ（**札そのものは挙動を持たない**・`VendettaTrait.OnAllyDamaged`）
+    VendettaRoundCap3,  // 1ターン3回まで（ZC-b）: 割り込み（仇討ち ＋ 濡れ衣の仇討ち）は1ラウンド（戦のターン）に3回まで。手番の仇巡りは数えない（帳簿はザンの私有・`OnCarryOver` で消す）
+    RecoilLethal,       // 返り血で倒れる（ZC-c・`Recoil` と組む）: 返り血（1回 3）が HP 1 で止まらない（**札そのものは挙動を持たない**・`VendettaTrait.Avenge`）
+    VendettaFrameOnce,  // 濡れ衣は1ターン1回（ZC-d）: 濡れ衣の仇討ち（味方の攻撃から「あいつがやった！」で起きる分）は1ラウンドに1回まで。ヒサの指差し（敵に標）は今のまま（帳簿はザンの私有・`OnCarryOver` で消す）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -12788,7 +12794,9 @@ public sealed class VendettaTrait : Trait
         if (source is null || source.TeamId == self.TeamId) return;     // 味方の事故には出ない
         if (!source.IsAlive) return;
         if (ctx.InReaction) return;                                     // 反撃の連鎖を止める
+        if (ctx.Hit.Relayed && self.HasTrait(TraitId.VendettaDirectOnly)) { ctx.TallyOf(self).Zc334RelaySkipped++; return; }   // 第334期（ZC-a）: 肩代わりの中継では出ない
         if (!ctx.CanActOutOfTurn(self, OutOfTurnRoute.Avenge)) return;  // 粛・痺れで止まる
+        if (!VendettaCapTrait.Allows(ctx, self, framed: false)) return;   // 第334期（ZC-b）
         Avenge(ctx, self, ally, source, framed: false);
     }
 
@@ -12806,6 +12814,7 @@ public sealed class VendettaTrait : Trait
         UnitState? foe = ctx.FramePick(self);
         if (foe is null) return;
         if (!ctx.CanActOutOfTurn(self, OutOfTurnRoute.Avenge)) return;
+        if (!VendettaCapTrait.Allows(ctx, self, framed: true)) return;   // 第334期（ZC-b ／ ZC-d）
         ctx.NoteFramed(hisa, self, foe, ally, shooter);
         Avenge(ctx, self, ally, foe, framed: true);
     }
@@ -12819,12 +12828,15 @@ public sealed class VendettaTrait : Trait
         if (!self.HasTrait(TraitId.VendettaFrameAll) && !shooter.HasTrait(TraitId.Feathers)) return;
         if (!foe.IsAlive || ctx.InReaction) return;
         if (!ctx.CanActOutOfTurn(self, OutOfTurnRoute.Avenge)) return;
+        if (!VendettaCapTrait.Allows(ctx, self, framed: true)) return;   // 第334期（ZC-b ／ ZC-d）
         ctx.NoteFramedVendetta(self, foe, shooter);
         Avenge(ctx, self, ally, foe, framed: true);
     }
 
     static void Avenge(BattleContext ctx, UnitState self, UnitState ally, UnitState source, bool framed)
     {
+        // 第334期（計数のみ）: 割り込みの出どころ。いま解決中の一撃（標の味方への一撃）の札で分ける——中継なら受けた駒（ドハ ＝ 分かち ／ ゴルム ＝ 巨躯）で。
+        int kind = framed ? 4 : !ctx.Hit.Relayed ? 0 : ally.HasTrait(TraitId.Sharer) ? 1 : ally.HasTrait(TraitId.Colossus) ? 2 : 3;
         ctx.Reaction(() =>
         {
             int atk = Math.Max(1, self.CurrentAttack * AvengeMultiplier);
@@ -12844,12 +12856,15 @@ public sealed class VendettaTrait : Trait
             if (!markFirst) marked = MarkFoe(ctx, self, source, alreadyMarked);
             ctx.NoteVendetta(self, dealt, marked);
             if (framed) ctx.NoteFrameDealt(self, dealt);
+            ctx.NoteZc334(self, kind, dealt);   // 第334期（計数のみ）
 
             if (self.HasTrait(TraitId.Recoil) && self.IsAlive)
             {
                 int before2 = self.Hp;
-                ctx.ApplyDamage(self, RecoilTrait.AvengeCost, self, isFriendlyFire: true, lethal: false, levy: true);
-                ctx.NoteRecoil(self, Math.Max(0, before2 - self.Hp));
+                bool lethal = self.HasTrait(TraitId.RecoilLethal);   // 第334期（ZC-c）: 返り血で倒れる
+                ctx.ApplyDamage(self, RecoilTrait.AvengeCost, self, isFriendlyFire: true, lethal: lethal, levy: true);
+                ctx.NoteRecoil(self, Math.Max(0, before2 - Math.Max(0, self.Hp)));
+                if (lethal && !self.IsAlive) { UnitTally rt = ctx.TallyOf(self); rt.RecoilDeaths++; rt.RecoilDeathTurn += ctx.Turn; }
             }
         });
     }
@@ -13295,6 +13310,47 @@ public sealed class RecoilTrait : Trait
     public const int AvengeCost = 3;
 
     public override TraitId Id => TraitId.Recoil;
+}
+
+/// <summary>
+/// 割り込みの上限（第334期・ザンの版 ZC-b ／ ZC-d）。<b>本体は <see cref="VendettaTrait"/> の3つの入口が呼ぶ <see cref="Allows"/></b>（粛 ／ 痺れの問いの後・仇討ちの直前）。
+/// ZC-b（<see cref="TraitId.VendettaRoundCap3"/>）は仇討ち ＋ 濡れ衣の仇討ちを1ラウンド（戦のターン）に <see cref="RoundCap"/> 回まで、
+/// ZC-d（<see cref="TraitId.VendettaFrameOnce"/>）は濡れ衣の仇討ちだけを1ラウンドに <see cref="FrameCap"/> 回まで。手番の仇巡り（engine の <c>VendettaTurn</c>）は数えない。
+/// 帳簿はザンの私有カウンタ（ラウンドの番号 ＋ 1 と回数）で、<b>会戦の境界で消す</b>（次の戦のターンの番号が同じでも持ち越さない）。<b>乱数を引かない。</b>
+/// ZC-d で止まっても、ヒサの指差し（敵に標を1つ）は engine の <c>FrameAccuse</c> が先に済ませている。
+/// </summary>
+public sealed class VendettaCapTrait : Trait
+{
+    /// <summary>ZC-b の1ラウンドの上限（指示書が<b>測る前に固定</b>した値）。</summary>
+    public const int RoundCap = 3;
+    /// <summary>ZC-d の1ラウンドの上限（濡れ衣の仇討ちだけ・指示書が<b>測る前に固定</b>した値）。</summary>
+    public const int FrameCap = 1;
+    public const string RoundTurnKey = "zcRoundT", RoundCountKey = "zcRoundN", FrameTurnKey = "zcFrameT", FrameCountKey = "zcFrameN";
+
+    readonly TraitId _id;
+    public VendettaCapTrait(TraitId id) => _id = id;
+    public override TraitId Id => _id;
+
+    /// <summary>この割り込みを許すか。許すなら帳簿に1つ足す（ZC-b は割り込み全部・ZC-d は濡れ衣だけ）。札が無ければ常に真（帳簿も書かない）。</summary>
+    public static bool Allows(BattleContext ctx, UnitState zan, bool framed)
+    {
+        bool cap = zan.HasTrait(TraitId.VendettaRoundCap3), once = framed && zan.HasTrait(TraitId.VendettaFrameOnce);
+        if (!cap && !once) return true;
+        int now = ctx.Turn + 1;
+        int nRound = zan.RawCounter(RoundTurnKey) == now ? zan.RawCounter(RoundCountKey) : 0;
+        int nFrame = zan.RawCounter(FrameTurnKey) == now ? zan.RawCounter(FrameCountKey) : 0;
+        if (cap && nRound >= RoundCap) { ctx.TallyOf(zan).Zc334Capped++; return false; }
+        if (once && nFrame >= FrameCap) { ctx.TallyOf(zan).Zc334FrameCapped++; return false; }
+        if (cap) { zan.SetCounter(RoundTurnKey, now); zan.SetCounter(RoundCountKey, nRound + 1); }
+        if (once) { zan.SetCounter(FrameTurnKey, now); zan.SetCounter(FrameCountKey, nFrame + 1); }
+        return true;
+    }
+
+    public override void OnCarryOver(UnitState self)
+    {
+        self.SetCounter(RoundTurnKey, 0); self.SetCounter(RoundCountKey, 0);
+        self.SetCounter(FrameTurnKey, 0); self.SetCounter(FrameCountKey, 0);
+    }
 }
 
 /// <summary>
@@ -17563,6 +17619,10 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.ShockGuardDaunt),           // 第331期（痺れ慣れ ST-b・印だけ）
         new MarkOnlyTrait(TraitId.ShockStunOnce),             // 第331期（痺れは1ターン1回 ST-c・印だけ）
         new MarkOnlyTrait(TraitId.SparkVeilTemp),             // 第332期（一時の衣 LV-d・ソム・印だけ）
+        new MarkOnlyTrait(TraitId.VendettaDirectOnly),        // 第334期（中継では出ない ZC-a・ザン・印だけ）
+        new VendettaCapTrait(TraitId.VendettaRoundCap3),      // 第334期（1ターン3回まで ZC-b・ザン）
+        new MarkOnlyTrait(TraitId.RecoilLethal),              // 第334期（返り血で倒れる ZC-c・ザン・印だけ）
+        new VendettaCapTrait(TraitId.VendettaFrameOnce),      // 第334期（濡れ衣は1ターン1回 ZC-d・ザン）
         new SharePushTrait(TraitId.ShareSin),                 // 第313期（ドハ DP-c の手番）
         new AmplifierTrait(),
         new ContagionTrait(),

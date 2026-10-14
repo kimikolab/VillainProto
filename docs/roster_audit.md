@@ -36,7 +36,7 @@
 | 9 | 疫みのラウ | +0.00 | +1.47 | 転生 | 3 | 0 | 13.0 | どこでも同じ | 右下（選んでも働かない） |  | Contagion / Touch / TouchLeak |
 | 10 | 移り木のシオ | +0.00 | +8.54 | 残す | 1 | 0 | 11.0 | どこでも同じ | 上（単独で強い） |  | Drifter / Regroup / DrifterMend / RegroupTend / RegroupTendSelf / ShioStage / Retreat / DriftSurge / RetreatHalf |
 | 11 | 錯乱のササ | +0.00 | +10.02 | 残す | 1 | 0 | 21.0 | 化ける | 上（単独で強い） |  | Brace |
-| 12 | 見境なしのミサ | +0.42 | +1.55 | 残す | 3 | 0 | 25.0 | 化ける | 上（単独で強い） |  | Rupture / RuptureScar / RuptureKeep / Feathers / FeatherLoss / FeatherMarkLayer |
+| 12 | 見境なしのミサ | +0.42 | +1.55 | 残す | 3 | 0 | 25.0 | 化ける | 上（単独で強い） |  | Rupture / RuptureKeep / Feathers / FeatherLoss / FeatherMarkLayer |
 | 13 | 泥人形ムド | +1.14 | +16.35 | 残す | 8 | 0 | 19.0 | 化ける | 上（単独で強い） |  | Erupt / Smear / Hex |
 | 14 | 痺れ粉のトウ | +1.50 | +3.87 | 残す | 2 | 0 | 37.0 | ノイズ | 上（単独で強い） |  | ChargedPowder / ChargedPowderLeak / ShockStunHalf / ChargedPowderSpread / ShockDaunt / PowderDense / PowderDenseKeep / PowderDenseBurn / PowderContagion / PowderMarkFoeOnly / DenseConduct / DustBurst / PowderBurstMarked / PowderBurstFall / ShockStunOnce |
 | 15 | 電気鞭のシガ | +4.00 | — | — | 3 | 1 | 15.0 | どこでも同じ | — |  | Scourge / Shame / Lash / LiveWire / ScourgeShock / StoredCharge / ShockWhipFlurry / ShockWhipChain / FearNoStun / ScourgeDaunt / BetrayBackswing / ChargeUncapped / ChargeKeep / ScourgeFearDoubled |
@@ -84,4 +84,4 @@
 - `checkup ideal` が値を返した駒: 51 / 52 （返さないのは `CompareBuilds()` に在席 0 枠の駒だけ）
 - `stage catalog` が引けた駒: 51 / 52
 
-所要 367.2 秒（うち `stage catalog` が 346.0 秒）。
+所要 453.1 秒（うち `stage catalog` が 430.7 秒）。

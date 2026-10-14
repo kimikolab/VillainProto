@@ -372,7 +372,7 @@ static class Misa285Diag
                            && Rows.All(r => r.F.Occupied().All(o => !o.Def.Traits.Contains(TraitId.Feathers) || ReferenceEquals(o.Def, UnitCatalog.Tome)));
         // 第299期: 規定は M-b ＋ MF-b（`FeatherMarkLayer`）になり、M-b は `TomeMb` が明示的に持つ（別名ではなくなった）。
         Expect("(b) 羽の札の保持者は `Everyone` ／ `compare` で規定のミサだけ・規定 ＝ M-b（`TomeMb`）＋ MF-b（第299期）・T1n は `TomeT1n` が明示的に持つ",
-            onlyDefault && UnitCatalog.Tome.Traits.SequenceEqual(UnitCatalog.TomeMb.Traits.Append(TraitId.FeatherMarkLayer)) && !ReferenceEquals(UnitCatalog.Tome, UnitCatalog.TomeT1n));
+            onlyDefault && UnitCatalog.TomeH333.Traits.SequenceEqual(UnitCatalog.TomeMb.Traits.Append(TraitId.FeatherMarkLayer)) && !ReferenceEquals(UnitCatalog.Tome, UnitCatalog.TomeT1n));   // 第334期: 第299〜333期の規定は `TomeH333`
         Expect("(b) M-b は M-a ＋ 羽を失う の1札だけが違う",
             UnitCatalog.TomeMb.Traits.SequenceEqual(UnitCatalog.TomeMa.Traits.Append(TraitId.FeatherLoss)));
 

@@ -4478,6 +4478,37 @@ public static class UnitCatalog
         Flavor = ZanZNb.Flavor
     };
 
+    // ---------------------------------------------------------------------------------
+    // 第334期（指示書 design/PHASE334_MARK_ZAN_SPEC.md §4）—— ザンの割り込みの回数の版（ZC）。規定の `Zan` に札を1枚ずつ足す。
+    // 対照（`All` ／ `Retired` ／ `Presets` の `Compare` ／ `Playtest` に入れない・`Presets.Versions` の「版・」の台だけが使う・採否はポン）。Id は規定と同じ（`TallyByUnit` で引ける）。
+    // 版は規定のザン（第301期〜）から作る（静的初期化の順で、規定の `Zan` より後ろに置く）。
+    // ---------------------------------------------------------------------------------
+    static UnitDef ZanOn334(TraitId card, string? plusFrom = null, string? plusTo = null, string? minusTo = null)
+    {
+        string plus = Zan.PlusText;
+        if (plusFrom is not null)
+            plus = plus.Contains(plusFrom, StringComparison.Ordinal) ? plus.Replace(plusFrom, plusTo, StringComparison.Ordinal)
+                : throw new InvalidOperationException($"第334期: 規定のザンの文面に「{plusFrom}」が見つからない");
+        return new UnitDef
+        {
+            Id = Zan.Id, Name = Zan.Name, MaxHp = Zan.MaxHp, Attack = Zan.Attack, Speed = Zan.Speed, Advances = Zan.Advances, Pattern = Zan.Pattern,
+            Traits = Zan.Traits.Append(card).ToArray(), Actions = Zan.Actions,
+            PlusText = plus, MinusText = minusTo ?? Zan.MinusText, Flavor = Zan.Flavor,
+        };
+    }
+
+    /// <summary>第334期 ZC-a（中継では出ない）。規定 ＋ <see cref="TraitId.VendettaDirectOnly"/>（ドハ ／ ゴルムが肩代わりして入った一撃では仇討ちしない・標の味方が直に殴られたときだけ）。</summary>
+    public static readonly UnitDef ZanZCa = ZanOn334(TraitId.VendettaDirectOnly, "標を付けられた味方が殴られるたび", "標を付けられた味方が直に殴られるたび");
+
+    /// <summary>第334期 ZC-b（1ターン3回まで）。規定 ＋ <see cref="TraitId.VendettaRoundCap3"/>（割り込み ＝ 仇討ち ＋ 濡れ衣の仇討ちは1ラウンドに3回まで・手番の仇巡りは数えない）。</summary>
+    public static readonly UnitDef ZanZCb = ZanOn334(TraitId.VendettaRoundCap3, "割り込んで倍の刃を返す", "割り込んで倍の刃を返す（1ターンに3度まで）");
+
+    /// <summary>第334期 ZC-c（返り血で倒れる）。規定 ＋ <see cref="TraitId.RecoilLethal"/>（返り血 3 が HP 1 で止まらない）。</summary>
+    public static readonly UnitDef ZanZCc = ZanOn334(TraitId.RecoilLethal, minusTo: "刃を返すたびに自分も傷つく（倒れることもある）");
+
+    /// <summary>第334期 ZC-d（濡れ衣は1ターン1回）。規定 ＋ <see cref="TraitId.VendettaFrameOnce"/>（濡れ衣の仇討ちは1ラウンドに1回まで・ヒサの指差しは今のまま）。</summary>
+    public static readonly UnitDef ZanZCd = ZanOn334(TraitId.VendettaFrameOnce, "ヒサが指差した敵を斬る", "ヒサが指差した敵を斬る（1ターンに1度）");
+
     /// <summary>
     /// 裂きのキリ。傷（Wound）の**供給源**。物理側に初めて置いた「盤面に残る汚れ」の書き手。
     ///
@@ -5346,6 +5377,25 @@ public static class UnitCatalog
         // 第285期: 止めのトメ → 見境なしのミサ（名前とフレーバーだけ・Id と識別子は据え置き）。
         // 第286期: ポンの判断（第285期の案 A5b）で M-b を規定にした（羽の連射・乱射した羽は失う）。T1n は `TomeT1n`（対照として残置）。
         // 第299期: ポンの判断（第298期の案 F2）で MF-b（指差されたものは、全部撃つ・層も）を規定にした。旧の規定（M-b）は `TomeMb`（指示書 design/PHASE299_ZAN_ROUND_SPEC.md §2）。
+        // 第334期: 爪痕（「抉った傷は塞がらない」・`RuptureScar`）を規定から外し、レリックの札「抉りの鏃」に移した（`RelicCatalog.Added334`・ポンの見立て）。旧の規定は `TomeH333`（指示書 design/PHASE334_MARK_ZAN_SPEC.md §2）。
+        Traits = new[] { TraitId.Rupture, TraitId.RuptureKeep, TraitId.Feathers, TraitId.FeatherLoss, TraitId.FeatherMarkLayer },
+        PlusText = "指差されるたび羽が1枚増える。羽は1枚ずつ最も深く指差された敵を追って撃ち、倒れれば次の標へ流れる。どの列にも届く。指差されたものは、全部撃つ",
+        MinusText = "追う標が無い羽は、敵味方構わず飛んで、戻ってこない。味方が指差されても、撃つ",
+        Flavor = "狙うのは得意。見分けるのが苦手。"
+    };
+
+    /// <summary>
+    /// 第299〜333期の規定のミサ（MF-b・爪痕あり）。第334期に爪痕（<see cref="TraitId.RuptureScar"/>）をレリック「抉りの鏃」へ移したので、旧の規定の定義を明示的に持つ。
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。第299〜333期の規定のミサで測った過去の器具はこちらに固定する（`Common.PinM333` ほか）。
+    /// 規定の <see cref="Tome"/> にレリック「抉りの鏃」（札 <see cref="TraitId.RuptureScar"/>）を付けると、札の並びの順だけが違うこの駒と同じ働きになる（爪痕の札は挙動を持たず、保持だけを読む）。
+    /// </summary>
+    public static readonly UnitDef TomeH333 = new()
+    {
+        Id = "tome",
+        Name = "見境なしのミサ",
+        MaxHp = 58,
+        Attack = 12,
+        Speed = 6,
         Traits = new[] { TraitId.Rupture, TraitId.RuptureScar, TraitId.RuptureKeep, TraitId.Feathers, TraitId.FeatherLoss, TraitId.FeatherMarkLayer },
         PlusText = "指差されるたび羽が1枚増える。羽は1枚ずつ最も深く指差された敵を追って撃ち、倒れれば次の標へ流れる。どの列にも届き、抉った傷は塞がらない。指差されたものは、全部撃つ",
         MinusText = "追う標が無い羽は、敵味方構わず飛んで、戻ってこない。味方が指差されても、撃つ",

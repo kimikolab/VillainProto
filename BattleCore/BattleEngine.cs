@@ -8416,6 +8416,21 @@ public sealed class BattleContext
     /// <summary>返り血（<b>計数のみ</b>）。</summary>
     public void NoteRecoil(UnitState self, int taken) => TallyOf(self).RecoilTaken += taken;
 
+    /// <summary>
+    /// 第334期（<b>計数のみ</b>）: ザンの割り込みの出どころ（<paramref name="kind"/> ＝ 0 直 ／ 1 ドハの中継 ／ 2 ゴルムの中継 ／ 3 そのほかの中継 ／ 4 濡れ衣）と、
+    /// 1ラウンド（戦のターン）の割り込みの最多。誰も読んで分岐しない（規定でも数える）。
+    /// </summary>
+    public void NoteZc334(UnitState zan, int kind, int dealt)
+    {
+        UnitTally t = TallyOf(zan);
+        (t.Zc334Kind ??= new long[5])[kind]++;
+        (t.Zc334KindDealt ??= new long[5])[kind] += dealt;
+        if (t.Zc334RoundTurn != _turn + 1) { t.Zc334RoundTurn = _turn + 1; t.Zc334RoundN = 0; }
+        t.Zc334RoundN++;
+        if (t.Zc334RoundN > t.Zc334RoundMax) t.Zc334RoundMax = t.Zc334RoundN;
+        if (t.Zc334RoundN > t.Zc334RoundPeak) t.Zc334RoundPeak = t.Zc334RoundN;
+    }
+
     /// <summary>§2: 矢面の記憶が指しているのに標が剥がされていて、半減が掛からなかった被弾（回数・量）。</summary>
     public long BeckonStrippedHits, BeckonStrippedDamage;
 

@@ -60,10 +60,21 @@ public static class RelicCatalog
         new(TraitId.RelicPoisonMagnet, "毒を招く", "ゴミ", $"受ける毒の層が {RelicPoisonMagnetTrait.Factor} 倍", "読み手: ベニ（結界の中では毒の刻みが回復）・ヴィオ（味方の毒を吸って攻撃力と腹に変える）"),
     };
 
-    /// <summary>レリックとして付けられる札の一覧（<see cref="Initial"/> ＋ <see cref="Added273"/>）。<b>ここと <see cref="Versions"/> に無い札は <see cref="Formation.SetRelic"/> が弾く。</b></summary>
+    /// <summary>
+    /// 第334期に足した札（指示書 design/PHASE334_MARK_ZAN_SPEC.md §2）。<b>ミサの爪痕（第281〜333期の規定のミサの札 <see cref="TraitId.RuptureScar"/>）をそのまま札にした</b>
+    /// ——札そのものは挙動を持たず、engine の <c>RuptureAfter</c>（炸裂 ＝ ミサの羽の一撃の後始末）が保持を読むので、<b>働くのは炸裂（<see cref="TraitId.Rupture"/>）を持つ駒だけ</b>（いまはミサ）。
+    /// 量は元の働きと同じ（炸裂で実際に減らした HP と同量・下限 1）。規定のミサに付けると第333期までの規定のミサ（<see cref="UnitCatalog.TomeH333"/>）と同じ働きになる。
+    /// <b><see cref="All"/> には入れない</b>——第273〜274期の器具（`relic expand` ほか）が回す12枚を変えないため（<see cref="Versions"/> と同じ扱い・<see cref="Formation.SetRelic"/> は受け付ける）。
+    /// </summary>
+    public static IReadOnlyList<RelicInfo> Added334 { get; } = new RelicInfo[]
+    {
+        new(TraitId.RuptureScar, "抉りの鏃", "繋ぎ", "炸裂（ミサの羽）で実際に減らした HP と同量、相手の最大HPも削る（抉った傷は塞がらない・炸裂を持つ駒だけに効く）", "炸裂 → 敵の最大HP（第333期までのミサの爪痕・ミサ専用）"),
+    };
+
+    /// <summary>レリックとして付けられる札の一覧（<see cref="Initial"/> ＋ <see cref="Added273"/>）。<b>ここと <see cref="Versions"/> ／ <see cref="Added334"/> に無い札は <see cref="Formation.SetRelic"/> が弾く。</b></summary>
     public static IReadOnlyList<RelicInfo> All { get; } = Initial.Concat(Added273).ToArray();
 
-    private static readonly Dictionary<TraitId, RelicInfo> Map = All.Concat(Versions).ToDictionary(r => r.Id);
+    private static readonly Dictionary<TraitId, RelicInfo> Map = All.Concat(Versions).Concat(Added334).ToDictionary(r => r.Id);
 
     public static bool IsRelic(TraitId id) => Map.ContainsKey(id);
     public static RelicInfo Info(TraitId id) => Map[id];
