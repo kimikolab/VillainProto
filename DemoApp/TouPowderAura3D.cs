@@ -11,10 +11,13 @@ public partial class TouPowderAura3D : Node3D
     private Camera3D _camera = null!;
     private readonly Sprite3D[] _motes = new Sprite3D[12];
     private Label3D _badge = null!;
+    private Sprite3D _stamp = null!;
+    private static Texture2D? _stampTexture;
     private float _age;
     private bool _paused;
     private double _speed = 1;
     internal float Age => _age;
+    internal string BadgeText => _badge.Text;
     internal void Configure(BattlePawn3D pawn, Camera3D camera)
         => Configure(() => IsInstanceValid(pawn) && pawn.PresentationAlive ? pawn.FxPoint : null,
             () => pawn.PowderDensity, () => pawn.PowderMarked, camera);
@@ -29,7 +32,11 @@ public partial class TouPowderAura3D : Node3D
             Billboard = BaseMaterial3D.BillboardModeEnum.Enabled, NoDepthTest = true,
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
         };
-        AddChild(_badge); Draw();
+        AddChild(_badge);
+        _stamp = ShockMarkFx.Sprite(this, point() ?? Vector3.Zero,
+            _stampTexture ??= UiKit.LoadTexture("res://assets/fx/tou_powder_mark.svg", mipmaps: true), .30f, Colors.White);
+        _stamp.NoDepthTest = true; _stamp.RenderPriority = 2;
+        Draw();
     }
     internal void SetClock(bool paused, double speed) { _paused = paused; _speed = speed; }
     public override void _Process(double delta)
@@ -56,8 +63,11 @@ public partial class TouPowderAura3D : Node3D
                 + _camera.GlobalBasis.Z * .28f;
             mote.Modulate = new Color(tint, .5f + .13f * Mathf.Sin(_age * 2 + i));
         }
-        _badge.Visible = n > 0;
-        _badge.Text = $"粉 {n}";
+        bool marked = _marked();
+        _stamp.Visible = marked;
+        _stamp.GlobalPosition = center + _camera.GlobalBasis.X * .64f - Vector3.Up * .23f + _camera.GlobalBasis.Z * .40f;
+        _badge.Visible = n > 0 || marked;
+        _badge.Text = n > 0 ? $"粉 {n}{(marked ? " ◇" : "")}" : "粉印";
         _badge.GlobalPosition = center + _camera.GlobalBasis.X * .60f - Vector3.Up * .5f + _camera.GlobalBasis.Z * .35f;
     }
 }

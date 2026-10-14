@@ -2,7 +2,7 @@ using Godot;
 using System;
 using System.Threading.Tasks;
 
-internal enum TouPowderFxKind { Settle, Lift, Thread, Contagion, Pop, Burn, Heavy }
+internal enum TouPowderFxKind { Settle, Lift, Thread, Contagion, Pop, Burn, Heavy, DustFall }
 
 // 粉の移動は毎フレーム描く。一時停止・途中の倍速変更も同じ時計で受ける。
 public partial class TouPowderFx3D : Node3D
@@ -25,6 +25,7 @@ public partial class TouPowderFx3D : Node3D
     private int _burnGeneration;
     private PowderBurnBurst3D? _burnBurst;
     private double _speed = 1;
+    private Action? _onArrival;
     internal float Age => _age;
     internal TouPowderFxKind Kind => _kind;
     internal PowderBurnBurst3D? BurnBurst => _burnBurst;
@@ -39,7 +40,7 @@ public partial class TouPowderFx3D : Node3D
         _right = camera.GlobalBasis.X; _up = camera.GlobalBasis.Y; _front = camera.GlobalBasis.Z;
         _duration = kind switch {
             TouPowderFxKind.Burn => PowderBurnBurst3D.DurationFor(amount), TouPowderFxKind.Thread => .32f,
-            TouPowderFxKind.Lift => .18f, TouPowderFxKind.Contagion => .20f,
+            TouPowderFxKind.Lift => .18f, TouPowderFxKind.Contagion or TouPowderFxKind.DustFall => .20f,
             TouPowderFxKind.Heavy => .24f, _ => .22f,
         };
         AddChild(new MeshInstance3D {
@@ -50,7 +51,10 @@ public partial class TouPowderFx3D : Node3D
             }, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
         });
         for (int i = 0; i < _motes.Length; i++)
+        {
             _motes[i] = ShockMarkFx.Sprite(this, from, Grain, .12f, ShockMarkFx.Gold);
+            if (kind == TouPowderFxKind.DustFall) { _motes[i].NoDepthTest = true; _motes[i].RenderPriority = 2; }
+        }
         if (kind is TouPowderFxKind.Burn or TouPowderFxKind.Pop)
         {
             if (kind == TouPowderFxKind.Pop)
@@ -77,6 +81,7 @@ public partial class TouPowderFx3D : Node3D
     {
         _burnPawn = pawn; _burnGeneration = pawn.BeginPowderBurnBody();
     }
+    internal void OnArrival(Action arrival) => _onArrival = arrival;
 
     internal static float HeavyWidth(int amount)
         => .030f + .008f * MathF.Sqrt(Math.Clamp(amount / 8f - 1, 0, 16));
@@ -117,10 +122,14 @@ public partial class TouPowderFx3D : Node3D
 
     public override void _Process(double delta)
     {
-        if (_paused) return;
+        if (_paused || IsQueuedForDeletion()) return;
         _age += (float)(delta * _speed);
         float arrivalAt = _kind == TouPowderFxKind.Burn ? .28f : _kind == TouPowderFxKind.Settle ? .10f : _duration;
-        if (_age >= arrivalAt) _arrival.TrySetResult(true);
+        if (_age >= arrivalAt && !_arrival.Task.IsCompleted)
+        {
+            _onArrival?.Invoke(); _onArrival = null;
+            _arrival.TrySetResult(true);
+        }
         if (_age >= _duration) { ClearBurnBody(); Hide(); QueueFree(); return; }
         Draw();
     }
@@ -133,6 +142,8 @@ public partial class TouPowderFx3D : Node3D
             TouPowderFxKind.Lift => point + _right * Mathf.Sin(p * Mathf.Pi) * (lane - 4) * .045f,
             TouPowderFxKind.Contagion => point - _up * Mathf.Sin(p * Mathf.Pi) * .25f
                 + _right * Mathf.Sin(p * Mathf.Tau * 3) * .045f,
+            TouPowderFxKind.DustFall => point + _up * Mathf.Sin(p * Mathf.Pi) * (.35f + lane % 3 * .10f)
+                + _right * Mathf.Sin(p * Mathf.Pi) * (lane % 3 - 1) * .14f,
             _ => point + _right * Mathf.Sin(p * Mathf.Pi) * (lane - 4) * .055f,
         };
     }
@@ -196,8 +207,9 @@ public partial class TouPowderFx3D : Node3D
             }
             mote.Visible = _kind is not (TouPowderFxKind.Heavy or TouPowderFxKind.Burn);
             mote.Scale = Vector3.One * (.7f + Math.Min(6, _amount) * .04f);
+            if (_kind == TouPowderFxKind.DustFall) mote.Scale *= 1.6f;
             mote.Modulate = new Color(_kind == TouPowderFxKind.Burn ? new Color("ff3045") : ShockMarkFx.Gold,
-                Math.Min(1, fade * 2));
+                _kind == TouPowderFxKind.DustFall ? Math.Min(1, fade * 5) : Math.Min(1, fade * 2));
         }
         if (_core is not null)
         {
@@ -232,6 +244,6 @@ public partial class TouPowderFx3D : Node3D
     {
         if (_burnPawn is not null && IsInstanceValid(_burnPawn)) _burnPawn.SetPowderBurnBody(_burnGeneration, 0, 0);
     }
-    internal void Cancel() { ClearBurnBody(); Hide(); _arrival.TrySetResult(false); QueueFree(); }
+    internal void Cancel() { _onArrival = null; ClearBurnBody(); Hide(); _arrival.TrySetResult(false); QueueFree(); }
     public override void _ExitTree() { ClearBurnBody(); _arrival.TrySetResult(false); }
 }

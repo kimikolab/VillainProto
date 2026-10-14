@@ -15,7 +15,7 @@ public partial class DustBurstChain3D : Node3D
     private readonly List<(float At, Vector3 Point, PowderBurnBurst3D Fx, int Density, float Pan, bool Ally)> _bursts = new();
     private readonly List<(float At, Vector3 From, Vector3 To, float Width, bool Branch)> _arcs = new();
     private readonly List<(float At, GpuParticles3D Fx, bool Started)> _particles = new();
-    private readonly List<(float At, Action Play)> _sounds = new();
+    private readonly List<(float At, Action Play)> _scheduled = new();
     private readonly ImmediateMesh _mesh = new();
     private Camera3D _camera = null!;
     private bool _paused, _drawing, _summarized;
@@ -38,6 +38,7 @@ public partial class DustBurstChain3D : Node3D
         _arcs.Add((at, from, to, width, branch));
         if (branch) BranchCount++;
     }
+    internal void Schedule(float at, Action action) => _scheduled.Add((at, action));
 
     internal void AddBurst(float at, Vector3 point, int density, float pan, bool ally,
         bool purchased, Action<int, float> sound)
@@ -46,7 +47,7 @@ public partial class DustBurstChain3D : Node3D
         if (ally) fx.Brightness = .75f;
         _bursts.Add((at, point, fx, density, pan, ally));
         for (int pulse = 0; pulse < fx.PulseCount; pulse++)
-            _sounds.Add((at + pulse * .045f, () => sound(density, pan)));
+            _scheduled.Add((at + pulse * .045f, () => sound(density, pan)));
         // 購入済みの針状粒子を短い補助に。密集時もGPU粒子の emitter は8つまで。
         if (!purchased || _particles.Count >= 8 || !ResourceLoader.Exists(TouPowderFx3D.SparkPath)) return;
         var particles = GD.Load<PackedScene>(TouPowderFx3D.SparkPath).Instantiate<GpuParticles3D>();
@@ -79,10 +80,10 @@ public partial class DustBurstChain3D : Node3D
 
     public override void _Process(double delta)
     {
-        if (_paused) return;
+        if (_paused || IsQueuedForDeletion()) return;
         Age += (float)(delta * _speed);
-        for (int i = 0; i < _sounds.Count; i++)
-            if (_sounds[i].At <= Age) { _sounds[i].Play(); _sounds.RemoveAt(i--); }
+        for (int i = 0; i < _scheduled.Count; i++)
+            if (_scheduled[i].At <= Age) { _scheduled[i].Play(); _scheduled.RemoveAt(i--); }
         for (int i = 0; i < _particles.Count; i++)
         {
             var p = _particles[i];

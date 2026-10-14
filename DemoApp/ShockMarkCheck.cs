@@ -24,7 +24,8 @@ public partial class ShockMarkCheck : Control
             bool powder = OS.GetCmdlineUserArgs().Contains("--powder");
             if (!OS.GetCmdlineUserArgs().Contains("--replay-only"))
             {
-                if (OS.GetCmdlineUserArgs().Contains("--dust-burst")) await CheckDustBurst();
+                if (OS.GetCmdlineUserArgs().Contains("--dust-fall")) await CheckDustFall();
+                else if (OS.GetCmdlineUserArgs().Contains("--dust-burst")) await CheckDustBurst();
                 else if (OS.GetCmdlineUserArgs().Contains("--powder-readability")) await CheckTouPowderReadability();
                 else if (powder) { await CheckTouPowderAudio(); await CheckTouPowderVisuals(); await CheckTouPowderReadability(); }
                 else if (doha) { await CheckDohaPortraits(); await CheckDohaBatches(); }
@@ -37,7 +38,7 @@ public partial class ShockMarkCheck : Control
                 else if (web) await CheckWebVisuals();
                 else await CheckVisuals();
             }
-            if (OS.GetCmdlineUserArgs().Contains("--dust-burst") && OS.GetCmdlineUserArgs().Contains("--verify"))
+            if ((OS.GetCmdlineUserArgs().Contains("--dust-burst") || OS.GetCmdlineUserArgs().Contains("--dust-fall")) && OS.GetCmdlineUserArgs().Contains("--verify"))
             {
                 foreach (int stage in OS.GetCmdlineUserArgs().Contains("--dust-live") ? new[] { 0 } : new[] { 0, 1, 2 })
                     await ReplayTouPowder("試遊・感電 ポンの台", stage, 0);

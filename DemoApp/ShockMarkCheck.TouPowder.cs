@@ -164,12 +164,13 @@ public partial class ShockMarkCheck
         Require(field.PowderMarkPlays == Count(ShockGaugeLabels.PowderMark), "粉の印の件数");
         Require(field.PowderContagionPlays == Count(ShockGaugeLabels.Contagion), "伝染の件数");
         Require(field.DustBurstPlays == Count(ShockGaugeLabels.DustBurst), "糸玉を含む粉塵爆発の件数");
+        Require(field.DustFallPlays == Count(ShockGaugeLabels.DustFall), "粉が降るの通知件数");
         int dustChains = DustBurstPresentation.Build(result.Events).Starts.Count;
         Require(field.DustChainPlays == dustChains, $"爆竹の連鎖の束ね件数 {field.DustChainPlays}/{dustChains}");
         var plan = TouPowderPresentation.Build(result.Events);
         Require(plan.ThunderReturns.Count == Count(ShockGaugeLabels.DenseMove), "雷の1発目と粉返しを全件接続");
         Require(plan.ContagionGains.Count == Count(ShockGaugeLabels.Contagion), "伝染の付与だけを移動に接続");
         Require(field.ActivePowderEffects == 0 && field.Pawns.Values.All(p => !p.PowderMarked && p.PowderDensity == 0), "終了で粉を残さない");
-        GD.Print($"TOU_POWDER_REPLAY_OK dense={field.PowderDensePlays} return={field.PowderMovePlays}/{field.PowderFlowPlays} burn={field.PowderBurnPlays} contagion={field.PowderContagionPlays} heavy={field.PowderHeavyPlays} dust={field.DustBurstPlays}/{field.DustChainPlays}");
+        GD.Print($"TOU_POWDER_REPLAY_OK dense={field.PowderDensePlays} return={field.PowderMovePlays}/{field.PowderFlowPlays} burn={field.PowderBurnPlays} contagion={field.PowderContagionPlays} heavy={field.PowderHeavyPlays} dust={field.DustBurstPlays}/{field.DustChainPlays} fall={field.DustFallPlays}");
     }
 }

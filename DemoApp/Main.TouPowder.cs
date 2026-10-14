@@ -8,6 +8,7 @@ public partial class Main
     private async Task<bool> PlayTouPowder(BattleEvent e, int index, BattlePawn3D? target)
     {
         if (!_battleField.ShowTouPowder(e, _speed, scheduledDust: _dustChainFastEvent)) return false;
+        if (_fastSmoke) _battleField.FinishDustFall(e); // 高速照合でも印の状態は通知順に保つ。
         int token = _playToken;
         // 演出自身の時計で到着を待つ。途中の一時停止・倍速でも先に帯電の印を出さない。
         if (!_fastSmoke && !_dustChainFastEvent && !await _battleField.PowderArrival) return true;

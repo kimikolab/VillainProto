@@ -58,7 +58,7 @@ public partial class BattlefieldView3D
     {
         EndTouPowder();
         PowderDensePlays = PowderFlowPlays = PowderMovePlays = PowderPopPlays = PowderBurnPlays = PowderMarkPlays = PowderContagionPlays = PowderHeavyPlays = 0;
-        DustBurstPlays = DustChainPlays = DustDamageSummaries = 0;
+        DustBurstPlays = DustChainPlays = DustDamageSummaries = DustFallPlays = 0;
     }
 
     private void PowderAura(BattlePawn3D target)
@@ -155,6 +155,11 @@ public partial class BattlefieldView3D
                         new[] { new DustBurstPresentation.Burst(0, Array.Empty<int>()) }, new Dictionary<int, int>());
                     BeginDustBurstChain(one, new[] { e }, speed);
                 }
+                break;
+            case ShockGaugeLabels.DustFall:
+                DustFallPlays++;
+                if (!scheduledDust && ElectricPoint(e.ActorId) is Vector3 origin)
+                    PowderArrival = DustFallFlight(e, origin, speed)?.Arrival ?? Task.FromResult(true);
                 break;
             case ShockGaugeLabels.Contagion:
                 PowderContagionPlays++;

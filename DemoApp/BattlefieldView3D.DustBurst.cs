@@ -10,9 +10,25 @@ public partial class BattlefieldView3D
     private DustBurstChain3D? _dustChain;
     internal DustBurstChain3D? DustChain => _dustChain is not null && IsInstanceValid(_dustChain) && !_dustChain.IsQueuedForDeletion() ? _dustChain : null;
     internal Task<bool> DustBurstCompletion { get; private set; } = Task.FromResult(true);
-    internal int DustBurstPlays, DustChainPlays, DustDamageSummaries;
+    internal int DustBurstPlays, DustChainPlays, DustDamageSummaries, DustFallPlays;
     internal int BallPowderCount => _ballPowder.Count;
     private readonly Dictionary<int, (int Density, bool Marked)> _ballPowder = new();
+
+    internal void FinishDustFall(BattleEvent e)
+    {
+        if (e.Text != ShockGaugeLabels.DustFall || e.TargetId is not int id) return;
+        if (FindPawn(id) is { PresentationAlive: true } pawn)
+        { pawn.SetPowderMark(); PowderAura(pawn); }
+        else if (_silkBalls.ContainsKey(id)) BallPowder(id, marked: true);
+    }
+
+    private TouPowderFx3D? DustFallFlight(BattleEvent e, Vector3 from, double speed)
+    {
+        if (ElectricPoint(e.TargetId) is not Vector3 to) return null;
+        var flight = PowderEffect(TouPowderFxKind.DustFall, from, to, speed);
+        flight.OnArrival(() => FinishDustFall(e));
+        return flight;
+    }
 
     private void BallPowder(int id, int? density = null, bool marked = false)
     {
@@ -79,6 +95,17 @@ public partial class BattlefieldView3D
             foreach (int hit in burst.Hits)
                 if (ElectricPoint(events[hit].TargetId) is Vector3 end)
                     fx.AddArc(at + .02f, point, end, .011f, branch: true);
+        }
+        // 「粉が降る」の端点は通知を読むだけ。爆発と同じ束の中で飛行と到着を予約する。
+        for (int index = chain.Start; index <= chain.End; index++)
+        {
+            var fall = events[index];
+            if (fall.Kind != BattleEventKind.ShockGauge || fall.Text != ShockGaugeLabels.DustFall
+                || ElectricPoint(fall.ActorId) is not Vector3 from) continue;
+            var burst = chain.Bursts.LastOrDefault(b => b.Index < index && events[b.Index].TargetId == fall.ActorId);
+            int preceding = burst is null ? -1 : chain.Discharges.LastOrDefault(i => i < burst.Index, -1);
+            float at = arrivalTimes.GetValueOrDefault(preceding) + .11f;
+            fx.Schedule(at, () => DustFallFlight(fall, from, _powderSpeed));
         }
     }
 }
