@@ -1403,3 +1403,7 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 ## 第340期 —— ミサの羽は標が無いと増えていく（FG-b）を規定に
 
 - engine は第339期のまま（窓口は足していない）。規定のミサ `UnitCatalog.Tome` ＝ `TomeH339`（第334〜339期の規定・明示の定義に）− `FeatherLoss` ＋ `FeatherGrowUnmarked`——規定の戦で `_featherGrowLive` が立つ。固定の口 `Common.PinM339` ／ `Pin339` ／ `CompareBuildsH339` ／ `PlaytestH339`（古い口の終端 `PinH337` の最後に `PinM339`）・`IsMisaNow` は `TomeH339` も受ける。器具: `settle340`。
+
+## 第341期 —— 戦績の「仕掛け」の列（計数のみ）
+
+- `NoteCredit341`（計数のみ・盤面を変えない・乱数を引かない）: `DustExplode`（隣の駒が実際に減らした HP）と `PowderSelfBurn`（焼）は粉の持ち主（`_powderHolder`・トウ）、`Discharge` ／ `ThreadDischarge` の糸玉発の放電は糸玉の持ち主（`_silkOwner`・クグ）の帳簿へ。陣営は仕掛けた駒から見る（`UnitTally.CreditToEnemy` ／ `CreditToAlly`・内訳 `Credit341Dust` ／ `Credit341Burn` ／ `Credit341Ball`・受けた側 `Credit341Taken`）。回復に反転した分は呼ばない。糸玉の粉が爆ぜた爆発はトウに入れる（クグには入れない）。爆ぜた駒の `DamageToEnemy` ／ `DamageToAlly` ／ `TakenFromAlly` はそのまま（二重は放電の列と同じ扱い）。戦績パネル（`DemoApp/ScorePanel.cs`）の「仕掛け(敵)」「仕掛け(味)」。器具: `credit341`。

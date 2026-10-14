@@ -2335,6 +2335,14 @@ public sealed class UnitTally
     /// <c>Fg339AllyKillTurnSum</c> 乱射で味方が倒れたターンの和（倒れた数は <c>SprayAllyKills</c>）。
     /// </summary>
     public long Fg339UnmarkedHeads, Fg339Grows, Fg339AllyKillTurnSum;
+    /// <summary>
+    /// 第341期（<b>計数のみ</b>・戦績の「仕掛け」の列）。誰も読んで分岐しない。<b>仕掛けた駒</b>の帳簿: 粉塵爆発 ／ 焼は粉の持ち主（トウ）、糸玉の放電は糸玉の持ち主（クグ）。
+    /// <c>CreditToEnemy</c> ／ <c>CreditToAlly</c> ＝ 仕掛けた駒から見た陣営で実際に削った HP（回復に反転した分は含まない）。内訳 <c>Credit341Dust</c> ／ <c>Credit341Burn</c> ／ <c>Credit341Ball</c>（敵味方の和）。
+    /// 爆ぜた駒の <c>DamageToEnemy</c> ／ <c>DamageToAlly</c> ／ <c>TakenFromAlly</c> にも入っているので、合算すると二重になる（放電の列と同じ扱い）。
+    /// </summary>
+    public long CreditToEnemy, CreditToAlly, Credit341Dust, Credit341Burn, Credit341Ball;
+    /// <summary>第341期（計数のみ）: 受けた側の帳簿——仕掛けの列に入ったダメージのうち、この駒が受けた量。</summary>
+    public long Credit341Taken;
     public long[]? Fg339Spray, Fg339AllyHits, Fg339AllyDmg;
     /// <summary>第339期（計数のみ）: 乱射の1発をターンごとに数える（羽の乱射 ／ 乱射の札の両方）。</summary>
     public void NoteSpray339(int turn, bool ally, int lost, bool killed)
@@ -3583,6 +3591,7 @@ public sealed class UnitTally
         Mi337MarkedDeaths += o.Mi337MarkedDeaths; Mi337DeadLayers += o.Mi337DeadLayers; Mi337DeadLayerMax = Math.Max(Mi337DeadLayerMax, o.Mi337DeadLayerMax); Mi337DeadNeighbors += o.Mi337DeadNeighbors;   // 第337期
         Mi337Fires += o.Mi337Fires; Mi337Recipients += o.Mi337Recipients; Mi337Layers += o.Mi337Layers; Mi337Lost += o.Mi337Lost; Mi337ChainMax = Math.Max(Mi337ChainMax, o.Mi337ChainMax); Mi337Feathers += o.Mi337Feathers;
         Fg339UnmarkedHeads += o.Fg339UnmarkedHeads; Fg339Grows += o.Fg339Grows; Fg339AllyKillTurnSum += o.Fg339AllyKillTurnSum;   // 第339期
+        CreditToEnemy += o.CreditToEnemy; CreditToAlly += o.CreditToAlly; Credit341Dust += o.Credit341Dust; Credit341Burn += o.Credit341Burn; Credit341Ball += o.Credit341Ball; Credit341Taken += o.Credit341Taken;   // 第341期
         Fg339Spray = AddArr(Fg339Spray, o.Fg339Spray); Fg339AllyHits = AddArr(Fg339AllyHits, o.Fg339AllyHits); Fg339AllyDmg = AddArr(Fg339AllyDmg, o.Fg339AllyDmg);
         SharedAway += o.SharedAway; ShareTakenHits += o.ShareTakenHits; ShareGives += o.ShareGives; ShareGiven += o.ShareGiven; ShareGiftAccrued += o.ShareGiftAccrued;   // 第297期
         ShareGifts += o.ShareGifts; ShareGiftCapped += o.ShareGiftCapped; ShareGiftNoTarget += o.ShareGiftNoTarget; ShareGiftSkipped += o.ShareGiftSkipped;

@@ -31,7 +31,7 @@ public partial class ScorePanelCheck : Control
         await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
         string row = OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--score-row=", StringComparison.Ordinal))?["--score-row=".Length..] ?? "継ぎ当て×分散回復";
         const int stage = 4, seed = 6;
-        Formation f = Presets.Compare.First(r => r.Name == row).F;
+        Formation f = Presets.Compare.Concat(Presets.Versions).First(r => r.Name == row).F;   // 第341期: 試遊の一覧の末尾（ポンの台）も
         var players = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
         var enemies = BattleEngine.Materialize(EnemyCatalog.Stages[stage].Enemy, BattleContext.EnemyTeam);
         typeof(Main).GetMethod("EnterBattle", Flags)!.Invoke(main, new object[] { players, enemies, seed, stage, "" });
@@ -45,16 +45,18 @@ public partial class ScorePanelCheck : Control
         int w = grid.Columns;
         var head = cells.Take(w).ToList();
         int ia = head.IndexOf("破片(与)"), ir = head.IndexOf("反射"), ie = head.IndexOf("与(敵)"), it = head.IndexOf("被");
-        bool ok = panel.Visible && ia > 0 && ir > 0;
+        int ice = head.IndexOf("仕掛け(敵)"), ica = head.IndexOf("仕掛け(味)");   // 第341期
+        bool ok = panel.Visible && ia > 0 && ir > 0 && ice > 0 && ica > 0;
         GD.Print($"SCORE_CHECK row={row} stage={stage + 1} seed={seed} turns={result.Turns} won={result.PlayerWon} columns={w - 1} armorCol={ia} reflectCol={ir}");
         for (int k = w; k + w <= cells.Count; k += w)
         {
             string name = cells[k];
             string armor = ia > 0 ? cells[k + ia] : "?", refl = ir > 0 ? cells[k + ir] : "?";
-            GD.Print($"SCORE_ROW {name} 破片(与)={armor} 反射={refl} 与(敵)={cells[k + ie]} 被={cells[k + it]}");
+            string ce = ice > 0 ? cells[k + ice] : "?", ca = ica > 0 ? cells[k + ica] : "?";
+            GD.Print($"SCORE_ROW {name} 破片(与)={armor} 反射={refl} 与(敵)={cells[k + ie]} 被={cells[k + it]} 仕掛け(敵)={ce} 仕掛け(味)={ca}");
             // 表の値が帳簿と同じか
             var t = result.TallyByUnit.FirstOrDefault(p => UnitCatalog.Everyone.FirstOrDefault(u => u.Id == p.Key)?.Name == name).Value;
-            if (t is not null) ok &= armor == t.ArmorOut.ToString() && refl == t.ReflectByPlank.ToString();
+            if (t is not null) ok &= armor == t.ArmorOut.ToString() && refl == t.ReflectByPlank.ToString() && ce == t.CreditToEnemy.ToString() && ca == t.CreditToAlly.ToString();
         }
         GD.Print($"SCORE_CHECK_COMPLETE ok={ok}");
     }

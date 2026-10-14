@@ -2947,7 +2947,7 @@ public sealed class BattleContext
         int removed = before - Math.Max(0, to.Hp);
         ft.DischargeDealt += removed;
         tt.DischargeTaken += removed;
-        if (fromBall) TallyOf(_silkOwner[from]).SilkDealt += removed;   // 第292期・計数のみ
+        if (fromBall) { TallyOf(_silkOwner[from]).SilkDealt += removed; NoteCredit341(_silkOwner[from], to, removed, 2); }   // 第292期・計数のみ ／ 第341期: 糸玉の放電はクグの仕掛け
         if (before > 0 && !to.IsAlive) tt.DischargeDeaths++;
         if (_powderLive) { NoteDischargeDealt(from, to, removed, tdN); NoteDr326(from, to, amt, removed, fromBall ? 1 : BetrayedTrait.IsFodder(from) ? 0 : 3); }   // 第323期 ／ 第326期・計数のみ
         if (tpFrom && !tpWas && to.IsAlive && !(_tpDry && _tpPopped.Contains(to.InstanceId))) PowderInfect(from, to);   // 第323期（TP）: 帯電していない隣も帯電させる（TP-a′ は同じ連鎖で先に弾けた駒を除く）
@@ -2993,6 +2993,7 @@ public sealed class BattleContext
         vt.ThreadDealt += removed;
         TallyOf(from).DischargeDealt += removed;
         tt.DischargeTaken += removed;
+        if (_silkBalls.Count > 0 && IsSilkBall(from)) NoteCredit341(_silkOwner[from], to, removed, 2);   // 第341期: 糸を伝った糸玉の放電もクグの仕掛け
         if (before > 0 && !to.IsAlive) { tt.DischargeDeaths++; vt.ThreadKills++; }
         if (_powderLive) { NoteDischargeDealt(from, to, removed, _tdLive ? DensityOf(from) : 0); NoteDr326(from, to, amt, removed, 2); }   // 第323期 ／ 第326期・計数のみ
         if (wasShocked && to.RawCounter(StatusKeys.Shock) <= 0) vt.ThreadPopped++;
@@ -3253,8 +3254,22 @@ public sealed class BattleContext
         _shockKillerSet = false;
         _shockKiller = null;
         int removed = before - Math.Max(0, x.Hp);
+        NoteCredit341(_powderHolder, x, removed, 1);   // 第341期: 焼はトウ（粉の持ち主）の仕掛け
         if (ally) { t.TdBurnAlly += removed; if (before > 0 && !x.IsAlive) t.TdBurnAllyKills++; }
         else { t.TdBurnFoe += removed; if (before > 0 && !x.IsAlive) t.TdBurnFoeKills++; }
+    }
+
+    /// <summary>
+    /// 第341期（<b>計数のみ</b>・戦績の「仕掛け」の列）: 仕掛けた駒（粉の持ち主 ／ 糸玉の持ち主）の帳簿に、実際に削った HP を足す。
+    /// 陣営は仕掛けた駒から見る（同じ陣営なら <c>CreditToAlly</c>）。回復に反転した分は呼ばない。<paramref name="kind"/>: 0 粉塵爆発 ／ 1 焼 ／ 2 糸玉の放電。<b>盤面は変えない・乱数を引かない。</b>
+    /// </summary>
+    void NoteCredit341(UnitState? holder, UnitState victim, int removed, int kind)
+    {
+        if (holder is null || removed <= 0) return;
+        UnitTally t = TallyOf(holder);
+        if (victim.TeamId == holder.TeamId) t.CreditToAlly += removed; else t.CreditToEnemy += removed;
+        if (kind == 0) t.Credit341Dust += removed; else if (kind == 1) t.Credit341Burn += removed; else t.Credit341Ball += removed;
+        TallyOf(victim).Credit341Taken += removed;   // 受けた側（勇者の被(味) のうち仕掛けの列に入った量）
     }
 
     /// <summary>第326期（DR）: 放電1本の量 ＝ 8 ×（1 ＋ 出し手の濃さ（DR-a は 0）＋ 受け手の濃さ）。<b>乱数を引かない。</b></summary>
@@ -3303,6 +3318,7 @@ public sealed class BattleContext
             _shockKiller = null;
             int removed = before - Math.Max(0, v.Hp);
             sum += removed;
+            NoteCredit341(_powderHolder, v, removed, 0);   // 第341期: 粉塵爆発はトウ（粉の持ち主）の仕掛け（糸玉の粉が爆ぜた分も）
             (t.Dx327Dealt ??= new long[12])[rk * 3 + vk] += removed;
             (t.Dx327Hits ??= new long[12])[rk * 3 + vk]++;
             if (before > 0 && !v.IsAlive) (t.Dx327Kills ??= new long[3])[vk]++;

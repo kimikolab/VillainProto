@@ -126,6 +126,8 @@ public partial class ScorePanel : PanelContainer
 
         Note("放電(敵)・放電(味)＝感電を最後に付けた駒に帰属させた放電ダメージ。敵・味方はその駒から見た陣営。"
              + "回復に反転した分は含まない。放電は放電した駒の与(味)にも入っているため、合算すると二重になる。", UiKit.Gold);
+        Note("仕掛け(敵)・仕掛け(味)＝粉塵爆発と焼は粉の持ち主（トウ）に、糸玉の放電は糸玉の持ち主（クグ）に帰属させたダメージ。"
+             + "爆ぜた駒の与(味)／被(味) にも入っているため、合算すると二重になる。", UiKit.Gold);   // 第341期
 
         // ---------------------------------------------------------------------------
         // 読み違えを画面が作らないための注記（受け入れ条件 A6）。
@@ -185,7 +187,7 @@ public partial class ScorePanel : PanelContainer
         _body.AddChild(new HSeparator());
         _body.AddChild(UiKit.Text(title, 13, color));
 
-        var grid = new GridContainer { Columns = Columns.Length + 3 };
+        var grid = new GridContainer { Columns = Columns.Length + 5 };   // 第341期: ＋ 仕掛け(敵) ／ 仕掛け(味)
         grid.AddThemeConstantOverride("h_separation", 10);
         grid.AddThemeConstantOverride("v_separation", 3);
         _body.AddChild(grid);
@@ -196,6 +198,8 @@ public partial class ScorePanel : PanelContainer
         foreach ((string h, _) in Columns) grid.AddChild(Cell(h, UiKit.Faint, 11));
         grid.AddChild(Cell("放電(敵)", UiKit.Faint, 11));
         grid.AddChild(Cell("放電(味)", UiKit.Faint, 11));
+        grid.AddChild(Cell("仕掛け(敵)", UiKit.Faint, 11));   // 第341期
+        grid.AddChild(Cell("仕掛け(味)", UiKit.Faint, 11));
 
         foreach ((string id, UnitTally t) in rows)
         {
@@ -209,7 +213,7 @@ public partial class ScorePanel : PanelContainer
                 grid.AddChild(Cell(v.ToString(), v == 0 ? UiKit.Faint : UiKit.Ink, 12));
             }
             var credit = discharge.GetValueOrDefault(id);
-            foreach (int value in new[] { credit.Enemy, credit.Ally })
+            foreach (int value in new[] { credit.Enemy, credit.Ally, (int)t.CreditToEnemy, (int)t.CreditToAlly })   // 第341期: 仕掛け(敵) ／ 仕掛け(味)（`UnitTally` の計数）
                 grid.AddChild(Cell(value.ToString(), value == 0 ? UiKit.Faint : UiKit.Ink, 12));
         }
     }
