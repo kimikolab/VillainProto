@@ -831,6 +831,10 @@ public enum TraitId
     PowderBurstFall,    // 爆ぜた粉が隣に降る（PB-b）: 粉塵爆発を浴びた敵の側の生きている駒に粉の印を付ける（帯電させない・濃さは上げない・同じ放電で二度は爆ぜない）（**札そのものは挙動を持たない**・engine の `DustExplode`）
     PowderSpreadFar,    // 粉の舞う範囲を広げる（PB-c）: 粉が主目標の隣に舞うとき、その隣（主目標から2歩・主目標と1歩目の駒を除く）の敵にも舞う（帯電 ／ 濃さ ／ 印は1歩目と同じ規則・糸玉は1歩目のまま）（**札そのものは挙動を持たない**・engine の `PowderFar`）
 
+    // --- 第331期で足した札（指示書 design/PHASE331_SHOCK_STUN_GUARD_SPEC.md）。ST はトウ ／ カタの版（保持者 0 枚）。ST-a は第217期の `LiveWireGuard` をそのまま使う ---
+    ShockGuardDaunt,    // 痺れ慣れ（ST-b・`LiveWireGuard` と組む）: ハメ防止（G3H）が立っている間に感電が弾けたら、痺れの代わりに萎縮する（乱数を引かない・第312期の萎縮と同じ状態 ／ 同じ表示）（**札そのものは挙動を持たない**・engine の `StunByShock`）
+    ShockStunOnce,      // 痺れは1ターン1回（ST-c）: 感電の痺れの判定（S3 の 50%）は1体につき1ターン（ラウンド）1回まで。2回目以降に弾けても判定しない（乱数も引かない・萎縮もしない）。痺れない駒（動じない）の萎縮は今のまま（**札そのものは挙動を持たない**・engine の `StunByShock`）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -17551,6 +17555,8 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.PowderBurstMarked),         // 第329期（粉が付いていれば爆ぜる PB-a・印だけ）
         new MarkOnlyTrait(TraitId.PowderBurstFall),           // 第329期（爆ぜた粉が隣に降る PB-b・印だけ）
         new MarkOnlyTrait(TraitId.PowderSpreadFar),           // 第329期（粉の舞う範囲を広げる PB-c・印だけ）
+        new MarkOnlyTrait(TraitId.ShockGuardDaunt),           // 第331期（痺れ慣れ ST-b・印だけ）
+        new MarkOnlyTrait(TraitId.ShockStunOnce),             // 第331期（痺れは1ターン1回 ST-c・印だけ）
         new SharePushTrait(TraitId.ShareSin),                 // 第313期（ドハ DP-c の手番）
         new AmplifierTrait(),
         new ContagionTrait(),

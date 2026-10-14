@@ -3914,6 +3914,43 @@ public static class UnitCatalog
     /// <summary>第329期 PB-a ＋ b ＋ c（全部）。</summary>
     public static readonly UnitDef TouPBabc = TouOn329(new[] { TraitId.PowderBurstMarked, TraitId.PowderBurstFall, TraitId.PowderSpreadFar }, TouFuseFallText, far: true);
 
+    // ---------------------------------------------------------------------------------
+    // 第331期 —— 感電の痺れで敵が止まりすぎる（ST）（指示書 design/PHASE331_SHOCK_STUN_GUARD_SPEC.md §2）。痺れの札（`ShockStunHalf`）を持つトウ ／ カタの規定に札を足し、痺れの句の後に括弧で足す（叩き台）。
+    // `All` にも `Retired` にも入れない。
+    // ---------------------------------------------------------------------------------
+
+    /// <summary>規定のトウ ／ カタの痺れの句（ST の版はこの後ろに括弧で足す）。</summary>
+    public const string StunHalfClause = "半々の確率で痺れて次の手番を失う";
+    /// <summary>第331期 ST-a の句（叩き台）。</summary>
+    public const string StunGuardClause = "（痺れて手番を失った相手は、次の手番まで痺れない）";
+    /// <summary>第331期 ST-b の句（叩き台）。</summary>
+    public const string StunGuardDauntClause = "（痺れて手番を失った相手は、次の手番まで痺れず、痺れない間に弾けると萎縮する）";
+    /// <summary>第331期 ST-c の句（叩き台）。</summary>
+    public const string StunOnceClause = "（同じ相手は1ターンに1度しか痺れない）";
+
+    static UnitDef On331(UnitDef b, TraitId[] add, string clause) => new()
+    {
+        Id = b.Id, Name = b.Name, MaxHp = b.MaxHp, Attack = b.Attack, Speed = b.Speed, Advances = b.Advances, Pattern = b.Pattern,
+        Traits = b.Traits.Concat(add).ToArray(), Actions = b.Actions,
+        PlusText = b.PlusText.IndexOf(StunHalfClause, StringComparison.Ordinal) is int k and >= 0
+            ? b.PlusText.Insert(k + StunHalfClause.Length, clause)
+            : throw new InvalidOperationException($"第331期: {b.Name} の文面に痺れの句が見つからない"),
+        MinusText = b.MinusText, Flavor = b.Flavor
+    };
+
+    /// <summary>第331期 ST-a ハメ防止。規定のトウ ＋ <see cref="TraitId.LiveWireGuard"/>（第217期 G3H の札そのまま）。</summary>
+    public static readonly UnitDef TouSTa = On331(Tou, new[] { TraitId.LiveWireGuard }, StunGuardClause);
+    /// <summary>第331期 ST-b 痺れ慣れ。ST-a ＋ <see cref="TraitId.ShockGuardDaunt"/>。</summary>
+    public static readonly UnitDef TouSTb = On331(Tou, new[] { TraitId.LiveWireGuard, TraitId.ShockGuardDaunt }, StunGuardDauntClause);
+    /// <summary>第331期 ST-c 1ターン1回。規定のトウ ＋ <see cref="TraitId.ShockStunOnce"/>。</summary>
+    public static readonly UnitDef TouSTc = On331(Tou, new[] { TraitId.ShockStunOnce }, StunOnceClause);
+    /// <summary>第331期 ST-a（カタ）。</summary>
+    public static readonly UnitDef KataSTa = On331(Kata, new[] { TraitId.LiveWireGuard }, StunGuardClause);
+    /// <summary>第331期 ST-b（カタ）。</summary>
+    public static readonly UnitDef KataSTb = On331(Kata, new[] { TraitId.LiveWireGuard, TraitId.ShockGuardDaunt }, StunGuardDauntClause);
+    /// <summary>第331期 ST-c（カタ）。</summary>
+    public static readonly UnitDef KataSTc = On331(Kata, new[] { TraitId.ShockStunOnce }, StunOnceClause);
+
     /// <summary>第323期 カタの版（返す）。規定のカタ ＋ <see cref="TraitId.ThunderPowderReturn"/>（濃さの保持者がいない戦では何も起きない）。</summary>
     public static readonly UnitDef KataTDR = On323(KataH324, new[] { TraitId.ThunderPowderReturn }, KataPowderReturnText);
     /// <summary>第323期 クグの版（返す）。規定のクグ ＋ <see cref="TraitId.ThreadPowderFlow"/>。</summary>

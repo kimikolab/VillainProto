@@ -900,10 +900,14 @@ public static class Presets
     /// <para>第327期: 粉塵爆発（DX）の4つの版を、第326期のポンの台の並び（前1 カタ・前3 シガ・中央 トウ・後1 クグ・後3 ソム）で。</para>
     /// <para>第328期: DX ＋ 電池を規定にしたので4つの版を外し、<b>ポンの台（規定の駒）を試遊の台として</b>ここに置いた（`Playtest` に足すと試遊の台を数える器具の出力が動くため・
     /// design/PHASE328_DUST_BATTERY_SETTLE_SPEC.md §6）。名前は「試遊・」で始まるが、置き場所はこの一覧。</para>
-    /// <para>第329期: ポンの台は残し、粉の付いた駒は爆ぜる（PB）の4つの版を「版・」の台として足した。第330期: PB-a ＋ b を規定にしたので4台を外した（ポンの台は規定の駒のまま残す）。</para>
+    /// <para>第329期: ポンの台は残し、粉の付いた駒は爆ぜる（PB）の4つの版を「版・」の台として足した。第330期: PB-a ＋ b を規定にしたので4台を外した（ポンの台は規定の駒のまま残す）。第331期: 感電の痺れの ST の3つの版を「版・」の台として足した。</para>
     /// </summary>
     public static (string Name, Formation F)[] Versions => new (string, Formation)[]
     {
         ("試遊・感電 ポンの台", Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Shiga, center: UnitCatalog.Tou, back1: UnitCatalog.Kugu, back3: UnitCatalog.Som)),
+        // 第331期（design/PHASE331_SHOCK_STUN_GUARD_SPEC.md §6）: 感電の痺れの ST の3つの版を、ポンの台の並びで（トウ ／ カタだけ版の駒）。
+        ("版・ST-a ポンの台", Formation.Build(front1: UnitCatalog.KataSTa, front3: UnitCatalog.Shiga, center: UnitCatalog.TouSTa, back1: UnitCatalog.Kugu, back3: UnitCatalog.Som)),
+        ("版・ST-b ポンの台", Formation.Build(front1: UnitCatalog.KataSTb, front3: UnitCatalog.Shiga, center: UnitCatalog.TouSTb, back1: UnitCatalog.Kugu, back3: UnitCatalog.Som)),
+        ("版・ST-c ポンの台", Formation.Build(front1: UnitCatalog.KataSTc, front3: UnitCatalog.Shiga, center: UnitCatalog.TouSTc, back1: UnitCatalog.Kugu, back3: UnitCatalog.Som)),
     };
 }

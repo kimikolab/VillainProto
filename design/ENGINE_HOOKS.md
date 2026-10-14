@@ -1345,3 +1345,12 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 
 - 規定のトウ `UnitCatalog.Tou` ＝ `TouH328`（第328〜329期の規定・DX 入り）＋ `PowderBurstMarked` ＋ `PowderBurstFall`。第329期の口（`_pbMarked` ／ `_pbFall` ／ `DustK` ／ `DustFall`）がそのまま規定の戦で立つ。PB-c（`PowderSpreadFar` ／ `PowderFar`）は版のまま。
 - 第329期の版の定義 `TouPBa` ／ `TouPBab` ／ `TouPBc` ／ `TouPBabc` は旧の規定（`TouH328`）から作り直した（DX の札は1枚）。固定の口 `Common.PinT328` ／ `Pin328`。器具: `settle330`。
+
+## 第331期 —— 感電の痺れの ST（版のみ）
+
+- **ST-a**: 第217期の `LiveWireGuard`（G3H・`_shockStunGuard`）をトウ ／ カタの版に持たせただけ（engine は変えていない）。痺れで手番を失った手番に `ShockRule.GuardKey` を立て、次の自分の手番の頭で落とす。立っている間の弾けは痺れない。
+- **ST-b の札 `ShockGuardDaunt`**（`MarkOnlyTrait`・`_stGuardDaunt`・`_dauntLive` も立てる）: `StunByShock` のハメ防止の枝で、痺れの代わりに `GuardDaunt`——`StatusKeys.Daunted` を立てて萎縮の `StatusGain` を出す（既に萎縮していれば何もしない・乱数を引かない）。
+- **ST-c の札 `ShockStunOnce`**（`_stOnce`）: `StunByShock` の S3 の乱数の直前に、`_stJudged`（駒 → 判定したターン・この戦の中だけ）で同じターンの2回目以降を判定せずに抜ける（乱数も引かない）。痺れない駒（`ControlBlockedAtEntry`）は対象外（萎縮の判定は今のまま）。
+- **計数のみ**: 弾けた駒の `St331GuardDaunted` ／ `St331GuardDauntAlready` ／ `St331OnceSkip`、シガの `Whip331Why[3]`（縛られた的で2倍が入った理由: 痺れ ／ 手番を失った・萎縮だけ・ほか）。
+- 器具: `stun331`。乱数の口は足していない（`PickOne(` の数は第330期と同じ）。規定の `compare` は 0 セル。
+

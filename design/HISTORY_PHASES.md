@@ -8,6 +8,14 @@ description: 第259期に `CLAUDE.md` の「現状値」節を**逐語で**移�
 
 ## 現状値
 
+**第331期は軽い期で、規定は動かしていない**（指示書は design/PHASE331_SHOCK_STUN_GUARD_SPEC.md・報告は design/PHASE331_SHOCK_STUN_GUARD.md）。トウ ／ カタの版 ST-a ／ ST-b ／ ST-c だけを足した。`compare` の規定の列は 0 セル（`docs/balance.md` 差分 0）——全64行 100 / 91.1 / 89.4 / 83.3 / 83.6・主判定19行の第五波 81.6・歯止めの余裕 +48.4pt・情報セル 74 ／ 26 のまま。版の `compare` は ST-a ／ ST-b が1行3セル（`感電 (シガ×カタ×ソム)` 第2波 +0.5 ／ 第3波 +0.5 ／ 第5波 +1.5）・ST-c は 0 セル。
+
+### 第330期まで `CLAUDE.md` の「現状値」にあった索引の段落（第331期に逐語で移した）
+
+**最後に動かした期: 第330期**（**重い期・規定化だけ**。**トウ ＝ 粉の導火線（PB-a ＋ b）を規定にした**（ポンの判断 Q2・旧の規定は `TouH328`・PB-c は版のまま残置）。粉の印のある敵は濃さ 0 でも爆ぜ（量 8 ×（1 ＋ n））、爆発を浴びた敵に印が降る。ポンの台 × 大隊の爆発 1戦 1.2 → 63.1 回（1つの連鎖で爆ぜた駒 平均 5.17 ／ 最大 9）・ボス 5.0T のまま・精鋭 ／ 本編 ±0.5pt・近衛の格子（固定枠 トウ ＋ カタ・30,030 台）で 1T 決着の台 0・強すぎの兆しなし。試遊の台は「試遊・感電 ポンの台」だけに戻した（第329期の「版・PB」の4台を外した）。器具 `settle330`・報告は `design/PHASE330_POWDER_FUSE_SETTLE.md`）。**期ごとの報告ファイルの索引と、第319期までの過去の器具の固定の一覧は `design/HISTORY_PHASES.md` の冒頭**（第320期までこの節にあった段落を第321期に逐語で移した・第329期までの2段落は第330期に移した）。
+
+**最後に `compare` が動いた期: 第326期**（段0 で1行1セル: `感電 (シガ×カタ×ソム)` 第3波 90.5 → 91.0。第327期の DR-a ／ 第328期の DX ＋ 電池 ／ 第330期の PB-a ＋ b の規定化はどれも 0 セル）。**過去の器具の固定**: 第329期までのトウは `TouH328`（`Common.PinT328` ／ `Pin328` ／ `CompareBuildsH328` ／ `PlaytestH328`・`fuse329` の「規定」・`settle328` の「新」）。第327期までのトウ ／ クグは `TouH327` ／ `KuguH327`（`Common.PinTK327` ／ `Pin327` ／ `CompareBuildsH327` ／ `PlaytestH327`・`dust327`・`PinTK327` は `TouH328` も `TouH327` へ）。第326期までのトウは `TouH326`（`Common.PinT326` ／ `Pin326` ／ `CompareBuildsH326` ／ `PlaytestH326`・`dense326`。`Pin325` も・`tou325`。`PinT326` は `TouH327` ／ `TouH328` も `TouH326` へ、規定のクグを `KuguH327` へ）。`PinTKK324` は規定のトウ ／ `TouH326` ／ `TouH327` ／ `TouH328` を `TouH324` へ、規定のクグ ／ `KuguH327` を `KuguH324` へ替えるので、古い口の終端はそのまま。第325期までのシガは `ShigaH325`（`Common.PinS325` ／ `Pin325` ／ `CompareBuildsH325` ／ `PlaytestH325`）。それより前の固定は `design/HISTORY_PHASES.md`。
+
 **第330期は重い期で、規定化だけ: トウ ＝ 第329期の PB-a ＋ b（粉の導火線）を規定にした**（ポンの判断 Q2・指示書は design/PHASE330_POWDER_FUSE_SETTLE_SPEC.md・報告は design/PHASE330_POWDER_FUSE_SETTLE.md）。規定のトウ ＝ 第328〜329期の規定（`TouH328`・明示の定義に）＋ `PowderBurstMarked` ＋ `PowderBurstFall`（札は第329期の `TouPBab` と同じ）。`compare` の規定の列は 0 セル（`docs/balance.md` 差分 0・第329期の PB-a＋b の列と一致）——全64行 100 / 91.1 / 89.4 / 83.3 / 83.6・主判定19行の第五波 81.6・歯止めの余裕 +48.4pt・情報セル 74 ／ 26 のまま。
 
 ### 第329期まで `CLAUDE.md` の「現状値」にあった索引の段落（第330期に逐語で移した）

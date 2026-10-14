@@ -1148,6 +1148,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 settle330 grid        # 第330期 §4: 格子1本（近衛・固定枠 トウ ＋ カタ・探索枠3・席 30）・1T 決着 5% 以上の台・決着T の上位10台
     dotnet run --project BattleSim -c Release 0 settle330 log [台] [波] [seed] [old|new]   # 第330期: 1戦のログ（台 pon ／ whip ／ shield ／ near ／ torment）
     dotnet run --project BattleSim -c Release 0 settle330 check       # 第330期 自己検査（定義と固定の口・規定のトウで PB-a ／ PB-b・旧（`TouH328`）では起きない・試遊の台・verbose・PickOne）
+    dotnet run --project BattleSim -c Release 0 stun331 p0            # 第331期 §3 Phase 0: 規定 × ポンの台（近衛 ／ 大隊 ／ 第2 ／ 5波 ／ ボス）・敵の手番を感電の痺れで失った割合・続けて失った最長・1体が1ターンに弾けた回数・ソムの破片（得た ／ 使った ／ 溢れた）・味方が受けた攻撃（1 秒）
+    dotnet run --project BattleSim -c Release 0 stun331 boards [版,…]   # 第331期 §5: 代表台 5 × 5 波 × 版（規定 ／ ST-a ／ ST-b ／ ST-c）・seed 0..99・痺れの割合・破片・勝率 ／ 決着T・シガの2倍の理由（4 秒）。予測のファイルが無ければ走らない
+    dotnet run --project BattleSim -c Release 0 stun331 compare [版,…]  # 第331期 §5: `compare` 64 行 × 版（基準は規定・16 秒）
+    dotnet run --project BattleSim -c Release 0 stun331 log [波] [seed] [版]     # 第331期: ポンの台の1戦のログ（版 base ／ a ／ b ／ c）
+    dotnet run --project BattleSim -c Release 0 stun331 check         # 第331期 自己検査（定義・ST-a ／ ST-b（萎縮・縛られた的）／ ST-c（判定は1ターン1回・乱数も引かない）・ボスは今のまま・試遊の台・verbose・PickOne）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

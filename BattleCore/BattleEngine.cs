@@ -1196,6 +1196,10 @@ public sealed class BattleContext
 
     /// <summary>感電の痺れのハメ防止（G3H・<see cref="TraitId.LiveWireGuard"/>）の保持者が戦闘に出たか。</summary>
     bool _shockStunGuard;
+    /// <summary>第331期: 痺れ慣れ（ST-b・<see cref="TraitId.ShockGuardDaunt"/>）／ 痺れは1ターン1回（ST-c・<see cref="TraitId.ShockStunOnce"/>）の保持者が戦闘に出たか。<b>いなければ比較1つで今どおり。</b></summary>
+    bool _stGuardDaunt, _stOnce;
+    /// <summary>第331期（ST-c）: 駒 → その駒の痺れの判定をしたターン（この戦の中だけ・戦をまたがない）。</summary>
+    readonly Dictionary<int, int> _stJudged = new();
 
     /// <summary>1回の攻撃（鞭の一振り）の枠。<b>乱数を引かない。</b></summary>
     public sealed class WhipSwing
@@ -1557,6 +1561,11 @@ public sealed class BattleContext
         {
             wt.WhipDoubled++;
             if (shocked) wt.WhipDoubledShock++;
+            else   // 第331期・計数のみ: 縛られた的の理由（0 痺れ ／ 手番を失った ／ 1 萎縮だけ ／ 2 ほか）
+            {
+                int why = BoundWhy(t);
+                (wt.Whip331Why ??= new long[3])[(why & 3) != 0 ? 0 : why == 32 ? 1 : 2]++;
+            }
             wt.WhipBonus += amount;
             Log($"    {w.Actor.Name} の鞭が動けない {t.Name} に二重に入る（{amount} → {amount + amount}）", LogKind.Highlight, w.Actor);
             result = amount + amount;
@@ -2811,7 +2820,18 @@ public sealed class BattleContext
         // 第316期（SF-A）: 自分の感電が弾けても痺れない（放電はした・乱数も引かない）。保持者がいなければ比較1つで抜ける。
         if (_fearNoStunLive && x.HasTrait(TraitId.FearNoStun)) { t.FearStunSkipped++; return; }
         // 第217期（G3H）: 痺れが明けた駒は、次の自分の手番まで感電で痺れない。保持者がいなければ比較1つで抜ける。
-        if (_shockStunGuard && x.RawCounter(ShockRule.GuardKey) > 0) { t.ShockStunGuarded++; return; }
+        if (_shockStunGuard && x.RawCounter(ShockRule.GuardKey) > 0)
+        {
+            t.ShockStunGuarded++;
+            if (_stGuardDaunt) GuardDaunt(x, ini);   // 第331期（ST-b）: 痺れの代わりに萎縮する（乱数を引かない）
+            return;
+        }
+        // 第331期（ST-c）: 痺れの判定は1体につき1ターン1回まで（2回目以降は判定しない・乱数も引かない）。痺れない駒（動じない）は今のまま萎縮の判定へ。保持者がいなければ比較1つで抜ける。
+        if (_stOnce && !x.ControlBlockedAtEntry)
+        {
+            if (_stJudged.TryGetValue(x.InstanceId, out int tj) && tj == _turn) { t.St331OnceSkip++; return; }
+            _stJudged[x.InstanceId] = _turn;
+        }
         if (_shockStun == 3 && Roll(100) >= ShockRule.StunHalfPercent) { t.ShockStunMissed++; return; }
         // 第311期（萎縮の規則の版・`ShockDaunt`）: 痺れが付かない駒（動じない など）は、痺れの代わりに萎縮する（二値）。札の保持者がいなければ比較1つで抜ける。
         if (_shockDauntLive && x.ControlBlockedAtEntry)
@@ -2838,6 +2858,20 @@ public sealed class BattleContext
         x.SetCounter(StatusKeys.Stun, 1);
         x.SetCounter(ShockRule.StunKey, 1);            // 計数専用（失った手番の帰属）
         Log($"    {x.Name} は感電で痺れた", LogKind.Status);
+    }
+
+    /// <summary>
+    /// 第331期（ST-b・痺れ慣れ）: ハメ防止（G3H）が立っている間に弾けた駒は、痺れの代わりに萎縮する（二値・既に萎縮していれば何も増えない）。
+    /// 状態と表示は第311期の萎縮の規則（`ShockDaunt`）と同じ（`StatusKeys.Daunted` ＋ `StatusGain`）。<b>乱数を引かない。</b>
+    /// </summary>
+    void GuardDaunt(UnitState x, UnitState? ini)
+    {
+        UnitTally t = TallyOf(x);
+        if (x.RawCounter(StatusKeys.Daunted) > 0) { t.St331GuardDauntAlready++; return; }
+        t.St331GuardDaunted++;
+        x.SetCounter(StatusKeys.Daunted, 1);
+        EmitStatusGain(x, StatusKeys.Daunted, 1, ini);   // 表示専用（ShockSpent の直後・萎縮の規則と同じ出来事）
+        Log($"    {x.Name} は痺れに慣れた——代わりに腕が縮んだ（萎縮）", LogKind.Status);
     }
 
     /// <summary>
@@ -9172,6 +9206,8 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Grapple)) _grappleLive = true;              // 第290期（クグの計数・糸の口の手前）
         if (u.HasTrait(TraitId.Thread)) _threadLive = true;                // 第290期（糸・KG-a〜）
         if (u.HasTrait(TraitId.LiveWireGuard)) _shockStunGuard = true;     // 第217期（G3H）
+        if (u.HasTrait(TraitId.ShockGuardDaunt)) { _stGuardDaunt = true; _dauntLive = true; }   // 第331期（ST-b・萎縮の効き目の口も立てる）
+        if (u.HasTrait(TraitId.ShockStunOnce)) _stOnce = true;             // 第331期（ST-c）
         // 第218期（澱みのミオの版・M3〜M5）。**保持者がいなければ比較1つで抜ける。**
         if (u.HasTrait(TraitId.MireDull) || u.HasTrait(TraitId.MireDullAll))
         {

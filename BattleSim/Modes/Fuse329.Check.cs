@@ -169,7 +169,8 @@ static partial class Fuse329Diag
             // 第330期: PB-a ＋ b を規定にしたので「版・」の4台は外した（`Presets.Versions` はポンの台1台・規定の駒）。
             var v = Presets.Versions;
             var rows = Presets.Compare.Concat(Presets.Cross).Concat(Presets.Playtest).Concat(v).ToArray();
-            bool ok = v.Length == 1 && v[0].Name == "試遊・感電 ポンの台"
+            // 第331期: `Versions` は期ごとに「版・」の台を入れ替えるので、1行目（ポンの台）だけを見る（後ろの行は「版・」で始まること）。見出しの文は第330期のまま。
+            bool ok = v.Length >= 1 && v[0].Name == "試遊・感電 ポンの台" && v.Skip(1).All(r => r.Name.StartsWith("版・", StringComparison.Ordinal))
                 && v[0].F.Occupied().Select(o => o.Def).SequenceEqual(new[] { UnitCatalog.Kata, UnitCatalog.Shiga, UnitCatalog.Tou, UnitCatalog.Kugu, UnitCatalog.Som })
                 && !v.Any(r => r.Name.StartsWith("版・PB", StringComparison.Ordinal)) && Presets.Playtest.Length == 17 && rows.First(r => r.Name.Contains(v[0].Name, StringComparison.Ordinal)).Name == v[0].Name;
             Expect("試遊の台: `Presets.Versions` ＝ 「試遊・感電 ポンの台」1台（規定の駒）・第329期の「版・PB」の4台は第330期に外した・`Playtest` は 17 台のまま・DemoApp の `--demo-preset=` の部分一致で自分に当たる", ok);

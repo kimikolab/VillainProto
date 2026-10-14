@@ -2080,6 +2080,12 @@ public sealed class UnitTally
     /// </summary>
     public long[]? Pb329HeadByTurn, Pb329MarkedByTurn, Pb329PopDens;
     public long Pb329Heads, Pb329PopMarked, Pb329Chains, Pb329ChainRecv, Pb329ChainMax, Pb329Fall, Pb329FarFell, Pb329FarNew;
+    /// <summary>
+    /// 第331期（<b>計数専用</b>・ST）。<b>だれの側でも</b>（弾けた駒）: <c>St331GuardDaunted</c> ハメ防止の間に弾けて萎縮した（ST-b）／ <c>St331GuardDauntAlready</c> 既に萎縮していた ／
+    /// <c>St331OnceSkip</c> 同じターンの2回目以降で痺れの判定をしなかった（ST-c）。<b>鞭の保持者（シガ）の側</b>: <c>Whip331Why</c>[0 痺れ ／ 手番を失った・1 萎縮だけ・2 ほか] 縛られた的で2倍が入った理由。
+    /// </summary>
+    public long St331GuardDaunted, St331GuardDauntAlready, St331OnceSkip;
+    public long[]? Whip331Why;
 
     /// <summary>
     /// 第289期（<b>計数専用</b>）。<b>蓄電の保持者（シガ）の側</b>: <c>ChainIniHist</c>[起点] 敵の感電の連鎖（自分の一撃で起きたものを除く・0 トウ ／ 1 カタ ／ 3 ほかの味方 ／ 4 刻み・出どころ無し ／ 5 敵）／
@@ -3430,6 +3436,7 @@ public sealed class UnitTally
         Bat327Recharged += o.Bat327Recharged; Bat327Chains += o.Bat327Chains; Bat327Dry += o.Bat327Dry; Bc327FreshSkip += o.Bc327FreshSkip; Bc327Popped += o.Bc327Popped;
         AddHist(ref Pb329HeadByTurn, o.Pb329HeadByTurn); AddHist(ref Pb329MarkedByTurn, o.Pb329MarkedByTurn); AddHist(ref Pb329PopDens, o.Pb329PopDens);   // 第329期
         Pb329Heads += o.Pb329Heads; Pb329PopMarked += o.Pb329PopMarked; Pb329Chains += o.Pb329Chains; Pb329ChainRecv += o.Pb329ChainRecv; Pb329ChainMax = Math.Max(Pb329ChainMax, o.Pb329ChainMax); Pb329Fall += o.Pb329Fall; Pb329FarFell += o.Pb329FarFell; Pb329FarNew += o.Pb329FarNew;
+        St331GuardDaunted += o.St331GuardDaunted; St331GuardDauntAlready += o.St331GuardDauntAlready; St331OnceSkip += o.St331OnceSkip; AddHist(ref Whip331Why, o.Whip331Why);   // 第331期
         AddHist(ref ChargeBySrc, o.ChargeBySrc);
         // 第289期
         ChainOwn += o.ChainOwn; SwAsked += o.SwAsked; SwNoCharge += o.SwNoCharge; SwNoTarget += o.SwNoTarget; SwNested += o.SwNested;
