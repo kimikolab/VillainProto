@@ -67,7 +67,7 @@ public partial class ShockMarkCheck
             field.BeginDustBurstChain(chain, events, speed);
             field.ShowTouPowder(fall, speed, scheduledDust: true);
             Require(field.PowderEffects.All(f => f.Kind != TouPowderFxKind.DustFall), "連鎖の粉は爆発前に飛び始めない");
-            var packet = field.DustChain!; packet._Process(.12 / speed);
+            var packet = field.DustChain!; packet.Advance(.12 / speed);
             var scheduled = field.PowderEffects.Single(f => f.Kind == TouPowderFxKind.DustFall);
             Require(!field.FindPawn(2)!.PowderMarked, "連鎖の中でも到着前に印を出さない");
             scheduled._Process(.09 / speed); field.SetTouPowderClock(true, speed);
@@ -79,13 +79,13 @@ public partial class ShockMarkCheck
                     await Capture($"dust-fall-frame-{frame:00}");
                     field.SetTouPowderClock(false, speed);
                     if (IsInstanceValid(scheduled) && !scheduled.IsQueuedForDeletion()) scheduled._Process(.04);
-                    packet._Process(.04); field.SetTouPowderClock(true, speed);
+                    packet.Advance(.04); field.SetTouPowderClock(true, speed);
                 }
             }
             field.SetTouPowderClock(false, speed);
             if (IsInstanceValid(scheduled) && !scheduled.IsQueuedForDeletion()) scheduled._Process(.21 / speed);
             Require(field.FindPawn(2)!.PowderMarked, "予約した粉の飛行が到着して印を付ける");
-            packet._Process(.49 / speed);
+            packet.Advance(.49 / speed);
             Require(await packet.Completion && field.DustChainPlays == 1, "粉の飛行でも0.6秒の連鎖を分割しない");
             GD.Print($"DUST_FALL_OK side={side} speed={speed} origin=silk_ball arrival_mark=true");
         }

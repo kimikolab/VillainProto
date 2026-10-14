@@ -25,9 +25,10 @@ public partial class PowderBurnBurst3D : Node3D
         _compact = compact;
         _right = camera.GlobalBasis.X; _up = camera.GlobalBasis.Y; _front = camera.GlobalBasis.Z;
         float level = Level(density);
-        Radius = compact ? .60f + level * .17f : .62f + level * .23f;
-        RayCount = compact ? 22 + (int)(level * 6) : 16 + (int)(level * 7);
-        PulseCount = compact ? 1 + Math.Min(3, (int)(level / 1.5f)) : SizeTier(density);
+        // 粉の印だけ・濃さ1でも読める大きさから始め、累積分はさらに広げる。
+        Radius = compact ? 1.00f + level * .12f : .62f + level * .23f;
+        RayCount = compact ? 30 + (int)(level * 5) : 16 + (int)(level * 7);
+        PulseCount = compact ? 2 + Math.Min(2, (int)(level / 2f)) : SizeTier(density);
         Duration = compact ? .15f + (PulseCount - 1) * .045f : DurationFor(density);
         AddChild(new MeshInstance3D {
             Mesh = _mesh,
@@ -42,7 +43,7 @@ public partial class PowderBurnBurst3D : Node3D
             }, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
         });
         _flash = ShockMarkFx.Sprite(this, GlobalPosition, ShockMarkFx.Halo,
-            compact ? .95f + level * .16f : .72f + level * .10f, Colors.White);
+            compact ? 1.40f + level * .10f : .72f + level * .10f, Colors.White);
         _flash.NoDepthTest = true; _flash.RenderPriority = 3;
     }
 

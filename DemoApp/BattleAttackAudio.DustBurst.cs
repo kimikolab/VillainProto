@@ -3,6 +3,7 @@ using System;
 
 public partial class BattleAttackAudio
 {
+    internal const string DustBurstFile = "res://assets/audio/se/tou_dust_burst.wav";
     private readonly AudioStreamPlayer?[] _dustVoices = new AudioStreamPlayer?[4];
     private readonly Tween?[] _dustFades = new Tween?[4];
     private readonly double[] _dustSpeeds = new double[4];
@@ -13,7 +14,7 @@ public partial class BattleAttackAudio
 
     internal bool PlayDustCrackle(int density, float pan, double speed)
     {
-        string file = PowderBurnFileFor(density);
+        string file = DustBurstFile;
         if (!FileAccess.FileExists(file)) return false;
         ulong now = Time.GetTicksMsec(), frame = Engine.GetProcessFrames();
         // 同じ描画フレームの破裂は1音へ。倍速でも実時間35msの間隔を残す。

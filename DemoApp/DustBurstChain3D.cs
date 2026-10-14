@@ -18,7 +18,7 @@ public partial class DustBurstChain3D : Node3D
     private readonly List<(float At, Action Play)> _scheduled = new();
     private readonly ImmediateMesh _mesh = new();
     private Camera3D _camera = null!;
-    private bool _paused, _drawing, _summarized;
+    private bool _paused, _drawing, _summarized, _clockStarted;
     private double _speed = 1;
     private Action _summary = null!;
 
@@ -80,6 +80,15 @@ public partial class DustBurstChain3D : Node3D
     }
 
     public override void _Process(double delta)
+    {
+        if (_paused || IsQueuedForDeletion()) return;
+        // 生成前のフレーム時間で初期の破裂をまとめて飛ばさない。
+        // 購入粒子の準備に時間がかかった場合も、最初は年齢0から描く。
+        if (!_clockStarted) { _clockStarted = true; delta = 0; }
+        Advance(delta);
+    }
+
+    internal void Advance(double delta)
     {
         if (_paused || IsQueuedForDeletion()) return;
         Age += (float)(delta * _speed);

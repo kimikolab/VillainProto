@@ -15,14 +15,19 @@ public partial class ShockMarkCheck
         int effect = AudioServer.GetBusEffectCount(0); AudioServer.AddBusEffect(0, capture);
         try
         {
+            var bomb = (AudioStream)typeof(BattleAttackAudio).GetMethod("LoadSound", Flags)!
+                .Invoke(audio, new object[] { BattleAttackAudio.DustBurstFile })!;
+            Require(bomb is AudioStreamWav && Math.Abs(bomb.GetLength() - 2.5) < .01,
+                "指定のBit Bomb WAVを復号");
             var formation = Presets.Versions.Single(p => p.Name == "試遊・感電 ポンの台").F;
             var players = BattleEngine.Materialize(formation, 0);
             var enemy = BattleEngine.MaterializeEnemy(EnemyCatalog.BossRegularWave, EnemyScaleRule.None);
             var opening = players.Concat(enemy).Select(u => new DemoOpening(u.InstanceId, u.TeamId, u.Def.Id,
                 u.Name, u.Slot, u.Hp, u.Def.MaxHp, u.CurrentAttack, u.CurrentPattern, u.Def.Advances, u.Def.Traits)).ToArray();
             int heroId = enemy.Single().InstanceId, kuguId = players.Single(u => u.Def.Id == "kugu").InstanceId;
-            foreach (int density in new[] { 1, 12, 30 })
+            foreach (int density in new[] { 0, 1, 12, 30 })
             {
+                int damage = Math.Max(1, density) * 8;
                 field.BeginBattle(opening, $"粉塵爆発：粉 {density} ／ 糸玉から飛び火", 0);
                 var events = new List<BattleEvent> { new() { Turn = 8, Kind = BattleEventKind.ShockSpent, TargetId = heroId } };
                 foreach (int slot in Enumerable.Range(0, 9).Where(i => i != 2))
@@ -32,11 +37,14 @@ public partial class ShockMarkCheck
                         Team = 1, Slot = slot, PartnerId = heroId, Text = SilkBallLabels.Place }, 1);
                     field.ShowTouPowder(new() { Turn = 8, Kind = BattleEventKind.ShockGauge, TargetId = id,
                         Text = ShockGaugeLabels.Dense, Amount = density }, 1);
+                    if (density == 0)
+                        field.ShowTouPowder(new() { Turn = 8, Kind = BattleEventKind.ShockGauge, TargetId = id,
+                            Text = ShockGaugeLabels.PowderMark }, 1);
                     events.Add(new() { Turn = 8, Kind = BattleEventKind.Discharge, ActorId = heroId, TargetId = id, Amount = 8 * (density + 1), ReceiverDensity = density });
                     events.Add(new() { Turn = 8, Kind = BattleEventKind.ShockGauge, ActorId = heroId, TargetId = id,
-                        Text = ShockGaugeLabels.DustBurst, Amount = density * 8, Slot = density });
+                        Text = ShockGaugeLabels.DustBurst, Amount = damage, Slot = density });
                     events.Add(new() { Turn = 8, Kind = BattleEventKind.Damage, ActorId = id, TargetId = heroId,
-                        Amount = density * 8, HpAfter = 1000, FriendlyFire = true });
+                        Amount = damage, HpAfter = 1000, FriendlyFire = true });
                     // 着弾後に粉が降っても、次の放電を別の連鎖へ切り離さない。
                     events.Add(new() { Turn = 8, Kind = BattleEventKind.ShockGauge, ActorId = id, TargetId = heroId,
                         Text = ShockGaugeLabels.DustFall, Amount = 1 });
@@ -45,13 +53,20 @@ public partial class ShockMarkCheck
                 var plan = DustBurstPresentation.Build(events);
                 Require(plan.Starts.Count == 1, "着弾ごとに粉が降っても8つの爆発は1つの連鎖のまま");
                 var chain = plan.Starts.Single().Value;
-                Require(plan.DamageMembers.Count == 8 && chain.Totals[heroId] == density * 8 * 8, "台本の8着弾を勇者の1合計へ束ねる");
+                Require(plan.DamageMembers.Count == 8 && chain.Totals[heroId] == damage * 8, "台本の8着弾を勇者の1合計へ束ねる");
                 Require(field.BallPowderCount == 8 && field.FindPawn(heroId)!.PowderDensity == 0, "糸玉の濃さを本人のHPや粉から独立して表示する");
                 field.BeginDustBurstChain(chain, events, 1);
                 foreach (var b in chain.Bursts) field.ShowTouPowder(events[b.Index], 1);
                 var fx = field.DustChain!;
                 Require(fx.BurstCount == 8 && fx.BranchCount == 8, "四方の糸玉から本人への飛び火を全件接続する");
-                fx._Process(.20); field.SetTouPowderClock(true, 1);
+                fx._Process(.4);
+                Require(fx.Age == 0 && !fx.Completion.IsCompleted, "生成前の長いフレームで初期の爆発を飛ばさない");
+                int initialPlayed = audio.DustCracklePlays;
+                fx.Advance(.20); field.SetTouPowderClock(true, 1);
+                var voices = (AudioStreamPlayer?[])typeof(BattleAttackAudio).GetField("_dustVoices", Flags)!.GetValue(audio)!;
+                Require(audio.DustCracklePlays > initialPlayed
+                    && voices.OfType<AudioStreamPlayer>().Any(v => v.Stream == bomb),
+                    "粉の印だけの爆発も累積した爆発もBit Bombへ接続");
                 float pausedAge = fx.Age; await Wait(.08);
                 Require(fx.Age == pausedAge && !fx.Completion.IsCompleted, "停止中は爆竹の時計・終了待ちも止まる");
                 await Capture($"dust-burst-density{density}");
@@ -66,10 +81,10 @@ public partial class ShockMarkCheck
                     for (int frame = 0; frame < 14; frame++)
                     {
                         await Capture($"dust-burst-frame-{frame:00}");
-                        field.SetTouPowderClock(false, 1); fx._Process(.04); field.SetTouPowderClock(true, 1);
+                        field.SetTouPowderClock(false, 1); fx.Advance(.04); field.SetTouPowderClock(true, 1);
                     }
                 }
-                field.SetTouPowderClock(false, 2); fx._Process(.4);
+                field.SetTouPowderClock(false, 2); fx.Advance(.4);
                 Require(await fx.Completion && field.DustDamageSummaries == 1, "0.6秒の一団の後に合計数字は1つだけ");
                 field.BeginDustBurstChain(chain, events, 1); var canceled = field.DustBurstCompletion;
                 field.SetTouPowderClock(true, 1); field.Hide();

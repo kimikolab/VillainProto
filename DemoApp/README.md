@@ -444,6 +444,7 @@ Godot_console.exe --path DemoApp --windowed --resolution 1440x900 res://SomCheck
 ## トウの粉塵爆発の火花
 
 粉塵爆発は鮮やかな赤・朱色の放射火花、白い小さな芯、広がる衝撃の輪で描く。濃さで広がり・本数・連続閃光を増やし、連鎖全体は0.6秒で重ねて再生する。放電と粉の着弾は反撃の中でも追加攻撃カットインを出さない。
+粉の印だけ・濃さ1でも火花の広がりと閃光を大きくし、最低2回の短い破裂で初期段階を読ませる。爆発のSEは指定のBit Bomb 001。配置元と手順は [SEの採用記録](assets/audio/se/SOURCES.md#粉塵爆発の爆竹2026-10-14)。
 
 購入済みEffectBlocks v4の `electric_sparks_2.tscn` を複製し、粒の大きさ・速度・本数を増やして赤く着色する。`explosion_light` / `explosion_electric` も確認したが、長い煙と爆炎は密集した糸玉の連鎖を覆うため使わず、短い針状粒子を採用。購入素材の原本には触れず、購入素材が無くても放射火花と閃光は描く。
 
@@ -452,4 +453,4 @@ Godot_console.exe --path DemoApp res://ShockMarkCheck.tscn -- --dust-reaction --
 Godot_console.exe --path DemoApp res://ShockMarkCheck.tscn -- --dust-reaction --verify --replay-only --dust-live
 ```
 
-粉1・12・30、1倍・2倍・4倍速の音、停止・消去と「ポンの台／精鋭・大隊／seed 7」の初回・再戦を照合する。`--dust-clip --capture-dir=<絶対パス>` で爆竹の連番を保存できる。完了の印は `SHOCK_MARK_CHECK_OK`。
+粉の印だけ・粉1・12・30、1倍・2倍・4倍速の音、停止・消去と「ポンの台／精鋭・大隊／seed 7」の初回・再戦を照合する。`--dust-clip --capture-dir=<絶対パス>` で爆竹の連番を保存できる。完了の印は `SHOCK_MARK_CHECK_OK`。

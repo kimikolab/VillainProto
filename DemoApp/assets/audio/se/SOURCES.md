@@ -394,9 +394,17 @@ SHA-256: `EE595A4C0D4DDE8FF2AB7D246209FBC4FE8B5A8DDC2F0B7BA8F4BC907CE84DB1`。
 
 ### 粉塵爆発の爆竹（2026-10-14）
 
-同じPhoenix Spark 001〜003を `BattleAttackAudio.DustBurst.cs` で短い破裂として再利用。
+ユーザー指定により `DSGNImpt_EXPLOSION-Bit Bomb_HY_PC-001.wav` へ差し替え。原本を `tou_dust_burst.wav` に無加工でコピー（96kHz / 24bit / stereo / 2.5秒）。SHA-256: `376F7A914533A9F8EEF7FEF1A5CF7EB326C43CDDD1E486E04FE408A3D0EE0717`。
+`BattleAttackAudio.DustBurst.cs` がこの専用音源を短い破裂として再生する。通常の粉焼はPhoenix Spark 001〜003を引き続き使う。
+
+配置コマンド（購入音源はGitに含めない）：
+
+```powershell
+Copy-Item -LiteralPath "D:\Assets\SE\Helton Yan's Pixel Combat - Single Files\DSGNImpt_EXPLOSION-Bit Bomb_HY_PC-001.wav" -Destination "DemoApp/assets/audio/se/tou_dust_burst.wav"
+```
+
 粉の濃さの段階は粉焼と共通。小-13 / 中-11 / 大-9 dB、4枠、原音程。
 冒頭0.15秒（倍速時も最低0.09秒）、末尾45%をフェードする。35ms未満・同じフレームの発火は集約する。
 再生時刻は0.60秒の連鎖の時計で予約し、後半ほど間隔を詰める。通常の大きな粉焼SEとの二重再生を避ける。
 一時停止・途中の速度変更・離脱・再戦は音とフェードにも反映。原本・購入素材本体は変更しない。
-`--dust-burst` で濃さ1・12・30×1・2・4倍速のMaster実出力、複数回の再生と単発のクリップなしを確認する。
+`--dust-burst` で粉の印だけ・濃さ1・12・30×1・2・4倍速のMaster実出力、複数回の再生と単発のクリップなしを確認する。
