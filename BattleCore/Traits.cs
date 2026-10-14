@@ -835,6 +835,9 @@ public enum TraitId
     ShockGuardDaunt,    // 痺れ慣れ（ST-b・`LiveWireGuard` と組む）: ハメ防止（G3H）が立っている間に感電が弾けたら、痺れの代わりに萎縮する（乱数を引かない・第312期の萎縮と同じ状態 ／ 同じ表示）（**札そのものは挙動を持たない**・engine の `StunByShock`）
     ShockStunOnce,      // 痺れは1ターン1回（ST-c）: 感電の痺れの判定（S3 の 50%）は1体につき1ターン（ラウンド）1回まで。2回目以降に弾けても判定しない（乱数も引かない・萎縮もしない）。痺れない駒（動じない）の萎縮は今のまま（**札そのものは挙動を持たない**・engine の `StunByShock`）
 
+    // --- 第332期で足した札（指示書 design/PHASE332_STUN_ONCE_SOM_VEIL_SPEC.md）。LV-d はソムの版（保持者 0 枚）。LV-c は第308期の `SparkVeilCap` をそのまま使う ---
+    SparkVeilTemp,      // 一時の衣（LV-d・`SparkVeil` と組む）: 衣で足した破片（`SparkTrait.VeilKey` の帳簿の残り）は、ソムの次の光の雨の頭で消える（ほかの書き手の破片は消さない・上限なし）（**札そのものは挙動を持たない**・`SparkTrait.Rain` ／ `RainOn` が engine の `VeilExpire` を呼ぶ）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -13108,6 +13111,7 @@ public sealed class SparkTrait : Trait
     /// </summary>
     public static void Rain(BattleContext ctx, UnitState som, int lights)
     {
+        if (som.HasTrait(TraitId.SparkVeilTemp)) ctx.VeilExpire(som);   // 第332期（LV-d）: 前の雨の衣は、次の雨の頭で消える
         if (som.HasTrait(TraitId.SparkFocus)) { RainFocus(ctx, som, lights); return; }
         int amt = AmountOf(som, lights);
         bool veil = som.HasTrait(TraitId.SparkVeil), cap = som.HasTrait(TraitId.SparkVeilCap);
@@ -13139,6 +13143,7 @@ public sealed class SparkTrait : Trait
     /// </summary>
     public static void RainOn(BattleContext ctx, UnitState som, int lights, UnitState a)
     {
+        if (som.HasTrait(TraitId.SparkVeilTemp)) ctx.VeilExpire(som);   // 第332期（LV-d）
         int amt = AmountOf(som, lights) * 5;
         UnitTally t = ctx.TallyOf(som);
         t.SparkRains++;
@@ -17557,6 +17562,7 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.PowderSpreadFar),           // 第329期（粉の舞う範囲を広げる PB-c・印だけ）
         new MarkOnlyTrait(TraitId.ShockGuardDaunt),           // 第331期（痺れ慣れ ST-b・印だけ）
         new MarkOnlyTrait(TraitId.ShockStunOnce),             // 第331期（痺れは1ターン1回 ST-c・印だけ）
+        new MarkOnlyTrait(TraitId.SparkVeilTemp),             // 第332期（一時の衣 LV-d・ソム・印だけ）
         new SharePushTrait(TraitId.ShareSin),                 // 第313期（ドハ DP-c の手番）
         new AmplifierTrait(),
         new ContagionTrait(),

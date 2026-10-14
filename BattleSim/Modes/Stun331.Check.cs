@@ -30,23 +30,23 @@ static partial class Stun331Diag
 
         // ---- 定義
         {
-            bool tou = UnitCatalog.TouSTa.Traits.SequenceEqual(UnitCatalog.Tou.Traits.Append(TraitId.LiveWireGuard))
-                && UnitCatalog.TouSTb.Traits.SequenceEqual(UnitCatalog.Tou.Traits.Concat(new[] { TraitId.LiveWireGuard, TraitId.ShockGuardDaunt }))
-                && UnitCatalog.TouSTc.Traits.SequenceEqual(UnitCatalog.Tou.Traits.Append(TraitId.ShockStunOnce));
-            bool kata = UnitCatalog.KataSTa.Traits.SequenceEqual(UnitCatalog.Kata.Traits.Append(TraitId.LiveWireGuard))
-                && UnitCatalog.KataSTb.Traits.SequenceEqual(UnitCatalog.Kata.Traits.Concat(new[] { TraitId.LiveWireGuard, TraitId.ShockGuardDaunt }))
-                && UnitCatalog.KataSTc.Traits.SequenceEqual(UnitCatalog.Kata.Traits.Append(TraitId.ShockStunOnce));
+            bool tou = UnitCatalog.TouSTa.Traits.SequenceEqual(UnitCatalog.TouH331.Traits.Append(TraitId.LiveWireGuard))
+                && UnitCatalog.TouSTb.Traits.SequenceEqual(UnitCatalog.TouH331.Traits.Concat(new[] { TraitId.LiveWireGuard, TraitId.ShockGuardDaunt }))
+                && UnitCatalog.TouSTc.Traits.SequenceEqual(UnitCatalog.TouH331.Traits.Append(TraitId.ShockStunOnce));
+            bool kata = UnitCatalog.KataSTa.Traits.SequenceEqual(UnitCatalog.KataH331.Traits.Append(TraitId.LiveWireGuard))
+                && UnitCatalog.KataSTb.Traits.SequenceEqual(UnitCatalog.KataH331.Traits.Concat(new[] { TraitId.LiveWireGuard, TraitId.ShockGuardDaunt }))
+                && UnitCatalog.KataSTc.Traits.SequenceEqual(UnitCatalog.KataH331.Traits.Append(TraitId.ShockStunOnce));
             var vs = new[] { UnitCatalog.TouSTa, UnitCatalog.TouSTb, UnitCatalog.TouSTc, UnitCatalog.KataSTa, UnitCatalog.KataSTb, UnitCatalog.KataSTc };
             string[] cl = { UnitCatalog.StunGuardClause, UnitCatalog.StunGuardDauntClause, UnitCatalog.StunOnceClause };
             bool text = Enumerable.Range(0, 6).All(i => vs[i].PlusText.Contains(UnitCatalog.StunHalfClause + cl[i % 3], StringComparison.Ordinal));
             bool outside = vs.All(d => !UnitCatalog.Everyone.Contains(d)) && UnitCatalog.All.Count == 52
-                && UnitCatalog.Everyone.All(d => !d.Traits.Contains(TraitId.LiveWireGuard) && !d.Traits.Contains(TraitId.ShockGuardDaunt) && !d.Traits.Contains(TraitId.ShockStunOnce));
-            Expect("定義: ST-a ＝ 規定のトウ ／ カタ ＋ `LiveWireGuard`・ST-b ＝ ST-a ＋ `ShockGuardDaunt`・ST-c ＝ 規定 ＋ `ShockStunOnce`（文面は痺れの句の後に括弧）・版は `Everyone` の外・規定の駒は ST の札を持たない・`All` 52 枚",
+                && UnitCatalog.Everyone.All(d => !d.Traits.Contains(TraitId.LiveWireGuard) && !d.Traits.Contains(TraitId.ShockGuardDaunt) && (d == UnitCatalog.Tou || d == UnitCatalog.Kata || !d.Traits.Contains(TraitId.ShockStunOnce)));   // 第332期: 規定のトウ ／ カタは ST-c を持つ
+            Expect("定義: ST-a ＝ 規定のトウ ／ カタ ＋ `LiveWireGuard`・ST-b ＝ ST-a ＋ `ShockGuardDaunt`・ST-c ＝ 規定 ＋ `ShockStunOnce`（文面は痺れの句の後に括弧）・版は `Everyone` の外・ST の札を持つ規定の駒は ST-c のトウ ／ カタだけ（第332期から）・`All` 52 枚",
                 tou && kata && text && outside, $"トウ {tou}・カタ {kata}・文面 {text}・外 {outside}");
         }
 
         // ---- ST-a ／ ST-b: 痺れで手番を失った駒は、次の自分の手番の頭まで弾けても痺れない（ST-b は萎縮する）・手番の頭で戻る
-        foreach (var (tou, tag) in new[] { (UnitCatalog.Tou, "規定"), (UnitCatalog.TouSTa, "ST-a"), (UnitCatalog.TouSTb, "ST-b") })
+        foreach (var (tou, tag) in new[] { (UnitCatalog.TouH331, "規定"), (UnitCatalog.TouSTa, "ST-a"), (UnitCatalog.TouSTb, "ST-b") })   // 第332期: 「規定」は `TouH331`
         {
             var ctx = T323.Ctx(Formation.Build(back3: tou, front1: UnitCatalog.Shiga), Formation.Build(front1: Dummy), out var p, out var e);
             var x = e[0];
@@ -72,7 +72,7 @@ static partial class Stun331Diag
         }
 
         // ---- ST-c: 同じラウンドの2回目以降の弾けで痺れの判定をしない・次のラウンドは判定する
-        foreach (var (tou, tag) in new[] { (UnitCatalog.Tou, "規定"), (UnitCatalog.TouSTc, "ST-c") })
+        foreach (var (tou, tag) in new[] { (UnitCatalog.TouH331, "規定"), (UnitCatalog.TouSTc, "ST-c") })
         {
             var ctx = T323.Ctx(Formation.Build(back3: tou, front1: T323.Mate), Formation.Build(front1: Dummy), out var p, out var e);
             var x = e[0];
@@ -89,7 +89,7 @@ static partial class Stun331Diag
         // ---- 痺れない敵（ボス）は今のまま萎縮（ST-c でも同じラウンドの2回目以降も萎縮の判定へ）
         {
             var hero = WaveOf("boss").Make()[0].Def;
-            foreach (var (tou, tag) in new[] { (UnitCatalog.Tou, "規定"), (UnitCatalog.TouSTb, "ST-b"), (UnitCatalog.TouSTc, "ST-c") })
+            foreach (var (tou, tag) in new[] { (UnitCatalog.TouH331, "規定"), (UnitCatalog.TouSTb, "ST-b"), (UnitCatalog.TouSTc, "ST-c") })
             {
                 var ctx = T323.Ctx(Formation.Build(back3: tou, front1: T323.Mate), Formation.Build(front1: hero), out var p, out var e, seed: 3);
                 var x = e[0];
@@ -106,9 +106,10 @@ static partial class Stun331Diag
             string[] names = { "試遊・感電 ポンの台", "版・ST-a ポンの台", "版・ST-b ポンの台", "版・ST-c ポンの台" };
             var tk = new[] { (UnitCatalog.Tou, UnitCatalog.Kata), (UnitCatalog.TouSTa, UnitCatalog.KataSTa), (UnitCatalog.TouSTb, UnitCatalog.KataSTb), (UnitCatalog.TouSTc, UnitCatalog.KataSTc) };
             var rows = Presets.Compare.Concat(Presets.Cross).Concat(Presets.Playtest).Concat(v).ToArray();
-            bool ok = v.Select(r => r.Name).SequenceEqual(names)
-                && Enumerable.Range(0, 4).All(i => v[i].F.Occupied().Select(o => o.Def).SequenceEqual(new[] { tk[i].Item2, UnitCatalog.Shiga, tk[i].Item1, UnitCatalog.Kugu, UnitCatalog.Som }))
-                && Presets.Playtest.Length == 17 && names.All(n => rows.First(r => r.Name.Contains(n, StringComparison.Ordinal)).Name == n);
+            // 第332期: `Versions` は期ごとに「版・」の台を入れ替えるので、1行目（ポンの台・規定の駒）だけを見る（後ろの行は「版・」で始まること）。見出しの文は第331期のまま。
+            bool ok = v.Length >= 1 && v[0].Name == names[0] && v.Skip(1).All(r => r.Name.StartsWith("版・", StringComparison.Ordinal))
+                && v[0].F.Occupied().Select(o => o.Def).SequenceEqual(new[] { UnitCatalog.Kata, UnitCatalog.Shiga, UnitCatalog.Tou, UnitCatalog.Kugu, UnitCatalog.Som })
+                && Presets.Playtest.Length == 17 && rows.First(r => r.Name.Contains(names[0], StringComparison.Ordinal)).Name == names[0];
             Expect("試遊の台: `Presets.Versions` ＝ 「試遊・感電 ポンの台」＋「版・ST-a ／ ST-b ／ ST-c ポンの台」（並びはポンの台・トウ ／ カタだけ版）・`Playtest` は 17 台のまま・`--demo-preset=` の部分一致で自分に当たる", ok);
         }
 

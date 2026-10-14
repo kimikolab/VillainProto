@@ -1312,11 +1312,13 @@ public static class UnitCatalog
     };
 
     /// <summary>
-    /// 痺れ粉のトウ（規定）。<b>第330期に第329期の PB-a ＋ b（粉の導火線）を規定にした</b>（ポンの判断 Q2・design/PHASE330_POWDER_FUSE_SETTLE_SPEC.md §2）——
+    /// 痺れ粉のトウ（第330〜331期の規定）。<b>第330期に第329期の PB-a ＋ b（粉の導火線）を規定にした</b>（ポンの判断 Q2・design/PHASE330_POWDER_FUSE_SETTLE_SPEC.md §2）——
     /// 第328〜329期の規定（<see cref="TouH328"/>・DX 入り）＋ <see cref="TraitId.PowderBurstMarked"/>（粉の印のある敵は濃さ 0 でも爆ぜる・量は 8 ×（1 ＋ n））
     /// ＋ <see cref="TraitId.PowderBurstFall"/>（爆発を浴びた敵に粉の印が降る）。札は第329期の <see cref="TouPBab"/> と同じ。文面は粉塵爆発の句を <see cref="TouFuseSettleText"/> に差し替えた。
+    /// <para><b>第332期に ST-c（<see cref="Tou"/>）を規定にしたので、旧の規定の定義を明示的に持つ</b>（第331期まで <see cref="Tou"/> と同じ物だった）。
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。第330〜331期の規定のトウで測った器具はこれに固定する（`Common.PinTK331`）。第331期の版（ST）もこれから作る。</para>
     /// </summary>
-    public static readonly UnitDef Tou = new()
+    public static readonly UnitDef TouH331 = new()
     {
         Id = TouH328.Id,
         Name = TouH328.Name,
@@ -1333,6 +1335,31 @@ public static class UnitCatalog
         MinusText = TouH328.MinusText,
         Flavor = TouH328.Flavor
     };
+
+    /// <summary>
+    /// 痺れ粉のトウ（規定）。<b>第332期に第331期の ST-c（痺れの判定は1ターン1回）を規定にした</b>（ポンの判断 R3・design/PHASE332_STUN_ONCE_SOM_VEIL_SPEC.md §2）——
+    /// 第330〜331期の規定（<see cref="TouH331"/>・PB-a ＋ b 入り）＋ <see cref="TraitId.ShockStunOnce"/>。札と文面は第331期の <see cref="TouSTc"/> と同じ（痺れの句の後に <see cref="StunOnceClause"/>）。
+    /// </summary>
+    public static readonly UnitDef Tou = new()
+    {
+        Id = TouH331.Id,
+        Name = TouH331.Name,
+        MaxHp = TouH331.MaxHp,
+        Attack = TouH331.Attack,
+        Speed = TouH331.Speed,
+        Advances = TouH331.Advances,
+        Pattern = TouH331.Pattern,
+        Traits = TouH331.Traits.Append(TraitId.ShockStunOnce).ToArray(),
+        Actions = TouH331.Actions,
+        PlusText = StunOncePlus(TouH331),
+        MinusText = TouH331.MinusText,
+        Flavor = TouH331.Flavor
+    };
+
+    /// <summary>第332期: 痺れの句（<see cref="StunHalfClause"/>）の直後に <see cref="StunOnceClause"/> を入れた文面（第331期の ST-c の版と同じ作り）。</summary>
+    static string StunOncePlus(UnitDef b) => b.PlusText.IndexOf(StunHalfClause, StringComparison.Ordinal) is int k and >= 0
+        ? b.PlusText.Insert(k + StunHalfClause.Length, StunOnceClause)
+        : throw new InvalidOperationException($"第332期: {b.Name} の文面に痺れの句が見つからない");
 
     // 第311期 —— 萎縮の規則の版（§3-3）。痺れの規則の札（`ShockStunHalf`）を持つ駒に規則の札 <see cref="TraitId.ShockDaunt"/> を足すだけ。`All` にも `Retired` にも入れない。
     // 第312期に規定にした（規定の <see cref="Tou"/> と同じ札）。版の定義は第311期のまま旧の規定（<see cref="TouH311"/>）から作る。
@@ -3366,7 +3393,8 @@ public static class UnitCatalog
     /// 禍導のカタ（規定）。<b>第325期に返す働き（<see cref="TraitId.ThunderPowderReturn"/>）を足した</b>（ポンの判断 E3・design/PHASE325_TOU_SETTLE_SPEC.md §2）——
     /// 第312〜324期の規定（<see cref="KataH324"/>）の末尾に札1枚。札は第323期の <see cref="KataTDR"/> と同じ。濃さの保持者（トウ）がいない戦では何も起きない。
     /// </summary>
-    public static readonly UnitDef Kata = new()
+    /// <summary>禍導のカタ（第325〜331期の規定・返す働きつき）。<b>第332期に ST-c（<see cref="Kata"/>）を規定にしたので、旧の規定の定義を明示的に持つ</b>（第331期まで <see cref="Kata"/> と同じ物だった）。`All` ／ `Retired` の外。第325〜331期の規定のカタで測った器具はこれに固定する（`Common.PinTK331` ほか）。</summary>
+    public static readonly UnitDef KataH331 = new()
     {
         Id = KataH324.Id,
         Name = KataH324.Name,
@@ -3380,6 +3408,25 @@ public static class UnitCatalog
         PlusText = KataH324.PlusText + KataPowderReturnText,
         MinusText = KataH324.MinusText,
         Flavor = KataH324.Flavor
+    };
+
+    /// <summary>
+    /// 禍導のカタ（規定）。<b>第332期に第331期の ST-c を規定にした</b>——第325〜331期の規定（<see cref="KataH331"/>）＋ <see cref="TraitId.ShockStunOnce"/>。札と文面は第331期の <see cref="KataSTc"/> と同じ。
+    /// </summary>
+    public static readonly UnitDef Kata = new()
+    {
+        Id = KataH331.Id,
+        Name = KataH331.Name,
+        MaxHp = KataH331.MaxHp,
+        Attack = KataH331.Attack,
+        Speed = KataH331.Speed,
+        Advances = KataH331.Advances,
+        Pattern = KataH331.Pattern,
+        Traits = KataH331.Traits.Append(TraitId.ShockStunOnce).ToArray(),
+        Actions = KataH331.Actions,
+        PlusText = StunOncePlus(KataH331),
+        MinusText = KataH331.MinusText,
+        Flavor = KataH331.Flavor
     };
 
     // 第311期 —— 萎縮の規則の版（§3-3）。痺れの規則の札（`ShockStunHalf`）を持つ駒に規則の札 <see cref="TraitId.ShockDaunt"/> を足すだけ。`All` にも `Retired` にも入れない。
@@ -3928,7 +3975,7 @@ public static class UnitCatalog
     /// <summary>第331期 ST-c の句（叩き台）。</summary>
     public const string StunOnceClause = "（同じ相手は1ターンに1度しか痺れない）";
 
-    static UnitDef On331(UnitDef b, TraitId[] add, string clause) => new()
+    static UnitDef On331(UnitDef b, TraitId[] add, string clause) => new()   // 第332期: 規定が ST-c になったので、版は第330〜331期の規定（`TouH331` ／ `KataH331`）から作る
     {
         Id = b.Id, Name = b.Name, MaxHp = b.MaxHp, Attack = b.Attack, Speed = b.Speed, Advances = b.Advances, Pattern = b.Pattern,
         Traits = b.Traits.Concat(add).ToArray(), Actions = b.Actions,
@@ -3939,17 +3986,44 @@ public static class UnitCatalog
     };
 
     /// <summary>第331期 ST-a ハメ防止。規定のトウ ＋ <see cref="TraitId.LiveWireGuard"/>（第217期 G3H の札そのまま）。</summary>
-    public static readonly UnitDef TouSTa = On331(Tou, new[] { TraitId.LiveWireGuard }, StunGuardClause);
+    public static readonly UnitDef TouSTa = On331(TouH331, new[] { TraitId.LiveWireGuard }, StunGuardClause);
     /// <summary>第331期 ST-b 痺れ慣れ。ST-a ＋ <see cref="TraitId.ShockGuardDaunt"/>。</summary>
-    public static readonly UnitDef TouSTb = On331(Tou, new[] { TraitId.LiveWireGuard, TraitId.ShockGuardDaunt }, StunGuardDauntClause);
+    public static readonly UnitDef TouSTb = On331(TouH331, new[] { TraitId.LiveWireGuard, TraitId.ShockGuardDaunt }, StunGuardDauntClause);
     /// <summary>第331期 ST-c 1ターン1回。規定のトウ ＋ <see cref="TraitId.ShockStunOnce"/>。</summary>
-    public static readonly UnitDef TouSTc = On331(Tou, new[] { TraitId.ShockStunOnce }, StunOnceClause);
+    public static readonly UnitDef TouSTc = On331(TouH331, new[] { TraitId.ShockStunOnce }, StunOnceClause);
     /// <summary>第331期 ST-a（カタ）。</summary>
-    public static readonly UnitDef KataSTa = On331(Kata, new[] { TraitId.LiveWireGuard }, StunGuardClause);
+    public static readonly UnitDef KataSTa = On331(KataH331, new[] { TraitId.LiveWireGuard }, StunGuardClause);
     /// <summary>第331期 ST-b（カタ）。</summary>
-    public static readonly UnitDef KataSTb = On331(Kata, new[] { TraitId.LiveWireGuard, TraitId.ShockGuardDaunt }, StunGuardDauntClause);
+    public static readonly UnitDef KataSTb = On331(KataH331, new[] { TraitId.LiveWireGuard, TraitId.ShockGuardDaunt }, StunGuardDauntClause);
     /// <summary>第331期 ST-c（カタ）。</summary>
-    public static readonly UnitDef KataSTc = On331(Kata, new[] { TraitId.ShockStunOnce }, StunOnceClause);
+    public static readonly UnitDef KataSTc = On331(KataH331, new[] { TraitId.ShockStunOnce }, StunOnceClause);
+
+    // ---------------------------------------------------------------------------------
+    // 第332期 —— ソムの光の衣を積もらせない（LV）（指示書 design/PHASE332_STUN_ONCE_SOM_VEIL_SPEC.md §3）。規定のソム（LV-a）に札を足し、衣の句を差し替える（叩き台）。
+    // `All` にも `Retired` にも入れない。
+    // ---------------------------------------------------------------------------------
+
+    /// <summary>規定のソムの光の衣の句（LV の版はここを差し替える）。</summary>
+    public const string SomVeilClause = "光の衣になって次の一撃を受け止める";
+    /// <summary>第332期 LV-c の衣の句（叩き台）。</summary>
+    public const string SomVeilCapClause = "光の衣になって次の一撃を受け止める（衣は最大HPの4割まで）";
+    /// <summary>第332期 LV-d の衣の句（叩き台）。</summary>
+    public const string SomVeilTempClause = "次に光を降らせるまでの光の衣になって、一撃を受け止める";
+
+    static UnitDef SomOn332(TraitId add, string clause) => new()
+    {
+        Id = Som.Id, Name = Som.Name, MaxHp = Som.MaxHp, Attack = Som.Attack, Speed = Som.Speed, Advances = Som.Advances, Pattern = Som.Pattern,
+        Traits = Som.Traits.Append(add).ToArray(), Actions = Som.Actions,
+        PlusText = Som.PlusText.Contains(SomVeilClause, StringComparison.Ordinal)
+            ? Som.PlusText.Replace(SomVeilClause, clause, StringComparison.Ordinal)
+            : throw new InvalidOperationException("第332期: 規定のソムの文面に光の衣の句が見つからない"),
+        MinusText = Som.MinusText, Flavor = Som.Flavor
+    };
+
+    /// <summary>第332期 LV-c。規定のソム ＋ <see cref="TraitId.SparkVeilCap"/>（第308期の札）——衣で足せるのは、その味方の破片（ほかの書き手を合算）が最大HPの 4 割になるまで。</summary>
+    public static readonly UnitDef SomLVc332 = SomOn332(TraitId.SparkVeilCap, SomVeilCapClause);
+    /// <summary>第332期 LV-d。規定のソム ＋ <see cref="TraitId.SparkVeilTemp"/>——衣で足した破片は、ソムの次の光の雨の頭で消える（ほかの書き手の破片は消さない）。</summary>
+    public static readonly UnitDef SomLVd332 = SomOn332(TraitId.SparkVeilTemp, SomVeilTempClause);
 
     /// <summary>第323期 カタの版（返す）。規定のカタ ＋ <see cref="TraitId.ThunderPowderReturn"/>（濃さの保持者がいない戦では何も起きない）。</summary>
     public static readonly UnitDef KataTDR = On323(KataH324, new[] { TraitId.ThunderPowderReturn }, KataPowderReturnText);

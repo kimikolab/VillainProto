@@ -2086,6 +2086,11 @@ public sealed class UnitTally
     /// </summary>
     public long St331GuardDaunted, St331GuardDauntAlready, St331OnceSkip;
     public long[]? Whip331Why;
+    /// <summary>
+    /// 第332期（<b>計数専用</b>・LV-d）。<b>ソムの側</b>: <c>Lv332Expired</c> 一時の衣が消えた量 ／ <c>Lv332ExpireHits</c> 消えた回数（味方1体ごと）。
+    /// <b>だれの側でも</b>: <c>Lv332ArmorLost</c> 破片が減った延べ（被弾・礫・鱗・移し——衣か板かを問わない・一時の衣が消えた分は数えない）。
+    /// </summary>
+    public long Lv332Expired, Lv332ExpireHits, Lv332ArmorLost;
 
     /// <summary>
     /// 第289期（<b>計数専用</b>）。<b>蓄電の保持者（シガ）の側</b>: <c>ChainIniHist</c>[起点] 敵の感電の連鎖（自分の一撃で起きたものを除く・0 トウ ／ 1 カタ ／ 3 ほかの味方 ／ 4 刻み・出どころ無し ／ 5 敵）／
@@ -3437,6 +3442,7 @@ public sealed class UnitTally
         AddHist(ref Pb329HeadByTurn, o.Pb329HeadByTurn); AddHist(ref Pb329MarkedByTurn, o.Pb329MarkedByTurn); AddHist(ref Pb329PopDens, o.Pb329PopDens);   // 第329期
         Pb329Heads += o.Pb329Heads; Pb329PopMarked += o.Pb329PopMarked; Pb329Chains += o.Pb329Chains; Pb329ChainRecv += o.Pb329ChainRecv; Pb329ChainMax = Math.Max(Pb329ChainMax, o.Pb329ChainMax); Pb329Fall += o.Pb329Fall; Pb329FarFell += o.Pb329FarFell; Pb329FarNew += o.Pb329FarNew;
         St331GuardDaunted += o.St331GuardDaunted; St331GuardDauntAlready += o.St331GuardDauntAlready; St331OnceSkip += o.St331OnceSkip; AddHist(ref Whip331Why, o.Whip331Why);   // 第331期
+        Lv332Expired += o.Lv332Expired; Lv332ExpireHits += o.Lv332ExpireHits; Lv332ArmorLost += o.Lv332ArmorLost;   // 第332期
         AddHist(ref ChargeBySrc, o.ChargeBySrc);
         // 第289期
         ChainOwn += o.ChainOwn; SwAsked += o.SwAsked; SwNoCharge += o.SwNoCharge; SwNoTarget += o.SwNoTarget; SwNested += o.SwNested;
@@ -4363,6 +4369,8 @@ public static class SparkLabels
     public const string Silenced = "止まる";
     /// <summary>第308期: 光の衣（LV-a ／ LV-c）——溢れた光がその味方の破片になった（<c>TargetId</c> ＝ 受けた味方・<c>Amount</c> ＝ 衣になった量・<c>Slot</c> ＝ その後の破片）。</summary>
     public const string Veil = "衣";
+    /// <summary>第332期（LV-d・<b>版のみ</b>）: 光の雨の頭で、前の雨の衣が消えた（<c>TargetId</c> ＝ 味方・<c>Amount</c> ＝ 消えた量・<c>Slot</c> ＝ その後の破片）。直後にその雨の <c>降る</c>。</summary>
+    public const string VeilFade = "衣が消えた";
 }
 
 /// <summary>`CommandBall`（第302期）の <c>Text</c>。</summary>

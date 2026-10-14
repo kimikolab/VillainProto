@@ -1354,3 +1354,12 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **計数のみ**: 弾けた駒の `St331GuardDaunted` ／ `St331GuardDauntAlready` ／ `St331OnceSkip`、シガの `Whip331Why[3]`（縛られた的で2倍が入った理由: 痺れ ／ 手番を失った・萎縮だけ・ほか）。
 - 器具: `stun331`。乱数の口は足していない（`PickOne(` の数は第330期と同じ）。規定の `compare` は 0 セル。
 
+## 第332期 —— 段0: 痺れは1ターン1回（ST-c）の規定化 ／ ソムの光の衣の LV-c ／ LV-d（版）
+
+- **段0**: 規定のトウ ／ カタ ＝ `TouH331` ／ `KataH331`（第330〜331期の規定・明示の定義に）＋ `ShockStunOnce`。第331期の口（`_stOnce` ／ `_stJudged`）がそのまま規定の戦で立つ。第331期の版（ST-a ／ ST-b ／ ST-c）は旧から作り直した。固定の口 `Common.PinTK331` ／ `Pin331`、古い口（`PinT328` ／ `PinTK327` ／ `PinT326`）は規定のカタも `KataH331` へ、`PinTKK324` ／ `PinKataTou311` は `TouH331` ／ `KataH331` も受ける。
+- **LV-c**: 第308期の `SparkVeilCap`（`SparkTrait.Veil` の上限）をソムの版に持たせただけ（engine は変えていない）。
+- **LV-d の札 `SparkVeilTemp`**（`MarkOnlyTrait`）: `SparkTrait.Rain` ／ `RainOn` の最初の行で `ctx.VeilExpire(ソム)`——ソムの陣営の生きている味方それぞれの衣の帳簿（`SparkTrait.VeilKey`）の残りを破片から引き、帳簿を 0 にする（ほかの書き手の破片は残る）。引くときは `_veilExpiring` を立てて `NoteArmorLost` が「衣が受け止めた」「瓦礫拾い」に数えないようにする（板の印は破片が 0 になれば今どおり消える）。
+- **表示専用**: `SparkLabels.VeilFade`（「衣が消えた」）。並びは `design/PHASE291_CODEX_MEMO.md` §28。
+- **計数のみ**: ソムの `Lv332Expired` ／ `Lv332ExpireHits`、だれの側でも `Lv332ArmorLost`（破片が減った延べ・`NoteArmorLost` の入口・消えた衣は数えない）。
+- 器具: `veil332`。乱数の口は足していない（`PickOne(` の数は第331期と同じ）。
+

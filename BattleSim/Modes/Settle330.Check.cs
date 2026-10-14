@@ -27,7 +27,7 @@ static partial class Settle330Diag
         Console.WriteLine("| 項目 | 結果 | 備考 |");
         Console.WriteLine("|---|---|---|");
         var Wall = T323.Wall;
-        UnitDef T = UnitCatalog.Tou, TO = UnitCatalog.TouH328;
+        UnitDef T = UnitCatalog.TouH331, TO = UnitCatalog.TouH328;   // 第332期: 「規定」は第330〜331期の規定（`TouH331`）に固定
 
         // ---- 定義と固定の口
         {
@@ -38,8 +38,8 @@ static partial class Settle330Diag
             bool vers = UnitCatalog.TouPBa.Traits.SequenceEqual(TO.Traits.Append(TraitId.PowderBurstMarked)) && UnitCatalog.TouPBc.Traits.SequenceEqual(TO.Traits.Append(TraitId.PowderSpreadFar))
                 && UnitCatalog.TouPBabc.Traits.SequenceEqual(TO.Traits.Concat(new[] { TraitId.PowderBurstMarked, TraitId.PowderBurstFall, TraitId.PowderSpreadFar }))
                 && new[] { UnitCatalog.TouPBa, UnitCatalog.TouPBab, UnitCatalog.TouPBc, UnitCatalog.TouPBabc }.All(d => d.Traits.Count(x => x == TraitId.DustBurst) == 1);
-            bool outside = new[] { TO, UnitCatalog.TouPBa, UnitCatalog.TouPBab, UnitCatalog.TouPBc, UnitCatalog.TouPBabc }.All(d => !UnitCatalog.Everyone.Contains(d)) && UnitCatalog.All.Contains(T) && UnitCatalog.All.Count == 52
-                && UnitCatalog.Everyone.All(d => (d == T || !d.Traits.Contains(TraitId.PowderBurstMarked) && !d.Traits.Contains(TraitId.PowderBurstFall)) && !d.Traits.Contains(TraitId.PowderSpreadFar));
+            bool outside = new[] { TO, UnitCatalog.TouPBa, UnitCatalog.TouPBab, UnitCatalog.TouPBc, UnitCatalog.TouPBabc }.All(d => !UnitCatalog.Everyone.Contains(d)) && UnitCatalog.All.Contains(UnitCatalog.Tou) && !UnitCatalog.Everyone.Contains(T) && UnitCatalog.All.Count == 52
+                && UnitCatalog.Everyone.All(d => (d == UnitCatalog.Tou || !d.Traits.Contains(TraitId.PowderBurstMarked) && !d.Traits.Contains(TraitId.PowderBurstFall)) && !d.Traits.Contains(TraitId.PowderSpreadFar));
             Expect("定義: 規定のトウ ＝ 第328〜329期の規定（`TouH328`・DX）＋ PB-a ＋ PB-b の札（札は第329期の `TouPBab` と同じ・文面は粉塵爆発の句を差し替え）・`TouH328` は第329期までの規定と同じ札と文面・第329期の版は `TouH328` から（DX の札は1枚）・PB-c は規定にしない・旧と版は `Everyone` の外・`All` 52 枚",
                 tou && old && vers && outside, $"トウ {tou}・旧 {old}・版 {vers}・外 {outside}");
             bool pin = ReferenceEquals(PinT328(T), TO) && ReferenceEquals(Pin328(Formation.Build(front1: T))[0], TO)
@@ -90,7 +90,7 @@ static partial class Settle330Diag
             var rows = Presets.Compare.Concat(Presets.Cross).Concat(Presets.Playtest).Concat(v).ToArray();
             // 第331期: `Versions` は期ごとに「版・」の台を入れ替えるので、1行目（ポンの台）だけを見る（後ろの行は「版・」で始まること）。見出しの文は第330期のまま。
             bool ok = v.Length >= 1 && v[0].Name == "試遊・感電 ポンの台" && v.Skip(1).All(r => r.Name.StartsWith("版・", StringComparison.Ordinal))
-                && v[0].F.Occupied().Select(o => o.Def).SequenceEqual(new[] { UnitCatalog.Kata, UnitCatalog.Shiga, T, UnitCatalog.Kugu, UnitCatalog.Som })
+                && v[0].F.Occupied().Select(o => o.Def).SequenceEqual(new[] { UnitCatalog.Kata, UnitCatalog.Shiga, UnitCatalog.Tou, UnitCatalog.Kugu, UnitCatalog.Som })
                 && !v.Any(r => r.Name.StartsWith("版・PB", StringComparison.Ordinal)) && Presets.Playtest.Length == 17 && rows.First(r => r.Name.Contains(v[0].Name, StringComparison.Ordinal)).Name == v[0].Name;
             Expect("試遊の台: `Presets.Versions` ＝ 「試遊・感電 ポンの台」1台（規定の駒・トウは PB-a ＋ b）・第329期の「版・PB」の4台は外した・`Playtest` は 17 台のまま", ok);
         }

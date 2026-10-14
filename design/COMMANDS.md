@@ -1153,6 +1153,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 stun331 compare [版,…]  # 第331期 §5: `compare` 64 行 × 版（基準は規定・16 秒）
     dotnet run --project BattleSim -c Release 0 stun331 log [波] [seed] [版]     # 第331期: ポンの台の1戦のログ（版 base ／ a ／ b ／ c）
     dotnet run --project BattleSim -c Release 0 stun331 check         # 第331期 自己検査（定義・ST-a ／ ST-b（萎縮・縛られた的）／ ST-c（判定は1ターン1回・乱数も引かない）・ボスは今のまま・試遊の台・verbose・PickOne）
+    dotnet run --project BattleSim -c Release 0 veil332 p0            # 第332期 §4 Phase 0: ソムの衣に頼ってボスに勝つ台（衣を外したソムと比べる）・ソム ＋ ツギの台（瓦礫）の衣 ／ 板の割合（2 秒）
+    dotnet run --project BattleSim -c Release 0 veil332 boards [版,…]   # 第332期 §6: 代表台 7 × 5 波 × 版（規定 ＝ LV-a ／ LV-c ／ LV-d）・seed 0..99・衣（得た ／ 受け止めた ／ 捨てた ／ 消えた ／ 残り）・衣 ／ 板の割合・勝率 ／ 倒れた味方・段0 の痺れの割合（5 秒）。予測のファイルが無ければ走らない
+    dotnet run --project BattleSim -c Release 0 veil332 compare [版,…]  # 第332期 §6: `compare` 64 行 × 版（基準は段0 入りの規定・13 秒）
+    dotnet run --project BattleSim -c Release 0 veil332 log [台] [波] [seed] [版]   # 第332期: 1戦のログ（台は pon か代表台の名前・版 base ／ c ／ d）
+    dotnet run --project BattleSim -c Release 0 veil332 check         # 第332期 自己検査（定義と固定の口・段0 の ST-c（規定で働き旧で働かない）・LV-a ／ LV-c（4割まで・板と合算）／ LV-d（次の雨の頭で衣だけ消える・帳簿・瓦礫拾いは拾わない）・試遊の台・verbose・PickOne）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

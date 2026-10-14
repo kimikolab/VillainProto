@@ -7336,6 +7336,33 @@ public sealed class BattleContext
         return doubled;
     }
 
+    /// <summary>第332期（LV-d）: 一時の衣を消している最中（<see cref="NoteArmorLost"/> が受け止め ／ 瓦礫拾いに数えない）。</summary>
+    bool _veilExpiring;
+
+    /// <summary>
+    /// 第332期（LV-d・一時の衣）: ソム <paramref name="som"/> の光の雨の頭（`SparkTrait.Rain` ／ `RainOn` の最初の行）で、ソムの陣営の生きている味方それぞれについて、
+    /// 衣で足した破片の残り（`SparkTrait.VeilKey`・破片が減ったら衣から先に減らす帳簿）を破片から引き、帳簿を 0 にする。ほかの書き手の破片（板など）は消さない。<b>乱数を引かない。</b>
+    /// </summary>
+    public void VeilExpire(UnitState som)
+    {
+        UnitTally t = TallyOf(som);
+        foreach (UnitState a in LivingMembers(som.TeamId))
+        {
+            int v = a.RawCounter(SparkTrait.VeilKey);
+            if (v <= 0) continue;
+            int armor = a.RawCounter(StatusKeys.Armor), drop = Math.Min(v, armor);
+            a.SetCounter(SparkTrait.VeilKey, 0);
+            if (drop <= 0) continue;
+            _veilExpiring = true;
+            try { a.SetCounter(StatusKeys.Armor, armor - drop); }
+            finally { _veilExpiring = false; }
+            t.Lv332Expired += drop;
+            t.Lv332ExpireHits++;
+            EmitSpark(som, SparkLabels.VeilFade, drop, armor - drop, a);   // 表示専用（消えた衣の量・その後の破片）
+            Log($"    {a.Name} の光の衣が消えた（破片 −{drop}）", LogKind.Status);
+        }
+    }
+
     /// <summary>
     /// 破片が減った（<see cref="UnitState.SetCounter"/> の1点からだけ来る・Q0-5）。減る口は3つ——<see cref="ApplyDamage"/> の破片の段・
     /// 礫（ガレ）の砕き・鱗（ウロ）の支払い——と、リリの移しで敵の破片が 0 になる口。
@@ -7347,6 +7374,13 @@ public sealed class BattleContext
     /// </summary>
     internal void NoteArmorLost(UnitState u, int lost, int after)
     {
+        // 第332期（LV-d）: 一時の衣が消えた分は「受け止めた」でも「砕けた」でもない（衣の帳簿は呼び出し側が直に消す・瓦礫拾いも拾わない）。板の印の段だけ通す。
+        if (_veilExpiring)
+        {
+            if (u.RawCounter(StatusKeys.Plank) > 0 && after <= 0) { TallyOf(u).PlankBreaks++; u.SetCounter(StatusKeys.Plank, 0); }
+            return;
+        }
+        TallyOf(u).Lv332ArmorLost += lost;   // 第332期・計数のみ（減った破片の延べ・衣か板かを問わない）
         // 第308期・**計数のみ**（光の衣）: 破片が減ったら衣の帳簿から先に減らし、減った分を「衣が受け止めた量」に数える。保持者がいなければ比較1つで抜ける。
         if (_veilLive && u.RawCounter(SparkTrait.VeilKey) is int vk and > 0)
         {

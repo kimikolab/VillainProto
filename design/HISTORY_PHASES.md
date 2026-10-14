@@ -8,6 +8,14 @@ description: 第259期に `CLAUDE.md` の「現状値」節を**逐語で**移�
 
 ## 現状値
 
+**第332期は軽い期で、段0 でトウ ／ カタ ＝ 第331期の ST-c（痺れは1ターン1回）を規定にした**（ポンの判断 R3・指示書は design/PHASE332_STUN_ONCE_SOM_VEIL_SPEC.md・報告は design/PHASE332_STUN_ONCE_SOM_VEIL.md）。規定のトウ ／ カタ ＝ 第330〜331期の規定（`TouH331` ／ `KataH331`・明示の定義に）＋ `ShockStunOnce`（札と文面は第331期の `TouSTc` ／ `KataSTc` と同じ）。`compare` の規定の列は 0 セル（`docs/balance.md` 差分 0・第331期の ST-c の列と一致）——全64行 100 / 91.1 / 89.4 / 83.3 / 83.6・主判定19行の第五波 81.6・歯止めの余裕 +48.4pt・情報セル 74 ／ 26 のまま。本体のソムの光の衣の版（LV-c ／ LV-d）の `compare` は LV-c 1行1セル（`感電` 第5波 +0.5）・LV-d 0 セル。
+
+### 第331期まで `CLAUDE.md` の「現状値」にあった索引の段落（第332期に逐語で移した）
+
+**最後に動かした期: 第331期**（**軽い期・版だけ**。感電の痺れで敵が止まりすぎる: ST-a ハメ防止（第217期の `LiveWireGuard`）／ ST-b 痺れ慣れ（ハメ防止の間は萎縮）／ ST-c 痺れの判定は1ターン1回（トウ ／ カタの版 `TouSTa`〜`KataSTc`）。規定は動かしていない（`compare` 規定の列 0 セル・版は ST-a ／ ST-b で1行3セル）。Phase 0: ポンの台 × 近衛 ／ 大隊で敵の手番の 51% ／ 49% を感電の痺れで失い、ソムの破片は得た量の 2〜3% しか使われない。ST-c で 33% ／ 38%・ST-a ／ ST-b は 44〜46%・勝率はどの版も ±1pt・破片の使った割合はほぼ変わらない。試遊の台「版・ST-a ／ ST-b ／ ST-c ポンの台」を `Presets.Versions` に足した。器具 `stun331`・報告は `design/PHASE331_SHOCK_STUN_GUARD.md`）。**期ごとの報告ファイルの索引と、第319期までの過去の器具の固定の一覧は `design/HISTORY_PHASES.md` の冒頭**（第320期までこの節にあった段落を第321期に逐語で移した・第330期までの2段落は第331期に移した）。
+
+**最後に `compare` が動いた期: 第326期**（段0 で1行1セル: `感電 (シガ×カタ×ソム)` 第3波 90.5 → 91.0。第327期の DR-a ／ 第328期の DX ＋ 電池 ／ 第330期の PB-a ＋ b の規定化はどれも 0 セル・第331期は規定を動かしていない）。**過去の器具の固定**: 第329期までのトウは `TouH328`（`Common.PinT328` ／ `Pin328` ／ `CompareBuildsH328` ／ `PlaytestH328`・`fuse329` の「規定」・`settle328` の「新」）。第327期までのトウ ／ クグは `TouH327` ／ `KuguH327`（`Common.PinTK327` ／ `Pin327` ／ `CompareBuildsH327` ／ `PlaytestH327`・`dust327`・`PinTK327` は `TouH328` も `TouH327` へ）。第326期までのトウは `TouH326`（`Common.PinT326` ／ `Pin326` ／ `CompareBuildsH326` ／ `PlaytestH326`・`dense326`。`Pin325` も・`tou325`。`PinT326` は `TouH327` ／ `TouH328` も `TouH326` へ、規定のクグを `KuguH327` へ）。`PinTKK324` は規定のトウ ／ `TouH326` ／ `TouH327` ／ `TouH328` を `TouH324` へ、規定のクグ ／ `KuguH327` を `KuguH324` へ替えるので、古い口の終端はそのまま。第325期までのシガは `ShigaH325`（`Common.PinS325` ／ `Pin325` ／ `CompareBuildsH325` ／ `PlaytestH325`）。それより前の固定は `design/HISTORY_PHASES.md`。
+
 **第331期は軽い期で、規定は動かしていない**（指示書は design/PHASE331_SHOCK_STUN_GUARD_SPEC.md・報告は design/PHASE331_SHOCK_STUN_GUARD.md）。トウ ／ カタの版 ST-a ／ ST-b ／ ST-c だけを足した。`compare` の規定の列は 0 セル（`docs/balance.md` 差分 0）——全64行 100 / 91.1 / 89.4 / 83.3 / 83.6・主判定19行の第五波 81.6・歯止めの余裕 +48.4pt・情報セル 74 ／ 26 のまま。版の `compare` は ST-a ／ ST-b が1行3セル（`感電 (シガ×カタ×ソム)` 第2波 +0.5 ／ 第3波 +0.5 ／ 第5波 +1.5）・ST-c は 0 セル。
 
 ### 第330期まで `CLAUDE.md` の「現状値」にあった索引の段落（第331期に逐語で移した）

@@ -62,7 +62,7 @@ static partial class Stun331Diag
 
     internal static readonly Ver[] Vers =
     {
-        new("規定", "base", UnitCatalog.Tou, UnitCatalog.Kata),
+        new("規定", "base", UnitCatalog.TouH331, UnitCatalog.KataH331),   // 第332期: 第330〜331期の規定に固定（いまの規定は ST-c）
         new("ST-a", "a", UnitCatalog.TouSTa, UnitCatalog.KataSTa),
         new("ST-b", "b", UnitCatalog.TouSTb, UnitCatalog.KataSTb),
         new("ST-c", "c", UnitCatalog.TouSTc, UnitCatalog.KataSTc),

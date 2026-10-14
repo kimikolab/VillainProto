@@ -110,7 +110,7 @@ static partial class Settle330Diag
     static void Grid()
     {
         var w = WaveOf("guard");
-        var fixedU = new[] { UnitCatalog.Tou, UnitCatalog.Kata };
+        var fixedU = new[] { UnitCatalog.TouH331, UnitCatalog.KataH331 };   // 第332期: 第330〜331期の規定に固定
         int free = 5 - fixedU.Length;
         UnitDef Now(UnitDef d) => UnitCatalog.All.FirstOrDefault(x => x.Id == d.Id) ?? d;
         var heal = S287.Heal.Select(d => d.Id).ToHashSet();

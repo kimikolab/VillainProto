@@ -74,9 +74,9 @@ static partial class Fuse329Diag
     internal static Formation Apply(Formation f, Ver v) => S316.SwapId(f, "tou", v.Tou);
 
     /// <summary>ポンの台（第326〜328期と同じ席）: 前1 カタ・前3 シガ・中央 トウ・後1 クグ・後3 ソム。第330期: トウは第328〜329期の規定（`TouH328`）に固定。</summary>
-    internal static Formation PonBoard() => Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Shiga, center: UnitCatalog.TouH328, back1: UnitCatalog.Kugu, back3: UnitCatalog.Som);
+    internal static Formation PonBoard() => Formation.Build(front1: UnitCatalog.KataH331, front3: UnitCatalog.Shiga, center: UnitCatalog.TouH328, back1: UnitCatalog.Kugu, back3: UnitCatalog.Som);
 
-    static Formation Playtest(string n) => Presets.Playtest.First(r => r.Name == n).F;
+    static Formation Playtest(string n) => PlaytestH328.First(r => r.Name == n).F;   // 第332期: カタを第325〜331期の規定に固定（トウは版で差し替える）
 
     /// <summary>§5 の代表台（駒はいまの規定）。ポンの台を最初に。</summary>
     internal static (string Name, Formation F)[] Boards() => new (string, Formation)[]
@@ -85,7 +85,7 @@ static partial class Fuse329Diag
         ("光の盾 鞭", Playtest("試遊・感電 光の盾 鞭")),
         ("光の盾", Playtest("試遊・感電 光の盾")),
         ("粉 隣あり", Playtest("試遊・感電 粉 隣あり")),
-        ("責め苦", CompareBuilds().First(r => r.Name == "責め苦 (トウ×シガ)").F),
+        ("責め苦", CompareBuildsH328().First(r => r.Name == "責め苦 (トウ×シガ)").F),
     };
 
     internal static readonly S287.Wave[] Waves = new[] { "boss", "guard", "bat", "2", "5" }.Select(T323.WaveOf).ToArray();

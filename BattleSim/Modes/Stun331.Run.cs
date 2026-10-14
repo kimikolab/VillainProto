@@ -19,7 +19,7 @@ static partial class Stun331Diag
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var waves = new[] { "guard", "bat", "2", "5", "boss" }.Select(WaveOf).ToArray();
-        var res = waves.ToDictionary(w => w.Name, w => Measure(PonBoard(), w));
+        var res = waves.ToDictionary(w => w.Name, w => Measure(Apply(PonBoard(), Vers[0]), w));   // 第332期: 「規定」の列（第330〜331期の規定）に固定
         Console.WriteLine($"# {Tag} §3 Phase 0 —— 規定 × ポンの台（{S307.Seats(PonBoard())}）・seed 0..{Seeds - 1}");
         Console.WriteLine();
         Console.WriteLine("ボスは参考（痺れない・萎縮だけ）。敵 ＝ 波の駒（ソムの喚ぶ召喚獣 ／ 糸玉を除く）。");
