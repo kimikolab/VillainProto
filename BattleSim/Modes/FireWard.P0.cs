@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 using BA = BurnAuditDiag;
 
@@ -114,7 +114,7 @@ static partial class FireWardDiag
             }
         Console.WriteLine();
         var sw2 = System.Diagnostics.Stopwatch.StartNew();
-        var probe = BA.AllSeats(CoreOf(VerOf("A+D1+V1")).Concat(new[] { UnitCatalog.Golm, UnitCatalog.Susu }).ToArray(), BA.PickSeeds);
+        var probe = BA.AllSeats(CoreOf(VerOf("A+D1+V1")).Concat(new[] { UnitCatalog.GolmH344, UnitCatalog.Susu }).ToArray(), BA.PickSeeds);
         double us = sw2.Elapsed.TotalMilliseconds * 1000 / (120.0 * BA.PickSeeds);
         Console.WriteLine($"- 所要の見積もり（A+D1+V1・ゴルム＋アカの 120 席 × seed {BA.PickSeeds} で {sw2.Elapsed.TotalSeconds:F1} 秒）: T3 1 版 ≒ {us * 1081 * 120 * BA.PickSeeds / 1e6 / 60:F1} 分 ＋ 400/300 の同値の分（組ごとに 200/200 の最良と同値の席だけ）");
         Console.WriteLine();

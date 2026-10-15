@@ -87,7 +87,7 @@ static class Som309Diag
             ("感電 糸 ガルド→H", "代表台 ／ 試遊", Swap(Playtest("試遊・感電 糸"), UnitCatalog.Gald, Som), Swap(Playtest("試遊・感電 糸"), UnitCatalog.Gald, Tsugi)),
             ("火の型 ソラ→H", "試遊", Swap(Playtest("試遊・感電 火の型"), UnitCatalog.Sora, Som), Swap(Playtest("試遊・感電 火の型"), UnitCatalog.Sora, Tsugi)),
             ("勝ち台 ツギの席（元の勝ち台）", "代表台 ／ 元の勝ち台", Swap(win, Tsugi, Som), win),
-            ("勝ち台 ゴルム→H", "代表台", Swap(win, UnitCatalog.Golm, Som), null),
+            ("勝ち台 ゴルム→H", "代表台", Swap(win, UnitCatalog.GolmH344, Som), null),   // 第345期: 勝ち台は固定の口を通るのでゴルムは `GolmH344`
             ("感電 行（もう片方 → ドルガ）", "compare", Swap(shock, Tsugi, UnitCatalog.Dolga), Swap(shock, Som, UnitCatalog.Dolga)),
         };
         if (PlaytestH311.Any(r => r.Name == Shield)) list.Add(("光の盾", "試遊（§3-1）", Playtest(Shield), Swap(Playtest(Shield), Som, Tsugi)));

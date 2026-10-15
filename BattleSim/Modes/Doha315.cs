@@ -104,7 +104,7 @@ static class Doha315Diag
         return new[]
         {
             ("守り型", g, true),
-            ("守り型 ゴルム↔ドハ", SwapSeats(g, UnitCatalog.Golm, UnitCatalog.DohaH316), true),
+            ("守り型 ゴルム↔ドハ", SwapSeats(g, UnitCatalog.GolmH344, UnitCatalog.DohaH316), true),
             ("雷の型", Playtest(Thunder), false),
             ("反撃改", Row(Ret1), false),
             ("反撃改2", Row(Ret2), false),
@@ -302,7 +302,7 @@ static class Doha315Diag
             Console.WriteLine("**新** ＝ 窓（ドハの前の手番の終わりから今の手番の頭まで）に敵の攻撃が主目標に選んだ味方（量 → 回数 → 攻撃力 → 席・殴らない駒 ／ 支援を拒む駒は飛ばす）。"
                 + "**旧** ＝ 第313期の数え方（窓の肩代わりの実額）。どちらも規定のドハの手番の頭で数えて閉じる（同じ手番）。");
             Console.WriteLine();
-            var boards = new[] { ("守り型", Playtest(Guard)), ("守り型 ゴルム↔ドハ", SwapSeats(Playtest(Guard), UnitCatalog.Golm, UnitCatalog.DohaH316)), ("雷の型", Playtest(Thunder)), ("反撃改2", Row(Ret2)) };
+            var boards = new[] { ("守り型", Playtest(Guard)), ("守り型 ゴルム↔ドハ", SwapSeats(Playtest(Guard), UnitCatalog.GolmH344, UnitCatalog.DohaH316)), ("雷の型", Playtest(Thunder)), ("反撃改2", Row(Ret2)) };
             foreach (var (bn, bf) in boards)
             {
                 Console.WriteLine($"### {bn}（{Seats(bf)}）");
@@ -666,7 +666,7 @@ static class Doha315Diag
 
         // (a) 主目標に選ばれた量で最多が決まる・巨躯の中継と味方由来は数えない
         {
-            var ctx = Ctx(Formation.Build(front1: UnitCatalog.Zan, front3: UnitCatalog.Golm, center: UnitCatalog.DohaDQa, back1: UnitCatalog.Tome, back3: UnitCatalog.Sora), out var p, out var e);
+            var ctx = Ctx(Formation.Build(front1: UnitCatalog.Zan, front3: UnitCatalog.GolmH344, center: UnitCatalog.DohaDQa, back1: UnitCatalog.Tome, back3: UnitCatalog.Sora), out var p, out var e);
             var doha = p.First(u => u.Def.Id == "doha"); var zan = p.First(u => u.Def.Id == "zan"); var golm = p.First(u => u.Def.Id == "golm");
             var misa = p.First(u => u.Def.Id == "tome"); var sora = p.First(u => u.Def.Id == "sora");
             e[1].AtkBonus = 30;   // 前3 のドルガは強く殴る

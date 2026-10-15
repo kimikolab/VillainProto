@@ -90,7 +90,7 @@ static class Doha313Diag
         var l = new List<(string, Formation)>
         {
             ("守り型", g),
-            ("守り型 ゴルム↔ドハ", SwapSeats(g, UnitCatalog.Golm, UnitCatalog.DohaH316)),
+            ("守り型 ゴルム↔ドハ", SwapSeats(g, UnitCatalog.GolmH344, UnitCatalog.DohaH316)),
             ("雷の型", Playtest(Thunder)),
         };
         foreach (var (n, f) in CompareBuildsH316().Concat(CrossBuilds().Select(r => (r.Name, Pin316(r.F)))))

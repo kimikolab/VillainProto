@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 using K342 = Kata342Diag;
 using S287 = Shock287Diag;
@@ -18,6 +18,7 @@ using T323 = Tou323Diag;
 //     dotnet run --project BattleSim -c Release 0 golm343 check                   # §9 自己検査
 //
 // 版の名前（ASCII）: base（規定）／ a2（吐き捨てる）／ a1（消化）／ a3（膨れる）。台: guard ／ havoc（突き出し）／ utsu（逆しま+後備え）／ shock ／ poison。
+// 第345期: S3 を規定にしたので、「規定」（base）は第1〜344期の規定のゴルム（`GolmH344`・`Common.Pin344`）に固定した。
 // **予測のファイルが無ければ本測定（boards ／ compare）を走らせない**（R397・`.tmp/p343/predict.md`）。
 // =====================================================================================
 static partial class Golm343Diag
@@ -69,7 +70,7 @@ static partial class Golm343Diag
     };
     static Ver V(string n) => Vers.First(v => v.Name == n || v.Ascii == n);
     static Ver[] Pick(string only) => (string.IsNullOrEmpty(only) ? Vers : new[] { Vers[0] }.Concat(only.Split(',').Select(V).Where(v => v != Vers[0]))).ToArray();
-    internal static Formation Apply(Formation f, Ver v) => v.Golm is null ? f : S316.SwapId(f, "golm", v.Golm);
+    internal static Formation Apply(Formation f, Ver v) => v.Golm is null ? Pin344(f) : S316.SwapId(f, "golm", v.Golm);   // 第345期: 「規定」は第1〜344期の規定のゴルム（`GolmH344`）に固定
 
     internal const string GuardRow = "試遊・標 守り型";
     // Phase 0 の後に決めた（決めたこと）: 惨禍×死の連鎖はゴルムの手番が 1戦 0.2 回で呑める敵 0 なので外し、呑む見込み（手番 × 呑める敵）の多い2行を取った（逆しまは自傷の軸）。
@@ -194,7 +195,7 @@ static partial class Golm343Diag
         Console.WriteLine("|---|---|---|--:|---|--:|---|");
         foreach (var (kind, name, f) in rows)
         {
-            var per = Waves.Select(w => Measure(f, w)).ToArray();
+            var per = Waves.Select(w => Measure(Pin344(f), w)).ToArray();   // 第345期: 第1〜344期の規定のゴルム
             var all = new St(); foreach (var z in per) all.Add(z);
             int slot = f.Occupied().First(o => ReferenceEquals(o.Def, UnitCatalog.Golm)).Slot;
             Console.WriteLine($"| {kind} | {name} | {FormationRules.SeatNames[slot]} | {Per(all.G.Gt343Turns, all.N)} | {Per(all.G.Gt343BellySum, all.G.Gt343Turns)} ／ {all.G.Gt343BellyMax} | {Per2(all.G.Gt343Edible, all.G.Gt343Turns)} | "
@@ -205,7 +206,7 @@ static partial class Golm343Diag
         Console.WriteLine();
         foreach (var (bn, bf) in new[] { ("感電にゴルム", ShockGolm()), ("毒にゴルム", PoisonGolm()) })
         {
-            var all = new St(); foreach (var w in Waves) all.Add(Measure(bf, w));
+            var all = new St(); foreach (var w in Waves) all.Add(Measure(Pin344(bf), w));   // 第345期: 第1〜344期の規定のゴルム
             Console.WriteLine($"- {bn}（{S307.Seats(bf)}）: 手番 {Per(all.G.Gt343Turns, all.N)} ／戦・腹 {Per(all.G.Gt343BellySum, all.G.Gt343Turns)} ／ {all.G.Gt343BellyMax}・呑める敵 {Per2(all.G.Gt343Edible, all.G.Gt343Turns)} ／手番");
         }
         Console.WriteLine();

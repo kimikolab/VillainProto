@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 using K342 = Kata342Diag;
 using T323 = Tou323Diag;
@@ -72,13 +72,13 @@ static partial class Golm343Diag
 
         // ================= 本体: 版の定義と試遊の台 =================
         {
-            UnitDef G = UnitCatalog.Golm;
+            UnitDef G = UnitCatalog.GolmH344;   // 第345期: 版は第1〜344期の規定のゴルムから作り直した
             (UnitDef D, TraitId Card, string Tail)[] vs = { (UnitCatalog.GolmGTa2, TraitId.GolmSwallowSpit, "。呑み込めない毒や雷は、いちばん大きな敵に吐き捨てる"), (UnitCatalog.GolmGTa1, TraitId.GolmSwallowHeal, "。呑んだ精気で仲間を癒す"), (UnitCatalog.GolmGTa3, TraitId.GolmSwallowGrow, "。呑むほど膨れ上がる") };
             bool def = vs.All(x => x.D.Traits.SequenceEqual(G.Traits.Append(x.Card)) && x.D.PlusText == G.PlusText + "。手番で、腹に収まるほど弱った敵の精気を呑み干す" + x.Tail
                     && x.D.MinusText == G.MinusText && x.D.Actions is { Count: 1 } a && a[0].Kind == ActionKind.Skill && !UnitCatalog.Everyone.Contains(x.D))
                 && UnitCatalog.GolmGTa2.Flavor == "呑んだ精気は糧になる。呑み込めない毒と雷は、吐き捨てる。"
-                && UnitCatalog.Everyone.All(d => !d.Traits.Any(t => t is TraitId.GolmSwallowSpit or TraitId.GolmSwallowHeal or TraitId.GolmSwallowGrow));
-            Expect("版の定義: GT-a2 ／ a1 ／ a3 ＝ 規定のゴルム ＋ 札1枚・手番は `[Skill]`・文面は叩き台（a2 はフレーバーも）・`Everyone` の外・保持者 0", def);
+                && UnitCatalog.Everyone.Where(d => d.Traits.Any(t => t is TraitId.GolmSwallowSpit or TraitId.GolmSwallowHeal or TraitId.GolmSwallowGrow)).SequenceEqual(new[] { UnitCatalog.Golm });   // 第345期: 吐き捨ては規定のゴルムの札
+            Expect("版の定義: GT-a2 ／ a1 ／ a3 ＝ 第1〜344期の規定のゴルム（`GolmH344`）＋ 札1枚・手番は `[Skill]`・文面は叩き台（a2 はフレーバーも）・`Everyone` の外・札の保持者は第345期から規定のゴルム（吐き捨て）だけ", def);
             var v = Presets.Versions; var guard = Presets.Playtest.First(r => r.Name == GuardRow).F; var shock = ShockGolm();
             (string Name, Formation Base, UnitDef Golm)[] want = { ("版・GT吐き捨て 守り型", guard, UnitCatalog.GolmGTa2), ("版・GT消化 守り型", guard, UnitCatalog.GolmGTa1), ("版・GT膨れ 守り型", guard, UnitCatalog.GolmGTa3), ("版・GT吐き捨て 感電", shock, UnitCatalog.GolmGTa2) };
             // 第344期: 「版・GT」の4台を外した——1〜2行目（ポンの台 ／ 書き手なし）と、GT の版が試遊の台に残っていないことだけを見る（`want` は第343期の並びの記録）

@@ -44,7 +44,7 @@ static class Tome282Diag
     };
     static Ver VerOf(string n) => Vers.First(v => v.Name == n);
 
-    static Formation Row(string prefix) => FvSwap(FvSwap(FvSwap(FvSwap(CompareBuilds().First(r => r.Name.StartsWith(prefix)).F, UnitCatalog.Sora, UnitCatalog.SoraSR0), UnitCatalog.Hisa, UnitCatalog.HisaHK0), UnitCatalog.Tome, UnitCatalog.TomeMb), UnitCatalog.Zan, UnitCatalog.ZanZN0);   // 第295期: ソラを旧の規定（SR0）に固定・第296期: ヒサも（HK0）・第299期: ミサ ／ ザンも（`TomeMb` ／ `ZanZN0`）
+    static Formation Row(string prefix) => FvSwap(FvSwap(FvSwap(FvSwap(CompareBuildsH344().First(r => r.Name.StartsWith(prefix)).F, UnitCatalog.Sora, UnitCatalog.SoraSR0), UnitCatalog.Hisa, UnitCatalog.HisaHK0), UnitCatalog.Tome, UnitCatalog.TomeMb), UnitCatalog.Zan, UnitCatalog.ZanZN0);   // 第295期: ソラを旧の規定（SR0）に固定・第296期: ヒサも（HK0）・第299期: ミサ ／ ザンも（`TomeMb` ／ `ZanZN0`）
 
     /// <summary>新台の壁（`wall` で選んだもの・指示書 §3-1）。標経済の前3 ガルドをこの駒に替える。</summary>
     internal static UnitDef NewWall => UnitCatalog.DohaD0;
@@ -294,7 +294,7 @@ static class Tome282Diag
     // ---------------------------------------------------------------------------------
     // 段2 の Phase 0: 壁の選別（指示書 §3-1）
     // ---------------------------------------------------------------------------------
-    static readonly UnitDef[] WallCands = { UnitCatalog.Gald, UnitCatalog.Golm, UnitCatalog.Ban, UnitCatalog.DohaD0, UnitCatalog.Uke, UnitCatalog.Kado, UnitCatalog.Sasa, UnitCatalog.Dolga };
+    static readonly UnitDef[] WallCands = { UnitCatalog.Gald, UnitCatalog.GolmH344, UnitCatalog.Ban, UnitCatalog.DohaD0, UnitCatalog.Uke, UnitCatalog.Kado, UnitCatalog.Sasa, UnitCatalog.Dolga };
 
     static void Wall()
     {

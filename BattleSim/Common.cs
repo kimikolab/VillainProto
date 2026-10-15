@@ -528,7 +528,7 @@ public static (string Name, Formation F)[] PlaytestH339 => Presets.Playtest.Sele
 /// 第343期: 規定のカタ（K3・KT-b ＋ 避雷針・跳ねる）を第332〜342期の規定（`KataH342`）に替える。ほかの駒はそのまま返す。
 /// 古い口の終端（`PinM333` → … → `PinM339` → ここ）。カタをもっと古い規定へ替える口（`PinKataTou311` ／ `PinTKK324` ／ `PinT326` ／ `PinTK327` ／ `PinT328` ／ `PinTK331`）は `IsKataNow` で `KataH342` も受ける。
 /// </summary>
-public static UnitDef PinK342(UnitDef d) => ReferenceEquals(d, UnitCatalog.Kata) ? UnitCatalog.KataH342 : d;
+public static UnitDef PinK342(UnitDef d) => ReferenceEquals(d, UnitCatalog.Kata) ? UnitCatalog.KataH342 : PinG344(d);   // 第345期: 規定のゴルムも（古い口の終端）
 
 /// <summary>第343期: 規定のカタか、第332〜342期の規定（`KataH342`・`PinK342` を通った後）か。</summary>
 public static bool IsKataNow(UnitDef d) => ReferenceEquals(d, UnitCatalog.Kata) || ReferenceEquals(d, UnitCatalog.KataH342);
@@ -546,6 +546,29 @@ public static (string Name, Formation F)[] CompareBuildsH342() => CompareBuilds(
 
 /// <summary>第343期: `Presets.Playtest` のカタを第332〜342期の規定に替えた写し（行の数と並びはそのまま）。</summary>
 public static (string Name, Formation F)[] PlaytestH342 => Presets.Playtest.Select(r => (r.Name, Pin342(r.F))).ToArray();
+
+/// <summary>
+/// 第345期: 規定のゴルム（S3・弱った敵だけ ／ 腹を使う ／ 吐き捨てる）を第1〜344期の規定（`GolmH344`）に替える。ほかの駒はそのまま返す。
+/// 古い口の終端（`PinM333` → … → `PinM339` → `PinK342` → ここ）。ゴルムをもっと古い規定へ替える口は無い（第344期まで規定のゴルムは一度も変わっていない）。
+/// </summary>
+public static UnitDef PinG344(UnitDef d) => ReferenceEquals(d, UnitCatalog.Golm) ? UnitCatalog.GolmH344 : d;
+
+/// <summary>第345期: 規定のゴルムか、第1〜344期の規定（`GolmH344`・`PinG344` を通った後）か。</summary>
+public static bool IsGolmNow(UnitDef d) => ReferenceEquals(d, UnitCatalog.Golm) || ReferenceEquals(d, UnitCatalog.GolmH344);
+
+/// <summary>第345期: ゴルムの S3 を規定にした。第1〜344期の規定のゴルムで測った器具（`golm343` ／ `sw344` の「規定」）はこれを通す。陣形とレリックは保つ。</summary>
+public static Formation Pin344(Formation f)
+{
+    var g = f.Clone();
+    foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinG344(d);
+    return g;
+}
+
+/// <summary>第345期: `CompareBuilds()` のゴルムを第1〜344期の規定に替えた写し。</summary>
+public static (string Name, Formation F)[] CompareBuildsH344() => CompareBuilds().Select(r => (r.Name, Pin344(r.F))).ToArray();
+
+/// <summary>第345期: `Presets.Playtest` のゴルムを第1〜344期の規定に替えた写し（行の数と並びはそのまま）。</summary>
+public static (string Name, Formation F)[] PlaytestH344 => Presets.Playtest.Select(r => (r.Name, Pin344(r.F))).ToArray();
 
 /// <summary>第336期: 規定のドハか、第317〜335期の規定（`DohaH335`・`PinD335` を通った後）か。</summary>
 public static bool IsDohaNow(UnitDef d) => ReferenceEquals(d, UnitCatalog.Doha) || ReferenceEquals(d, UnitCatalog.DohaH335);

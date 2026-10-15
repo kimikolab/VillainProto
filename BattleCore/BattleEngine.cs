@@ -1930,8 +1930,7 @@ public sealed class BattleContext
         int pv = -1;
         foreach (UnitState e in LivingMembers(Opponent(g.TeamId)))
         {
-            if (e.Hp > belly) continue;
-            if (weakOnly && e.Hp * 100 > e.MaxHp * GolmSwallowWeakPercent) continue;   // 第344期（SW-b）: 最大 HP の 3 割を超える敵は呑めない
+            if (!GolmEdible345(e, e.Hp, belly, weakOnly)) continue;   // 第344期（SW-b）: 最大 HP の 3 割を超える敵は呑めない
             int v = Gt343Load(e);
             if (pick is null || v > pv || (v == pv && (e.Hp > pick.Hp || (e.Hp == pick.Hp && e.Slot < pick.Slot)))) { pick = e; pv = v; }
         }
@@ -1939,11 +1938,35 @@ public sealed class BattleContext
         if (pick is null)
         {
             if (spit && GolmSwallowTrait.StashKeys.Any(k => g.RawCounter(k) > 0) && GolmSpit343(g)) return;
+            // 第345期: 呑めない手番に何をするか（版の札・保持者がいなければ比較3つで今までどおり殴る）
+            bool grab = g.HasTrait(TraitId.GolmRocketGrab);
+            if (grab || g.HasTrait(TraitId.GolmRocketPunch)) { GolmRocket345(g, belly, weakOnly, grab); return; }
+            if (g.HasTrait(TraitId.GolmStomp)) { GolmStomp345(g, belly); return; }
             t.Gt343Attacks++;
+            long d0 = t.DamageToEnemy;
             PerformAttack(g);
+            t.Rp345NormalDealt += t.DamageToEnemy - d0;   // 第345期・計数のみ（殴った量）
             return;
         }
+        if (g.HasTrait(TraitId.GolmRocketGrab))   // 第345期（RP-b）: 呑める敵は殴らずに手で掴む（表示と計数だけ・呑むのは今までどおり）
+        {
+            t.Rp345GrabNoPunch++;
+            if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.GolmArm, Turn = _turn, ActorId = g.InstanceId, TargetId = pick.InstanceId, Amount = pick.Hp, Slot = 0, Text = GolmArmLabels.Grab, Team = pick.TeamId });
+            Log($"    {g.Name} の腕が飛び、弱った {pick.Name} を掴んで持ち帰った", LogKind.Trigger);
+        }
+        GolmSwallow345(g, pick, belly, spit);
+    }
 
+    /// <summary>第343期〜: 呑める敵か（HP が腹以下・SW-b なら最大 HP の 3 割以下）。<paramref name="hp"/> は見込みの HP を渡せる（第345期 RP-b）。<b>読むだけ。</b></summary>
+    static bool GolmEdible345(UnitState e, int hp, int belly, bool weakOnly) => hp <= belly && (!weakOnly || hp * 100 <= e.MaxHp * GolmSwallowWeakPercent);
+
+    /// <summary>
+    /// 第343期の呑む本体（第345期に `GolmTurn343` から切り出した・中身は第344期のまま）。<paramref name="belly"/> は呑む前の腹（出来事の <c>Slot</c> とログに出す）。
+    /// 状態異常を腹に入れて消し、`HandleDeath` を直に呼ぶ（撃破者 ＝ ゴルム・ダメージは出ない・引き継ぎ ／ 飛び火なし）。その後に版ごとの吐く ／ 癒す ／ 膨れる。
+    /// </summary>
+    void GolmSwallow345(UnitState g, UnitState pick, int belly, bool spit)
+    {
+        UnitTally t = TallyOf(g);
         int hp = pick.Hp;
         t.Sw344HpPctSum += pick.MaxHp > 0 ? 100L * hp / pick.MaxHp : 0;   // 第344期・計数のみ（呑んだ敵の HP ÷ 最大 HP）
         if (g.HasTrait(TraitId.GolmSwallowSpend))   // 第344期（SW-a）: 呑んだ敵の残りの HP の分だけ腹が減る
@@ -1991,6 +2014,120 @@ public sealed class BattleContext
             t.Gt343Grown += hp;
             if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.Swallow, Turn = _turn, ActorId = g.InstanceId, TargetId = g.InstanceId, Amount = hp, Slot = g.MaxHp, Text = SwallowLabels.Grow, Team = g.TeamId });
             Log($"    {g.Name} は呑むほど膨れ上がる（最大 HP +{hp} → {g.MaxHp}）", LogKind.Trigger);
+        }
+    }
+
+    // =================================================================================
+    // 第345期 —— 呑めない手番に何をするか（RP-a ロケットパンチ ／ RP-b ロケットパンチ ＋ 捕獲 ／ GA-a 踏み潰し）。指示書 design/PHASE345_GOLM_ROCKET_PUNCH_SPEC.md §3。
+    // 量はどれも 攻（`CurrentAttack`）＋ 腹の 1 割（切り捨て・腹は減らない）。`PerformAttack` の本体が一発の札（`_golmHitActor`）を最初に読んで消し、打点に足す——
+    // だから萎縮 ／ 痺れ毒 ／ 澱み ／ 止め ／ §1 の +50% ／ 回避 ／ 軽減 ／ 軛 ／ 合図 ／ 感電の弾け ／ `OnAfterAttack` は通常攻撃と同じく起きる。**乱数を引かない**（狙いは決定的）。
+    // =================================================================================
+    /// <summary>第345期: 次の `PerformAttack` の本体1回にだけ効く、ゴルムの一撃の札（打ち手・足す量・踏み潰しか）。本体の最初の行で読んで消す。</summary>
+    UnitState? _golmHitActor;
+    int _golmHitBonus;
+    bool _golmHitStomp;
+
+    /// <summary>
+    /// 第345期 RP-a ／ RP-b: 手を飛ばして殴る（列 ／ 前後を問わず、生きている敵の誰にでも届く）。的は固定（`_forcedTarget`）——庇う ／ 後備え ／ 標 ／ 挑発 ／ 執着の鎖を通らない（手が狙った敵へまっすぐ飛ぶ）。
+    /// 狙い: RP-b なら先に「殴れば呑める」見込みの敵（HP − 量 が 1 以上で、その HP が呑める条件を満たす・量は素の値で軽減を見ない）を呑む候補の並びで。
+    /// いなければ（RP-a はいつも）帯びた状態異常の量 → HP の高い方 → 席の若い方。
+    /// RP-b は殴った後、その敵が生きていて呑める条件を満たせば、同じ手番で掴んで呑む（第343期の呑むと同じ）。殴って倒れたら、ふつうの撃破。
+    /// </summary>
+    void GolmRocket345(UnitState g, int belly, bool weakOnly, bool grab)
+    {
+        UnitTally t = TallyOf(g);
+        int add = belly / 10;
+        int amount = g.CurrentAttack + add;
+        UnitState? aim = null;
+        int av = -1;
+        if (grab)
+            foreach (UnitState e in LivingMembers(Opponent(g.TeamId)))
+            {
+                int left = e.Hp - amount;
+                if (left < 1 || !GolmEdible345(e, left, belly, weakOnly)) continue;
+                int v = Gt343Load(e);
+                if (aim is null || v > av || (v == av && (e.Hp > aim.Hp || (e.Hp == aim.Hp && e.Slot < aim.Slot)))) { aim = e; av = v; }
+            }
+        if (aim is not null) t.Rp345AimEdible++;
+        else
+            foreach (UnitState e in LivingMembers(Opponent(g.TeamId)))
+            {
+                int v = Gt343Load(e);
+                if (aim is null || v > av || (v == av && (e.Hp > aim.Hp || (e.Hp == aim.Hp && e.Slot < aim.Slot)))) { aim = e; av = v; }
+            }
+        if (aim is null) return;
+
+        t.Rp345Punches++;
+        if (aim.Row != Row.Front) t.Rp345PunchBack++;
+        t.Rp345PunchAmount += amount;
+        if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.GolmArm, Turn = _turn, ActorId = g.InstanceId, TargetId = aim.InstanceId, Amount = amount, Slot = add, Text = GolmArmLabels.Launch, Team = aim.TeamId });
+        Log($"    {g.Name} の腕が噴射で飛んでいく（{aim.Name} へ・攻 {g.CurrentAttack} ＋ 腹 {belly} の 1 割 {add}）", LogKind.Trigger);
+        long d0 = t.DamageToEnemy;
+        _golmHitActor = g; _golmHitBonus = add; _golmHitStomp = false;
+        _forcedTarget = aim;
+        try { PerformAttack(g, patternOverride: AttackPattern.Single); }
+        finally { _forcedTarget = null; _forcedLane = -1; _golmHitActor = null; }
+        long dealt = t.DamageToEnemy - d0;
+        t.Rp345PunchDealt += dealt;
+        if (!aim.IsAlive) { t.Rp345PunchKills++; return; }
+        if (grab && g.IsAlive)
+        {
+            int now = g.RawCounter(ColossusTrait.BellyKey);
+            if (GolmEdible345(aim, aim.Hp, now, weakOnly))
+            {
+                t.Rp345GrabAfter++;
+                if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.GolmArm, Turn = _turn, ActorId = g.InstanceId, TargetId = aim.InstanceId, Amount = aim.Hp, Slot = 1, Text = GolmArmLabels.Grab, Team = aim.TeamId });
+                Log($"    {g.Name} の手がそのまま {aim.Name} を掴んで持ち帰った", LogKind.Trigger);
+                GolmSwallow345(g, aim, now, g.HasTrait(TraitId.GolmSwallowSpit));
+                return;
+            }
+        }
+        if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.GolmArm, Turn = _turn, ActorId = g.InstanceId, TargetId = aim.InstanceId, Amount = (int)dealt, Text = GolmArmLabels.Return, Team = aim.TeamId });
+    }
+
+    /// <summary>
+    /// 第345期 GA-a: 踏み潰す。的は通常攻撃と同じ（前から・庇う ／ 標 ／ 挑発の鎖を通る）。的に 攻 ＋ 腹の 1 割、その的の左右の隣の敵（同じ列で左右それぞれいちばん近い生きている敵）に、
+    /// その一撃の量（萎縮などの後）の半分（切り捨て・0 なら当てない）。隣への半分は薙ぎの巻き込みと同じ扱い（`ApplyDamage` を個別に・`OnAfterAttack` は主目標だけ）。
+    /// </summary>
+    void GolmStomp345(UnitState g, int belly)
+    {
+        UnitTally t = TallyOf(g);
+        int add = belly / 10;
+        t.Ga345Stomps++;
+        t.Rp345PunchAmount += g.CurrentAttack + add;
+        if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.GolmArm, Turn = _turn, ActorId = g.InstanceId, Amount = g.CurrentAttack + add, Slot = add, Text = GolmArmLabels.Stomp, Team = Opponent(g.TeamId) });
+        Log($"    {g.Name} が巨体で踏み潰しにかかる（攻 {g.CurrentAttack} ＋ 腹 {belly} の 1 割 {add}）", LogKind.Trigger);
+        long d0 = t.DamageToEnemy;
+        _golmHitActor = g; _golmHitBonus = add; _golmHitStomp = true;
+        try { PerformAttack(g); }
+        finally { _golmHitActor = null; }
+        t.Rp345PunchDealt += t.DamageToEnemy - d0;
+    }
+
+    /// <summary>第345期 GA-a: 同じ列の並び（左 → 右・席番号）。前 前1 ○前2 前3 ／ 中 ○中1 中央 ○中3 ／ 後 後1 ○後2 後3。</summary>
+    static readonly int[][] StompRows345 = { new[] { 0, 7, 1 }, new[] { 5, 2, 6 }, new[] { 3, 8, 4 } };
+
+    /// <summary>第345期 GA-a: 踏み潰しの的の左右の隣（同じ列で左右それぞれいちばん近い生きている敵）に、一撃の量の半分。</summary>
+    void StompSplash345(UnitState actor, UnitState target, int dealt)
+    {
+        int half = dealt / 2;
+        if (half <= 0) return;
+        int[]? row = StompRows345.FirstOrDefault(r => Array.IndexOf(r, target.Slot) >= 0);
+        if (row is null) return;
+        int at = Array.IndexOf(row, target.Slot);
+        var side = new List<UnitState>();
+        var mates = LivingMembers(target.TeamId);
+        for (int i = at - 1; i >= 0; i--) { UnitState? u = mates.FirstOrDefault(x => x.Slot == row[i]); if (u is not null) { side.Add(u); break; } }
+        for (int i = at + 1; i < row.Length; i++) { UnitState? u = mates.FirstOrDefault(x => x.Slot == row[i]); if (u is not null) { side.Add(u); break; } }
+        UnitTally t = TallyOf(actor);
+        foreach (UnitState u in side)
+        {
+            if (!u.IsAlive) continue;
+            Log($"    踏み潰しの余波が {u.Name} にも届く（{half}）", LogKind.Damage);
+            long d0 = t.DamageToEnemy;
+            ApplyDamage(u, half, actor, pattern: AttackPattern.Sweep);
+            t.Ga345SplashHits++;
+            t.Ga345SplashDealt += t.DamageToEnemy - d0;
         }
     }
 
@@ -12500,6 +12637,10 @@ public sealed class BattleContext
     {
         if (!actor.IsAlive) return;
 
+        // 第345期（ゴルムの RP ／ GA の版）: 一発の札を最初に読んで消す（打ち手が違えば触らない）。**保持者がいなければ比較1つで抜ける。**
+        int golmBonus = 0; bool golmStomp = false;
+        if (_golmHitActor is not null && _golmHitActor == actor) { golmBonus = _golmHitBonus; golmStomp = _golmHitStomp; _golmHitActor = null; }
+
         // 第243期（④・バサの版 `ConfuseHalf`）: 保持者がいる戦では、混乱した駒の攻撃は標的を選ぶ前に `Roll(100)` を1回——
         // 50% で今までどおり自軍へ、残りは混乱をここで消して普段どおり振る。**保持者がいなければ比較1つで抜ける。**
         if (_confuseHalf && ConfusionLive && actor.RawCounter(StatusKeys.Confused) > 0)
@@ -12564,6 +12705,7 @@ public sealed class BattleContext
         int atk = attackPercent == 100
             ? actor.CurrentAttack
             : actor.CurrentAttack * attackPercent / 100;
+        if (golmBonus > 0) atk += golmBonus;   // 第345期（攻 ＋ 腹の 1 割）
 
         // 第277期（豆鉄砲）: 1発の打点は攻撃力に依らず `ShotDamage`（攻撃力は弾数の側・`PelletTrait.ModifyHitCount`）。
         // 萎縮・痺れ毒・澱み・止めの倍率はこの後ろなので、今までどおりこの 1 点に掛かる（切り捨てなので 1 は 1 のまま）。**保持者がいなければ比較1つで抜ける。**
@@ -12909,6 +13051,8 @@ public sealed class BattleContext
             ApplyDamage(recv, share, actor, pattern: pattern);
             _whipHitNext = false;
         }
+
+        if (golmStomp && pattern == AttackPattern.Single) StompSplash345(actor, target, dealt);   // 第345期（GA-a 踏み潰し: 左右の隣に半分）
 
         // 第217期・自己検査用（計数のみ）: 札が「動けるか」を読む時点の値を控える。
         bool whipPrimBound = whip is not null && TormentTrait.IsBound(this, target);

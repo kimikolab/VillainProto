@@ -839,7 +839,7 @@ static class Shiga316Diag
                 for (int sd = 0; sd < 40; sd++)
                 {
                     var ctx = new BattleContext(sd, false);
-                    var p = BattleEngine.Materialize(Formation.Build(front1: sdef, front3: UnitCatalog.KataH324, center: UnitCatalog.Golm), BattleContext.PlayerTeam);
+                    var p = BattleEngine.Materialize(Formation.Build(front1: sdef, front3: UnitCatalog.KataH324, center: UnitCatalog.GolmH344), BattleContext.PlayerTeam);
                     var e = BattleEngine.Materialize(Formation.Build(front1: Wall), BattleContext.EnemyTeam, EnemyScaleRule.None);
                     foreach (var u in p) AddUnit.Invoke(ctx, new object[] { u });
                     foreach (var u in e) AddUnit.Invoke(ctx, new object[] { u });

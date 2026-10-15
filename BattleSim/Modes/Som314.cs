@@ -500,7 +500,7 @@ static class Som314Diag
             ("感電 糸 ガルド→H", S309.Swap(Playtest("試遊・感電 糸"), UnitCatalog.Gald, som), S309.Swap(Playtest("試遊・感電 糸"), UnitCatalog.Gald, tsugi)),
             ("火の型 ソラ→H", S309.Swap(Playtest("試遊・感電 火の型"), UnitCatalog.Sora, som), S309.Swap(Playtest("試遊・感電 火の型"), UnitCatalog.Sora, tsugi)),
             ("勝ち台 ツギの席（元の勝ち台）", S309.Swap(win, tsugi, som), win),
-            ("勝ち台 ゴルム→H", S309.Swap(win, UnitCatalog.Golm, som), null),
+            ("勝ち台 ゴルム→H", S309.Swap(win, UnitCatalog.GolmH344, som), null),
             ("感電 行（もう片方 → ドルガ）", S309.Swap(shock, tsugi, UnitCatalog.Dolga), S309.Swap(shock, som, UnitCatalog.Dolga)),
             ("光の盾", Playtest(S309.Shield), S309.Swap(Playtest(S309.Shield), som, tsugi)),
             ("光の盾 重", Playtest(S309.ShieldHeavy), S309.Swap(Playtest(S309.ShieldHeavy), som, tsugi)),

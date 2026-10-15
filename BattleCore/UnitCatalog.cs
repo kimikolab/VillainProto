@@ -396,7 +396,11 @@ public static class UnitCatalog
         Flavor = "味方の死を待っている顔をする、と report に書かれた。"
     };
 
-    public static readonly UnitDef Golm = new()
+    /// <summary>
+    /// 大喰らいゴルム（第1〜344期の規定）。<b>第345期に第344期の S3（SW-a ＋ b ＋ 吐き捨てる）を規定にしたので、それまでの規定はこの <see cref="GolmH344"/> として明示的に持つ。</b>
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。第344期までの規定のゴルムで測った過去の器具はこちらに固定する（`Common.PinG344` ほか）。第335期 ／ 第343期の版（飲み干す ／ GL ／ GT）はこちらから作る。
+    /// </summary>
+    public static readonly UnitDef GolmH344 = new()
     {
         Id = "golm",
         Name = "大喰らいゴルム",
@@ -407,6 +411,34 @@ public static class UnitCatalog
         PlusText = "後ろの味方への攻撃を型を問わず肩代わりし、飲み込んだ力をその味方へ返す／倒れるとき、飲み込んだ量の一部が生存味方の回復になる（1戦に1度）",
         MinusText = "毎ターン味方から精気を吸う",
         Flavor = "維持費が高すぎる。連れて行くと部隊が保たない。"
+    };
+
+    /// <summary>第343期 GT の手番（`[Skill]`・ラベルは表示だけ）。第345期: 規定のゴルムが使うので、規定より前に置く（静的初期化の順）。</summary>
+    static readonly UnitAction[] GolmSwallowActions = { new(ActionKind.Skill, Label: "弱った敵の匂いを嗅いだ") };
+
+    /// <summary>第343期 GT-a2 の吐き捨ての句（第345期から規定の文面）。</summary>
+    public const string GolmSpitClause343 = "。呑み込めない毒や雷は、いちばん大きな敵に吐き捨てる";
+
+    /// <summary>
+    /// 大喰らいゴルム（規定）。<b>第345期に第344期の S3（SW-a ＋ b ＋ 吐き捨てる）を規定にした</b>（ポンの判断・design/PHASE345_GOLM_ROCKET_PUNCH_SPEC.md §2）——
+    /// 第1〜344期の規定（<see cref="GolmH344"/>）＋ <see cref="TraitId.GolmSwallowSpit"/> ＋ <see cref="TraitId.GolmSwallowSpend"/> ＋ <see cref="TraitId.GolmSwallowWeak"/>・手番は `[Skill]`。
+    /// 札と文面は第344期の <c>GolmSWab</c> と同じ（腹を使うことは文面に入れない）。
+    /// </summary>
+    public static readonly UnitDef Golm = new()
+    {
+        Id = GolmH344.Id,
+        Name = GolmH344.Name,
+        MaxHp = GolmH344.MaxHp,
+        Attack = GolmH344.Attack,
+        Speed = GolmH344.Speed,
+        Advances = GolmH344.Advances,
+        Pattern = GolmH344.Pattern,
+        // 第345期: ポンの判断（第344期の案 S3）で「呑む」（弱った敵だけ・腹を使う・吐き捨てる）を規定にした。旧の規定は `GolmH344`（指示書 design/PHASE345_GOLM_ROCKET_PUNCH_SPEC.md §2）。
+        Traits = GolmH344.Traits.Concat(new[] { TraitId.GolmSwallowSpit, TraitId.GolmSwallowSpend, TraitId.GolmSwallowWeak }).ToArray(),
+        Actions = GolmSwallowActions,
+        PlusText = GolmH344.PlusText + GolmSwallowClauseWeak344 + GolmSpitClause343,
+        MinusText = GolmH344.MinusText,
+        Flavor = "呑んだ精気は糧になる。呑み込めない毒と雷は、吐き捨てる。"
     };
 
     public static readonly UnitDef Mug = new()
@@ -2058,10 +2090,10 @@ public static class UnitCatalog
     public static readonly UnitDef DohaDMc = With335(DohaH335, TraitId.DohaOverflow, minusFrom: "味方が多いほど早く尽きる", minusTo: "倒れると、背負ってきた痛みの半分が仲間に溢れる");
 
     /// <summary>第335期 DM-c ＋ ゴルムが飲む の、ゴルムの側。規定のゴルム ＋ <see cref="TraitId.ColossusDrink"/>（ドハの溢れを生きていればすべて飲み、巨躯と同じ換算で自分の攻撃力に）。ドハは <see cref="DohaDMc"/> と組む。</summary>
-    public static readonly UnitDef GolmDrink = With335(Golm, TraitId.ColossusDrink, plusFrom: "（1戦に1度）", plusTo: "（1戦に1度）／ドハが溢れさせた痛みを飲み干し、自分の力にする");
+    public static readonly UnitDef GolmDrink = With335(GolmH344, TraitId.ColossusDrink, plusFrom: "（1戦に1度）", plusTo: "（1戦に1度）／ドハが溢れさせた痛みを飲み干し、自分の力にする");
 
     /// <summary>第335期 GL（力は殴る味方へ）。規定のゴルム ＋ <see cref="TraitId.ColossusToStriker"/>（吐き戻しの返り先が手番で殴らない駒なら、攻撃力の最も高い殴る味方へ）。</summary>
-    public static readonly UnitDef GolmGL = With335(Golm, TraitId.ColossusToStriker, plusFrom: "飲み込んだ力をその味方へ返す", plusTo: "飲み込んだ力は、戦う仲間へ返す");
+    public static readonly UnitDef GolmGL = With335(GolmH344, TraitId.ColossusToStriker, plusFrom: "飲み込んだ力をその味方へ返す", plusTo: "飲み込んだ力は、戦う仲間へ返す");
 
     /// <summary>第297期までの規定のドハ（分かち ＋ 破片の後ろ・自分の攻撃力が上がる・なまりあり）。対照（<see cref="All"/> に入れない）。第297期の版（<see cref="DohaDHa"/> ほか）はこちらから作る。</summary>
     public static readonly UnitDef DohaD0 = new()
@@ -5623,12 +5655,11 @@ public static class UnitCatalog
 
     // ---------------------------------------------------------------------------------
     // 第343期（指示書 design/PHASE343_KATA_SETTLE_GOLM_SWALLOW_SPEC.md §3）—— ゴルムの手番「精気を呑む」（GT）。規定のゴルムに札を1枚足し、手番を `[Skill]` にする。
+    // 第345期: S3 を規定にしたので、GT の3版（と第335期の飲み干す ／ GL）は第1〜344期の規定（`GolmH344`）から作り直した（中身は第343期のまま）。
     // 対照（`All` ／ `Retired` ／ `Presets` の `Compare` ／ `Playtest` に入れない・`Presets.Versions` の「版・」の台だけが使う・採否はポン）。文面は叩き台。
     // ---------------------------------------------------------------------------------
     /// <summary>第343期 GT の手番の句（叩き台）。</summary>
     public const string GolmSwallowClause343 = "。手番で、腹に収まるほど弱った敵の精気を呑み干す";
-    static readonly UnitAction[] GolmSwallowActions = { new(ActionKind.Skill, Label: "弱った敵の匂いを嗅いだ") };
-
     static UnitDef With343(UnitDef b, TraitId card, string tail, string? flavor = null) => new()
     {
         Id = b.Id, Name = b.Name, MaxHp = b.MaxHp, Attack = b.Attack, Speed = b.Speed, Advances = b.Advances, Pattern = b.Pattern,
@@ -5637,7 +5668,7 @@ public static class UnitCatalog
     };
 
     /// <summary>第343期 GT-a2（吐き捨てる・推し）。規定のゴルム ＋ <see cref="TraitId.GolmSwallowSpit"/>（呑んだ状態異常を HP の最も多い敵にまとめて吐きかける）。</summary>
-    public static readonly UnitDef GolmGTa2 = With343(Golm, TraitId.GolmSwallowSpit, "。呑み込めない毒や雷は、いちばん大きな敵に吐き捨てる", "呑んだ精気は糧になる。呑み込めない毒と雷は、吐き捨てる。");
+    public static readonly UnitDef GolmGTa2 = With343(GolmH344, TraitId.GolmSwallowSpit, GolmSpitClause343, "呑んだ精気は糧になる。呑み込めない毒と雷は、吐き捨てる。");
 
     // 第344期（指示書 design/PHASE344_GOLM_SWALLOW_LIMIT_SPEC.md §2）—— GT-a2 吐き捨てるの呑む条件（SW）。吐き捨ての中身は第343期のまま。文面は手番の句を差し替える。
     /// <summary>第344期 SW-a の手番の句（叩き台）。</summary>
@@ -5661,10 +5692,39 @@ public static class UnitCatalog
     public static readonly UnitDef GolmSWab = With344(new[] { TraitId.GolmSwallowSpend, TraitId.GolmSwallowWeak }, GolmSwallowClauseWeak344);
 
     /// <summary>第343期 GT-a1（消化）。規定のゴルム ＋ <see cref="TraitId.GolmSwallowHeal"/>（呑んだ敵の残りの HP を生きている味方全員に等分して癒す）。</summary>
-    public static readonly UnitDef GolmGTa1 = With343(Golm, TraitId.GolmSwallowHeal, "。呑んだ精気で仲間を癒す");
+    public static readonly UnitDef GolmGTa1 = With343(GolmH344, TraitId.GolmSwallowHeal, "。呑んだ精気で仲間を癒す");
 
     /// <summary>第343期 GT-a3（膨れる）。規定のゴルム ＋ <see cref="TraitId.GolmSwallowGrow"/>（呑んだ敵の残りの HP だけ最大 HP と HP が増える）。</summary>
-    public static readonly UnitDef GolmGTa3 = With343(Golm, TraitId.GolmSwallowGrow, "。呑むほど膨れ上がる");
+    public static readonly UnitDef GolmGTa3 = With343(GolmH344, TraitId.GolmSwallowGrow, "。呑むほど膨れ上がる");
+
+    // ---------------------------------------------------------------------------------
+    // 第345期（指示書 design/PHASE345_GOLM_ROCKET_PUNCH_SPEC.md §3）—— 呑めない手番に何をするか（RP-a ロケットパンチ ／ RP-b ロケットパンチ ＋ 捕獲 ／ GA-a 踏み潰し）。
+    // 規定のゴルム（段0 の S3）に札を1枚足す。呑む条件・吐き捨て・引き継ぎ ／ 飛び火が起きないことは規定のまま。
+    // 対照（`All` ／ `Retired` ／ `Presets` の `Compare` ／ `Playtest` に入れない・`Presets.Versions` の「版・」の台だけが使う・採否はポン）。文面は叩き台。
+    // ---------------------------------------------------------------------------------
+    /// <summary>第345期 RP-a の句（叩き台・規定の文面の末尾に足す）。</summary>
+    public const string GolmRocketClause345 = "。呑めないときは、腕を飛ばして殴る（後ろの敵にも届く）";
+    /// <summary>第345期 RP-b の手番の句（叩き台・規定の手番の句と差し替える）。</summary>
+    public const string GolmGrabClause345 = "。手番で、腕を飛ばして殴る（後ろの敵にも届く）。弱った敵（最大 HP の3割以下）は、その手で掴んで持ち帰り、精気を呑み干す";
+    /// <summary>第345期 GA-a の句（叩き台・規定の文面の末尾に足す）。</summary>
+    public const string GolmStompClause345 = "。呑めないときは、巨体で踏み潰す（隣の敵にも半分）";
+    static UnitDef With345(TraitId card, string plus) => new()
+    {
+        Id = Golm.Id, Name = Golm.Name, MaxHp = Golm.MaxHp, Attack = Golm.Attack, Speed = Golm.Speed, Advances = Golm.Advances, Pattern = Golm.Pattern,
+        Traits = Golm.Traits.Append(card).ToArray(), Actions = Golm.Actions,
+        PlusText = plus, MinusText = Golm.MinusText, Flavor = Golm.Flavor,
+    };
+
+    /// <summary>第345期 RP-a（ロケットパンチ）。規定のゴルム ＋ <see cref="TraitId.GolmRocketPunch"/>（呑めない手番は、通常攻撃の代わりに誰にでも届く手を飛ばして殴る・攻 ＋ 腹の 1 割）。</summary>
+    public static readonly UnitDef GolmRPa = With345(TraitId.GolmRocketPunch, Golm.PlusText + GolmRocketClause345);
+
+    /// <summary>第345期 RP-b（ロケットパンチ ＋ 捕獲・推し）。規定のゴルム ＋ <see cref="TraitId.GolmRocketGrab"/>（いつも手を飛ばす・呑める敵は殴らずに掴む・殴れば呑める敵を先に殴り、呑めれば同じ手番で掴んで呑む）。</summary>
+    public static readonly UnitDef GolmRPb = With345(TraitId.GolmRocketGrab,
+        Golm.PlusText.Contains(GolmSwallowClauseWeak344, StringComparison.Ordinal) ? Golm.PlusText.Replace(GolmSwallowClauseWeak344, GolmGrabClause345, StringComparison.Ordinal)
+            : throw new InvalidOperationException("第345期: 規定のゴルムの文面に手番の句が見つからない"));
+
+    /// <summary>第345期 GA-a（踏み潰し・比べるための版）。規定のゴルム ＋ <see cref="TraitId.GolmStomp"/>（呑めない手番は、通常攻撃の的に 攻 ＋ 腹の 1 割・その的の左右の隣の敵に半分）。</summary>
+    public static readonly UnitDef GolmGAa = With345(TraitId.GolmStomp, Golm.PlusText + GolmStompClause345);
 
     /// <summary>第342期 KT-b ＋ 避雷針（跳ねる）。<see cref="KataKTr1"/> ＋ <see cref="TraitId.KataRodChain"/>（逆雷が手番の雷と同じく帯びた隣の敵へ跳ねる）。</summary>
     public static readonly UnitDef KataKTrJ = With342(KataH342, new[] { TraitId.ThundercloudAllyPops, TraitId.KataRod, TraitId.KataRodChain }, KataAllyCloudClause342 + KataRodClause342, rod: true);

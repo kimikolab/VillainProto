@@ -2359,6 +2359,12 @@ public sealed class UnitTally
                 Gt343Attacks, Gt343Spits, Gt343SpitPoison, Gt343SpitBurn, Gt343SpitShock, Gt343SpitDensity, Gt343SpitMark, Gt343SpitOnTop, Gt343Healed, Gt343Grown;
     /// <summary>第344期（<b>計数のみ</b>・ゴルムの SW）: <c>Sw344HpPctSum</c> 呑んだ敵の HP ÷ 最大 HP（% の和）／ <c>Sw344BellySpent</c> 呑んで減った腹の和（SW-a）。</summary>
     public long Sw344HpPctSum, Sw344BellySpent;
+    /// <summary>
+    /// 第345期（<b>計数のみ</b>・ゴルムの RP ／ GA）: <c>Rp345NormalDealt</c> 呑めずに通常攻撃した量（規定でも数える）／ <c>Rp345Punches</c> 手を飛ばした（RP）／ <c>Rp345PunchBack</c> そのうち狙った敵が前列でない ／
+    /// <c>Rp345PunchKills</c> 殴って倒した ／ <c>Rp345PunchDealt</c> 殴った量（RP ／ GA の主目標と隣の和）／ <c>Rp345PunchAmount</c> 量の素の値（攻 ＋ 腹の 1 割）の和 ／ <c>Rp345AimEdible</c> 殴れば呑める見込みの敵を狙った（RP-b）／
+    /// <c>Rp345GrabNoPunch</c> 殴らずに掴んだ ／ <c>Rp345GrabAfter</c> 殴って掴んだ（RP-b）／ <c>Ga345Stomps</c> 踏み潰した ／ <c>Ga345SplashHits</c> ／ <c>Ga345SplashDealt</c> 隣に当たった回数 ／ 量（GA-a）。
+    /// </summary>
+    public long Rp345NormalDealt, Rp345Punches, Rp345PunchBack, Rp345PunchKills, Rp345PunchDealt, Rp345PunchAmount, Rp345AimEdible, Rp345GrabNoPunch, Rp345GrabAfter, Ga345Stomps, Ga345SplashHits, Ga345SplashDealt;
     public long[]? Fg339Spray, Fg339AllyHits, Fg339AllyDmg;
     /// <summary>第339期（計数のみ）: 乱射の1発をターンごとに数える（羽の乱射 ／ 乱射の札の両方）。</summary>
     public void NoteSpray339(int turn, bool ally, int lost, bool killed)
@@ -3615,6 +3621,8 @@ public sealed class UnitTally
         Gt343Attacks += o.Gt343Attacks; Gt343Spits += o.Gt343Spits; Gt343SpitPoison += o.Gt343SpitPoison; Gt343SpitBurn += o.Gt343SpitBurn; Gt343SpitShock += o.Gt343SpitShock; Gt343SpitDensity += o.Gt343SpitDensity; Gt343SpitMark += o.Gt343SpitMark;
         Gt343SpitOnTop += o.Gt343SpitOnTop; Gt343Healed += o.Gt343Healed; Gt343Grown += o.Gt343Grown;
         Sw344HpPctSum += o.Sw344HpPctSum; Sw344BellySpent += o.Sw344BellySpent;   // 第344期
+        Rp345NormalDealt += o.Rp345NormalDealt; Rp345Punches += o.Rp345Punches; Rp345PunchBack += o.Rp345PunchBack; Rp345PunchKills += o.Rp345PunchKills; Rp345PunchDealt += o.Rp345PunchDealt; Rp345PunchAmount += o.Rp345PunchAmount;   // 第345期
+        Rp345AimEdible += o.Rp345AimEdible; Rp345GrabNoPunch += o.Rp345GrabNoPunch; Rp345GrabAfter += o.Rp345GrabAfter; Ga345Stomps += o.Ga345Stomps; Ga345SplashHits += o.Ga345SplashHits; Ga345SplashDealt += o.Ga345SplashDealt;
         Fg339Spray = AddArr(Fg339Spray, o.Fg339Spray); Fg339AllyHits = AddArr(Fg339AllyHits, o.Fg339AllyHits); Fg339AllyDmg = AddArr(Fg339AllyDmg, o.Fg339AllyDmg);
         SharedAway += o.SharedAway; ShareTakenHits += o.ShareTakenHits; ShareGives += o.ShareGives; ShareGiven += o.ShareGiven; ShareGiftAccrued += o.ShareGiftAccrued;   // 第297期
         ShareGifts += o.ShareGifts; ShareGiftCapped += o.ShareGiftCapped; ShareGiftNoTarget += o.ShareGiftNoTarget; ShareGiftSkipped += o.ShareGiftSkipped;
@@ -4425,9 +4433,19 @@ public enum BattleEventKind
     /// <summary>
     /// 精気を呑む（第343期・ゴルムの版 GT・<b>表示専用</b>）。ゴルムの手番に1件（<c>Text</c> ＝ <see cref="SwallowLabels.Swallow"/>・<c>ActorId</c> ＝ ゴルム・<c>TargetId</c> ＝ 呑まれた敵・<c>Amount</c> ＝ その敵の残りの HP・
     /// <c>Slot</c> ＝ 腹）→ 呑まれた敵の <c>Death</c>（撃破者 ＝ ゴルム）。その後に版ごとの1件: <see cref="SwallowLabels.Spit"/>（<c>TargetId</c> ＝ 吐きかけた敵・<c>Amount</c> ＝ 吐いた量の和・<c>Text</c> の後ろに内訳）／
-    /// <see cref="SwallowLabels.Heal"/>（<c>Amount</c> ＝ 癒した量の和）／ <see cref="SwallowLabels.Grow"/>（<c>Amount</c> ＝ 増えた最大 HP・<c>Slot</c> ＝ 新しい最大 HP）。<b>どの規則も読まない。</b> 規定のゴルムには出ない。
+    /// <see cref="SwallowLabels.Heal"/>（<c>Amount</c> ＝ 癒した量の和）／ <see cref="SwallowLabels.Grow"/>（<c>Amount</c> ＝ 増えた最大 HP・<c>Slot</c> ＝ 新しい最大 HP）。<b>どの規則も読まない。</b>
+    /// 第345期から規定のゴルム（S3 ＝ 弱った敵だけ・腹を使う・吐き捨てる）にも出る（「呑む」→ 「吐く」）。
     /// </summary>
     Swallow,
+
+    /// <summary>
+    /// ゴルムの腕（第345期・ゴルムの版 RP-a ／ RP-b ／ GA-a・<b>表示専用</b>）。<c>Text</c> ＝ <see cref="GolmArmLabels"/>・<c>ActorId</c> ＝ ゴルム。
+    /// <see cref="GolmArmLabels.Launch"/>（腕が飛ぶ・<c>TargetId</c> ＝ 狙った敵・<c>Amount</c> ＝ 量の素の値・<c>Slot</c> ＝ 腹の 1 割）→ その一撃の <c>Attack</c> ／ <c>Damage</c> … →
+    /// <see cref="GolmArmLabels.Return"/>（腕が戻る・<c>Amount</c> ＝ 与えた量）か、RP-b で呑める条件になれば <see cref="GolmArmLabels.Grab"/>（掴む・<c>Slot</c> ＝ 1 殴って掴む ／ 0 殴らずに掴む）→ <c>Swallow</c>「呑む」→ <c>Death</c> → 「吐く」。
+    /// 殴って倒したら <c>Death</c> で終わる（「戻る」は出ない）。<see cref="GolmArmLabels.Stomp"/>（踏み潰す・<c>TargetId</c> なし・<c>Amount</c> ＝ 量の素の値）→ <c>Attack</c> ／ 主目標の <c>Damage</c> → 左右の隣の <c>Damage</c>。
+    /// <b>どの規則も読まない。</b> 規定のゴルムには出ない。
+    /// </summary>
+    GolmArm,
 }
 /// <summary>`Swallow`（第343期）の <c>Text</c>（吐くは「吐く:毒3,火2,雷1,濃1,標2」のように内訳を後ろに付ける）。</summary>
 public static class SwallowLabels
@@ -4436,6 +4454,15 @@ public static class SwallowLabels
     public const string Spit = "吐く";
     public const string Heal = "癒す";
     public const string Grow = "膨れる";
+}
+
+/// <summary>`GolmArm`（第345期）の <c>Text</c>。</summary>
+public static class GolmArmLabels
+{
+    public const string Launch = "飛ばす";
+    public const string Return = "戻る";
+    public const string Grab = "掴む";
+    public const string Stomp = "踏み潰す";
 }
 
 /// <summary>`MarkInherit`（第337期）の <c>Text</c>。</summary>

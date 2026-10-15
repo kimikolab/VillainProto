@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 using G343 = Golm343Diag;
 using S287 = Shock287Diag;
@@ -16,6 +16,7 @@ using T323 = Tou323Diag;
 //     dotnet run --project BattleSim -c Release 0 sw344 check                   # §7 自己検査
 //
 // 版の名前（ASCII）: base（規定）／ gt（第343期の GT-a2・対照）／ a ／ b ／ ab。台は `golm343` と同じ（guard ／ havoc ／ utsu ／ shock ／ poison）。
+// 第345期: S3 を規定にしたので、「規定」（base）は第1〜344期の規定のゴルム（`GolmH344`・`Common.Pin344`）に固定した。
 // **予測のファイルが無ければ本測定（boards ／ compare）を走らせない**（R397・`.tmp/p344/predict.md`）。
 // =====================================================================================
 static partial class Sw344Diag
@@ -62,7 +63,7 @@ static partial class Sw344Diag
     };
     static Ver V(string n) => Vers.First(v => v.Name == n || v.Ascii == n);
     static Ver[] Pick(string only) => (string.IsNullOrEmpty(only) ? Vers : new[] { Vers[0] }.Concat(only.Split(',').Select(V).Where(v => v != Vers[0]))).ToArray();
-    internal static Formation Apply(Formation f, Ver v) => v.Golm is null ? f : S316.SwapId(f, "golm", v.Golm);
+    internal static Formation Apply(Formation f, Ver v) => v.Golm is null ? Pin344(f) : S316.SwapId(f, "golm", v.Golm);   // 第345期: 「規定」は第1〜344期の規定のゴルム（`GolmH344`）に固定
     static S287.Wave[] Waves => G343.Waves;
     static bool IsElite(S287.Wave w) => w.Name is "近衛" or "大隊";
 

@@ -63,7 +63,7 @@ static partial class Som307Diag
         ("感電 (シガ×カタ×ソム)", Row("感電 (シガ×カタ×ソム)")),
         ("雷の型 ドハ→ソム", FvSwap(Playtest("試遊・感電 雷の型"), UnitCatalog.DohaH316, UnitCatalog.SomH307)),
         ("感電 糸 ガルド→ソム", FvSwap(Playtest("試遊・感電 糸"), UnitCatalog.Gald, UnitCatalog.SomH307)),
-        ("勝ち台 ゴルム→ソム", FvSwap(PinKT311(Pin316(B283.Seat(Order(WinBoard)))), UnitCatalog.Golm, UnitCatalog.SomH307)),
+        ("勝ち台 ゴルム→ソム", FvSwap(PinKT311(Pin316(B283.Seat(Order(WinBoard)))), UnitCatalog.GolmH344, UnitCatalog.SomH307)),
         ("勝ち台 ツギ→ソム", FvSwap(PinKT311(Pin316(B283.Seat(Order(WinBoard)))), UnitCatalog.Tsugi, UnitCatalog.SomH307)),
     };
 

@@ -515,7 +515,7 @@ static partial class Som307Diag
         // 直の盤面: 味方 ソム（版）・ドルガ・ゴルム ／ 敵 ドルガ ×3（ガルドは一撃で弾けない札を持つので使わない）
         BattleContext Ctx(UnitDef somDef, out List<UnitState> p, out List<UnitState> e, UnitDef? enemyCenter = null, Formation? pl = null)
         {
-            var ctx = H304.Ctx(pl ?? Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Golm, center: somDef),
+            var ctx = H304.Ctx(pl ?? Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.GolmH344, center: somDef),
                                Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Dolga, center: enemyCenter ?? UnitCatalog.Dolga), out p, out e);
             foreach (var u in p.Concat(e)) { u.MaxHp = 1000; u.Hp = 500; }
             return ctx;

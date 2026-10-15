@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 using T323 = Tou323Diag;
 
@@ -45,14 +45,14 @@ static partial class Sw344Diag
                 && UnitCatalog.GolmSWa.PlusText.Contains("。手番で、腹に溜めた量を使って、敵の精気を呑み干す", StringComparison.Ordinal)
                 && UnitCatalog.GolmSWb.PlusText.Contains("。手番で、弱った敵（最大 HP の3割以下）の精気を呑み干す", StringComparison.Ordinal) && UnitCatalog.GolmSWab.PlusText == UnitCatalog.GolmSWb.PlusText
                 && new[] { UnitCatalog.GolmSWa, UnitCatalog.GolmSWb, UnitCatalog.GolmSWab }.All(d => !UnitCatalog.Everyone.Contains(d) && d.PlusText.EndsWith("。呑み込めない毒や雷は、いちばん大きな敵に吐き捨てる", StringComparison.Ordinal))
-                && UnitCatalog.Everyone.All(d => !d.Traits.Any(t => t is TraitId.GolmSwallowSpend or TraitId.GolmSwallowWeak));
-            Expect("版の定義: SW-a ／ SW-b ／ SW-a＋b ＝ 第343期の GT-a2 ＋ 札（腹を使う ／ 弱った敵だけ）・手番の句だけ差し替え（吐き捨ての句は残る）・`Everyone` の外・保持者 0", def);
+                && UnitCatalog.Everyone.Where(d => d.Traits.Any(t => t is TraitId.GolmSwallowSpend or TraitId.GolmSwallowWeak)).SequenceEqual(new[] { UnitCatalog.Golm });   // 第345期: 2枚とも規定のゴルムの札
+            Expect("版の定義: SW-a ／ SW-b ／ SW-a＋b ＝ 第343期の GT-a2 ＋ 札（腹を使う ／ 弱った敵だけ）・手番の句だけ差し替え（吐き捨ての句は残る）・`Everyone` の外・札の保持者は第345期から規定のゴルムだけ", def);
             var v = Presets.Versions; var guard = Presets.Playtest.First(r => r.Name == Golm343Diag.GuardRow).F; var poison = Golm343Diag.PoisonGolm();
             (string Name, Formation Base, UnitDef Golm)[] want = { ("版・SW-a 守り型", guard, UnitCatalog.GolmSWa), ("版・SW-b 守り型", guard, UnitCatalog.GolmSWb), ("版・SW-a＋b 守り型", guard, UnitCatalog.GolmSWab), ("版・SW-a＋b 毒", poison, UnitCatalog.GolmSWab) };
-            bool rows = v.Length == 6 && v[0].Name == "試遊・感電 ポンの台" && v[1].Name == "試遊・ミサ 書き手なし" && Presets.Playtest.Length == 17
-                && want.All(x => v.Any(r => r.Name == x.Name && r.F.Occupied().Select(o => o.Def).SequenceEqual(x.Base.Occupied().Select(o => o.Def.Id == "golm" ? x.Golm : o.Def))
-                    && r.F.Occupied().Select(o => o.Slot).SequenceEqual(x.Base.Occupied().Select(o => o.Slot))));
-            Expect("試遊の台: `Presets.Versions` ＝ 「試遊・感電 ポンの台」「試遊・ミサ 書き手なし」＋「版・SW-a ／ SW-b ／ SW-a＋b 守り型」「版・SW-a＋b 毒」（第343期の「版・GT」の4台は外した）・`Playtest` は 17 台のまま", rows);
+            // 第345期: 「版・SW」の4台を外した——1〜2行目（ポンの台 ／ 書き手なし）と、SW の版が試遊の台に残っていないことだけを見る（`want` は第344期の並びの記録）
+            bool rows = v[0].Name == "試遊・感電 ポンの台" && v[1].Name == "試遊・ミサ 書き手なし" && Presets.Playtest.Length == 17 && want.Length == 4
+                && v.SelectMany(r => r.F.Occupied()).All(o => !ReferenceEquals(o.Def, UnitCatalog.GolmSWa) && !ReferenceEquals(o.Def, UnitCatalog.GolmSWb) && !ReferenceEquals(o.Def, UnitCatalog.GolmSWab));
+            Expect("試遊の台: `Presets.Versions` の1〜2行目は「試遊・感電 ポンの台」「試遊・ミサ 書き手なし」・第344期の「版・SW」の4台は第345期に外した・`Playtest` は 17 台のまま", rows);
         }
 
         // ---- SW-a: 呑むと腹が呑んだ HP だけ減る・腹を超える敵は呑めない

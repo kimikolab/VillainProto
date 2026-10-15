@@ -74,8 +74,8 @@ static class MarkHeal295Diag
     internal static (string Name, Formation F, bool Ref)[] Boards() => new (string, Formation, bool)[]
     {
         ("循環の台", Cycle, false),
-        ("循環 ゴルム→ツギ（参考・ヒーラー同居）", FvSwap(Cycle, UnitCatalog.Golm, UnitCatalog.Tsugi), true),
-        ("循環 ゴルム→ドルガ", FvSwap(Cycle, UnitCatalog.Golm, UnitCatalog.Dolga), false),
+        ("循環 ゴルム→ツギ（参考・ヒーラー同居）", FvSwap(Cycle, UnitCatalog.GolmH344, UnitCatalog.Tsugi), true),
+        ("循環 ゴルム→ドルガ", FvSwap(Cycle, UnitCatalog.GolmH344, UnitCatalog.Dolga), false),
         ("標 ボス台", Playtest("試遊・標 ボス台"), false),
         ("標経済", CompareBuilds().First(r => r.Name == "標経済 (ヒサ×ザン×ミサ)").F, false),
     };
@@ -390,7 +390,7 @@ static class MarkHeal295Diag
     // ---------------------------------------------------------------------------------
     // 格子
     // ---------------------------------------------------------------------------------
-    static readonly UnitDef[] Guards = { UnitCatalog.Golm, UnitCatalog.Gald, UnitCatalog.Doha, UnitCatalog.Ban, UnitCatalog.Kubi, UnitCatalog.Kado, UnitCatalog.Uke, UnitCatalog.Sekki };
+    static readonly UnitDef[] Guards = { UnitCatalog.GolmH344, UnitCatalog.Gald, UnitCatalog.Doha, UnitCatalog.Ban, UnitCatalog.Kubi, UnitCatalog.Kado, UnitCatalog.Uke, UnitCatalog.Sekki };
     static string TypeOf(UnitDef d) => B283.HealPool295.Contains(d) ? "ヒーラー" : Guards.Contains(d) ? "守り" : d.Id is "gan" or "veru" or "hibi" or "sasa" ? "支え" : "火力・その他";
 
     sealed record GridRes(UnitDef[] Order, int[] Wins, long[] WinT, int[][] Ctl);
@@ -601,14 +601,14 @@ static class MarkHeal295Diag
         // (g) 標の敵に当たらないまとまりでは回復しない: 標の書き手のいない台（ヒサだけ・ソラもザンもいない）で HK-a の回復が 0
         {
             long heals = 0;
-            var noMark = B283.Seat(new[] { UnitCatalog.Golm, UnitCatalog.Gald, UnitCatalog.Borg, UnitCatalog.Dolga, UnitCatalog.HisaHKa });
+            var noMark = B283.Seat(new[] { UnitCatalog.GolmH344, UnitCatalog.Gald, UnitCatalog.Borg, UnitCatalog.Dolga, UnitCatalog.HisaHKa });
             foreach (var w in S287.Waves) for (int s = 0; s < 20; s++) heals += BattleEngine.Run(BattleEngine.Materialize(noMark, BattleContext.PlayerTeam), w.Make(), s, verbose: false).TallyByUnit["hisa"].RallyHeals;
             Expect("(g) 敵に標を書く駒がいない台（ゴルム・ガルド・ボルグ・ドルガ・ヒサ HK-a）では回復 0", heals == 0, $"{heals}");
         }
         // (h) 量 ＝ 最も深い層 × 6: エンジンの1回の回復を ApplyDamage の外から再現する——ログの叫びの直後の Heal の名目量（溢れ前）を見る代わりに、層 1 の戦（ミサがいない）で癒えた量 ≦ 6
         {
             int over = 0, n = 0;
-            var f = B283.Seat(new[] { UnitCatalog.ZanZNb, UnitCatalog.Golm, UnitCatalog.Dolga, UnitCatalog.SoraSRs, UnitCatalog.HisaHKa });   // ミサがいない＝層 1・第300期: ザンは第299期の規定（`ZanZNb`）に固定
+            var f = B283.Seat(new[] { UnitCatalog.ZanZNb, UnitCatalog.GolmH344, UnitCatalog.Dolga, UnitCatalog.SoraSRs, UnitCatalog.HisaHKa });   // ミサがいない＝層 1・第300期: ザンは第299期の規定（`ZanZNb`）に固定
             foreach (var w in S287.Waves) for (int s = 0; s < 20; s++)
                 foreach (var x in BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), w.Make(), s, verbose: true).Events.Where(x => x.Kind == BattleEventKind.MarkRally)) { n++; if (x.Slot != 1 || x.Amount > 6) over++; }
             Expect("(h) ミサのいない戦では層 1・1回の回復は 6 以下", n > 0 && over == 0, $"{n} 回・外れ {over}");

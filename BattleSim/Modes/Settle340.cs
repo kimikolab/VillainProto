@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using BattleCore;
 using static Common;
 using G339 = Grow339Diag;
@@ -62,7 +62,7 @@ static partial class Settle340Diag
         foreach (var (bn, bf) in boards) Console.WriteLine($"- {bn}: {S307.Seats(bf)}");
         Console.WriteLine();
         var res = new Dictionary<(string, string, bool), G339.St>();
-        foreach (var (bn, bf) in boards) foreach (var w in Waves) { res[(bn, w.Name, false)] = G339.Measure(Pin339(bf), w, Seeds); res[(bn, w.Name, true)] = G339.Measure(bf, w, Seeds); }
+        foreach (var (bn, bf) in boards) foreach (var w in Waves) { res[(bn, w.Name, false)] = G339.Measure(Pin339(bf), w, Seeds); res[(bn, w.Name, true)] = G339.Measure(Pin344(bf), w, Seeds); }   // 第345期: ゴルムは第1〜344期の規定
 
         Console.WriteLine("## 1. 勝率 ／ 決着T（ボスは倒しT）／ 倒れた味方 ／戦（旧 → 新・表示の桁で動いたセルだけ太字）");
         Console.WriteLine();
@@ -175,7 +175,7 @@ static partial class Settle340Diag
         }
         {
             long gNew = 0, gOld = 0; int diff = 0, same = 0, n = 0;
-            foreach (var (_, f) in Boards())
+            foreach (var f in Boards().Select(b => Pin344(b.F)))   // 第345期: ゴルムは第1〜344期の規定
                 foreach (var w in Waves)
                     for (int sd = 0; sd < 10; sd++)
                     {

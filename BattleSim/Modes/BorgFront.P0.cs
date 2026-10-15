@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 using BA = BurnAuditDiag;
 using BG = BorgGuardDiag;
@@ -81,7 +81,7 @@ static partial class BorgFrontDiag
         Console.WriteLine($"- T3′: シオ・ササを除く {c3.Count(u => u.Id is not ("shio" or "sasa"))} 枚 → {(c3.Count - 2) * (c3.Count - 3) / 2} 組（T3 の表から抜き出す）");
         Console.WriteLine($"- 雷＋ボルグ: 候補 {cth.Count} 枚（T3 の 47 枚からベニ・ミオ・カタを除く）× 席 120 × seed {BA.PickSeeds}");
         var sw2 = System.Diagnostics.Stopwatch.StartNew();
-        var probe = BA.AllSeats(BG.CoreOf(VerBorg("全部")).Concat(new[] { UnitCatalog.Golm, UnitCatalog.Susu }).ToArray(), BA.PickSeeds);
+        var probe = BA.AllSeats(BG.CoreOf(VerBorg("全部")).Concat(new[] { UnitCatalog.GolmH344, UnitCatalog.Susu }).ToArray(), BA.PickSeeds);
         double us = sw2.Elapsed.TotalMilliseconds * 1000 / (120.0 * BA.PickSeeds);
         Console.WriteLine($"- 所要の見積もり（全部・ゴルム＋アカの 120 席で {sw2.Elapsed.TotalSeconds:F1} 秒）: T3 1 版 ≒ {us * 1081 * 120 * BA.PickSeeds / 1e6 / 60:F1} 分・雷＋ボルグ 1 版 ≒ {us * cth.Count * 120 * BA.PickSeeds / 1e6 / 60:F1} 分");
         Console.WriteLine();

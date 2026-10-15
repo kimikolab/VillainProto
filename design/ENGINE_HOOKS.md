@@ -1423,3 +1423,9 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 ## 第344期 —— ゴルムの「精気を呑む」の条件（SW・版）
 
 - `GolmTurn343` の候補の絞りに `GolmSwallowWeak`（SW-b・HP が最大 HP の `GolmSwallowWeakPercent` ＝ 30% 以下の敵だけ）、呑んだ後に `GolmSwallowSpend`（SW-a・腹を呑んだ敵の残りの HP だけ減らす・0 で止める）。どちらも `GolmSwallowSpit`（GT-a2）と一緒に持つ札で、札そのものは挙動を持たない。乱数を引かない。計数のみ `UnitTally.Sw344HpPctSum` ／ `Sw344BellySpent`。版 `GolmSWa` ／ `GolmSWb` ／ `GolmSWab`。器具: `sw344`。
+
+## 第345期 —— 段0: ゴルムの S3 を規定に ／ 呑めない手番（RP-a ／ RP-b ／ GA-a・版）
+
+- 段0: engine は第344期のまま（呑む本体を `GolmSwallow345` に切り出しただけ・中身は同じ）。規定のゴルム `UnitCatalog.Golm` ＝ `GolmH344`（第1〜344期の規定・明示の定義に）＋ `GolmSwallowSpit` ＋ `GolmSwallowSpend` ＋ `GolmSwallowWeak`・手番 `[Skill]`（第344期の `GolmSWab` と同じ）。固定の口 `Common.PinG344` ／ `Pin344` ／ `CompareBuildsH344` ／ `PlaytestH344`（古い口の終端 `PinK342` の最後に `PinG344`）・`IsGolmNow`。呑める条件は `GolmEdible345`（HP ≦ 腹・SW-b なら HP × 100 ≦ 最大 HP × 30）の1箇所。
+- 本体: 呑めない手番の分岐を `GolmTurn343` に3本（札は印だけ・保持者がいなければ比較3つで今までどおり `PerformAttack`）。RP-a ／ RP-b は `GolmRocket345`（的を `_forcedTarget` で固定——庇う ／ 後備え ／ 標 ／ 挑発 ／ 執着の鎖を通らない・型は単体）、GA-a は `GolmStomp345`（的は通常攻撃と同じ）。量 ＝ 攻 ＋ 腹 ÷ 10 は一発の札 `_golmHitActor` ／ `_golmHitBonus` ／ `_golmHitStomp` で `PerformAttackBody` に渡す（本体の最初の行で読んで消す・打ち手が違えば触らない・`atk` を作った直後に足すので萎縮 ／ 痺れ毒 ／ 澱み ／ 止め ／ §1 ／ 回避 ／ 軽減 ／ 軛 ／ `OnAfterAttack` は通常攻撃と同じ）。踏み潰しの隣は `StompSplash345`（同じ列 `StompRows345` で左右それぞれいちばん近い生きている敵に一撃の量の半分・`ApplyDamage` を個別に・型は薙ぎ扱い）。RP-b は呑める敵を殴らずに掴み、いなければ「殴れば呑める」見込みの敵（HP − 量 ≧ 1 かつ その HP が呑める）を先に殴り、殴った後に呑める条件なら同じ手番で `GolmSwallow345`。乱数を引かない。
+- 表示専用の出来事 `BattleEventKind.GolmArm`（`GolmArmLabels` 飛ばす ／ 戻る ／ 掴む ／ 踏み潰す）。計数のみ `UnitTally.Rp345*` ／ `Ga345*`（`Rp345NormalDealt` は規定でも数える）。版 `GolmRPa` ／ `GolmRPb` ／ `GolmGAa`。器具: `rp345`。

@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 using T323 = Tou323Diag;
 
@@ -68,7 +68,7 @@ static partial class Doha335Diag
 
         // ---- 版の定義と試遊の台
         {
-            UnitDef D = UnitCatalog.DohaH335, G = UnitCatalog.Golm;   // 第336期: 版の土台は第317〜335期の規定のドハ
+            UnitDef D = UnitCatalog.DohaH335, G = UnitCatalog.GolmH344;   // 第336期: 版の土台は第317〜335期の規定のドハ
             bool vers = UnitCatalog.DohaDMa.Traits.SequenceEqual(D.Traits.Append(TraitId.DohaSplit)) && UnitCatalog.DohaDMc.Traits.SequenceEqual(D.Traits.Append(TraitId.DohaOverflow))
                 && UnitCatalog.GolmDrink.Traits.SequenceEqual(G.Traits.Append(TraitId.ColossusDrink)) && UnitCatalog.GolmGL.Traits.SequenceEqual(G.Traits.Append(TraitId.ColossusToStriker))
                 && UnitCatalog.DohaDMa.MinusText == "自分は強くならず、自分が受ける痛みは、仲間に等しく分かれる" && UnitCatalog.DohaDMc.MinusText == "自分は強くならず、倒れると、背負ってきた痛みの半分が仲間に溢れる"
@@ -85,7 +85,7 @@ static partial class Doha335Diag
         // ---- DM-a: ドハへの直の一撃はドハ以外に等分・ドハは受けない・欠片は巨躯 ／ 分かち ／ 仇討ち ／ 指差しに乗らない・標のドハへの直の一撃で仇討ちが1回
         {
             // (1) 前1 ゴルム ／ 前3 ドハ（ゴルムと同じ列なので巨躯は掛からない）／ 中央・後1・後3 木偶。40 を 4 体で 10 ずつ（後ろの木偶への欠片もゴルムは飲まない）。
-            var ctx = T323.Ctx(Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.DohaDMa, center: Pal, back1: Pal2, back3: Pal3), Formation.Build(front1: Dummy), out var p, out var e);
+            var ctx = T323.Ctx(Formation.Build(front1: UnitCatalog.GolmH344, front3: UnitCatalog.DohaDMa, center: Pal, back1: Pal2, back3: Pal3), Formation.Build(front1: Dummy), out var p, out var e);
             var golm = T323.Seat(p, 0); var doha = T323.Seat(p, 1); var a1 = T323.Seat(p, 2); var a2 = T323.Seat(p, 3); var a3 = T323.Seat(p, 4);
             ctx.ApplyDamage(doha, 40, e[0]);
             var dt = T323.Tal(ctx, "doha");
@@ -114,7 +114,7 @@ static partial class Doha335Diag
         }
 
         // ---- DM-c ／ DM-c ＋ ゴルム
-        foreach (var (golmDef, drink, golmDead) in new[] { (UnitCatalog.Golm, false, false), (UnitCatalog.GolmDrink, true, false), (UnitCatalog.GolmDrink, true, true) })
+        foreach (var (golmDef, drink, golmDead) in new[] { (UnitCatalog.GolmH344, false, false), (UnitCatalog.GolmDrink, true, false), (UnitCatalog.GolmDrink, true, true) })
         {
             // 前1 ゴルム ／ 前3 木偶（殴られ役・ゴルムと同じ列）／ 中央 ドハ（DM-c）／ 後1 木偶（あとで標）／ 後3 旧のザン（中継でも仇討ちする）。
             // 前3 の木偶への一撃 50 を5回 → ドハの肩代わり（名目）は 20 ＋ ゴルムと押し付け合う中継の分（巨躯が飲んだ中継をドハがまた4割…）で 1回 29 → 累計 145 → 倒れると 72 が溢れる。
@@ -156,7 +156,7 @@ static partial class Doha335Diag
         // ---- GL: 返り先が殴らない駒なら、攻撃力の最も高い殴る味方へ（規定と GL で同じ一撃を入れ、規定でドハへ返った力が GL ではミサへ回ることを見る）
         {
             var got = new Dictionary<bool, (int Doha, int Misa, int Zan, int Misa2, long Redir, bool Strikers)>();
-            foreach (var (golmDef, gl) in new[] { (UnitCatalog.Golm, false), (UnitCatalog.GolmGL, true) })
+            foreach (var (golmDef, gl) in new[] { (UnitCatalog.GolmH344, false), (UnitCatalog.GolmGL, true) })
             {
                 var ctx = T323.Ctx(Formation.Build(front1: golmDef, front3: Z, center: UnitCatalog.DohaH335, back1: UnitCatalog.Tome, back3: UnitCatalog.Hisa), Formation.Build(front1: Dummy), out var p, out var e);   // 第336期: 第317〜335期の規定のドハ
                 var zan = T323.Seat(p, 1); var doha = T323.Seat(p, 2); var misa = T323.Seat(p, 3); var hisa = T323.Seat(p, 4);

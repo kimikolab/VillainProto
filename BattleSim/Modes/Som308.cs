@@ -70,7 +70,7 @@ static class Som308Diag
         ("感電 (シガ×カタ×ソム)", Row("感電 (シガ×カタ×ソム)")),
         ("雷の型 ドハ→ソム", FvSwap(Playtest("試遊・感電 雷の型"), UnitCatalog.DohaH316, UnitCatalog.SomH308)),
         ("感電 糸 ガルド→ソム", FvSwap(Playtest("試遊・感電 糸"), UnitCatalog.Gald, UnitCatalog.SomH308)),
-        ("勝ち台 ゴルム→ソム", FvSwap(WinSeat(), UnitCatalog.Golm, UnitCatalog.SomH308)),
+        ("勝ち台 ゴルム→ソム", FvSwap(WinSeat(), UnitCatalog.GolmH344, UnitCatalog.SomH308)),
         ("勝ち台 ツギ→ソム", FvSwap(WinSeat(), UnitCatalog.Tsugi, UnitCatalog.SomH308)),
     };
 
@@ -460,7 +460,7 @@ static class Som308Diag
 
         BattleContext Ctx(UnitDef somDef, out List<UnitState> p, out List<UnitState> e, Formation? pl = null, UnitDef? enemyCenter = null)
         {
-            var ctx = H304.Ctx(pl ?? Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Golm, center: somDef),
+            var ctx = H304.Ctx(pl ?? Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.GolmH344, center: somDef),
                                Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Dolga, center: enemyCenter ?? UnitCatalog.Dolga), out p, out e);
             foreach (var u in p.Concat(e)) { u.MaxHp = 1000; u.Hp = 1000; }
             return ctx;
