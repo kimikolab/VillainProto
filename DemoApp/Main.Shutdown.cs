@@ -9,6 +9,7 @@ public partial class Main
     {
         ++_playToken;
         _battleField.EndShockMarkPresentation();
+        _battleField.EndGolmPresentation();
         var tree = GetTree();
         foreach (var tween in tree.GetProcessedTweens()) tween.Kill();
         foreach (Node child in GetChildren()) child.QueueFree();

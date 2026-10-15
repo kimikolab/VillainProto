@@ -87,6 +87,13 @@ public partial class BattlePawn3D
             if (key == "tome_attack") height *= 1488f / 1371f;
             if (key == "kata_thunder") height *= 1.05f; // 掲げた手より頭身で合わせる。
         }
+        if (_golmRocketPose && _unitId == "golm")
+        {
+            key = "golm_rocket";
+            padding = UiKit.BattlePortraitBottomPaddingRatio(key);
+            // 右向き差分の頭〜足1179pxを待機絵の1232pxと揃える。
+            height *= 1.045f;
+        }
         if (HushShattered && _unitId == "husher")
         {
             key = _alive && _movementPortrait == "husher_shatter_burst"
@@ -98,7 +105,8 @@ public partial class BattlePawn3D
         _portraitGroundDistance = height * (0.5f - padding);
         _portraitBaseY = PortraitGroundY + _portraitGroundDistance;
         _sprite.Texture = portrait;
-        _sprite.FlipH = _movementFlip ?? (Team == BattleContext.EnemyTeam);
+        _sprite.FlipH = _golmRocketPose ? Team == BattleContext.EnemyTeam
+            : _movementFlip ?? (Team == BattleContext.EnemyTeam);
         AlignMisaPortrait(key);
         _sprite.PixelSize = height / Math.Max(1, portrait.GetHeight());
         _sprite.Position = new Vector3(_portraitOffsetX, _portraitBaseY, 0);

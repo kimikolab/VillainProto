@@ -233,6 +233,8 @@ uniform float fire_heat = 0.0;
 uniform float fire_damage = 0.0;
 uniform float powder_burn_heat = 0.0;
 uniform float powder_burn_char = 0.0;
+uniform float golm_gray = 0.0;
+uniform float golm_crumble = 0.0;
 void fragment() {
     vec4 c = texture(portrait_texture, UV);
     vec4 top_left = texture(portrait_texture, vec2(0.02, 0.02));
@@ -254,6 +256,12 @@ void fragment() {
         c.g = min(c.g, max(c.r, c.b));
     }
     float alpha = c.a * portrait_tint.a * mask;
+    // 右手の輪郭だけを抜き、飛んでいる手との二重表示を避ける。
+    // 抜け殻は上から小片に崩す。生身の損傷や血の表現にはしない。
+    vec2 cell = floor(UV * vec2(48.0,64.0));
+    float grain = fract(sin(dot(cell,vec2(12.9898,78.233)))*43758.5453);
+    float shell = UV.y * 0.60 + grain * 0.40;
+    alpha *= 1.0 - smoothstep(shell, shell + 0.035, golm_crumble * 1.05);
     if (alpha < 0.02) discard;
     ALBEDO = mix(c.rgb * portrait_tint.rgb, portrait_tint.rgb, aura_amount);
     ALBEDO = mix(ALBEDO, ALBEDO * vec3(0.58,0.20,0.78), numb_amount * 0.7);
@@ -274,6 +282,9 @@ void fragment() {
     ALBEDO = mix(ALBEDO,vec3(1.0,0.08,0.14),powder_zone*powder_burn_heat*0.65);
     ALBEDO *= 1.0-powder_zone*powder_burn_char*0.40;
     EMISSION += vec3(1.0,0.10,0.16)*powder_zone*powder_burn_heat*(0.45+powder_vein*1.1);
+    float gray = dot(ALBEDO,vec3(0.299,0.587,0.114));
+    ALBEDO = mix(ALBEDO,vec3(gray)*0.65+vec3(0.10),golm_gray);
+    EMISSION *= 1.0-golm_gray;
     ALPHA = alpha;
 }"
         };
@@ -465,7 +476,7 @@ void fragment() {
         SetThrustCharge(0);
         _thrustPosition = null;
         CancelCharge();
-        ShowLifeTransition(LifeTransition3D.Kind.Death);
+        if (!_golmConsumed) ShowLifeTransition(LifeTransition3D.Kind.Death);
         ClearAuras();
         _statusIcons.Clear();
         SetCurseStain(false);
@@ -483,11 +494,18 @@ void fragment() {
         _ring.Visible = false;
         _turnRing.Visible = false;
         Hud.SetForecast("");
-        Hud.Retire(fade: !QuietLastStand);
+        Hud.Retire(fade: !QuietLastStand && !_golmConsumed);
         // 保持者が倒れたらルールは消える。**札も一緒に消す**（第171期 §2-2）。
         _ruleTag.Visible = false;
         ShowAttackChange(0);
         ClearSpecialEffects();
+        if (_golmConsumed)
+        {
+            _motion?.Kill();
+            if (_golmDiscarded) ShowGolmDiscardedPose();
+            else { _sprite.Hide(); _shadow.Hide(); }
+            return;
+        }
         if (QuietLastStand)
         {
             _motion?.Kill();
@@ -517,6 +535,7 @@ void fragment() {
         ResetStaggerPose();
         _guardPosition = null;
         _alive = true;
+        ClearGolmPresentation();
         _misaFeathers?.SetActive(true);
         RefreshBattlePortrait();
         Visible = true;
@@ -659,6 +678,7 @@ void fragment() {
         ProcessAllyBumpPose();
         ProcessAllyBounce();
         ProcessSomDaunt(animationDelta);
+        ShowGolmDiscardedPose();
         _shadow.Scale = new Vector3(1.0f - breath * 0.10f + shadowSpread, 1, 1.0f - breath * 0.10f - shadowSpread * 0.35f);
         _ring.Rotation = new Vector3(0, _phase * 0.15f, 0);
     }

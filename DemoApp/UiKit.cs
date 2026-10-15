@@ -271,6 +271,7 @@ public static class UiKit
         "yomi_iai" => 0.03776f,
         "yomi_iai_extra" => 0.06459f,
         "golm" => 0.0871f,
+        "golm_rocket" => 149f / 1515f,
         "dolga" => 0.0699f,
         "sasa" => 0.0267f,
         "tome" => 0.02083f, // 右向き待機絵。1536px の下端に32px。

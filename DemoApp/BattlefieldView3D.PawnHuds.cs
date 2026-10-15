@@ -59,7 +59,7 @@ public partial class BattlefieldView3D
         PawnHud2D hud = pawn.Hud;
         if (!IsInstanceValid(hud)) return;
         Vector3 anchor = pawn.HudAnchor;
-        bool onScreen = pawn.IsVisibleInTree() && !_camera.IsPositionBehind(anchor);
+        bool onScreen = pawn.IsVisibleInTree() && !pawn.GolmUsesProxy && !pawn.GolmDiscarded && !_camera.IsPositionBehind(anchor);
         hud.Visible = onScreen;
         if (onScreen) hud.Position = _camera.UnprojectPosition(anchor).Round() + hud.Nudge.Round();
     }

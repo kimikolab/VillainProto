@@ -1153,6 +1153,7 @@ public partial class Main : Control
         IndexBeniMio(_result.Events);
         IndexThunder(_result.Events);
         _misa = MisaPresentation.Build(_result.Events);
+        _golm = GolmPresentation.Build(_result.Events);
         _markRally = MarkRallyPresentation.Build(_result.Events);
         _markLoop = MarkLoopPresentation.Build(_result.Events);
         _dohaShares = DohaSharePresentation.Build(_result.Events);
@@ -1225,6 +1226,7 @@ public partial class Main : Control
         IndexFireHits(_result.Events);
         _fireFastEvent = false;
         _misaFastEvent = false;
+        _golmFastEvent = false;
         _zanFastEvent = false;
         _dohaFastEvent = false;
         int token = ++_playToken;
@@ -1269,12 +1271,16 @@ public partial class Main : Control
             await FinishZan(eventIndex);
             if (token != _playToken || !_battleMode) return;
             await FinishMarkLoop(eventIndex);
+            if (token != _playToken || !_battleMode) return;
+            if (_golm.ReturnAfterDeath.TryGetValue(eventIndex, out int golmOwner))
+                await _battleField.ReturnGolmAfterDeath(golmOwner);
             if (_hisaCommand.CoverEnds.TryGetValue(eventIndex, out int coverId))
                 _battleField.FindPawn(coverId)?.ReturnFromHisaCover();
             if (token != _playToken || !_battleMode) return;
             _tickDelayBudget = null;
             _fireFastEvent = false;
             _misaFastEvent = false;
+            _golmFastEvent = false;
             _zanFastEvent = false;
             foreach (var combo in _comboEnds.Where(pair => _eventIndex >= pair.Value).ToArray())
             {
@@ -1289,6 +1295,7 @@ public partial class Main : Control
 
         if (token != _playToken || !_battleMode) return;
         _playing = false;
+        _battleField.EndGolmPresentation();
         string verdict = _result.PlayerWon ? "VICTORY" : "DEFEAT";
         _battleField.ResetBindings();
         _battleField.EndShockMarkPresentation();
@@ -1392,6 +1399,7 @@ public partial class Main : Control
             : _ticks.Budgets.TryGetValue(eventIndex, out double tickBudget) ? tickBudget : null;
         _fireFastEvent = _firePresentation.FastEvents.Contains(eventIndex);
         _misaFastEvent = _misa.FastEvents.Contains(eventIndex);
+        _golmFastEvent = _golm.FastEvents.Contains(eventIndex);
         _zanFastEvent = _zan.FastEvents.Contains(eventIndex);
         int hushToken = _playToken;
         if (await PlaySom(e, eventIndex, actor, target) || hushToken != _playToken || !_battleMode) return;
@@ -1411,6 +1419,7 @@ public partial class Main : Control
         if (await PlayMarkRally(e, eventIndex, actor, target)) return;
         if (await PlayShockMark(e, eventIndex, actor, target)) return;
         if (await PlayMisa(e, eventIndex, actor, target)) return;
+        if (await PlayGolm(e, actor, target) || hushToken != _playToken || !_battleMode) return;
         if (await PlayFire(e, eventIndex, actor, target)) return;
         if (await PlayMovement(e, eventIndex, actor, target)) return;
         if (await PlayThunder(e, eventIndex, actor, target)) return;
@@ -1498,18 +1507,22 @@ public partial class Main : Control
                 bool continuingCombo = actor is not null && _comboEnds.ContainsKey(actor);
                 _movement.Attacks.TryGetValue(eventIndex, out var movementCue);
                 bool misaAttack = _misa.Attacks.Contains(eventIndex) || _markLoop.FeatherAttacks.Contains(eventIndex);
-                bool flowingAttack = misaAttack || actor?.UnitId == "shiga" || movementCue is not null || actor?.UnitId == "sero"
+                bool golmAttack = _golm.Attacks.ContainsKey(eventIndex);
+                bool flowingAttack = golmAttack || misaAttack || actor?.UnitId == "shiga" || movementCue is not null || actor?.UnitId == "sero"
                     || actor?.UnitId == "basa" && e.Pattern == AttackPattern.Sweep;
                 if (e.Reaction && !continuingCombo && !flowingAttack)
                     await _battleField.ShowBonusAttack(actor);
                 // 責め苦も位置保持だけを共用する。Attackの回数・連撃の計数は増やさない。
-                int? holdEnd = misaAttack ? null : FindComboEnd(eventIndex, e)
+                int? holdEnd = misaAttack || golmAttack ? null : FindComboEnd(eventIndex, e)
                     ?? (actor?.UnitId == "shiga" && _result is not null ? FindTormentEnd(_result.Events, eventIndex) : null);
                 if (!continuingCombo && actor is not null && holdEnd is { } comboEnd)
                 {
                     _comboEnds[actor] = comboEnd;
                 }
-                if (misaAttack)
+                if (golmAttack)
+                    await _battleField.PlayGolmImpact(actor, target, e, _golm.Attacks[eventIndex] == GolmArmLabels.Stomp,
+                        captureFollows: _golm.CapturingAttacks.Contains(eventIndex));
+                else if (misaAttack)
                 {
                     // 射出は直前のFeatherで再生済み。通常斬撃を重ねず、接触通知だけ渡す。
                     foreach (var hit in impactTargets) FireHitContact(eventIndex, hit);
@@ -2505,7 +2518,7 @@ public partial class Main : Control
     {
         if (!raw && _dustChainFastEvent) return;
         if (!raw && _dohaFastEvent) seconds = Math.Min(seconds, 0.04);
-        if (!raw && (_fireFastEvent || _misaFastEvent || _zanFastEvent)) return;
+        if (!raw && (_fireFastEvent || _misaFastEvent || _zanFastEvent || _golmFastEvent)) return;
         if (!raw && _tickDelayBudget is double budget)
         {
             seconds = Math.Min(seconds, budget);
@@ -2528,6 +2541,7 @@ public partial class Main : Control
         _battleField.SetSomClock(_paused, _speed);
         _battleField.SetWhipClock(_paused, _speed);
         _battleField.SetTouPowderClock(_paused, _speed);
+        _battleField.SetGolmClock(_paused, _speed);
         _pause.Text = _paused ? "再開" : "一時停止";
         Notice(_paused ? "一時停止中" : "再生中", _paused ? UiKit.Gold : UiKit.Player);
     }
@@ -2538,6 +2552,7 @@ public partial class Main : Control
         _battleField.SetSomClock(_paused, _speed);
         _battleField.SetWhipClock(_paused, _speed);
         _battleField.SetTouPowderClock(_paused, _speed);
+        _battleField.SetGolmClock(_paused, _speed);
         _speedPicker.Selected = index;
         Notice($"再生速度 ×{_speed:0.#}", UiKit.Player);
     }

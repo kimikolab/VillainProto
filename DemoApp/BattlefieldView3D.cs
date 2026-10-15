@@ -90,7 +90,7 @@ public partial class BattlefieldView3D : Control
         BuildOverlay();
         _attackAudio = new BattleAttackAudio();
         AddChild(_attackAudio);
-        VisibilityChanged += () => { if (!IsVisibleInTree()) { _attackAudio.StopAll(); ResetLiliRite(); ResetFire(); EndShockMarkPresentation(); } };
+        VisibilityChanged += () => { if (!IsVisibleInTree()) { _attackAudio.StopAll(); ResetLiliRite(); ResetFire(); EndShockMarkPresentation(); EndGolmPresentation(); } };
     }
 
     private void BuildWorld()
@@ -289,6 +289,7 @@ public partial class BattlefieldView3D : Control
 
     public void BeginBattle(IReadOnlyList<DemoOpening> openings, string stageName, int stageIndex)
     {
+        ResetGolmPresentation();
         ResetFire();
         ResetMovement();
         MisaShots = MisaSprays = MisaFlows = 0;
@@ -566,6 +567,7 @@ public partial class BattlefieldView3D : Control
     public void PlayDeath(BattlePawn3D? pawn, bool finish = false)
     {
         if (pawn is null) return;
+        if (_golmEffects.Remove(pawn.InstanceId, out var golm)) golm.Cancel();
         SealPawnDied(pawn);
         pawn.SetHp(0);
         _attackAudio.PlayDeath(pawn.Team, finish);
