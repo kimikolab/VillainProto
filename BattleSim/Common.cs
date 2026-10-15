@@ -305,7 +305,7 @@ public static Formation Pin311(Formation f)
 /// <summary>第312期: 規定のカタ ／ トウ（萎縮の規則つき）を第311期までの規定（`KataH311` ／ `TouH311`）に替える。ほかの駒はそのまま返す。`Pin308`〜`Pin311` が使う。
 /// 第317期: ドハ ／ シガも第316期までの規定（`DohaH316` ／ `ShigaSWa`）に替える（`PinDS316`・第311期までの規定は第316期までの規定でもある）。</summary>
 public static UnitDef PinKataTou311(UnitDef d) =>
-    ReferenceEquals(d, UnitCatalog.Kata) || ReferenceEquals(d, UnitCatalog.KataH324) || ReferenceEquals(d, UnitCatalog.KataH331) ? UnitCatalog.KataH311 : ReferenceEquals(d, UnitCatalog.Tou) || ReferenceEquals(d, UnitCatalog.TouH324) ? UnitCatalog.TouH311 : PinDS316(d);   // 第325期: `Pin316` などが先に第324期までの規定（`KataH324` ／ `TouH324`）へ替えた駒も
+    IsKataNow(d) || ReferenceEquals(d, UnitCatalog.KataH324) || ReferenceEquals(d, UnitCatalog.KataH331) ? UnitCatalog.KataH311 : ReferenceEquals(d, UnitCatalog.Tou) || ReferenceEquals(d, UnitCatalog.TouH324) ? UnitCatalog.TouH311 : PinDS316(d);   // 第325期: `Pin316` などが先に第324期までの規定（`KataH324` ／ `TouH324`）へ替えた駒も
 
 /// <summary>第317期: 規定のドハ（DP-s）／ シガ（SF-AC）を第316期までの規定（`DohaH316` ／ `ShigaSWa`）に替える。ほかの駒はそのまま返す。
 /// 第318期: ソムも第317期までの規定（`SomH317`）に替える（`PinS317`・第316期までの規定のソムは第317期の規定と同じ物）。</summary>
@@ -339,7 +339,7 @@ public static UnitDef PinSH321(UnitDef d) => ReferenceEquals(d, UnitCatalog.Shig
 /// </summary>
 public static UnitDef PinTKK324(UnitDef d) =>
     ReferenceEquals(d, UnitCatalog.Tou) || ReferenceEquals(d, UnitCatalog.TouH326) || ReferenceEquals(d, UnitCatalog.TouH327) || ReferenceEquals(d, UnitCatalog.TouH328) || ReferenceEquals(d, UnitCatalog.TouH331) ? UnitCatalog.TouH324   // 第327期: 第325〜326期の規定（`TouH326`・`PinT326` が先に替えた駒）も・第328期: 第327期の規定（`TouH327`）も・第330期: 第328〜329期の規定（`TouH328`）も
-    : ReferenceEquals(d, UnitCatalog.Kata) || ReferenceEquals(d, UnitCatalog.KataH331) ? UnitCatalog.KataH324 : ReferenceEquals(d, UnitCatalog.Kugu) || ReferenceEquals(d, UnitCatalog.KuguH327) ? UnitCatalog.KuguH324
+    : IsKataNow(d) || ReferenceEquals(d, UnitCatalog.KataH331) ? UnitCatalog.KataH324 : ReferenceEquals(d, UnitCatalog.Kugu) || ReferenceEquals(d, UnitCatalog.KuguH327) ? UnitCatalog.KuguH324
     : ReferenceEquals(d, UnitCatalog.Som) ? UnitCatalog.SomH332 : PinM333(d);   // 第333期: 規定のソム（LV-c）は第320〜332期の規定（`SomH332`）へ（古い口の終端・第320〜332期はソムが変わっていない）   // 第328期: 第325〜327期の規定のクグ（`KuguH327`）も   // 第334期: 規定のミサ（爪痕なし）は第299〜333期の規定（`TomeH333`）へ
 
 /// <summary>第325期: トウ ／ カタ ／ クグ ＝ E3 を規定にした。第324期の規定の駒で測った器具（`tou323` ／ `tou324` ／ `shiga322`）はこれを通す。陣形とレリックは保つ。
@@ -373,7 +373,7 @@ public static Formation Pin325(Formation f)
 /// </summary>
 public static UnitDef PinT326(UnitDef d) =>
     ReferenceEquals(d, UnitCatalog.Tou) || ReferenceEquals(d, UnitCatalog.TouH327) || ReferenceEquals(d, UnitCatalog.TouH328) || ReferenceEquals(d, UnitCatalog.TouH331) ? UnitCatalog.TouH326 : ReferenceEquals(d, UnitCatalog.Kugu) ? UnitCatalog.KuguH327
-    : ReferenceEquals(d, UnitCatalog.Kata) ? UnitCatalog.KataH331 : ReferenceEquals(d, UnitCatalog.Som) ? UnitCatalog.SomH332 : PinM333(d);   // 第330期: `TouH328` も・第332期: `TouH331` も・規定のカタ（ST-c）は第325〜331期の規定（`KataH331`）へ・第333期: 規定のソム（LV-c）は `SomH332` へ・第334期: 規定のミサは `TomeH333` へ
+    : IsKataNow(d) ? UnitCatalog.KataH331 : ReferenceEquals(d, UnitCatalog.Som) ? UnitCatalog.SomH332 : PinM333(d);   // 第330期: `TouH328` も・第332期: `TouH331` も・規定のカタ（ST-c）は第325〜331期の規定（`KataH331`）へ・第333期: 規定のソム（LV-c）は `SomH332` へ・第334期: 規定のミサは `TomeH333` へ
 
 /// <summary>
 /// 第328期: 規定のトウ（DX）／ クグ（電池）を第327期の規定（`TouH327` ／ `KuguH327`）に替える。ほかの駒はそのまま返す。
@@ -381,7 +381,7 @@ public static UnitDef PinT326(UnitDef d) =>
 /// </summary>
 public static UnitDef PinTK327(UnitDef d) =>
     ReferenceEquals(d, UnitCatalog.Tou) || ReferenceEquals(d, UnitCatalog.TouH328) || ReferenceEquals(d, UnitCatalog.TouH331) ? UnitCatalog.TouH327 : ReferenceEquals(d, UnitCatalog.Kugu) ? UnitCatalog.KuguH327
-    : ReferenceEquals(d, UnitCatalog.Kata) ? UnitCatalog.KataH331 : ReferenceEquals(d, UnitCatalog.Som) ? UnitCatalog.SomH332 : PinM333(d);   // 第330期: 第328〜329期の規定（`TouH328`）も・第332期: `TouH331` も・規定のカタは `KataH331` へ・第333期: 規定のソムは `SomH332` へ・第334期: 規定のミサは `TomeH333` へ
+    : IsKataNow(d) ? UnitCatalog.KataH331 : ReferenceEquals(d, UnitCatalog.Som) ? UnitCatalog.SomH332 : PinM333(d);   // 第330期: 第328〜329期の規定（`TouH328`）も・第332期: `TouH331` も・規定のカタは `KataH331` へ・第333期: 規定のソムは `SomH332` へ・第334期: 規定のミサは `TomeH333` へ
 
 /// <summary>第328期: トウ ／ クグの DX ＋ 電池を規定にした。第327期の規定の駒で測った器具（`dust327`）はこれを通す。陣形とレリックは保つ。</summary>
 public static Formation Pin327(Formation f)
@@ -402,7 +402,7 @@ public static (string Name, Formation F)[] PlaytestH327 => Presets.Playtest.Sele
 /// それより前の固定の口（`PinTK327` ／ `PinT326` ／ `PinTKK324`）は `TouH328` も受ける。
 /// </summary>
 public static UnitDef PinT328(UnitDef d) => ReferenceEquals(d, UnitCatalog.Tou) || ReferenceEquals(d, UnitCatalog.TouH331) ? UnitCatalog.TouH328
-    : ReferenceEquals(d, UnitCatalog.Kata) ? UnitCatalog.KataH331 : ReferenceEquals(d, UnitCatalog.Som) ? UnitCatalog.SomH332 : PinM333(d);   // 第332期: `TouH331` も・規定のカタは `KataH331` へ・第333期: 規定のソムは `SomH332` へ・第334期: 規定のミサは `TomeH333` へ
+    : IsKataNow(d) ? UnitCatalog.KataH331 : ReferenceEquals(d, UnitCatalog.Som) ? UnitCatalog.SomH332 : PinM333(d);   // 第332期: `TouH331` も・規定のカタは `KataH331` へ・第333期: 規定のソムは `SomH332` へ・第334期: 規定のミサは `TomeH333` へ
 
 /// <summary>第330期: トウの PB-a ＋ b を規定にした。第328〜329期の規定の駒で測った器具（`settle328` の「新」・`fuse329` の「規定」）はこれを通す。陣形とレリックは保つ。</summary>
 public static Formation Pin328(Formation f)
@@ -422,7 +422,7 @@ public static (string Name, Formation F)[] PlaytestH328 => Presets.Playtest.Sele
 /// 第332期: 規定のトウ ／ カタ（ST-c）を第330〜331期の規定（`TouH331` ／ `KataH331`）に替える。ほかの駒はそのまま返す。
 /// それより前の固定の口（`PinT328` ／ `PinTK327` ／ `PinT326` ／ `PinTKK324` ／ `PinKataTou311`）は `TouH331` ／ `KataH331` も受ける。
 /// </summary>
-public static UnitDef PinTK331(UnitDef d) => ReferenceEquals(d, UnitCatalog.Tou) ? UnitCatalog.TouH331 : ReferenceEquals(d, UnitCatalog.Kata) ? UnitCatalog.KataH331 : ReferenceEquals(d, UnitCatalog.Som) ? UnitCatalog.SomH332 : PinM333(d);   // 第333期: 規定のソムも・第334期: 規定のミサも
+public static UnitDef PinTK331(UnitDef d) => ReferenceEquals(d, UnitCatalog.Tou) ? UnitCatalog.TouH331 : IsKataNow(d) ? UnitCatalog.KataH331 : ReferenceEquals(d, UnitCatalog.Som) ? UnitCatalog.SomH332 : PinM333(d);   // 第333期: 規定のソムも・第334期: 規定のミサも
 
 /// <summary>第332期: トウ ／ カタの ST-c を規定にした。第330〜331期の規定の駒で測った器具（`settle330`・`stun331` の「規定」）はこれを通す。陣形とレリックは保つ。</summary>
 public static Formation Pin331(Formation f)
@@ -508,7 +508,7 @@ public static (string Name, Formation F)[] PlaytestH337 => Presets.Playtest.Sele
 /// 古い口の終端（`PinM333` → `PinZ334` → `PinD335` → `PinH337` → ここ）なので、`PinM333` を最後に通す口すべてもここを通る（`PinM333` は先に規定のミサを `TomeH333` へ替えるので、第333期までの口には届かない）。
 /// ミサをもっと古い規定へ替える口（`Pin299` ／ `guard294` ／ `kugu292` ／ `markheal295`）は `IsMisaNow` で `TomeH339` も受ける。
 /// </summary>
-public static UnitDef PinM339(UnitDef d) => ReferenceEquals(d, UnitCatalog.Tome) ? UnitCatalog.TomeH339 : d;
+public static UnitDef PinM339(UnitDef d) => ReferenceEquals(d, UnitCatalog.Tome) ? UnitCatalog.TomeH339 : PinK342(d);   // 第343期: 規定のカタも（古い口の終端）
 
 /// <summary>第340期: ミサの FG-b を規定にした。第334〜339期の規定のミサで測った器具（`grow339` の「規定」）はこれを通す。陣形とレリックは保つ。</summary>
 public static Formation Pin339(Formation f)
@@ -523,6 +523,29 @@ public static (string Name, Formation F)[] CompareBuildsH339() => CompareBuilds(
 
 /// <summary>第340期: `Presets.Playtest` のミサを第334〜339期の規定に替えた写し（行の数と並びはそのまま）。</summary>
 public static (string Name, Formation F)[] PlaytestH339 => Presets.Playtest.Select(r => (r.Name, Pin339(r.F))).ToArray();
+
+/// <summary>
+/// 第343期: 規定のカタ（K3・KT-b ＋ 避雷針・跳ねる）を第332〜342期の規定（`KataH342`）に替える。ほかの駒はそのまま返す。
+/// 古い口の終端（`PinM333` → … → `PinM339` → ここ）。カタをもっと古い規定へ替える口（`PinKataTou311` ／ `PinTKK324` ／ `PinT326` ／ `PinTK327` ／ `PinT328` ／ `PinTK331`）は `IsKataNow` で `KataH342` も受ける。
+/// </summary>
+public static UnitDef PinK342(UnitDef d) => ReferenceEquals(d, UnitCatalog.Kata) ? UnitCatalog.KataH342 : d;
+
+/// <summary>第343期: 規定のカタか、第332〜342期の規定（`KataH342`・`PinK342` を通った後）か。</summary>
+public static bool IsKataNow(UnitDef d) => ReferenceEquals(d, UnitCatalog.Kata) || ReferenceEquals(d, UnitCatalog.KataH342);
+
+/// <summary>第343期: カタの K3 を規定にした。第332〜342期の規定のカタで測った器具（`kata342` の「規定」）はこれを通す。陣形とレリックは保つ。</summary>
+public static Formation Pin342(Formation f)
+{
+    var g = f.Clone();
+    foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinK342(d);
+    return g;
+}
+
+/// <summary>第343期: `CompareBuilds()` のカタを第332〜342期の規定に替えた写し。</summary>
+public static (string Name, Formation F)[] CompareBuildsH342() => CompareBuilds().Select(r => (r.Name, Pin342(r.F))).ToArray();
+
+/// <summary>第343期: `Presets.Playtest` のカタを第332〜342期の規定に替えた写し（行の数と並びはそのまま）。</summary>
+public static (string Name, Formation F)[] PlaytestH342 => Presets.Playtest.Select(r => (r.Name, Pin342(r.F))).ToArray();
 
 /// <summary>第336期: 規定のドハか、第317〜335期の規定（`DohaH335`・`PinD335` を通った後）か。</summary>
 public static bool IsDohaNow(UnitDef d) => ReferenceEquals(d, UnitCatalog.Doha) || ReferenceEquals(d, UnitCatalog.DohaH335);

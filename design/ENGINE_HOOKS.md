@@ -1413,3 +1413,9 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - `AfterChain` の雷雲を `GrowCloud` に切り出した。札 `ThundercloudAllyPops`（KT-b）の保持者は、自分の陣営の連鎖（カタ自身の弾けを含む）でも雷雲が育つ。計数のみ `UnitTally.Kt342AllyPops`（規定でも数える）。
 - `ShockTrigger` の列の中で、札 `KataRod` を持つ生きているカタが弾けたら（`_ktRodLive` で短絡）、痺れの判定（`StunByShock`・萎縮も）を飛ばし、隣の味方 ／ 糸 ／ 糸玉への放電の代わりに `RodBolt`（逆雷）: 的は連鎖を起こした一撃の主が生きている敵ならその敵、そうでなければ手番の雷と同じ選び方の最初の的、それもいなければ候補の席番号の若い駒（乱数を引かない）。量 ＝ 攻 ×（1 ＋ 種類 ＋ 雷雲）・雷雲は消費しない・`StrikeThunder` を通る（感電を弾けさせない・当てた敵に感電）。`_ktRodBolt` の間は返す（`PowderReturn`）をしない。`KataRodChain` は手番の雷と同じく帯びた隣の敵へ跳ねる。表示は既存の `Thunder` に `SourceTrait = KataRod`。**第317期の避雷針（`LightningRod`・投げを引き寄せる・`_rodLive`）とは別の札。**
 - 計数のみ `Kt342StunCause`（カタが感電で痺れたきっかけ）／ `Kt342RodFires` ／ `Kt342RodOnAttacker` ／ `Kt342RodHits` ／ `Kt342RodDealt` ／ `Kt342RodNoTarget`。版 `KataKTb` ／ `KataKTr1` ／ `KataKTrJ`。器具: `kata342`。
+
+## 第343期 —— 段0: カタの K3 を規定に ／ 本体: ゴルムの手番「精気を呑む」（GT・版）
+
+- 段0: engine は第342期のまま。規定のカタ `UnitCatalog.Kata` ＝ `KataH342`（第332〜342期の規定・明示の定義に）＋ `ThundercloudAllyPops` ＋ `KataRod` ＋ `KataRodChain`。固定の口 `Common.PinK342` ／ `Pin342` ／ `CompareBuildsH342` ／ `PlaytestH342`（古い口の終端 `PinM339` の最後に `PinK342`）・`IsKataNow`（`PinKataTou311` ／ `PinTKK324` ／ `PinT326` ／ `PinTK327` ／ `PinT328` ／ `PinTK331`）。
+- 本体: `GolmTurn343`（札 `GolmSwallowSpit` ／ `GolmSwallowHeal` ／ `GolmSwallowGrow` の `OnAction` だけが呼ぶ・手番は `[Skill]`）。HP が腹（`ColossusTrait.BellyKey`・巨躯で飲み込んだ量の残高——まどろみの規則は既定で切れているので累計と同じ）以下の生きている敵のうち、帯びた量（毒の層 ＋ 燃焼の残ターン ＋ 感電 1 ＋ 濃さ ＋ 標の層）→ HP → 席の順で1体を選ぶ。**呑むは攻撃ではない**——毒 ／ 燃焼 ／ 感電 ／ 標 ／ 印 ／ 濃さを消してから `HandleDeath`（撃破者 ＝ ゴルム）を直に呼ぶので、`Damage` も出ず、引き継ぎ ／ 飛び火（標の散る・澱み・疫み・延焼・感電の弾け）も起きない。腹は呑んでも減らない。呑めなければ GT-a2 は在庫（私有キー `gtPoison` ほか）があれば吐き（`GolmSpit343`）、なければ `PerformAttack`。吐きは HP の最も多い敵へ直に足す（標は `LayerMark` を通さない・感電は `MarkShock`）。乱数を引かない。
+- 表示専用の出来事 `BattleEventKind.Swallow`（`SwallowLabels` 呑む ／ 吐く ／ 癒す ／ 膨れる）。計数のみ `UnitTally.Gt343*`（手番の頭の腹と呑める敵の数は規定でも数える・`_gtCensusLive`）。版 `GolmGTa2` ／ `GolmGTa1` ／ `GolmGTa3`。器具: `golm343`。

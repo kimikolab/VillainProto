@@ -3512,9 +3512,11 @@ public static class UnitCatalog
     };
 
     /// <summary>
-    /// 禍導のカタ（規定）。<b>第332期に第331期の ST-c を規定にした</b>——第325〜331期の規定（<see cref="KataH331"/>）＋ <see cref="TraitId.ShockStunOnce"/>。札と文面は第331期の <see cref="KataSTc"/> と同じ。
+    /// 禍導のカタ（第332〜342期の規定）。<b>第332期に第331期の ST-c を規定にした</b>——第325〜331期の規定（<see cref="KataH331"/>）＋ <see cref="TraitId.ShockStunOnce"/>。札と文面は第331期の <see cref="KataSTc"/> と同じ。
+    /// <b>第343期に K3（KT-b ＋ 避雷針・跳ねる）を規定にしたので、第332〜342期の規定はこの <see cref="KataH342"/> として明示的に持つ。</b>
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。第332〜342期の規定のカタで測った過去の器具はこちらに固定する（`Common.PinK342` ほか）。第342期の版（KT-b ／ 避雷針1発 ／ 跳ね）はこちらから作る。
     /// </summary>
-    public static readonly UnitDef Kata = new()
+    public static readonly UnitDef KataH342 = new()
     {
         Id = KataH331.Id,
         Name = KataH331.Name,
@@ -3529,6 +3531,32 @@ public static class UnitCatalog
         MinusText = KataH331.MinusText,
         Flavor = KataH331.Flavor
     };
+
+    /// <summary>
+    /// 禍導のカタ（規定）。<b>第343期に第342期の K3（KT-b ＋ 避雷針・跳ねる）を規定にした</b>（ポンの判断・design/PHASE343_KATA_SETTLE_GOLM_SWALLOW_SPEC.md §2）——
+    /// 第332〜342期の規定（<see cref="KataH342"/>）＋ <see cref="TraitId.ThundercloudAllyPops"/> ＋ <see cref="TraitId.KataRod"/> ＋ <see cref="TraitId.KataRodChain"/>。札は第342期の <c>KataKTrJ</c> と同じ（文面は跳ねることを足した）。
+    /// </summary>
+    public static readonly UnitDef Kata = new()
+    {
+        Id = KataH342.Id,
+        Name = KataH342.Name,
+        MaxHp = KataH342.MaxHp,
+        Attack = KataH342.Attack,
+        Speed = KataH342.Speed,
+        Advances = KataH342.Advances,
+        Pattern = KataH342.Pattern,
+        // 第343期: ポンの判断（第342期の案 K3）で KT-b ＋ 避雷針（跳ねる）を規定にした。旧の規定は `KataH342`（指示書 design/PHASE343_KATA_SETTLE_GOLM_SWALLOW_SPEC.md §2）。
+        Traits = KataH342.Traits.Concat(new[] { TraitId.ThundercloudAllyPops, TraitId.KataRod, TraitId.KataRodChain }).ToArray(),
+        Actions = KataH342.Actions,
+        PlusText = KataH342.PlusText + KataAllyCloudClause342 + KataRodChainClause343,
+        MinusText = KataH342.MinusText.Contains("その味方が半々の確率で痺れる", StringComparison.Ordinal)
+            ? KataH342.MinusText.Replace("その味方が半々の確率で痺れる", "その味方（自分を除く）が半々の確率で痺れる", StringComparison.Ordinal)
+            : throw new InvalidOperationException("第343期: カタのマイナスに痺れの句が見つからない"),
+        Flavor = KataH342.Flavor
+    };
+
+    /// <summary>第343期の規定（K3）の避雷針の句（第342期の叩き台に跳ねることを足した）。</summary>
+    public const string KataRodChainClause343 = "。感電した身で殴られると、雷は避雷針を伝って敵に落ち、帯びた隣の敵へ跳ねる（自分は痺れない）";
 
     // 第311期 —— 萎縮の規則の版（§3-3）。痺れの規則の札（`ShockStunHalf`）を持つ駒に規則の札 <see cref="TraitId.ShockDaunt"/> を足すだけ。`All` にも `Retired` にも入れない。
 
@@ -5587,14 +5615,38 @@ public static class UnitCatalog
         Flavor = b.Flavor,
     };
 
-    /// <summary>第342期 KT-b。規定のカタ ＋ <see cref="TraitId.ThundercloudAllyPops"/>（敵味方を問わず、感電が1体弾けるたび雷雲 +1・カタ自身を含む）。</summary>
-    public static readonly UnitDef KataKTb = With342(Kata, new[] { TraitId.ThundercloudAllyPops }, KataAllyCloudClause342, rod: false);
+    /// <summary>第342期 KT-b（第343期: 旧の規定 <see cref="KataH342"/> から作り直した・中身は第342期のまま）。規定のカタ ＋ <see cref="TraitId.ThundercloudAllyPops"/>（敵味方を問わず、感電が1体弾けるたび雷雲 +1・カタ自身を含む）。</summary>
+    public static readonly UnitDef KataKTb = With342(KataH342, new[] { TraitId.ThundercloudAllyPops }, KataAllyCloudClause342, rod: false);
 
     /// <summary>第342期 KT-b ＋ 避雷針（1発）。<see cref="KataKTb"/> ＋ <see cref="TraitId.KataRod"/>（カタの感電が弾けたら隣の味方へ放電せず、敵へ逆雷1発・雷雲は消費しない・カタは痺れない ／ 萎縮しない）。</summary>
-    public static readonly UnitDef KataKTr1 = With342(Kata, new[] { TraitId.ThundercloudAllyPops, TraitId.KataRod }, KataAllyCloudClause342 + KataRodClause342, rod: true);
+    public static readonly UnitDef KataKTr1 = With342(KataH342, new[] { TraitId.ThundercloudAllyPops, TraitId.KataRod }, KataAllyCloudClause342 + KataRodClause342, rod: true);
+
+    // ---------------------------------------------------------------------------------
+    // 第343期（指示書 design/PHASE343_KATA_SETTLE_GOLM_SWALLOW_SPEC.md §3）—— ゴルムの手番「精気を呑む」（GT）。規定のゴルムに札を1枚足し、手番を `[Skill]` にする。
+    // 対照（`All` ／ `Retired` ／ `Presets` の `Compare` ／ `Playtest` に入れない・`Presets.Versions` の「版・」の台だけが使う・採否はポン）。文面は叩き台。
+    // ---------------------------------------------------------------------------------
+    /// <summary>第343期 GT の手番の句（叩き台）。</summary>
+    public const string GolmSwallowClause343 = "。手番で、腹に収まるほど弱った敵の精気を呑み干す";
+    static readonly UnitAction[] GolmSwallowActions = { new(ActionKind.Skill, Label: "弱った敵の匂いを嗅いだ") };
+
+    static UnitDef With343(UnitDef b, TraitId card, string tail, string? flavor = null) => new()
+    {
+        Id = b.Id, Name = b.Name, MaxHp = b.MaxHp, Attack = b.Attack, Speed = b.Speed, Advances = b.Advances, Pattern = b.Pattern,
+        Traits = b.Traits.Append(card).ToArray(), Actions = GolmSwallowActions,
+        PlusText = b.PlusText + GolmSwallowClause343 + tail, MinusText = b.MinusText, Flavor = flavor ?? b.Flavor,
+    };
+
+    /// <summary>第343期 GT-a2（吐き捨てる・推し）。規定のゴルム ＋ <see cref="TraitId.GolmSwallowSpit"/>（呑んだ状態異常を HP の最も多い敵にまとめて吐きかける）。</summary>
+    public static readonly UnitDef GolmGTa2 = With343(Golm, TraitId.GolmSwallowSpit, "。呑み込めない毒や雷は、いちばん大きな敵に吐き捨てる", "呑んだ精気は糧になる。呑み込めない毒と雷は、吐き捨てる。");
+
+    /// <summary>第343期 GT-a1（消化）。規定のゴルム ＋ <see cref="TraitId.GolmSwallowHeal"/>（呑んだ敵の残りの HP を生きている味方全員に等分して癒す）。</summary>
+    public static readonly UnitDef GolmGTa1 = With343(Golm, TraitId.GolmSwallowHeal, "。呑んだ精気で仲間を癒す");
+
+    /// <summary>第343期 GT-a3（膨れる）。規定のゴルム ＋ <see cref="TraitId.GolmSwallowGrow"/>（呑んだ敵の残りの HP だけ最大 HP と HP が増える）。</summary>
+    public static readonly UnitDef GolmGTa3 = With343(Golm, TraitId.GolmSwallowGrow, "。呑むほど膨れ上がる");
 
     /// <summary>第342期 KT-b ＋ 避雷針（跳ねる）。<see cref="KataKTr1"/> ＋ <see cref="TraitId.KataRodChain"/>（逆雷が手番の雷と同じく帯びた隣の敵へ跳ねる）。</summary>
-    public static readonly UnitDef KataKTrJ = With342(Kata, new[] { TraitId.ThundercloudAllyPops, TraitId.KataRod, TraitId.KataRodChain }, KataAllyCloudClause342 + KataRodClause342, rod: true);
+    public static readonly UnitDef KataKTrJ = With342(KataH342, new[] { TraitId.ThundercloudAllyPops, TraitId.KataRod, TraitId.KataRodChain }, KataAllyCloudClause342 + KataRodClause342, rod: true);
 
     /// <summary>第285期 M-b（乱射した数だけ羽を失う・下限 1）。<see cref="TomeMa"/> ＋ <see cref="TraitId.FeatherLoss"/> の1札だけが違う。<b>第286〜298期の規定</b>。
     /// 第299期に MF-b を規定にしたので、旧の規定の定義を明示的に持つ（第298期までは <c>TomeMb = Tome</c> の別名だった）。過去の器具はこちらに固定する。

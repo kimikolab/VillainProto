@@ -2349,6 +2349,14 @@ public sealed class UnitTally
     /// </summary>
     public long[]? Kt342StunCause;
     public long Kt342AllyPops, Kt342RodFires, Kt342RodOnAttacker, Kt342RodHits, Kt342RodDealt, Kt342RodNoTarget;
+    /// <summary>
+    /// 第343期（<b>計数のみ</b>・ゴルム）。誰も読んで分岐しない。規定でも数える: <c>Gt343Turns</c> 手番の頭（動けた手番）／ <c>Gt343BellySum</c> ／ <c>Gt343BellyMax</c> そのときの腹 ／ <c>Gt343Edible</c> そのとき HP が腹以下の敵の数の和。
+    /// 版: <c>Gt343Swallows</c> 呑んだ ／ <c>Gt343SwallowHp</c> 呑んだ敵の残りの HP ／ <c>Gt343SwPoison</c> ／ <c>Gt343SwBurn</c> ／ <c>Gt343SwShock</c> ／ <c>Gt343SwDensity</c> ／ <c>Gt343SwMark</c> ／ <c>Gt343SwConc</c> 呑んだ状態異常 ／
+    /// <c>Gt343SwMarkedNbr</c> 標の付いた敵を隣のいるまま呑んだ（引き継ぎが起きたはずの死）／ <c>Gt343Attacks</c> 呑めずに殴った ／ <c>Gt343Spits</c> 吐いた ／ <c>Gt343SpitPoison</c> ほか 吐いた量 ／ <c>Gt343SpitOnTop</c> 吐いた先の HP の和 ／
+    /// <c>Gt343Healed</c> 癒した量 ／ <c>Gt343Grown</c> 増えた最大 HP。
+    /// </summary>
+    public long Gt343Turns, Gt343BellySum, Gt343BellyMax, Gt343Edible, Gt343Swallows, Gt343SwallowHp, Gt343SwPoison, Gt343SwBurn, Gt343SwShock, Gt343SwDensity, Gt343SwMark, Gt343SwConc, Gt343SwMarkedNbr,
+                Gt343Attacks, Gt343Spits, Gt343SpitPoison, Gt343SpitBurn, Gt343SpitShock, Gt343SpitDensity, Gt343SpitMark, Gt343SpitOnTop, Gt343Healed, Gt343Grown;
     public long[]? Fg339Spray, Fg339AllyHits, Fg339AllyDmg;
     /// <summary>第339期（計数のみ）: 乱射の1発をターンごとに数える（羽の乱射 ／ 乱射の札の両方）。</summary>
     public void NoteSpray339(int turn, bool ally, int lost, bool killed)
@@ -3600,6 +3608,10 @@ public sealed class UnitTally
         CreditToEnemy += o.CreditToEnemy; CreditToAlly += o.CreditToAlly; Credit341Dust += o.Credit341Dust; Credit341Burn += o.Credit341Burn; Credit341Ball += o.Credit341Ball; Credit341Taken += o.Credit341Taken;   // 第341期
         Kt342StunCause = AddArr(Kt342StunCause, o.Kt342StunCause); Kt342AllyPops += o.Kt342AllyPops; Kt342RodFires += o.Kt342RodFires; Kt342RodOnAttacker += o.Kt342RodOnAttacker;   // 第342期
         Kt342RodHits += o.Kt342RodHits; Kt342RodDealt += o.Kt342RodDealt; Kt342RodNoTarget += o.Kt342RodNoTarget;
+        Gt343Turns += o.Gt343Turns; Gt343BellySum += o.Gt343BellySum; Gt343BellyMax = Math.Max(Gt343BellyMax, o.Gt343BellyMax); Gt343Edible += o.Gt343Edible; Gt343Swallows += o.Gt343Swallows; Gt343SwallowHp += o.Gt343SwallowHp;   // 第343期
+        Gt343SwPoison += o.Gt343SwPoison; Gt343SwBurn += o.Gt343SwBurn; Gt343SwShock += o.Gt343SwShock; Gt343SwDensity += o.Gt343SwDensity; Gt343SwMark += o.Gt343SwMark; Gt343SwConc += o.Gt343SwConc; Gt343SwMarkedNbr += o.Gt343SwMarkedNbr;
+        Gt343Attacks += o.Gt343Attacks; Gt343Spits += o.Gt343Spits; Gt343SpitPoison += o.Gt343SpitPoison; Gt343SpitBurn += o.Gt343SpitBurn; Gt343SpitShock += o.Gt343SpitShock; Gt343SpitDensity += o.Gt343SpitDensity; Gt343SpitMark += o.Gt343SpitMark;
+        Gt343SpitOnTop += o.Gt343SpitOnTop; Gt343Healed += o.Gt343Healed; Gt343Grown += o.Gt343Grown;
         Fg339Spray = AddArr(Fg339Spray, o.Fg339Spray); Fg339AllyHits = AddArr(Fg339AllyHits, o.Fg339AllyHits); Fg339AllyDmg = AddArr(Fg339AllyDmg, o.Fg339AllyDmg);
         SharedAway += o.SharedAway; ShareTakenHits += o.ShareTakenHits; ShareGives += o.ShareGives; ShareGiven += o.ShareGiven; ShareGiftAccrued += o.ShareGiftAccrued;   // 第297期
         ShareGifts += o.ShareGifts; ShareGiftCapped += o.ShareGiftCapped; ShareGiftNoTarget += o.ShareGiftNoTarget; ShareGiftSkipped += o.ShareGiftSkipped;
@@ -4406,7 +4418,23 @@ public enum BattleEventKind
     /// ＋ 羽なら最後にミサの <c>Feather</c>「増えた」。隣がいなければ出ない。<b>どの規則も読まない。</b> 規定のヒサには出ない。
     /// </summary>
     MarkInherit,
+
+    /// <summary>
+    /// 精気を呑む（第343期・ゴルムの版 GT・<b>表示専用</b>）。ゴルムの手番に1件（<c>Text</c> ＝ <see cref="SwallowLabels.Swallow"/>・<c>ActorId</c> ＝ ゴルム・<c>TargetId</c> ＝ 呑まれた敵・<c>Amount</c> ＝ その敵の残りの HP・
+    /// <c>Slot</c> ＝ 腹）→ 呑まれた敵の <c>Death</c>（撃破者 ＝ ゴルム）。その後に版ごとの1件: <see cref="SwallowLabels.Spit"/>（<c>TargetId</c> ＝ 吐きかけた敵・<c>Amount</c> ＝ 吐いた量の和・<c>Text</c> の後ろに内訳）／
+    /// <see cref="SwallowLabels.Heal"/>（<c>Amount</c> ＝ 癒した量の和）／ <see cref="SwallowLabels.Grow"/>（<c>Amount</c> ＝ 増えた最大 HP・<c>Slot</c> ＝ 新しい最大 HP）。<b>どの規則も読まない。</b> 規定のゴルムには出ない。
+    /// </summary>
+    Swallow,
 }
+/// <summary>`Swallow`（第343期）の <c>Text</c>（吐くは「吐く:毒3,火2,雷1,濃1,標2」のように内訳を後ろに付ける）。</summary>
+public static class SwallowLabels
+{
+    public const string Swallow = "呑む";
+    public const string Spit = "吐く";
+    public const string Heal = "癒す";
+    public const string Grow = "膨れる";
+}
+
 /// <summary>`MarkInherit`（第337期）の <c>Text</c>。</summary>
 public static class MarkInheritLabels
 {

@@ -864,6 +864,11 @@ public enum TraitId
     KataRod,            // 避雷針（KT-r・カタ）: カタの感電が弾けたら、隣の味方へ放電する代わりに敵へ逆雷を1発（殴った敵が生きていればその敵・いなければ手番の雷の最初の的）。雷雲は消費しない。カタはこの弾けで痺れない ／ 萎縮しない（**札そのものは挙動を持たない**・engine の `ShockTrigger` ／ `RodBolt`）
     KataRodChain,       // 避雷針の逆雷は跳ねる（KT-r 跳ね・カタ）: 逆雷が手番の雷と同じく、帯びた隣の敵へ跳ねる（**札そのものは挙動を持たない**・engine の `RodBolt`）
 
+    // --- 第343期で足した札（指示書 design/PHASE343_KATA_SETTLE_GOLM_SWALLOW_SPEC.md §3）。GT はゴルムの手番の版（保持者 0 枚・手番は `[Skill]`） ---
+    GolmSwallowSpit,    // 精気を呑む ＋ 吐き捨てる（GT-a2・ゴルム）: 手番で HP が腹以下の敵の精気を呑み（倒れる・引き継ぎ ／ 飛び火なし）、呑んだ状態異常を HP の最も多い敵にまとめて吐きかける（engine の `GolmTurn343`）
+    GolmSwallowHeal,    // 精気を呑む ＋ 消化（GT-a1・ゴルム）: 呑んだ敵の残りの HP を生きている味方全員に等分して癒す（engine の `GolmTurn343`）
+    GolmSwallowGrow,    // 精気を呑む ＋ 膨れる（GT-a3・ゴルム）: 呑んだ敵の残りの HP だけゴルムの最大 HP と HP が増える（engine の `GolmTurn343`）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -5069,6 +5074,33 @@ public sealed class FeatherGrowTrait : Trait
     public const string RoundKey = "featherGrowTurn";
 
     public override void OnCarryOver(UnitState self) => self.SetCounter(RoundKey, 0);
+}
+
+/// <summary>
+/// 精気を呑む（第343期・ゴルムの手番の版 GT-a2 ／ a1 ／ a3）。手番（`[Skill]`）で engine の <c>BattleContext.GolmTurn343</c> を呼ぶだけ——
+/// HP が腹（巨躯で飲み込んだ量 <see cref="ColossusTrait.BellyKey"/>）以下の敵がいればその精気を呑み、いなければ通常攻撃（GT-a2 は腹に吐くものがあれば吐く）。
+/// 吐くものの在庫は私有キー（<see cref="StashKeys"/>）に持ち、部隊戦の境界で捨てる。<b>乱数を引かない。</b>
+/// </summary>
+public sealed class GolmSwallowTrait : Trait
+{
+    readonly TraitId _id;
+    public GolmSwallowTrait(TraitId id) => _id = id;
+    public override TraitId Id => _id;
+
+    /// <summary>GT-a2 の吐くものの在庫（毒の層 ／ 燃焼の残ターン ／ 感電 ／ 濃さ ／ 標の層）。`StatusKeys.All` に入れない私有キー。</summary>
+    public static readonly string[] StashKeys = { "gtPoison", "gtBurn", "gtShock", "gtDensity", "gtMark" };
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+    {
+        if (!self.IsAlive) return;
+        if (_id != TraitId.GolmSwallowSpit && _id != TraitId.GolmSwallowHeal && _id != TraitId.GolmSwallowGrow) return;
+        ctx.GolmTurn343(self);
+    }
+
+    public override void OnCarryOver(UnitState self)
+    {
+        foreach (string k in StashKeys) self.SetCounter(k, 0);
+    }
 }
 
 /// <summary>羽を失う（第285期・M-b）。<b>札そのものは挙動を持たない</b>（engine の <c>FeatherVolley</c> が保持を読む）。外せば M-a。</summary>
@@ -17697,6 +17729,9 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.ThundercloudAllyPops),      // 第342期（味方の弾けも雷雲に KT-b・カタ・印だけ）
         new MarkOnlyTrait(TraitId.KataRod),                   // 第342期（避雷針 KT-r・カタ・印だけ）
         new MarkOnlyTrait(TraitId.KataRodChain),              // 第342期（避雷針の逆雷は跳ねる・カタ・印だけ）
+        new GolmSwallowTrait(TraitId.GolmSwallowSpit),        // 第343期（精気を呑む ＋ 吐き捨てる GT-a2・ゴルム）
+        new GolmSwallowTrait(TraitId.GolmSwallowHeal),        // 第343期（精気を呑む ＋ 消化 GT-a1・ゴルム）
+        new GolmSwallowTrait(TraitId.GolmSwallowGrow),        // 第343期（精気を呑む ＋ 膨れる GT-a3・ゴルム）
         new SharePushTrait(TraitId.ShareSin),                 // 第313期（ドハ DP-c の手番）
         new AmplifierTrait(),
         new ContagionTrait(),

@@ -42,7 +42,7 @@ static partial class Kata342Diag
 
         // ---- 版の定義と試遊の台
         {
-            UnitDef K = UnitCatalog.Kata;
+            UnitDef K = UnitCatalog.KataH342;   // 第343期: 版は第332〜342期の規定のカタから作り直した
             bool def = UnitCatalog.KataKTb.Traits.SequenceEqual(K.Traits.Append(TraitId.ThundercloudAllyPops))
                 && UnitCatalog.KataKTr1.Traits.SequenceEqual(K.Traits.Append(TraitId.ThundercloudAllyPops).Append(TraitId.KataRod))
                 && UnitCatalog.KataKTrJ.Traits.SequenceEqual(K.Traits.Append(TraitId.ThundercloudAllyPops).Append(TraitId.KataRod).Append(TraitId.KataRodChain))
@@ -50,14 +50,13 @@ static partial class Kata342Diag
                 && UnitCatalog.KataKTr1.PlusText.EndsWith("。感電した身で殴られると、雷は避雷針を伝って敵に落ちる（自分は痺れない）", StringComparison.Ordinal)
                 && UnitCatalog.KataKTr1.MinusText.Contains("その味方（自分を除く）が半々の確率で痺れる", StringComparison.Ordinal) && UnitCatalog.KataKTr1.MinusText.Contains("雷を落とすたび、隣の味方すべてに感電が付く", StringComparison.Ordinal)
                 && new[] { UnitCatalog.KataKTb, UnitCatalog.KataKTr1, UnitCatalog.KataKTrJ }.All(d => !UnitCatalog.Everyone.Contains(d))
-                && UnitCatalog.Everyone.All(d => !d.Traits.Any(t => t is TraitId.ThundercloudAllyPops or TraitId.KataRod or TraitId.KataRodChain));
+                && UnitCatalog.Everyone.Where(d => d.Traits.Any(t => t is TraitId.ThundercloudAllyPops or TraitId.KataRod or TraitId.KataRodChain)).SequenceEqual(new[] { UnitCatalog.Kata });   // 第343期: 3枚とも規定のカタの札
             Expect("版の定義: KT-b ＝ 規定のカタ ＋ `ThundercloudAllyPops`・避雷針 ＝ ＋ `KataRod`（跳ねる ＝ ＋ `KataRodChain`）・文面は叩き台（マイナスの痺れの句は「自分を除く」）・`Everyone` の外・保持者 0", def);
-            var v = Presets.Versions; var pon = v.First(r => r.Name == PonRow).F;
-            (string Name, UnitDef Kata)[] want = { ("版・KT-b ポンの台", UnitCatalog.KataKTb), ("版・避雷針1発 ポンの台", UnitCatalog.KataKTr1), ("版・避雷針跳ね ポンの台", UnitCatalog.KataKTrJ) };
+            // 第343期: K3 を規定にしたので「版・」の3台を外した——1行目（ポンの台）と、KT の版が試遊の台に残っていないことだけを見る
+            var v = Presets.Versions;
             bool rows = v[0].Name == PonRow && v.Any(r => r.Name == "試遊・ミサ 書き手なし") && Presets.Playtest.Length == 17
-                && want.All(x => v.Any(r => r.Name == x.Name && r.F.Occupied().Select(o => o.Def).SequenceEqual(pon.Occupied().Select(o => o.Def.Id == "kata" ? x.Kata : o.Def))
-                    && r.F.Occupied().Select(o => o.Slot).SequenceEqual(pon.Occupied().Select(o => o.Slot))));
-            Expect("試遊の台: `Presets.Versions` ＝ 「試遊・感電 ポンの台」「試遊・ミサ 書き手なし」＋「版・KT-b ／ 避雷針1発 ／ 避雷針跳ね ポンの台」（ポンの台の並びでカタだけ版）・`Playtest` は 17 台のまま", rows);
+                && v.SelectMany(r => r.F.Occupied()).All(o => !ReferenceEquals(o.Def, UnitCatalog.KataKTb) && !ReferenceEquals(o.Def, UnitCatalog.KataKTr1) && !ReferenceEquals(o.Def, UnitCatalog.KataKTrJ));
+            Expect("試遊の台: `Presets.Versions` の1行目は「試遊・感電 ポンの台」・「試遊・ミサ 書き手なし」は残る・第342期の「版・」の3台は第343期に外した・`Playtest` は 17 台のまま", rows);
         }
 
         // ---- KT-b: 味方（カタ自身を含む）の弾けも雷雲 +1・規定では敵だけ
@@ -71,7 +70,7 @@ static partial class Kata342Diag
                 return Cloud(k) - c0;
             }
             int bA = Grow(UnitCatalog.KataKTb, true, false), bS = Grow(UnitCatalog.KataKTb, true, true), bE = Grow(UnitCatalog.KataKTb, false, false);
-            int dA = Grow(UnitCatalog.Kata, true, false), dS = Grow(UnitCatalog.Kata, true, true), dE = Grow(UnitCatalog.Kata, false, false);
+            int dA = Grow(UnitCatalog.KataH342, true, false), dS = Grow(UnitCatalog.KataH342, true, true), dE = Grow(UnitCatalog.KataH342, false, false);   // 第343期: 第332〜342期の規定のカタ
             Expect("KT-b: 味方の弾けでも ／ カタ自身の弾けでも雷雲 +1（敵の弾けも +1）・規定は敵の弾けだけ +1", bA == 1 && bS == 1 && bE == 1 && dA == 0 && dS == 0 && dE == 1,
                 $"KT-b 味方 {bA} ／ 自身 {bS} ／ 敵 {bE}・規定 味方 {dA} ／ 自身 {dS} ／ 敵 {dE}");
         }

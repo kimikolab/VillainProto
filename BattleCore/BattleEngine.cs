@@ -1892,6 +1892,122 @@ public sealed class BattleContext
         kt.Kt342RodDealt += kt.ThunderDealt - dealt0;
     }
 
+    // =================================================================================
+    // 第343期 —— ゴルムの手番「精気を呑む」（GT-a2 吐き捨てる ／ GT-a1 消化 ／ GT-a3 膨れる）。指示書 design/PHASE343_KATA_SETTLE_GOLM_SWALLOW_SPEC.md §3。
+    // 呑むは攻撃ではない（`ApplyDamage` を通らない・`Damage` も出さない）——状態異常を腹に入れて消し、`HandleDeath` を直に呼ぶ（撃破者 ＝ ゴルム）。
+    // だから倒れたときの引き継ぎ ／ 飛び火（標の散る・澱みの爆ぜ ／ 移り・疫みの毒・延焼・感電の弾け）は起きない。**乱数を引かない。**
+    // =================================================================================
+    /// <summary>第343期: 巨躯（ゴルム）が戦に出たか（計数のみ・手番の頭の腹）。</summary>
+    bool _gtCensusLive;
+
+    /// <summary>第343期（<b>計数のみ</b>）: ゴルムの手番の頭（動けた手番）で、腹と、HP が腹以下の敵の数を数える。</summary>
+    void NoteGolmTurn343(UnitState g)
+    {
+        UnitTally t = TallyOf(g);
+        int belly = g.RawCounter(ColossusTrait.BellyKey);
+        t.Gt343Turns++;
+        t.Gt343BellySum += belly;
+        if (belly > t.Gt343BellyMax) t.Gt343BellyMax = belly;
+        foreach (UnitState e in LivingMembers(Opponent(g.TeamId))) if (e.Hp <= belly) t.Gt343Edible++;
+    }
+
+    /// <summary>第343期: 呑む候補の並びに使う「帯びた状態異常の量」（毒の層 ＋ 燃焼の残ターン ＋ 感電 1 ＋ 濃さ ＋ 標の層）。<b>読むだけ。</b></summary>
+    int Gt343Load(UnitState e) => e.RawCounter(StatusKeys.Poison) + e.RawCounter(StatusKeys.Burn) + (e.RawCounter(StatusKeys.Shock) > 0 ? 1 : 0) + DensityOf(e) + e.RawCounter(StatusKeys.Marked);
+
+    /// <summary>
+    /// 第343期 GT: ゴルムの手番（`GolmSwallowTrait.OnAction` だけが呼ぶ）。HP が腹以下の生きている敵のうち、帯びた状態異常の量が最も多い敵（同じなら HP の高い方・さらに同じなら席の若い方）の精気を呑む。
+    /// いなければ、GT-a2 で吐くものが腹にあれば吐き、なければ通常攻撃。
+    /// </summary>
+    public void GolmTurn343(UnitState g)
+    {
+        UnitTally t = TallyOf(g);
+        int belly = g.RawCounter(ColossusTrait.BellyKey);
+        UnitState? pick = null;
+        int pv = -1;
+        foreach (UnitState e in LivingMembers(Opponent(g.TeamId)))
+        {
+            if (e.Hp > belly) continue;
+            int v = Gt343Load(e);
+            if (pick is null || v > pv || (v == pv && (e.Hp > pick.Hp || (e.Hp == pick.Hp && e.Slot < pick.Slot)))) { pick = e; pv = v; }
+        }
+        bool spit = g.HasTrait(TraitId.GolmSwallowSpit);
+        if (pick is null)
+        {
+            if (spit && GolmSwallowTrait.StashKeys.Any(k => g.RawCounter(k) > 0) && GolmSpit343(g)) return;
+            t.Gt343Attacks++;
+            PerformAttack(g);
+            return;
+        }
+
+        int hp = pick.Hp;
+        int p = pick.RawCounter(StatusKeys.Poison), b = pick.RawCounter(StatusKeys.Burn), s = pick.RawCounter(StatusKeys.Shock) > 0 ? 1 : 0, d = DensityOf(pick), m = pick.RawCounter(StatusKeys.Marked), c = pick.RawCounter(StatusKeys.Concentrated);
+        t.Gt343Swallows++; t.Gt343SwallowHp += hp;
+        t.Gt343SwPoison += p; t.Gt343SwBurn += b; t.Gt343SwShock += s; t.Gt343SwDensity += d; t.Gt343SwMark += m; t.Gt343SwConc += c;
+        if (m > 0 && LivingMembers(pick.TeamId).Any(u => u != pick && FormationRules.AreAdjacent(pick, u))) t.Gt343SwMarkedNbr++;
+        // 腹に入る: 状態異常を消す（引き継ぎ ／ 飛び火の元を断つ）。GT-a2 は吐くものとして在庫に積む。
+        pick.SetCounter(StatusKeys.Poison, 0); pick.SetCounter(StatusKeys.Burn, 0); pick.SetCounter(StatusKeys.Shock, 0); pick.SetCounter(StatusKeys.Marked, 0); pick.SetCounter(StatusKeys.Concentrated, 0);
+        if (d > 0) { _density.Remove(pick.InstanceId); _densityRet.Remove(pick.InstanceId); }
+        if (spit)
+        {
+            int[] add = { p, b, s, d, m };
+            for (int i = 0; i < add.Length; i++) if (add[i] > 0) g.SetCounter(GolmSwallowTrait.StashKeys[i], g.RawCounter(GolmSwallowTrait.StashKeys[i]) + add[i]);
+        }
+        if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.Swallow, Turn = _turn, ActorId = g.InstanceId, TargetId = pick.InstanceId, Amount = hp, Slot = belly, Text = SwallowLabels.Swallow, Team = pick.TeamId });
+        Log($"    {g.Name} が {pick.Name} の精気を呑み干した（残り HP {hp}・腹 {belly}）——{pick.Name} は抜け殻のように崩れた", LogKind.Highlight);
+        HandleDeath(pick, g);
+
+        if (spit) { GolmSpit343(g); return; }
+        if (g.HasTrait(TraitId.GolmSwallowHeal))
+        {
+            var allies = LivingMembers(g.TeamId);
+            int each = allies.Count == 0 ? 0 : hp / allies.Count;
+            long healed = 0;
+            if (each > 0)
+                foreach (UnitState a in allies)
+                {
+                    int before = a.Hp;
+                    Heal(a, each, g);
+                    healed += Math.Max(0, a.Hp - before);
+                }
+            t.Gt343Healed += healed;
+            if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.Swallow, Turn = _turn, ActorId = g.InstanceId, Amount = (int)healed, Slot = each, Text = SwallowLabels.Heal, Team = g.TeamId });
+            Log($"    呑んだ精気で仲間を癒した（{allies.Count} 体に {each} ずつ・届いた {healed}）", LogKind.Trigger);
+        }
+        else if (g.HasTrait(TraitId.GolmSwallowGrow))
+        {
+            g.MaxHp += hp;
+            g.Hp += hp;
+            t.Gt343Grown += hp;
+            if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.Swallow, Turn = _turn, ActorId = g.InstanceId, TargetId = g.InstanceId, Amount = hp, Slot = g.MaxHp, Text = SwallowLabels.Grow, Team = g.TeamId });
+            Log($"    {g.Name} は呑むほど膨れ上がる（最大 HP +{hp} → {g.MaxHp}）", LogKind.Trigger);
+        }
+    }
+
+    /// <summary>
+    /// 第343期 GT-a2: 腹の吐くもの（毒の層 ／ 燃焼の残ターン ／ 感電 ／ 濃さ ／ 標の層）を、生きている敵のうち HP の最も多い1体（同じなら席の若い方）にまとめて吐きかける。
+    /// そのまま足す（感電は付ける）。<b>吐きかけは攻撃ではない</b>（`ApplyDamage` を通らない・標は `LayerMark` を通さないので羽 ／ 合図にならない）。吐いたら真。
+    /// </summary>
+    bool GolmSpit343(UnitState g)
+    {
+        UnitState? top = null;
+        foreach (UnitState e in LivingMembers(Opponent(g.TeamId)))
+            if (top is null || e.Hp > top.Hp || (e.Hp == top.Hp && e.Slot < top.Slot)) top = e;
+        if (top is null) return false;
+        UnitTally t = TallyOf(g);
+        int p = g.RawCounter("gtPoison"), b = g.RawCounter("gtBurn"), s = g.RawCounter("gtShock"), d = g.RawCounter("gtDensity"), m = g.RawCounter("gtMark");
+        foreach (string k in GolmSwallowTrait.StashKeys) g.SetCounter(k, 0);
+        if (p + b + s + d + m <= 0) return false;
+        t.Gt343Spits++; t.Gt343SpitPoison += p; t.Gt343SpitBurn += b; t.Gt343SpitShock += s; t.Gt343SpitDensity += d; t.Gt343SpitMark += m; t.Gt343SpitOnTop += top.Hp;
+        if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.Swallow, Turn = _turn, ActorId = g.InstanceId, TargetId = top.InstanceId, Amount = p + b + s + d + m, Text = $"{SwallowLabels.Spit}:毒{p},火{b},雷{s},濃{d},標{m}", Team = top.TeamId });
+        Log($"    {g.Name} は呑み込めない毒や雷を {top.Name} に吐き捨てた（毒 {p}・火 {b}・雷 {s}・濃さ {d}・標 {m}）", LogKind.Trigger);
+        if (p > 0) top.SetCounter(StatusKeys.Poison, top.RawCounter(StatusKeys.Poison) + p);
+        if (b > 0) top.SetCounter(StatusKeys.Burn, top.RawCounter(StatusKeys.Burn) + b);
+        if (m > 0) top.SetCounter(StatusKeys.Marked, top.RawCounter(StatusKeys.Marked) + m);
+        if (d > 0) _density[top.InstanceId] = DensityOf(top) + d;
+        if (s > 0) MarkShock(top, g);
+        return true;
+    }
+
     /// <summary>雷を落とし終えた（<b>計数のみ</b>）。</summary>
     public void NoteThunderCast(UnitState kata, int hits, bool fallback)
     {
@@ -9296,6 +9412,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Feathers)) _featherLive = true; // 第285期（羽の一振り・羽の書き込み・1発の打点）
         if (u.HasTrait(TraitId.FeatherGrow) || u.HasTrait(TraitId.FeatherGrowUnmarked)) _featherGrowLive = true;   // 第339期（羽が毎ターン増える FG-a ／ FG-b）
         if (u.HasTrait(TraitId.KataRod) && u.HasTrait(TraitId.Thunder)) _ktRodLive = true;   // 第342期（避雷針 KT-r）
+        if (u.HasTrait(TraitId.Colossus)) _gtCensusLive = true;   // 第343期（計数のみ・ゴルムの手番の頭の腹）
         if (u.HasTrait(TraitId.FireArmor) || u.HasTrait(TraitId.Smolder)
             || u.HasTrait(TraitId.FireMend) || u.HasTrait(TraitId.FireFeed)) _fireArmorLive = true;   // 第234期（火の鎧・焼け残り）・第235期（火の癒し・焼き返し）
         if (u.HasTrait(TraitId.FireWard) || u.HasTrait(TraitId.FireWardAll)) _fireWardHolders.Add(u);             // 第238期（盾の配り）
@@ -14594,6 +14711,8 @@ public sealed class BattleContext
             if (actor.RawCounter(ParryTrait.StockKey) >= Parry.Uses) pst.ParrySwingsFull++;
         }
 
+        if (_gtCensusLive && actor.HasTrait(TraitId.Colossus)) NoteGolmTurn343(actor);   // 第343期（計数のみ・保持者がいなければ比較1つで抜ける）
+
         if (act is null)
         {
             // 第313期 Phase 0（**計数のみ**・計数器 `PushCensus` が立っている戦だけ）: 規定のドハの手番の頭で、背を押すなら誰を選んだかを数えて窓を閉じる。
@@ -16189,7 +16308,7 @@ public sealed class BattleContext
         if (d.Actions is null || d.Actions.Count == 0 || d.Actions.Any(a => a.Kind == ActionKind.Attack)) return true;
         return SkillStrikers.Contains(d.Id);
     }
-    static readonly HashSet<string> SkillStrikers = new() { "kata", "hane", "lili", "mio" };
+    static readonly HashSet<string> SkillStrikers = new() { "kata", "hane", "lili", "mio", "golm" };   // 第343期: ゴルムの GT の版（手番は `[Skill]`・呑めなければ殴る）も殴る味方のまま（規定のゴルムは `Actions` が無いので上で真）
 
     /// <summary>敵 <paramref name="actor"/> の一撃が味方 <paramref name="aim"/> を主目標に選んだ（打点 <paramref name="atk"/>）。同じ陣営の DQ の保持者（と計数器のドハ）の窓に足す。</summary>
     void AccrueAim(UnitState actor, UnitState aim, int atk)

@@ -36,8 +36,8 @@ static partial class Veil332Diag
         {
             bool tou = UnitCatalog.Tou.Traits.SequenceEqual(UnitCatalog.TouH331.Traits.Append(TraitId.ShockStunOnce)) && UnitCatalog.Tou.Traits.SequenceEqual(UnitCatalog.TouSTc.Traits)
                 && UnitCatalog.Tou.PlusText == UnitCatalog.TouSTc.PlusText && UnitCatalog.TouH331.Traits.SequenceEqual(UnitCatalog.TouH328.Traits.Concat(new[] { TraitId.PowderBurstMarked, TraitId.PowderBurstFall }));
-            bool kata = UnitCatalog.Kata.Traits.SequenceEqual(UnitCatalog.KataH331.Traits.Append(TraitId.ShockStunOnce)) && UnitCatalog.Kata.Traits.SequenceEqual(UnitCatalog.KataSTc.Traits)
-                && UnitCatalog.Kata.PlusText == UnitCatalog.KataSTc.PlusText && UnitCatalog.KataH331.Traits.SequenceEqual(UnitCatalog.KataH324.Traits.Append(TraitId.ThunderPowderReturn));
+            bool kata = UnitCatalog.KataH342.Traits.SequenceEqual(UnitCatalog.KataH331.Traits.Append(TraitId.ShockStunOnce)) && UnitCatalog.KataH342.Traits.SequenceEqual(UnitCatalog.KataSTc.Traits)   // 第343期: 第332〜342期の規定のカタ（`KataH342`）で見る
+                && UnitCatalog.KataH342.PlusText == UnitCatalog.KataSTc.PlusText && UnitCatalog.KataH331.Traits.SequenceEqual(UnitCatalog.KataH324.Traits.Append(TraitId.ThunderPowderReturn));
             bool vers = UnitCatalog.TouSTa.Traits.SequenceEqual(UnitCatalog.TouH331.Traits.Append(TraitId.LiveWireGuard)) && UnitCatalog.KataSTb.Traits.SequenceEqual(UnitCatalog.KataH331.Traits.Concat(new[] { TraitId.LiveWireGuard, TraitId.ShockGuardDaunt }))
                 && UnitCatalog.SomLVc332.Traits.SequenceEqual(UnitCatalog.SomH332.Traits.Append(TraitId.SparkVeilCap)) && UnitCatalog.SomLVd332.Traits.SequenceEqual(UnitCatalog.SomH332.Traits.Append(TraitId.SparkVeilTemp))
                 && UnitCatalog.SomLVc332.PlusText.Contains(UnitCatalog.SomVeilCapClause, StringComparison.Ordinal) && UnitCatalog.SomLVd332.PlusText.Contains(UnitCatalog.SomVeilTempClause, StringComparison.Ordinal);

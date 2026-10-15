@@ -34,7 +34,7 @@ static partial class Credit341Diag
     static string F1(double x) => S307.F1(x);
     static string Per(long a, long n) => n == 0 ? "—" : F1((double)a / n);
     static string Pct(long a, long n) => n == 0 ? "—" : F1(100.0 * a / n);
-    internal static Formation Pon() => Presets.Versions.First(r => r.Name == PonRow).F;
+    internal static Formation Pon() => Pin342(Presets.Versions.First(r => r.Name == PonRow).F);   // 第343期: カタは第332〜342期の規定（`KataH342`）に固定（この期の数字を保つ）
 
     /// <summary>駒の表示名（`Def.Id` → 名前・召喚 ／ 糸玉も）。</summary>
     static string NameOf(string id, IEnumerable<UnitState> p, S287.Wave w)

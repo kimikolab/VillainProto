@@ -1198,6 +1198,12 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 kata342 compare [版,…]  # 第342期 §5: `compare` 64 行 × 版（16 秒）
     dotnet run --project BattleSim -c Release 0 kata342 log [台] [波] [seed] [版]   # 第342期: 1戦のログ（台 pon ／ whip ／ shield か台の名前・版 base ／ b ／ r1 ／ rj）
     dotnet run --project BattleSim -c Release 0 kata342 check         # 第342期 自己検査（版の定義と試遊の台・KT-b ／ 避雷針 ／ 跳ねるを盤を直に組んで・verbose・PickOne）
+    dotnet run --project BattleSim -c Release 0 golm343 s0            # 第343期 §2 段0: カタの代表台 4 × 5 波 × 旧（`KataH342`）／ 新（K3）・seed 0..99（1 秒）
+    dotnet run --project BattleSim -c Release 0 golm343 p0            # 第343期 §4 Phase 0: ゴルムのいる台（compare ／ 試遊 29 行 ＋ 器具の中の2台）の手番の数 ／ 腹 ／ 呑める敵（2 秒）
+    dotnet run --project BattleSim -c Release 0 golm343 boards [版,…]   # 第343期 §6: 代表台 5（守り型 ／ 突き出し ／ 逆しま+後備え ／ 感電にゴルム ／ 毒にゴルム）× 5 波 × 版（規定 ／ GT-a2 ／ a1 ／ a3）・seed 0..99（3 秒）。予測のファイルが無ければ走らない
+    dotnet run --project BattleSim -c Release 0 golm343 compare [版,…]  # 第343期 §6: `compare` 64 行 × 版（16 秒）
+    dotnet run --project BattleSim -c Release 0 golm343 log [台] [波] [seed] [版]   # 第343期: 1戦のログ（台 guard ／ havoc ／ utsu ／ shock ／ poison・版 base ／ a2 ／ a1 ／ a3）
+    dotnet run --project BattleSim -c Release 0 golm343 check         # 第343期 自己検査（段0 の定義 ／ 固定の口 ／ 戦の中・GT の版の定義と試遊の台・呑む ／ 吐く ／ 癒す ／ 膨れるを盤を直に組んで・verbose・PickOne）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

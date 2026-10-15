@@ -15,6 +15,7 @@ using T323 = Tou323Diag;
 //     dotnet run --project BattleSim -c Release 0 kata342 log [台] [波] [seed] [版] # 1戦のログ
 //     dotnet run --project BattleSim -c Release 0 kata342 check                   # §8 自己検査
 //
+// 第343期: K3 を規定にしたので、「規定」（base）は第332〜342期の規定のカタ（`KataH342`・`Common.Pin342`）に固定した。
 // 版の名前（ASCII）: base（規定）／ b（KT-b）／ r1（KT-b ＋ 避雷針 1発）／ rj（KT-b ＋ 避雷針 跳ねる）。波: boss ／ guard ／ bat ／ 2 ／ 5。台: pon ／ whip ／ shield ／ 感電。
 // **予測のファイルが無ければ本測定（boards ／ compare）を走らせない**（R397・`.tmp/p342/predict.md`）。
 // =====================================================================================
@@ -66,7 +67,7 @@ static partial class Kata342Diag
     };
     static Ver V(string n) => Vers.First(v => v.Name == n || v.Ascii == n);
     static Ver[] Pick(string only) => (string.IsNullOrEmpty(only) ? Vers : new[] { Vers[0] }.Concat(only.Split(',').Select(V).Where(v => v != Vers[0]))).ToArray();
-    internal static Formation Apply(Formation f, Ver v) => v.Kata is null ? f : S316.SwapId(f, "kata", v.Kata);
+    internal static Formation Apply(Formation f, Ver v) => v.Kata is null ? Pin342(f) : S316.SwapId(f, "kata", v.Kata);   // 第343期: 「規定」は第332〜342期の規定のカタ（`KataH342`）に固定
 
     internal const string PonRow = "試遊・感電 ポンの台";
     internal static (string Name, Formation F)[] Boards() => new (string, Formation)[]
@@ -157,7 +158,7 @@ static partial class Kata342Diag
         foreach (var (bn, bf) in Boards().Take(2))
             foreach (var w in new[] { Waves[1], Waves[2], Waves[0] })
             {
-                var z = Measure(bf, w);
+                var z = Measure(Pin342(bf), w);   // 第343期: 第332〜342期の規定のカタ
                 Console.WriteLine($"| {bn} | {w.Name} | {F1(z.Win)}%・{Per(z.WinT, z.Wins)}T | {Per(z.Casts, z.N)} | {Per2(z.StallShock, z.N)}（{Pct(z.StallShock, z.Casts + z.StallStun)}%） | {Per2(z.StunCause[0], z.N)} ／ {Per2(z.StunCause[1], z.N)} ／ {Per2(z.StunCause[2], z.N)} | "
                     + $"{Per(z.CloudSum, z.Casts)} ／ {z.CloudMax} | {Per(z.ThunderDealt, z.N)} | {Per(z.KataDealt, z.N)}・{Pct(z.KataDealt + z.KataCredit, z.WorkAll)}% | {Per(z.AllyPops, z.N)} |");
             }

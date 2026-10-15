@@ -88,7 +88,9 @@ $Cmds = @(
     # 第341期に足した（この期の器具）
     "credit341 check",
     # 第342期に足した（この期の器具）
-    "kata342 check"
+    "kata342 check",
+    # 第343期に足した（この期の器具）
+    "golm343 check"
 )
 # ソースの行番号などを出す（差は「ずれ」と数えない）
 $Volatile = @("derive check")
