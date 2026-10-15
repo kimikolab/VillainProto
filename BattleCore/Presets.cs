@@ -909,15 +909,16 @@ public static class Presets
     /// 第339期: ミサの羽が毎ターン増える（FG-a ／ FG-b）の3台を足した（守り型の並びでミサだけ版・「書き手なし」は守り型のザン ／ ヒサをドルガ ／ バンに替えた標の書き手のいない台）。
     /// 第340期: FG-b を規定にしたので3台を外し、「書き手なし」の台を規定のミサのまま「試遊・ミサ 書き手なし」として残した（羽が増えていく怖さを画面で見るため）。
     /// 第342期: カタの KT-b ／ 避雷針（1発 ／ 跳ねる）の3台を足した（並びはポンの台・カタだけ版）。
-    /// 第343期: K3 を規定にしたので3台を外し、ゴルムの手番「精気を呑む」（GT-a2 ／ a1 ／ a3）の3台（並びは守り型）と、感電の台にゴルム（ポンの台のカタ → ゴルム・前1）の吐き捨ての1台を足した。</para>
+    /// 第343期: K3 を規定にしたので3台を外し、ゴルムの手番「精気を呑む」（GT-a2 ／ a1 ／ a3）の3台（並びは守り型）と、感電の台にゴルム（ポンの台のカタ → ゴルム・前1）の吐き捨ての1台を足した。
+    /// 第344期: 「版・GT」の4台を外し、呑む条件の SW-a ／ SW-b ／ SW-a＋b の3台（並びは守り型）と、毒の台にゴルム（`毒 (グザ×ミオ×ラウ)` の前3 ガルド → ゴルム）の SW-a＋b の1台を足した。</para>
     /// </summary>
     public static (string Name, Formation F)[] Versions => new (string, Formation)[]
     {
         ("試遊・感電 ポンの台", Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Shiga, center: UnitCatalog.Tou, back1: UnitCatalog.Kugu, back3: UnitCatalog.Som)),
         ("試遊・ミサ 書き手なし", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Dolga, center: UnitCatalog.Doha, back1: UnitCatalog.Tome, back3: UnitCatalog.Ban)),
-        ("版・GT吐き捨て 守り型", Formation.Build(front1: UnitCatalog.GolmGTa2, front3: UnitCatalog.Zan, center: UnitCatalog.Doha, back1: UnitCatalog.Tome, back3: UnitCatalog.Hisa)),
-        ("版・GT消化 守り型", Formation.Build(front1: UnitCatalog.GolmGTa1, front3: UnitCatalog.Zan, center: UnitCatalog.Doha, back1: UnitCatalog.Tome, back3: UnitCatalog.Hisa)),
-        ("版・GT膨れ 守り型", Formation.Build(front1: UnitCatalog.GolmGTa3, front3: UnitCatalog.Zan, center: UnitCatalog.Doha, back1: UnitCatalog.Tome, back3: UnitCatalog.Hisa)),
-        ("版・GT吐き捨て 感電", Formation.Build(front1: UnitCatalog.GolmGTa2, front3: UnitCatalog.Shiga, center: UnitCatalog.Tou, back1: UnitCatalog.Kugu, back3: UnitCatalog.Som)),
+        ("版・SW-a 守り型", Formation.Build(front1: UnitCatalog.GolmSWa, front3: UnitCatalog.Zan, center: UnitCatalog.Doha, back1: UnitCatalog.Tome, back3: UnitCatalog.Hisa)),
+        ("版・SW-b 守り型", Formation.Build(front1: UnitCatalog.GolmSWb, front3: UnitCatalog.Zan, center: UnitCatalog.Doha, back1: UnitCatalog.Tome, back3: UnitCatalog.Hisa)),
+        ("版・SW-a＋b 守り型", Formation.Build(front1: UnitCatalog.GolmSWab, front3: UnitCatalog.Zan, center: UnitCatalog.Doha, back1: UnitCatalog.Tome, back3: UnitCatalog.Hisa)),
+        ("版・SW-a＋b 毒", Formation.Build(front1: UnitCatalog.Mio, front3: UnitCatalog.GolmSWab, center: UnitCatalog.Guza, back1: UnitCatalog.Sid, back3: UnitCatalog.Rau)),
     };
 }

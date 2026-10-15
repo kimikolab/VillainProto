@@ -869,6 +869,10 @@ public enum TraitId
     GolmSwallowHeal,    // 精気を呑む ＋ 消化（GT-a1・ゴルム）: 呑んだ敵の残りの HP を生きている味方全員に等分して癒す（engine の `GolmTurn343`）
     GolmSwallowGrow,    // 精気を呑む ＋ 膨れる（GT-a3・ゴルム）: 呑んだ敵の残りの HP だけゴルムの最大 HP と HP が増える（engine の `GolmTurn343`）
 
+    // --- 第344期で足した札（指示書 design/PHASE344_GOLM_SWALLOW_LIMIT_SPEC.md §2）。SW は GT-a2 の呑む条件（保持者 0 枚・`GolmSwallowSpit` と一緒に持つ） ---
+    GolmSwallowSpend,   // 腹を使う（SW-a・ゴルム）: 呑んだら、呑んだ敵の残りの HP の分だけ腹が減る（**札そのものは挙動を持たない**・engine の `GolmTurn343`）
+    GolmSwallowWeak,    // 弱った敵だけ（SW-b・ゴルム）: 呑めるのは HP が最大 HP の 3 割以下の敵だけ（**札そのものは挙動を持たない**・engine の `GolmTurn343`）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -17732,6 +17736,8 @@ public static class TraitCatalog
         new GolmSwallowTrait(TraitId.GolmSwallowSpit),        // 第343期（精気を呑む ＋ 吐き捨てる GT-a2・ゴルム）
         new GolmSwallowTrait(TraitId.GolmSwallowHeal),        // 第343期（精気を呑む ＋ 消化 GT-a1・ゴルム）
         new GolmSwallowTrait(TraitId.GolmSwallowGrow),        // 第343期（精気を呑む ＋ 膨れる GT-a3・ゴルム）
+        new MarkOnlyTrait(TraitId.GolmSwallowSpend),          // 第344期（腹を使う SW-a・ゴルム・印だけ）
+        new MarkOnlyTrait(TraitId.GolmSwallowWeak),           // 第344期（弱った敵だけ SW-b・ゴルム・印だけ）
         new SharePushTrait(TraitId.ShareSin),                 // 第313期（ドハ DP-c の手番）
         new AmplifierTrait(),
         new ContagionTrait(),

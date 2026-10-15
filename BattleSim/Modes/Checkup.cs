@@ -476,6 +476,8 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.MarkInheritOne]     = (HcPlusL,  "隣へ全部（第337期・ヒサ MI-a）: 標の付いた敵が倒れると、層をすべて、隣の層の最も多い1体へ（同じなら席の若い方）。保持者 0 枚"),
         [TraitId.MarkInheritFeathers] = (HcPlusL, "散った恨みの羽（第337期・ミサ）: 引き継ぎで移った層の数だけ羽が増える（在庫だけ）。保持者 0 枚"),
         [TraitId.FeatherGrow]        = (HcMinusL, "羽が毎ターン増える（第339期・ミサ FG-a）: 手番の頭に羽が3枚増える（標の有無を問わない・1ラウンドに1度）。版は `FeatherLoss` を外す（乱射しても減らない）。保持者 0 枚"),
+        [TraitId.GolmSwallowSpend]   = (HcMinusL, "腹を使う（第344期・ゴルム SW-a）: 呑んだら、呑んだ敵の残りの HP の分だけ腹が減る（GT-a2 と一緒に持つ）。保持者 0 枚"),
+        [TraitId.GolmSwallowWeak]    = (HcMinusL, "弱った敵だけ（第344期・ゴルム SW-b）: 呑めるのは HP が最大 HP の 3 割以下の敵だけ（GT-a2 と一緒に持つ）。保持者 0 枚"),
         [TraitId.GolmSwallowSpit]    = (HcPlusL,  "精気を呑む ＋ 吐き捨てる（第343期・ゴルム GT-a2）: 手番で HP が腹以下の敵の精気を呑み（倒れる・引き継ぎ ／ 飛び火なし）、呑んだ状態異常を HP の最も多い敵に吐きかける。呑めなければ吐く ／ 殴る。保持者 0 枚"),
         [TraitId.GolmSwallowHeal]    = (HcPlusL,  "精気を呑む ＋ 消化（第343期・ゴルム GT-a1）: 呑んだ敵の残りの HP を生きている味方全員に等分して癒す。保持者 0 枚"),
         [TraitId.GolmSwallowGrow]    = (HcPlusL,  "精気を呑む ＋ 膨れる（第343期・ゴルム GT-a3）: 呑んだ敵の残りの HP だけ最大 HP と HP が増える。保持者 0 枚"),

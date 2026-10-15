@@ -2357,6 +2357,8 @@ public sealed class UnitTally
     /// </summary>
     public long Gt343Turns, Gt343BellySum, Gt343BellyMax, Gt343Edible, Gt343Swallows, Gt343SwallowHp, Gt343SwPoison, Gt343SwBurn, Gt343SwShock, Gt343SwDensity, Gt343SwMark, Gt343SwConc, Gt343SwMarkedNbr,
                 Gt343Attacks, Gt343Spits, Gt343SpitPoison, Gt343SpitBurn, Gt343SpitShock, Gt343SpitDensity, Gt343SpitMark, Gt343SpitOnTop, Gt343Healed, Gt343Grown;
+    /// <summary>第344期（<b>計数のみ</b>・ゴルムの SW）: <c>Sw344HpPctSum</c> 呑んだ敵の HP ÷ 最大 HP（% の和）／ <c>Sw344BellySpent</c> 呑んで減った腹の和（SW-a）。</summary>
+    public long Sw344HpPctSum, Sw344BellySpent;
     public long[]? Fg339Spray, Fg339AllyHits, Fg339AllyDmg;
     /// <summary>第339期（計数のみ）: 乱射の1発をターンごとに数える（羽の乱射 ／ 乱射の札の両方）。</summary>
     public void NoteSpray339(int turn, bool ally, int lost, bool killed)
@@ -3612,6 +3614,7 @@ public sealed class UnitTally
         Gt343SwPoison += o.Gt343SwPoison; Gt343SwBurn += o.Gt343SwBurn; Gt343SwShock += o.Gt343SwShock; Gt343SwDensity += o.Gt343SwDensity; Gt343SwMark += o.Gt343SwMark; Gt343SwConc += o.Gt343SwConc; Gt343SwMarkedNbr += o.Gt343SwMarkedNbr;
         Gt343Attacks += o.Gt343Attacks; Gt343Spits += o.Gt343Spits; Gt343SpitPoison += o.Gt343SpitPoison; Gt343SpitBurn += o.Gt343SpitBurn; Gt343SpitShock += o.Gt343SpitShock; Gt343SpitDensity += o.Gt343SpitDensity; Gt343SpitMark += o.Gt343SpitMark;
         Gt343SpitOnTop += o.Gt343SpitOnTop; Gt343Healed += o.Gt343Healed; Gt343Grown += o.Gt343Grown;
+        Sw344HpPctSum += o.Sw344HpPctSum; Sw344BellySpent += o.Sw344BellySpent;   // 第344期
         Fg339Spray = AddArr(Fg339Spray, o.Fg339Spray); Fg339AllyHits = AddArr(Fg339AllyHits, o.Fg339AllyHits); Fg339AllyDmg = AddArr(Fg339AllyDmg, o.Fg339AllyDmg);
         SharedAway += o.SharedAway; ShareTakenHits += o.ShareTakenHits; ShareGives += o.ShareGives; ShareGiven += o.ShareGiven; ShareGiftAccrued += o.ShareGiftAccrued;   // 第297期
         ShareGifts += o.ShareGifts; ShareGiftCapped += o.ShareGiftCapped; ShareGiftNoTarget += o.ShareGiftNoTarget; ShareGiftSkipped += o.ShareGiftSkipped;

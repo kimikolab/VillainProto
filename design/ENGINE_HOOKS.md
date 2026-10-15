@@ -1419,3 +1419,7 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - 段0: engine は第342期のまま。規定のカタ `UnitCatalog.Kata` ＝ `KataH342`（第332〜342期の規定・明示の定義に）＋ `ThundercloudAllyPops` ＋ `KataRod` ＋ `KataRodChain`。固定の口 `Common.PinK342` ／ `Pin342` ／ `CompareBuildsH342` ／ `PlaytestH342`（古い口の終端 `PinM339` の最後に `PinK342`）・`IsKataNow`（`PinKataTou311` ／ `PinTKK324` ／ `PinT326` ／ `PinTK327` ／ `PinT328` ／ `PinTK331`）。
 - 本体: `GolmTurn343`（札 `GolmSwallowSpit` ／ `GolmSwallowHeal` ／ `GolmSwallowGrow` の `OnAction` だけが呼ぶ・手番は `[Skill]`）。HP が腹（`ColossusTrait.BellyKey`・巨躯で飲み込んだ量の残高——まどろみの規則は既定で切れているので累計と同じ）以下の生きている敵のうち、帯びた量（毒の層 ＋ 燃焼の残ターン ＋ 感電 1 ＋ 濃さ ＋ 標の層）→ HP → 席の順で1体を選ぶ。**呑むは攻撃ではない**——毒 ／ 燃焼 ／ 感電 ／ 標 ／ 印 ／ 濃さを消してから `HandleDeath`（撃破者 ＝ ゴルム）を直に呼ぶので、`Damage` も出ず、引き継ぎ ／ 飛び火（標の散る・澱み・疫み・延焼・感電の弾け）も起きない。腹は呑んでも減らない。呑めなければ GT-a2 は在庫（私有キー `gtPoison` ほか）があれば吐き（`GolmSpit343`）、なければ `PerformAttack`。吐きは HP の最も多い敵へ直に足す（標は `LayerMark` を通さない・感電は `MarkShock`）。乱数を引かない。
 - 表示専用の出来事 `BattleEventKind.Swallow`（`SwallowLabels` 呑む ／ 吐く ／ 癒す ／ 膨れる）。計数のみ `UnitTally.Gt343*`（手番の頭の腹と呑める敵の数は規定でも数える・`_gtCensusLive`）。版 `GolmGTa2` ／ `GolmGTa1` ／ `GolmGTa3`。器具: `golm343`。
+
+## 第344期 —— ゴルムの「精気を呑む」の条件（SW・版）
+
+- `GolmTurn343` の候補の絞りに `GolmSwallowWeak`（SW-b・HP が最大 HP の `GolmSwallowWeakPercent` ＝ 30% 以下の敵だけ）、呑んだ後に `GolmSwallowSpend`（SW-a・腹を呑んだ敵の残りの HP だけ減らす・0 で止める）。どちらも `GolmSwallowSpit`（GT-a2）と一緒に持つ札で、札そのものは挙動を持たない。乱数を引かない。計数のみ `UnitTally.Sw344HpPctSum` ／ `Sw344BellySpent`。版 `GolmSWa` ／ `GolmSWb` ／ `GolmSWab`。器具: `sw344`。

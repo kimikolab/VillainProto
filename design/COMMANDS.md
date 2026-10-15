@@ -1204,6 +1204,10 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 golm343 compare [版,…]  # 第343期 §6: `compare` 64 行 × 版（16 秒）
     dotnet run --project BattleSim -c Release 0 golm343 log [台] [波] [seed] [版]   # 第343期: 1戦のログ（台 guard ／ havoc ／ utsu ／ shock ／ poison・版 base ／ a2 ／ a1 ／ a3）
     dotnet run --project BattleSim -c Release 0 golm343 check         # 第343期 自己検査（段0 の定義 ／ 固定の口 ／ 戦の中・GT の版の定義と試遊の台・呑む ／ 吐く ／ 癒す ／ 膨れるを盤を直に組んで・verbose・PickOne）
+    dotnet run --project BattleSim -c Release 0 sw344 boards [版,…]     # 第344期 §4: 代表台 5（golm343 と同じ）× 5 波 × 版（規定 ／ GT-a2 ／ SW-a ／ SW-b ／ SW-a＋b）・seed 0..99・ゴルムの手番の中身 ／ 勝率 ／ 還し ／ 壊れの兆し（3 秒）。予測のファイルが無ければ走らない
+    dotnet run --project BattleSim -c Release 0 sw344 compare [版,…]    # 第344期 §4: `compare` 64 行 × 版（上がった行 ／ セル・第五波 95% 超の行の数）（20 秒）
+    dotnet run --project BattleSim -c Release 0 sw344 log [台] [波] [seed] [版]   # 第344期: 1戦のログ（版 base ／ gt ／ a ／ b ／ ab）
+    dotnet run --project BattleSim -c Release 0 sw344 check           # 第344期 自己検査（版の定義と試遊の台・SW-a ／ SW-b ／ SW-a＋b を盤を直に組んで・吐き捨ては GT-a2 と同じ・verbose・PickOne）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

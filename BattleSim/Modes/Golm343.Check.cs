@@ -81,10 +81,10 @@ static partial class Golm343Diag
             Expect("版の定義: GT-a2 ／ a1 ／ a3 ＝ 規定のゴルム ＋ 札1枚・手番は `[Skill]`・文面は叩き台（a2 はフレーバーも）・`Everyone` の外・保持者 0", def);
             var v = Presets.Versions; var guard = Presets.Playtest.First(r => r.Name == GuardRow).F; var shock = ShockGolm();
             (string Name, Formation Base, UnitDef Golm)[] want = { ("版・GT吐き捨て 守り型", guard, UnitCatalog.GolmGTa2), ("版・GT消化 守り型", guard, UnitCatalog.GolmGTa1), ("版・GT膨れ 守り型", guard, UnitCatalog.GolmGTa3), ("版・GT吐き捨て 感電", shock, UnitCatalog.GolmGTa2) };
-            bool rows = v[0].Name == K342.PonRow && v[1].Name == "試遊・ミサ 書き手なし" && v.Length == 2 + want.Length && Presets.Playtest.Length == 17
-                && want.All(x => v.Any(r => r.Name == x.Name && r.F.Occupied().Select(o => o.Def).SequenceEqual(x.Base.Occupied().Select(o => o.Def.Id == "golm" ? x.Golm : o.Def))
-                    && r.F.Occupied().Select(o => o.Slot).SequenceEqual(x.Base.Occupied().Select(o => o.Slot))));
-            Expect("試遊の台: `Presets.Versions` ＝ 「試遊・感電 ポンの台」「試遊・ミサ 書き手なし」＋「版・GT吐き捨て ／ GT消化 ／ GT膨れ 守り型」「版・GT吐き捨て 感電」（第342期の「版・」の3台は外した）・`Playtest` は 17 台のまま", rows);
+            // 第344期: 「版・GT」の4台を外した——1〜2行目（ポンの台 ／ 書き手なし）と、GT の版が試遊の台に残っていないことだけを見る（`want` は第343期の並びの記録）
+            bool rows = v[0].Name == K342.PonRow && v[1].Name == "試遊・ミサ 書き手なし" && Presets.Playtest.Length == 17 && want.Length == 4
+                && v.SelectMany(r => r.F.Occupied()).All(o => !ReferenceEquals(o.Def, UnitCatalog.GolmGTa2) && !ReferenceEquals(o.Def, UnitCatalog.GolmGTa1) && !ReferenceEquals(o.Def, UnitCatalog.GolmGTa3));
+            Expect("試遊の台: `Presets.Versions` の1〜2行目は「試遊・感電 ポンの台」「試遊・ミサ 書き手なし」・第343期の「版・GT」の4台は第344期に外した・`Playtest` は 17 台のまま", rows);
         }
 
         // ================= 本体: 共通（呑む） =================

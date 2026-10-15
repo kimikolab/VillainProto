@@ -5639,6 +5639,27 @@ public static class UnitCatalog
     /// <summary>第343期 GT-a2（吐き捨てる・推し）。規定のゴルム ＋ <see cref="TraitId.GolmSwallowSpit"/>（呑んだ状態異常を HP の最も多い敵にまとめて吐きかける）。</summary>
     public static readonly UnitDef GolmGTa2 = With343(Golm, TraitId.GolmSwallowSpit, "。呑み込めない毒や雷は、いちばん大きな敵に吐き捨てる", "呑んだ精気は糧になる。呑み込めない毒と雷は、吐き捨てる。");
 
+    // 第344期（指示書 design/PHASE344_GOLM_SWALLOW_LIMIT_SPEC.md §2）—— GT-a2 吐き捨てるの呑む条件（SW）。吐き捨ての中身は第343期のまま。文面は手番の句を差し替える。
+    /// <summary>第344期 SW-a の手番の句（叩き台）。</summary>
+    public const string GolmSwallowClauseSpend344 = "。手番で、腹に溜めた量を使って、敵の精気を呑み干す";
+    /// <summary>第344期 SW-b ／ SW-a ＋ b の手番の句（叩き台）。</summary>
+    public const string GolmSwallowClauseWeak344 = "。手番で、弱った敵（最大 HP の3割以下）の精気を呑み干す";
+    static UnitDef With344(TraitId[] cards, string clause) => new()
+    {
+        Id = GolmGTa2.Id, Name = GolmGTa2.Name, MaxHp = GolmGTa2.MaxHp, Attack = GolmGTa2.Attack, Speed = GolmGTa2.Speed, Advances = GolmGTa2.Advances, Pattern = GolmGTa2.Pattern,
+        Traits = GolmGTa2.Traits.Concat(cards).ToArray(), Actions = GolmGTa2.Actions,
+        PlusText = GolmGTa2.PlusText.Replace(GolmSwallowClause343, clause, StringComparison.Ordinal), MinusText = GolmGTa2.MinusText, Flavor = GolmGTa2.Flavor,
+    };
+
+    /// <summary>第344期 SW-a（腹を使う）。GT-a2 ＋ <see cref="TraitId.GolmSwallowSpend"/>（呑んだら呑んだ敵の残りの HP だけ腹が減る）。</summary>
+    public static readonly UnitDef GolmSWa = With344(new[] { TraitId.GolmSwallowSpend }, GolmSwallowClauseSpend344);
+
+    /// <summary>第344期 SW-b（弱った敵だけ）。GT-a2 ＋ <see cref="TraitId.GolmSwallowWeak"/>（最大 HP の 3 割以下の敵だけ呑める・腹は減らない）。</summary>
+    public static readonly UnitDef GolmSWb = With344(new[] { TraitId.GolmSwallowWeak }, GolmSwallowClauseWeak344);
+
+    /// <summary>第344期 SW-a ＋ b。GT-a2 ＋ <see cref="TraitId.GolmSwallowSpend"/> ＋ <see cref="TraitId.GolmSwallowWeak"/>。</summary>
+    public static readonly UnitDef GolmSWab = With344(new[] { TraitId.GolmSwallowSpend, TraitId.GolmSwallowWeak }, GolmSwallowClauseWeak344);
+
     /// <summary>第343期 GT-a1（消化）。規定のゴルム ＋ <see cref="TraitId.GolmSwallowHeal"/>（呑んだ敵の残りの HP を生きている味方全員に等分して癒す）。</summary>
     public static readonly UnitDef GolmGTa1 = With343(Golm, TraitId.GolmSwallowHeal, "。呑んだ精気で仲間を癒す");
 

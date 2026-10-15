@@ -1911,6 +1911,9 @@ public sealed class BattleContext
         foreach (UnitState e in LivingMembers(Opponent(g.TeamId))) if (e.Hp <= belly) t.Gt343Edible++;
     }
 
+    /// <summary>第344期（SW-b）: 呑める敵の HP の上限（最大 HP に対する %）。</summary>
+    public const int GolmSwallowWeakPercent = 30;
+
     /// <summary>第343期: 呑む候補の並びに使う「帯びた状態異常の量」（毒の層 ＋ 燃焼の残ターン ＋ 感電 1 ＋ 濃さ ＋ 標の層）。<b>読むだけ。</b></summary>
     int Gt343Load(UnitState e) => e.RawCounter(StatusKeys.Poison) + e.RawCounter(StatusKeys.Burn) + (e.RawCounter(StatusKeys.Shock) > 0 ? 1 : 0) + DensityOf(e) + e.RawCounter(StatusKeys.Marked);
 
@@ -1922,11 +1925,13 @@ public sealed class BattleContext
     {
         UnitTally t = TallyOf(g);
         int belly = g.RawCounter(ColossusTrait.BellyKey);
+        bool weakOnly = g.HasTrait(TraitId.GolmSwallowWeak);   // 第344期（SW-b）
         UnitState? pick = null;
         int pv = -1;
         foreach (UnitState e in LivingMembers(Opponent(g.TeamId)))
         {
             if (e.Hp > belly) continue;
+            if (weakOnly && e.Hp * 100 > e.MaxHp * GolmSwallowWeakPercent) continue;   // 第344期（SW-b）: 最大 HP の 3 割を超える敵は呑めない
             int v = Gt343Load(e);
             if (pick is null || v > pv || (v == pv && (e.Hp > pick.Hp || (e.Hp == pick.Hp && e.Slot < pick.Slot)))) { pick = e; pv = v; }
         }
@@ -1940,6 +1945,12 @@ public sealed class BattleContext
         }
 
         int hp = pick.Hp;
+        t.Sw344HpPctSum += pick.MaxHp > 0 ? 100L * hp / pick.MaxHp : 0;   // 第344期・計数のみ（呑んだ敵の HP ÷ 最大 HP）
+        if (g.HasTrait(TraitId.GolmSwallowSpend))   // 第344期（SW-a）: 呑んだ敵の残りの HP の分だけ腹が減る
+        {
+            g.SetCounter(ColossusTrait.BellyKey, Math.Max(0, belly - hp));
+            t.Sw344BellySpent += Math.Min(belly, hp);
+        }
         int p = pick.RawCounter(StatusKeys.Poison), b = pick.RawCounter(StatusKeys.Burn), s = pick.RawCounter(StatusKeys.Shock) > 0 ? 1 : 0, d = DensityOf(pick), m = pick.RawCounter(StatusKeys.Marked), c = pick.RawCounter(StatusKeys.Concentrated);
         t.Gt343Swallows++; t.Gt343SwallowHp += hp;
         t.Gt343SwPoison += p; t.Gt343SwBurn += b; t.Gt343SwShock += s; t.Gt343SwDensity += d; t.Gt343SwMark += m; t.Gt343SwConc += c;
@@ -1953,7 +1964,7 @@ public sealed class BattleContext
             for (int i = 0; i < add.Length; i++) if (add[i] > 0) g.SetCounter(GolmSwallowTrait.StashKeys[i], g.RawCounter(GolmSwallowTrait.StashKeys[i]) + add[i]);
         }
         if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.Swallow, Turn = _turn, ActorId = g.InstanceId, TargetId = pick.InstanceId, Amount = hp, Slot = belly, Text = SwallowLabels.Swallow, Team = pick.TeamId });
-        Log($"    {g.Name} が {pick.Name} の精気を呑み干した（残り HP {hp}・腹 {belly}）——{pick.Name} は抜け殻のように崩れた", LogKind.Highlight);
+        Log($"    {g.Name} が {pick.Name} の精気を呑み干した（残り HP {hp}・腹 {belly}{(g.HasTrait(TraitId.GolmSwallowSpend) ? $" → {g.RawCounter(ColossusTrait.BellyKey)}" : "")}）——{pick.Name} は抜け殻のように崩れた", LogKind.Highlight);
         HandleDeath(pick, g);
 
         if (spit) { GolmSpit343(g); return; }
