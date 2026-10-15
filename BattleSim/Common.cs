@@ -551,10 +551,30 @@ public static (string Name, Formation F)[] PlaytestH342 => Presets.Playtest.Sele
 /// 第345期: 規定のゴルム（S3・弱った敵だけ ／ 腹を使う ／ 吐き捨てる）を第1〜344期の規定（`GolmH344`）に替える。ほかの駒はそのまま返す。
 /// 古い口の終端（`PinM333` → … → `PinM339` → `PinK342` → ここ）。ゴルムをもっと古い規定へ替える口は無い（第344期まで規定のゴルムは一度も変わっていない）。
 /// </summary>
-public static UnitDef PinG344(UnitDef d) => ReferenceEquals(d, UnitCatalog.Golm) ? UnitCatalog.GolmH344 : d;
+public static UnitDef PinG344(UnitDef d) => IsGolmNow(d) && !ReferenceEquals(d, UnitCatalog.GolmH344) ? UnitCatalog.GolmH344 : d;   // 第346期: 第345期の規定（`GolmH345`・`PinG345` を通った後）も
 
 /// <summary>第345期: 規定のゴルムか、第1〜344期の規定（`GolmH344`・`PinG344` を通った後）か。</summary>
-public static bool IsGolmNow(UnitDef d) => ReferenceEquals(d, UnitCatalog.Golm) || ReferenceEquals(d, UnitCatalog.GolmH344);
+public static bool IsGolmNow(UnitDef d) => ReferenceEquals(d, UnitCatalog.Golm) || ReferenceEquals(d, UnitCatalog.GolmH344) || ReferenceEquals(d, UnitCatalog.GolmH345);   // 第346期: `GolmH345` も
+
+/// <summary>
+/// 第346期: 規定のゴルム（RP-b・ロケットパンチ ＋ 捕獲）を第345期の規定（`GolmH345`・S3）に替える。ほかの駒はそのまま返す。
+/// 第345期の器具（`rp345` の「規定」）だけが通す。第344期までの器具は古い口の終端の `PinG344` が規定のゴルムも `GolmH345` も `GolmH344` へ替える。
+/// </summary>
+public static UnitDef PinG345(UnitDef d) => ReferenceEquals(d, UnitCatalog.Golm) ? UnitCatalog.GolmH345 : d;
+
+/// <summary>第346期: ゴルムの RP-b を規定にした。第345期の規定のゴルムで測った器具（`rp345` の「規定」）はこれを通す。陣形とレリックは保つ。</summary>
+public static Formation Pin345(Formation f)
+{
+    var g = f.Clone();
+    foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinG345(d);
+    return g;
+}
+
+/// <summary>第346期: `CompareBuilds()` のゴルムを第345期の規定に替えた写し。</summary>
+public static (string Name, Formation F)[] CompareBuildsH345() => CompareBuilds().Select(r => (r.Name, Pin345(r.F))).ToArray();
+
+/// <summary>第346期: `Presets.Playtest` のゴルムを第345期の規定に替えた写し（行の数と並びはそのまま）。</summary>
+public static (string Name, Formation F)[] PlaytestH345 => Presets.Playtest.Select(r => (r.Name, Pin345(r.F))).ToArray();
 
 /// <summary>第345期: ゴルムの S3 を規定にした。第1〜344期の規定のゴルムで測った器具（`golm343` ／ `sw344` の「規定」）はこれを通す。陣形とレリックは保つ。</summary>
 public static Formation Pin344(Formation f)

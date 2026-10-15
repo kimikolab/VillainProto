@@ -873,7 +873,7 @@ public enum TraitId
     GolmSwallowSpend,   // 腹を使う（SW-a・ゴルム）: 呑んだら、呑んだ敵の残りの HP の分だけ腹が減る（**札そのものは挙動を持たない**・engine の `GolmTurn343`）
     GolmSwallowWeak,    // 弱った敵だけ（SW-b・ゴルム）: 呑めるのは HP が最大 HP の 3 割以下の敵だけ（**札そのものは挙動を持たない**・engine の `GolmTurn343`）
 
-    // --- 第345期で足した札（指示書 design/PHASE345_GOLM_ROCKET_PUNCH_SPEC.md §3）。呑めない手番に何をするか（保持者 0 枚・規定のゴルムの札と一緒に持つ） ---
+    // --- 第345期で足した札（指示書 design/PHASE345_GOLM_ROCKET_PUNCH_SPEC.md §3）。呑めない手番に何をするか（規定のゴルムの札と一緒に持つ・第346期からロケットパンチ ／ 捕獲は規定のゴルムの札・踏み潰しは保持者 0 枚） ---
     GolmRocketPunch,    // ロケットパンチ（RP-a・ゴルム）: 呑めない手番は、通常攻撃の代わりに誰にでも届く手を飛ばして殴る（攻 ＋ 腹の 1 割・**札そのものは挙動を持たない**・engine の `GolmRocket345`）
     GolmRocketGrab,     // ロケットパンチ ＋ 捕獲（RP-b・ゴルム）: 手番はいつも手を飛ばす。呑める敵は殴らずに掴み、殴った敵が呑める条件になれば同じ手番で掴んで呑む（**札そのものは挙動を持たない**・engine の `GolmTurn343`）
     GolmStomp,          // 踏み潰し（GA-a・ゴルム）: 呑めない手番は、通常攻撃の的に 攻 ＋ 腹の 1 割・その的の左右の隣の敵に半分（**札そのものは挙動を持たない**・engine の `GolmTurn343`）

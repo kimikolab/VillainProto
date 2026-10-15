@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 using G343 = Golm343Diag;
 using S316 = Shiga316Diag;
@@ -44,17 +44,17 @@ static partial class Rp345Diag
 
         // ================= 段0 =================
         {
-            UnitDef G = UnitCatalog.Golm, O = UnitCatalog.GolmH344;
+            UnitDef G = UnitCatalog.GolmH345, O = UnitCatalog.GolmH344;   // 第346期: 第345期の規定は `GolmH345`
             bool def = G.Traits.SequenceEqual(O.Traits.Concat(new[] { TraitId.GolmSwallowSpit, TraitId.GolmSwallowSpend, TraitId.GolmSwallowWeak })) && G.Traits.SequenceEqual(UnitCatalog.GolmSWab.Traits)
                 && G.PlusText == UnitCatalog.GolmSWab.PlusText && G.PlusText == O.PlusText + "。手番で、弱った敵（最大 HP の3割以下）の精気を呑み干す" + "。呑み込めない毒や雷は、いちばん大きな敵に吐き捨てる"
                 && G.MinusText == O.MinusText && G.Flavor == UnitCatalog.GolmSWab.Flavor && G.Actions is { Count: 1 } a && a[0].Kind == ActionKind.Skill
                 && new[] { UnitCatalog.GolmGTa2, UnitCatalog.GolmGTa1, UnitCatalog.GolmGTa3 }.Zip(new[] { TraitId.GolmSwallowSpit, TraitId.GolmSwallowHeal, TraitId.GolmSwallowGrow }).All(x => x.First.Traits.SequenceEqual(O.Traits.Append(x.Second)))
                 && UnitCatalog.GolmDrink.Traits.SequenceEqual(O.Traits.Append(TraitId.ColossusDrink)) && UnitCatalog.GolmGL.Traits.SequenceEqual(O.Traits.Append(TraitId.ColossusToStriker))
                 && UnitCatalog.GolmSWa.Traits.SequenceEqual(UnitCatalog.GolmGTa2.Traits.Append(TraitId.GolmSwallowSpend))
-                && UnitCatalog.All.Contains(G) && !UnitCatalog.Everyone.Contains(O) && UnitCatalog.All.Count == 52;
+                && UnitCatalog.All.Contains(UnitCatalog.Golm) && !UnitCatalog.Everyone.Contains(O) && !UnitCatalog.Everyone.Contains(G) && UnitCatalog.All.Count == 52;
             Expect("段0 定義: 規定のゴルム ＝ 第1〜344期の規定（`GolmH344`）＋ 吐き捨て ＋ 腹を使う ＋ 弱った敵だけ（札 ／ 文面 ／ フレーバー ／ 手番 `[Skill]` は第344期の `GolmSWab` と同じ）・第335期 ／ 第343期の版は旧から作り直した・旧は `Everyone` の外", def);
             var guard = Presets.Playtest.First(r => r.Name == G343.GuardRow).F;
-            bool pin = ReferenceEquals(PinG344(G), O) && ReferenceEquals(PinK342(G), O) && ReferenceEquals(Pin344(guard)[0], O) && IsGolmNow(O) && IsGolmNow(G)
+            bool pin = ReferenceEquals(PinG344(G), O) && ReferenceEquals(PinK342(G), O) && ReferenceEquals(PinG344(UnitCatalog.Golm), O) && ReferenceEquals(Pin344(guard)[0], O) && IsGolmNow(O) && IsGolmNow(G)
                 && new Func<UnitDef, UnitDef>[] { PinM339, PinH337, PinD335, PinZ334, PinM333 }.All(p => ReferenceEquals(p(G), O))
                 && ReferenceEquals(Pin342(guard)[0], O) && ReferenceEquals(Pin339(guard)[0], O)
                 && G343.Apply(guard, G343.Vers[0]).Occupied().All(o => !ReferenceEquals(o.Def, G)) && Sw344Diag.Apply(guard, Sw344Diag.Vers[0]).Occupied().All(o => !ReferenceEquals(o.Def, G))
@@ -66,7 +66,7 @@ static partial class Rp345Diag
             foreach (var w in new[] { Waves[1], Waves[2], Waves[3] })
                 for (int sd = 0; sd < 20; sd++)
                 {
-                    var rn = BattleEngine.Run(BattleEngine.Materialize(guard, BattleContext.PlayerTeam), w.Make(), sd, verbose: false);
+                    var rn = BattleEngine.Run(BattleEngine.Materialize(Pin345(guard), BattleContext.PlayerTeam), w.Make(), sd, verbose: false);   // 第346期: 第345期の規定
                     var ro = BattleEngine.Run(BattleEngine.Materialize(Pin344(guard), BattleContext.PlayerTeam), w.Make(), sd, verbose: false);
                     var rv = BattleEngine.Run(BattleEngine.Materialize(S316.SwapId(Pin344(guard), "golm", UnitCatalog.GolmSWab), BattleContext.PlayerTeam), w.Make(), sd, verbose: false);
                     n++;
@@ -86,9 +86,36 @@ static partial class Rp345Diag
             Expect("段0 盤を直に: 規定のゴルムは 3 割以下かつ腹以下の敵（25%）だけを呑み（40% は呑まない）、腹が減り（50 → 25）、呑んだ毒を HP の最も多い敵へ吐き捨てる", ok, $"腹 50 → {Belly(g)}・吐いた先の毒 {e[2]!.RawCounter(StatusKeys.Poison)}");
         }
 
+        // ================= 第346期: RP-b を規定に =================
+        {
+            UnitDef N = UnitCatalog.Golm, O = UnitCatalog.GolmH345;
+            bool def = N.Traits.SequenceEqual(O.Traits.Concat(new[] { TraitId.GolmRocketPunch, TraitId.GolmRocketGrab })) && N.PlusText == UnitCatalog.GolmRPb.PlusText
+                && N.MinusText == O.MinusText && N.Flavor == O.Flavor && N.Actions == O.Actions && UnitCatalog.All.Contains(N) && !UnitCatalog.Everyone.Contains(O)
+                && ReferenceEquals(PinG345(N), O) && ReferenceEquals(Pin345(Presets.Playtest.First(r => r.Name == G343.GuardRow).F)[0], O)
+                && CompareBuildsH345().Concat(PlaytestH345).SelectMany(r => r.F.Occupied()).All(o => !ReferenceEquals(o.Def, N))
+                && Apply(Presets.Playtest.First(r => r.Name == G343.GuardRow).F, Vers[0]).Occupied().All(o => !ReferenceEquals(o.Def, N));
+            Expect("第346期 定義: 規定のゴルム ＝ 第345期の規定（`GolmH345`）＋ ロケットパンチ ＋ 捕獲（文面は第345期の RP-b）・`PinG345` ／ `Pin345` は規定を `GolmH345` へ・`rp345` の「規定」は `GolmH345`", def);
+            var guard = Presets.Playtest.First(r => r.Name == G343.GuardRow).F;
+            long armNew = 0, armOld = 0; int n = 0, diff = 0;
+            foreach (var w in new[] { Waves[0], Waves[2], Waves[3] })
+                for (int sd = 0; sd < 20; sd++)
+                {
+                    var rn = BattleEngine.Run(BattleEngine.Materialize(guard, BattleContext.PlayerTeam), w.Make(), sd, verbose: false);
+                    var ro = BattleEngine.Run(BattleEngine.Materialize(Pin345(guard), BattleContext.PlayerTeam), w.Make(), sd, verbose: false);
+                    var rv = BattleEngine.Run(BattleEngine.Materialize(S316.SwapId(Pin345(guard), "golm", UnitCatalog.GolmRPb), BattleContext.PlayerTeam), w.Make(), sd, verbose: false);
+                    n++;
+                    UnitTally? tn = rn.TallyByUnit.GetValueOrDefault("golm"), to = ro.TallyByUnit.GetValueOrDefault("golm"), tv = rv.TallyByUnit.GetValueOrDefault("golm");
+                    long a1 = (tn?.Rp345Punches ?? 0) + (tn?.Rp345GrabNoPunch ?? 0), a0 = (to?.Rp345Punches ?? 0) + (to?.Rp345GrabNoPunch ?? 0), av = (tv?.Rp345Punches ?? 0) + (tv?.Rp345GrabNoPunch ?? 0);
+                    armNew += a1; armOld += a0;
+                    if (rn.PlayerWon != rv.PlayerWon || rn.Turns != rv.Turns || a1 != av || (tn?.Gt343Swallows ?? 0) != (tv?.Gt343Swallows ?? 0)) diff++;
+                }
+            Expect($"第346期 戦の中で: 守り型 × ボス ／ 大隊 ／ 第2波 × seed 0..19（{n} 戦）——規定のゴルムは手を飛ばし（RP-b が働く）、旧（`GolmH345`）は飛ばさない・規定は第345期の RP-b（`GolmRPb`）と勝敗 ／ 決着T ／ 手の回数 ／ 呑んだ回数が一致",
+                armNew > 0 && armOld == 0 && diff == 0, $"手 規定 {armNew} ／ 旧 {armOld}・RP-b との違い {diff}");
+        }
+
         // ================= 版の定義と試遊の台 =================
         {
-            UnitDef G = UnitCatalog.Golm;
+            UnitDef G = UnitCatalog.GolmH345;   // 第346期: 版は第345期の規定から作り直した
             bool def = UnitCatalog.GolmRPa.Traits.SequenceEqual(G.Traits.Append(TraitId.GolmRocketPunch)) && UnitCatalog.GolmRPb.Traits.SequenceEqual(G.Traits.Append(TraitId.GolmRocketGrab))
                 && UnitCatalog.GolmGAa.Traits.SequenceEqual(G.Traits.Append(TraitId.GolmStomp))
                 && UnitCatalog.GolmRPa.PlusText == G.PlusText + "。呑めないときは、腕を飛ばして殴る（後ろの敵にも届く）"
@@ -96,15 +123,15 @@ static partial class Rp345Diag
                 && UnitCatalog.GolmRPb.PlusText != G.PlusText
                 && UnitCatalog.GolmGAa.PlusText == G.PlusText + "。呑めないときは、巨体で踏み潰す（隣の敵にも半分）"
                 && new[] { UnitCatalog.GolmRPa, UnitCatalog.GolmRPb, UnitCatalog.GolmGAa }.All(d => !UnitCatalog.Everyone.Contains(d) && d.MinusText == G.MinusText && d.Actions == G.Actions)
-                && UnitCatalog.Everyone.All(d => !d.Traits.Any(t => t is TraitId.GolmRocketPunch or TraitId.GolmRocketGrab or TraitId.GolmStomp));
-            Expect("版の定義: RP-a ／ RP-b ／ GA-a ＝ 規定のゴルム（S3）＋ 札1枚・文面は叩き台（RP-b は手番の句を差し替え）・`Everyone` の外・保持者 0", def);
+                && UnitCatalog.Everyone.Where(d => d.Traits.Any(t => t is TraitId.GolmRocketPunch or TraitId.GolmRocketGrab)).SequenceEqual(new[] { UnitCatalog.Golm })   // 第346期: 規定のゴルムの札
+                && UnitCatalog.Everyone.All(d => !d.Traits.Contains(TraitId.GolmStomp));
+            Expect("版の定義: RP-a ／ RP-b ／ GA-a ＝ 第345期の規定のゴルム（S3・`GolmH345`）＋ 札1枚・文面は叩き台（RP-b は手番の句を差し替え）・`Everyone` の外・ロケットパンチ ／ 捕獲の札は第346期から規定のゴルムの札（踏み潰しは保持者 0）", def);
             var v = Presets.Versions; var guard = Presets.Playtest.First(r => r.Name == G343.GuardRow).F; var poison = G343.PoisonGolm();
             (string Name, Formation Base, UnitDef Golm)[] want = { ("版・RP-a 守り型", guard, UnitCatalog.GolmRPa), ("版・RP-b 守り型", guard, UnitCatalog.GolmRPb), ("版・GA-a 守り型", guard, UnitCatalog.GolmGAa), ("版・RP-b 毒", poison, UnitCatalog.GolmRPb) };
-            bool rows = v.Length == 6 && v[0].Name == "試遊・感電 ポンの台" && v[1].Name == "試遊・ミサ 書き手なし" && Presets.Playtest.Length == 17
-                && want.All(x => v.Any(r => r.Name == x.Name && r.F.Occupied().Select(o => o.Def).SequenceEqual(x.Base.Occupied().Select(o => o.Def.Id == "golm" ? x.Golm : o.Def))
-                    && r.F.Occupied().Select(o => o.Slot).SequenceEqual(x.Base.Occupied().Select(o => o.Slot))))
-                && v.SelectMany(r => r.F.Occupied()).All(o => !ReferenceEquals(o.Def, UnitCatalog.GolmSWa) && !ReferenceEquals(o.Def, UnitCatalog.GolmSWb) && !ReferenceEquals(o.Def, UnitCatalog.GolmSWab));
-            Expect("試遊の台: `Presets.Versions` ＝ 「試遊・感電 ポンの台」「試遊・ミサ 書き手なし」＋「版・RP-a ／ RP-b ／ GA-a 守り型」「版・RP-b 毒」（第344期の「版・SW」の4台は外した）・`Playtest` は 17 台のまま", rows);
+            // 第346期: 「版・RP ／ GA」の4台を外した——1〜2行目（ポンの台 ／ 書き手なし）と、第344〜345期の版が試遊の台に残っていないことだけを見る（`want` は第345期の並びの記録）
+            bool rows = v.Length == 2 && v[0].Name == "試遊・感電 ポンの台" && v[1].Name == "試遊・ミサ 書き手なし" && Presets.Playtest.Length == 17 && want.Length == 4
+                && v.SelectMany(r => r.F.Occupied()).All(o => !new[] { UnitCatalog.GolmSWa, UnitCatalog.GolmSWb, UnitCatalog.GolmSWab, UnitCatalog.GolmRPa, UnitCatalog.GolmRPb, UnitCatalog.GolmGAa }.Any(d => ReferenceEquals(o.Def, d)));
+            Expect("試遊の台: `Presets.Versions` ＝ 「試遊・感電 ポンの台」「試遊・ミサ 書き手なし」だけ（第345期の「版・RP-a ／ RP-b ／ GA-a 守り型」「版・RP-b 毒」は第346期に外した）・`Playtest` は 17 台のまま", rows);
         }
 
         // ================= RP-a =================

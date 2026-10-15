@@ -4443,7 +4443,7 @@ public enum BattleEventKind
     /// <see cref="GolmArmLabels.Launch"/>（腕が飛ぶ・<c>TargetId</c> ＝ 狙った敵・<c>Amount</c> ＝ 量の素の値・<c>Slot</c> ＝ 腹の 1 割）→ その一撃の <c>Attack</c> ／ <c>Damage</c> … →
     /// <see cref="GolmArmLabels.Return"/>（腕が戻る・<c>Amount</c> ＝ 与えた量）か、RP-b で呑める条件になれば <see cref="GolmArmLabels.Grab"/>（掴む・<c>Slot</c> ＝ 1 殴って掴む ／ 0 殴らずに掴む）→ <c>Swallow</c>「呑む」→ <c>Death</c> → 「吐く」。
     /// 殴って倒したら <c>Death</c> で終わる（「戻る」は出ない）。<see cref="GolmArmLabels.Stomp"/>（踏み潰す・<c>TargetId</c> なし・<c>Amount</c> ＝ 量の素の値）→ <c>Attack</c> ／ 主目標の <c>Damage</c> → 左右の隣の <c>Damage</c>。
-    /// <b>どの規則も読まない。</b> 規定のゴルムには出ない。
+    /// <b>どの規則も読まない。</b> 第346期から規定のゴルム（RP-b）にも出る（飛ばす ／ 戻る ／ 掴む）。踏み潰すは版（GA-a）だけ。
     /// </summary>
     GolmArm,
 }

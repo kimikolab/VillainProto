@@ -1213,6 +1213,7 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 rp345 compare [版,…]    # 第345期 §5: `compare` 64 行 × 版（上がった行 ／ セル・主判定19行の第五波・第五波 95% 超の行の数）（22 秒）
     dotnet run --project BattleSim -c Release 0 rp345 log [台] [波] [seed] [版]   # 第345期: 1戦のログ（版 base ／ a ／ b ／ ga）
     dotnet run --project BattleSim -c Release 0 rp345 check           # 第345期 自己検査（段0 の定義 ／ 固定の口 ／ 戦の中・版の定義と試遊の台・RP-a ／ RP-b ／ GA-a を盤を直に組んで・verbose・PickOne）
+    dotnet run --project BattleSim -c Release 0 rp345 s346            # 第346期 §3: 規定（RP-b）の `compare` 64 行と第345期の RP-b（`GolmH345` の上でゴルムだけ `GolmRPb`）の一致・旧 → 規定の差・試遊・標 守り型 × ボス ／ 大隊 ／ 第2波（20 秒）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

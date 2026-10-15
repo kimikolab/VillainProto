@@ -420,11 +420,13 @@ public static class UnitCatalog
     public const string GolmSpitClause343 = "。呑み込めない毒や雷は、いちばん大きな敵に吐き捨てる";
 
     /// <summary>
-    /// 大喰らいゴルム（規定）。<b>第345期に第344期の S3（SW-a ＋ b ＋ 吐き捨てる）を規定にした</b>（ポンの判断・design/PHASE345_GOLM_ROCKET_PUNCH_SPEC.md §2）——
+    /// 大喰らいゴルム（第345期の規定）。<b>第345期に第344期の S3（SW-a ＋ b ＋ 吐き捨てる）を規定にした</b>（ポンの判断・design/PHASE345_GOLM_ROCKET_PUNCH_SPEC.md §2）——
     /// 第1〜344期の規定（<see cref="GolmH344"/>）＋ <see cref="TraitId.GolmSwallowSpit"/> ＋ <see cref="TraitId.GolmSwallowSpend"/> ＋ <see cref="TraitId.GolmSwallowWeak"/>・手番は `[Skill]`。
     /// 札と文面は第344期の <c>GolmSWab</c> と同じ（腹を使うことは文面に入れない）。
+    /// <b>第346期に RP-b（ロケットパンチ ＋ 捕獲）を規定にしたので、第345期の規定はこの <see cref="GolmH345"/> として明示的に持つ。</b>
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。第345期の規定のゴルムで測った器具（`rp345` の「規定」）はこちらに固定する（`Common.PinG345` ほか）。第345期の版（RP-a ／ RP-b ／ GA-a）はこちらから作る。
     /// </summary>
-    public static readonly UnitDef Golm = new()
+    public static readonly UnitDef GolmH345 = new()
     {
         Id = GolmH344.Id,
         Name = GolmH344.Name,
@@ -439,6 +441,29 @@ public static class UnitCatalog
         PlusText = GolmH344.PlusText + GolmSwallowClauseWeak344 + GolmSpitClause343,
         MinusText = GolmH344.MinusText,
         Flavor = "呑んだ精気は糧になる。呑み込めない毒と雷は、吐き捨てる。"
+    };
+
+    /// <summary>
+    /// 大喰らいゴルム（規定）。<b>第346期に第345期の RP-b（ロケットパンチ ＋ 捕獲）を規定にした</b>（ポンの判断・design/PHASE346_GOLM_RP_SETTLE_SPEC.md §2）——
+    /// 第345期の規定（<see cref="GolmH345"/>）＋ <see cref="TraitId.GolmRocketPunch"/> ＋ <see cref="TraitId.GolmRocketGrab"/>。手番は毎回手を飛ばす（呑める敵は殴らずに掴む・殴れば呑める敵を先に殴って掴む・いなければ状態異常の量 → HP → 席で殴る）。
+    /// 挙動は第345期の <c>GolmRPb</c> と同じ（engine は捕獲の札があれば捕獲で分岐するので、ロケットパンチの札は文面と札の分類のための印）。文面は第345期の RP-b の叩き台。
+    /// </summary>
+    public static readonly UnitDef Golm = new()
+    {
+        Id = GolmH345.Id,
+        Name = GolmH345.Name,
+        MaxHp = GolmH345.MaxHp,
+        Attack = GolmH345.Attack,
+        Speed = GolmH345.Speed,
+        Advances = GolmH345.Advances,
+        Pattern = GolmH345.Pattern,
+        // 第346期: ポンの判断（第345期の案 R2）でロケットパンチ ＋ 捕獲を規定にした。旧の規定は `GolmH345`（指示書 design/PHASE346_GOLM_RP_SETTLE_SPEC.md §2）。
+        Traits = GolmH345.Traits.Concat(new[] { TraitId.GolmRocketPunch, TraitId.GolmRocketGrab }).ToArray(),
+        Actions = GolmH345.Actions,
+        PlusText = GolmH345.PlusText.Contains(GolmSwallowClauseWeak344, StringComparison.Ordinal) ? GolmH345.PlusText.Replace(GolmSwallowClauseWeak344, GolmGrabClause345, StringComparison.Ordinal)
+            : throw new InvalidOperationException("第346期: 第345期の規定のゴルムの文面に手番の句が見つからない"),
+        MinusText = GolmH345.MinusText,
+        Flavor = GolmH345.Flavor
     };
 
     public static readonly UnitDef Mug = new()
@@ -5708,23 +5733,24 @@ public static class UnitCatalog
     public const string GolmGrabClause345 = "。手番で、腕を飛ばして殴る（後ろの敵にも届く）。弱った敵（最大 HP の3割以下）は、その手で掴んで持ち帰り、精気を呑み干す";
     /// <summary>第345期 GA-a の句（叩き台・規定の文面の末尾に足す）。</summary>
     public const string GolmStompClause345 = "。呑めないときは、巨体で踏み潰す（隣の敵にも半分）";
+    // 第346期: RP-b を規定にしたので、3版は第345期の規定（`GolmH345`）から作り直した（中身は第345期のまま）。
     static UnitDef With345(TraitId card, string plus) => new()
     {
-        Id = Golm.Id, Name = Golm.Name, MaxHp = Golm.MaxHp, Attack = Golm.Attack, Speed = Golm.Speed, Advances = Golm.Advances, Pattern = Golm.Pattern,
-        Traits = Golm.Traits.Append(card).ToArray(), Actions = Golm.Actions,
-        PlusText = plus, MinusText = Golm.MinusText, Flavor = Golm.Flavor,
+        Id = GolmH345.Id, Name = GolmH345.Name, MaxHp = GolmH345.MaxHp, Attack = GolmH345.Attack, Speed = GolmH345.Speed, Advances = GolmH345.Advances, Pattern = GolmH345.Pattern,
+        Traits = GolmH345.Traits.Append(card).ToArray(), Actions = GolmH345.Actions,
+        PlusText = plus, MinusText = GolmH345.MinusText, Flavor = GolmH345.Flavor,
     };
 
     /// <summary>第345期 RP-a（ロケットパンチ）。規定のゴルム ＋ <see cref="TraitId.GolmRocketPunch"/>（呑めない手番は、通常攻撃の代わりに誰にでも届く手を飛ばして殴る・攻 ＋ 腹の 1 割）。</summary>
-    public static readonly UnitDef GolmRPa = With345(TraitId.GolmRocketPunch, Golm.PlusText + GolmRocketClause345);
+    public static readonly UnitDef GolmRPa = With345(TraitId.GolmRocketPunch, GolmH345.PlusText + GolmRocketClause345);
 
     /// <summary>第345期 RP-b（ロケットパンチ ＋ 捕獲・推し）。規定のゴルム ＋ <see cref="TraitId.GolmRocketGrab"/>（いつも手を飛ばす・呑める敵は殴らずに掴む・殴れば呑める敵を先に殴り、呑めれば同じ手番で掴んで呑む）。</summary>
     public static readonly UnitDef GolmRPb = With345(TraitId.GolmRocketGrab,
-        Golm.PlusText.Contains(GolmSwallowClauseWeak344, StringComparison.Ordinal) ? Golm.PlusText.Replace(GolmSwallowClauseWeak344, GolmGrabClause345, StringComparison.Ordinal)
+        GolmH345.PlusText.Contains(GolmSwallowClauseWeak344, StringComparison.Ordinal) ? GolmH345.PlusText.Replace(GolmSwallowClauseWeak344, GolmGrabClause345, StringComparison.Ordinal)
             : throw new InvalidOperationException("第345期: 規定のゴルムの文面に手番の句が見つからない"));
 
     /// <summary>第345期 GA-a（踏み潰し・比べるための版）。規定のゴルム ＋ <see cref="TraitId.GolmStomp"/>（呑めない手番は、通常攻撃の的に 攻 ＋ 腹の 1 割・その的の左右の隣の敵に半分）。</summary>
-    public static readonly UnitDef GolmGAa = With345(TraitId.GolmStomp, Golm.PlusText + GolmStompClause345);
+    public static readonly UnitDef GolmGAa = With345(TraitId.GolmStomp, GolmH345.PlusText + GolmStompClause345);
 
     /// <summary>第342期 KT-b ＋ 避雷針（跳ねる）。<see cref="KataKTr1"/> ＋ <see cref="TraitId.KataRodChain"/>（逆雷が手番の雷と同じく帯びた隣の敵へ跳ねる）。</summary>
     public static readonly UnitDef KataKTrJ = With342(KataH342, new[] { TraitId.ThundercloudAllyPops, TraitId.KataRod, TraitId.KataRodChain }, KataAllyCloudClause342 + KataRodClause342, rod: true);

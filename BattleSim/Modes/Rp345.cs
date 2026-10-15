@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 using G343 = Golm343Diag;
 using S287 = Shock287Diag;
@@ -15,8 +15,10 @@ using T323 = Tou323Diag;
 //     dotnet run --project BattleSim -c Release 0 rp345 compare [版,…]          # §5 `compare` 64 行 × 版（seed 0..199・基準は段0 入りの規定）
 //     dotnet run --project BattleSim -c Release 0 rp345 log [台] [波] [seed] [版] # 1戦のログ
 //     dotnet run --project BattleSim -c Release 0 rp345 check                   # §8 自己検査
+//     dotnet run --project BattleSim -c Release 0 rp345 s346                    # 第346期 §3: 規定（RP-b）の `compare` と第345期の RP-b（`GolmH345` の上でゴルムだけ `GolmRPb`）の一致・守り型 × ボス ／ 大隊 ／ 第2波
 //
 // 版の名前（ASCII）: base（規定 ＝ S3）／ a（RP-a）／ b（RP-b）／ ga（GA-a）。台は `golm343` と同じ（guard ／ havoc ／ utsu ／ shock ／ poison）。
+// 第346期: RP-b を規定にしたので、「規定」（base）と段0 の「新」は第345期の規定のゴルム（`GolmH345`・`Common.Pin345`）に固定した。
 // **予測のファイルが無ければ本測定（boards ／ compare）を走らせない**（R397・`.tmp/p345/predict.md`）。
 // =====================================================================================
 static partial class Rp345Diag
@@ -39,6 +41,7 @@ static partial class Rp345Diag
         switch (mode)
         {
             case "s0": Stage0(); return;
+            case "s346": Settle346(); return;   // 第346期
             case "log": Log(A(3, "guard"), A(4, "2"), int.Parse(A(5, "0")), V(A(6, "b"))); return;
             case "boards": BoardsAll(Pick(A(3, ""))); return;
             case "compare": CompareAll(Pick(A(3, ""))); return;
@@ -64,7 +67,7 @@ static partial class Rp345Diag
     static Ver V(string n) => Vers.First(v => v.Name == n || v.Ascii == n);
     static Ver[] Pick(string only) => (string.IsNullOrEmpty(only) ? Vers : new[] { Vers[0] }.Concat(only.Split(',').Select(V).Where(v => v != Vers[0]))).ToArray();
     /// <summary>版はゴルムだけを差し替える（段0 入りの規定の上）。「規定」はいまの規定のゴルム（S3）のまま。</summary>
-    internal static Formation Apply(Formation f, Ver v) => v.Golm is null ? f : S316.SwapId(f, "golm", v.Golm);
+    internal static Formation Apply(Formation f, Ver v) => v.Golm is null ? Pin345(f) : S316.SwapId(f, "golm", v.Golm);   // 第346期: 「規定」は第345期の規定のゴルム（`GolmH345`）に固定
     static S287.Wave[] Waves => G343.Waves;
     static bool IsElite(S287.Wave w) => w.Name is "近衛" or "大隊";
 
@@ -104,7 +107,7 @@ static partial class Rp345Diag
         var rows = CompareBuilds().ToArray();
         int nw = EnemyCatalog.Stages.Count;
         var old = Grid(rows, Pin344);
-        var now = Grid(rows, f => f);
+        var now = Grid(rows, Pin345);   // 第346期: 「新」は第345期の規定（`GolmH345`）に固定
         var swab = Grid(rows, f => S316.SwapId(Pin344(f), "golm", UnitCatalog.GolmSWab));
         int same = 0, cells = rows.Length * nw;
         for (int r = 0; r < rows.Length; r++) for (int w = 0; w < nw; w++) if (now[r, w] == swab[r, w]) same++;
@@ -125,6 +128,41 @@ static partial class Rp345Diag
         int o95 = Enumerable.Range(0, rows.Length).Count(r => old[r, last] > 95), n95 = Enumerable.Range(0, rows.Length).Count(r => now[r, last] > 95);
         Console.WriteLine();
         Console.WriteLine($"上がった行 ／ セル（第2〜5波）{upRows} ／ {upCells}・落ちたセル {down}・第五波 95% 超の行 {o95} → {n95}");
+        Console.WriteLine();
+        Console.WriteLine($"所要 {sw.Elapsed.TotalSeconds:F0} 秒。");
+    }
+
+    // ---------------------------------------------------------------------------------
+    // 第346期 §3: RP-b を規定にした確かめ（規定 ＝ いまの規定・対照 ＝ 第345期の規定の上でゴルムだけ `GolmRPb`）
+    // ---------------------------------------------------------------------------------
+    static void Settle346()
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var rows = CompareBuilds().ToArray();
+        int nw = EnemyCatalog.Stages.Count;
+        var now = Grid(rows, f => f);
+        var rpb = Grid(rows, f => S316.SwapId(Pin345(f), "golm", UnitCatalog.GolmRPb));
+        var old = Grid(rows, Pin345);
+        int same = 0, cells = rows.Length * nw;
+        for (int r = 0; r < rows.Length; r++) for (int w = 0; w < nw; w++) if (now[r, w] == rpb[r, w]) same++;
+        Console.WriteLine($"# 第346期 §3 —— 規定（RP-b）の `compare` {rows.Length} 行 × 第345期の RP-b（`GolmH345` の上でゴルムだけ `GolmRPb`）・seed 0..{CompareSeeds - 1}");
+        Console.WriteLine();
+        Console.WriteLine($"**規定と第345期の RP-b の一致: {same} ／ {cells} セル**");
+        Console.WriteLine();
+        Console.WriteLine("## 旧（`GolmH345`）→ 規定");
+        Console.WriteLine();
+        S316.PrintCompare(rows, old, now, "golm");
+        Console.WriteLine();
+        Console.WriteLine($"## 試遊・標 守り型 × ボス ／ 大隊 ／ 本編 第2波・seed 0..{Seeds - 1}（規定 ／ 第345期の RP-b）");
+        Console.WriteLine();
+        Console.WriteLine("| 波 | 規定 | 第345期の RP-b | 旧（S3） |");
+        Console.WriteLine("|---|---|---|---|");
+        var guard = Presets.Playtest.First(r => r.Name == G343.GuardRow).F;
+        foreach (var w in new[] { Waves[0], Waves[2], Waves[3] })
+        {
+            string Cell(G343.St z) => $"{F1(z.Win)}%・{Per(z.WinT, z.Wins)}T・手 {Per2(z.G.Rp345Punches + z.G.Rp345GrabNoPunch, z.N)}・呑 {Per2(z.G.Gt343Swallows, z.N)}";
+            Console.WriteLine($"| {w.Name} | {Cell(G343.Measure(guard, w, Seeds))} | {Cell(G343.Measure(S316.SwapId(Pin345(guard), "golm", UnitCatalog.GolmRPb), w, Seeds))} | {Cell(G343.Measure(Pin345(guard), w, Seeds))} |");
+        }
         Console.WriteLine();
         Console.WriteLine($"所要 {sw.Elapsed.TotalSeconds:F0} 秒。");
     }
