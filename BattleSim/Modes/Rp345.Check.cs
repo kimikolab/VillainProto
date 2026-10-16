@@ -129,9 +129,10 @@ static partial class Rp345Diag
             var v = Presets.Versions; var guard = Presets.Playtest.First(r => r.Name == G343.GuardRow).F; var poison = G343.PoisonGolm();
             (string Name, Formation Base, UnitDef Golm)[] want = { ("版・RP-a 守り型", guard, UnitCatalog.GolmRPa), ("版・RP-b 守り型", guard, UnitCatalog.GolmRPb), ("版・GA-a 守り型", guard, UnitCatalog.GolmGAa), ("版・RP-b 毒", poison, UnitCatalog.GolmRPb) };
             // 第346期: 「版・RP ／ GA」の4台を外した——1〜2行目（ポンの台 ／ 書き手なし）と、第344〜345期の版が試遊の台に残っていないことだけを見る（`want` は第345期の並びの記録）
-            bool rows = v.Length == 2 && v[0].Name == "試遊・感電 ポンの台" && v[1].Name == "試遊・ミサ 書き手なし" && Presets.Playtest.Length == 17 && want.Length == 4
+            // 第347期: 「版・」の台は期ごとに入れ替わるので、3行目以降の数は見ない（第347期の「版・FL」の3台が並ぶ）
+            bool rows = v.Length >= 2 && v[0].Name == "試遊・感電 ポンの台" && v[1].Name == "試遊・ミサ 書き手なし" && Presets.Playtest.Length == 17 && want.Length == 4
                 && v.SelectMany(r => r.F.Occupied()).All(o => !new[] { UnitCatalog.GolmSWa, UnitCatalog.GolmSWb, UnitCatalog.GolmSWab, UnitCatalog.GolmRPa, UnitCatalog.GolmRPb, UnitCatalog.GolmGAa }.Any(d => ReferenceEquals(o.Def, d)));
-            Expect("試遊の台: `Presets.Versions` ＝ 「試遊・感電 ポンの台」「試遊・ミサ 書き手なし」だけ（第345期の「版・RP-a ／ RP-b ／ GA-a 守り型」「版・RP-b 毒」は第346期に外した）・`Playtest` は 17 台のまま", rows);
+            Expect("試遊の台: `Presets.Versions` ＝ 「試遊・感電 ポンの台」「試遊・ミサ 書き手なし」が1〜2行目・第344〜345期の版は無い（第345期の「版・RP-a ／ RP-b ／ GA-a 守り型」「版・RP-b 毒」は第346期に外した）・`Playtest` は 17 台のまま", rows);
         }
 
         // ================= RP-a =================

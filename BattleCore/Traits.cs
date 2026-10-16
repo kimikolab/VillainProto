@@ -878,6 +878,11 @@ public enum TraitId
     GolmRocketGrab,     // ロケットパンチ ＋ 捕獲（RP-b・ゴルム）: 手番はいつも手を飛ばす。呑める敵は殴らずに掴み、殴った敵が呑める条件になれば同じ手番で掴んで呑む（**札そのものは挙動を持たない**・engine の `GolmTurn343`）
     GolmStomp,          // 踏み潰し（GA-a・ゴルム）: 呑めない手番は、通常攻撃の的に 攻 ＋ 腹の 1 割・その的の左右の隣の敵に半分（**札そのものは挙動を持たない**・engine の `GolmTurn343`）
 
+    // --- 第347期で足した札（指示書 design/PHASE347_KUGU_FLOW_SPEC.md §3）。クグの「流す」（`Grapple` と組む・保持者は版のクグだけ・規定のクグは持たない） ---
+    ThreadFlowCopy,     // 写す・ダメージ系（FL-a・クグ）: 浴びた毒 ／ 燃焼は、組み付いた敵が生きていればその敵にも同じだけ付く（クグにも残る）（**札そのものは挙動を持たない**・engine の `StatusOnThread`）
+    ThreadFlowMove,     // 移す・ダメージ系（FL-b・クグ）: 浴びた毒 ／ 燃焼は、組み付いた敵が生きていればその敵へ流れる（クグには付かない）（**札そのものは挙動を持たない**・engine の `StatusOnThread`）
+    ThreadFlowAll,      // 移す・害のあるもの全部（FL-c・クグ）: 浴びた害のある状態異常（`ThreadFlowRule.Harmful`）は、組み付いた敵が生きていればその敵へ流れる（クグには付かない）（**札そのものは挙動を持たない**・engine の `StatusOnThread`）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -13569,6 +13574,7 @@ public sealed class GrappleTrait : Trait
         if (source is null || source.TeamId == self.TeamId || dmg <= 0) return;   // 殴られたときだけ
         // 第290期（糸・KG-a〜）: ほどける前に糸の先を控える——この一撃で弾けた電気は切れる前の糸を伝う（engine が起爆の段の後で消す）。
         if (self.RawCounter(TargetKey) > 0 && self.HasTrait(TraitId.Thread)) self.SetCounter(ThreadTrait.MemoKey, self.RawCounter(TargetKey));
+        if (self.RawCounter(TargetKey) > 0) ctx.NoteGrappleHitRelease(self, source);   // 第347期・**計数のみ**（この一撃でほどけた）
         Release(ctx, self, "殴られて");
     }
 
@@ -17746,6 +17752,9 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.GolmRocketPunch),           // 第345期（ロケットパンチ RP-a・ゴルム・印だけ）
         new MarkOnlyTrait(TraitId.GolmRocketGrab),            // 第345期（ロケットパンチ ＋ 捕獲 RP-b・ゴルム・印だけ）
         new MarkOnlyTrait(TraitId.GolmStomp),                 // 第345期（踏み潰し GA-a・ゴルム・印だけ）
+        new MarkOnlyTrait(TraitId.ThreadFlowCopy),            // 第347期（写す・ダメージ系 FL-a・クグ・印だけ）
+        new MarkOnlyTrait(TraitId.ThreadFlowMove),            // 第347期（移す・ダメージ系 FL-b・クグ・印だけ）
+        new MarkOnlyTrait(TraitId.ThreadFlowAll),             // 第347期（移す・害のあるもの全部 FL-c・クグ・印だけ）
         new SharePushTrait(TraitId.ShareSin),                 // 第313期（ドハ DP-c の手番）
         new AmplifierTrait(),
         new ContagionTrait(),

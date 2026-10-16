@@ -918,5 +918,9 @@ public static class Presets
     {
         ("試遊・感電 ポンの台", Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Shiga, center: UnitCatalog.Tou, back1: UnitCatalog.Kugu, back3: UnitCatalog.Som)),
         ("試遊・ミサ 書き手なし", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Dolga, center: UnitCatalog.Doha, back1: UnitCatalog.Tome, back3: UnitCatalog.Ban)),
+        // 第347期: クグの「流す」の版（FL-a ／ FL-b ／ FL-c）。台は `縛め非収入型 (クグ×速攻)` の並び（Phase 0 で組み付いている間に浴びる量が最も多かった台・ボルグの火の漏れ）。
+        ("版・FL-a 縛め非収入型", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Borg, center: UnitCatalog.KuguFLa, back1: UnitCatalog.Sero, back3: UnitCatalog.Mudo)),
+        ("版・FL-b 縛め非収入型", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Borg, center: UnitCatalog.KuguFLb, back1: UnitCatalog.Sero, back3: UnitCatalog.Mudo)),
+        ("版・FL-c 縛め非収入型", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Borg, center: UnitCatalog.KuguFLc, back1: UnitCatalog.Sero, back3: UnitCatalog.Mudo)),
     };
 }

@@ -1433,3 +1433,11 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 ## 第346期 —— ゴルムの RP-b（ロケットパンチ ＋ 捕獲）を規定に
 
 - engine は第345期のまま。規定のゴルム `UnitCatalog.Golm` ＝ `GolmH345`（第345期の規定 S3・明示の定義に）＋ `GolmRocketPunch` ＋ `GolmRocketGrab`（`GolmTurn343` は捕獲の札があれば捕獲で分岐するので、挙動は第345期の `GolmRPb` と同じ）。表示専用の `GolmArm`（飛ばす ／ 戻る ／ 掴む）が規定の台本に出る。固定の口 `Common.PinG345` ／ `Pin345` ／ `CompareBuildsH345` ／ `PlaytestH345`（第345期の器具だけが通す）。古い口の終端 `PinG344` は規定のゴルムも `GolmH345` も `GolmH344` へ替える・`IsGolmNow` は `GolmH345` も受ける。第345期の版（RP-a ／ RP-b ／ GA-a）は `GolmH345` から作り直した。
+
+## 第347期 —— クグの「流す」（FL-a ／ FL-b ／ FL-c・版）
+
+- **窓口: `UnitState.SetCounter` の増えた分 → `BattleContext.StatusOnThread`**（組み付きの保持者 `FlowWatch` の駒だけ・ほかの駒は bool の比較1つで抜ける）。`ControlProof` の入口の後ろ、`Counters[key] = v` の手前。偽が返ればクグに書かない（移す）。
+  規定のクグは数えるだけ（`UnitTally.Fl347Cnt` ／ `Fl347Amt`: 種類 × 書き手（第94期の印 `Mark.Owner`）× 組み付き）。版（`UnitState.FlowMode` 1 ／ 2 ／ 3・札 `ThreadFlowCopy` ／ `ThreadFlowMove` ／ `ThreadFlowAll`）は `GrappledFoe` が生きていれば同じ量をその敵の `SetCounter` へ書く（量のキーは増えた分・ほかは付いた値まで・`ControlProof` の敵には付かない）。
+- 分類表は `ThreadFlowRule`（`Counted` の先頭 13 個が害のあるもの・毒と燃焼がダメージ系・標は敵が書いたときだけ害）。感電 ／ 糸 ／ 手番 ／ 組み付きと私有キーは数えない。
+- 攻撃ではない（`ApplyDamage` も合図も通らない）・乱数を引かない・再入は `_flowing` で止める。殴られてほどけた一撃の印 `NoteGrappleHitRelease`（`GrappleTrait.OnDamaged`・計数のみ）。流した先が倒れたら `HandleDeath` で1回数える（計数のみ）。
+- 表示専用の出来事 `BattleEventKind.ThreadFlow`（`design/PHASE291_CODEX_MEMO.md` §42）。移したときは直後の書き手の `StatusGain`（クグへの）を1件だけ出さない（`_flSkipGainId`）。

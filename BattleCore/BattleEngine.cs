@@ -426,6 +426,41 @@ public static class BurnRules
 }
 
 /// <summary>
+/// クグの「流す」（第347期・版 FL のクグだけ・<see cref="BattleContext.StatusOnThread"/>）の分類表。<b>規則が読むのは <see cref="HarmfulCount"/> ／ <see cref="IsDot"/> ／ <see cref="IsAdditive"/> だけ</b>（ほかは Phase 0 の計数の並び）。
+/// <para><see cref="Counted"/> の先頭 <see cref="HarmfulCount"/> 個が「害のあるもの」（FL-c が流す）、うち毒・燃焼が「ダメージ系」（FL-a ／ FL-b が流す）。
+/// 標は<b>敵が付けたときだけ</b>害（味方の付けた標は流さない）。残りの8個（破片・預かり・据え・紅蓮・灰・板・聖痕・負債）は害の無いもの ／ 本人の帳簿で、<b>どの版も流さない</b>（数えるだけ）。
+/// 電気（感電）・糸・手番（まどろみ）・組み付きは<b>数えもしない</b>（電気は今も糸を伝う・ほかは状態異常ではない）。私有キー（火勢・紅蓮の控えなど）も流さない。</para>
+/// </summary>
+public static class ThreadFlowRule
+{
+    public static readonly string[] Counted =
+    {
+        StatusKeys.Poison, StatusKeys.Burn,
+        StatusKeys.Stun, StatusKeys.Stagger, StatusKeys.Cowed, StatusKeys.Confused, StatusKeys.Daunted, StatusKeys.Numbed,
+        StatusKeys.Wound, StatusKeys.Deep, StatusKeys.Curse, StatusKeys.Concentrated, StatusKeys.Marked,
+        StatusKeys.Armor, StatusKeys.Ward, StatusKeys.Footing, StatusKeys.Guren, StatusKeys.Ash, StatusKeys.Plank, StatusKeys.Stigma, StatusKeys.Debt,
+    };
+
+    /// <summary><see cref="Counted"/> の先頭から何個が害のあるものか（FL-c が流す）。</summary>
+    public const int HarmfulCount = 13;
+
+    /// <summary>ダメージ系（FL-a ／ FL-b が流す）: 毒・燃焼。</summary>
+    public static bool IsDot(string key) => key is StatusKeys.Poison or StatusKeys.Burn;
+
+    /// <summary>量のキー（流すと敵の値に増えた分を足す）。ほかは「付いた値と敵の値の大きい方」（燃焼の残りターン・二値）。</summary>
+    public static bool IsAdditive(string key) => key is StatusKeys.Poison or StatusKeys.Wound or StatusKeys.Concentrated;
+
+    public static int IndexOf(string key) => key switch
+    {
+        StatusKeys.Poison => 0, StatusKeys.Burn => 1,
+        StatusKeys.Stun => 2, StatusKeys.Stagger => 3, StatusKeys.Cowed => 4, StatusKeys.Confused => 5, StatusKeys.Daunted => 6, StatusKeys.Numbed => 7,
+        StatusKeys.Wound => 8, StatusKeys.Deep => 9, StatusKeys.Curse => 10, StatusKeys.Concentrated => 11, StatusKeys.Marked => 12,
+        StatusKeys.Armor => 13, StatusKeys.Ward => 14, StatusKeys.Footing => 15, StatusKeys.Guren => 16, StatusKeys.Ash => 17, StatusKeys.Plank => 18, StatusKeys.Stigma => 19, StatusKeys.Debt => 20,
+        _ => -1,
+    };
+}
+
+/// <summary>
 /// 感電の規則（第214期）。<b>放電の量は仮置き</b>（指示書 §9・ポンが遊んで決める）。
 /// </summary>
 public static class ShockRule
@@ -3424,6 +3459,70 @@ public sealed class BattleContext
         foreach (UnitState u in _units)
             if (u.InstanceId == id) return u.IsAlive && u.TeamId != k.TeamId ? u : null;
         return null;
+    }
+
+    /// <summary>第347期: 流した先（敵の <c>InstanceId</c> → 流したクグ・計数のみ）。倒れたら1回だけ数えて消す。</summary>
+    readonly Dictionary<int, UnitState> _flTo = new();
+    /// <summary>第347期: 殴られてほどけた（クグの <c>InstanceId</c> → そのターンと殴った駒・<b>計数のみ</b>）。同じ一撃が付けた状態異常を「この一撃でほどけた」に分ける。</summary>
+    readonly Dictionary<int, (int Turn, int By)> _flHitRelease = new();
+    /// <summary>第347期: 流している最中（再入止め・組み付いた敵がまた流す保持者だったときのため）。</summary>
+    bool _flowing;
+    /// <summary>第347期（表示専用）: 移した直後の書き手の <c>StatusGain</c>（クグに付かなかったもの）を1件だけ出さない。</summary>
+    int _flSkipGainId = -1, _flSkipGainTurn;
+    string? _flSkipGainKey;
+
+    /// <summary>第347期（計数のみ）: クグが敵に殴られてほどけた（<see cref="GrappleTrait.OnDamaged"/> が呼ぶ）。</summary>
+    internal void NoteGrappleHitRelease(UnitState k, UnitState by) => _flHitRelease[k.InstanceId] = (_turn, by.InstanceId);
+
+    /// <summary>
+    /// クグが状態異常を浴びた（第347期・<see cref="UnitState.SetCounter"/> の増えた分だけ・<see cref="UnitState.FlowWatch"/> の駒だけが呼ぶ）。
+    /// <para>1. <b>数える</b>（規定のクグも）: 種類（<see cref="ThreadFlowRule.Counted"/>）× 書き手（第94期の印 <see cref="Mark"/>: 味方 ／ 敵 ／ なし）×
+    /// そのとき組み付いていたか（組み付いている ／ この一撃でほどけた ／ 組み付いていない）。</para>
+    /// <para>2. <b>流す</b>（版 FL のクグだけ）: 組み付いた敵（<see cref="GrappledFoe"/>）が生きていれば、同じ量（量のキーは増えた分・ほかは付いた値まで）をその敵へ書く。
+    /// 書き手は印のまま（敵の帳簿も書き手に付く）。攻撃ではない（<c>ApplyDamage</c> も合図も通らない）。手番を奪う状態を受け付けない敵には付かない（<c>SetCounter</c> の入口どおり）。
+    /// <b>乱数を引かない。</b></para>
+    /// </summary>
+    /// <returns>クグにも付けるか（偽 ＝ 移した・クグには付かない）。</returns>
+    internal bool StatusOnThread(UnitState k, string key, int v, int delta)
+    {
+        int ki = ThreadFlowRule.IndexOf(key);
+        if (ki < 0 || _flowing) return true;
+        UnitState? w = Mark.Owner;
+        int wi = w is null ? 2 : w.TeamId == k.TeamId ? 0 : 1;
+        UnitState? g = GrappledFoe(k);
+        int hi = g is not null ? 0
+               : w is not null && _flHitRelease.TryGetValue(k.InstanceId, out var rel) && rel.Turn == _turn && rel.By == w.InstanceId ? 1 : 2;
+        UnitTally t = TallyOf(k);
+        int n = ThreadFlowRule.Counted.Length * 9, cell = (ki * 3 + wi) * 3 + hi;
+        (t.Fl347Cnt ??= new long[n])[cell]++;
+        (t.Fl347Amt ??= new long[n])[cell] += delta;
+        int mode = k.FlowMode;
+        if (mode == 0 || g is null) return true;
+        bool flows = mode == 3 ? ki < ThreadFlowRule.HarmfulCount && (key != StatusKeys.Marked || wi == 1) : ThreadFlowRule.IsDot(key);
+        if (!flows) return true;
+        int before = g.RawCounter(key);
+        _flowing = true;
+        g.SetCounter(key, ThreadFlowRule.IsAdditive(key) ? before + delta : Math.Max(before, v));
+        _flowing = false;
+        int got = g.RawCounter(key) - before;
+        int m = ThreadFlowRule.Counted.Length;
+        (t.Fl347Flowed ??= new long[m])[ki]++;
+        (t.Fl347FlowedAmt ??= new long[m])[ki] += Math.Max(0, got);
+        if (got <= 0) (t.Fl347FlowNoGain ??= new long[m])[ki]++;
+        if (wi == 0) t.Fl347FlowedFromAlly++; else if (wi == 1) t.Fl347FlowedFromFoe++;
+        _flTo.TryAdd(g.InstanceId, k);
+        bool keep = mode == 1;
+        if (!keep && _verbose) { _flSkipGainId = k.InstanceId; _flSkipGainKey = key; _flSkipGainTurn = _turn; }
+        if (_verbose)
+            Emit(new BattleEvent
+            {
+                Kind = BattleEventKind.ThreadFlow, Turn = _turn, Text = StatusKeys.LabelOf(key), ActorId = k.InstanceId, TargetId = g.InstanceId, PartnerId = w?.InstanceId,
+                Amount = g.RawCounter(key), Slot = got, StatusRemaining = keep ? 1 : 0, Team = g.TeamId, HpAfter = g.Hp,
+            });
+        Log(keep
+                ? $"    {k.Name} が浴びた{StatusKeys.LabelOf(key)}は、糸を伝って {g.Name} にも流れた"
+                : $"    {k.Name} に降りかかった{StatusKeys.LabelOf(key)}は、糸を伝って {g.Name} へ流れた", LogKind.Trigger);
+        return keep;
     }
 
     /// <summary>生きている隣の味方（同じ陣営）の数（第323期・計数のみ）。<paramref name="dryOnly"/> なら帯電していない駒だけ。</summary>
@@ -10015,6 +10114,13 @@ public sealed class BattleContext
                                  PoisonRoute? route = null, UnitState? spreadFrom = null, PowderRoute? powder = null)
     {
         if (!_verbose || amount <= 0) return;
+        // 第347期（表示専用）: 糸を伝って移した状態異常は、クグには付いていない（流した出来事 `ThreadFlow` が代わりに出る）。
+        if (_flSkipGainId >= 0)
+        {
+            bool skip = _flSkipGainId == target.InstanceId && _flSkipGainKey == key && _flSkipGainTurn == _turn;
+            _flSkipGainId = -1;
+            if (skip) return;
+        }
         Emit(new BattleEvent
         {
             Kind = BattleEventKind.StatusGain,
@@ -16852,6 +16958,7 @@ public sealed class BattleContext
         }
         TallyOf(dead).Deaths++;
         (TallyOf(dead).DeathTurnHist ??= new long[7])[Math.Clamp(_turn, 0, 6)]++;   // 第216期・**計数のみ**
+        if (_flTo.Count > 0 && _flTo.Remove(dead.InstanceId, out UnitState? flk)) { UnitTally ft = TallyOf(flk); ft.Fl347ToDied++; if (killer is null) ft.Fl347ToDiedNoKiller++; }   // 第347期・**計数のみ**（流した先が倒れた）
         // 第136期・計数のみ。倒れた瞬間に受け流しの在庫が残っていたか（＝在庫切れで死んだのか、上限を素通りしたのか）。
         if (Parry.Uses > 0 && dead.HasTrait(TraitId.Parry))
             TallyOf(dead).ParryStockAtDeath += dead.RawCounter(ParryTrait.StockKey);

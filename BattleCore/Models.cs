@@ -249,7 +249,8 @@ public sealed class UnitState
     public IReadOnlyList<Trait> Traits
     {
         get => _traits;
-        init { _traits = value; ControlProof = value.Any(t => t.BlocksControl); ControlTaxed = value.Any(t => t.TaxesControl); }
+        init { _traits = value; ControlProof = value.Any(t => t.BlocksControl); ControlTaxed = value.Any(t => t.TaxesControl); FlowWatch = value.Any(t => t.Id == TraitId.Grapple);
+              FlowMode = value.Any(t => t.Id == TraitId.ThreadFlowAll) ? 3 : value.Any(t => t.Id == TraitId.ThreadFlowMove) ? 2 : value.Any(t => t.Id == TraitId.ThreadFlowCopy) ? 1 : 0; }
     }
     private readonly IReadOnlyList<Trait> _traits = Array.Empty<Trait>();
 
@@ -261,6 +262,15 @@ public sealed class UnitState
 
     /// <summary>第266期: 手番を奪う状態が上がったことを知らせる札（<see cref="Trait.TaxesControl"/>・不屈）を持つ駒か。<see cref="SetCounter"/> の熱い経路は保持者がいなければ bool 1つで抜ける。</summary>
     public bool ControlTaxed { get; private init; }
+
+    /// <summary>
+    /// 第347期: 組み付きの保持者（クグ）か。浴びた状態異常を <see cref="BattleContext.StatusOnThread"/> へ知らせる（Phase 0 の計数 ＋ 版 FL の「流す」）。
+    /// <see cref="SetCounter"/> は熱い経路なので、保持者でなければ bool の比較1つで抜ける。
+    /// </summary>
+    public bool FlowWatch { get; private init; }
+
+    /// <summary>第347期: クグの「流す」の版（0 ＝ 流さない・規定 ／ 1 ＝ FL-a 写す・ダメージ系 ／ 2 ＝ FL-b 移す・ダメージ系 ／ 3 ＝ FL-c 移す・害のあるもの全部）。</summary>
+    public int FlowMode { get; private init; }
 
     /// <summary>第311期: いま手番を奪う状態（痺れなど）が付かない駒か（<see cref="SetCounter"/> の入口と同じ判定・読むだけ）。</summary>
     public bool ControlBlockedAtEntry => ControlProof && ControlBlockedNow();
@@ -437,6 +447,8 @@ public sealed class UnitState
         // 第265期: 条件付きで塞ぐ札（勇者の印）は `BlocksControlNow` で「いま塞いでいるか」を問う（第261期の動じないは常に true）。
         if (ControlProof && v > 0 && StatusKeys.IsControl(key) && ControlBlockedNow()) return;
         int delta = v - (Counters.TryGetValue(key, out int had) ? had : 0);
+        // 第347期: クグが浴びた状態異常（増えた分だけ）。版 FL の「移す」は組み付いた敵へ流してクグには付けない（偽が返る）。規定のクグは数えるだけ。
+        if (FlowWatch && delta > 0 && Board is not null && !Board.StatusOnThread(this, key, v, delta)) return;
         Counters[key] = v;
         // 第266期: 不屈。手番を奪う状態が実際に上がったときだけ、札に知らせる（拒否はしない・動じないの1行の後ろ）。
         if (ControlTaxed && delta > 0 && StatusKeys.IsControl(key))
@@ -2364,6 +2376,14 @@ public sealed class UnitTally
     /// <c>Rp345PunchKills</c> 殴って倒した ／ <c>Rp345PunchDealt</c> 殴った量（RP ／ GA の主目標と隣の和）／ <c>Rp345PunchAmount</c> 量の素の値（攻 ＋ 腹の 1 割）の和 ／ <c>Rp345AimEdible</c> 殴れば呑める見込みの敵を狙った（RP-b）／
     /// <c>Rp345GrabNoPunch</c> 殴らずに掴んだ ／ <c>Rp345GrabAfter</c> 殴って掴んだ（RP-b）／ <c>Ga345Stomps</c> 踏み潰した ／ <c>Ga345SplashHits</c> ／ <c>Ga345SplashDealt</c> 隣に当たった回数 ／ 量（GA-a）。
     /// </summary>
+    /// <summary>
+    /// 第347期（<b>計数のみ</b>・クグが浴びた状態異常と「流す」の版 FL）: <c>Fl347Cnt</c> ／ <c>Fl347Amt</c> 浴びた回数 ／ 増えた量（添字 ＝ (種類 × 3 ＋ 書き手) × 3 ＋ 組み付き。
+    /// 種類は <see cref="ThreadFlowRule.Counted"/>・書き手は 0 味方 ／ 1 敵 ／ 2 なし・組み付きは 0 組み付いている ／ 1 この一撃でほどけた ／ 2 組み付いていない・規定のクグも数える）／
+    /// <c>Fl347Flowed</c> ／ <c>Fl347FlowedAmt</c> ／ <c>Fl347FlowNoGain</c> 流した回数 ／ 敵に増えた量 ／ 敵に増えなかった回数（種類ごと）／
+    /// <c>Fl347FlowedFromAlly</c> ／ <c>FromFoe</c> 流したもののうち味方 ／ 敵が書いた回数 ／ <c>Fl347ToDied</c> 流した先が倒れた（敵1体につき1回）・<c>NoKiller</c> そのうち撃破者のいない死（刻み ／ 起爆など）。
+    /// </summary>
+    public long[]? Fl347Cnt, Fl347Amt, Fl347Flowed, Fl347FlowedAmt, Fl347FlowNoGain;
+    public long Fl347FlowedFromAlly, Fl347FlowedFromFoe, Fl347ToDied, Fl347ToDiedNoKiller;
     public long Rp345NormalDealt, Rp345Punches, Rp345PunchBack, Rp345PunchKills, Rp345PunchDealt, Rp345PunchAmount, Rp345AimEdible, Rp345GrabNoPunch, Rp345GrabAfter, Ga345Stomps, Ga345SplashHits, Ga345SplashDealt;
     public long[]? Fg339Spray, Fg339AllyHits, Fg339AllyDmg;
     /// <summary>第339期（計数のみ）: 乱射の1発をターンごとに数える（羽の乱射 ／ 乱射の札の両方）。</summary>
@@ -3623,6 +3643,8 @@ public sealed class UnitTally
         Sw344HpPctSum += o.Sw344HpPctSum; Sw344BellySpent += o.Sw344BellySpent;   // 第344期
         Rp345NormalDealt += o.Rp345NormalDealt; Rp345Punches += o.Rp345Punches; Rp345PunchBack += o.Rp345PunchBack; Rp345PunchKills += o.Rp345PunchKills; Rp345PunchDealt += o.Rp345PunchDealt; Rp345PunchAmount += o.Rp345PunchAmount;   // 第345期
         Rp345AimEdible += o.Rp345AimEdible; Rp345GrabNoPunch += o.Rp345GrabNoPunch; Rp345GrabAfter += o.Rp345GrabAfter; Ga345Stomps += o.Ga345Stomps; Ga345SplashHits += o.Ga345SplashHits; Ga345SplashDealt += o.Ga345SplashDealt;
+        Fl347Cnt = AddArr(Fl347Cnt, o.Fl347Cnt); Fl347Amt = AddArr(Fl347Amt, o.Fl347Amt); Fl347Flowed = AddArr(Fl347Flowed, o.Fl347Flowed); Fl347FlowedAmt = AddArr(Fl347FlowedAmt, o.Fl347FlowedAmt); Fl347FlowNoGain = AddArr(Fl347FlowNoGain, o.Fl347FlowNoGain);   // 第347期
+        Fl347FlowedFromAlly += o.Fl347FlowedFromAlly; Fl347FlowedFromFoe += o.Fl347FlowedFromFoe; Fl347ToDied += o.Fl347ToDied; Fl347ToDiedNoKiller += o.Fl347ToDiedNoKiller;
         Fg339Spray = AddArr(Fg339Spray, o.Fg339Spray); Fg339AllyHits = AddArr(Fg339AllyHits, o.Fg339AllyHits); Fg339AllyDmg = AddArr(Fg339AllyDmg, o.Fg339AllyDmg);
         SharedAway += o.SharedAway; ShareTakenHits += o.ShareTakenHits; ShareGives += o.ShareGives; ShareGiven += o.ShareGiven; ShareGiftAccrued += o.ShareGiftAccrued;   // 第297期
         ShareGifts += o.ShareGifts; ShareGiftCapped += o.ShareGiftCapped; ShareGiftNoTarget += o.ShareGiftNoTarget; ShareGiftSkipped += o.ShareGiftSkipped;
@@ -4446,6 +4468,14 @@ public enum BattleEventKind
     /// <b>どの規則も読まない。</b> 第346期から規定のゴルム（RP-b）にも出る（飛ばす ／ 戻る ／ 掴む）。踏み潰すは版（GA-a）だけ。
     /// </summary>
     GolmArm,
+
+    /// <summary>
+    /// クグの「流す」（第347期・クグの版 FL-a ／ FL-b ／ FL-c だけ・<b>表示専用</b>）。クグに降りかかった状態異常が、糸を伝って組み付いた敵へ流れた。
+    /// <c>Text</c> ＝ 状態異常の表示名（<see cref="StatusKeys.LabelOf"/>: 毒 ／ 燃 ／ 痺 …）・<c>ActorId</c> ＝ クグ ／ <c>TargetId</c> ＝ 組み付いた敵 ／ <c>PartnerId</c> ＝ もとの書き手（無ければ null）／
+    /// <c>Amount</c> ＝ 敵の新しい値 ／ <c>Slot</c> ＝ 敵に増えた分 ／ <c>StatusRemaining</c> ＝ 1 写した（クグにも残る・FL-a）／ 0 移した（クグには付かない）。
+    /// 書き手の出来事（<c>StatusGain</c> など）より<b>前</b>に出る。移したときは、クグへの書き手の <c>StatusGain</c> は出ない（付いていないので）。<b>どの規則も読まない。</b>
+    /// </summary>
+    ThreadFlow,
 }
 /// <summary>`Swallow`（第343期）の <c>Text</c>（吐くは「吐く:毒3,火2,雷1,濃1,標2」のように内訳を後ろに付ける）。</summary>
 public static class SwallowLabels

@@ -1214,6 +1214,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 rp345 log [台] [波] [seed] [版]   # 第345期: 1戦のログ（版 base ／ a ／ b ／ ga）
     dotnet run --project BattleSim -c Release 0 rp345 check           # 第345期 自己検査（段0 の定義 ／ 固定の口 ／ 戦の中・版の定義と試遊の台・RP-a ／ RP-b ／ GA-a を盤を直に組んで・verbose・PickOne）
     dotnet run --project BattleSim -c Release 0 rp345 s346            # 第346期 §3: 規定（RP-b）の `compare` 64 行と第345期の RP-b（`GolmH345` の上でゴルムだけ `GolmRPb`）の一致・旧 → 規定の差・試遊・標 守り型 × ボス ／ 大隊 ／ 第2波（20 秒）
+    dotnet run --project BattleSim -c Release 0 flow347 p0              # 第347期 §2 Phase 0: クグのいる台 13 ＋ 器具で組んだ台 2 × 5 波・seed 0..99・規定のクグが浴びた状態異常（種類 × 書き手 × 組み付き）（2 秒）
+    dotnet run --project BattleSim -c Release 0 flow347 boards [版,…]   # 第347期 §5: 代表台 4 × 5 波 × 版（規定 ／ FL-a ／ FL-b ／ FL-c）・seed 0..99・流れた量 ／ クグの働き ／ 勝率 ／ 壊れの兆し（3 秒）。予測のファイルが無ければ走らない
+    dotnet run --project BattleSim -c Release 0 flow347 compare [版,…]  # 第347期 §5: `compare` 64 行 × 版（16 秒）
+    dotnet run --project BattleSim -c Release 0 flow347 log [台] [波] [seed] [版]   # 第347期: 1戦のログ（台 pon ／ quick ／ heavy ／ poison ／ burn・版 base ／ a ／ b ／ c）
+    dotnet run --project BattleSim -c Release 0 flow347 check           # 第347期 自己検査（定義・分類表・盤を直に組んで共通 ／ 版ごと・戦の中で流れなかった戦は規定と同じ・verbose・台本・試遊の台・PickOne）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

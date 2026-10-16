@@ -5752,6 +5752,25 @@ public static class UnitCatalog
     /// <summary>第345期 GA-a（踏み潰し・比べるための版）。規定のゴルム ＋ <see cref="TraitId.GolmStomp"/>（呑めない手番は、通常攻撃の的に 攻 ＋ 腹の 1 割・その的の左右の隣の敵に半分）。</summary>
     public static readonly UnitDef GolmGAa = With345(TraitId.GolmStomp, GolmH345.PlusText + GolmStompClause345);
 
+    // ---------------------------------------------------------------------------------
+    // 第347期（指示書 design/PHASE347_KUGU_FLOW_SPEC.md §3）—— クグの「流す」: 浴びた状態異常を、糸で組み付いた敵へ（FL-a 写す・ダメージ系 ／ FL-b 移す・ダメージ系 ／ FL-c 移す・害のあるもの全部）。
+    // 規定のクグ（電池入り）の末尾に札を1枚足し、文面の末尾に1句（叩き台）。電気と濃さの流れ・組み付き・糸玉・電池・体と速さは規定のまま。
+    // 対照（`All` ／ `Retired` ／ `Presets` の `Compare` ／ `Playtest` に入れない・`Presets.Versions` の「版・」の台だけが使う・採否はポン）。
+    // ---------------------------------------------------------------------------------
+    /// <summary>第347期 FL-a の句（叩き台）。</summary>
+    public const string KuguFlowCopyText347 = "。浴びた毒や火は、糸を伝って組み付いた敵にも同じだけ流れる";
+    /// <summary>第347期 FL-b の句（叩き台）。</summary>
+    public const string KuguFlowMoveText347 = "。浴びた毒や火は、糸を伝って組み付いた敵へ流れる（自分には残らない）";
+    /// <summary>第347期 FL-c の句（叩き台）。</summary>
+    public const string KuguFlowAllText347 = "。浴びた悪いものは、すべて糸を伝って組み付いた敵へ流れる（自分には残らない）";
+
+    /// <summary>第347期 FL-a（写す・ダメージ系）。規定のクグ ＋ <see cref="TraitId.ThreadFlowCopy"/>（浴びた毒 ／ 燃焼は組み付いた敵にも同じだけ付く・クグにも残る）。</summary>
+    public static readonly UnitDef KuguFLa = On327(Kugu, TraitId.ThreadFlowCopy, KuguFlowCopyText347);
+    /// <summary>第347期 FL-b（移す・ダメージ系）。規定のクグ ＋ <see cref="TraitId.ThreadFlowMove"/>（浴びた毒 ／ 燃焼は組み付いた敵へ流れる・クグには付かない）。</summary>
+    public static readonly UnitDef KuguFLb = On327(Kugu, TraitId.ThreadFlowMove, KuguFlowMoveText347);
+    /// <summary>第347期 FL-c（移す・害のあるもの全部）。規定のクグ ＋ <see cref="TraitId.ThreadFlowAll"/>（浴びた害のある状態異常は組み付いた敵へ流れる・クグには付かない）。</summary>
+    public static readonly UnitDef KuguFLc = On327(Kugu, TraitId.ThreadFlowAll, KuguFlowAllText347);
+
     /// <summary>第342期 KT-b ＋ 避雷針（跳ねる）。<see cref="KataKTr1"/> ＋ <see cref="TraitId.KataRodChain"/>（逆雷が手番の雷と同じく帯びた隣の敵へ跳ねる）。</summary>
     public static readonly UnitDef KataKTrJ = With342(KataH342, new[] { TraitId.ThundercloudAllyPops, TraitId.KataRod, TraitId.KataRodChain }, KataAllyCloudClause342 + KataRodClause342, rod: true);
 
