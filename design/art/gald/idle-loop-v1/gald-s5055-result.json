@@ -1,0 +1,601 @@
+{
+  "prompt": [
+    1,
+    "19298055-3472-4eb9-bb65-71e64b467c65",
+    {
+      "1": {
+        "class_type": "UNETLoader",
+        "inputs": {
+          "unet_name": "wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors",
+          "weight_dtype": "default"
+        }
+      },
+      "2": {
+        "class_type": "UNETLoader",
+        "inputs": {
+          "unet_name": "wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors",
+          "weight_dtype": "default"
+        }
+      },
+      "3": {
+        "class_type": "CLIPLoader",
+        "inputs": {
+          "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+          "type": "wan",
+          "device": "default"
+        }
+      },
+      "4": {
+        "class_type": "VAELoader",
+        "inputs": {
+          "vae_name": "wan_2.1_vae.safetensors"
+        }
+      },
+      "5": {
+        "class_type": "LoadImage",
+        "inputs": {
+          "image": "vp_gald.png"
+        }
+      },
+      "30": {
+        "class_type": "EmptyImage",
+        "inputs": {
+          "width": 1037,
+          "height": 1516,
+          "batch_size": 1,
+          "color": 45376
+        }
+      },
+      "31": {
+        "class_type": "InvertMask",
+        "inputs": {
+          "mask": [
+            "5",
+            1
+          ]
+        }
+      },
+      "32": {
+        "class_type": "ImageCompositeMasked",
+        "inputs": {
+          "destination": [
+            "30",
+            0
+          ],
+          "source": [
+            "5",
+            0
+          ],
+          "x": 0,
+          "y": 0,
+          "resize_source": false,
+          "mask": [
+            "31",
+            0
+          ]
+        }
+      },
+      "19": {
+        "class_type": "ImageScale",
+        "inputs": {
+          "image": [
+            "32",
+            0
+          ],
+          "upscale_method": "lanczos",
+          "width": 640,
+          "height": 960,
+          "crop": "disabled"
+        }
+      },
+      "6": {
+        "class_type": "CLIPTextEncode",
+        "inputs": {
+          "clip": [
+            "3",
+            0
+          ],
+          "text": "A 2D anime fighting game character idle animation, like a Street Fighter or Guilty Gear idle loop. The fully helmeted knight in battered ivory-white plate armor with dark red cracks keeps the same right-facing broad defensive stance. He holds a large pointed kite shield upright in front of his left arm and a straight sword low across his body in his right hand, its blade pointing diagonally down and right. Like a heavy fighting game character, he makes a steady rhythmic springy idle motion in place: his knees clearly bend and straighten, his hips and torso dip down and rise back up, and his armored shoulders rise and fall with deep breathing. He keeps his chest lifted, his helmet facing the opponent and his shield raised in guard throughout the cycle. The shield and sword rise and dip with his arms while both hands keep their original grips. Both feet stay flat on the ground in exactly the same spots; he never jumps and never steps. His body keeps facing right and does not turn toward the camera. His torn ivory tabard and dark red waist cloth sway and follow through with the bounce. The sword and shield stay straight and rigid with the same shape and size. No attacks, no shield bash, no sparks, no flames, no new glow. Same face, same costume, same colors. Fixed camera, no zoom, full body always visible, flat plain green background."
+        }
+      },
+      "7": {
+        "class_type": "CLIPTextEncode",
+        "inputs": {
+          "clip": [
+            "3",
+            0
+          ],
+          "text": "static image, frozen pose, walking, moving across the frame, turning around, camera movement, zoom, cuts, jumping, hopping, feet leaving the ground, stepping, turning to face the camera, cropped feet, cropped ears, multiple characters, changing costume, changing face, extra limbs, extra fingers, deformed hands, flicker, text, watermark, background change, shadows on background, hunched back, slouching, bowing head, exhausted posture, sword swing, shield bash, bending sword, bending shield, changing weapon, face visible through helmet"
+        }
+      },
+      "8": {
+        "class_type": "ModelSamplingSD3",
+        "inputs": {
+          "model": [
+            "1",
+            0
+          ],
+          "shift": 8.0
+        }
+      },
+      "9": {
+        "class_type": "ModelSamplingSD3",
+        "inputs": {
+          "model": [
+            "2",
+            0
+          ],
+          "shift": 8.0
+        }
+      },
+      "10": {
+        "class_type": "WanImageToVideo",
+        "inputs": {
+          "positive": [
+            "6",
+            0
+          ],
+          "negative": [
+            "7",
+            0
+          ],
+          "vae": [
+            "4",
+            0
+          ],
+          "width": 640,
+          "height": 960,
+          "length": 81,
+          "batch_size": 1,
+          "start_image": [
+            "19",
+            0
+          ]
+        }
+      },
+      "11": {
+        "class_type": "KSamplerAdvanced",
+        "inputs": {
+          "model": [
+            "8",
+            0
+          ],
+          "add_noise": "enable",
+          "noise_seed": 5055,
+          "steps": 20,
+          "cfg": 3.5,
+          "sampler_name": "euler",
+          "scheduler": "simple",
+          "positive": [
+            "10",
+            0
+          ],
+          "negative": [
+            "10",
+            1
+          ],
+          "latent_image": [
+            "10",
+            2
+          ],
+          "start_at_step": 0,
+          "end_at_step": 10,
+          "return_with_leftover_noise": "enable"
+        }
+      },
+      "12": {
+        "class_type": "KSamplerAdvanced",
+        "inputs": {
+          "model": [
+            "9",
+            0
+          ],
+          "add_noise": "disable",
+          "noise_seed": 0,
+          "steps": 20,
+          "cfg": 3.5,
+          "sampler_name": "euler",
+          "scheduler": "simple",
+          "positive": [
+            "10",
+            0
+          ],
+          "negative": [
+            "10",
+            1
+          ],
+          "latent_image": [
+            "11",
+            0
+          ],
+          "start_at_step": 10,
+          "end_at_step": 20,
+          "return_with_leftover_noise": "disable"
+        }
+      },
+      "13": {
+        "class_type": "VAEDecode",
+        "inputs": {
+          "samples": [
+            "12",
+            0
+          ],
+          "vae": [
+            "4",
+            0
+          ]
+        }
+      },
+      "14": {
+        "class_type": "CreateVideo",
+        "inputs": {
+          "images": [
+            "13",
+            0
+          ],
+          "fps": 16.0
+        }
+      },
+      "15": {
+        "class_type": "SaveVideo",
+        "inputs": {
+          "video": [
+            "14",
+            0
+          ],
+          "filename_prefix": "VillainProto/idle_loop/gald_s5055_raw",
+          "format": "auto",
+          "format.codec": "auto"
+        }
+      },
+      "40": {
+        "class_type": "VPIdleLoopFind",
+        "inputs": {
+          "images": [
+            "13",
+            0
+          ],
+          "min_length": 16,
+          "max_length": 48,
+          "skip_head": 8,
+          "min_motion": 3.0,
+          "compare_size": 192,
+          "min_step": 2.5,
+          "crossfade": 0
+        }
+      },
+      "45": {
+        "class_type": "PreviewAny",
+        "inputs": {
+          "source": [
+            "40",
+            4
+          ]
+        }
+      },
+      "41": {
+        "class_type": "BiRefNetRMBG",
+        "inputs": {
+          "image": [
+            "40",
+            0
+          ],
+          "model": "BiRefNet_toonout",
+          "sensitivity": 1.0,
+          "mask_blur": 0,
+          "mask_offset": 0,
+          "invert_output": false,
+          "refine_foreground": false,
+          "background": "Alpha",
+          "background_color": "#222222"
+        }
+      },
+      "42": {
+        "class_type": "VPGreenKeyAlpha",
+        "inputs": {
+          "images": [
+            "40",
+            0
+          ],
+          "mask": [
+            "41",
+            1
+          ],
+          "key_low": 25.0,
+          "key_high": 75.0,
+          "despill": true,
+          "edge_width": 12
+        }
+      },
+      "43": {
+        "class_type": "SaveImage",
+        "inputs": {
+          "images": [
+            "42",
+            0
+          ],
+          "filename_prefix": "VillainProto/idle_loop/gald_s5055_rgba/f"
+        }
+      },
+      "44": {
+        "class_type": "SaveAnimatedWEBP",
+        "inputs": {
+          "images": [
+            "42",
+            0
+          ],
+          "filename_prefix": "VillainProto/idle_loop/gald_s5055_loop",
+          "fps": 16.0,
+          "lossless": false,
+          "quality": 90,
+          "method": "default"
+        }
+      }
+    },
+    {
+      "comfy_usage_source": "comfy-cli/comfy-mcp",
+      "client_id": "eedcb581-17f6-4b07-82b7-0654ce560604",
+      "create_time": 1792154354017
+    },
+    [
+      "43",
+      "44",
+      "45",
+      "15"
+    ]
+  ],
+  "outputs": {
+    "45": {
+      "text": [
+        "81 frames / loop [47, 77) = 30 frames / seam 12.72 = 1.73x of median step 7.37 (目立つ)"
+      ]
+    },
+    "15": {
+      "images": [
+        {
+          "filename": "gald_s5055_raw_00001_.mp4",
+          "subfolder": "VillainProto\\idle_loop",
+          "type": "output"
+        }
+      ],
+      "animated": [
+        true
+      ]
+    },
+    "43": {
+      "images": [
+        {
+          "filename": "f_00001_.png",
+          "subfolder": "VillainProto\\idle_loop\\gald_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00002_.png",
+          "subfolder": "VillainProto\\idle_loop\\gald_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00003_.png",
+          "subfolder": "VillainProto\\idle_loop\\gald_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00004_.png",
+          "subfolder": "VillainProto\\idle_loop\\gald_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00005_.png",
+          "subfolder": "VillainProto\\idle_loop\\gald_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00006_.png",
+          "subfolder": "VillainProto\\idle_loop\\gald_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00007_.png",
+          "subfolder": "VillainProto\\idle_loop\\gald_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00008_.png",
+          "subfolder": "VillainProto\\idle_loop\\gald_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00009_.png",
+          "subfolder": "VillainProto\\idle_loop\\gald_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00010_.png",
+          "subfolder": "VillainProto\\idle_loop\\gald_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00011_.png",
+          "subfolder": "VillainProto\\idle_loop\\gald_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00012_.png",
+          "subfolder": "VillainProto\\idle_loop\\gald_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00013_.png",
+          "subfolder": "VillainProto\\idle_loop\\gald_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00014_.png",
+          "subfolder": "VillainProto\\idle_loop\\gald_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00015_.png",
+          "subfolder": "VillainProto\\idle_loop\\gald_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00016_.png",
+          "subfolder": "VillainProto\\idle_loop\\gald_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00017_.png",
+          "subfolder": "VillainProto\\idle_loop\\gald_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00018_.png",
+          "subfolder": "VillainProto\\idle_loop\\gald_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00019_.png",
+          "subfolder": "VillainProto\\idle_loop\\gald_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00020_.png",
+          "subfolder": "VillainProto\\idle_loop\\gald_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00021_.png",
+          "subfolder": "VillainProto\\idle_loop\\gald_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00022_.png",
+          "subfolder": "VillainProto\\idle_loop\\gald_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00023_.png",
+          "subfolder": "VillainProto\\idle_loop\\gald_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00024_.png",
+          "subfolder": "VillainProto\\idle_loop\\gald_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00025_.png",
+          "subfolder": "VillainProto\\idle_loop\\gald_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00026_.png",
+          "subfolder": "VillainProto\\idle_loop\\gald_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00027_.png",
+          "subfolder": "VillainProto\\idle_loop\\gald_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00028_.png",
+          "subfolder": "VillainProto\\idle_loop\\gald_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00029_.png",
+          "subfolder": "VillainProto\\idle_loop\\gald_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00030_.png",
+          "subfolder": "VillainProto\\idle_loop\\gald_s5055_rgba",
+          "type": "output"
+        }
+      ]
+    },
+    "44": {
+      "images": [
+        {
+          "filename": "gald_s5055_loop_00001_.webp",
+          "subfolder": "VillainProto\\idle_loop",
+          "type": "output"
+        }
+      ],
+      "animated": [
+        true
+      ]
+    }
+  },
+  "status": {
+    "status_str": "success",
+    "completed": true,
+    "messages": [
+      [
+        "execution_start",
+        {
+          "prompt_id": "19298055-3472-4eb9-bb65-71e64b467c65",
+          "timestamp": 1792155254700
+        }
+      ],
+      [
+        "execution_cached",
+        {
+          "nodes": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "30",
+            "31",
+            "32",
+            "19",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10"
+          ],
+          "prompt_id": "19298055-3472-4eb9-bb65-71e64b467c65",
+          "timestamp": 1792155254830
+        }
+      ],
+      [
+        "execution_success",
+        {
+          "prompt_id": "19298055-3472-4eb9-bb65-71e64b467c65",
+          "timestamp": 1792155912756
+        }
+      ]
+    ]
+  },
+  "meta": {
+    "45": {
+      "node_id": "45",
+      "display_node": "45",
+      "parent_node": null,
+      "real_node_id": "45"
+    },
+    "15": {
+      "node_id": "15",
+      "display_node": "15",
+      "parent_node": null,
+      "real_node_id": "15"
+    },
+    "43": {
+      "node_id": "43",
+      "display_node": "43",
+      "parent_node": null,
+      "real_node_id": "43"
+    },
+    "44": {
+      "node_id": "44",
+      "display_node": "44",
+      "parent_node": null,
+      "real_node_id": "44"
+    }
+  }
+}

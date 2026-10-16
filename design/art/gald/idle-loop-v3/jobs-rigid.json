@@ -1,0 +1,12 @@
+[
+  {
+    "tag": "gald_coherent_v3_rigid_a30",
+    "prompt_id": "efb0a1a3-4a59-401e-9df1-4dc138841d5e",
+    "host": "http://127.0.0.1:8189"
+  },
+  {
+    "tag": "gald_coherent_v3_rigid_a45",
+    "prompt_id": "e0f12f5d-625a-4db7-af34-befda05182bb",
+    "host": "http://127.0.0.1:8189"
+  }
+]

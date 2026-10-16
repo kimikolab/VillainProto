@@ -18,6 +18,7 @@ public partial class IdleLoopCheck : Node3D
             Require(frames.Length == 19, $"ヒヨの連番 19 コマ（{frames.Length}）");
             Require(BattlePawn3D.IdleLoopFramesOf("borg").Length == 44, "ボルグの連番 44 コマ");
             Require(BattlePawn3D.IdleLoopFramesOf("hota").Length == 36, "ホタの連番 36 コマ");
+            Require(BattlePawn3D.IdleLoopFramesOf("gald").Length == 32, "ガルドの連番 32 コマ");
             Require(BattlePawn3D.IdleLoopFramesOf("golm").Length == 0, "連番の無い駒は空");
             var still = UiKit.BattlePortrait(atlas, "hiyo");
 
@@ -28,6 +29,7 @@ public partial class IdleLoopCheck : Node3D
             var golm = MakePawn(atlas, 3, BattleContext.PlayerTeam, 3.6f, "golm");
             var borg = MakePawn(atlas, 4, BattleContext.PlayerTeam, -2.6f, "borg");
             var hota = MakePawn(atlas, 5, BattleContext.PlayerTeam, 2.4f, "hota");
+            var gald = MakePawn(atlas, 6, BattleContext.PlayerTeam, 4.8f, "gald");
             var sprite = SpriteOf(hiyo);
 
             // 開戦直後から連番。待機絵と同じ高さ（=同じ足元）で描く。
@@ -36,12 +38,31 @@ public partial class IdleLoopCheck : Node3D
             float worldHeight = sprite.Texture.GetHeight() * sprite.PixelSize;
             Require(Math.Abs(worldHeight - UiKit.PortraitWorldHeight("hiyo")) < 1e-4f, "待機絵と同じ高さ");
             Require(!golm.IdleLoopPlaying && SpriteOf(golm).Texture == UiKit.BattlePortrait(atlas, "golm"), "連番の無い駒は静止絵のまま");
-            foreach (var (pawn, key) in new[] { (borg, "borg"), (hota, "hota") })
+            foreach (var (pawn, key) in new[] { (borg, "borg"), (hota, "hota"), (gald, "gald") })
             {
                 var s = SpriteOf(pawn);
                 Require(pawn.IdleLoopPlaying && BattlePawn3D.IdleLoopFramesOf(key).Contains(s.Texture), $"{key} も開戦から連番");
                 Require(Math.Abs(s.Texture.GetHeight() * s.PixelSize - UiKit.PortraitWorldHeight(key)) < 1e-4f, $"{key} も待機絵と同じ高さ");
+                Require(Shader(s) == s.Texture, $"{key} もシェーダーと同じ連番");
             }
+            Require(CountDistinct(gald, 0.6) >= 6, "ガルドの連番も進む");
+            gald.AnimateDeath();
+            var galdDead = SpriteOf(gald).Texture;
+            CountDistinct(gald, 0.1);
+            Require(!gald.IdleLoopPlaying && SpriteOf(gald).Texture == galdDead, "ガルドも死亡で止まる");
+            gald.AnimateRevive();
+            Require(gald.IdleLoopPlaying, "ガルドも蘇生で再開");
+            gald.DrawSword(18);
+            var galdSprite = SpriteOf(gald);
+            Require(!gald.IdleLoopPlaying && galdSprite.Texture == UiKit.BattlePortrait(atlas, "gald_sword")
+                && Shader(galdSprite) == galdSprite.Texture, "ガルドの抜剣絵を連番で上書きしない");
+            gald.QuietLastStand = true;
+            gald.AnimateDeath();
+            CountDistinct(gald, 0.6);
+            Require(!gald.IdleLoopPlaying && galdSprite.Texture == UiKit.BattlePortrait(atlas, "gald_kneel")
+                && Shader(galdSprite) == galdSprite.Texture, "ガルドの膝つき絵を保持");
+            var galdWinner = MakePawn(atlas, 7, BattleContext.PlayerTeam, 6.8f, "gald");
+            galdWinner.AnimateVictory();
             // ホタは燃焼の差分絵を持つ。燃えているあいだは差分の連番（hota_burning）、消えたら通常の連番へ戻る。
             var burnFrames = BattlePawn3D.IdleLoopFramesOf("hota_burning");
             Require(burnFrames.Length > 0 && !burnFrames.Intersect(BattlePawn3D.IdleLoopFramesOf("hota")).Any(), "ホタの燃焼差分の連番");
@@ -99,9 +120,10 @@ public partial class IdleLoopCheck : Node3D
             hiyo.AnimateVictory();
             await Wait(0.7);
             Require(!hiyo.IdleLoopPlaying && sprite.Texture == UiKit.Portrait(atlas, "hiyo"), "勝利絵を保つ");
+            Require(!galdWinner.IdleLoopPlaying && SpriteOf(galdWinner).Texture == UiKit.Portrait(atlas, "gald"), "ガルドも勝利絵を保つ");
             Require(still != frames[0], "静止絵と連番は別の画像");
 
-            GD.Print("IDLE_LOOP_CHECK_OK hiyo borg hota hota_burning start advance speed gift burning burning-variant death revive victory enemy fallback");
+            GD.Print("IDLE_LOOP_CHECK_OK hiyo borg hota hota_burning gald start advance speed gift burning burning-variant death revive victory enemy fallback sword kneel");
             GetTree().Quit();
         }
         catch (Exception e)

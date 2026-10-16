@@ -1,0 +1,56 @@
+{
+  "source": "DemoApp\\assets\\portraits\\battle\\gald_idle_right.png",
+  "source_sha256": "c1fb373341ae532e158d0b6db24251ffc484f493bb93d9db54adf3ca7941213d",
+  "motion_source": "D:\\comfyui\\output\\VillainProto\\idle_loop\\gald_s2022_raw_00001_.mp4",
+  "motion_sha256": "f0492e8597952c25ba45f5e129e58fb0df7a798f17073fa43f50e89ca3adb71c",
+  "motion_interval": [
+    21,
+    43
+  ],
+  "size": [
+    640,
+    960
+  ],
+  "method": "全身の振幅縮小・周期運動の再標本化・剣と盾は移動と回転で形を維持。固定画像の上貼り無し。",
+  "node_sha256": "0886c9b666961fcc175bcfde0c1d5fcaa419c606ba45219f9518f6d0171be63e",
+  "feedback": "顔と腕を完全固定せず、全身に連動した控えめな動きを残す",
+  "status": "A/Bの動きはユーザー評価良好。兜の突起の伸縮と剣の周囲の揺らぎをv4で修正。ゲーム未反映。",
+  "candidates": [
+    {
+      "tag": "gald_coherent_v3_rigid_a30",
+      "factor": 0.3,
+      "frames": 32,
+      "fps": 16,
+      "seconds": 2,
+      "crossfade": 0,
+      "helmet_y_range_px": 9.212,
+      "hand_y_range_px": 4.29,
+      "neck_y_range_px": 12.598,
+      "hip_y_range_px": 12.785,
+      "sword_tip_wrap_px": 0.776,
+      "sole_row": [
+        906,
+        906
+      ],
+      "green_px": 0
+    },
+    {
+      "tag": "gald_coherent_v3_rigid_a45",
+      "factor": 0.45,
+      "frames": 32,
+      "fps": 16,
+      "seconds": 2,
+      "crossfade": 0,
+      "helmet_y_range_px": 14.112,
+      "hand_y_range_px": 6.521,
+      "neck_y_range_px": 18.81,
+      "hip_y_range_px": 19.118,
+      "sword_tip_wrap_px": 1.596,
+      "sole_row": [
+        906,
+        906
+      ],
+      "green_px": 0
+    }
+  ]
+}

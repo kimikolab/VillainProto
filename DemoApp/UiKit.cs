@@ -252,6 +252,8 @@ public static class UiKit
         "zoto" => 0.0f, // 鉱石の浮遊体。画像下端の透明な空間を残して地面から浮かせる。
         "kado" => 0.0198f,
         "gald" => 0.0547f,
+        "gald_hit" => 109f / 1536f,
+        "gald_parry" => 91f / 1536f,
         "sero" => 0.02309f,
         "sero_attack" => 0.02243f,
         "sero_move_shot" => 0.0117188f,

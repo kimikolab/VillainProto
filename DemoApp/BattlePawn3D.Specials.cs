@@ -40,6 +40,8 @@ public partial class BattlePawn3D
     public void DrawSword(int scars)
     {
         SwordDrawn = true;
+        // 受けた直後の盾差分を、抜剣の構えへ持ち越さない。
+        if (_movementPortrait is "gald_hit" or "gald_parry") ClearMovementPortrait();
         _scarGlow = Math.Clamp(scars / 24f, 0, 1);
         RefreshBattlePortrait();
     }

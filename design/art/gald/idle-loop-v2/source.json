@@ -1,0 +1,48 @@
+{
+  "source": "DemoApp/assets/portraits/battle/gald_idle_right.png",
+  "sha256": "c1fb373341ae532e158d0b6db24251ffc484f493bb93d9db54adf3ca7941213d",
+  "size": [
+    1037,
+    1516
+  ],
+  "generated_size": [
+    640,
+    960
+  ],
+  "fps": 16,
+  "frames": 81,
+  "seeds": [
+    2022,
+    5055
+  ],
+  "model": "Wan2.2 I2V 14B high/low fp8",
+  "steps": 20,
+  "cfg": 3.5,
+  "shift": 8,
+  "feedback": [
+    "v1 A: 顔の不要な上下",
+    "v1 B: 剣の不自然な上下と持ち上げ途中で切れるループ"
+  ],
+  "status": "不採用。顔と腕の完全固定で胴体とのつながりが失われ、首が切れたように見えるとユーザーが指摘。v3で全身の運動を一体に縮小。",
+  "candidate": {
+    "tag": "gald_breath_v2_s2022_stable",
+    "frames": 24,
+    "fps": 16,
+    "seconds": 1.5,
+    "crossfade": 0,
+    "raw_interval": [
+      18,
+      42
+    ],
+    "head_top_range_px": 0,
+    "head_tracking_range_y_px": 0.007,
+    "sword_tip_tracking_range_y_px": 0.013,
+    "sole_rows": [
+      906,
+      906
+    ],
+    "green_px": 0,
+    "rgba_seam_ratio": 1.32,
+    "mask_sha256": "f6e3b12fc6ee4d24f04250572dea963e9c25c1fc35a068662250ac671adc5a52"
+  }
+}

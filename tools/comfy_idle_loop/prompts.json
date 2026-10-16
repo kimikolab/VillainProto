@@ -1,5 +1,31 @@
 {
   "_readme": "④b（キャラごとの文）。組み立ては idle_loop.py の compose(): HEAD + char + motion + 共通の縛り（sway を含む）。neg は共通の負のプロンプトの後ろに足す。新しいキャラは既存の項目を写して char / motion / sway を書き換える。motion には『膝がはっきり曲がって伸びる・弾む』を必ず入れる（『ゆっくり重く』『わずかに』と書くと止まる）。",
+  "gald": {
+    "still": "DemoApp/assets/portraits/battle/gald_idle_right.png",
+    "pronoun": "he",
+    "char": "The fully helmeted knight in battered ivory-white plate armor with dark red cracks keeps the same right-facing broad defensive stance. He holds a large pointed kite shield upright in front of his left arm and a straight sword low across his body in his right hand, its blade pointing diagonally down and right. ",
+    "motion": "Like a heavy fighting game character, he makes a steady rhythmic springy idle motion in place: his knees clearly bend and straighten, his hips and torso dip down and rise back up, and his armored shoulders rise and fall with deep breathing. He keeps his chest lifted, his helmet facing the opponent and his shield raised in guard throughout the cycle. The shield and sword rise and dip with his arms while both hands keep their original grips. ",
+    "sway": "His torn ivory tabard and dark red waist cloth sway and follow through with the bounce. The sword and shield stay straight and rigid with the same shape and size. No attacks, no shield bash, no sparks, no flames, no new glow.",
+    "neg": "hunched back, slouching, bowing head, exhausted posture, sword swing, shield bash, bending sword, bending shield, changing weapon, face visible through helmet",
+    "note": "2026-10-16 v1は両案不採用。2022は顔の上下、5055は剣の上下と継ぎ目が不自然。v2の頭・腕の固定も不採用。v1 seed 2022の全身運動を30%へ縮小し、剣・盾・兜の形と周囲の連続性を保持したv4 Aを2026-10-17にユーザーが選択、ゲームへ反映。再現はdesign/art/gald/idle-loop-v4/gald_coherent_v4_a30-workflow.json。",
+    "adopted": {
+      "tag": "gald_coherent_v4_a30",
+      "seed": 2022,
+      "amplitude": 0.3,
+      "crossfade": 0,
+      "frames": 32,
+      "fps": 16,
+      "loop": "gald",
+      "date": "2026-10-17"
+    }
+  },
+  "gald_breath_v2": {
+    "still": "DemoApp/assets/portraits/battle/gald_idle_right.png",
+    "pronoun": "he",
+    "full": "A hand-drawn 2D anime game animation of a disciplined armored knight breathing in a steady defensive guard. The fully closed helmet, battered ivory-white plate armor with dark red cracks, pointed kite shield and straight sword stay faithful to the reference image. He remains in the same broad planted right-facing stance throughout. The animation is a small repeated breathing cycle: his chest expands outward on the inhale and settles inward on the exhale, the shoulder plates gently settle with the breath, and the loose torn waist cloth softly sways and settles. He completes the whole inhale and exhale and returns to the same resting guard, repeating this breathing cycle several times with an even unhurried rhythm. His neck remains upright and his helmet stays level and steady, watching the opponent without nodding. His knees remain at the same bent angle, holding a stable height. Both forearms hold a steady guard throughout: the right hand stays low by his hip, the sword stays at the same low diagonal angle with the tip down and right; the left forearm keeps the shield upright at the same height. The weapons are supported, not swung or lifted. The sword and shield are rigid and keep their original shape and length. Both feet stay flat in exactly the same spots. Same helmet, same costume, same colors, same silhouette and proportions. Fixed camera, full body always visible, flat plain green background. Only breathing and the cloth's soft secondary motion, no attack, no flourish, no magic effects.",
+    "neg": "head bobbing, nodding, head shaking, helmet bouncing, squatting, bending and straightening knees, bouncing body, vertical bobbing, lifting sword, raising sword, lowering sword, sword swing, sword flourish, changing sword angle, shield bash, raising shield, bending weapon, hunched back, slouching, bowing head, face visible through helmet, frozen image",
+    "note": "2026-10-16 v2の固定レイヤー仕上げも不採用。ユーザーは顔や腕の小さな動きを許容し、全身の連動を求めている。固定画像を上貼りしたら首が切れたように見えた。v3はv1の全身運動を一体に30% / 45%へ縮小して2秒へ整える。design/art/gald/idle-loop-v3/ のComfyUIワークフローとVPScaleIdleMotionを使い、剣・盾は動かしながら形を維持する。2026-10-17、兜・剣周りを修正したv4 Aを採用（galdのadopted参照）。"
+  },
   "hane": {
     "still": "DemoApp/assets/portraits/battle/hane_idle_right.png",
     "full": "A 2D anime fighting game character idle animation, like a Street Fighter or Guilty Gear idle loop. The rabbit-eared martial artist keeps the same right-facing fighting stance with both fists raised in guard. She makes a steady rhythmic springy bounce in place: her knees bend and straighten, her hips and torso dip down and rise back up, her shoulders rise and fall with her breathing, and her fists bob slightly in time. Both boots stay flat on the ground in exactly the same spots; she never jumps and never steps. Her body keeps facing right and does not turn toward the camera. Her ponytail, loose hair strands, rabbit ears and the red waist cloth sway and follow through with the bounce. Same face, same costume, same colors. Fixed camera, no zoom, full body always visible, flat plain green background.",

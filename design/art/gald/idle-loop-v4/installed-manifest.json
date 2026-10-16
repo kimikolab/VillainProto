@@ -1,0 +1,171 @@
+{
+  "date": "2026-10-17",
+  "tag": "gald_coherent_v4_a30",
+  "frames": 32,
+  "fps": 16,
+  "seconds": 2,
+  "bytes": 24594019,
+  "source_pixels_identical": true,
+  "files": [
+    {
+      "file": "gald_idle_00.png",
+      "bytes": 768576,
+      "sha256": "7de55636eb55360d9c95259ab472d94f131de537e861bbb7d81e74a7c52c638c"
+    },
+    {
+      "file": "gald_idle_01.png",
+      "bytes": 769240,
+      "sha256": "0f53260a6b1a5d471492527765255bf593df0d87e6ef1cbe07802d33f14c4e30"
+    },
+    {
+      "file": "gald_idle_02.png",
+      "bytes": 768433,
+      "sha256": "6f8ef8b46f0f660c6f2ff0438f562e95e116797a4dfe4f930b8f9ed4fcd7bb04"
+    },
+    {
+      "file": "gald_idle_03.png",
+      "bytes": 781314,
+      "sha256": "b6bc055d768091d9f41616ea25b8363939ddf6426c98149c5cc2eb0daab4cf4f"
+    },
+    {
+      "file": "gald_idle_04.png",
+      "bytes": 778640,
+      "sha256": "70c50f328e1a1efe6da17b2942f54ecf9484f37903576352a2d59a48f5a502f3"
+    },
+    {
+      "file": "gald_idle_05.png",
+      "bytes": 772029,
+      "sha256": "020e759df6f0fc04e56dee430cc99ddc8d1237b4e6a969a2d682bc8e22f3db09"
+    },
+    {
+      "file": "gald_idle_06.png",
+      "bytes": 769362,
+      "sha256": "0efbcd6b296d3ccfb3cece1a9a4bd7b2947f115c6f1e37cdbbfa6893f4be490f"
+    },
+    {
+      "file": "gald_idle_07.png",
+      "bytes": 769260,
+      "sha256": "c7ab621e1fb0a3cf526e6886d6d532914cf3fe46bab37bf599a4c16da8e7a4b6"
+    },
+    {
+      "file": "gald_idle_08.png",
+      "bytes": 768683,
+      "sha256": "c74ea8ba95e35955dd319518dfee800cda081b4453ff7bf6316d39b749c5e46c"
+    },
+    {
+      "file": "gald_idle_09.png",
+      "bytes": 769163,
+      "sha256": "8d83eb61dbea47aeaca4ae9f278a07acb45981f3d2084d6791cae586e8d779d4"
+    },
+    {
+      "file": "gald_idle_10.png",
+      "bytes": 769993,
+      "sha256": "65fb6c5158a6ac200ed1db90e9bea158d85f9a65ba84f63d5a3da83c078967ee"
+    },
+    {
+      "file": "gald_idle_11.png",
+      "bytes": 769553,
+      "sha256": "a631e73a4720ccae2a2089dbe244dc4bf2046d71338b5d2ec4757cf411963677"
+    },
+    {
+      "file": "gald_idle_12.png",
+      "bytes": 769912,
+      "sha256": "d63bbf1849a68688107054abf2743008a62547c9c02bd7db3c8588a3ab4dc0cd"
+    },
+    {
+      "file": "gald_idle_13.png",
+      "bytes": 769442,
+      "sha256": "82f9bc5fe978053bf7cd8828a9155b5082939827e649b0fe292f373cbb0d7b2e"
+    },
+    {
+      "file": "gald_idle_14.png",
+      "bytes": 769411,
+      "sha256": "e6a5104511a391d58fcc9ac79e6d25e61b540e27458a7a96bae34a3877b61373"
+    },
+    {
+      "file": "gald_idle_15.png",
+      "bytes": 769453,
+      "sha256": "b6491696663eccdcdcd39484d43938200495eda49073733bed94e5bfbfe4fe22"
+    },
+    {
+      "file": "gald_idle_16.png",
+      "bytes": 769597,
+      "sha256": "8b963fe2a32bcf8bf5124b24f86f991fc1bb787685bf124c286fc7f8fc17232e"
+    },
+    {
+      "file": "gald_idle_17.png",
+      "bytes": 768660,
+      "sha256": "bc6c9ca5d0ec57889918966054e65ea50dedb57cf377026d6d0b2647f56627d2"
+    },
+    {
+      "file": "gald_idle_18.png",
+      "bytes": 768476,
+      "sha256": "973d5ed03cee16ed8cba79f54acd6f74b10e951f7f007cd0265dfa83bf205450"
+    },
+    {
+      "file": "gald_idle_19.png",
+      "bytes": 767246,
+      "sha256": "318d6c829a376072d3b580f043b0eba9ba41e04a23c860aafe0da540088e35a3"
+    },
+    {
+      "file": "gald_idle_20.png",
+      "bytes": 767524,
+      "sha256": "a35e48d109eb37327df7faecb40512d04173a1bd26c336d7af06df4569d7e0e5"
+    },
+    {
+      "file": "gald_idle_21.png",
+      "bytes": 765658,
+      "sha256": "3c5a4426bd9e0ddd0067a938733351a624a0d2384505dd68d0f2e0a037fc4fba"
+    },
+    {
+      "file": "gald_idle_22.png",
+      "bytes": 765868,
+      "sha256": "e79c7d789cc62735493298b79fb954738ab23628534f4895e3f2d961ed92ae6c"
+    },
+    {
+      "file": "gald_idle_23.png",
+      "bytes": 767162,
+      "sha256": "73cbff37273fd63ffff2c94af258f6fadde586b4b52aadc93b3d1d0b26403807"
+    },
+    {
+      "file": "gald_idle_24.png",
+      "bytes": 766359,
+      "sha256": "606062b942b0c8eac85251ca55419b9381ca6956e6eb00a203267d4be6179056"
+    },
+    {
+      "file": "gald_idle_25.png",
+      "bytes": 762807,
+      "sha256": "87136035f11414bca35faece76b7e51da75078421f83869a99fd5a25a6bf2b7a"
+    },
+    {
+      "file": "gald_idle_26.png",
+      "bytes": 765329,
+      "sha256": "c2efe09e958fe99ea9a4551e99cba724388c57c84fa2c9d41af2fa30dcea92c5"
+    },
+    {
+      "file": "gald_idle_27.png",
+      "bytes": 762867,
+      "sha256": "af7e9098fd2252764fe4c3a12bdbd7a531f56bbe3bf38ebc15b4950f8087000e"
+    },
+    {
+      "file": "gald_idle_28.png",
+      "bytes": 760731,
+      "sha256": "37567a695b7ce91e1503e8049ed9d22a4d191c54589ae05576633063b4de3c75"
+    },
+    {
+      "file": "gald_idle_29.png",
+      "bytes": 763913,
+      "sha256": "8e73c7a5a788d6d7e274d9f59bb2539fd6f095d4a27e1801e3d364c3b4d267d9"
+    },
+    {
+      "file": "gald_idle_30.png",
+      "bytes": 767015,
+      "sha256": "b4a37e910110ee582aa80cddae66f7246bca16ed8b154033e090d8815e2092c4"
+    },
+    {
+      "file": "gald_idle_31.png",
+      "bytes": 772343,
+      "sha256": "530607f0f7e24f5dc397ae57cb087f4131b994d0e54caac0b48dcdb2e73994f3"
+    }
+  ]
+}

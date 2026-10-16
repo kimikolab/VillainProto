@@ -1,0 +1,61 @@
+{
+  "source": "DemoApp\\assets\\portraits\\battle\\gald_idle_right.png",
+  "source_sha256": "c1fb373341ae532e158d0b6db24251ffc484f493bb93d9db54adf3ca7941213d",
+  "motion_source": "D:\\comfyui\\output\\VillainProto\\idle_loop\\gald_s2022_raw_00001_.mp4",
+  "motion_sha256": "f0492e8597952c25ba45f5e129e58fb0df7a798f17073fa43f50e89ca3adb71c",
+  "motion_interval": [
+    21,
+    43
+  ],
+  "size": [
+    640,
+    960
+  ],
+  "method": "全身運動を維持。剣・盾・兜は動く剛体、周囲は連続変形。透過済み元絵を同じ写像で駆動。",
+  "node_sha256": "e940d90a693e6c6709abfdd6f62e403f4bb98653ca5ae3d934d1b1703d71635a",
+  "feedback": "v3の動きは両案良好。頭頂の尖りの伸縮と剣周りの揺らぎを修正。",
+  "status": "ユーザーがAを採用。DemoAppの戦闘待機へ反映・検証済み。",
+  "adopted_date": "2026-10-17",
+  "adopted_tag": "gald_coherent_v4_a30",
+  "installed_directory": "DemoApp/assets/portraits/battle/idle_loop/gald",
+  "candidates": [
+    {
+      "tag": "gald_coherent_v4_a30",
+      "factor": 0.3,
+      "frames": 32,
+      "fps": 16,
+      "seconds": 2,
+      "crossfade": 0,
+      "helmet_y_range_px": 9.989,
+      "hand_y_range_px": 4.327,
+      "neck_y_range_px": 11.474,
+      "hip_y_range_px": 11.379,
+      "sole_rows": [
+        906,
+        906
+      ],
+      "green_px": 0,
+      "aligned_crest_top_range_px": 0,
+      "shared_gif_palette": true
+    },
+    {
+      "tag": "gald_coherent_v4_a45",
+      "factor": 0.45,
+      "frames": 32,
+      "fps": 16,
+      "seconds": 2,
+      "crossfade": 0,
+      "helmet_y_range_px": 14.901,
+      "hand_y_range_px": 6.623,
+      "neck_y_range_px": 17.056,
+      "hip_y_range_px": 17.164,
+      "sole_rows": [
+        906,
+        907
+      ],
+      "green_px": 0,
+      "aligned_crest_top_range_px": 0,
+      "shared_gif_palette": true
+    }
+  ]
+}

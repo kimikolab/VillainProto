@@ -1,0 +1,53 @@
+{
+  "source": "DemoApp/assets/portraits/battle/gald_idle_right.png",
+  "sha256": "c1fb373341ae532e158d0b6db24251ffc484f493bb93d9db54adf3ca7941213d",
+  "size": [
+    1037,
+    1516
+  ],
+  "model": "Wan2.2 I2V 14B high/low fp8",
+  "steps": 20,
+  "cfg": 3.5,
+  "shift": 8,
+  "size_generated": [
+    640,
+    960
+  ],
+  "frames_generated": 81,
+  "fps": 16,
+  "seeds": [
+    2022,
+    5055
+  ],
+  "status": "両案不採用。ユーザー指摘: Aは顔の不要な上下、Bは剣の上下と持ち上げ途中で切れるループ。v2へ再制作。",
+  "candidates": [
+    {
+      "label": "A",
+      "tag": "gald_s2022",
+      "frames": 22,
+      "seconds": 1.375,
+      "crossfade": 0,
+      "head_travel_px": 38,
+      "sole_row": [
+        906,
+        906
+      ],
+      "green_px": 0,
+      "rgba_seam_ratio": 1.07
+    },
+    {
+      "label": "B",
+      "tag": "gald_s5055_final",
+      "frames": 30,
+      "seconds": 1.875,
+      "crossfade": 6,
+      "head_travel_px": 19,
+      "sole_row": [
+        906,
+        906
+      ],
+      "green_px": 0,
+      "rgba_seam_ratio": 1.1
+    }
+  ]
+}

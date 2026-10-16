@@ -6,6 +6,12 @@
 - `beni_release_idle_right.png`: 紅蓮を放つ間だけ使用。
 - `gald_sword_idle_right.png`: `LastStand` 以後の構え。
 - `gald_kneel_idle_right.png`: `LastStandVictory` の後の死亡姿勢。
+- `gald_hit_idle_right.png`: 抜剣前の通常被弾（毒を除く）に0.28秒表示し、待機連番へ戻る。
+- `gald_parry_idle_right.png`: 抜剣前の盾受け流しに0.32秒表示し、待機連番へ戻る。
+
+被弾・受け流しの制作プロンプトと検証記録は `design/art/gald/reaction-portraits-v1/notes.md`。
+両差分は1024×1536の透過PNG。表示倍率1.05、下端余白は被弾109px・受け流し91px。
+抜剣時に盾差分を解除し、従来の剣・膝つきの絵へ切り替える。
 
 ## 使用したプロンプト
 

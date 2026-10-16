@@ -4,7 +4,7 @@
 Claude Code・Codex・人のどれが作業しても同じ結果になるように、操作は `tools/comfy_idle_loop/idle_loop.py` の命令にまとめてある。
 採用までの経緯と数値は `design/art/hane/hane-idle-loop-v1-notes.md`（方式の比較・ボルグ／ホタ／ヒヨ）と `design/art/hiyo/hiyo-idle-loop-comfyui-v1.md`（ゲームへの接続・燃焼差分）。
 
-**いまゲームに入っているもの**: ヒヨ（`hiyo`）・ボルグ（`borg`）・ホタ（`hota`）・ホタの燃焼差分（`hota_burning`）。
+**いまゲームに入っているもの**: ヒヨ（`hiyo`）・ボルグ（`borg`）・ホタ（`hota`）・ホタの燃焼差分（`hota_burning`）・ガルド（`gald`、v4 A・32コマ、記録は `design/art/gald/idle-loop-v4/notes.md`）。
 
 ---
 
@@ -132,6 +132,21 @@ D:/comfyui/venv/Scripts/python.exe tools/comfy_idle_loop/idle_loop.py recut hota
 報告に「混ぜた → 継ぎ目 …x」が出る。長い髪が流れ続けるキャラ（ホタ）は周期が閉じにくいので 6 を基本にする。
 48 コマ以内で閉じないときは `--max-length 64 --crossfade 8`（ヒヨ 3033 で 2.71x → 0.91x）。
 
+### 全身の振れ幅を抑える（ガルド v3 の例）
+
+大きすぎる動きを調整する `VP Scale Idle Motion` を用意した（`comfy_node/__init__.py`、OpenCV / numpy が必要）。
+元絵と、全身が連動している動画の1周期を入力し、全身の運動を同じ割合で弱めてから元絵を変形させる。
+ガルドでは振幅0.30 / 0.45、32コマ・16fps・周期3次で比較している。頭・首・腕・膝も小さく動く。
+剣・盾・兜などの `rigid_mask_a/b/c` は部位を停止させるマスクではなく、移動・回転しながら長さと形を保つためのもの。
+細かな波打ちが出るときは `elastic_constraints` で周囲を滑らかにつなぐ。
+`reference_rgba` に一度だけ透過した元絵を与えると、RGBと透過が同じ写像で動く。
+この場合はRGBAの出力3をそのまま保存し、コマごとの背景除去を重ねない（ガルドv4のワークフローを参照）。
+
+ガルドの顔と腕を元絵の固定レイヤーで止めた版は、ユーザーから「首が切られたように見える」と不採用になった。
+「揺れすぎない」を「動かさない」に置き換えない。自然さは全身のつながりと動画で確認する。
+再現用ワークフロー・マスク・測定は `design/art/gald/idle-loop-v3/`、ノードの数値検証は同フォルダーの `verify-motion-node.py`。
+兜の突起の伸縮と剣周囲の波打ち・輪郭の検証は `design/art/gald/idle-loop-v4/`。
+
 ## 8. ゲームに入れる（`install`）
 
 ```bash
@@ -158,7 +173,7 @@ C:/tools/Godot_v4.7.2-stable_mono_win64/Godot_console.exe --path DemoApp --headl
 合否は `IDLE_LOOP_CHECK_OK` / `PORTRAIT_STATE_CHECK_OK` / `FIRE_CHECK_OK` / `MOVEMENT_PORTRAIT_CHECK_OK` の行で読む
 （終了時の `RID allocations … leaked` は既存の警告）。
 
-- **`IdleLoopCheck.cs` はコマ数を数えている**（ヒヨ 19・ボルグ 44・ホタ 36）。入れ替えたら数を直す。新しい駒を足したら、その駒の「開戦から連番・同じ高さ」の確認を足す。
+- **`IdleLoopCheck.cs` はコマ数を数えている**（ヒヨ 19・ボルグ 44・ホタ 36・ガルド 32）。入れ替えたら数を直す。新しい駒を足したら、その駒の「開戦から連番・同じ高さ」の確認を足す。
 - 実戦の画面は窓ありで撮る:
   `Godot.exe --path DemoApp -- --demo-autoplay "--demo-preset=火選り (ヒヨ×ホタ)" --demo-stage=2 --demo-seed=1 "--demo-capture-dir=<出力先>"`（6 枚撮って終わる）。
 

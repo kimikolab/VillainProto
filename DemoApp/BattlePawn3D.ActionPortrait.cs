@@ -86,6 +86,8 @@ public partial class BattlePawn3D
             // 右向き待機絵は頭〜足が1488px、攻撃絵は1371px。同じ身長へ揃える。
             if (key == "tome_attack") height *= 1488f / 1371f;
             if (key == "kata_thunder") height *= 1.05f; // 掲げた手より頭身で合わせる。
+            // 被弾・受け流しの差分は本体が少し小さいため、待機絵と体格を合わせる。
+            if (key is "gald_hit" or "gald_parry") height *= 1.05f;
         }
         if (_golmRocketPose && _unitId == "golm")
         {

@@ -403,6 +403,7 @@ void fragment() {
     public void AnimateParry(Vector3 direction)
     {
         if (!_alive) return;
+        if (_unitId == "gald" && !SwordDrawn) ShowMovementPortrait("gald_parry", 0.32);
         Vector3 forward = new(direction.X, 0, direction.Z);
         if (forward.LengthSquared() < 0.001f)
             forward = new Vector3(Team == BattleContext.PlayerTeam ? 1 : -1, 0, 0);
@@ -420,6 +421,7 @@ void fragment() {
     {
         if (!_alive) return;
         if (SwordDrawn && !poison) return; // 剣の段はよろめかず、その場で返す。
+        if (_unitId == "gald" && !poison) ShowMovementPortrait("gald_hit", 0.28);
         Color hit = poison ? new Color(1.05f, 0.48f, 1.35f, 1) : new Color(1.45f, 0.62f, 0.48f, 1);
         if (poison) _poison.Pulse();
         var tween = CreateTween();

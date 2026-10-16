@@ -1,0 +1,51 @@
+{
+  "date": "2026-10-17",
+  "generator": "built-in image_gen",
+  "reference": "DemoApp/assets/portraits/battle/gald_idle_right.png",
+  "reference_sha256": "c1fb373341ae532e158d0b6db24251ffc484f493bb93d9db54adf3ca7941213d",
+  "installed": true,
+  "outputs": [
+    {
+      "file": "gald-hit-right-v1.png",
+      "size": [
+        1024,
+        1536
+      ],
+      "mode": "RGBA",
+      "bytes": 2463445,
+      "sha256": "e8ce45fd7026baa872dc363651626b71bc1ddb8ec6dbf9b0c7557d72975d6d83",
+      "transparent_pixels": 734439,
+      "border_alpha_max": 1,
+      "alpha_gt128_bbox": [
+        35,
+        141,
+        1008,
+        1427
+      ],
+      "installed_path": "DemoApp/assets/portraits/battle/gald_hit_idle_right.png"
+    },
+    {
+      "file": "gald-parry-right-v1.png",
+      "size": [
+        1024,
+        1536
+      ],
+      "mode": "RGBA",
+      "bytes": 2440162,
+      "sha256": "f3e12a30ed6a4e54ba60ca2e2622d00a4882893a517171012b186965af5d6699",
+      "transparent_pixels": 774060,
+      "border_alpha_max": 7,
+      "alpha_gt128_bbox": [
+        14,
+        141,
+        1018,
+        1445
+      ],
+      "installed_path": "DemoApp/assets/portraits/battle/gald_parry_idle_right.png"
+    }
+  ],
+  "installed_date": "2026-10-17",
+  "display_scale": 1.05,
+  "hit_seconds": 0.28,
+  "parry_seconds": 0.32
+}

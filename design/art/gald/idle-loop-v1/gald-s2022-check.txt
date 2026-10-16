@@ -1,0 +1,8 @@
+gald_s2022: 22 コマ（1.38 秒）
+  靴底の行     元絵 906 / 連番 906〜906   （1px 以内なら足元が合う）
+  頭頂の上下   38px                  （参考: ヒヨ 34・ハネ 23・ボルグ 17・ホタ燃焼 1。小さくても手足や髪が自然に揺れていれば採れる。動画で決める）
+  頭と腰の横ずれ 平均 3.4（元絵 10.4）幅 12.9px  （幅 25px 超は前かがみ・猫背を疑う）
+  継ぎ目       12.54 / 1 コマの差の中央値 11.68 = 1.07x  （1.5x 超は recut --crossfade 6）
+  緑の抜け残り 0px（0 が正常）
+  確認シート D:/comfyui/output/VillainProto/idle_loop/gald_s2022_check.jpg
+  比較 GIF   D:/comfyui/output/VillainProto/idle_loop/gald_s2022_compare.gif（左が元絵・右が連番。これをユーザーに見せて選んでもらう）

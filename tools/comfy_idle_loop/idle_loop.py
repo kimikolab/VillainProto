@@ -264,7 +264,13 @@ def cmd_check(a):
     for im in fr:
         c = Image.new("RGBA", (Wf * 2, Hf), (23, 34, 31, 255)); c.alpha_composite(still, (0, 0)); c.alpha_composite(im, (Wf, 0))
         gif.append(c.convert("RGB").resize((Wf, Hf // 2)))
-    gif[0].save(f"{OUT}/{a.tag}_compare.gif", save_all=True, append_images=gif[1:], duration=62, loop=0)
+    # コマごとに別の色表・ディザを使うと、輪郭が実際の動きと無関係にちらつく。
+    swatches = Image.new("RGB", (1280, 960))
+    for k in range(16):
+        swatches.paste(gif[min(len(gif) - 1, k * len(gif) // 16)].resize((320, 240)), ((k % 4) * 320, (k // 4) * 240))
+    palette = swatches.quantize(colors=256, method=Image.Quantize.MEDIANCUT)
+    gif = [im.quantize(palette=palette, dither=Image.Dither.NONE) for im in gif]
+    gif[0].save(f"{OUT}/{a.tag}_compare.gif", save_all=True, append_images=gif[1:], duration=62, loop=0, optimize=False)
     print(f"  確認シート {OUT}/{a.tag}_check.jpg\n  比較 GIF   {OUT}/{a.tag}_compare.gif（左が元絵・右が連番。これをユーザーに見せて選んでもらう）")
 
 

@@ -1,4 +1,5 @@
-# VillainProto 用: 動画生成のフレーム列から「待機ループ」を切り出す小さなノード群（依存は torch のみ）。
+# VillainProto 用: 動画生成のフレーム列から「待機ループ」を切り出す小さなノード群。
+# 基本ノードは torch、動きの振幅調整だけ numpy / OpenCV を遅延読込する。
 #
 #   VP Idle Loop Find   … 始点終点を縛らない I2V の出力から、継ぎ目のいちばん目立たない区間 [start, end) を探して返す
 #   VP Green Key Alpha  … 緑背景で生成したフレームと BiRefNet のマスクを合わせ、緑の抜け残りと緑かぶりを取った RGBA を返す
@@ -131,5 +132,163 @@ class VPGreenKeyAlpha:
         return (torch.cat([rgb, alpha.unsqueeze(-1)], dim=-1), alpha)
 
 
-NODE_CLASS_MAPPINGS = {"VPIdleLoopFind": VPIdleLoopFind, "VPGreenKeyAlpha": VPGreenKeyAlpha}
-NODE_DISPLAY_NAME_MAPPINGS = {"VPIdleLoopFind": "VP Idle Loop Find", "VPGreenKeyAlpha": "VP Green Key Alpha"}
+class VPScaleIdleMotion:
+    """全身の連動を保って動きだけ弱める。固定部の貼り付けや画像の半透明合成はしない。"""
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {
+            "images": ("IMAGE",),
+            "reference": ("IMAGE",),
+            "amplitude": ("FLOAT", {"default": 0.3, "min": 0.0, "max": 1.0, "step": 0.05}),
+            "frames": ("INT", {"default": 32, "min": 4, "max": 240}),
+            "harmonics": ("INT", {"default": 3, "min": 1, "max": 8,
+                                  "tooltip": "動きの周期を低次の波で表し、末尾→先頭も連続させる。画像自体は混ぜない"}),
+            "spatial_smooth": ("FLOAT", {"default": 2.0, "min": 0.0, "max": 8.0, "step": 0.5}),
+        }, "optional": {
+            "rigid_mask_a": ("MASK", {"tooltip": "元絵の硬い部位。停止させず、移動・回転しながら形を保つ"}),
+            "rigid_mask_b": ("MASK",),
+            "rigid_mask_c": ("MASK",),
+            "elastic_constraints": ("BOOLEAN", {"default": False, "tooltip": "硬い部位の周囲を連続した変形でつなぎ、細かな波打ちを抑える"}),
+            "reference_rgba": ("IMAGE", {"tooltip": "元絵の透過を一度だけ作り、RGBと同じ写像で全コマへ引き継ぐ"}),
+        }}
+
+    RETURN_TYPES = ("IMAGE", "STRING", "MASK", "IMAGE")
+    RETURN_NAMES = ("loop_images", "report", "alpha", "rgba")
+    FUNCTION = "run"
+    CATEGORY = "VillainProto"
+
+    def run(self, images, reference, amplitude, frames, harmonics, spatial_smooth, rigid_mask_a=None, rigid_mask_b=None,
+            rigid_mask_c=None, elastic_constraints=False, reference_rgba=None):
+        import cv2
+        import numpy as np
+
+        source = reference[0, ..., :3].detach().cpu().numpy().astype(np.float32)
+        batch = images[..., :3].detach().cpu().numpy()
+        if len(batch) < 4 or source.shape != batch.shape[1:]:
+            raise ValueError("同じ解像度の元絵と、4コマ以上の動きが必要")
+        material = source if reference_rgba is None else reference_rgba[0].detach().cpu().numpy().astype(np.float32)
+        if material.shape[:2] != source.shape[:2]:
+            raise ValueError("透過済み元絵も同じ解像度が必要")
+        alpha = material[..., 3] if material.shape[-1] == 4 else np.ones(source.shape[:2], np.float32)
+        premultiplied = np.concatenate([material[..., :3] * alpha[..., None], alpha[..., None]], axis=-1)
+        if amplitude == 0:
+            rgb = np.repeat(source[None], frames, axis=0)
+            rgba = np.repeat(np.concatenate([material[..., :3], alpha[..., None]], axis=-1)[None], frames, axis=0)
+            return (torch.from_numpy(rgb), "振幅0: 元絵", torch.from_numpy(rgba[..., 3]), torch.from_numpy(rgba))
+        source_gray = cv2.cvtColor(np.uint8(np.clip(source * 255, 0, 255)), cv2.COLOR_RGB2GRAY)
+        dis = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
+        fields = []
+        for image in batch:
+            gray = cv2.cvtColor(np.uint8(np.clip(image * 255, 0, 255)), cv2.COLOR_RGB2GRAY)
+            field = dis.calc(source_gray, gray, None)
+            if spatial_smooth > 0:
+                field = cv2.GaussianBlur(field, (0, 0), spatial_smooth)
+            fields.append(field)
+        field = np.stack(fields)
+        # 全身の同じ運動場に同じ係数を掛ける。頭・首・腕を別々の領域で固定しない。
+        spectrum = np.fft.rfft(field, axis=0) / len(field)
+        count = min(harmonics, (len(field) - 1) // 2)
+        h, w = source.shape[:2]
+        grid_y, grid_x = np.mgrid[:h, :w].astype(np.float32)
+        coordinates = np.stack([grid_x, grid_y], axis=-1)
+        constraints = []
+        foreground = (source[..., 1] - np.maximum(source[..., 0], source[..., 2])) < (30 / 255)
+        for mask in (rigid_mask_a, rigid_mask_b, rigid_mask_c):
+            if mask is None:
+                continue
+            region = mask[0].detach().cpu().numpy().astype(np.float32)
+            if region.shape != (h, w):
+                raise ValueError("硬い部位のマスクも元絵と同じ解像度が必要")
+            ys, xs = np.nonzero((region > 0.5) & foreground)
+            stride = max(1, len(xs) // 2048)
+            ys, xs = ys[::stride], xs[::stride]
+            if len(xs) < 6:
+                raise ValueError("硬い部位のマスクに前景がほとんど無い")
+            weight = cv2.dilate(region, np.ones((25, 25), np.uint8))
+            weight = np.clip(cv2.GaussianBlur(weight, (0, 0), 4) * 1.03, 0, 1)[..., None]
+            constraints.append((xs, ys, weight, region))
+        rendered, rendered_rgba = [], []
+        for t in range(frames):
+            motion = spectrum[0].real.copy()
+            for k in range(1, count + 1):
+                motion += 2 * (spectrum[k] * np.exp(2j * np.pi * k * t / frames)).real
+            motion = np.float32(motion * amplitude)
+            rigid_fields = []
+            for xs, ys, weight, region in constraints:
+                points = coordinates[ys, xs]
+                target = points + motion[ys, xs]
+                rotation, translation = self.fit_rigid(points, target)
+                rigid = coordinates @ rotation.T + translation - coordinates
+                rigid_fields.append((np.float32(rigid), region))
+                if not elastic_constraints:
+                    motion = np.float32(motion * (1 - weight) + rigid * weight)
+            if elastic_constraints:
+                motion = self.elastic_field(motion, rigid_fields)
+            # 順方向の運動を逆写像で描画する。元絵の線を1回だけ補間し、二重像を作らない。
+            map_x, map_y = grid_x.copy(), grid_y.copy()
+            for _ in range(6):
+                sampled = cv2.remap(motion, map_x, map_y, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+                map_x = grid_x - sampled[..., 0]
+                map_y = grid_y - sampled[..., 1]
+            if reference_rgba is None:
+                image = cv2.remap(source, map_x, map_y, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+                rgba = np.concatenate([image, np.ones((h, w, 1), np.float32)], axis=-1)
+            else:
+                warped = cv2.remap(premultiplied, map_x, map_y, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
+                a = np.clip(warped[..., 3:4], 0, 1)
+                color = np.divide(warped[..., :3], a, out=np.zeros_like(warped[..., :3]), where=a > 1e-6)
+                rgba = np.concatenate([np.clip(color, 0, 1), a], axis=-1)
+                image = color * a + np.array([0, 1, 0], np.float32) * (1 - a)
+            rendered.append(image)
+            rendered_rgba.append(rgba)
+        report = f"全身の振幅 {amplitude:.2f} / 元の周期 {len(batch)} → {frames} コマ / 周期の次数 {count} / 硬い部位 {len(constraints)} / 周囲の連続変形 {elastic_constraints} / 共通の透過 {reference_rgba is not None} / 固定レイヤーなし"
+        print("[VP Scale Idle Motion]", report)
+        rgba = np.stack(rendered_rgba)
+        return (torch.from_numpy(np.stack(rendered)), report, torch.from_numpy(rgba[..., 3]), torch.from_numpy(rgba))
+
+    @staticmethod
+    def elastic_field(motion, rigid_fields):
+        """硬い部位の境界条件を、なだらかな変形として周囲へ伝える。"""
+        import cv2
+        import numpy as np
+        h, w = motion.shape[:2]
+        size = (max(2, w // 4), max(2, h // 4))
+        target = cv2.resize(cv2.GaussianBlur(motion, (0, 0), 8), size, interpolation=cv2.INTER_AREA)
+        locked = np.zeros(target.shape[:2], bool)
+        fixed = np.zeros_like(target)
+        for rigid, region in rigid_fields:
+            # 小さい突起も粗い格子から落とさない。格子上では境界を少し広く取る。
+            core = cv2.resize(cv2.dilate(region, np.ones((5, 5), np.uint8)), size, interpolation=cv2.INTER_AREA) > 0.05
+            locked |= core
+            fixed[core] = cv2.resize(rigid, size, interpolation=cv2.INTER_AREA)[core]
+        value = target.copy()
+        value[locked] = fixed[locked]
+        kernel = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]], np.float32)
+        # 剛体境界と元の全身の動きを両立する screened Poisson の緩和。
+        fidelity = 0.015
+        for _ in range(220):
+            value = (cv2.filter2D(value, -1, kernel, borderType=cv2.BORDER_REFLECT_101) + fidelity * target) / (4 + fidelity)
+            value[locked] = fixed[locked]
+        result = cv2.resize(value, (w, h), interpolation=cv2.INTER_CUBIC)
+        # 格子の補間による硬い部位の誤差だけを内側で補正。周囲は既に解いてあるので差は小さい。
+        for rigid, region in rigid_fields:
+            weight = cv2.GaussianBlur(cv2.dilate(region, np.ones((5, 5), np.uint8)), (0, 0), 2)
+            weight = np.clip(weight * 1.05, 0, 1)[..., None]
+            result = result * (1 - weight) + rigid * weight
+        return np.float32(result)
+
+    @staticmethod
+    def fit_rigid(points, target):
+        import numpy as np
+        origin, destination = points.mean(axis=0), target.mean(axis=0)
+        u, _, vt = np.linalg.svd((points - origin).T @ (target - destination))
+        rotation = vt.T @ u.T
+        if np.linalg.det(rotation) < 0:
+            vt[-1] *= -1
+            rotation = vt.T @ u.T
+        return rotation, destination - rotation @ origin
+
+
+NODE_CLASS_MAPPINGS = {"VPIdleLoopFind": VPIdleLoopFind, "VPGreenKeyAlpha": VPGreenKeyAlpha, "VPScaleIdleMotion": VPScaleIdleMotion}
+NODE_DISPLAY_NAME_MAPPINGS = {"VPIdleLoopFind": "VP Idle Loop Find", "VPGreenKeyAlpha": "VP Green Key Alpha", "VPScaleIdleMotion": "VP Scale Idle Motion"}
