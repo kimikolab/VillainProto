@@ -1219,6 +1219,13 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 flow347 compare [版,…]  # 第347期 §5: `compare` 64 行 × 版（16 秒）
     dotnet run --project BattleSim -c Release 0 flow347 log [台] [波] [seed] [版]   # 第347期: 1戦のログ（台 pon ／ quick ／ heavy ／ poison ／ burn・版 base ／ a ／ b ／ c）
     dotnet run --project BattleSim -c Release 0 flow347 check           # 第347期 自己検査（定義・分類表・盤を直に組んで共通 ／ 版ごと・戦の中で流れなかった戦は規定と同じ・verbose・台本・試遊の台・PickOne）
+    dotnet run --project BattleSim -c Release 0 inv348 axes            # 第348期 §3 軸の横並び: 代表台 20（10 軸 × 2）× 物差し 13 波（ボス ／ 近衛 ／ 大隊 ／ 本編 第2・4・5波 ／ 九体 ／ 的・一 ／ 的・九 ／ 強 第2〜5波）・seed 0..99・攻め ／ 守り（7 秒）
+    dotnet run --project BattleSim -c Release 0 inv348 burn            # 第348期 §4 燃焼の内訳: ボルグの札を1枚ずつ外す ／ ボルグが受けた量の内訳 ／ ホタの手番の種類ごとの与ダメ ／ ホタの札を1枚ずつ外す（6 秒）
+    dotnet run --project BattleSim -c Release 0 inv348 move            # 第348期 §5 移動の内訳: 移動の駒の働き（台本）／ 第232期の駒・被弾の燃焼なしと今（移動 ／ 燃焼の台）（5 秒）
+    dotnet run --project BattleSim -c Release 0 inv348 roster          # 第348期 §2 立ち絵の無い 16 枚の表 ／ 読み書きする資源 ／ 資源の地図（状態キーの帳簿 `Inv348Out` ／ `Inv348In`・CounterProbe）（22 秒）
+    dotnet run --project BattleSim -c Release 0 inv348 log <台> <波> [seed]   # 第348期: 1戦のログ（台は名前の頭か軸名・波 boss ／ guard ／ bat ／ 2 ／ 4 ／ 5 ／ nine ／ t1 ／ t9）
+    dotnet run --project BattleSim -c Release 0 inv348 iso <台> <波> [seed]   # 第348期: 計数の規則を片方ずつ渡して1戦（自己検査の切り分け）
+    dotnet run --project BattleSim -c Release 0 inv348 check           # 第348期 自己検査（計数の有無で勝敗 ／ 台本が変わらない・帳簿の帳尻・的の波・台と第232期の駒・PickOne）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

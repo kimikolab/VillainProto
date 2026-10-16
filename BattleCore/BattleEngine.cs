@@ -3471,6 +3471,24 @@ public sealed class BattleContext
     int _flSkipGainId = -1, _flSkipGainTurn;
     string? _flSkipGainKey;
 
+    /// <summary>
+    /// 第348期（<b>計数のみ</b>・<see cref="UnitTally.Inv348Out"/> ／ <see cref="UnitTally.Inv348In"/>）: 状態キーが増えた分を書き手と受け手に付ける。
+    /// <see cref="UnitState.SetCounter"/> から <c>HarmCensus</c> のときだけ来る。<b>盤面は1ビットも動かさない・乱数を引かない。</b>
+    /// </summary>
+    internal void NoteInv348(UnitState u, string key, int delta)
+    {
+        int ki = Array.IndexOf(StatusKeys.All, key);
+        if (ki < 0) return;
+        UnitState? w = Mark.Owner;
+        int rel = w is null ? 3 : ReferenceEquals(w, u) ? 0 : w.TeamId == u.TeamId ? 1 : 2;
+        int n = StatusKeys.All.Length * 8;
+        long[] inn = TallyOf(u).Inv348In ??= new long[n];
+        inn[ki * 8 + rel * 2]++; inn[ki * 8 + rel * 2 + 1] += delta;
+        if (w is null) return;
+        long[] o = TallyOf(w).Inv348Out ??= new long[n];
+        o[ki * 8 + rel * 2]++; o[ki * 8 + rel * 2 + 1] += delta;
+    }
+
     /// <summary>第347期（計数のみ）: クグが敵に殴られてほどけた（<see cref="GrappleTrait.OnDamaged"/> が呼ぶ）。</summary>
     internal void NoteGrappleHitRelease(UnitState k, UnitState by) => _flHitRelease[k.InstanceId] = (_turn, by.InstanceId);
 

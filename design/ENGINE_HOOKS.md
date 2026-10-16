@@ -1441,3 +1441,10 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - 分類表は `ThreadFlowRule`（`Counted` の先頭 13 個が害のあるもの・毒と燃焼がダメージ系・標は敵が書いたときだけ害）。感電 ／ 糸 ／ 手番 ／ 組み付きと私有キーは数えない。
 - 攻撃ではない（`ApplyDamage` も合図も通らない）・乱数を引かない・再入は `_flowing` で止める。殴られてほどけた一撃の印 `NoteGrappleHitRelease`（`GrappleTrait.OnDamaged`・計数のみ）。流した先が倒れたら `HandleDeath` で1回数える（計数のみ）。
 - 表示専用の出来事 `BattleEventKind.ThreadFlow`（`design/PHASE291_CODEX_MEMO.md` §42）。移したときは直後の書き手の `StatusGain`（クグへの）を1件だけ出さない（`_flSkipGainId`）。
+
+## 第348期 —— 駒と軸の棚卸し（計数だけ）
+
+- **窓口: `UnitState.SetCounter` の増えた分 → `BattleContext.NoteInv348`**（`HarmCensus` のときだけ・既定の `compare` ／ `layout` では条件1つで抜ける）。`FlowWatch` の行の後ろ、`NoteStatusGain` の直前。
+  `StatusKeys.All` のキーだけを、受け手の `UnitTally.Inv348In`（自分 ／ 味方 ／ 敵 ／ 書き手なし × 回 ／ 量）と書き手（第94期の印 `Mark.Owner`）の `UnitTally.Inv348Out`（自分 ／ 味方 ／ 敵へ × 回 ／ 量）に付ける。盤面を読まない・乱数を引かない。
+- 既存の `CounterProbe` は正の書き込みを7キー＋窓口の4通貨しか流さない（萎縮 ／ 感電 ／ 濃縮などが漏れる）ので、資源の地図はこちらで数えた。`UnitTally.Add` は `AddArr` で足す。
+- 計数を渡すと、状態を書かれただけの糸玉に空の帳簿（与ダメ ／ 被ダメ 0）が立つことがある（`TallyOf` が作る）。勝敗 ／ 台本は変わらない（`inv348 check`）。

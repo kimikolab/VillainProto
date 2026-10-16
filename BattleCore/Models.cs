@@ -454,6 +454,7 @@ public sealed class UnitState
         if (ControlTaxed && delta > 0 && StatusKeys.IsControl(key))
             foreach (Trait t in _traits)
                 if (t.TaxesControl) t.OnControlGained(this, key);
+        if (delta > 0 && Board is { HarmCensus: true } hc) hc.NoteInv348(this, key, delta);   // 第348期（計数のみ・害の帳簿のときだけ）
         if (delta > 0) Board?.NoteStatusGain(this, key, delta);
         // 第207期: 破片が減った1点（板の印を消す・瓦礫拾い）。**減った分を1回だけ**流す（Q0-5・二重に数えない）。
         else if (delta < 0 && key == StatusKeys.Armor) Board?.NoteArmorLost(this, -delta, v);
@@ -2384,6 +2385,13 @@ public sealed class UnitTally
     /// </summary>
     public long[]? Fl347Cnt, Fl347Amt, Fl347Flowed, Fl347FlowedAmt, Fl347FlowNoGain;
     public long Fl347FlowedFromAlly, Fl347FlowedFromFoe, Fl347ToDied, Fl347ToDiedNoKiller;
+    /// <summary>
+    /// 第348期（<b>計数のみ</b>・駒と軸の棚卸しの資源の地図）: <see cref="UnitState.SetCounter"/> で<b>増えた分</b>を、書き手（第94期の印）と受け手の両方に付ける。
+    /// 添字 ＝ <see cref="StatusKeys.All"/> の並び × 8。<c>Inv348Out</c>（書き手の側）: 0 自分 回 ／ 1 自分 量 ／ 2 味方 回 ／ 3 味方 量 ／ 4 敵 回 ／ 5 敵 量。
+    /// <c>Inv348In</c>（受け手の側）: 0 自分から 回 ／ 1 量 ／ 2 味方から 回 ／ 3 量 ／ 4 敵から 回 ／ 5 量 ／ 6 書き手なし 回 ／ 7 量。
+    /// 回るのは <c>HarmCensus</c> のときだけ（既定は1行も走らない）。誰も読んで分岐しない。
+    /// </summary>
+    public long[]? Inv348Out, Inv348In;
     public long Rp345NormalDealt, Rp345Punches, Rp345PunchBack, Rp345PunchKills, Rp345PunchDealt, Rp345PunchAmount, Rp345AimEdible, Rp345GrabNoPunch, Rp345GrabAfter, Ga345Stomps, Ga345SplashHits, Ga345SplashDealt;
     public long[]? Fg339Spray, Fg339AllyHits, Fg339AllyDmg;
     /// <summary>第339期（計数のみ）: 乱射の1発をターンごとに数える（羽の乱射 ／ 乱射の札の両方）。</summary>
@@ -3645,6 +3653,7 @@ public sealed class UnitTally
         Rp345AimEdible += o.Rp345AimEdible; Rp345GrabNoPunch += o.Rp345GrabNoPunch; Rp345GrabAfter += o.Rp345GrabAfter; Ga345Stomps += o.Ga345Stomps; Ga345SplashHits += o.Ga345SplashHits; Ga345SplashDealt += o.Ga345SplashDealt;
         Fl347Cnt = AddArr(Fl347Cnt, o.Fl347Cnt); Fl347Amt = AddArr(Fl347Amt, o.Fl347Amt); Fl347Flowed = AddArr(Fl347Flowed, o.Fl347Flowed); Fl347FlowedAmt = AddArr(Fl347FlowedAmt, o.Fl347FlowedAmt); Fl347FlowNoGain = AddArr(Fl347FlowNoGain, o.Fl347FlowNoGain);   // 第347期
         Fl347FlowedFromAlly += o.Fl347FlowedFromAlly; Fl347FlowedFromFoe += o.Fl347FlowedFromFoe; Fl347ToDied += o.Fl347ToDied; Fl347ToDiedNoKiller += o.Fl347ToDiedNoKiller;
+        Inv348Out = AddArr(Inv348Out, o.Inv348Out); Inv348In = AddArr(Inv348In, o.Inv348In);   // 第348期
         Fg339Spray = AddArr(Fg339Spray, o.Fg339Spray); Fg339AllyHits = AddArr(Fg339AllyHits, o.Fg339AllyHits); Fg339AllyDmg = AddArr(Fg339AllyDmg, o.Fg339AllyDmg);
         SharedAway += o.SharedAway; ShareTakenHits += o.ShareTakenHits; ShareGives += o.ShareGives; ShareGiven += o.ShareGiven; ShareGiftAccrued += o.ShareGiftAccrued;   // 第297期
         ShareGifts += o.ShareGifts; ShareGiftCapped += o.ShareGiftCapped; ShareGiftNoTarget += o.ShareGiftNoTarget; ShareGiftSkipped += o.ShareGiftSkipped;
