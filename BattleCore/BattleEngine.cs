@@ -946,7 +946,11 @@ public sealed class BattleContext
             {
                 // 第235期: 火の癒し（H1）。「焼かれない」を置き換え、刻みの量だけ回復する（火の回復・ベニの反転の裏は通らない）。
                 if (_fireConvertHolders.Count > 0) NoteConvertPrec(u, ScorchTick(u, baseD), MendsFire(u) ? 1 : 0);   // 第238期・**計数のみ**
-                if (MendsFire(u)) { FireHeal(u, ScorchTick(u, baseD), FireArmorLabels.Mend, tick: true); return; }   // 第249期: ホタの火の癒しも
+                if (MendsFire(u))   // 第249期: ホタの火の癒しも
+                {
+                    if (BurnHitNoHeal) { NoteNoMend(u, ScorchTick(u, baseD), mend: true); return; }   // 第349期 BN-a: 被弾の燃焼では癒えない（焼かれもしない）
+                    FireHeal(u, ScorchTick(u, baseD), FireArmorLabels.Mend, tick: true); return;
+                }
                 Log($"    {u.Name} は燃えているが焼かれない（残り {left - 1}）", LogKind.Status);
                 // ノブ（既定 0 ＝ 1ビットも動かない）。**`ctx.Heal` を通す**ので、
                 // 渇き（盤面ルール）にも支援拒否（`Stoic`）にも素直に課税される。
@@ -976,6 +980,7 @@ public sealed class BattleContext
             // 第238期: 火の変換（ヒヨ・V）。熾火・火の癒し・ベニの結界の後。刻みを受ける代わりに回復（ベニの反転と同じく刻みの計数には写さない）。
             if (_fireConvertHolders.Count > 0 && FireConvertHolder(u) is UnitState hiyoB)
             {
+                if (BurnHitNoHeal) { NoteNoMend(u, burnDmg, mend: false); ClearKindleHeld(u); return; }   // 第349期 BN-a: 変換は打ち消すだけ（癒えない・焼かれない）
                 FireConvert(hiyoB, u, burnDmg, tick: true);
                 ClearKindleHeld(u);
                 return;
@@ -9682,6 +9687,7 @@ public sealed class BattleContext
             || u.HasTrait(TraitId.FireMend) || u.HasTrait(TraitId.FireFeed)) _fireArmorLive = true;   // 第234期（火の鎧・焼け残り）・第235期（火の癒し・焼き返し）
         if (u.HasTrait(TraitId.FireWard) || u.HasTrait(TraitId.FireWardAll)) _fireWardHolders.Add(u);             // 第238期（盾の配り）
         if (u.HasTrait(TraitId.FireConvert) || u.HasTrait(TraitId.FireConvertHalf)) _fireConvertHolders.Add(u);   // 第238期（火の変換）
+        if (u.HasTrait(TraitId.BurnHitNoMend)) _burnHitNoMend = true;   // 第349期（BN-a・被弾の燃焼では癒えない・両陣営）
         if (FireLevelRule.Holds(u)) { _fireLvLive = true; _fireLvTeams[u.TeamId] = true; }   // 第242期（火勢）
         if (u.HasTrait(TraitId.FireSpreadCap)) _spreadCapTeams[u.TeamId] = true;              // 第244期（燃え広がりの上限）
         if (FireKindleRule.Holds(u)) _kindleLive = true;                                      // 第252期（ボルグが育つ口・あぶれた火）
@@ -11434,6 +11440,17 @@ public sealed class BattleContext
     // **札の持ち主がいなければ `_burnHitLive` の比較1つで全部抜ける。乱数を引かない。**
     // =====================================================================================
     bool _burnHitLive;
+    /// <summary>第349期 BN-a（`BurnHitNoMend` の保持者がいる戦）: 被弾の燃焼の刻みは火の癒し ／ 火の変換で回復しない。</summary>
+    bool _burnHitNoMend;
+    /// <summary>いまの刻みが被弾の燃焼で、BN-a の門が立っている。</summary>
+    bool BurnHitNoHeal => _burnHitNoMend && _inBurnHit > 0;
+    /// <summary>第349期 BN-a（<b>計数のみ</b>）: 被弾の燃焼で回復しなかった刻み（火の癒し ／ 火の変換の名目）。誰も読んで分岐しない。</summary>
+    void NoteNoMend(UnitState u, int amount, bool mend)
+    {
+        UnitTally t = TallyOf(u);
+        if (mend) t.Bn349MendDenied += amount; else t.Bn349ConvDenied += amount;
+        Log($"    {u.Name} は叩かれて燃え上がった火では癒えない（{amount}）", LogKind.Status);
+    }
     /// <summary>被弾の燃焼が起きる陣営 ／ ターン頭の燃焼の刻みを 6 × 1 にする陣営（分担）。</summary>
     readonly bool[] _burnHitTeams = new bool[2], _splitTickTeams = new bool[2];
     /// <summary>分担1: 1回の攻撃で同じ駒は1回まで。</summary>
@@ -13851,7 +13868,7 @@ public sealed class BattleContext
             if (source is not null && source.TeamId != target.TeamId && !burnTick && !levy && !relayed && !hexShare
                 && FireArmorFrameOf(source) is FireArmorFrame fr && !fr.Hit.Contains(target))
                 fr.Hit.Add(target);
-            if (amount > 0 && target.RawCounter(StatusKeys.Burn) > 0)
+            if (amount > 0 && target.RawCounter(StatusKeys.Burn) > 0 && !target.HasTrait(TraitId.FireArmorNoGuard))   // 第349期: BN-f は半減だけ外す
             {
                 int saved = amount * FireArmorTrait.GuardPercent / 100;
                 if (saved > 0)

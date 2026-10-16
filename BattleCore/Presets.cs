@@ -912,15 +912,24 @@ public static class Presets
     /// 第343期: K3 を規定にしたので3台を外し、ゴルムの手番「精気を呑む」（GT-a2 ／ a1 ／ a3）の3台（並びは守り型）と、感電の台にゴルム（ポンの台のカタ → ゴルム・前1）の吐き捨ての1台を足した。
     /// 第344期: 「版・GT」の4台を外し、呑む条件の SW-a ／ SW-b ／ SW-a＋b の3台（並びは守り型）と、毒の台にゴルム（`毒 (グザ×ミオ×ラウ)` の前3 ガルド → ゴルム）の SW-a＋b の1台を足した。
     /// 第345期: S3（SW-a＋b）を規定にしたので「版・SW」の4台を外し、呑めない手番の RP-a ／ RP-b ／ GA-a の3台（並びは守り型）と、毒の台にゴルムの RP-b の1台を足した。
-    /// 第346期: RP-b を規定にしたので「版・」の4台を外した（足す台は無し・規定のゴルムは「試遊・標 守り型」ほか規定の台で見られる）。</para>
+    /// 第346期: RP-b を規定にしたので「版・」の4台を外した（足す台は無し・規定のゴルムは「試遊・標 守り型」ほか規定の台で見られる）。
+    /// 第347期: クグの「流す」の3台（版・FL）を足した。第349期: 版・FL の3台を外し、「試遊・燃焼 ポンの台」（規定の駒・残す）と燃焼を抑える版（BN-f ／ BN-g ／ BN-a ／ BN-d ／ BN-f＋d）の5台を足した。</para>
     /// </summary>
+    /// <summary>第349期: 燃焼のポンの台の並び（前1 ムド ／ 前3 ボルグ ／ 中央 ホタ ／ 後1 ガルド ／ 後3 ヒヨ）。</summary>
+    public static Formation BurnPon(UnitDef borg, UnitDef hota, UnitDef hiyo) =>
+        Formation.Build(front1: UnitCatalog.Mudo, front3: borg, center: hota, back1: UnitCatalog.Gald, back3: hiyo);
+
     public static (string Name, Formation F)[] Versions => new (string, Formation)[]
     {
         ("試遊・感電 ポンの台", Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Shiga, center: UnitCatalog.Tou, back1: UnitCatalog.Kugu, back3: UnitCatalog.Som)),
         ("試遊・ミサ 書き手なし", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Dolga, center: UnitCatalog.Doha, back1: UnitCatalog.Tome, back3: UnitCatalog.Ban)),
-        // 第347期: クグの「流す」の版（FL-a ／ FL-b ／ FL-c）。台は `縛め非収入型 (クグ×速攻)` の並び（Phase 0 で組み付いている間に浴びる量が最も多かった台・ボルグの火の漏れ）。
-        ("版・FL-a 縛め非収入型", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Borg, center: UnitCatalog.KuguFLa, back1: UnitCatalog.Sero, back3: UnitCatalog.Mudo)),
-        ("版・FL-b 縛め非収入型", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Borg, center: UnitCatalog.KuguFLb, back1: UnitCatalog.Sero, back3: UnitCatalog.Mudo)),
-        ("版・FL-c 縛め非収入型", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Borg, center: UnitCatalog.KuguFLc, back1: UnitCatalog.Sero, back3: UnitCatalog.Mudo)),
+        // 第349期 段0: 燃焼のポンの台（前1 ムド ／ 前3 ボルグ ／ 中央 ホタ ／ 後1 ガルド ／ 後3 ヒヨ）。規定の駒のまま残す試遊の台（`compare` の行は増やさない）。
+        ("試遊・燃焼 ポンの台", BurnPon(UnitCatalog.Borg, UnitCatalog.Hota, UnitCatalog.Hiyo)),
+        // 第349期: 燃焼を抑える版（並びはポンの台・ボルグ ／ ホタ ／ ヒヨだけ版）。第347期の「版・FL」の3台は外した。
+        ("版・BN-f 燃焼", BurnPon(UnitCatalog.BorgBNf, UnitCatalog.Hota, UnitCatalog.HiyoBNhalf)),
+        ("版・BN-g 燃焼", BurnPon(UnitCatalog.BorgBNg, UnitCatalog.Hota, UnitCatalog.HiyoBNhalf)),
+        ("版・BN-a 燃焼", BurnPon(UnitCatalog.BorgBNa, UnitCatalog.HotaBNa, UnitCatalog.HiyoBNa)),
+        ("版・BN-d 燃焼", BurnPon(UnitCatalog.BorgBNd, UnitCatalog.Hota, UnitCatalog.Hiyo)),
+        ("版・BN-f＋d 燃焼", BurnPon(UnitCatalog.BorgBNfd, UnitCatalog.Hota, UnitCatalog.HiyoBNhalf)),
     };
 }

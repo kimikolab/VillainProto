@@ -196,6 +196,7 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.FireMend]    = (HcPlusL, "燃焼の刻みで自分が癒えるだけ"),
         [TraitId.FireWardAll] = (HcPlusL, "燃えている味方は敵の攻撃が半分になるだけ"),
         [TraitId.FireConvert] = (HcPlusL, "燃えている味方の燃焼ダメージが回復になるだけ"),
+        [TraitId.FireConvertHalf] = (HcPlusL, "燃えている味方の燃焼ダメージの半分が回復になるだけ（第238期 V2・第349期 BN-f ／ BN-g のヒヨで使い回す）"),
         // 第244期 前段: 第242期 R3 の規定化で保持者が付いた札（ボルグ3本・ホタ1本・ヒヨ2本）。分類を同じコミットで足す（第132期 段0-a の再発防止）。
         [TraitId.FireLevel]   = (HcPlusL, "燃えている駒に火勢（1〜4）を持たせるだけ（育つ・萎むは盤面の規則）"),
         [TraitId.CinderWide]  = (HcPlusL, "火の粉を、その攻撃で当たった敵全員に広げるだけ"),
@@ -484,6 +485,8 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.ThreadFlowCopy]     = (HcPlusL,  "写す・ダメージ系（第347期・クグ FL-a）: 浴びた毒 ／ 燃焼は、組み付いた敵が生きていればその敵にも同じだけ付く（クグにも残る・攻撃ではない・書き手はもとのまま）。保持者 0 枚"),
         [TraitId.ThreadFlowMove]     = (HcPlusL,  "移す・ダメージ系（第347期・クグ FL-b）: 浴びた毒 ／ 燃焼は、組み付いた敵が生きていればその敵へ流れる（クグには付かない・攻撃ではない・書き手はもとのまま）。保持者 0 枚"),
         [TraitId.ThreadFlowAll]      = (HcPlusL,  "移す・害のあるもの全部（第347期・クグ FL-c）: 浴びた害のある状態異常（毒・燃焼・痺れ・転倒・竦み・混乱・萎縮・鈍り・傷・深手・呪い・濃縮・敵の標）は、組み付いた敵が生きていればその敵へ流れる（クグには付かない）。保持者 0 枚"),
+        [TraitId.FireArmorNoGuard]   = (HcMinusL, "火の鎧・半減なし（第349期・ボルグ BN-f）: 火の鎧の「燃えている間は受けるダメージが半分」だけを外す（着火と焼かれないは残る）。保持者 0 枚"),
+        [TraitId.BurnHitNoMend]      = (HcBothL,  "被弾の燃焼では癒えない（第349期・ボルグ BN-a）: 被弾の燃焼の刻みは火の癒し ／ 火の変換で回復しない（焼かれない・変換は打ち消すだけ）——敵にも味方にも同じ。保持者 0 枚"),
         [TraitId.GolmStomp]          = (HcPlusL,  "踏み潰し（第345期・ゴルム GA-a）: 呑めない手番は、通常攻撃の的に 攻 ＋ 腹の 1 割・その的の左右の隣の敵に半分。保持者 0 枚"),
         [TraitId.GolmSwallowHeal]    = (HcPlusL,  "精気を呑む ＋ 消化（第343期・ゴルム GT-a1）: 呑んだ敵の残りの HP を生きている味方全員に等分して癒す。保持者 0 枚"),
         [TraitId.GolmSwallowGrow]    = (HcPlusL,  "精気を呑む ＋ 膨れる（第343期・ゴルム GT-a3）: 呑んだ敵の残りの HP だけ最大 HP と HP が増える。保持者 0 枚"),

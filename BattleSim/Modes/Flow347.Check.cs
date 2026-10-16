@@ -208,9 +208,11 @@ static partial class Flow347Diag
         }
         {
             var rows = Presets.Versions.Select(r => r.Name).ToArray();
-            bool ok = rows.Contains("試遊・感電 ポンの台") && rows.Contains("試遊・ミサ 書き手なし") && rows.Count(n => n.StartsWith("版・", StringComparison.Ordinal)) == 3
-                && Presets.Versions.Where(r => r.Name.StartsWith("版・FL-", StringComparison.Ordinal)).Select(r => r.F[2]).SequenceEqual(new[] { UnitCatalog.KuguFLa, UnitCatalog.KuguFLb, UnitCatalog.KuguFLc });
-            Expect("試遊の台: 「試遊・」2台を残し、「版・FL-a ／ FL-b ／ FL-c 縛め非収入型」の3台（中央のクグが版）", ok, string.Join("・", rows));
+            // 第349期: 「版・」の台は期ごとに入れ替わる（第349期に「版・FL」の3台を外した）ので、版の台は「あれば中央のクグが版」だけを見る
+            var fl = Presets.Versions.Where(r => r.Name.StartsWith("版・FL-", StringComparison.Ordinal)).Select(r => r.F[2]).ToArray();
+            bool ok = rows.Contains("試遊・感電 ポンの台") && rows.Contains("試遊・ミサ 書き手なし")
+                && (fl.Length == 0 || fl.SequenceEqual(new[] { UnitCatalog.KuguFLa, UnitCatalog.KuguFLb, UnitCatalog.KuguFLc }));
+            Expect("試遊の台: 「試遊・感電 ポンの台」「試遊・ミサ 書き手なし」を残す・「版・FL-a ／ FL-b ／ FL-c 縛め非収入型」はあれば中央のクグが版（第349期に外した）", ok, string.Join("・", rows));
         }
         {
             int Now(string f) => File.Exists(f) ? File.ReadAllText(f).Split("PickOne(").Length - 1 : -1;

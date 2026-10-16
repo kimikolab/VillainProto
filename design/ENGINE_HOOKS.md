@@ -1448,3 +1448,9 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
   `StatusKeys.All` のキーだけを、受け手の `UnitTally.Inv348In`（自分 ／ 味方 ／ 敵 ／ 書き手なし × 回 ／ 量）と書き手（第94期の印 `Mark.Owner`）の `UnitTally.Inv348Out`（自分 ／ 味方 ／ 敵へ × 回 ／ 量）に付ける。盤面を読まない・乱数を引かない。
 - 既存の `CounterProbe` は正の書き込みを7キー＋窓口の4通貨しか流さない（萎縮 ／ 感電 ／ 濃縮などが漏れる）ので、資源の地図はこちらで数えた。`UnitTally.Add` は `AddArr` で足す。
 - 計数を渡すと、状態を書かれただけの糸玉に空の帳簿（与ダメ ／ 被ダメ 0）が立つことがある（`TallyOf` が作る）。勝敗 ／ 台本は変わらない（`inv348 check`）。
+
+## 第349期 —— 燃焼を抑える版（BN-f ／ BN-g ／ BN-a ／ BN-d ／ BN-f＋d）
+
+- **火の鎧の半減の条件に `!target.HasTrait(FireArmorNoGuard)`**（BN-f の印・ボルグ）。火の鎧の着火と「焼かれない」は残る。盾の配りは札（`FireWardAll`）ごと外す。
+- **`BurnTickOnce` の2か所に BN-a の門 `BurnHitNoHeal`**（`_burnHitNoMend` ＝ 札 `BurnHitNoMend` の保持者が戦にいる・`_inBurnHit > 0`）: 火の癒しの枝（ボルグ ／ ホタ）は回復せず焼かれもしない、火の変換の枝は打ち消すだけ。ターン頭の刻み ／ 起爆 ／ 燃える巻き込み ／ 爆炎は今どおり。計数 `UnitTally.Bn349MendDenied` ／ `Bn349ConvDenied`。
+- BN-d は第255期の札 `BurnHitSplitOnce`（`_burnHitOnce`・1回の攻撃 ＝ 手番の一振り全体か手番の外の1回の攻撃）をそのまま使う。ムドの連撃は殴り返し1発ずつが別の攻撃なので対象外。

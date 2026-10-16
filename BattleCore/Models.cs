@@ -2392,6 +2392,8 @@ public sealed class UnitTally
     /// 回るのは <c>HarmCensus</c> のときだけ（既定は1行も走らない）。誰も読んで分岐しない。
     /// </summary>
     public long[]? Inv348Out, Inv348In;
+    /// <summary>第349期（<b>計数のみ</b>・BN-a）: 被弾の燃焼で火の癒し ／ 火の変換が回復しなかった刻みの名目（受け手の側）。</summary>
+    public long Bn349MendDenied, Bn349ConvDenied;
     public long Rp345NormalDealt, Rp345Punches, Rp345PunchBack, Rp345PunchKills, Rp345PunchDealt, Rp345PunchAmount, Rp345AimEdible, Rp345GrabNoPunch, Rp345GrabAfter, Ga345Stomps, Ga345SplashHits, Ga345SplashDealt;
     public long[]? Fg339Spray, Fg339AllyHits, Fg339AllyDmg;
     /// <summary>第339期（計数のみ）: 乱射の1発をターンごとに数える（羽の乱射 ／ 乱射の札の両方）。</summary>
@@ -3654,6 +3656,7 @@ public sealed class UnitTally
         Fl347Cnt = AddArr(Fl347Cnt, o.Fl347Cnt); Fl347Amt = AddArr(Fl347Amt, o.Fl347Amt); Fl347Flowed = AddArr(Fl347Flowed, o.Fl347Flowed); Fl347FlowedAmt = AddArr(Fl347FlowedAmt, o.Fl347FlowedAmt); Fl347FlowNoGain = AddArr(Fl347FlowNoGain, o.Fl347FlowNoGain);   // 第347期
         Fl347FlowedFromAlly += o.Fl347FlowedFromAlly; Fl347FlowedFromFoe += o.Fl347FlowedFromFoe; Fl347ToDied += o.Fl347ToDied; Fl347ToDiedNoKiller += o.Fl347ToDiedNoKiller;
         Inv348Out = AddArr(Inv348Out, o.Inv348Out); Inv348In = AddArr(Inv348In, o.Inv348In);   // 第348期
+        Bn349MendDenied += o.Bn349MendDenied; Bn349ConvDenied += o.Bn349ConvDenied;   // 第349期
         Fg339Spray = AddArr(Fg339Spray, o.Fg339Spray); Fg339AllyHits = AddArr(Fg339AllyHits, o.Fg339AllyHits); Fg339AllyDmg = AddArr(Fg339AllyDmg, o.Fg339AllyDmg);
         SharedAway += o.SharedAway; ShareTakenHits += o.ShareTakenHits; ShareGives += o.ShareGives; ShareGiven += o.ShareGiven; ShareGiftAccrued += o.ShareGiftAccrued;   // 第297期
         ShareGifts += o.ShareGifts; ShareGiftCapped += o.ShareGiftCapped; ShareGiftNoTarget += o.ShareGiftNoTarget; ShareGiftSkipped += o.ShareGiftSkipped;

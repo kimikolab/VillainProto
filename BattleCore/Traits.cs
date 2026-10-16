@@ -881,6 +881,9 @@ public enum TraitId
     // --- 第347期で足した札（指示書 design/PHASE347_KUGU_FLOW_SPEC.md §3）。クグの「流す」（`Grapple` と組む・保持者は版のクグだけ・規定のクグは持たない） ---
     ThreadFlowCopy,     // 写す・ダメージ系（FL-a・クグ）: 浴びた毒 ／ 燃焼は、組み付いた敵が生きていればその敵にも同じだけ付く（クグにも残る）（**札そのものは挙動を持たない**・engine の `StatusOnThread`）
     ThreadFlowMove,     // 移す・ダメージ系（FL-b・クグ）: 浴びた毒 ／ 燃焼は、組み付いた敵が生きていればその敵へ流れる（クグには付かない）（**札そのものは挙動を持たない**・engine の `StatusOnThread`）
+    // --- 第349期で足した札（指示書 design/PHASE349_BURN_TRIM_SPEC.md §4）。燃焼を抑える版（ボルグの印だけ・判定は engine）。保持者 0 枚 ---
+    FireArmorNoGuard,   // 火の鎧・半減なし（BN-f・ボルグ）: 火の鎧の「燃えている間は受けるダメージが半分」だけを外す（殴った敵と自分への着火・焼かれないは残る）（**札そのものは挙動を持たない**・engine の火の鎧の段）
+    BurnHitNoMend,      // 被弾の燃焼では癒えない（BN-a・ボルグ）: 保持者が戦にいれば両陣営で、被弾の燃焼の刻みは火の癒し（ボルグ ／ ホタ）でも火の変換（ヒヨ）でも回復にならない（焼かれないは残る・変換は打ち消すだけ）。ターン頭の刻み ／ 起爆 ／ 燃える巻き込み ／ 爆炎は今どおり（**札そのものは挙動を持たない**・engine の `BurnTickOnce`）
     ThreadFlowAll,      // 移す・害のあるもの全部（FL-c・クグ）: 浴びた害のある状態異常（`ThreadFlowRule.Harmful`）は、組み付いた敵が生きていればその敵へ流れる（クグには付かない）（**札そのものは挙動を持たない**・engine の `StatusOnThread`）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -17755,6 +17758,8 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.ThreadFlowCopy),            // 第347期（写す・ダメージ系 FL-a・クグ・印だけ）
         new MarkOnlyTrait(TraitId.ThreadFlowMove),            // 第347期（移す・ダメージ系 FL-b・クグ・印だけ）
         new MarkOnlyTrait(TraitId.ThreadFlowAll),             // 第347期（移す・害のあるもの全部 FL-c・クグ・印だけ）
+        new MarkOnlyTrait(TraitId.FireArmorNoGuard),          // 第349期（火の鎧・半減なし BN-f・ボルグ・印だけ）
+        new MarkOnlyTrait(TraitId.BurnHitNoMend),             // 第349期（被弾の燃焼では癒えない BN-a・ボルグ・印だけ）
         new SharePushTrait(TraitId.ShareSin),                 // 第313期（ドハ DP-c の手番）
         new AmplifierTrait(),
         new ContagionTrait(),
