@@ -1454,3 +1454,7 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **火の鎧の半減の条件に `!target.HasTrait(FireArmorNoGuard)`**（BN-f の印・ボルグ）。火の鎧の着火と「焼かれない」は残る。盾の配りは札（`FireWardAll`）ごと外す。
 - **`BurnTickOnce` の2か所に BN-a の門 `BurnHitNoHeal`**（`_burnHitNoMend` ＝ 札 `BurnHitNoMend` の保持者が戦にいる・`_inBurnHit > 0`）: 火の癒しの枝（ボルグ ／ ホタ）は回復せず焼かれもしない、火の変換の枝は打ち消すだけ。ターン頭の刻み ／ 起爆 ／ 燃える巻き込み ／ 爆炎は今どおり。計数 `UnitTally.Bn349MendDenied` ／ `Bn349ConvDenied`。
 - BN-d は第255期の札 `BurnHitSplitOnce`（`_burnHitOnce`・1回の攻撃 ＝ 手番の一振り全体か手番の外の1回の攻撃）をそのまま使う。ムドの連撃は殴り返し1発ずつが別の攻撃なので対象外。
+
+## 第350期 —— BN-a を規定に
+
+- engine は変えていない。第349期の門（`_burnHitNoMend`・札 `BurnHitNoMend` の保持者が戦にいれば両陣営）を、規定のボルグ ／ ホタ ／ ヒヨの3枚に持たせた。火の癒し（`FireMend` ／ `PyreMend`）と火の変換（`FireConvert*`）を持つ駒はこの3枚だけなので、門は燃焼が回復になる戦すべてで立つ（`EmberRule` の側に置いた場合と同じ盤面）。

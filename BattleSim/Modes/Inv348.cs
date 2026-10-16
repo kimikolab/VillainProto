@@ -169,8 +169,8 @@ static partial class Inv348Diag
     // 代表台（§3-1・決めたこと: 各軸の `compare` の行か試遊の台から 1〜2 台）
     // ---------------------------------------------------------------------------------
     internal sealed record Board(string Axis, string Name, Formation F);
-    static Formation Row(string n) => CompareBuilds().Concat(CrossBuilds()).First(r => r.Name == n).F;   // 交差帯 12 行（強化×燃 ／ 弱体×破片）も引く
-    static Formation Play(string n) => Presets.Playtest.Concat(Presets.Versions).First(r => r.Name == n).F;
+    static Formation Row(string n) => Pin349(CompareBuilds().Concat(CrossBuilds()).First(r => r.Name == n).F);   // 交差帯 12 行（強化×燃 ／ 弱体×破片）も引く・第350期: 燃焼の3枚は第349期までの規定に固定
+    static Formation Play(string n) => Pin349(Presets.Playtest.Concat(Presets.Versions).First(r => r.Name == n).F);   // 第350期: 燃焼の3枚は第349期までの規定に固定
     /// <summary>チェック波の移動の台（第232期の規定の席・`checkwave` の「移動」・駒は今の規定）。</summary>
     internal static Formation MoveCheck => CheckWaveDiag.BoardOf("移動");
 

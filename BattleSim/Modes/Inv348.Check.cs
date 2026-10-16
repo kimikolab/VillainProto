@@ -119,9 +119,9 @@ static partial class Inv348Diag
                 && g.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.HaneR0)) && g.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.SeroS0))
                 && g.Occupied().Count(o => ReferenceEquals(o.Def, UnitCatalog.Yomi) || ReferenceEquals(o.Def, UnitCatalog.Basa) || ReferenceEquals(o.Def, UnitCatalog.Shio)) == 3;
             Expect("第232期の駒: ハネ HaneR0 ／ セロ SeroS0 ／ ボルグ BorgF0 ／ ホタ HotaL0 ／ ヒヨ HiyoF0 に替わり、ヨミ ／ バサ ／ シオは今のまま", pin, $"{Seats(g)} ／ {Seats(f)}");
-            var borgNo = Without(UnitCatalog.Borg, TraitId.FireArmor);
-            Expect("札を外す: 規定の札の配列から1枚だけ抜く（並びと数値は同じ）", borgNo.Traits.Count == UnitCatalog.Borg.Traits.Count - 1 && borgNo.MaxHp == UnitCatalog.Borg.MaxHp
-                && borgNo.Traits.SequenceEqual(UnitCatalog.Borg.Traits.Where(t => t != TraitId.FireArmor)), $"{UnitCatalog.Borg.Traits.Count} → {borgNo.Traits.Count}");
+            var borgNo = Without(UnitCatalog.BorgH349, TraitId.FireArmor);
+            Expect("札を外す: 規定の札の配列から1枚だけ抜く（並びと数値は同じ）", borgNo.Traits.Count == UnitCatalog.BorgH349.Traits.Count - 1 && borgNo.MaxHp == UnitCatalog.BorgH349.MaxHp
+                && borgNo.Traits.SequenceEqual(UnitCatalog.BorgH349.Traits.Where(t => t != TraitId.FireArmor)), $"{UnitCatalog.BorgH349.Traits.Count} → {borgNo.Traits.Count}");
             Expect("16 枚がすべて `UnitCatalog.All` にいる", NoArt.All(nm => UnitCatalog.All.Any(d => Short(d) == nm)), string.Join("・", NoArt));
         }
         // ---- PickOne ----

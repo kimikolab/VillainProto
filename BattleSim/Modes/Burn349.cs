@@ -17,6 +17,7 @@ using S316 = Shiga316Diag;
 //     dotnet run --project BattleSim -c Release 0 burn349 compare [版,…]     # §6-4: `compare` 64 行 × 版（seed 0..199）
 //     dotnet run --project BattleSim -c Release 0 burn349 log <版> <波> [seed] # 1戦のログ（ポンの台）
 //     dotnet run --project BattleSim -c Release 0 burn349 kindle             # 守るほど燃え上がる（KindleGuard）の効き（規定 ／ −KindleGuard ／ BN-f ／ BN-g）
+//     dotnet run --project BattleSim -c Release 0 burn349 s350               # 第350期 §3: 規定（BN-a）と第349期の BN-a の `compare` の一致 ／ ポンの台 ／ ボルグのいない燃焼の台
 //     dotnet run --project BattleSim -c Release 0 burn349 check              # 自己検査
 //
 // 版の名前（ASCII）: base（規定）／ f ／ g ／ a ／ d ／ fd。版はボルグ ／ ホタ ／ ヒヨだけを差し替える（Id で引く・規定の上）。
@@ -49,6 +50,7 @@ static partial class Burn349Diag
             case "compare": CompareAll(Pick(A(3, ""))); return;
             case "log": Log(V(A(3, "base")), A(4, "boss"), int.Parse(A(5, "7"))); return;
             case "kindle": Kindle(); return;
+            case "s350": Settle350(); return;
             case "check": Check(); return;
             default: Console.WriteLine("burn349: モードは s0 / seats / p0 / boards / seatsall / axes / compare / log / check。"); return;
         }
@@ -68,7 +70,7 @@ static partial class Burn349Diag
     internal sealed record Ver(string Name, string Ascii, UnitDef Borg, UnitDef Hota, UnitDef Hiyo);
     internal static readonly Ver[] Vers =
     {
-        new("規定", "base", UnitCatalog.Borg, UnitCatalog.Hota, UnitCatalog.Hiyo),
+        new("規定", "base", UnitCatalog.BorgH349, UnitCatalog.HotaH349, UnitCatalog.HiyoH349),   // 第350期: BN-a を規定にしたので、第349期の「規定」は旧の定義に固定
         new("BN-f 半減なし＋変換半分", "f", UnitCatalog.BorgBNf, UnitCatalog.Hota, UnitCatalog.HiyoBNhalf),
         new("BN-g 盾の配りなし＋変換半分", "g", UnitCatalog.BorgBNg, UnitCatalog.Hota, UnitCatalog.HiyoBNhalf),
         new("BN-a 被弾の燃焼では癒えない", "a", UnitCatalog.BorgBNa, UnitCatalog.HotaBNa, UnitCatalog.HiyoBNa),
@@ -83,7 +85,10 @@ static partial class Burn349Diag
     // 台
     // ---------------------------------------------------------------------------------
     internal const string PonRow = "試遊・燃焼 ポンの台";
-    internal static Formation Pon => Presets.Versions.First(r => r.Name == PonRow).F;
+    /// <summary>ポンの台（第350期から規定の燃焼が BN-a なので、この器具では第349期までの規定に固定する・`Common.Pin349`）。</summary>
+    internal static Formation Pon => Pin349(PonNow);
+    /// <summary>ポンの台そのもの（規定の駒・第350期から BN-a）。</summary>
+    internal static Formation PonNow => Presets.Versions.First(r => r.Name == PonRow).F;
 
     /// <summary>席の総当たりの埋め方（指示書 §3-1・3組目は「燃焼と関係の薄い2枚」のドルガ＋セッキ）。2枚は残りの席の番号の若いほうから順に置く（決めたこと）。</summary>
     internal static readonly (string Name, UnitDef A, UnitDef B)[] Fillers =

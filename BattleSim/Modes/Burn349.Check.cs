@@ -43,7 +43,7 @@ static partial class Burn349Diag
         {
             var (r, _, _) = I.Raw(Pon, I.Boss, 7);
             Expect("段0: 試遊・燃焼 ポンの台（ムド・ボルグ・ホタ・ガルド・ヒヨ）× ボス × seed 7 が 4ターン・生存5体", r.PlayerWon && r.Turns == 4 && r.PlayerSurvivors == 5, $"{(r.PlayerWon ? "勝ち" : "負け")} T{r.Turns} 生存 {r.PlayerSurvivors}");
-            bool def = Pon.Occupied().All(o => ReferenceEquals(o.Def, UnitCatalog.Mudo) || ReferenceEquals(o.Def, UnitCatalog.Borg) || ReferenceEquals(o.Def, UnitCatalog.Hota) || ReferenceEquals(o.Def, UnitCatalog.Gald) || ReferenceEquals(o.Def, UnitCatalog.Hiyo))
+            bool def = PonNow.Occupied().All(o => ReferenceEquals(o.Def, UnitCatalog.Mudo) || ReferenceEquals(o.Def, UnitCatalog.Borg) || ReferenceEquals(o.Def, UnitCatalog.Hota) || ReferenceEquals(o.Def, UnitCatalog.Gald) || ReferenceEquals(o.Def, UnitCatalog.Hiyo))
                 && Seats(Pon) == "ムド・ボルグ・ホタ・ガルド・ヒヨ" && !CompareBuilds().Any(c => c.Name == PonRow) && !Presets.Playtest.Any(c => c.Name == PonRow);
             Expect("段0: ポンの台は規定の駒・`Presets.Versions` に置き、`compare` ／ `Playtest` には入れない", def, Seats(Pon));
         }
@@ -51,19 +51,34 @@ static partial class Burn349Diag
         {
             bool f = UnitCatalog.BorgBNf.Traits.Contains(TraitId.FireArmor) && UnitCatalog.BorgBNf.Traits.Contains(TraitId.FireArmorNoGuard) && !UnitCatalog.BorgBNf.Traits.Contains(TraitId.FireWardAll)
                 && UnitCatalog.HiyoBNhalf.Traits.Contains(TraitId.FireConvertHalf) && !UnitCatalog.HiyoBNhalf.Traits.Contains(TraitId.FireConvert)
-                && Array.IndexOf(UnitCatalog.HiyoBNhalf.Traits.ToArray(), TraitId.FireConvertHalf) == Array.IndexOf(UnitCatalog.Hiyo.Traits.ToArray(), TraitId.FireConvert);
+                && Array.IndexOf(UnitCatalog.HiyoBNhalf.Traits.ToArray(), TraitId.FireConvertHalf) == Array.IndexOf(UnitCatalog.HiyoH349.Traits.ToArray(), TraitId.FireConvert);
             bool g = UnitCatalog.BorgBNg.Traits.Contains(TraitId.FireArmor) && !UnitCatalog.BorgBNg.Traits.Contains(TraitId.FireArmorNoGuard) && !UnitCatalog.BorgBNg.Traits.Contains(TraitId.FireWardAll);
-            bool a = UnitCatalog.BorgBNa.Traits.Contains(TraitId.BurnHitNoMend) && UnitCatalog.HotaBNa.Traits.SequenceEqual(UnitCatalog.Hota.Traits) && UnitCatalog.HiyoBNa.Traits.SequenceEqual(UnitCatalog.Hiyo.Traits);
-            bool d = UnitCatalog.BorgBNd.Traits.SequenceEqual(UnitCatalog.Borg.Traits.Append(TraitId.BurnHitSplitOnce)) && UnitCatalog.BorgBNfd.Traits.SequenceEqual(UnitCatalog.BorgBNf.Traits.Append(TraitId.BurnHitSplitOnce));
-            bool def = !UnitCatalog.Borg.Traits.Any(t => t is TraitId.FireArmorNoGuard or TraitId.BurnHitNoMend or TraitId.BurnHitSplitOnce) && UnitCatalog.Hiyo.Traits.Contains(TraitId.FireConvert)
-                && !UnitCatalog.All.Concat(UnitCatalog.Retired).Any(u => u.Traits.Any(t => t is TraitId.FireArmorNoGuard or TraitId.BurnHitNoMend));
+            bool a = UnitCatalog.BorgBNa.Traits.Contains(TraitId.BurnHitNoMend) && UnitCatalog.HotaBNa.Traits.SequenceEqual(UnitCatalog.HotaH349.Traits) && UnitCatalog.HiyoBNa.Traits.SequenceEqual(UnitCatalog.HiyoH349.Traits);
+            bool d = UnitCatalog.BorgBNd.Traits.SequenceEqual(UnitCatalog.BorgH349.Traits.Append(TraitId.BurnHitSplitOnce)) && UnitCatalog.BorgBNfd.Traits.SequenceEqual(UnitCatalog.BorgBNf.Traits.Append(TraitId.BurnHitSplitOnce));
+            // 第350期: BN-a を規定にした——規定のボルグ ／ ホタ ／ ヒヨ ＝ 第349期までの規定（H349）＋ `BurnHitNoMend` だけ・ほかの新しい札の保持者は 0 枚
+            bool def = UnitCatalog.Borg.Traits.SequenceEqual(UnitCatalog.BorgH349.Traits.Append(TraitId.BurnHitNoMend))
+                && UnitCatalog.Hota.Traits.SequenceEqual(UnitCatalog.HotaH349.Traits.Append(TraitId.BurnHitNoMend))
+                && UnitCatalog.Hiyo.Traits.SequenceEqual(UnitCatalog.HiyoH349.Traits.Append(TraitId.BurnHitNoMend)) && UnitCatalog.Hiyo.Traits.Contains(TraitId.FireConvert)
+                && !UnitCatalog.BorgH349.Traits.Contains(TraitId.BurnHitNoMend) && !UnitCatalog.HotaH349.Traits.Contains(TraitId.BurnHitNoMend) && !UnitCatalog.HiyoH349.Traits.Contains(TraitId.BurnHitNoMend)
+                && UnitCatalog.All.Concat(UnitCatalog.Retired).Where(u => u.Traits.Contains(TraitId.BurnHitNoMend)).Select(u => u.Id).OrderBy(x => x, StringComparer.Ordinal).SequenceEqual(new[] { "borg", "hiyo", "hota" })
+                && !UnitCatalog.All.Concat(UnitCatalog.Retired).Any(u => u.Traits.Contains(TraitId.FireArmorNoGuard))
+                && UnitCatalog.Borg.PlusText.Contains(UnitCatalog.NoMendText349) && UnitCatalog.Hota.PlusText.Contains(UnitCatalog.NoMendText349) && UnitCatalog.Hiyo.PlusText.Contains(UnitCatalog.HiyoNoMendText349);
             Expect("版の定義: BN-f ＝ 火の鎧は残して半減だけ外す（`FireArmorNoGuard`）＋ 盾の配りを外す ＋ ヒヨの変換を半分（同じ席）／ BN-g ＝ 盾の配りだけ外す ／ BN-a ＝ `BurnHitNoMend`（ホタ ／ ヒヨは文面だけ）／ BN-d ＝ `BurnHitSplitOnce` を足すだけ", f && g && a && d, $"f {f}・g {g}・a {a}・d {d}");
-            Expect("規定の駒は変わらない（新しい札の保持者は 52 枚 ＋ 退役に 0 枚・規定のヒヨは全量の変換）", def);
+            Expect("第350期: 規定のボルグ ／ ホタ ／ ヒヨ ＝ 旧（H349）＋ `BurnHitNoMend` と文面の句・旧の定義は札を持たない・`FireArmorNoGuard` の保持者は 0 枚", def);
+            {
+                long now = 0, old = 0;
+                foreach (var w in new[] { I.StrongWaves[0], I.StrongWaves[1], I.Boss }) for (int s = 0; s < 5; s++)
+                {
+                    var (rn, _, _) = I.Raw(PonNow, w, s); var (ro, _, _) = I.Raw(Pon, w, s);
+                    now += rn.TallyByUnit.Values.Sum(t => t.Bn349MendDenied + t.Bn349ConvDenied); old += ro.TallyByUnit.Values.Sum(t => t.Bn349MendDenied + t.Bn349ConvDenied);
+                }
+                Expect("第350期: 規定（ポンの台そのもの）では BN-a が働き（被弾の燃焼で癒えなかった名目 > 0）、旧の定義（`Pin349`）では働かない（0）", now > 0 && old == 0, $"規定 {now} ／ 旧 {old}");
+            }
             string[] want = { "版・BN-f 燃焼", "版・BN-g 燃焼", "版・BN-a 燃焼", "版・BN-d 燃焼", "版・BN-f＋d 燃焼" };
             var vrow = Presets.Versions.Where(r => r.Name.StartsWith("版・", StringComparison.Ordinal)).ToArray();
-            bool rows = vrow.Select(r => r.Name).SequenceEqual(want) && Presets.Versions.Take(3).Select(r => r.Name).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", PonRow })
-                && vrow.Zip(Vers.Skip(1)).All(z => ReferenceEquals(z.First.F[1], z.Second.Borg) && ReferenceEquals(z.First.F[2], z.Second.Hota) && ReferenceEquals(z.First.F[4], z.Second.Hiyo) && ReferenceEquals(z.First.F[0], UnitCatalog.Mudo) && ReferenceEquals(z.First.F[3], UnitCatalog.Gald));
-            Expect("試遊の台: 「試遊・感電 ポンの台」「試遊・ミサ 書き手なし」「試遊・燃焼 ポンの台」の後に「版・BN-f ／ BN-g ／ BN-a ／ BN-d ／ BN-f＋d 燃焼」（並びはポンの台・3枚が版）・「版・FL」は外した", rows, string.Join("・", Presets.Versions.Select(r => r.Name)));
+            // 第350期: BN-a を規定にしたので「版・BN」の5台は外した（`want` は第349期の並び・いまは無いことを見る）
+            bool rows = vrow.Length == 0 && want.Length == 5 && Presets.Versions.Select(r => r.Name).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", PonRow });
+            Expect("試遊の台: 「試遊・感電 ポンの台」「試遊・ミサ 書き手なし」「試遊・燃焼 ポンの台」の3台だけ（第349期の「版・BN」の5台は第350期に外した）", rows, string.Join("・", Presets.Versions.Select(r => r.Name)));
         }
         // ---- BN-f ／ BN-g: 半減 ----
         {

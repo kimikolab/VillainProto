@@ -913,7 +913,8 @@ public static class Presets
     /// 第344期: 「版・GT」の4台を外し、呑む条件の SW-a ／ SW-b ／ SW-a＋b の3台（並びは守り型）と、毒の台にゴルム（`毒 (グザ×ミオ×ラウ)` の前3 ガルド → ゴルム）の SW-a＋b の1台を足した。
     /// 第345期: S3（SW-a＋b）を規定にしたので「版・SW」の4台を外し、呑めない手番の RP-a ／ RP-b ／ GA-a の3台（並びは守り型）と、毒の台にゴルムの RP-b の1台を足した。
     /// 第346期: RP-b を規定にしたので「版・」の4台を外した（足す台は無し・規定のゴルムは「試遊・標 守り型」ほか規定の台で見られる）。
-    /// 第347期: クグの「流す」の3台（版・FL）を足した。第349期: 版・FL の3台を外し、「試遊・燃焼 ポンの台」（規定の駒・残す）と燃焼を抑える版（BN-f ／ BN-g ／ BN-a ／ BN-d ／ BN-f＋d）の5台を足した。</para>
+    /// 第347期: クグの「流す」の3台（版・FL）を足した。第349期: 版・FL の3台を外し、「試遊・燃焼 ポンの台」（規定の駒・残す）と燃焼を抑える版（BN-f ／ BN-g ／ BN-a ／ BN-d ／ BN-f＋d）の5台を足した。
+    /// 第350期: BN-a を規定にしたので「版・BN」の5台を外した（足す台は無し・規定の燃焼は「試遊・燃焼 ポンの台」で見られる）。</para>
     /// </summary>
     /// <summary>第349期: 燃焼のポンの台の並び（前1 ムド ／ 前3 ボルグ ／ 中央 ホタ ／ 後1 ガルド ／ 後3 ヒヨ）。</summary>
     public static Formation BurnPon(UnitDef borg, UnitDef hota, UnitDef hiyo) =>
@@ -925,11 +926,5 @@ public static class Presets
         ("試遊・ミサ 書き手なし", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Dolga, center: UnitCatalog.Doha, back1: UnitCatalog.Tome, back3: UnitCatalog.Ban)),
         // 第349期 段0: 燃焼のポンの台（前1 ムド ／ 前3 ボルグ ／ 中央 ホタ ／ 後1 ガルド ／ 後3 ヒヨ）。規定の駒のまま残す試遊の台（`compare` の行は増やさない）。
         ("試遊・燃焼 ポンの台", BurnPon(UnitCatalog.Borg, UnitCatalog.Hota, UnitCatalog.Hiyo)),
-        // 第349期: 燃焼を抑える版（並びはポンの台・ボルグ ／ ホタ ／ ヒヨだけ版）。第347期の「版・FL」の3台は外した。
-        ("版・BN-f 燃焼", BurnPon(UnitCatalog.BorgBNf, UnitCatalog.Hota, UnitCatalog.HiyoBNhalf)),
-        ("版・BN-g 燃焼", BurnPon(UnitCatalog.BorgBNg, UnitCatalog.Hota, UnitCatalog.HiyoBNhalf)),
-        ("版・BN-a 燃焼", BurnPon(UnitCatalog.BorgBNa, UnitCatalog.HotaBNa, UnitCatalog.HiyoBNa)),
-        ("版・BN-d 燃焼", BurnPon(UnitCatalog.BorgBNd, UnitCatalog.Hota, UnitCatalog.Hiyo)),
-        ("版・BN-f＋d 燃焼", BurnPon(UnitCatalog.BorgBNfd, UnitCatalog.Hota, UnitCatalog.HiyoBNhalf)),
     };
 }

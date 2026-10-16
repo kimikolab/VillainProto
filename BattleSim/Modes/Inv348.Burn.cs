@@ -37,20 +37,20 @@ static partial class Inv348Diag
     static Abl[] BorgAbl()
     {
         var list = new List<Abl> { new("規定", f => f) };
-        foreach (var t in UnitCatalog.Borg.Traits)
-            list.Add(new($"ボルグ −{TraitJa(t)}（{t}）", f => Swap(f, "borg", Without(UnitCatalog.Borg, t))));
-        list.Add(new("ヒヨ → 素体", f => Swap(f, "hiyo", Plain(UnitCatalog.Hiyo))));
-        list.Add(new("ヒヨ −火の変換（FireConvert）", f => Swap(f, "hiyo", Without(UnitCatalog.Hiyo, TraitId.FireConvert))));
+        foreach (var t in UnitCatalog.BorgH349.Traits)
+            list.Add(new($"ボルグ −{TraitJa(t)}（{t}）", f => Swap(f, "borg", Without(UnitCatalog.BorgH349, t))));
+        list.Add(new("ヒヨ → 素体", f => Swap(f, "hiyo", Plain(UnitCatalog.HiyoH349))));
+        list.Add(new("ヒヨ −火の変換（FireConvert）", f => Swap(f, "hiyo", Without(UnitCatalog.HiyoH349, TraitId.FireConvert))));
         return list.ToArray();
     }
 
     static Abl[] HotaAbl()
     {
         var list = new List<Abl> { new("規定", f => f) };
-        foreach (var t in UnitCatalog.Hota.Traits)
-            list.Add(new($"ホタ −{TraitJa(t)}（{t}）", f => Swap(f, "hota", Without(UnitCatalog.Hota, t))));
-        list.Add(new("ヒヨ −贔屓（Favor ＋ FavorLevel）", f => Swap(f, "hiyo", Without(UnitCatalog.Hiyo, TraitId.Favor, TraitId.FavorLevel))));
-        list.Add(new("ホタ −あぶれた火 −くべられる火 ／ ヒヨ −贔屓（育ち3つとも）", f => Swap(Swap(f, "hota", Without(UnitCatalog.Hota, TraitId.PyreOverflow, TraitId.PyreFed)), "hiyo", Without(UnitCatalog.Hiyo, TraitId.Favor, TraitId.FavorLevel))));
+        foreach (var t in UnitCatalog.HotaH349.Traits)
+            list.Add(new($"ホタ −{TraitJa(t)}（{t}）", f => Swap(f, "hota", Without(UnitCatalog.HotaH349, t))));
+        list.Add(new("ヒヨ −贔屓（Favor ＋ FavorLevel）", f => Swap(f, "hiyo", Without(UnitCatalog.HiyoH349, TraitId.Favor, TraitId.FavorLevel))));
+        list.Add(new("ホタ −あぶれた火 −くべられる火 ／ ヒヨ −贔屓（育ち3つとも）", f => Swap(Swap(f, "hota", Without(UnitCatalog.HotaH349, TraitId.PyreOverflow, TraitId.PyreFed)), "hiyo", Without(UnitCatalog.HiyoH349, TraitId.Favor, TraitId.FavorLevel))));
         return list.ToArray();
     }
 

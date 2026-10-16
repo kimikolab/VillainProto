@@ -1235,6 +1235,7 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 burn349 compare [版,…]  # 第349期 §6-4: `compare` 64 行 × 版 ＋ BN-d を規則として全行（33 秒）
     dotnet run --project BattleSim -c Release 0 burn349 kindle          # 第349期: 守るほど燃え上がる（KindleGuard）の効き（規定 ／ −KindleGuard ／ BN-f ／ BN-g）
     dotnet run --project BattleSim -c Release 0 burn349 log <版> <波> [seed]   # 第349期: ポンの台の1戦のログ（波 boss ／ guard ／ bat ／ 2 ／ 4 ／ 5 ／ nine ／ s2〜s5）
+    dotnet run --project BattleSim -c Release 0 burn349 s350            # 第350期 §3: 規定（BN-a）と第349期の BN-a の `compare` の一致 ／ ポンの台 ／ ボルグのいない燃焼の台（11 秒）
     dotnet run --project BattleSim -c Release 0 burn349 check           # 第349期 自己検査（段0・版の定義・BN-f ／ g ／ a ／ d の規則・verbose・PickOne）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`

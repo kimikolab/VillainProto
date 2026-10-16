@@ -10,7 +10,7 @@ static partial class Inv348Diag
     internal static UnitDef ByShort(string n) => UnitCatalog.All.First(d => Short(d) == n);
     const int CompareSeeds = 200, MapSeeds = 20;
 
-    static (string Name, Formation F)[] AllRows() => CompareBuilds().Concat(CrossBuilds()).ToArray();
+    static (string Name, Formation F)[] AllRows() => CompareBuilds().Concat(CrossBuilds()).Select(r => (Name: r.Name, F: Pin349(r.F))).ToArray();   // 第350期: 燃焼の3枚は第349期までの規定に固定
 
     /// <summary>`compare` と同じ帯で1行 × 第1〜5波の勝率（<paramref name="sc"/> が null なら本編の倍率）。</summary>
     static double[] Grid(Formation f, int seeds, EnemyScaleRule? sc = null)
@@ -157,7 +157,7 @@ static partial class Inv348Diag
         var real = new Dictionary<string, double[]>();
         foreach (var (n, f) in rows) real[n] = Grid(f, CompareSeeds);
         var bossOf = new Dictionary<string, double>();
-        var boardsForBoss = rows.Concat(Presets.Playtest).Concat(Presets.Versions.Where(r => r.Name.StartsWith("試遊・", StringComparison.Ordinal)))
+        var boardsForBoss = rows.Concat(Presets.Playtest.Select(r => (Name: r.Name, F: Pin349(r.F)))).Concat(Presets.Versions.Where(r => r.Name.StartsWith("試遊・", StringComparison.Ordinal)).Select(r => (Name: r.Name, F: Pin349(r.F))))
             .Where(r => units.Any(u => r.F.Occupied().Any(o => o.Def.Id == u.Id))).GroupBy(r => r.Name).Select(g => g.First()).ToArray();
         foreach (var (n, f) in boardsForBoss) bossOf[n] = Measure(f, Boss).Win;
 

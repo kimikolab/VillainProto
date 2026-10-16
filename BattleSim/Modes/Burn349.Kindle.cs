@@ -12,7 +12,7 @@ static partial class Burn349Diag
         var cols = new (string Name, Formation F)[]
         {
             ("規定", Pon),
-            ("規定 −守るほど燃え上がる", S316Swap(Pon, "borg", I.Without(UnitCatalog.Borg, TraitId.KindleGuard))),
+            ("規定 −守るほど燃え上がる", S316Swap(Pon, "borg", I.Without(UnitCatalog.BorgH349, TraitId.KindleGuard))),
             ("BN-f", Apply(Pon, V("f"))),
             ("BN-g", Apply(Pon, V("g"))),
         };

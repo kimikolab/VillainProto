@@ -6,7 +6,8 @@
 /// </summary>
 public static class UnitCatalog
 {
-    public static readonly UnitDef Borg = new()
+    /// <summary>第349期までの規定のボルグ（第258期 W4）。対照（<see cref="All"/> に入れない）。第349期までの器具（`burn349` の「規定」・`inv348` ほか）はこちらに固定した（`Common.PinB349`）。</summary>
+    public static readonly UnitDef BorgH349 = new()
     {
         Id = "borg",
         Name = "焼け残りのボルグ",
@@ -35,6 +36,9 @@ public static class UnitCatalog
         MinusText = "同じ一振りが、自分の両隣の味方も巻き込む（燃え移る火として——火に強い味方には効かない）。隣の味方にも火が移る。放った炎は味方も焼く",
         Flavor = "三度、味方の部隊を半壊させて追い出された。"
     };
+
+    /// <summary>第350期（ポンの判断・design/PHASE350_BURN_BNA_SETTLE_SPEC.md）: 第349期 BN-a を規定に——<see cref="BorgH349"/> ＋ <see cref="TraitId.BurnHitNoMend"/>（被弾の燃焼では火の癒し ／ 火の変換が回復しない）と文面の句。</summary>
+    public static readonly UnitDef Borg = Re349(BorgH349, t => t.Append(TraitId.BurnHitNoMend), s => Must349(s, MendClause349, MendClause349 + NoMendText349));
 
     /// <summary>第257期までの規定のボルグ（第253期 N2）。対照（<see cref="All"/> に入れない）。第254〜257期の器具（`blazesurge` / `burnhit` / `burnadopt` / `foesurge`）の対照の版はこちらに固定した。</summary>
     public static readonly UnitDef BorgW0 = new()
@@ -3258,7 +3262,8 @@ public static class UnitCatalog
     /// <see cref="CinderTrait"/> は <c>ally == self</c> で自分を除外するので
     /// <b>供給源のボルグだけが燃えない</b>＝ヒヨの強化対象になれない、という穴は<b>まだ空いている。</b></para>
     /// </summary>
-    public static readonly UnitDef Hota = new()
+    /// <summary>第349期までの規定のホタ（第251期 L3）。対照（<see cref="All"/> に入れない）。第349期までの器具（`burn349` の「規定」・`inv348` ほか）はこちらに固定した（`Common.PinB349`）。</summary>
+    public static readonly UnitDef HotaH349 = new()
     {
         Id = "hota",
         Name = "熾のホタ",
@@ -3276,6 +3281,9 @@ public static class UnitCatalog
         MinusText = "火が消えればただの湿った薪。自分では火を点けられない",
         Flavor = "焚きつけられている間だけ働く。誰かが火を放つのを待っている。"
     };
+
+    /// <summary>第350期（ポンの判断・design/PHASE350_BURN_BNA_SETTLE_SPEC.md）: 第349期 BN-a を規定に——<see cref="HotaH349"/> ＋ <see cref="TraitId.BurnHitNoMend"/>（被弾の燃焼では火の癒し ／ 火の変換が回復しない）と文面の句。</summary>
+    public static readonly UnitDef Hota = Re349(HotaH349, t => t.Append(TraitId.BurnHitNoMend), s => Must349(s, HotaMendClause349, HotaMendClause349 + NoMendText349));
 
     /// <summary>第250期までの規定のホタ（第249期 K4・攻撃力は贔屓だけで上がる・焼き尽くすの全体は ×4）。対照（<see cref="All"/> に入れない）。第250期の器具（`fireatk`）の L0 はこちらに固定した。</summary>
     public static readonly UnitDef HotaK4 = new()
@@ -5945,7 +5953,8 @@ public static class UnitCatalog
     /// <b>攻5 と低いのは意図的</b>——出力で効いてしまうと、接続が効いたのか体が効いたのかが
     /// 分からなくなる（第34期「1変数を振るときは、その変数が他に何を一緒に動かすかを先に数える」）。</para>
     /// </summary>
-    public static readonly UnitDef Hiyo = new()
+    /// <summary>第349期までの規定のヒヨ（第253期 N2）。対照（<see cref="All"/> に入れない）。第349期までの器具（`burn349` の「規定」・`inv348` ほか）はこちらに固定した（`Common.PinB349`）。</summary>
+    public static readonly UnitDef HiyoH349 = new()
     {
         Id = "hiyo",
         Name = "火選りのヒヨ",
@@ -5967,6 +5976,9 @@ public static class UnitCatalog
         MinusText = "自分の隣で燃えていない味方は、逆に腕が鈍る。攻撃はしない（贔屓が手番そのもの）。火を渡した相手の手番では、自分の火は育たない",
         Flavor = "人を見る基準はただ一つ。燃えているか、いないか。"
     };
+
+    /// <summary>第350期（ポンの判断・design/PHASE350_BURN_BNA_SETTLE_SPEC.md）: 第349期 BN-a を規定に——<see cref="HiyoH349"/> ＋ <see cref="TraitId.BurnHitNoMend"/>（被弾の燃焼では火の癒し ／ 火の変換が回復しない）と文面の句。</summary>
+    public static readonly UnitDef Hiyo = Re349(HiyoH349, t => t.Append(TraitId.BurnHitNoMend), s => Must349(s, HiyoConvertClause349, HiyoNoMendText349));
 
     /// <summary>第252期までの規定のヒヨ（第249期 K4・贔屓・火勢）。対照（<see cref="All"/> に入れない）。第252期の器具（`firekindle`）の M0 と、第253期の器具（`giftorder`）の N0 はこちらに固定した。</summary>
     public static readonly UnitDef HiyoM0 = new()
@@ -6344,6 +6356,7 @@ public static class UnitCatalog
 
     // =====================================================================================
     // 第349期 —— 燃焼を抑える版（BN-f ／ BN-g ／ BN-a ／ BN-d ／ BN-f＋d・design/PHASE349_BURN_TRIM_SPEC.md §4）。規定の駒の上に札を差し替えるだけ。
+    // 第350期: BN-a を規定にしたので、版はすべて第349期までの規定（`BorgH349` ／ `HotaH349` ／ `HiyoH349`）から作る（第349期と同じ中身）。
     // **クラスの末尾に置く**（規定のボルグ ／ ホタ ／ ヒヨより後で初期化される）。`All` にも `Retired` にも入れない（版・`Presets.Versions` の「版・」の台）。
     // =====================================================================================
     const string BorgHalfClause349 = "燃えている間は自分も燃えている味方も受ける傷が半分になり、";
@@ -6352,6 +6365,8 @@ public static class UnitCatalog
     const string HotaMendClause349 = "火に焼かれる代わりに、その火で癒える";
     /// <summary>第349期 BN-a の句（叩き台）。</summary>
     public const string NoMendText349 = "（殴られて燃え上がった火では癒えない）";
+    /// <summary>第349期 BN-a のヒヨの句（第350期から規定の文面）。</summary>
+    public const string HiyoNoMendText349 = "燃えている味方は、火に焼かれる代わりにその火で癒える（殴られて燃え上がった火は、癒しにならず消えるだけ）。";
 
     static UnitDef Re349(UnitDef b, Func<IReadOnlyList<TraitId>, IEnumerable<TraitId>> traits, Func<string, string> plus) => new()
     {
@@ -6361,21 +6376,21 @@ public static class UnitCatalog
     static string Must349(string s, string a, string b) => s.Contains(a, StringComparison.Ordinal) ? s.Replace(a, b, StringComparison.Ordinal) : throw new InvalidOperationException($"第349期の句が見つからない: {a}");
 
     /// <summary>第349期 BN-f（ポン案）: 火の鎧の半減だけを外す（<see cref="TraitId.FireArmorNoGuard"/>）＋ 盾の配り（<see cref="TraitId.FireWardAll"/>）を外す。</summary>
-    public static readonly UnitDef BorgBNf = Re349(Borg, t => t.Where(x => x != TraitId.FireWardAll).Append(TraitId.FireArmorNoGuard), s => Must349(s, BorgHalfClause349, ""));
+    public static readonly UnitDef BorgBNf = Re349(BorgH349, t => t.Where(x => x != TraitId.FireWardAll).Append(TraitId.FireArmorNoGuard), s => Must349(s, BorgHalfClause349, ""));
     /// <summary>第349期 BN-g: 盾の配り（<see cref="TraitId.FireWardAll"/>）だけを外す（ボルグ自身の火の鎧の半減は残す）。</summary>
-    public static readonly UnitDef BorgBNg = Re349(Borg, t => t.Where(x => x != TraitId.FireWardAll), s => Must349(s, BorgHalfClause349, "燃えている間は受ける傷が半分になり、"));
+    public static readonly UnitDef BorgBNg = Re349(BorgH349, t => t.Where(x => x != TraitId.FireWardAll), s => Must349(s, BorgHalfClause349, "燃えている間は受ける傷が半分になり、"));
     /// <summary>第349期 BN-a: 被弾の燃焼では火の癒し ／ 火の変換が回復しない（<see cref="TraitId.BurnHitNoMend"/>・保持者がいれば両陣営）。</summary>
-    public static readonly UnitDef BorgBNa = Re349(Borg, t => t.Append(TraitId.BurnHitNoMend), s => Must349(s, MendClause349, MendClause349 + NoMendText349));
+    public static readonly UnitDef BorgBNa = Re349(BorgH349, t => t.Append(TraitId.BurnHitNoMend), s => Must349(s, MendClause349, MendClause349 + NoMendText349));
     /// <summary>第349期 BN-d: 被弾の燃焼は1回の攻撃につき同じ駒に1度（第255期の札 <see cref="TraitId.BurnHitSplitOnce"/>・保持者がいれば両陣営）。文面は変えない（規則）。</summary>
-    public static readonly UnitDef BorgBNd = Re349(Borg, t => t.Append(TraitId.BurnHitSplitOnce), s => s);
+    public static readonly UnitDef BorgBNd = Re349(BorgH349, t => t.Append(TraitId.BurnHitSplitOnce), s => s);
     /// <summary>第349期 BN-f＋d。</summary>
     public static readonly UnitDef BorgBNfd = Re349(BorgBNf, t => t.Append(TraitId.BurnHitSplitOnce), s => s);
     /// <summary>第349期 BN-f ／ BN-g のヒヨ: 火の変換を半分に（<see cref="TraitId.FireConvert"/> → <see cref="TraitId.FireConvertHalf"/>・第238期 V2 の札・同じ席）。</summary>
-    public static readonly UnitDef HiyoBNhalf = Re349(Hiyo, t => t.Select(x => x == TraitId.FireConvert ? TraitId.FireConvertHalf : x), s => Must349(s, HiyoConvertClause349, "燃えている味方が受ける火の半分を癒しに変える。"));
+    public static readonly UnitDef HiyoBNhalf = Re349(HiyoH349, t => t.Select(x => x == TraitId.FireConvert ? TraitId.FireConvertHalf : x), s => Must349(s, HiyoConvertClause349, "燃えている味方が受ける火の半分を癒しに変える。"));
     /// <summary>第349期 BN-a のホタ（文面だけ・札は規定のまま）。</summary>
-    public static readonly UnitDef HotaBNa = Re349(Hota, t => t, s => Must349(s, HotaMendClause349, HotaMendClause349 + NoMendText349));
+    public static readonly UnitDef HotaBNa = Re349(HotaH349, t => t, s => Must349(s, HotaMendClause349, HotaMendClause349 + NoMendText349));
     /// <summary>第349期 BN-a のヒヨ（文面だけ・札は規定のまま）。</summary>
-    public static readonly UnitDef HiyoBNa = Re349(Hiyo, t => t, s => Must349(s, HiyoConvertClause349, "燃えている味方は、火に焼かれる代わりにその火で癒える（殴られて燃え上がった火は、癒しにならず消えるだけ）。"));
+    public static readonly UnitDef HiyoBNa = Re349(HiyoH349, t => t, s => Must349(s, HiyoConvertClause349, HiyoNoMendText349));
 }
 
 /// <summary>討伐に来る人間側。プレイヤーは編成できない。</summary>
