@@ -9688,6 +9688,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.FireWard) || u.HasTrait(TraitId.FireWardAll)) _fireWardHolders.Add(u);             // 第238期（盾の配り）
         if (u.HasTrait(TraitId.FireConvert) || u.HasTrait(TraitId.FireConvertHalf)) _fireConvertHolders.Add(u);   // 第238期（火の変換）
         if (u.HasTrait(TraitId.BurnHitNoMend)) _burnHitNoMend = true;   // 第349期（BN-a・被弾の燃焼では癒えない・両陣営）
+        if (u.HasTrait(TraitId.RelayWide)) _relayWideLive = true;       // 第351期（WT-a・渡しが味方全員から拾う）
         if (FireLevelRule.Holds(u)) { _fireLvLive = true; _fireLvTeams[u.TeamId] = true; }   // 第242期（火勢）
         if (u.HasTrait(TraitId.FireSpreadCap)) _spreadCapTeams[u.TeamId] = true;              // 第244期（燃え広がりの上限）
         if (FireKindleRule.Holds(u)) _kindleLive = true;                                      // 第252期（ボルグが育つ口・あぶれた火）
@@ -14703,6 +14704,7 @@ public sealed class BattleContext
             else
             {
                 HexShareHits++;
+                if (source is not null) TallyOf(source).Db351HexSrcHits++;   // 第351期（計数のみ）
                 int share = amount * Curse.SharePercent / 100;
                 var others = LivingMembers(target.TeamId)
                     .Where(u => u != target && u.RawCounter(StatusKeys.Curse) > 0).ToList();
@@ -14739,9 +14741,16 @@ public sealed class BattleContext
                     _hexShareFrom = target.InstanceId;
                     try
                     {
+                        bool alive351 = other.IsAlive;
                         ApplyDamage(other, share, source, isFriendlyFire: ff,
                                     burnTick: burnTick, spillWound: false,
                                     singleHit: true, hexShare: true);
+                        if (source is not null)                              // 第351期（計数のみ）: 分けた痛みの出どころ
+                        {
+                            UnitTally ht = TallyOf(source);
+                            ht.Db351HexSplits++; ht.Db351HexDealt += share;
+                            if (alive351 && !other.IsAlive) ht.Db351HexKills++;
+                        }
                     }
                     finally { _hexShareFrom = prevShareFrom; }
                 }
@@ -17333,6 +17342,12 @@ public sealed class BattleContext
 
         DullTotal += amount;
         DullByRoute[(int)route] += amount;
+        // 第351期（計数のみ）: 書き手の側の量（対象が書き手と同じ陣営なら味方へ・違えば敵へ）。盤面は動かさない。
+        if (by is not null)
+        {
+            UnitTally wt = TallyOf(by);
+            if (by.TeamId == target.TeamId) wt.Db351DullWroteAlly += amount; else wt.Db351DullWroteFoe += amount;
+        }
 
         UnitState receiver = target;
 
@@ -17367,7 +17382,9 @@ public sealed class BattleContext
                     .Where(u => u != target
                                 && (u.HasTrait(TraitId.Bear) || (u.HasTrait(TraitId.Relay) && !InRelay)
                                     || (u.HasTrait(TraitId.Funnel) && Funnel.Both))
-                                && FormationRules.AreAdjacent(u, target))
+                                && (_relayWideLive && u.HasTrait(TraitId.RelayWide)
+                                    ? !target.HasTrait(TraitId.Perverse)            // 第351期 WT-a: 味方全員から拾う（逆しまからは拾わない）
+                                    : FormationRules.AreAdjacent(u, target)))
                     .ToList());
             if (taker is not null && taker.HasTrait(TraitId.Funnel)
                 && !taker.HasTrait(TraitId.Bear) && !taker.HasTrait(TraitId.Relay))
@@ -17442,12 +17459,45 @@ public sealed class BattleContext
         // 渡していない呼び出し元からは今までどおり null が載る。
         EmitStatusGain(receiver, DullKey, amount, by);
         receiver.AtkBonus -= amount;
+        if (receiver.HasTrait(TraitId.Perverse)) NotePerverse351(receiver);   // 第351期（計数のみ）
         if (atkBefore > 0 && receiver.CurrentAttack == 0)
         {
             DullZeroed++;
             DullZeroedWho[receiver.Name] =
                 DullZeroedWho.TryGetValue(receiver.Name, out int z) ? z + 1 : 1;
         }
+    }
+
+    /// <summary>第351期 WT-a: 渡しの横取りが味方全員に及ぶ札（<see cref="TraitId.RelayWide"/>）の保持者がいる戦。</summary>
+    bool _relayWideLive;
+
+    /// <summary>第351期 WT-u: 回し先の逆しま（生きている・席の若い順・乱数を引かない）。</summary>
+    UnitState? PerverseOf351(int team)
+    {
+        UnitState? pick = null;
+        foreach (UnitState u in LivingMembers(team))
+            if (u.HasTrait(TraitId.Perverse) && (pick is null || u.Slot < pick.Slot)) pick = u;
+        return pick;
+    }
+
+    /// <summary>第351期・表示専用: 呪いの受け渡し（`CursePass`）。版の駒（`RelayWide` ／ `Plunder` の保持者）だけが呼ぶ。盤面は動かさない。</summary>
+    internal void EmitCursePass(string label, UnitState actor, UnitState to, UnitState? from, int amount)
+    {
+        if (!_verbose || amount <= 0) return;
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.CursePass, Turn = _turn, Text = label, ActorId = actor.InstanceId, TargetId = to.InstanceId, PartnerId = from?.InstanceId,
+            Amount = amount, Team = to.TeamId,
+        });
+    }
+
+    /// <summary>第351期（計数のみ）: 逆しまの下げ幅の最大と、手数が上限に届いた T。</summary>
+    void NotePerverse351(UnitState u)
+    {
+        UnitTally t = TallyOf(u);
+        long d = -u.AtkBonus;
+        if (d > t.Db351PerverseMax) t.Db351PerverseMax = d;
+        if (t.Db351PerverseFullN == 0 && d >= (PerverseTrait.MaxHits - 1) * PerverseTrait.HitsPerDull) { t.Db351PerverseFullN = 1; t.Db351PerverseFullT = _turn; }
     }
 
     /// <summary>
@@ -17466,8 +17516,25 @@ public sealed class BattleContext
     {
         RelayTaken += amount;
         RelayFrom[target.Name] = RelayFrom.TryGetValue(target.Name, out int prev) ? prev + amount : amount;
+        UnitTally rt = TallyOf(relayer);                                               // 第351期（計数のみ）
+        rt.Db351Picked += amount;
+        if (!FormationRules.AreAdjacent(relayer, target)) rt.Db351PickedFar += amount;
 
         int sent = amount * Relay.TransferPercent / 100;
+        // 第351期 WT-u（ウツへ回す）: まず逆しまの手数が上限に届く下げ幅まで回し、余りを敵へ。逆しまがいなければ何もしない（WT-a と同じ）。
+        if (sent > 0 && relayer.HasTrait(TraitId.RelayFeed) && PerverseOf351(relayer.TeamId) is { } utsu)
+        {
+            int need = Math.Max(0, (PerverseTrait.MaxHits - 1) * PerverseTrait.HitsPerDull + utsu.AtkBonus);
+            int feed = Math.Min(sent, need);
+            if (feed > 0)
+            {
+                sent -= feed;
+                rt.Db351Fed += feed;
+                EmitCursePass(CursePassLabels.Feed, relayer, utsu, target, feed);
+                Relaying(() => Dull(utsu, feed, DullRoute.Relay, relayer));
+                Log($"    {relayer.Name} が {target.Name} の重荷を {utsu.Name} へ回した（攻撃 -{feed}）", LogKind.Trigger);
+            }
+        }
         if (sent > 0)
         {
             IReadOnlyList<UnitState> foes = LivingMembers(Opponent(relayer.TeamId));
@@ -17482,11 +17549,28 @@ public sealed class BattleContext
                     if (sent > RelayMaxSent) RelayMaxSent = sent;
 
                     int before = victim.CurrentAttack;
+                    // 第351期 WT-x（交換）: 渡す前の強化（今の攻撃力が元を上回る分）を、渡した量まで取る。
+                    int take = relayer.HasTrait(TraitId.RelaySwap) ? Math.Min(sent, Math.Max(0, before - victim.Def.Attack)) : 0;
+                    rt.Db351Sent += sent;
+                    if (relayer.HasTrait(TraitId.RelayWide)) EmitCursePass(CursePassLabels.Push, relayer, victim, target, sent);
                     Relaying(() => Dull(victim, sent, DullRoute.Relay, relayer));
+                    if (take > 0) Relaying(() => Dull(victim, take, DullRoute.Relay, relayer));
                     if (before > 0 && victim.CurrentAttack == 0) RelayZeroed++;
 
                     Log($"    {relayer.Name} が {target.Name} の重荷を {victim.Name} へ渡した（攻撃 -{sent}）",
                         LogKind.Trigger);
+                    if (take > 0)
+                    {
+                        rt.Db351Swapped += take;
+                        if (target.IsAlive)
+                        {
+                            TallyOf(target).Db351SwapGot += take;
+                            if (target.HasTrait(TraitId.Perverse)) rt.Db351SwapOnPerverse++;
+                            EmitCursePass(CursePassLabels.Swap, relayer, target, victim, take);
+                            Whet(target, take);
+                            Log($"    引き換えに {victim.Name} の力を奪い、{target.Name} へ返した（攻撃 +{take}）", LogKind.Trigger);
+                        }
+                    }
                 }
             }
         }

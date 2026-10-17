@@ -1237,6 +1237,14 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 burn349 log <版> <波> [seed]   # 第349期: ポンの台の1戦のログ（波 boss ／ guard ／ bat ／ 2 ／ 4 ／ 5 ／ nine ／ s2〜s5）
     dotnet run --project BattleSim -c Release 0 burn349 s350            # 第350期 §3: 規定（BN-a）と第349期の BN-a の `compare` の一致 ／ ポンの台 ／ ボルグのいない燃焼の台（11 秒）
     dotnet run --project BattleSim -c Release 0 burn349 check           # 第349期 自己検査（段0・版の定義・BN-f ／ g ／ a ／ d の規則・verbose・PickOne）
+    dotnet run --project BattleSim -c Release 0 db351 seats [版]        # 第351期 §2-1 Phase 0: ネル ／ ワタ ／ ウツの席 60 × 埋め方 3（ムド＋ガルド ／ クビ＋ゴルム ／ ムド＋クビ）× ボス ／ 近衛 ／ 大隊・seed 0..19（3 秒）
+    dotnet run --project BattleSim -c Release 0 db351 p0                # 第351期 §2-2 Phase 0: 呪いの流れ（呪いの台 1 ／ 2 × ボス ／ 大隊 ／ 本編 第2 ／ 第5波・弱体の量 ／ ウツと分け合い ／ 敵の攻撃力の推移 ／ 倒れた駒）＋ 敵の強化の量（全波）（1 秒）
+    dotnet run --project BattleSim -c Release 0 db351 flow [版,…]       # 第351期 §5-1: 呪いの流れ × 版（base ／ a ／ x ／ u ／ r）・呪いの台 1 ／ 2 ／ ウケ入り × ボス ／ 大隊（2 秒）。予測のファイルが無ければ走らない
+    dotnet run --project BattleSim -c Release 0 db351 boards [版,…]     # 第351期 §5-2: 代表台 6 × 10 波 × 版・seed 0..99・壊れの兆し（5 秒）
+    dotnet run --project BattleSim -c Release 0 db351 axes              # 第351期 §5-3: 軸の横並び（第348期 §3）のデバフの行 × 版と、物差しごとの順位（12 秒）
+    dotnet run --project BattleSim -c Release 0 db351 compare [版,…]    # 第351期 §5-4: `compare` 64 行 × 版（22 秒）
+    dotnet run --project BattleSim -c Release 0 db351 log <版> <台> <波> [seed]   # 第351期: 1戦のログ（台 1 ／ 2 ／ uk ／ 逆しま ／ 渡し ／ 弱体・波 boss ／ guard ／ bat ／ 2 ／ 4 ／ 5 ／ s2〜s5）
+    dotnet run --project BattleSim -c Release 0 db351 check             # 第351期 自己検査（版の定義・WT-a ／ WT-x ／ WT-u ／ UK-r を盤面を直に組んで・台の上・台本の印・verbose・PickOne）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

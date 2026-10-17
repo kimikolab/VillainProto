@@ -1458,3 +1458,11 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 ## 第350期 —— BN-a を規定に
 
 - engine は変えていない。第349期の門（`_burnHitNoMend`・札 `BurnHitNoMend` の保持者が戦にいれば両陣営）を、規定のボルグ ／ ホタ ／ ヒヨの3枚に持たせた。火の癒し（`FireMend` ／ `PyreMend`）と火の変換（`FireConvert*`）を持つ駒はこの3枚だけなので、門は燃焼が回復になる戦すべてで立つ（`EmberRule` の側に置いた場合と同じ盤面）。
+
+## 第351期 —— デバフ軸の版（WT-a ／ WT-x ／ WT-u ／ UK-r）
+
+- **`Dull` の横取りの候補**: `_relayWideLive`（札 `RelayWide` の保持者が戦にいる）のときだけ、`RelayWide` を持つ渡しは**隣でない味方の弱体も拾う**・ただし対象が逆しま（`Perverse`）なら拾わない（隣でも）。保持者がいなければ比較1つで今までの「隣」の条件に戻る。
+- **`RelayThrough` の2つの枝**（渡しの駒が `RelayFeed` ／ `RelaySwap` を持つときだけ）: WT-u は渡す前に、生きている逆しま（席の若い順）へ `12 + AtkBonus`（手数が5発に届く下げ幅）まで回す（`Relaying` で包んだ `Dull`）。WT-x は渡す前の敵の強化（`CurrentAttack − Def.Attack`・0 未満は 0）を渡した量まで取り、敵にもう1回 `Dull`（経路は `Relay`）・拾われた元の味方に `Whet`。代金（拾った量 × 2）は今どおり拾った量の全部。
+- **`PlunderTrait`（UK-r）**は `OnAfterAttack`: 下げ幅（`Def.Attack − CurrentAttack`・0 未満は 0）の半分を `Whet`、下げ幅 0 なら自分に `Dull` 1（隣の渡しが拾いうる）。
+- 表示専用の出来事 `CursePass`（`CursePassLabels`: 押し付け ／ 回す ／ 交換 ／ 奪う）——`RelayWide` の保持者の渡しと `Plunder` だけが出す（規定のワタの台本は変わらない）。
+- 計数だけの帳簿 `UnitTally.Db351*`: `Dull` の入口で書き手（`by`）に味方へ ／ 敵へ、受け手が逆しまなら下げ幅の最大と5発に届いた T、呪いの分け合い（`hexShare` の段）の出どころに 起こした一撃 ／ 分かれた先 ／ 量 ／ 倒した数。どれも盤面を読まない。

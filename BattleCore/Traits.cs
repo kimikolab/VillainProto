@@ -885,6 +885,11 @@ public enum TraitId
     FireArmorNoGuard,   // 火の鎧・半減なし（BN-f・ボルグ）: 火の鎧の「燃えている間は受けるダメージが半分」だけを外す（殴った敵と自分への着火・焼かれないは残る）（**札そのものは挙動を持たない**・engine の火の鎧の段）
     BurnHitNoMend,      // 被弾の燃焼では癒えない（BN-a・第350期から規定のボルグ ／ ホタ ／ ヒヨ）: 保持者が戦にいれば両陣営で、被弾の燃焼の刻みは火の癒し（ボルグ ／ ホタ）でも火の変換（ヒヨ）でも回復にならない（焼かれないは残る・変換は打ち消すだけ）。ターン頭の刻み ／ 起爆 ／ 燃える巻き込み ／ 爆炎は今どおり（**札そのものは挙動を持たない**・engine の `BurnTickOnce`）
     ThreadFlowAll,      // 移す・害のあるもの全部（FL-c・クグ）: 浴びた害のある状態異常（`ThreadFlowRule.Harmful`）は、組み付いた敵が生きていればその敵へ流れる（クグには付かない）（**札そのものは挙動を持たない**・engine の `StatusOnThread`）
+    // --- 第351期で足した札（指示書 design/PHASE351_DEBUFF_PUSH_SPEC.md §3）。デバフ軸の版（ワタの印 ／ ウケの転生）。保持者 0 枚 ---
+    RelayWide,          // 広く拾う（WT-a・ワタ）: 渡しが拾う範囲を「隣の味方」から味方全員へ（ワタ自身 ／ 逆しま（ウツ）からは拾わない）（**札そのものは挙動を持たない**・engine の `Dull` の横取り）
+    RelaySwap,          // 交換（WT-x・ワタ）: 渡すたび、渡した量まで、その敵の強化（今の攻撃力が元を上回る分）を取り、呪いを拾った元の味方に攻撃力として付ける（**札そのものは挙動を持たない**・engine の `RelayThrough`）
+    RelayFeed,          // ウツへ回す（WT-u・ワタ）: 拾った弱体を、まず逆しま（ウツ）へ手数が上限に届く下げ幅まで回し、余りを最も強い敵へ渡す（**札そのものは挙動を持たない**・engine の `RelayThrough`）
+    Plunder,            // 奪う（UK-r・ウケの転生）: 殴った敵の攻撃力の下げ幅（元 − 今）の半分（切り捨て）だけ、自分の攻撃力がその戦の間上がる（1回の攻撃ごと・累積）。下げ幅 0 の敵を殴ると自分の攻撃力が 1 下がる
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -4049,6 +4054,50 @@ public readonly record struct RelayRule(int TransferPercent)
 {
     /// <summary>探索段階の初期値（第43期）。</summary>
     public static RelayRule Default => new(100);
+}
+
+/// <summary>
+/// 奪う（第351期・UK-r・ウケの転生・指示書 design/PHASE351_DEBUFF_PUSH_SPEC.md §3）。<b>殴った敵の攻撃力の下げ幅（元 − 今）の半分（切り捨て）だけ、
+/// 自分の攻撃力がその戦の間上がる</b>（1回の攻撃ごと・累積・強化の窓口 <see cref="BattleContext.Whet"/> を通す＝強化として数える）。
+/// マイナス: <b>下げ幅 0 の敵を殴ると、自分の攻撃力が 1 下がる</b>（弱体の窓口 <see cref="BattleContext.Dull"/> を通す）。
+///
+/// <para>「元」は <c>Def.Attack</c>（敵の倍率を掛けた値）、「今」は <c>CurrentAttack</c>（0 で底を打つ）。<b>ボスの毎ターンの伸びは「今」に入る</b>ので、
+/// 伸びを上回るまで下げないとボスは「弱っていない」（決めたこと）。発動は <c>OnAfterAttack</c>（攻撃1回につき1度・主目標・避けられたら起きない）。乱数を引かない。</para>
+/// </summary>
+public sealed class PlunderTrait : Trait
+{
+    /// <summary>下げ幅の何分の1を奪うか（半分・切り捨て）。</summary>
+    public const int Divisor = 2;
+    /// <summary>弱っていない敵を殴ったときに自分から引く攻撃力。</summary>
+    public const int MissPenalty = 1;
+
+    public override TraitId Id => TraitId.Plunder;
+
+    /// <summary>その敵の下げ幅（元 − 今・負なら 0）。</summary>
+    public static int DropOf(UnitState foe) => Math.Max(0, foe.Def.Attack - foe.CurrentAttack);
+
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+    {
+        if (target.TeamId == self.TeamId || !self.IsAlive) return;
+        int drop = DropOf(target);
+        UnitTally t = ctx.TallyOf(self);
+        if (drop > 0)
+        {
+            int gain = drop / Divisor;
+            t.Db351PlunderHits++;
+            if (gain <= 0) return;
+            t.Db351PlunderGain += gain;
+            ctx.EmitCursePass(CursePassLabels.Plunder, self, self, target, gain);
+            ctx.Whet(self, gain);
+            ctx.Log($"    {self.Name} が弱った {target.Name} から力を奪った（攻撃 +{gain}）", LogKind.Trigger);
+        }
+        else
+        {
+            t.Db351PlunderMiss++;
+            ctx.Dull(self, MissPenalty, DullRoute.Other, self);
+            ctx.Log($"    {self.Name} の拳は弱っていない {target.Name} に鈍った（攻撃 -{MissPenalty}）", LogKind.FriendlyFire);
+        }
+    }
 }
 
 /// <summary>
@@ -17760,6 +17809,10 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.ThreadFlowAll),             // 第347期（移す・害のあるもの全部 FL-c・クグ・印だけ）
         new MarkOnlyTrait(TraitId.FireArmorNoGuard),          // 第349期（火の鎧・半減なし BN-f・ボルグ・印だけ）
         new MarkOnlyTrait(TraitId.BurnHitNoMend),             // 第349期（被弾の燃焼では癒えない BN-a・ボルグ・印だけ）
+        new MarkOnlyTrait(TraitId.RelayWide),                 // 第351期（広く拾う WT-a・ワタ・印だけ）
+        new MarkOnlyTrait(TraitId.RelaySwap),                 // 第351期（交換 WT-x・ワタ・印だけ）
+        new MarkOnlyTrait(TraitId.RelayFeed),                 // 第351期（ウツへ回す WT-u・ワタ・印だけ）
+        new PlunderTrait(),                                   // 第351期（奪う UK-r・ウケの転生）
         new SharePushTrait(TraitId.ShareSin),                 // 第313期（ドハ DP-c の手番）
         new AmplifierTrait(),
         new ContagionTrait(),

@@ -77,8 +77,8 @@ static partial class Burn349Diag
             string[] want = { "版・BN-f 燃焼", "版・BN-g 燃焼", "版・BN-a 燃焼", "版・BN-d 燃焼", "版・BN-f＋d 燃焼" };
             var vrow = Presets.Versions.Where(r => r.Name.StartsWith("版・", StringComparison.Ordinal)).ToArray();
             // 第350期: BN-a を規定にしたので「版・BN」の5台は外した（`want` は第349期の並び・いまは無いことを見る）
-            bool rows = vrow.Length == 0 && want.Length == 5 && Presets.Versions.Select(r => r.Name).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", PonRow });
-            Expect("試遊の台: 「試遊・感電 ポンの台」「試遊・ミサ 書き手なし」「試遊・燃焼 ポンの台」の3台だけ（第349期の「版・BN」の5台は第350期に外した）", rows, string.Join("・", Presets.Versions.Select(r => r.Name)));
+            bool rows = !vrow.Any(r => want.Contains(r.Name)) && want.Length == 5 && Presets.Versions.Take(3).Select(r => r.Name).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", PonRow });   // 第351期: 後ろに「試遊・呪い」と版が続いてよい
+            Expect("試遊の台: 「試遊・感電 ポンの台」「試遊・ミサ 書き手なし」「試遊・燃焼 ポンの台」の3台が頭にある・「版・BN」の5台は無い（第350期に外した）", rows, string.Join("・", Presets.Versions.Select(r => r.Name)));
         }
         // ---- BN-f ／ BN-g: 半減 ----
         {

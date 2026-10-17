@@ -2394,6 +2394,12 @@ public sealed class UnitTally
     public long[]? Inv348Out, Inv348In;
     /// <summary>第349期（<b>計数のみ</b>・BN-a）: 被弾の燃焼で火の癒し ／ 火の変換が回復しなかった刻みの名目（受け手の側）。</summary>
     public long Bn349MendDenied, Bn349ConvDenied;
+    /// <summary>第351期（<b>計数のみ</b>・デバフ軸）: 弱体を書いた量（書き手の側・<c>Dull</c> の入口で `by` に付ける・対象が味方 ／ 敵）／ 渡しが拾った ／ 隣でない味方から拾った ／ 敵へ渡した ／ ウツへ回した ／
+    /// 交換で敵から取った ／ 取った強化がウツに付いた回数 ／ 交換で受け取った（受け手の側）／ 奪う（UK-r）の上がった量 ／ 弱った敵を殴った回数 ／ 弱っていない敵を殴った回数 ／
+    /// 逆しまの下げ幅の最大 ／ 手数が上限に届いた T（届いた戦の T の和・<c>Db351PerverseFullN</c> で割る）／ 呪いの共有（出どころの側）: 共有を起こした一撃 ／ 分かれた先の延べ ／ 分けた量 ／ 分けた痛みで倒れた数。誰も読んで分岐しない。</summary>
+    public long Db351DullWroteAlly, Db351DullWroteFoe, Db351Picked, Db351PickedFar, Db351Sent, Db351Fed, Db351Swapped, Db351SwapOnPerverse, Db351SwapGot;
+    public long Db351PlunderGain, Db351PlunderHits, Db351PlunderMiss, Db351PerverseMax, Db351PerverseFullT, Db351PerverseFullN;
+    public long Db351HexSrcHits, Db351HexSplits, Db351HexDealt, Db351HexKills;
     public long Rp345NormalDealt, Rp345Punches, Rp345PunchBack, Rp345PunchKills, Rp345PunchDealt, Rp345PunchAmount, Rp345AimEdible, Rp345GrabNoPunch, Rp345GrabAfter, Ga345Stomps, Ga345SplashHits, Ga345SplashDealt;
     public long[]? Fg339Spray, Fg339AllyHits, Fg339AllyDmg;
     /// <summary>第339期（計数のみ）: 乱射の1発をターンごとに数える（羽の乱射 ／ 乱射の札の両方）。</summary>
@@ -3657,6 +3663,11 @@ public sealed class UnitTally
         Fl347FlowedFromAlly += o.Fl347FlowedFromAlly; Fl347FlowedFromFoe += o.Fl347FlowedFromFoe; Fl347ToDied += o.Fl347ToDied; Fl347ToDiedNoKiller += o.Fl347ToDiedNoKiller;
         Inv348Out = AddArr(Inv348Out, o.Inv348Out); Inv348In = AddArr(Inv348In, o.Inv348In);   // 第348期
         Bn349MendDenied += o.Bn349MendDenied; Bn349ConvDenied += o.Bn349ConvDenied;   // 第349期
+        Db351DullWroteAlly += o.Db351DullWroteAlly; Db351DullWroteFoe += o.Db351DullWroteFoe; Db351Picked += o.Db351Picked; Db351PickedFar += o.Db351PickedFar; Db351Sent += o.Db351Sent;   // 第351期
+        Db351Fed += o.Db351Fed; Db351Swapped += o.Db351Swapped; Db351SwapOnPerverse += o.Db351SwapOnPerverse; Db351SwapGot += o.Db351SwapGot;
+        Db351PlunderGain += o.Db351PlunderGain; Db351PlunderHits += o.Db351PlunderHits; Db351PlunderMiss += o.Db351PlunderMiss; Db351PerverseMax = Math.Max(Db351PerverseMax, o.Db351PerverseMax);
+        Db351PerverseFullT += o.Db351PerverseFullT; Db351PerverseFullN += o.Db351PerverseFullN;
+        Db351HexSrcHits += o.Db351HexSrcHits; Db351HexSplits += o.Db351HexSplits; Db351HexDealt += o.Db351HexDealt; Db351HexKills += o.Db351HexKills;
         Fg339Spray = AddArr(Fg339Spray, o.Fg339Spray); Fg339AllyHits = AddArr(Fg339AllyHits, o.Fg339AllyHits); Fg339AllyDmg = AddArr(Fg339AllyDmg, o.Fg339AllyDmg);
         SharedAway += o.SharedAway; ShareTakenHits += o.ShareTakenHits; ShareGives += o.ShareGives; ShareGiven += o.ShareGiven; ShareGiftAccrued += o.ShareGiftAccrued;   // 第297期
         ShareGifts += o.ShareGifts; ShareGiftCapped += o.ShareGiftCapped; ShareGiftNoTarget += o.ShareGiftNoTarget; ShareGiftSkipped += o.ShareGiftSkipped;
@@ -4488,6 +4499,23 @@ public enum BattleEventKind
     /// 書き手の出来事（<c>StatusGain</c> など）より<b>前</b>に出る。移したときは、クグへの書き手の <c>StatusGain</c> は出ない（付いていないので）。<b>どの規則も読まない。</b>
     /// </summary>
     ThreadFlow,
+
+    /// <summary>
+    /// 呪いの受け渡し（第351期・デバフ軸の版 WT-a ／ WT-x ／ WT-u ／ UK-r だけ・<b>表示専用</b>）。<c>Text</c> ＝ <see cref="CursePassLabels"/>・<c>ActorId</c> ＝ 動かした駒（ワタ ／ 奪いのウケ）・
+    /// <c>TargetId</c> ＝ 受け取る側・<c>PartnerId</c> ＝ 出どころ・<c>Amount</c> ＝ 量。
+    /// <see cref="CursePassLabels.Push"/>（押し付け: 拾った味方 → 敵）と <see cref="CursePassLabels.Feed"/>（ウツへ回す: 拾った味方 → ウツ）は、受け取る側の <c>StatusGain</c>（dull）より<b>前</b>に出る。
+    /// <see cref="CursePassLabels.Swap"/>（交換: 敵 → 拾った元の味方・<c>PartnerId</c> ＝ 力を取られた敵）は押し付けの後、<c>Whet</c> より前。
+    /// <see cref="CursePassLabels.Plunder"/>（奪う: 殴った敵 → ウケ）は殴った <c>Damage</c> の後。<b>どの規則も読まない。</b>規定のワタ ／ ウケには出ない。
+    /// </summary>
+    CursePass,
+}
+/// <summary>`CursePass`（第351期）の <c>Text</c>。</summary>
+public static class CursePassLabels
+{
+    public const string Push = "押し付け";
+    public const string Feed = "回す";
+    public const string Swap = "交換";
+    public const string Plunder = "奪う";
 }
 /// <summary>`Swallow`（第343期）の <c>Text</c>（吐くは「吐く:毒3,火2,雷1,濃1,標2」のように内訳を後ろに付ける）。</summary>
 public static class SwallowLabels

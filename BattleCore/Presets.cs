@@ -920,11 +920,22 @@ public static class Presets
     public static Formation BurnPon(UnitDef borg, UnitDef hota, UnitDef hiyo) =>
         Formation.Build(front1: UnitCatalog.Mudo, front3: borg, center: hota, back1: UnitCatalog.Gald, back3: hiyo);
 
+    /// <summary>第351期: 呪いの台（「試遊・呪い」の並び）。ワタと中央の駒（規定はクビ・UK-r の台はウケ）を差し替えて版の台を作る。</summary>
+    public static Formation CursePlay(UnitDef wata, UnitDef center) =>
+        Formation.Build(front1: wata, front3: UnitCatalog.Mudo, center: center, back1: UnitCatalog.Nel, back3: UnitCatalog.Utsu);
+
     public static (string Name, Formation F)[] Versions => new (string, Formation)[]
     {
         ("試遊・感電 ポンの台", Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Shiga, center: UnitCatalog.Tou, back1: UnitCatalog.Kugu, back3: UnitCatalog.Som)),
         ("試遊・ミサ 書き手なし", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Dolga, center: UnitCatalog.Doha, back1: UnitCatalog.Tome, back3: UnitCatalog.Ban)),
         // 第349期 段0: 燃焼のポンの台（前1 ムド ／ 前3 ボルグ ／ 中央 ホタ ／ 後1 ガルド ／ 後3 ヒヨ）。規定の駒のまま残す試遊の台（`compare` の行は増やさない）。
         ("試遊・燃焼 ポンの台", BurnPon(UnitCatalog.Borg, UnitCatalog.Hota, UnitCatalog.Hiyo)),
+        // 第351期 Phase 0: 呪いの台の上位1並び（前1 ワタ ／ 前3 ムド ／ 中央 クビ ／ 後1 ネル ／ 後3 ウツ・`db351 seats` の1位）。規定の駒のまま残す試遊の台。
+        ("試遊・呪い", CursePlay(UnitCatalog.Wata, UnitCatalog.Kubi)),
+        // 第351期の版（ポンが触る台・期ごとに入れ替える）。WT-a ／ WT-x ／ WT-u は「試遊・呪い」のワタを版に、UK-r は中央のクビをウケ（UK-r）に替えた並び。
+        ("版・WT-a 呪い", CursePlay(UnitCatalog.WataWTa, UnitCatalog.Kubi)),
+        ("版・WT-x 呪い", CursePlay(UnitCatalog.WataWTx, UnitCatalog.Kubi)),
+        ("版・WT-u 呪い", CursePlay(UnitCatalog.WataWTu, UnitCatalog.Kubi)),
+        ("版・UK-r 呪い", CursePlay(UnitCatalog.Wata, UnitCatalog.UkeUKr)),
     };
 }

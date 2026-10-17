@@ -6391,6 +6391,28 @@ public static class UnitCatalog
     public static readonly UnitDef HotaBNa = Re349(HotaH349, t => t, s => Must349(s, HotaMendClause349, HotaMendClause349 + NoMendText349));
     /// <summary>第349期 BN-a のヒヨ（文面だけ・札は規定のまま）。</summary>
     public static readonly UnitDef HiyoBNa = Re349(HiyoH349, t => t, s => Must349(s, HiyoConvertClause349, HiyoNoMendText349));
+
+    // ---------------------------------------------------------------------------------
+    // 第351期【軽い期】デバフ軸の立て直し①（指示書 design/PHASE351_DEBUFF_PUSH_SPEC.md §3）。版はワタ ／ ウケの写し（Id は同じ・規定の上）。保持者 0 枚。
+    // ---------------------------------------------------------------------------------
+    static UnitDef Re351(UnitDef b, TraitId[] traits, string name, string plus, string minus) => new()
+    {
+        Id = b.Id, Name = name, MaxHp = b.MaxHp, Attack = b.Attack, Speed = b.Speed, Traits = traits,
+        Pattern = b.Pattern, Advances = b.Advances, Actions = b.Actions, PlusText = plus, MinusText = minus, Flavor = b.Flavor,
+    };
+    const string WataPlus351 = "味方の誰かが受ける攻撃力低下を引き受け、最も強い敵へそのまま渡す（逆しまのウツの分は拾わない）";
+    const string WataMinus351 = "渡した分だけ自分の身が削れる";
+    /// <summary>第351期 WT-a 広く拾う: 渡しの横取りを味方全員へ（<see cref="TraitId.RelayWide"/>・ワタ自身 ／ ウツからは拾わない）。</summary>
+    public static readonly UnitDef WataWTa = Re351(Wata, new[] { TraitId.Relay, TraitId.RelayWide }, Wata.Name, WataPlus351, WataMinus351);
+    /// <summary>第351期 WT-x 交換: WT-a ＋ 渡すたび、渡した量までその敵の強化を取り、拾った元の味方に付ける（<see cref="TraitId.RelaySwap"/>）。</summary>
+    public static readonly UnitDef WataWTx = Re351(Wata, new[] { TraitId.Relay, TraitId.RelayWide, TraitId.RelaySwap }, Wata.Name,
+        WataPlus351 + "。渡した呪いと引き換えに、その敵の力を奪って持ち主へ返す", WataMinus351);
+    /// <summary>第351期 WT-u ウツへ回す: WT-a ＋ 拾った弱体をまずウツへ（手数が上限に届く下げ幅まで）・余りを敵へ（<see cref="TraitId.RelayFeed"/>）。</summary>
+    public static readonly UnitDef WataWTu = Re351(Wata, new[] { TraitId.Relay, TraitId.RelayWide, TraitId.RelayFeed }, Wata.Name,
+        WataPlus351 + "。呪いを欲しがる仲間（ウツ）がいれば、先にそちらへ回す", WataMinus351);
+    /// <summary>第351期 UK-r 奪う: ウケの転生（体はウケのまま・手番は殴る・背負う札 <see cref="TraitId.Bear"/> は外す・<see cref="TraitId.Plunder"/>）。</summary>
+    public static readonly UnitDef UkeUKr = Re351(Uke, new[] { TraitId.Plunder }, "奪いのウケ",
+        "弱らされた敵を殴るたび、下げられた力の半分を自分のものにする（その戦の間・積み上がる）", "弱っていない敵を殴ると、腕が鈍る（攻撃力 -1）");
 }
 
 /// <summary>討伐に来る人間側。プレイヤーは編成できない。</summary>
