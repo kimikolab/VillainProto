@@ -1470,3 +1470,9 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 ## 第352期 —— ワタの WT-u を規定に
 
 - engine は変えていない。第351期の `_relayWideLive` ／ `RelayFeed` の枝が規定のワタで立つようになった（規定のワタのいる戦だけ・いなければ比較1つで抜けるのは同じ）。
+
+## 第353期 —— デバフ軸の版（UT-o ／ UK-c）
+
+- **`Dull` の最後**（`receiver.AtkBonus -= amount` の直後）: `_plunderCumLive`（札 `PlunderCum` の保持者が戦にいる）のときだけ、受け手の「この戦で弱体の窓口から受けた量」を盤面の私有の表に足す（`DullReceived353`）。横取りの後の受け手に付く（ワタが押し付けた分は敵の側）。ボスの伸び（`BossRise11`）は窓口を通らないので入らない。保持者がいなければ比較1つで抜ける。
+- 窓口 `Plundered353` ／ `NotePlundered353`（奪い手 × 敵ごとの「奪った累計」）。どちらも盤面の表で、戦ごとに作り直される（`Counters` に置かない）。
+- `PerverseOverTrait`（UT-o）は逆しまの後ろに置く `ModifyAttack` だけ（下げ幅 − 12 の分 × 2 を足す）。`PlunderCumTrait`（UK-c）は `OnAfterAttack`（奪う分を `Whet`・累計 0 なら自分に `Dull` 1）。出来事は第351期の `CursePass`「奪う」を使う。乱数は引かない。

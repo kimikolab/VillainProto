@@ -1246,6 +1246,12 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 db351 log <版> <台> <波> [seed]   # 第351期: 1戦のログ（台 1 ／ 2 ／ uk ／ 逆しま ／ 渡し ／ 弱体・波 boss ／ guard ／ bat ／ 2 ／ 4 ／ 5 ／ s2〜s5）
     dotnet run --project BattleSim -c Release 0 db351 s352              # 第352期 §3: 規定（WT-u）の「試遊・呪い」× ボス ／ 近衛 ／ 大隊 ／ 本編2 ／ 強 第4波 と第351期の WT-u ／ 旧の列の突き合わせ（1 秒）
     dotnet run --project BattleSim -c Release 0 db351 check             # 第351期 自己検査（版の定義・WT-a ／ WT-x ／ WT-u ／ UK-r を盤面を直に組んで・台の上・台本の印・verbose・PickOne）
+    dotnet run --project BattleSim -c Release 0 db353 reach             # 第353期 §2-1 Phase 0: 机上の到達計算（試遊・呪い × ボス・規定・seed 0..19・T1〜T12 の与ダメ ／ 回復 ／ ウツの攻撃力と手数・要る与ダメと UT-o ／ UK-c の線形の見込み）（1 秒）
+    dotnet run --project BattleSim -c Release 0 db353 ukseats [版]      # 第353期 §2-2 Phase 0: ウケ入りの台（ムド ／ クビ → ウケ × ウケの席 10 並び × ボス ／ 近衛 ／ 大隊・seed 0..19）。版を付けると予測のファイルが要る（1 秒）
+    dotnet run --project BattleSim -c Release 0 db353 boards [版,…]     # 第353期 §5: 代表台 3 × 10 波 × 版（base ／ o ／ c ／ oc・参考 r）・ボスへの届き方 ／ 呪いの流れ ／ 勝率と決着T ／ 壊れの兆し（3 秒）。予測のファイルが無ければ走らない
+    dotnet run --project BattleSim -c Release 0 db353 compare [版,…]    # 第353期 §5-4: `compare` 64 行 × 版（20 秒）
+    dotnet run --project BattleSim -c Release 0 db353 log <版> <台> <波> [seed]   # 第353期: 1戦のログと台本の最後の2ターン（台 play ／ uk ／ 逆しま・波は db351 と同じ）
+    dotnet run --project BattleSim -c Release 0 db353 check             # 第353期 自己検査（版の定義・UT-o の +1 ／ +3・UK-c の累計 ／ 二度奪わない ／ ボスの伸び ／ −1・台の上・台本・verbose・PickOne）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

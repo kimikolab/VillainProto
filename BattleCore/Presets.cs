@@ -932,5 +932,9 @@ public static class Presets
         ("試遊・燃焼 ポンの台", BurnPon(UnitCatalog.Borg, UnitCatalog.Hota, UnitCatalog.Hiyo)),
         // 第351期 Phase 0: 呪いの台の上位1並び（前1 ワタ ／ 前3 ムド ／ 中央 クビ ／ 後1 ネル ／ 後3 ウツ・`db351 seats` の1位）。規定の駒のまま残す試遊の台。
         ("試遊・呪い", CursePlay(UnitCatalog.Wata, UnitCatalog.Kubi)),
+        // 第353期（版・期ごとに入れ替える）: 試遊・呪いのウツを UT-o に ／ ウケ入りの台（試遊・呪いの中央のクビをウケに・`db353 ukseats` の決めたこと）のウケを UK-c に。
+        ("版・UT-o 呪い", Formation.Build(front1: UnitCatalog.Wata, front3: UnitCatalog.Mudo, center: UnitCatalog.Kubi, back1: UnitCatalog.Nel, back3: UnitCatalog.UtsuUTo)),
+        ("版・UK-c 呪い", Formation.Build(front1: UnitCatalog.Wata, front3: UnitCatalog.Mudo, center: UnitCatalog.UkeUKc, back1: UnitCatalog.Nel, back3: UnitCatalog.Utsu)),
+        ("版・UT-o＋UK-c 呪い", Formation.Build(front1: UnitCatalog.Wata, front3: UnitCatalog.Mudo, center: UnitCatalog.UkeUKc, back1: UnitCatalog.Nel, back3: UnitCatalog.UtsuUTo)),
     };
 }

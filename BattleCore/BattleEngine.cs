@@ -9689,6 +9689,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.FireConvert) || u.HasTrait(TraitId.FireConvertHalf)) _fireConvertHolders.Add(u);   // 第238期（火の変換）
         if (u.HasTrait(TraitId.BurnHitNoMend)) _burnHitNoMend = true;   // 第349期（BN-a・被弾の燃焼では癒えない・両陣営）
         if (u.HasTrait(TraitId.RelayWide)) _relayWideLive = true;       // 第351期（WT-a・渡しが味方全員から拾う）
+        if (u.HasTrait(TraitId.PlunderCum)) _plunderCumLive = true;     // 第353期（UK-c・弱体の累計を数える）
         if (FireLevelRule.Holds(u)) { _fireLvLive = true; _fireLvTeams[u.TeamId] = true; }   // 第242期（火勢）
         if (u.HasTrait(TraitId.FireSpreadCap)) _spreadCapTeams[u.TeamId] = true;              // 第244期（燃え広がりの上限）
         if (FireKindleRule.Holds(u)) _kindleLive = true;                                      // 第252期（ボルグが育つ口・あぶれた火）
@@ -17460,6 +17461,7 @@ public sealed class BattleContext
         EmitStatusGain(receiver, DullKey, amount, by);
         receiver.AtkBonus -= amount;
         if (receiver.HasTrait(TraitId.Perverse)) NotePerverse351(receiver);   // 第351期（計数のみ）
+        if (_plunderCumLive) _dullRecv353[receiver.InstanceId] = _dullRecv353.GetValueOrDefault(receiver.InstanceId) + amount;   // 第353期 UK-c: 実際に攻撃力が下がった量の累計（横取りの後の受け手）
         if (atkBefore > 0 && receiver.CurrentAttack == 0)
         {
             DullZeroed++;
@@ -17467,6 +17469,19 @@ public sealed class BattleContext
                 DullZeroedWho.TryGetValue(receiver.Name, out int z) ? z + 1 : 1;
         }
     }
+
+    /// <summary>第353期 UK-c: 奪う・累計（<see cref="TraitId.PlunderCum"/>）の保持者がいる戦。偽なら累計を1本も数えない。</summary>
+    bool _plunderCumLive;
+    /// <summary>第353期 UK-c: 駒ごとの「この戦で弱体の窓口から受けた量」の累計（InstanceId → 量・戦ごとに作り直される盤面の私有の表）。</summary>
+    readonly Dictionary<int, int> _dullRecv353 = new();
+    /// <summary>第353期 UK-c: 奪い手 × 敵ごとの「奪った累計」（その敵の累計のうち、もう使った分）。</summary>
+    readonly Dictionary<(int, int), int> _plundered353 = new();
+    /// <summary>第353期 UK-c: その駒がこの戦で弱体の窓口から受けた量の累計（保持者がいない戦では 0）。ボスの伸び（<c>BossRise11</c>）は窓口を通らないので入らない。</summary>
+    public int DullReceived353(UnitState u) => _dullRecv353.GetValueOrDefault(u.InstanceId);
+    /// <summary>第353期 UK-c: 奪い手がその敵からもう使った累計。</summary>
+    public int Plundered353(UnitState by, UnitState foe) => _plundered353.GetValueOrDefault((by.InstanceId, foe.InstanceId));
+    /// <summary>第353期 UK-c: 奪った累計を進める。</summary>
+    public void NotePlundered353(UnitState by, UnitState foe, int used) => _plundered353[(by.InstanceId, foe.InstanceId)] = Plundered353(by, foe) + used;
 
     /// <summary>第351期 WT-a: 渡しの横取りが味方全員に及ぶ札（<see cref="TraitId.RelayWide"/>）の保持者がいる戦。</summary>
     bool _relayWideLive;

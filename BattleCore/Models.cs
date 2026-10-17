@@ -2400,6 +2400,8 @@ public sealed class UnitTally
     public long Db351DullWroteAlly, Db351DullWroteFoe, Db351Picked, Db351PickedFar, Db351Sent, Db351Fed, Db351Swapped, Db351SwapOnPerverse, Db351SwapGot;
     public long Db351PlunderGain, Db351PlunderHits, Db351PlunderMiss, Db351PerverseMax, Db351PerverseFullT, Db351PerverseFullN;
     public long Db351HexSrcHits, Db351HexSplits, Db351HexDealt, Db351HexKills;
+    /// <summary>第353期（<b>計数のみ</b>・UK-c）: 奪った量 ／ 奪えた回数 ／ 累計はあるが奪える分が無かった回数 ／ 累計 0 の敵を殴った回数（−1）／ うちボスから奪った量。誰も読んで分岐しない。</summary>
+    public long Db353PlunderGain, Db353PlunderHits, Db353PlunderDry, Db353PlunderMiss, Db353PlunderBoss;
     public long Rp345NormalDealt, Rp345Punches, Rp345PunchBack, Rp345PunchKills, Rp345PunchDealt, Rp345PunchAmount, Rp345AimEdible, Rp345GrabNoPunch, Rp345GrabAfter, Ga345Stomps, Ga345SplashHits, Ga345SplashDealt;
     public long[]? Fg339Spray, Fg339AllyHits, Fg339AllyDmg;
     /// <summary>第339期（計数のみ）: 乱射の1発をターンごとに数える（羽の乱射 ／ 乱射の札の両方）。</summary>
@@ -3668,6 +3670,7 @@ public sealed class UnitTally
         Db351PlunderGain += o.Db351PlunderGain; Db351PlunderHits += o.Db351PlunderHits; Db351PlunderMiss += o.Db351PlunderMiss; Db351PerverseMax = Math.Max(Db351PerverseMax, o.Db351PerverseMax);
         Db351PerverseFullT += o.Db351PerverseFullT; Db351PerverseFullN += o.Db351PerverseFullN;
         Db351HexSrcHits += o.Db351HexSrcHits; Db351HexSplits += o.Db351HexSplits; Db351HexDealt += o.Db351HexDealt; Db351HexKills += o.Db351HexKills;
+        Db353PlunderGain += o.Db353PlunderGain; Db353PlunderHits += o.Db353PlunderHits; Db353PlunderDry += o.Db353PlunderDry; Db353PlunderMiss += o.Db353PlunderMiss; Db353PlunderBoss += o.Db353PlunderBoss;   // 第353期
         Fg339Spray = AddArr(Fg339Spray, o.Fg339Spray); Fg339AllyHits = AddArr(Fg339AllyHits, o.Fg339AllyHits); Fg339AllyDmg = AddArr(Fg339AllyDmg, o.Fg339AllyDmg);
         SharedAway += o.SharedAway; ShareTakenHits += o.ShareTakenHits; ShareGives += o.ShareGives; ShareGiven += o.ShareGiven; ShareGiftAccrued += o.ShareGiftAccrued;   // 第297期
         ShareGifts += o.ShareGifts; ShareGiftCapped += o.ShareGiftCapped; ShareGiftNoTarget += o.ShareGiftNoTarget; ShareGiftSkipped += o.ShareGiftSkipped;

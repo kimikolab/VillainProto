@@ -6432,6 +6432,16 @@ public static class UnitCatalog
     /// <summary>第351期 UK-r 奪う: ウケの転生（体はウケのまま・手番は殴る・背負う札 <see cref="TraitId.Bear"/> は外す・<see cref="TraitId.Plunder"/>）。</summary>
     public static readonly UnitDef UkeUKr = Re351(Uke, new[] { TraitId.Plunder }, "奪いのウケ",
         "弱らされた敵を殴るたび、下げられた力の半分を自分のものにする（その戦の間・積み上がる）", "弱っていない敵を殴ると、腕が鈍る（攻撃力 -1）");
+
+    // ---------------------------------------------------------------------------------
+    // 第353期【軽い期】デバフ軸の立て直し②（指示書 design/PHASE353_DEBUFF_BOSS_SPEC.md §3）。版はウツ ／ ウケの写し（Id は同じ・規定の上）。保持者 0 枚。
+    // ---------------------------------------------------------------------------------
+    /// <summary>第353期 UT-o 上限超え: 逆しまの後ろに <see cref="TraitId.PerverseOver"/>（下げ幅 12 を超えた分は 1 につき攻撃力 +3）。</summary>
+    public static readonly UnitDef UtsuUTo = Re351(Utsu, new[] { TraitId.Perverse, TraitId.PerverseOver }, Utsu.Name,
+        Utsu.PlusText + "。手数が上限に届いた後は、呪われた分だけ一撃が重くなる（上限を超えた下げ幅 1 につき攻撃力 +3）", Utsu.MinusText);
+    /// <summary>第353期 UK-c 奪う・累計: ウケの転生（体はウケのまま・手番は殴る・背負う札は無い・<see cref="TraitId.PlunderCum"/>）。UK-r（<see cref="UkeUKr"/>）の作り直し。</summary>
+    public static readonly UnitDef UkeUKc = Re351(Uke, new[] { TraitId.PlunderCum }, "奪いのウケ",
+        "呪いを受けた敵を殴るたび、その呪いの半分を自分の力にする（その戦の間・積み上がる・同じ呪いは二度奪えない）", "呪われていない敵を殴ると、腕が鈍る（攻撃力 -1）");
 }
 
 /// <summary>討伐に来る人間側。プレイヤーは編成できない。</summary>

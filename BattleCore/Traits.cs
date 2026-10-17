@@ -890,6 +890,9 @@ public enum TraitId
     RelaySwap,          // 交換（WT-x・ワタ）: 渡すたび、渡した量まで、その敵の強化（今の攻撃力が元を上回る分）を取り、呪いを拾った元の味方に攻撃力として付ける（**札そのものは挙動を持たない**・engine の `RelayThrough`）
     RelayFeed,          // ウツへ回す（WT-u・ワタ）: 拾った弱体を、まず逆しま（ウツ）へ手数が上限に届く下げ幅まで回し、余りを最も強い敵へ渡す（**札そのものは挙動を持たない**・engine の `RelayThrough`）
     Plunder,            // 奪う（UK-r・ウケの転生）: 殴った敵の攻撃力の下げ幅（元 − 今）の半分（切り捨て）だけ、自分の攻撃力がその戦の間上がる（1回の攻撃ごと・累積）。下げ幅 0 の敵を殴ると自分の攻撃力が 1 下がる
+    // --- 第353期で足した札（指示書 design/PHASE353_DEBUFF_BOSS_SPEC.md §3）。デバフ軸の版（ウツの上限超え ／ ウケの転生）。保持者 0 枚 ---
+    PerverseOver,       // 上限超え（UT-o・ウツ）: 下げ幅のうち手数が上限（5発）に届く分（12）を超えた分は、下げ幅 1 につき攻撃力 +3（上限までは今どおり +1）。逆しま（`Perverse`）の後ろに置く
+    PlunderCum,         // 奪う・累計（UK-c・ウケの転生）: 殴った敵がこの戦で弱体の窓口から受けた量の累計のうち、まだ奪っていない分の半分（切り捨て）だけ、自分の攻撃力がその戦の間上がる。累計 0 の敵を殴ると自分の攻撃力が 1 下がる
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -4097,6 +4100,69 @@ public sealed class PlunderTrait : Trait
             ctx.Dull(self, MissPenalty, DullRoute.Other, self);
             ctx.Log($"    {self.Name} の拳は弱っていない {target.Name} に鈍った（攻撃 -{MissPenalty}）", LogKind.FriendlyFire);
         }
+    }
+}
+
+/// <summary>
+/// 上限超え（第353期・UT-o・ウツの版）。<b>手数が上限（<see cref="PerverseTrait.MaxHits"/> 発）に届いた後の下げ幅を、1発の重さに強く変える</b>。
+/// 下げ幅 d のうち <see cref="Threshold"/>（＝ (MaxHits − 1) × HitsPerDull ＝ 12）を超えた分は、下げ幅 1 につき攻撃力 +<see cref="OverAttackPerDull"/>（上限までは逆しまのまま +1）。
+/// <para><b>逆しま（<see cref="PerverseTrait"/>）の後ろに置く</b>——逆しまの <c>ModifyAttack</c> は入ってきた値を読まずに「元 ＋ 下げ幅」を返すので、前に置くと上書きされる。
+/// 手数（<c>ModifyHitCount</c>）は触らない。強化されている間（<c>AtkBonus ≥ 0</c>）は何もしない。乱数を引かない。</para>
+/// </summary>
+public sealed class PerverseOverTrait : Trait
+{
+    /// <summary>手数が上限に届く下げ幅（12）。第351期 WT-u の回し先の量（<c>12 + AtkBonus</c>）と同じ決まり方。</summary>
+    public const int Threshold = (PerverseTrait.MaxHits - 1) * PerverseTrait.HitsPerDull;
+    /// <summary>上限を超えた下げ幅 1 につき乗る攻撃力（逆しまの <see cref="PerverseTrait.AttackPerDull"/> の代わり）。</summary>
+    public const int OverAttackPerDull = 3;
+
+    public override TraitId Id => TraitId.PerverseOver;
+
+    /// <summary>上限を超えた分（下げ幅 − 12・0 未満は 0）。</summary>
+    public static int OverOf(UnitState self) => Math.Max(0, -self.AtkBonus - Threshold);
+
+    public override int ModifyAttack(UnitState self, int atk)
+    {
+        int over = OverOf(self);
+        return over > 0 ? atk + over * (OverAttackPerDull - PerverseTrait.AttackPerDull) : atk;
+    }
+}
+
+/// <summary>
+/// 奪う・累計（第353期・UK-c・ウケの転生）。<b>殴った敵がこの戦で受けた弱体の累計から奪う</b>——第351期の UK-r（元 − 今）はボスの伸びで打ち消されたので、
+/// 伸びとは別に数える累計（<see cref="BattleContext.DullReceived353"/>・弱体の窓口 <c>Dull</c> で実際に攻撃力が下がった量の和・書き手を問わない）を読む。
+/// <para>まだ奪っていない分（累計 − 奪った累計）の半分（切り捨て）だけ <c>Whet</c> で自分に積み、<b>奪った量の2倍を「奪った累計」に足す</b>（同じ呪いを二度は奪わない・半端の 1 は次へ残る）。
+/// 累計 0 の敵を殴ると自分に <c>Dull</c> 1（UK-r と同じ・隣のワタが拾うことがある）。累計はあるが奪える分が 1 以下なら何も起きない。</para>
+/// <para>攻撃1回につき1度・主目標に対してだけ（<c>OnAfterAttack</c>）。乱数を引かない。記憶は盤面（<see cref="BattleContext"/>）の私有の表で、戦ごとに作り直される。</para>
+/// </summary>
+public sealed class PlunderCumTrait : Trait
+{
+    public const int Divisor = PlunderTrait.Divisor;
+    public const int MissPenalty = PlunderTrait.MissPenalty;
+
+    public override TraitId Id => TraitId.PlunderCum;
+
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+    {
+        if (target.TeamId == self.TeamId || !self.IsAlive) return;
+        int recv = ctx.DullReceived353(target);
+        UnitTally t = ctx.TallyOf(self);
+        if (recv <= 0)
+        {
+            t.Db353PlunderMiss++;
+            ctx.Dull(self, MissPenalty, DullRoute.Other, self);
+            ctx.Log($"    {self.Name} の拳は呪われていない {target.Name} に鈍った（攻撃 -{MissPenalty}）", LogKind.FriendlyFire);
+            return;
+        }
+        int gain = (recv - ctx.Plundered353(self, target)) / Divisor;
+        if (gain <= 0) { t.Db353PlunderDry++; return; }
+        ctx.NotePlundered353(self, target, gain * Divisor);
+        t.Db353PlunderHits++;
+        t.Db353PlunderGain += gain;
+        if (target.HasTrait(TraitId.BossRise11)) t.Db353PlunderBoss += gain;
+        ctx.EmitCursePass(CursePassLabels.Plunder, self, self, target, gain);
+        ctx.Whet(self, gain);
+        ctx.Log($"    {self.Name} が {target.Name} の呪いから力を奪った（攻撃 +{gain}）", LogKind.Trigger);
     }
 }
 
@@ -17813,6 +17879,8 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.RelaySwap),                 // 第351期（交換 WT-x・ワタ・印だけ）
         new MarkOnlyTrait(TraitId.RelayFeed),                 // 第351期（ウツへ回す WT-u・ワタ・印だけ）
         new PlunderTrait(),                                   // 第351期（奪う UK-r・ウケの転生）
+        new PerverseOverTrait(),                              // 第353期（上限超え UT-o・ウツ）
+        new PlunderCumTrait(),                                // 第353期（奪う・累計 UK-c・ウケの転生）
         new SharePushTrait(TraitId.ShareSin),                 // 第313期（ドハ DP-c の手番）
         new AmplifierTrait(),
         new ContagionTrait(),

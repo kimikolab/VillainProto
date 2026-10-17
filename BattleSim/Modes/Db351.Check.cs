@@ -153,10 +153,12 @@ static partial class Db351Diag
                 || ReferenceEquals(o.Def, UnitCatalog.Kubi) || ReferenceEquals(o.Def, UnitCatalog.Nel) || ReferenceEquals(o.Def, UnitCatalog.Utsu))
                 && !CompareBuilds().Any(c => c.Name == PlayRow) && !Presets.Playtest.Any(c => c.Name == PlayRow);
             Expect("「試遊・呪い」＝ Phase 0 の1位（ワタ・ムド・クビ・ネル・ウツ）・規定の駒・`Presets.Versions` だけに置く", row, Seats(top));
-            // 第352期: 規定化で第351期の「版・」の4台を外した（試遊の4台だけ）
+            // 第352期: 規定化で第351期の「版・」の4台を外した（試遊の4台だけ）。第353期: 「版・」の台は期ごとに入れ替わるので、頭の4台（試遊）と、第351期の版の台が無いことだけを見る
             var vr = Presets.Versions.Where(r => r.Name.StartsWith("版・", StringComparison.Ordinal)).ToArray();
-            bool vrows = vr.Length == 0 && Presets.Versions.Select(r => r.Name).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", PlayRow });
-            Expect("`Presets.Versions` ＝ 試遊の4台（感電 ／ ミサ ／ 燃焼 ／ 呪い）だけ（第351期の「版・」の4台は第352期に外した）", vrows, string.Join("、", Presets.Versions.Select(r => r.Name)));
+            bool vrows = !vr.Any(r => r.Name is "版・WT-a 呪い" or "版・WT-x 呪い" or "版・WT-u 呪い" or "版・UK-r 呪い")
+                && Presets.Versions.Select(r => r.Name).Take(4).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", PlayRow })
+                && Presets.Versions.Skip(4).All(r => r.Name.StartsWith("版・", StringComparison.Ordinal));
+            Expect("`Presets.Versions` の頭 ＝ 試遊の4台（感電 ／ ミサ ／ 燃焼 ／ 呪い）・第351期の「版・」の4台は無い（第352期に外した）", vrows, string.Join("、", Presets.Versions.Select(r => r.Name)));
 
             long far = 0, sw = 0, fed = 0, pl = 0, plMiss = 0, base0 = 0, onPerv = 0;
             foreach (var w in new[] { I.Boss, I.Bat }) for (int s = 0; s < 4; s++)
