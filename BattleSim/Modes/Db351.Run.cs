@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 using I = Inv348Diag;
 
@@ -133,7 +133,7 @@ static partial class Db351Diag
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var rows = CompareBuilds().ToArray();
         int nw = EnemyCatalog.Stages.Count, last = nw - 1;
-        var b = Grid(rows, f => f);
+        var b = Grid(rows, f => Apply(f, vers[0]));   // 第352期: 規定の列は第351期の規定（`WataH351`）に固定
         bool Has(Formation f) => f.Occupied().Any(o => o.Def.Id is "wata" or "uke");
         Console.WriteLine($"# {Tag} §5-4 `compare` {rows.Length} 行 × 版（seed 0..{CompareSeeds - 1}・基準は規定）");
         Console.WriteLine();
@@ -169,6 +169,27 @@ static partial class Db351Diag
                 if (Enumerable.Range(1, nw - 1).All(w => g[r, w] == b[r, w])) continue;
                 Console.WriteLine($"| {rows[r].Name} | " + string.Join(" | ", Enumerable.Range(1, nw - 1).Select(w => g[r, w] == b[r, w] ? F1(b[r, w]) : $"{F1(b[r, w])} → **{F1(g[r, w])}**")) + " |");
             }
+        }
+        Console.WriteLine();
+        Console.WriteLine($"所要 {sw.Elapsed.TotalSeconds:F0} 秒。");
+    }
+
+    // ---------------------------------------------------------------------------------
+    // 第352期 §3: 規定化の確かめ（規定のワタ ＝ 第351期の WT-u）
+    // ---------------------------------------------------------------------------------
+    static void Settle352()
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        I.W[] ws = { I.Boss, I.Guard, I.Bat, I.M2, I.StrongWaves[2] };
+        Console.WriteLine($"# 第352期 §3 規定化の確かめ —— 「{PlayRow}」（{Seats(Top1)}・規定のワタ）× 波・seed 0..{Seeds - 1}");
+        Console.WriteLine();
+        Console.WriteLine("| 波 | 規定（第352期） | 第351期の WT-u（旧に版を差した写し） | 第351期の規定（旧） | 一致 |");
+        Console.WriteLine("|---|---|---|---|:-:|");
+        foreach (var w in ws)
+        {
+            var n = I.Measure(Top1, w); var u = I.Measure(Apply(Top1, V("u")), w); var o = I.Measure(Apply(Top1, Vers[0]), w);
+            string C(I.St x) => $"{F1(x.Win)}・{x.WinTs}T・倒 {Per2(x.AllyFell, x.N)}";
+            Console.WriteLine($"| {w.Name} | {C(n)} | {C(u)} | {C(o)} | {(C(n) == C(u) ? "○" : "×")} |");
         }
         Console.WriteLine();
         Console.WriteLine($"所要 {sw.Elapsed.TotalSeconds:F0} 秒。");

@@ -1466,3 +1466,7 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **`PlunderTrait`（UK-r）**は `OnAfterAttack`: 下げ幅（`Def.Attack − CurrentAttack`・0 未満は 0）の半分を `Whet`、下げ幅 0 なら自分に `Dull` 1（隣の渡しが拾いうる）。
 - 表示専用の出来事 `CursePass`（`CursePassLabels`: 押し付け ／ 回す ／ 交換 ／ 奪う）——`RelayWide` の保持者の渡しと `Plunder` だけが出す（規定のワタの台本は変わらない）。
 - 計数だけの帳簿 `UnitTally.Db351*`: `Dull` の入口で書き手（`by`）に味方へ ／ 敵へ、受け手が逆しまなら下げ幅の最大と5発に届いた T、呪いの分け合い（`hexShare` の段）の出どころに 起こした一撃 ／ 分かれた先 ／ 量 ／ 倒した数。どれも盤面を読まない。
+
+## 第352期 —— ワタの WT-u を規定に
+
+- engine は変えていない。第351期の `_relayWideLive` ／ `RelayFeed` の枝が規定のワタで立つようになった（規定のワタのいる戦だけ・いなければ比較1つで抜けるのは同じ）。

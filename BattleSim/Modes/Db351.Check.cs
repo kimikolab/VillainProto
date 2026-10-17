@@ -56,9 +56,13 @@ static partial class Db351Diag
             bool r = UnitCatalog.UkeUKr.Traits.SequenceEqual(new[] { TraitId.Plunder }) && UnitCatalog.UkeUKr.MaxHp == UnitCatalog.Uke.MaxHp && UnitCatalog.UkeUKr.Attack == UnitCatalog.Uke.Attack
                 && UnitCatalog.UkeUKr.Speed == UnitCatalog.Uke.Speed && UnitCatalog.UkeUKr.Id == "uke" && UnitCatalog.UkeUKr.Actions == UnitCatalog.Uke.Actions;
             var held = UnitCatalog.All.Concat(UnitCatalog.Retired).Where(d => d.Traits.Any(t => t is TraitId.RelayWide or TraitId.RelaySwap or TraitId.RelayFeed or TraitId.Plunder)).Select(d => d.Id).ToArray();
-            bool def = UnitCatalog.Wata.Traits.SequenceEqual(new[] { TraitId.Relay }) && UnitCatalog.Uke.Traits.SequenceEqual(new[] { TraitId.Bear });
+            // 第352期: 規定のワタ ＝ WT-u（`RelayWide` ＋ `RelayFeed`）・旧（`WataH351`）は渡しだけ・`RelaySwap` ／ `Plunder` の保持者は 0 枚
+            bool def = UnitCatalog.Wata.Traits.SequenceEqual(UnitCatalog.WataWTu.Traits) && UnitCatalog.WataH351.Traits.SequenceEqual(new[] { TraitId.Relay })
+                && UnitCatalog.Uke.Traits.SequenceEqual(new[] { TraitId.Bear })
+                && UnitCatalog.All.Concat(UnitCatalog.Retired).Where(d => d.Traits.Any(t => t is TraitId.RelayWide or TraitId.RelayFeed)).Select(d => d.Id).SequenceEqual(new[] { "wata" });
+            held = UnitCatalog.All.Concat(UnitCatalog.Retired).Where(d => d.Traits.Any(t => t is TraitId.RelaySwap or TraitId.Plunder)).Select(d => d.Id).ToArray();
             Expect("版の定義: WT-a ＝ 渡し ＋ `RelayWide` ／ WT-x ＝ ＋ `RelaySwap` ／ WT-u ＝ ＋ `RelayFeed` ／ UK-r ＝ 体はウケのまま・札は `Plunder` だけ（背負う札なし）", a && x && u && r, $"a {a}・x {x}・u {u}・r {r}");
-            Expect("規定のワタ ／ ウケは触っていない・新しい札の保持者は 0 枚（`All` ／ `Retired`）", def && held.Length == 0, held.Length == 0 ? "" : string.Join(",", held));
+            Expect("第352期: 規定のワタ ＝ WT-u（`RelayWide` ＋ `RelayFeed`・保持者はワタだけ）・旧（`WataH351`）は渡しだけ・ウケは触っていない・`RelaySwap` ／ `Plunder` の保持者は 0 枚", def && held.Length == 0, held.Length == 0 ? "" : string.Join(",", held));
         }
 
         // ---- WT-a ----
@@ -75,9 +79,9 @@ static partial class Db351Diag
             bool skipSelf = wata.AtkBonus == -3 && foe.AtkBonus == -4;
             Expect("WT-a: 隣でない味方（前3・後1 のワタと隣でない）の弱体も拾って敵へ渡し、渡した分 ×2 だけワタが削れる", farOk && pick, $"遠い味方 {far.AtkBonus}・敵 {foe.AtkBonus}・ワタ HP {hp0} → {wata.Hp}");
             Expect("WT-a: ウツ ／ ワタ自身の弱体は拾わない", skipUtsu && skipSelf, $"ウツ {utsu.AtkBonus}・ワタ {wata.AtkBonus}");
-            var c0 = Board(UnitCatalog.Wata, 0, out var p0, out var f0);
+            var c0 = Board(UnitCatalog.WataH351, 0, out var p0, out var f0);
             c0.Dull(U(p0, "far"), 4);
-            Expect("規定のワタは隣でない味方の弱体を拾わない（対照）", U(p0, "far").AtkBonus == -4 && f0.AtkBonus == 0, $"遠い味方 {U(p0, "far").AtkBonus}・敵 {f0.AtkBonus}");
+            Expect("旧の規定のワタ（`WataH351`）は隣でない味方の弱体を拾わない（対照）", U(p0, "far").AtkBonus == -4 && f0.AtkBonus == 0, $"遠い味方 {U(p0, "far").AtkBonus}・敵 {f0.AtkBonus}");
         }
 
         // ---- WT-x ----
@@ -149,14 +153,10 @@ static partial class Db351Diag
                 || ReferenceEquals(o.Def, UnitCatalog.Kubi) || ReferenceEquals(o.Def, UnitCatalog.Nel) || ReferenceEquals(o.Def, UnitCatalog.Utsu))
                 && !CompareBuilds().Any(c => c.Name == PlayRow) && !Presets.Playtest.Any(c => c.Name == PlayRow);
             Expect("「試遊・呪い」＝ Phase 0 の1位（ワタ・ムド・クビ・ネル・ウツ）・規定の駒・`Presets.Versions` だけに置く", row, Seats(top));
-            string[] want = { "版・WT-a 呪い", "版・WT-x 呪い", "版・WT-u 呪い", "版・UK-r 呪い" };
+            // 第352期: 規定化で第351期の「版・」の4台を外した（試遊の4台だけ）
             var vr = Presets.Versions.Where(r => r.Name.StartsWith("版・", StringComparison.Ordinal)).ToArray();
-            bool vrows = vr.Select(r => r.Name).SequenceEqual(want)
-                && Seats(vr[0].F) == Seats(top) && vr[0].F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.WataWTa))
-                && vr[1].F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.WataWTx)) && vr[2].F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.WataWTu))
-                && Seats(vr[3].F) == Seats(UkBoard) && vr[3].F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.UkeUKr))
-                && Presets.Versions.Take(4).Select(r => r.Name).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", PlayRow });
-            Expect("`Presets.Versions` ＝ 試遊の4台（感電 ／ ミサ ／ 燃焼 ／ 呪い）＋「版・WT-a ／ WT-x ／ WT-u ／ UK-r 呪い」（UK-r はウケ入りの並び）", vrows, string.Join("、", vr.Select(r => r.Name)));
+            bool vrows = vr.Length == 0 && Presets.Versions.Select(r => r.Name).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", PlayRow });
+            Expect("`Presets.Versions` ＝ 試遊の4台（感電 ／ ミサ ／ 燃焼 ／ 呪い）だけ（第351期の「版・」の4台は第352期に外した）", vrows, string.Join("、", Presets.Versions.Select(r => r.Name)));
 
             long far = 0, sw = 0, fed = 0, pl = 0, plMiss = 0, base0 = 0, onPerv = 0;
             foreach (var w in new[] { I.Boss, I.Bat }) for (int s = 0; s < 4; s++)
@@ -165,7 +165,7 @@ static partial class Db351Diag
                 var (rx, _, _) = I.Raw(Apply(Top1, V("x")), w, s);
                 var (ru, _, _) = I.Raw(Apply(Top1, V("u")), w, s);
                 var (rr, _, _) = I.Raw(Apply(UkBoard, V("r")), w, s);
-                var (rb, _, _) = I.Raw(Top2, w, s);
+                var (rb, _, _) = I.Raw(Apply(Top2, V("base")), w, s);
                 far += ra.TallyByUnit["wata"].Db351PickedFar; sw += rx.TallyByUnit["wata"].Db351Swapped; onPerv += rx.TallyByUnit["wata"].Db351SwapOnPerverse; fed += ru.TallyByUnit["wata"].Db351Fed;
                 pl += rr.TallyByUnit["uke"].Db351PlunderGain; plMiss += rr.TallyByUnit["uke"].Db351PlunderMiss; base0 += rb.TallyByUnit["wata"].Db351PickedFar;
             }
@@ -177,11 +177,35 @@ static partial class Db351Diag
             var (ex, _, _) = I.Raw(Apply(Top1, V("x")), I.Boss, 0, verbose: true);
             var (eu, _, _) = I.Raw(Apply(Top1, V("u")), I.Boss, 0, verbose: true);
             var (er, _, _) = I.Raw(Apply(UkBoard, V("r")), I.Boss, 0, verbose: true);
-            var (eb, _, _) = I.Raw(Top1, I.Boss, 0, verbose: true);
+            var (eb, _, _) = I.Raw(Apply(Top1, V("base")), I.Boss, 0, verbose: true);
             bool marks = Kinds(ex, CursePassLabels.Push) > 0 && Kinds(ex, CursePassLabels.Swap) > 0 && Kinds(eu, CursePassLabels.Feed) > 0 && Kinds(er, CursePassLabels.Plunder) > 0
                 && eb.Events.All(e => e.Kind != BattleEventKind.CursePass);
             Expect("台本: `CursePass`（押し付け ／ 交換 ／ 回す ／ 奪う）は版の戦にだけ出る（規定の呪いの台には出ない）", marks,
                 $"押し付け {Kinds(ex, CursePassLabels.Push)}・交換 {Kinds(ex, CursePassLabels.Swap)}・回す {Kinds(eu, CursePassLabels.Feed)}・奪う {Kinds(er, CursePassLabels.Plunder)}");
+        }
+
+        // ---- 第352期: 規定化 ----
+        {
+            long nowFar = 0, nowFed = 0, oldFar = 0, oldFed = 0;
+            foreach (var w in new[] { I.Boss, I.Bat }) for (int s = 0; s < 4; s++)
+            {
+                var (rn, _, _) = I.Raw(Top1, w, s); var (ro, _, _) = I.Raw(Pin351(Top1), w, s);
+                nowFar += rn.TallyByUnit["wata"].Db351PickedFar; nowFed += rn.TallyByUnit["wata"].Db351Fed;
+                oldFar += ro.TallyByUnit["wata"].Db351PickedFar; oldFed += ro.TallyByUnit["wata"].Db351Fed;
+            }
+            Expect("第352期: 規定のワタ（「試遊・呪い」そのもの）では WT-u が働き（隣でない拾い ／ ウツへ回す > 0）、旧の定義（`Pin351`）では働かない（0）",
+                nowFar > 0 && nowFed > 0 && oldFar == 0 && oldFed == 0, $"規定 {nowFar} ／ {nowFed}・旧 {oldFar} ／ {oldFed}");
+            var (en, _, _) = I.Raw(Top1, I.Boss, 0, verbose: true);
+            int Kn(string t) => en.Events.Count(e => e.Kind == BattleEventKind.CursePass && e.Text == t);
+            Expect("第352期: 規定の台本に `CursePass` の押し付け ／ 回すが出る（交換 ／ 奪うは出ない）", Kn(CursePassLabels.Push) > 0 && Kn(CursePassLabels.Feed) > 0 && Kn(CursePassLabels.Swap) == 0 && Kn(CursePassLabels.Plunder) == 0,
+                $"押し付け {Kn(CursePassLabels.Push)}・回す {Kn(CursePassLabels.Feed)}");
+            bool same = true;
+            foreach (var w in new[] { I.Boss, I.Guard, I.Bat }) for (int s = 0; s < 4; s++)
+            {
+                var (rn, _, _) = I.Raw(Top1, w, s); var (ru, _, _) = I.Raw(Apply(Top1, V("u")), w, s);
+                same &= rn.PlayerWon == ru.PlayerWon && rn.Turns == ru.Turns && rn.PlayerSurvivors == ru.PlayerSurvivors;
+            }
+            Expect("第352期: 規定のワタの台は第351期の WT-u の台と勝敗 ／ T ／ 生存が同じ（ボス ／ 近衛 ／ 大隊 × seed 0..3）", same);
         }
 
         // ---- verbose ／ PickOne ----

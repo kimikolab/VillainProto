@@ -31,7 +31,7 @@
 | 4 | 据えのバン | -3.47 | +1.44 | 転生 | 4 | 0 | 26.0 | 化ける | 左下（送り先を選べば働く） |  | Footing / Planted |
 | 5 | 尾灯のトモ | +0.00 | +17.75 | 残す | 1 | 0 | 22.0 | 化ける | 上（単独で強い） |  | Taillight |
 | 6 | 引き受けのウケ | +0.00 | +1.96 | 残す | 1 | 0 | 8.0 | どこでも同じ | 上（単独で強い） |  | Bear |
-| 7 | 渡しのワタ | +0.00 | +2.05 | 残す | 1 | 0 | 8.0 | どこでも同じ | 上（単独で強い） |  | Relay |
+| 7 | 渡しのワタ | +0.00 | +2.05 | 残す | 1 | 0 | 8.0 | どこでも同じ | 上（単独で強い） |  | Relay / RelayWide / RelayFeed |
 | 8 | 熾のホタ | +0.00 | +1.44 | 転生 | 3 | 0 | 29.0 | 化ける | 左下（送り先を選べば働く） |  | Pyre / PyreStage / PyreBurnout / PyreEmbers / CallFire / PyreLance / PyreCritical / PyreMend / EmbersChain / PyreOverflow / PyreFed / BurnoutHeavy / BurnHitNoMend |
 | 9 | 疫みのラウ | +0.00 | +1.47 | 転生 | 3 | 0 | 13.0 | どこでも同じ | 右下（選んでも働かない） |  | Contagion / Touch / TouchLeak |
 | 10 | 移り木のシオ | +0.00 | +8.54 | 残す | 1 | 0 | 12.0 | どこでも同じ | 上（単独で強い） |  | Drifter / Regroup / DrifterMend / RegroupTend / RegroupTendSelf / ShioStage / Retreat / DriftSurge / RetreatHalf |
@@ -84,4 +84,4 @@
 - `checkup ideal` が値を返した駒: 51 / 52 （返さないのは `CompareBuilds()` に在席 0 枠の駒だけ）
 - `stage catalog` が引けた駒: 51 / 52
 
-所要 379.2 秒（うち `stage catalog` が 356.1 秒）。
+所要 410.7 秒（うち `stage catalog` が 386.3 秒）。

@@ -5212,8 +5212,11 @@ public static class UnitCatalog
     ///
     /// <para>HP84・攻8・速7 は探索段階の初期値。<b>掃引の対象は
     /// <see cref="RelayRule.TransferPercent"/> だけ</b>で、HP・攻・速は振らない。</para>
+    ///
+    /// <para><b>第352期: 第43〜351期の規定（隣の味方だけから拾う）。</b>規定は第351期の WT-u になった（<see cref="Wata"/>）。
+    /// 第351期までの規定のワタで測った過去の器具は `Common.PinW351` でこれに固定する。</para>
     /// </summary>
-    public static readonly UnitDef Wata = new()
+    public static readonly UnitDef WataH351 = new()
     {
         Id = "wata",
         Name = "渡しのワタ",
@@ -5224,6 +5227,21 @@ public static class UnitCatalog
         PlusText = "隣の味方が受ける攻撃力低下を引き受け、最も強い敵へそのまま渡す",
         MinusText = "渡した分だけ自分の身が削れる。隣に誰もいなければ何も起きない",
         Flavor = "受け取った呪いを、そのまま向こうへ渡す。通り道の自分だけが削れていく。"
+    };
+
+    /// <summary>
+    /// 渡しのワタ（規定）。<b>第352期に第351期の WT-u を規定にした</b>（ポンの判断・指示書 design/PHASE352_WATA_WTU_SETTLE_SPEC.md）——
+    /// 拾う範囲は味方全員（ワタ自身 ／ 逆しまのウツを除く・<see cref="TraitId.RelayWide"/>）、拾った弱体はまずウツへ手数が5発に届く下げ幅まで回し、
+    /// 余りを最も強い敵へ渡す（<see cref="TraitId.RelayFeed"/>）。代金（拾った量 × 2）は今どおり。札は第351期の <see cref="WataWTu"/> と同じ。
+    /// 旧（第43〜351期の規定）は <see cref="WataH351"/>。
+    /// </summary>
+    public static readonly UnitDef Wata = new()
+    {
+        Id = WataH351.Id, Name = WataH351.Name, MaxHp = WataH351.MaxHp, Attack = WataH351.Attack, Speed = WataH351.Speed,
+        Traits = new[] { TraitId.Relay, TraitId.RelayWide, TraitId.RelayFeed },
+        PlusText = "味方の誰かが受ける攻撃力低下を引き受ける。呪いを欲しがる仲間（逆しまのウツ）がいれば先にそちらへ回し、余りを最も強い敵へそのまま渡す（ウツの分は拾わない）",
+        MinusText = "拾った分だけ自分の身が削れる",
+        Flavor = WataH351.Flavor,
     };
 
     /// <summary>
@@ -6403,12 +6421,13 @@ public static class UnitCatalog
     const string WataPlus351 = "味方の誰かが受ける攻撃力低下を引き受け、最も強い敵へそのまま渡す（逆しまのウツの分は拾わない）";
     const string WataMinus351 = "渡した分だけ自分の身が削れる";
     /// <summary>第351期 WT-a 広く拾う: 渡しの横取りを味方全員へ（<see cref="TraitId.RelayWide"/>・ワタ自身 ／ ウツからは拾わない）。</summary>
-    public static readonly UnitDef WataWTa = Re351(Wata, new[] { TraitId.Relay, TraitId.RelayWide }, Wata.Name, WataPlus351, WataMinus351);
+    // 第352期: 規定のワタが WT-u になったので、版は旧（`WataH351`）から作る（`WataWTu` は規定と同じ札・第351期の文面のまま残置）。
+    public static readonly UnitDef WataWTa = Re351(WataH351, new[] { TraitId.Relay, TraitId.RelayWide }, Wata.Name, WataPlus351, WataMinus351);
     /// <summary>第351期 WT-x 交換: WT-a ＋ 渡すたび、渡した量までその敵の強化を取り、拾った元の味方に付ける（<see cref="TraitId.RelaySwap"/>）。</summary>
-    public static readonly UnitDef WataWTx = Re351(Wata, new[] { TraitId.Relay, TraitId.RelayWide, TraitId.RelaySwap }, Wata.Name,
+    public static readonly UnitDef WataWTx = Re351(WataH351, new[] { TraitId.Relay, TraitId.RelayWide, TraitId.RelaySwap }, Wata.Name,
         WataPlus351 + "。渡した呪いと引き換えに、その敵の力を奪って持ち主へ返す", WataMinus351);
     /// <summary>第351期 WT-u ウツへ回す: WT-a ＋ 拾った弱体をまずウツへ（手数が上限に届く下げ幅まで）・余りを敵へ（<see cref="TraitId.RelayFeed"/>）。</summary>
-    public static readonly UnitDef WataWTu = Re351(Wata, new[] { TraitId.Relay, TraitId.RelayWide, TraitId.RelayFeed }, Wata.Name,
+    public static readonly UnitDef WataWTu = Re351(WataH351, new[] { TraitId.Relay, TraitId.RelayWide, TraitId.RelayFeed }, Wata.Name,
         WataPlus351 + "。呪いを欲しがる仲間（ウツ）がいれば、先にそちらへ回す", WataMinus351);
     /// <summary>第351期 UK-r 奪う: ウケの転生（体はウケのまま・手番は殴る・背負う札 <see cref="TraitId.Bear"/> は外す・<see cref="TraitId.Plunder"/>）。</summary>
     public static readonly UnitDef UkeUKr = Re351(Uke, new[] { TraitId.Plunder }, "奪いのウケ",

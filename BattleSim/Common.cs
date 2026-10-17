@@ -595,7 +595,21 @@ public static (string Name, Formation F)[] PlaytestH344 => Presets.Playtest.Sele
 /// 古い口の終端（`PinM333` → … → `PinK342` → `PinG344` → ここ）・`PinG345` の後ろにも置いた。燃焼の駒をもっと古い規定へ替える器具（`firecycle` ほかの版の駒）は自分の版を使うので、ここを通らない。
 /// </summary>
 public static UnitDef PinB349(UnitDef d) =>
-    ReferenceEquals(d, UnitCatalog.Borg) ? UnitCatalog.BorgH349 : ReferenceEquals(d, UnitCatalog.Hota) ? UnitCatalog.HotaH349 : ReferenceEquals(d, UnitCatalog.Hiyo) ? UnitCatalog.HiyoH349 : d;
+    ReferenceEquals(d, UnitCatalog.Borg) ? UnitCatalog.BorgH349 : ReferenceEquals(d, UnitCatalog.Hota) ? UnitCatalog.HotaH349 : ReferenceEquals(d, UnitCatalog.Hiyo) ? UnitCatalog.HiyoH349 : PinW351(d);   // 第352期: 規定のワタも（古い口の終端）
+
+/// <summary>
+/// 第352期: 規定のワタ（WT-u・味方全員から拾ってウツへ回す）を第43〜351期の規定（`WataH351`・隣の味方だけ）に替える。ほかの駒はそのまま返す。
+/// 古い口の終端の `PinB349` の後ろに置いた（`PinG344` ／ `PinG345` ／ `Pin349` を通る器具はワタも旧になる）。
+/// </summary>
+public static UnitDef PinW351(UnitDef d) => ReferenceEquals(d, UnitCatalog.Wata) ? UnitCatalog.WataH351 : d;
+
+/// <summary>第352期: ワタの WT-u を規定にした。第351期までの規定のワタで測った器具はこれを通す。陣形とレリックは保つ。</summary>
+public static Formation Pin351(Formation f)
+{
+    var g = f.Clone();
+    foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinW351(d);
+    return g;
+}
 
 /// <summary>第350期: 燃焼の BN-a を規定にした。第349期までの規定の燃焼で測った器具（`burn349` の「規定」・`inv348` ほか）はこれを通す。陣形とレリックは保つ。</summary>
 public static Formation Pin349(Formation f)

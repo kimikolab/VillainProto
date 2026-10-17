@@ -1244,6 +1244,7 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 db351 axes              # 第351期 §5-3: 軸の横並び（第348期 §3）のデバフの行 × 版と、物差しごとの順位（12 秒）
     dotnet run --project BattleSim -c Release 0 db351 compare [版,…]    # 第351期 §5-4: `compare` 64 行 × 版（22 秒）
     dotnet run --project BattleSim -c Release 0 db351 log <版> <台> <波> [seed]   # 第351期: 1戦のログ（台 1 ／ 2 ／ uk ／ 逆しま ／ 渡し ／ 弱体・波 boss ／ guard ／ bat ／ 2 ／ 4 ／ 5 ／ s2〜s5）
+    dotnet run --project BattleSim -c Release 0 db351 s352              # 第352期 §3: 規定（WT-u）の「試遊・呪い」× ボス ／ 近衛 ／ 大隊 ／ 本編2 ／ 強 第4波 と第351期の WT-u ／ 旧の列の突き合わせ（1 秒）
     dotnet run --project BattleSim -c Release 0 db351 check             # 第351期 自己検査（版の定義・WT-a ／ WT-x ／ WT-u ／ UK-r を盤面を直に組んで・台の上・台本の印・verbose・PickOne）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`

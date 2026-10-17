@@ -15,6 +15,7 @@ using S316 = Shiga316Diag;
 //     dotnet run --project BattleSim -c Release 0 db351 axes                # §5-3: 軸の横並び（第348期 §3）のデバフの行を版ごとに
 //     dotnet run --project BattleSim -c Release 0 db351 compare [版,…]      # §5-4: `compare` 64 行 × 版（seed 0..199）
 //     dotnet run --project BattleSim -c Release 0 db351 log <版> <台> <波> [seed]   # 1戦のログ（台 1 ／ 2 ／ uk ／ 逆しま ／ 渡し ／ 弱体）
+//     dotnet run --project BattleSim -c Release 0 db351 s352                # 第352期 §3: 規定（WT-u）の「試遊・呪い」× 波と、第351期の WT-u の列の突き合わせ
 //     dotnet run --project BattleSim -c Release 0 db351 check               # 自己検査
 //
 // 版の名前（ASCII）: base（規定）／ a ／ x ／ u ／ r。版はワタ ／ ウケだけを差し替える（Id で引く・規定の上）。
@@ -45,6 +46,7 @@ static partial class Db351Diag
             case "axes": AxesAll(); return;
             case "compare": CompareAll(Pick(A(3, ""))); return;
             case "log": Log(V(A(3, "base")), A(4, "1"), A(5, "boss"), int.Parse(A(6, "0"))); return;
+            case "s352": Settle352(); return;
             case "check": Check(); return;
             default: Console.WriteLine("db351: モードは seats / p0 / flow / boards / axes / compare / log / check。"); return;
         }
@@ -64,11 +66,11 @@ static partial class Db351Diag
     internal sealed record Ver(string Name, string Ascii, UnitDef Wata, UnitDef Uke);
     internal static readonly Ver[] Vers =
     {
-        new("規定", "base", UnitCatalog.Wata, UnitCatalog.Uke),
+        new("規定", "base", UnitCatalog.WataH351, UnitCatalog.Uke),   // 第352期: 規定のワタが WT-u になったので、第351期の「規定」は旧の定義に固定
         new("WT-a 広く拾う", "a", UnitCatalog.WataWTa, UnitCatalog.Uke),
         new("WT-x 交換", "x", UnitCatalog.WataWTx, UnitCatalog.Uke),
         new("WT-u ウツへ回す", "u", UnitCatalog.WataWTu, UnitCatalog.Uke),
-        new("UK-r 奪う", "r", UnitCatalog.Wata, UnitCatalog.UkeUKr),
+        new("UK-r 奪う", "r", UnitCatalog.WataH351, UnitCatalog.UkeUKr),
     };
     internal static Ver V(string n) => Vers.First(v => v.Name == n || v.Ascii == n || v.Name.StartsWith(n, StringComparison.Ordinal));
     static Ver[] Pick(string only) => (string.IsNullOrEmpty(only) ? Vers : new[] { Vers[0] }.Concat(only.Split(',').Select(V).Where(v => v != Vers[0]))).ToArray();

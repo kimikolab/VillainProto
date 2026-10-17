@@ -152,7 +152,7 @@ static partial class Db351Diag
         foreach (var b in boards) Console.WriteLine($"- {b.Name}: {Seats(b.F)}");
         Console.WriteLine();
         foreach (var b in boards)
-            PrintFlow(b.Name, FlowWavesP0.Select(w => (w.Name, FlowMeasure(b.F, w))));
+            PrintFlow(b.Name, FlowWavesP0.Select(w => (w.Name, FlowMeasure(Apply(b.F, Vers[0]), w))));   // 第352期: 規定（第351期の）に固定
         // 強化の材料（§2-2 の 4）: 本編 ／ 精鋭の敵の強化の量を、呪いの台 1 で全波
         Console.WriteLine("#### 敵の強化の量（② の材料の見込み）—— 呪いの台 1 × 全波（強化 平均 ＝ ターン頭の敵1体あたり・0 以下 ＝ 攻撃力が 0 になった戦の割合）");
         Console.WriteLine();
@@ -160,7 +160,7 @@ static partial class Db351Diag
         Console.WriteLine("|---|---|--:|---|--:|");
         foreach (var w in Waves)
         {
-            var a = FlowMeasure(boards[0].F, w);
+            var a = FlowMeasure(Apply(boards[0].F, Vers[0]), w);
             Console.WriteLine($"| {w.Name} | {F1(a.Win)}・{a.WinTs}T | {Per(a.BuffSum, a.BuffN)} | {string.Join(" ／ ", new[] { 1, 3, 5 }.Select(t => Per(a.TBuff[t], a.TCnt[t])))} | {Pct(a.ZeroBattles, a.N)}% |");
         }
         Console.WriteLine();
