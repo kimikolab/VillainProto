@@ -601,13 +601,27 @@ public static UnitDef PinB349(UnitDef d) =>
 /// 第352期: 規定のワタ（WT-u・味方全員から拾ってウツへ回す）を第43〜351期の規定（`WataH351`・隣の味方だけ）に替える。ほかの駒はそのまま返す。
 /// 古い口の終端の `PinB349` の後ろに置いた（`PinG344` ／ `PinG345` ／ `Pin349` を通る器具はワタも旧になる）。
 /// </summary>
-public static UnitDef PinW351(UnitDef d) => ReferenceEquals(d, UnitCatalog.Wata) ? UnitCatalog.WataH351 : d;
+public static UnitDef PinW351(UnitDef d) => ReferenceEquals(d, UnitCatalog.Wata) ? UnitCatalog.WataH351 : PinU353(d);   // 第354期: 規定のウツも（古い口の終端）
 
 /// <summary>第352期: ワタの WT-u を規定にした。第351期までの規定のワタで測った器具はこれを通す。陣形とレリックは保つ。</summary>
 public static Formation Pin351(Formation f)
 {
     var g = f.Clone();
     foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinW351(d);
+    return g;
+}
+
+/// <summary>
+/// 第354期: 規定のウツ（UT-o・上限超え）を第178〜353期の規定（`UtsuH353`・逆しまだけ）に替える。ほかの駒はそのまま返す。
+/// 古い口の終端の `PinW351` の後ろに置いた（`PinB349` ／ `Pin349` ／ `Pin351` を通る器具はウツも旧になる）。
+/// </summary>
+public static UnitDef PinU353(UnitDef d) => ReferenceEquals(d, UnitCatalog.Utsu) ? UnitCatalog.UtsuH353 : d;
+
+/// <summary>第354期: ウツの UT-o を規定にした。第353期までの規定のウツで測った器具はこれを通す。陣形とレリックは保つ。</summary>
+public static Formation Pin353(Formation f)
+{
+    var g = f.Clone();
+    foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinU353(d);
     return g;
 }
 

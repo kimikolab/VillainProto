@@ -7,7 +7,7 @@ static partial class Db353Diag
 {
     static bool Applies(I.Board b, Ver v) => (v != RefUKr || b.Name == "ウケ入りの台") && Applies0(b, v);
     static bool Applies0(I.Board b, Ver v) =>
-        (v.Uke == UnitCatalog.Uke || b.F.Occupied().Any(o => o.Def.Id == "uke")) && (v.Utsu == UnitCatalog.Utsu || b.F.Occupied().Any(o => o.Def.Id == "utsu"));
+        (v.Uke == UnitCatalog.Uke || b.F.Occupied().Any(o => o.Def.Id == "uke")) && (v.Utsu == UnitCatalog.UtsuH353 || b.F.Occupied().Any(o => o.Def.Id == "utsu"));
 
     static void BoardsAll(Ver[] vers)
     {

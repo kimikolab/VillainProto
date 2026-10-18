@@ -33,7 +33,7 @@ static partial class Db351Diag
     /// <summary>直に組む盤面: 前1 ウツ ／ 前3 遠い味方 ／ 中央 中の味方 ／ 後1 ワタ（版）／ 後3 後の味方。敵は1体（攻 10・強化 <paramref name="foeBuff"/>）。</summary>
     static BattleContext Board(UnitDef wata, int foeBuff, out List<UnitState> p, out UnitState foe, bool utsu = true)
     {
-        var ctx = Ctx(Formation.Build(front1: utsu ? UnitCatalog.Utsu : Plain("x1"), front3: Plain("far"), center: Plain("mid"), back1: wata, back3: Plain("b3")),
+        var ctx = Ctx(Formation.Build(front1: utsu ? UnitCatalog.UtsuH353 : Plain("x1"), front3: Plain("far"), center: Plain("mid"), back1: wata, back3: Plain("b3")),
             Formation.Build(center: Plain("foe", hp: 999)), out p, out var e);
         foe = e[0];
         foe.AtkBonus = foeBuff;   // 検査の下ごしらえ（強化の窓口の外で置く・盤面の規則ではない）
@@ -150,7 +150,7 @@ static partial class Db351Diag
         {
             var top = Top1;
             bool row = Seats(top) == "ワタ・ムド・クビ・ネル・ウツ" && top.Occupied().All(o => ReferenceEquals(o.Def, UnitCatalog.Wata) || ReferenceEquals(o.Def, UnitCatalog.Mudo)
-                || ReferenceEquals(o.Def, UnitCatalog.Kubi) || ReferenceEquals(o.Def, UnitCatalog.Nel) || ReferenceEquals(o.Def, UnitCatalog.Utsu))
+                || ReferenceEquals(o.Def, UnitCatalog.Kubi) || ReferenceEquals(o.Def, UnitCatalog.Nel) || ReferenceEquals(o.Def, UnitCatalog.UtsuH353))
                 && !CompareBuilds().Any(c => c.Name == PlayRow) && !Presets.Playtest.Any(c => c.Name == PlayRow);
             Expect("「試遊・呪い」＝ Phase 0 の1位（ワタ・ムド・クビ・ネル・ウツ）・規定の駒・`Presets.Versions` だけに置く", row, Seats(top));
             // 第352期: 規定化で第351期の「版・」の4台を外した（試遊の4台だけ）。第353期: 「版・」の台は期ごとに入れ替わるので、頭の4台（試遊）と、第351期の版の台が無いことだけを見る

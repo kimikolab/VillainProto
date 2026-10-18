@@ -9690,6 +9690,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.BurnHitNoMend)) _burnHitNoMend = true;   // 第349期（BN-a・被弾の燃焼では癒えない・両陣営）
         if (u.HasTrait(TraitId.RelayWide)) _relayWideLive = true;       // 第351期（WT-a・渡しが味方全員から拾う）
         if (u.HasTrait(TraitId.PlunderCum)) _plunderCumLive = true;     // 第353期（UK-c・弱体の累計を数える）
+        if (u.HasTrait(TraitId.MudoCurseRage) || u.HasTrait(TraitId.MudoCurseHeavy)) _mudoCurseLive = true;   // 第354期（M1 ／ M2・ムドは呪いを欲しがる）
         if (FireLevelRule.Holds(u)) { _fireLvLive = true; _fireLvTeams[u.TeamId] = true; }   // 第242期（火勢）
         if (u.HasTrait(TraitId.FireSpreadCap)) _spreadCapTeams[u.TeamId] = true;              // 第244期（燃え広がりの上限）
         if (FireKindleRule.Holds(u)) _kindleLive = true;                                      // 第252期（ボルグが育つ口・あぶれた火）
@@ -14361,6 +14362,7 @@ public sealed class BattleContext
             string who = source?.Def.Id ?? "（出どころなし）";
             YokeCutBy.TryGetValue(who, out var acc);
             YokeCutBy[who] = (acc.Hits + 1, acc.Lost + amount - Yoke.Cap);
+            if (source is not null && source.RawCounter(EruptTrait.BurstKey) > 0) { UnitTally bt = TallyOf(source); bt.Db354BurstYokeCut++; bt.Db354BurstYokeLost += amount - Yoke.Cap; }   // 第354期（計数のみ・暴発の発）
 
             Log($"    軛が {target.Name} への一撃を {amount} から {Yoke.Cap} に切った", LogKind.Trigger);
             // 第171期・**表示専用**。**`amount` を書き換える前**に打つ（切り落とされた量は
@@ -17385,6 +17387,7 @@ public sealed class BattleContext
                                     || (u.HasTrait(TraitId.Funnel) && Funnel.Both))
                                 && (_relayWideLive && u.HasTrait(TraitId.RelayWide)
                                     ? !target.HasTrait(TraitId.Perverse)            // 第351期 WT-a: 味方全員から拾う（逆しまからは拾わない）
+                                      && !(_mudoCurseLive && WantsCurse354(target)) // 第354期 M1 ／ M2: 呪いを欲しがるムドからも拾わない
                                     : FormationRules.AreAdjacent(u, target)))
                     .ToList());
             if (taker is not null && taker.HasTrait(TraitId.Funnel)
@@ -17461,6 +17464,7 @@ public sealed class BattleContext
         EmitStatusGain(receiver, DullKey, amount, by);
         receiver.AtkBonus -= amount;
         if (receiver.HasTrait(TraitId.Perverse)) NotePerverse351(receiver);   // 第351期（計数のみ）
+        if (_mudoCurseLive && receiver.HasTrait(TraitId.MudoCurseRage)) EruptTrait.AddCurseRage(this, receiver, amount);   // 第354期 M1: 浴びた呪いが怒りに（攻撃力を引いた後）
         if (_plunderCumLive) _dullRecv353[receiver.InstanceId] = _dullRecv353.GetValueOrDefault(receiver.InstanceId) + amount;   // 第353期 UK-c: 実際に攻撃力が下がった量の累計（横取りの後の受け手）
         if (atkBefore > 0 && receiver.CurrentAttack == 0)
         {
@@ -17469,6 +17473,21 @@ public sealed class BattleContext
                 DullZeroedWho.TryGetValue(receiver.Name, out int z) ? z + 1 : 1;
         }
     }
+
+    /// <summary>第354期 M1 ／ M2: 呪いを欲しがるムド（<see cref="TraitId.MudoCurseRage"/> ／ <see cref="TraitId.MudoCurseHeavy"/>）の保持者がいる戦。</summary>
+    bool _mudoCurseLive;
+    /// <summary>第354期: 渡しが拾わない「呪いを欲しがる」ムドか。</summary>
+    static bool WantsCurse354(UnitState u) => u.HasTrait(TraitId.MudoCurseRage) || u.HasTrait(TraitId.MudoCurseHeavy);
+    /// <summary>第354期 配り: 回し先のムド（暴発の札の持ち主・生きている・席の若い順・乱数を引かない）。</summary>
+    UnitState? MudoOf354(int team)
+    {
+        UnitState? pick = null;
+        foreach (UnitState u in LivingMembers(team))
+            if (u.HasTrait(TraitId.Erupt) && (pick is null || u.Slot < pick.Slot)) pick = u;
+        return pick;
+    }
+    /// <summary>第354期 配り: ムドの下げ幅をいくつまで回すか（ウツの手数が上限に届く下げ幅と同じ 12）。</summary>
+    public const int MudoFeedCap354 = (PerverseTrait.MaxHits - 1) * PerverseTrait.HitsPerDull;
 
     /// <summary>第353期 UK-c: 奪う・累計（<see cref="TraitId.PlunderCum"/>）の保持者がいる戦。偽なら累計を1本も数えない。</summary>
     bool _plunderCumLive;
@@ -17534,6 +17553,7 @@ public sealed class BattleContext
         UnitTally rt = TallyOf(relayer);                                               // 第351期（計数のみ）
         rt.Db351Picked += amount;
         if (!FormationRules.AreAdjacent(relayer, target)) rt.Db351PickedFar += amount;
+        if (target.HasTrait(TraitId.Erupt)) rt.Db354PickedMudo += amount;              // 第354期（計数のみ）
 
         int sent = amount * Relay.TransferPercent / 100;
         // 第351期 WT-u（ウツへ回す）: まず逆しまの手数が上限に届く下げ幅まで回し、余りを敵へ。逆しまがいなければ何もしない（WT-a と同じ）。
@@ -17548,6 +17568,19 @@ public sealed class BattleContext
                 EmitCursePass(CursePassLabels.Feed, relayer, utsu, target, feed);
                 Relaying(() => Dull(utsu, feed, DullRoute.Relay, relayer));
                 Log($"    {relayer.Name} が {target.Name} の重荷を {utsu.Name} へ回した（攻撃 -{feed}）", LogKind.Trigger);
+            }
+        }
+        // 第354期 配り（ムドへも回す）: ウツの次に、ムドの下げ幅が 12 に届くまで回し、余りを敵へ。ムドがいなければ何もしない。
+        if (sent > 0 && relayer.HasTrait(TraitId.RelayFeedMudo) && MudoOf354(relayer.TeamId) is { } mudo && mudo != target)
+        {
+            int feed = Math.Min(sent, Math.Max(0, MudoFeedCap354 + mudo.AtkBonus));
+            if (feed > 0)
+            {
+                sent -= feed;
+                rt.Db354FedMudo += feed;
+                EmitCursePass(CursePassLabels.Feed, relayer, mudo, target, feed);
+                Relaying(() => Dull(mudo, feed, DullRoute.Relay, relayer));
+                Log($"    {relayer.Name} が {target.Name} の重荷を {mudo.Name} へ回した（攻撃 -{feed}）", LogKind.Trigger);
             }
         }
         if (sent > 0)

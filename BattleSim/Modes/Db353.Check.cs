@@ -40,18 +40,20 @@ static partial class Db353Diag
 
         // ---- 版の定義 ----
         {
-            var o = UnitCatalog.UtsuUTo; var c = UnitCatalog.UkeUKc; var u = UnitCatalog.Utsu; var k = UnitCatalog.Uke;
+            var o = UnitCatalog.UtsuUTo; var c = UnitCatalog.UkeUKc; var u = UnitCatalog.UtsuH353; var k = UnitCatalog.Uke;
             bool od = o.Traits.SequenceEqual(new[] { TraitId.Perverse, TraitId.PerverseOver }) && o.Id == "utsu" && o.MaxHp == u.MaxHp && o.Attack == u.Attack && o.Speed == u.Speed && o.Pattern == u.Pattern && o.Actions == u.Actions;
             bool cd = c.Traits.SequenceEqual(new[] { TraitId.PlunderCum }) && c.Id == "uke" && c.MaxHp == k.MaxHp && c.Attack == k.Attack && c.Speed == k.Speed && c.Pattern == k.Pattern && c.Actions == k.Actions;
-            bool def = u.Traits.SequenceEqual(new[] { TraitId.Perverse }) && k.Traits.SequenceEqual(new[] { TraitId.Bear });
-            var held = UnitCatalog.All.Concat(UnitCatalog.Retired).Where(d => d.Traits.Any(t => t is TraitId.PerverseOver or TraitId.PlunderCum)).Select(d => d.Id).ToArray();
+            // 第354期: 規定のウツ ＝ UT-o（`PerverseOver` の保持者はウツだけ）・旧（`UtsuH353`）は逆しまだけ
+            bool def = u.Traits.SequenceEqual(new[] { TraitId.Perverse }) && UnitCatalog.Utsu.Traits.SequenceEqual(o.Traits) && k.Traits.SequenceEqual(new[] { TraitId.Bear })
+                && UnitCatalog.All.Concat(UnitCatalog.Retired).Where(d => d.Traits.Contains(TraitId.PerverseOver)).Select(d => d.Id).SequenceEqual(new[] { "utsu" });
+            var held = UnitCatalog.All.Concat(UnitCatalog.Retired).Where(d => d.Traits.Contains(TraitId.PlunderCum)).Select(d => d.Id).ToArray();
             Expect("版の定義: UT-o ＝ 逆しま ＋ `PerverseOver`（逆しまの後ろ・体はウツのまま）／ UK-c ＝ 体はウケのまま・札は `PlunderCum` だけ（背負う札なし）", od && cd, $"o {od}・c {cd}");
-            Expect("規定のウツ ／ ウケは触っていない・`PerverseOver` ／ `PlunderCum` の保持者は 0 枚", def && held.Length == 0, string.Join(",", held));
+            Expect("第354期: 規定のウツ ＝ UT-o（`PerverseOver` の保持者はウツだけ）・旧（`UtsuH353`）は逆しまだけ・ウケは触っていない・`PlunderCum` の保持者は 0 枚", def && held.Length == 0, string.Join(",", held));
         }
 
         // ---- UT-o ----
         {
-            var ctx = Ctx(Formation.Build(front1: UnitCatalog.Utsu), Formation.Build(center: Plain("foe", hp: 999)), out var p, out _);
+            var ctx = Ctx(Formation.Build(front1: UnitCatalog.UtsuH353), Formation.Build(center: Plain("foe", hp: 999)), out var p, out _);
             var c2 = Ctx(Formation.Build(front1: UnitCatalog.UtsuUTo), Formation.Build(center: Plain("foe", hp: 999)), out var p2, out _);
             var b = p[0]; var o = p2[0];
             var rows = new List<string>();
@@ -60,7 +62,7 @@ static partial class Db353Diag
             {
                 b.AtkBonus = -d; o.AtkBonus = -d;
                 int over = Math.Max(0, d - 12);
-                int wantB = UnitCatalog.Utsu.Attack + d, wantO = UnitCatalog.Utsu.Attack + Math.Min(d, 12) + 3 * over;
+                int wantB = UnitCatalog.UtsuH353.Attack + d, wantO = UnitCatalog.UtsuH353.Attack + Math.Min(d, 12) + 3 * over;
                 ok &= b.CurrentAttack == wantB && o.CurrentAttack == wantO && Hits(b) == Hits(o) && Hits(o) == Math.Min(PerverseTrait.MaxHits, 1 + d / PerverseTrait.HitsPerDull);
                 rows.Add($"d{d}: {b.CurrentAttack} ／ {o.CurrentAttack}・{Hits(o)}発");
             }
@@ -105,15 +107,10 @@ static partial class Db353Diag
 
         // ---- 台の上で ----
         {
-            var vr = Presets.Versions.Where(r => r.Name.StartsWith("版・", StringComparison.Ordinal)).Select(r => r.Name).ToArray();
-            bool vrows = vr.SequenceEqual(new[] { "版・UT-o 呪い", "版・UK-c 呪い", "版・UT-o＋UK-c 呪い" })
+            // 第354期: 第353期の「版・」の3台は外した（試遊の4台は頭に残る）
+            bool vrows = !Presets.Versions.Any(r => r.Name is "版・UT-o 呪い" or "版・UK-c 呪い" or "版・UT-o＋UK-c 呪い")
                 && Presets.Versions.Select(r => r.Name).Take(4).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", PlayRow });
-            var f = Presets.Versions.ToDictionary(r => r.Name, r => r.F);
-            bool same = vrows && Seats(f["版・UT-o 呪い"]) == Seats(Play) && Seats(f["版・UK-c 呪い"]) == Seats(UkBoard) && Seats(f["版・UT-o＋UK-c 呪い"]) == Seats(UkBoard)
-                && f["版・UT-o 呪い"].Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.UtsuUTo)) && f["版・UK-c 呪い"].Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.UkeUKc))
-                && f["版・UK-c 呪い"].Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Utsu))
-                && f["版・UT-o＋UK-c 呪い"].Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.UtsuUTo)) && f["版・UT-o＋UK-c 呪い"].Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.UkeUKc));
-            Expect("`Presets.Versions` ＝ 試遊の4台 ＋ 「版・UT-o 呪い」（試遊・呪いのウツが版）／「版・UK-c 呪い」／「版・UT-o＋UK-c 呪い」（ウケ入りの台）", same, string.Join("、", Presets.Versions.Select(r => r.Name)));
+            Expect("`Presets.Versions` の頭 ＝ 試遊の4台・第353期の「版・」の3台は無い（第354期に外した）", vrows, string.Join("、", Presets.Versions.Select(r => r.Name)));
             Expect($"ウケ入りの台 ＝ `ukseats` で選んだ並び（{UkPick}）", Seats(UkBoard) == UkPick, Seats(UkBoard));
 
             long over = 0, gain = 0, boss = 0, miss = 0, baseOver = 0, baseGain = 0;

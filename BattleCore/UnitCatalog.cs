@@ -2017,7 +2017,8 @@ public static class UnitCatalog
         Flavor = "落ち着きのない者にしか懐かない。整った隊では浮く。"
     };
 
-    public static readonly UnitDef Utsu = new()
+    /// <summary>第178〜353期の規定のウツ（逆しまだけ）。<b>第354期に UT-o（上限超え）を規定にした</b>ので明示の定義として残す。過去の器具は `Common.PinU353` ／ `Pin353` で固定する。</summary>
+    public static readonly UnitDef UtsuH353 = new()
     {
         Id = "utsu",
         Name = "逆しまのウツ",
@@ -2028,6 +2029,25 @@ public static class UnitCatalog
         PlusText = "弱体化されるほど攻撃力が上がり（下げ幅と同じだけ）、手数も増える（下げ幅3ごとに+1発・最大5発。1発ずつ別の攻撃として当たる）",
         MinusText = "強化されると攻撃力が半減する。支援を積む編成には入れない。手数には上限があり、呪われ過ぎても伸びない",
         Flavor = "褒められると腕が落ちる。呪われている間だけまともに戦う。"
+    };
+
+    /// <summary>第354期 UT-o の文面の足し（第353期の `UtsuUTo` と同じ）。</summary>
+    const string UtsuOverText354 = "。手数が上限に届いた後は、呪われた分だけ一撃が重くなる（上限を超えた下げ幅 1 につき攻撃力 +3）";
+    /// <summary>
+    /// 逆しまのウツ（規定）。<b>第354期に UT-o（第353期の版・上限超え）を規定にした</b>（ポンの判断・指示書 design/PHASE354_UTSU_MUDO_SPEC.md §2）——
+    /// 旧（<see cref="UtsuH353"/>）に <see cref="TraitId.PerverseOver"/> を逆しまの後ろに足した。札と文面は第353期の <see cref="UtsuUTo"/> と同じ。
+    /// </summary>
+    public static readonly UnitDef Utsu = new()
+    {
+        Id = "utsu",
+        Name = UtsuH353.Name,
+        MaxHp = UtsuH353.MaxHp,
+        Attack = UtsuH353.Attack,
+        Speed = UtsuH353.Speed,
+        Traits = new[] { TraitId.Perverse, TraitId.PerverseOver },
+        PlusText = UtsuH353.PlusText + UtsuOverText354,
+        MinusText = UtsuH353.MinusText,
+        Flavor = UtsuH353.Flavor
     };
 
     // 第313期（指示書 design/PHASE313_DOHA_PUSH_SPEC.md §2）—— ドハの手番の札（背を押す）。手番は術（`Actions = [Skill]`）。条件を満たさない手番は殴る。
@@ -6437,11 +6457,33 @@ public static class UnitCatalog
     // 第353期【軽い期】デバフ軸の立て直し②（指示書 design/PHASE353_DEBUFF_BOSS_SPEC.md §3）。版はウツ ／ ウケの写し（Id は同じ・規定の上）。保持者 0 枚。
     // ---------------------------------------------------------------------------------
     /// <summary>第353期 UT-o 上限超え: 逆しまの後ろに <see cref="TraitId.PerverseOver"/>（下げ幅 12 を超えた分は 1 につき攻撃力 +3）。</summary>
-    public static readonly UnitDef UtsuUTo = Re351(Utsu, new[] { TraitId.Perverse, TraitId.PerverseOver }, Utsu.Name,
-        Utsu.PlusText + "。手数が上限に届いた後は、呪われた分だけ一撃が重くなる（上限を超えた下げ幅 1 につき攻撃力 +3）", Utsu.MinusText);
+    // 第354期: 規定のウツが UT-o になったので、版は旧（`UtsuH353`）から作る（札と文面は規定と同じ・第353期のまま残置）。
+    public static readonly UnitDef UtsuUTo = Re351(UtsuH353, new[] { TraitId.Perverse, TraitId.PerverseOver }, UtsuH353.Name,
+        UtsuH353.PlusText + UtsuOverText354, UtsuH353.MinusText);
     /// <summary>第353期 UK-c 奪う・累計: ウケの転生（体はウケのまま・手番は殴る・背負う札は無い・<see cref="TraitId.PlunderCum"/>）。UK-r（<see cref="UkeUKr"/>）の作り直し。</summary>
     public static readonly UnitDef UkeUKc = Re351(Uke, new[] { TraitId.PlunderCum }, "奪いのウケ",
         "呪いを受けた敵を殴るたび、その呪いの半分を自分の力にする（その戦の間・積み上がる・同じ呪いは二度奪えない）", "呪われていない敵を殴ると、腕が鈍る（攻撃力 -1）");
+
+    // ---------------------------------------------------------------------------------
+    // 第354期【軽い期】ムドを呪いで動く二人目の火力に（指示書 design/PHASE354_UTSU_MUDO_SPEC.md §4）。版はムド ／ ワタの写し（Id は同じ・規定の上）。保持者 0 枚。
+    // ---------------------------------------------------------------------------------
+    static string Must354(string s, string find, string with) => s.Contains(find) ? s.Replace(find, with) : throw new InvalidOperationException($"第354期: 文面に「{find}」が無い");
+    const string MudoRageFind354 = "殴られた回数を溜め、3回で閾を越えた瞬間";
+    const string MudoRageText354 = "殴られた回数と浴びた呪いを溜め（呪い 3 で 1 回ぶん）、3回で閾を越えた瞬間";
+    const string MudoHeavyText354 = "。呪われているほど、殴り返しの泥は重くなる（暴発の1発に下げ幅 × 2）";
+    const string MudoWantText354 = "。渡しのワタはこの泥人形の呪いを拾わない";
+    /// <summary>第354期 M1 呪いが怒りに: 暴発の札の後ろに <see cref="TraitId.MudoCurseRage"/>（受けた弱体 3 につき怒り +1・閾を越えたらその場で暴発）。</summary>
+    public static readonly UnitDef MudoM1 = Re351(Mudo, Mudo.Traits.Append(TraitId.MudoCurseRage).ToArray(), Mudo.Name,
+        Must354(Mudo.PlusText, MudoRageFind354, MudoRageText354) + MudoWantText354, Mudo.MinusText);
+    /// <summary>第354期 M2 呪われるほど重い: <see cref="TraitId.MudoCurseHeavy"/>（暴発の1発に下げ幅 × 2）。</summary>
+    public static readonly UnitDef MudoM2 = Re351(Mudo, Mudo.Traits.Append(TraitId.MudoCurseHeavy).ToArray(), Mudo.Name,
+        Mudo.PlusText + MudoHeavyText354 + MudoWantText354, Mudo.MinusText);
+    /// <summary>第354期 M1 ＋ M2。</summary>
+    public static readonly UnitDef MudoM12 = Re351(Mudo, Mudo.Traits.Append(TraitId.MudoCurseRage).Append(TraitId.MudoCurseHeavy).ToArray(), Mudo.Name,
+        Must354(Mudo.PlusText, MudoRageFind354, MudoRageText354) + MudoHeavyText354 + MudoWantText354, Mudo.MinusText);
+    /// <summary>第354期 配り: 規定のワタ ＋ <see cref="TraitId.RelayFeedMudo"/>（ウツ（5発まで）→ ムド（下げ幅 12 まで）→ 最も強い敵の順に回す）。</summary>
+    public static readonly UnitDef WataFeedMudo = Re351(Wata, Wata.Traits.Append(TraitId.RelayFeedMudo).ToArray(), Wata.Name,
+        Must354(Must354(Wata.PlusText, "（逆しまのウツ）", "（逆しまのウツ ／ 呪いで動くムド）"), "（ウツの分は拾わない）", "（ウツ ／ ムドの分は拾わない）"), Wata.MinusText);
 }
 
 /// <summary>討伐に来る人間側。プレイヤーは編成できない。</summary>

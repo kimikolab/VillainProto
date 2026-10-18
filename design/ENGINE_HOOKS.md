@@ -1476,3 +1476,12 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **`Dull` の最後**（`receiver.AtkBonus -= amount` の直後）: `_plunderCumLive`（札 `PlunderCum` の保持者が戦にいる）のときだけ、受け手の「この戦で弱体の窓口から受けた量」を盤面の私有の表に足す（`DullReceived353`）。横取りの後の受け手に付く（ワタが押し付けた分は敵の側）。ボスの伸び（`BossRise11`）は窓口を通らないので入らない。保持者がいなければ比較1つで抜ける。
 - 窓口 `Plundered353` ／ `NotePlundered353`（奪い手 × 敵ごとの「奪った累計」）。どちらも盤面の表で、戦ごとに作り直される（`Counters` に置かない）。
 - `PerverseOverTrait`（UT-o）は逆しまの後ろに置く `ModifyAttack` だけ（下げ幅 − 12 の分 × 2 を足す）。`PlunderCumTrait`（UK-c）は `OnAfterAttack`（奪う分を `Whet`・累計 0 なら自分に `Dull` 1）。出来事は第351期の `CursePass`「奪う」を使う。乱数は引かない。
+
+## 第354期 —— ウツの UT-o を規定に ／ ムドの版（M1 ／ M2 ／ 配り）
+
+- 段0: engine は変えていない（第353期の `PerverseOverTrait` が規定のウツで働くようになった）。
+- **`Dull` の横取りの候補**: `_mudoCurseLive`（M1 ／ M2 の札 `MudoCurseRage` ／ `MudoCurseHeavy` の保持者が戦にいる）のときだけ、`RelayWide` の渡しはその札を持つムドからも拾わない（ウツと同じ扱い）。
+- **`Dull` の最後**（`AtkBonus` を引いた後）: `_mudoCurseLive` かつ受け手が `MudoCurseRage` を持つとき `EruptTrait.AddCurseRage`（下げ幅 3 につき怒り +1・端数は私有キー `eruptCurseFrac`・閾を越えたら被弾と同じ門で暴発）。暴発の門は被弾の口から `EruptTrait.TryFire` に切り出した（規定の順序は同じ）。
+- **`RelayThrough` の配りの枝**（渡しが `RelayFeedMudo` を持つときだけ）: ウツへ回した後、暴発の札の持ち主（席の若い順）へ `12 + AtkBonus` まで回す（`Relaying` で包んだ `Dull`）。余りを敵へ。
+- `MudoCurseHeavyTrait`（M2）は暴発の後ろに置く `ModifyAttack` だけ（暴発の連撃の最中に `-AtkBonus × 2` を足す）。
+- 計数だけ: `UnitTally.Db354*`（呪いの怒り ／ 渡しがムドから拾った量（暴発の札の持ち主から・規定でも数える）／ ムドへ回した量 ／ 暴発の発が軛に切られた発数と量（軛の段・`BurstKey` を読む））。表示専用 `CursePassLabels.Rage`（「怒り」・M1 のムドだけ）。

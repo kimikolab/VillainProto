@@ -892,6 +892,10 @@ public enum TraitId
     Plunder,            // 奪う（UK-r・ウケの転生）: 殴った敵の攻撃力の下げ幅（元 − 今）の半分（切り捨て）だけ、自分の攻撃力がその戦の間上がる（1回の攻撃ごと・累積）。下げ幅 0 の敵を殴ると自分の攻撃力が 1 下がる
     // --- 第353期で足した札（指示書 design/PHASE353_DEBUFF_BOSS_SPEC.md §3）。デバフ軸の版（ウツの上限超え ／ ウケの転生）。保持者 0 枚 ---
     PerverseOver,       // 上限超え（UT-o・ウツ）: 下げ幅のうち手数が上限（5発）に届く分（12）を超えた分は、下げ幅 1 につき攻撃力 +3（上限までは今どおり +1）。逆しま（`Perverse`）の後ろに置く
+    // --- 第354期で足した札（指示書 design/PHASE354_UTSU_MUDO_SPEC.md §4）。ムドを呪いで動く二人目の火力に（版）。保持者 0 枚 ---
+    MudoCurseRage,      // 呪いが怒りに（M1・ムド）: 受けた弱体（攻撃力が実際に下がった量）が下げ幅 3 につき怒り +1（端数は持ち越し・殴られた回数の怒りと同じ帳簿・閾を越えたらその場で暴発）。渡し（ワタ）はこの駒の弱体を拾わない
+    MudoCurseHeavy,     // 呪われるほど重い（M2・ムド）: 暴発の1発に下げ幅（`-AtkBonus`・0 未満は 0）× 2 を足す（自分の手番の通常攻撃は今どおり）。渡し（ワタ）はこの駒の弱体を拾わない
+    RelayFeedMudo,      // ムドへも回す（配り・ワタ）: ウツへ回した余りを、ムドの下げ幅が 12 に届くまでムドへ回し、余りを最も強い敵へ（**札そのものは挙動を持たない**・engine の `RelayThrough`）
     PlunderCum,         // 奪う・累計（UK-c・ウケの転生）: 殴った敵がこの戦で弱体の窓口から受けた量の累計のうち、まだ奪っていない分の半分（切り捨て）だけ、自分の攻撃力がその戦の間上がる。累計 0 の敵を殴ると自分の攻撃力が 1 下がる
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -12419,7 +12423,36 @@ public sealed class EruptTrait : Trait
         int n = RageOf(self) + 1;
         self.SetCounter(CountKey, n);
         ctx.NoteEruptFuel(self, source);
+        TryFire(ctx, self);
+    }
 
+    /// <summary>第354期 M1: 呪いの怒りの端数（下げ幅 3 に満たない分・私有キー）。</summary>
+    public const string CurseFracKey = "eruptCurseFrac";
+    /// <summary>第354期 M1: 下げ幅いくつで怒り +1 か。</summary>
+    public const int CursePerRage = 3;
+
+    /// <summary>
+    /// 第354期 M1（<see cref="TraitId.MudoCurseRage"/>）: 受けた弱体を怒りに変える。<b>呼び口は engine の <c>Dull</c> の最後の1箇所</b>（保持者がいる戦だけ）。
+    /// 下げ幅 3 につき怒り +1・端数は持ち越し・怒りは殴られた回数と同じ帳簿（<see cref="CountKey"/>）。閾を越えたら被弾と同じ門でその場で暴発する。
+    /// </summary>
+    public static void AddCurseRage(BattleContext ctx, UnitState self, int amount)
+    {
+        if (amount <= 0 || !self.IsAlive) return;
+        int total = self.RawCounter(CurseFracKey) + amount;
+        int gain = total / CursePerRage;
+        self.SetCounter(CurseFracKey, total % CursePerRage);
+        if (gain <= 0) return;
+        self.SetCounter(CountKey, RageOf(self) + gain);
+        ctx.TallyOf(self).Db354CurseRage += gain;
+        ctx.EmitCursePass(CursePassLabels.Rage, self, self, null, gain);
+        ctx.Log($"    {self.Name} は浴びた呪いで膨れ上がった（怒り +{gain}・{RageOf(self)}）", LogKind.Trigger);
+        TryFire(ctx, self);
+    }
+
+    /// <summary>閾を越えていれば暴発する（被弾 ／ 呪い の両方の口が通る・第354期に被弾の口から切り出した——規定の順序は1つも変えていない）。</summary>
+    static void TryFire(BattleContext ctx, UnitState self)
+    {
+        int n = RageOf(self);
         if (!self.IsAlive) return;        // 倒れたら不発（死体は暴れない）
         if (n < Threshold) return;
 
@@ -12465,7 +12498,24 @@ public sealed class EruptTrait : Trait
     {
         self.SetCounter(CountKey, 0);
         self.SetCounter(BurstKey, 0);
+        if (self.RawCounter(CurseFracKey) != 0) self.SetCounter(CurseFracKey, 0);   // 第354期 M1 の端数
     }
+}
+
+/// <summary>
+/// 呪われるほど重い（第354期・M2・ムドの版）。<b>暴発の1発にだけ、下げ幅（<c>-AtkBonus</c>・0 未満は 0）× <see cref="PerDull"/> を足す</b>。
+/// 暴発の1発は今どおり「床（素攻）＋ 上乗せ 10」で、そこに足す。自分の手番の通常攻撃は変わらない。
+/// <para><b>暴発（<see cref="EruptTrait"/>）の後ろに置く</b>（暴発の <c>ModifyAttack</c> が床を掛けた後に足す）。
+/// 下げ幅は「元 − 今」ではなく <c>-AtkBonus</c> で読む——ムドの素攻は 3 なので「元 − 今」は 3 で底を打つ（ウツの下げ幅と同じ読み方）。
+/// 1発は軛の上限（25）を越えうる（そのまま・切られた発は計数で数える）。乱数を引かない。</para>
+/// </summary>
+public sealed class MudoCurseHeavyTrait : Trait
+{
+    public const int PerDull = 2;
+    public override TraitId Id => TraitId.MudoCurseHeavy;
+    public static int DropOf(UnitState self) => Math.Max(0, -self.AtkBonus);
+    public override int ModifyAttack(UnitState self, int atk) =>
+        self.RawCounter(EruptTrait.BurstKey) > 0 ? atk + DropOf(self) * PerDull : atk;
 }
 
 /// <summary>
@@ -17881,6 +17931,9 @@ public static class TraitCatalog
         new PlunderTrait(),                                   // 第351期（奪う UK-r・ウケの転生）
         new PerverseOverTrait(),                              // 第353期（上限超え UT-o・ウツ）
         new PlunderCumTrait(),                                // 第353期（奪う・累計 UK-c・ウケの転生）
+        new MarkOnlyTrait(TraitId.MudoCurseRage),             // 第354期（呪いが怒りに M1・ムド・印だけ・本体は `EruptTrait.AddCurseRage`）
+        new MudoCurseHeavyTrait(),                            // 第354期（呪われるほど重い M2・ムド）
+        new MarkOnlyTrait(TraitId.RelayFeedMudo),             // 第354期（ムドへも回す 配り・ワタ・印だけ）
         new SharePushTrait(TraitId.ShareSin),                 // 第313期（ドハ DP-c の手番）
         new AmplifierTrait(),
         new ContagionTrait(),

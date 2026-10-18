@@ -61,13 +61,13 @@ static partial class Db353Diag
     internal sealed record Ver(string Name, string Ascii, UnitDef Utsu, UnitDef Uke);
     internal static readonly Ver[] Vers =
     {
-        new("規定", "base", UnitCatalog.Utsu, UnitCatalog.Uke),
+        new("規定", "base", UnitCatalog.UtsuH353, UnitCatalog.Uke),   // 第354期: 規定のウツが UT-o になったので、第353期の「規定」は旧の定義に固定
         new("UT-o 上限超え", "o", UnitCatalog.UtsuUTo, UnitCatalog.Uke),
-        new("UK-c 奪う・累計", "c", UnitCatalog.Utsu, UnitCatalog.UkeUKc),
+        new("UK-c 奪う・累計", "c", UnitCatalog.UtsuH353, UnitCatalog.UkeUKc),
         new("UT-o ＋ UK-c", "oc", UnitCatalog.UtsuUTo, UnitCatalog.UkeUKc),
     };
     /// <summary>参考（版ではない）: 第351期の UK-r（元 − 今から奪う）。ウケ入りの台で UK-c と比べるためだけに回す（`boards r`）。</summary>
-    internal static readonly Ver RefUKr = new("参考・UK-r（第351期）", "r", UnitCatalog.Utsu, UnitCatalog.UkeUKr);
+    internal static readonly Ver RefUKr = new("参考・UK-r（第351期）", "r", UnitCatalog.UtsuH353, UnitCatalog.UkeUKr);
     internal static Ver V(string n) => Vers.Append(RefUKr).First(v => v.Name == n || v.Ascii == n);
     static Ver[] Pick(string only) => (string.IsNullOrEmpty(only) ? Vers : new[] { Vers[0] }.Concat(only.Split(',').Select(V).Where(v => v != Vers[0]))).ToArray();
     internal static Formation Apply(Formation f, Ver v) => S316.SwapId(S316.SwapId(f, "utsu", v.Utsu), "uke", v.Uke);
@@ -107,7 +107,7 @@ static partial class Db353Diag
     internal static Formation UkBoard => UkCandidates().First(c => c.Key == UkPick).F;
     internal const string UkPick = "ワタ・ムド・ウケ・ネル・ウツ";
 
-    static Formation Row(string n) => CompareBuilds().Concat(CrossBuilds()).First(r => r.Name == n).F;
+    static Formation Row(string n) => Pin353(CompareBuilds().Concat(CrossBuilds()).First(r => r.Name == n).F);   // 第354期: ウツは旧
     internal static I.Board[] Boards() => new[]
     {
         new I.Board("呪い", PlayRow, Play),
@@ -298,7 +298,7 @@ static partial class Db353Diag
         for (int t = 1; t <= TrajT; t++)
         {
             if (a.TUCnt[t] == 0 || a.TCnt[t] == 0) continue;
-            double ua = (double)a.TUAtk[t] / a.TUCnt[t], d = Math.Max(0, ua - UnitCatalog.Utsu.Attack);
+            double ua = (double)a.TUAtk[t] / a.TUCnt[t], d = Math.Max(0, ua - UnitCatalog.UtsuH353.Attack);
             double o = Math.Max(0, d - PerverseOverTrait.Threshold) * (PerverseOverTrait.OverAttackPerDull - PerverseTrait.AttackPerDull) * PerverseTrait.MaxHits;
             double cum = (double)a.TBDull[t] / a.TCnt[t], c = cum / PlunderCumTrait.Divisor;
             if (a.TAlly[t] > 0) { addO += o * a.TCnt[t]; addC += c * a.TCnt[t]; tn += a.TCnt[t]; }
