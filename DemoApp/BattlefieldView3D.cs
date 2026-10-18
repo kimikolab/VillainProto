@@ -90,7 +90,7 @@ public partial class BattlefieldView3D : Control
         BuildOverlay();
         _attackAudio = new BattleAttackAudio();
         AddChild(_attackAudio);
-        VisibilityChanged += () => { if (!IsVisibleInTree()) { _attackAudio.StopAll(); ResetLiliRite(); ResetFire(); EndShockMarkPresentation(); EndGolmPresentation(); } };
+        VisibilityChanged += () => { if (!IsVisibleInTree()) { _attackAudio.StopAll(); ResetLiliRite(); ResetFire(); EndShockMarkPresentation(); EndGolmPresentation(); ResetGaldSwordPresentation(); } };
     }
 
     private void BuildWorld()
@@ -300,6 +300,7 @@ public partial class BattlefieldView3D : Control
         LiliRites = LiliRiteStrikes = LiliRiteReleases = LiliRiteFinishes = 0;
         _inverseHolders.Clear();
         _specialGeneration++;
+        ResetGaldSwordPresentation();
         GurenReleases = GurenGains = SwordDraws = SwordRipostes = NumbSwings = VenomReturns = Spews = 0;
         ConcentratePlays = ThickenPlays = InvertedHealPlays = SipPlays = KindlePlays = TaintPlays = 0;
         MireSlams = MireConducts = MireFlows = MireBursts = WhipSweeps = ElectricWhipSweeps = 0;
@@ -660,6 +661,11 @@ public partial class BattlefieldView3D : Control
         // ボルグは攻撃の連番を流し、刃が当たるコマで下の剣閃へ続ける（BattlefieldView3D.AttackClip.cs）。
         if (from.UnitId == "borg" && !reaction && await PlayBorgAttackClipToContact(from)
             && (attackGeneration != _specialGeneration || !IsInstanceValid(from) || !IsInstanceValid(to) || from.Hp <= 0)) return;
+        if (from.UnitId == "gald" && from.SwordDrawn)
+        {
+            if (!await PlayGaldSwordClipToContact(from) || attackGeneration != _specialGeneration
+                || !IsInstanceValid(to) || !to.IsInsideTree()) return;
+        }
         bool charged = !reaction && from.IsCharging;
         bool hushSlap = from.UnitId == "husher" && from.HushShattered;
         if (!reaction) from.ReleaseCharge();

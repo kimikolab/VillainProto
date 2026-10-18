@@ -12,9 +12,26 @@ using System.Threading.Tasks;
 public partial class BattlePawn3D
 {
     internal sealed record AttackClip(Texture2D[] Frames, double Fps, int Contact, Vector2 Anchor, Vector2 IdleAnchor, float Scale,
-        float[] Forward);
+        float[] Forward, string? ReferencePortrait);
 
     private static readonly Dictionary<string, AttackClip?> AttackClipCache = new(StringComparer.Ordinal);
+    private static bool _animationCacheHooked, _animationCacheClosing;
+
+    private static void EnsureAnimationCacheShutdown()
+    {
+        if (_animationCacheHooked || Engine.GetMainLoop() is not SceneTree tree) return;
+        _animationCacheHooked = true;
+        tree.Root.TreeExiting += () => {
+            // ImageTextureをCLRの終了処理まで残すと、RenderingServer破棄後に解放される。
+            _animationCacheClosing = true;
+            var textures = AttackClipCache.Values.Where(c => c is not null).SelectMany(c => c!.Frames)
+                .Concat(IdleLoopCache.Values.SelectMany(f => f)).Distinct().ToArray();
+            AttackClipCache.Clear();
+            IdleLoopCache.Clear();
+            foreach (var texture in textures)
+                if (IsInstanceValid(texture)) texture.Dispose();
+        };
+    }
 
     private AttackClip? _attackClip;
     private double _attackClipTime;
@@ -25,12 +42,15 @@ public partial class BattlePawn3D
 
     internal const float PortraitGroundYForCheck = PortraitGroundY;
     internal bool AttackClipPlaying => _attackClip is not null;
+    internal bool CanPlayAttackClip => _alive && !_victory;
     internal Task AttackClipFinished => _attackClipDone?.Task ?? Task.CompletedTask;
     internal float AttackClipForward { get; private set; }
     internal int AttackClipFrame => _attackClipFrame;
 
     internal static AttackClip? AttackClipOf(string name)
     {
+        EnsureAnimationCacheShutdown();
+        if (_animationCacheClosing) return null;
         if (AttackClipCache.TryGetValue(name, out AttackClip? cached)) return cached;
         string dir = $"res://assets/portraits/battle/attack_clip/{name}";
         AttackClip? clip = null;
@@ -48,7 +68,8 @@ public partial class BattlePawn3D
                 ? fw.EnumerateArray().Select(v => v.GetSingle()).ToArray() : new float[frames.Length];
             if (frames.Length > 0)
                 clip = new AttackClip(frames, root.GetProperty("fps").GetDouble(), root.GetProperty("contact").GetInt32(),
-                    Vec("anchor"), Vec("idleAnchor"), root.GetProperty("scale").GetSingle(), forward);
+                    Vec("anchor"), Vec("idleAnchor"), root.GetProperty("scale").GetSingle(), forward,
+                    root.TryGetProperty("referencePortrait", out var reference) ? reference.GetString() : null);
         }
         AttackClipCache[name] = clip;
         return clip;
@@ -72,11 +93,13 @@ public partial class BattlePawn3D
         _attackClipHold = hold;
         _attackClipFrame = -1;
         _attackClipContact = onContact;
-        _attackClipDone = new TaskCompletionSource();
+        _attackClipDone = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         EnsureLoopDriver();
         ApplyAttackClipFrame();
         return _attackClipDone.Task;
     }
+
+    internal void CancelAttackClip() => FinishAttackClip(restore: true);
 
     internal void ProcessAttackClip(double delta)
     {
@@ -110,7 +133,7 @@ public partial class BattlePawn3D
             contact();
         }
         // 毎フレーム当て直す（再生中に RefreshBattlePortrait が呼ばれても連番へ戻す）。
-        Texture2D idle = UiKit.BattlePortrait(_atlas, _unitId);
+        Texture2D idle = UiKit.BattlePortrait(_atlas, clip.ReferencePortrait ?? _unitId);
         float idlePixel = _portraitHeight / Math.Max(1, idle.GetHeight());
         float clipPixel = idlePixel * clip.Scale;
         Texture2D texture = clip.Frames[frame];
@@ -120,6 +143,8 @@ public partial class BattlePawn3D
         // 地面（足底）から絵の中心までの高さ。足底は中心より下にあるので「足底の y − 中心の y」。
         _portraitGroundDistance = (clip.Anchor.Y - texture.GetHeight() * 0.5f) * clipPixel;
         _portraitBaseY = PortraitGroundY + _portraitGroundDistance;
+        // 開始したフレームから足元を合わせる。次の親_Processを待つと一瞬だけ待機絵の中心位置が残る。
+        _sprite.Position = new Vector3(_portraitOffsetX, _portraitBaseY, 0);
         if (_sprite.Texture != texture)
         {
             _sprite.Texture = texture;

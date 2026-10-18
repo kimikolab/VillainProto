@@ -74,6 +74,7 @@ public partial class BattlePawn3D
 
     public override void _ExitTree()
     {
+        FinishAttackClip(restore: false);
         ClearAllyBumpPose();
         ClearDropkickPose();
         ClearPalmStrikePose();

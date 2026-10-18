@@ -1,0 +1,12 @@
+{
+  "workflow": "C:\\works\\VillainProto\\design\\art\\gald\\sword-slash-v2\\clean-sheet-workflow.json",
+  "status": "queued",
+  "prompt_id": "6428b67c-bb95-485f-bbf9-c329818f62db",
+  "client_id": "fa9c2bc1-1e91-441e-95ca-d8dc1a88c094",
+  "outputs": [],
+  "elapsed_seconds": null,
+  "host": "127.0.0.1",
+  "port": 8188,
+  "state_file": "C:\\Users\\Pon\\AppData\\Local\\comfy-cli\\jobs\\6428b67c-bb95-485f-bbf9-c329818f62db.json",
+  "watcher_spawned": false
+}

@@ -165,5 +165,9 @@ public partial class BattlefieldView3D
             tween.TweenCallback(Callable.From(shard.QueueFree));
         }
     }
-    public override void _ExitTree() => EndHushPresentation();
+    public override void _ExitTree()
+    {
+        ResetGaldSwordPresentation();
+        EndHushPresentation();
+    }
 }

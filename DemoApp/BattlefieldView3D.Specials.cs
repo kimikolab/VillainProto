@@ -80,14 +80,7 @@ public partial class BattlefieldView3D
     {
         if (source is null || targets.Count == 0) return;
         if (riposte) SwordRipostes++;
-        var first = targets.OrderBy(p => p.FxPoint.Z).First();
-        var last = targets.OrderBy(p => p.FxPoint.Z).Last();
-        Vector3 side = targets.Count > 1 ? (last.FxPoint-first.FxPoint).Normalized() : Vector3.Right;
-        Vector3 from = first.FxPoint - side * 1.05f;
-        Vector3 to = last.FxPoint + side * 1.05f;
-        if (riposte) { from += Vector3.Up * 0.65f; to -= Vector3.Up * 0.5f; }
-        MakeBeam(from, to, new Color(Platinum, 0.3f), 0.36f, 0.22 / speed);
-        MakeBeam(from, to, Platinum, 0.065f, 0.27 / speed);
+        ShowGaldSwordFlash(source, targets);
         if (playSound) _attackAudio.PlayAttack(source.UnitId, source.Team, BattleCore.AttackPattern.Sweep, riposte, false);
     }
 

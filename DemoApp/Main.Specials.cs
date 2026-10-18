@@ -81,7 +81,8 @@ public partial class Main
         }
         if (e.Kind == BattleEventKind.LastStandRiposte)
         {
-            _battleField.ShowSwordSlash(actor, target is null ? [] : [target], _speed, true);
+            await _battleField.ShowSwordRiposte(actor, target is null ? [] : [target], _speed, dying: e.Slot == 1);
+            if (token != _playToken || !_battleMode) return true;
             for (int j = index + 1; j < events.Count; j++)
             {
                 var next = events[j];

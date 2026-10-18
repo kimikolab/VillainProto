@@ -26,6 +26,8 @@ public partial class BattlePawn3D
 
     internal static Texture2D[] IdleLoopFramesOf(string unitId)
     {
+        EnsureAnimationCacheShutdown();
+        if (_animationCacheClosing) return Array.Empty<Texture2D>();
         if (IdleLoopCache.TryGetValue(unitId, out Texture2D[]? cached)) return cached;
         string dir = $"res://assets/portraits/battle/idle_loop/{unitId}";
         Texture2D[] frames = Array.Empty<Texture2D>();
