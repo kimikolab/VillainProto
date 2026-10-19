@@ -920,9 +920,15 @@ public static class Presets
     public static Formation BurnPon(UnitDef borg, UnitDef hota, UnitDef hiyo) =>
         Formation.Build(front1: UnitCatalog.Mudo, front3: borg, center: hota, back1: UnitCatalog.Gald, back3: hiyo);
 
-    /// <summary>第351期: 呪いの台（「試遊・呪い」の並び）。ワタと中央の駒（規定はクビ・UK-r の台はウケ）を差し替えて版の台を作る。</summary>
+    /// <summary>第351期: 呪いの台（「試遊・呪い」の並び）。ワタと中央の駒（規定はクビ・UK-r の台はウケ）を差し替えて版の台を作る。
+    /// 第357期: 「試遊・呪い」はネル中央の並び（`CurseCenterNel`）に替えた。この並び（中央 クビ ／ 後1 ネル）は第351〜356期の「試遊・呪い」で、過去の器具が `Common.CurseBoardH356` で引く。</summary>
     public static Formation CursePlay(UnitDef wata, UnitDef center) =>
         Formation.Build(front1: wata, front3: UnitCatalog.Mudo, center: center, back1: UnitCatalog.Nel, back3: UnitCatalog.Utsu);
+
+    /// <summary>第357期: 「試遊・呪い」の並び（第356期 `db356 boards` の C・ヒーラーなし）。前1 ワタ ／ 前3 ムド ／ 中央 ネル ／ 後1 クビ ／ 後3 ウツ。
+    /// ネルが中央だと呪詛の漏れが味方4枚に届き、ワタ → ウツへ回る呪いが増える。</summary>
+    public static Formation CurseCenterNel() =>
+        Formation.Build(front1: UnitCatalog.Wata, front3: UnitCatalog.Mudo, center: UnitCatalog.Nel, back1: UnitCatalog.Kubi, back3: UnitCatalog.Utsu);
 
     public static (string Name, Formation F)[] Versions => new (string, Formation)[]
     {
@@ -931,7 +937,8 @@ public static class Presets
         // 第349期 段0: 燃焼のポンの台（前1 ムド ／ 前3 ボルグ ／ 中央 ホタ ／ 後1 ガルド ／ 後3 ヒヨ）。規定の駒のまま残す試遊の台（`compare` の行は増やさない）。
         ("試遊・燃焼 ポンの台", BurnPon(UnitCatalog.Borg, UnitCatalog.Hota, UnitCatalog.Hiyo)),
         // 第351期 Phase 0: 呪いの台の上位1並び（前1 ワタ ／ 前3 ムド ／ 中央 クビ ／ 後1 ネル ／ 後3 ウツ・`db351 seats` の1位）。規定の駒のまま残す試遊の台。
-        ("試遊・呪い", CursePlay(UnitCatalog.Wata, UnitCatalog.Kubi)),
+        // 第357期（ポンの判断）: 第356期の C（ヒーラーなし）に替えた（前1 ワタ ／ 前3 ムド ／ 中央 ネル ／ 後1 クビ ／ 後3 ウツ）。旧の並び（中央 クビ ／ 後1 ネル）は `Common.CurseBoardH356`。
+        ("試遊・呪い", CurseCenterNel()),
         // 第356期 §6: 「試遊・呪い 壁」（`db356 seats` の1位・ボス ／ 近衛 ／ 大隊のすべてで1位・ムドを残す並び）。前1 ウツ ／ 前3 ワタ ／ 中央 ネル ／ 後1 ムド ／ 後3 ツギ。採るか ／ 試遊・呪いと入れ替えるかはポン。
         ("試遊・呪い 壁", Formation.Build(front1: UnitCatalog.Utsu, front3: UnitCatalog.Wata, center: UnitCatalog.Nel, back1: UnitCatalog.Mudo, back3: UnitCatalog.Tsugi)),
     };

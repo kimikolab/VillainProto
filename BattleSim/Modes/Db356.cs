@@ -11,7 +11,8 @@ using S307 = Som307Diag;
 //     dotnet run --project BattleSim -c Release 0 db356 seats               # §3: ネル ／ ワタ ／ ウツ ＋ 6枚から2枚（15 組）× 席の全並び 120 ＝ 1,800 並び × ボス（seed 0..4）／ 近衛 ／ 大隊（seed 0..19）
 //     dotnet run --project BattleSim -c Release 0 db356 boards              # §5: 代表台（§3 の上位）＋ 試遊・呪い × 波（九体を含む）・seed 0..99・勇者の最大HPの推移（T1〜T14）
 //     dotnet run --project BattleSim -c Release 0 db356 axes                # §5: 軸の横並び（第348期 §3）のデバフの行に代表台を足す
-//     dotnet run --project BattleSim -c Release 0 db356 log <台> <波> [seed]  # 1戦のログ（台 play ／ wall ／ 並びの名前「ワタ・ムド・…」）
+//     dotnet run --project BattleSim -c Release 0 db356 log <台> <波> [seed]  # 1戦のログ（台 play ／ now ／ wall ／ 並びの名前「ワタ・ムド・…」・play は第356期までの「試遊・呪い」）
+//     dotnet run --project BattleSim -c Release 0 db356 s357                # 第357期: いまの「試遊・呪い」（ネル中央）× 波・seed 0..99 が §5 の C の列と同じか
 //     dotnet run --project BattleSim -c Release 0 db356 check               # 自己検査
 //
 // **予測のファイルが無ければ本測定（seats ／ boards ／ axes）を走らせない**（R397・`.tmp/p356/predict.md`）。
@@ -38,8 +39,9 @@ static partial class Db356Diag
             case "boards": BoardsAll(); return;
             case "axes": AxesAll(); return;
             case "log": Log(A(3, "play"), A(4, "boss"), int.Parse(A(5, "0"))); return;
+            case "s357": S357(); return;
             case "check": Check(); return;
-            default: Console.WriteLine("db356: モードは seats / boards / axes / log / check。"); return;
+            default: Console.WriteLine("db356: モードは seats / boards / axes / log / s357 / check。"); return;
         }
     }
 
@@ -91,7 +93,9 @@ static partial class Db356Diag
         return Go(0).OrderBy(p => string.Join(",", p), StringComparer.Ordinal).ToList();
     }
 
-    internal static Formation Play => Presets.Versions.First(r => r.Name == D.PlayRow).F;
+    internal static Formation Play => CurseBoardH356;   // 第357期: 第351〜356期の「試遊・呪い」（中央 クビ ／ 後1 ネル）に固定
+    /// <summary>第357期: いまの「試遊・呪い」（`Presets.Versions`・中央 ネル ／ 後1 クビ）。</summary>
+    internal static Formation PlayNow => Presets.Versions.First(r => r.Name == D.PlayRow).F;
     internal const string WallRow = "試遊・呪い 壁";
     static Formation ByKey(string key)
     {
@@ -103,7 +107,7 @@ static partial class Db356Diag
 
     static void Log(string board, string wave, int seed)
     {
-        var f = board switch { "play" => Play, "wall" => Presets.Versions.First(r => r.Name == WallRow).F, _ => ByKey(board) };
+        var f = board switch { "play" => Play, "now" => PlayNow, "wall" => Presets.Versions.First(r => r.Name == WallRow).F, _ => ByKey(board) };
         var w = D.WaveOf(wave);
         var (r, _, _) = I.Raw(f, w, seed, verbose: true);
         Console.WriteLine($"# {Seats(f)} × {w.Name} × seed {seed}: {(r.PlayerWon ? "勝ち" : "負け")} T{r.Turns} 生存 {r.PlayerSurvivors}");

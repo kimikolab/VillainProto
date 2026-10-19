@@ -653,6 +653,15 @@ public static Formation Pin355(Formation f)
     return g;
 }
 
+/// <summary>
+/// 第357期: 「試遊・呪い」をネル中央の並び（`Presets.CurseCenterNel`）に替えた。第351〜356期の「試遊・呪い」（前1 ワタ ／ 前3 ムド ／ 中央 クビ ／ 後1 ネル ／ 後3 ウツ・規定の駒）。
+/// 「試遊・呪い」を名前で引いていた器具（`db351` ／ `db353` ／ `db354` ／ `db355` ／ `db356` ／ `inv348 roster`）はこれを引く（駒の固定 `Pin353` ／ `Pin354` ／ `Pin355` はその上に掛ける）。
+/// </summary>
+public static Formation CurseBoardH356 => Presets.CursePlay(UnitCatalog.Wata, UnitCatalog.Kubi);
+
+/// <summary>第357期: `Presets.Versions` の「試遊・呪い」だけを第351〜356期の並び（`CurseBoardH356`）に替えた写し（行の数と並びはそのまま）。</summary>
+public static (string Name, Formation F)[] VersionsH356 => Presets.Versions.Select(r => r.Name == "試遊・呪い" ? (r.Name, CurseBoardH356) : r).ToArray();
+
 /// <summary>第350期: 燃焼の BN-a を規定にした。第349期までの規定の燃焼で測った器具（`burn349` の「規定」・`inv348` ほか）はこれを通す。陣形とレリックは保つ。</summary>
 public static Formation Pin349(Formation f)
 {

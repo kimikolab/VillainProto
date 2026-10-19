@@ -105,7 +105,7 @@ static partial class Db351Diag
     }
 
     /// <summary>Phase 0 の上位1並び（`db351 seats` の §2 の1位・報告 §2）。「試遊・呪い」もこの並び。</summary>
-    internal static Formation Top1 => Pin353(Presets.Versions.First(r => r.Name == PlayRow).F);   // 第354期: ウツは第353期までの規定に固定
+    internal static Formation Top1 => Pin353(CurseBoardH356);   // 第354期: ウツは第353期までの規定に固定・第357期: 並びは第351〜356期の「試遊・呪い」に固定
     internal const string PlayRow = "試遊・呪い";
     /// <summary>Phase 0 の上位2並び目。</summary>
     internal static Formation Top2 => Formation.Build(front1: UnitCatalog.WataH354, front3: UnitCatalog.MudoH354, center: UnitCatalog.NelH355, back1: UnitCatalog.Kubi, back3: UnitCatalog.UtsuH353);   // §2 の2位（第354期: ウツは旧）

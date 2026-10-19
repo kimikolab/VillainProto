@@ -74,7 +74,7 @@ static partial class Db355Diag
     // 台
     // ---------------------------------------------------------------------------------
     internal const string PlayRow = D.PlayRow;   // 「試遊・呪い」（ワタ・ムド・クビ・ネル・ウツ・段0 のムド ／ ワタ）
-    internal static Formation Play => Pin355(Presets.Versions.First(r => r.Name == PlayRow).F);   // 第356期: ネルは第355期までの規定に固定
+    internal static Formation Play => Pin355(CurseBoardH356);   // 第356期: ネルは第355期までの規定に固定・第357期: 並びは第351〜356期の「試遊・呪い」に固定
     /// <summary>ネルのいる `compare` の行からもう1つ（決めたこと: ウツがいない・燃焼の刻み ／ ムドの暴発が削り手になる行・第354期のムドの行と同じ）。</summary>
     internal const string FastRow = "速攻 (ボルグ×ムド)";
     static Formation Row(string n) => Pin355(CompareBuilds().Concat(CrossBuilds()).First(r => r.Name == n).F);   // 第356期: ネルは旧

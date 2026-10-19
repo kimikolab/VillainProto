@@ -157,7 +157,7 @@ static partial class Inv348Diag
         var real = new Dictionary<string, double[]>();
         foreach (var (n, f) in rows) real[n] = Grid(f, CompareSeeds);
         var bossOf = new Dictionary<string, double>();
-        var boardsForBoss = rows.Concat(Presets.Playtest.Select(r => (Name: r.Name, F: Pin349(r.F)))).Concat(Presets.Versions.Where(r => r.Name.StartsWith("試遊・", StringComparison.Ordinal)).Select(r => (Name: r.Name, F: Pin349(r.F))))
+        var boardsForBoss = rows.Concat(Presets.Playtest.Select(r => (Name: r.Name, F: Pin349(r.F)))).Concat(VersionsH356.Where(r => r.Name.StartsWith("試遊・", StringComparison.Ordinal)).Select(r => (Name: r.Name, F: Pin349(r.F))))
             .Where(r => units.Any(u => r.F.Occupied().Any(o => o.Def.Id == u.Id))).GroupBy(r => r.Name).Select(g => g.First()).ToArray();
         foreach (var (n, f) in boardsForBoss) bossOf[n] = Measure(f, Boss).Win;
 

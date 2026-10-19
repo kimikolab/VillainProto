@@ -1266,7 +1266,8 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 db356 seats             # 第356期 §3: ネル ／ ワタ ／ ウツ ＋ 6枚（ムド ／ クビ ／ ゴルム ／ ガルド ／ バン ／ ツギ）から2枚 × 席の全並び ＝ 1,800 並び × ボス（seed 0..4）／ 近衛 ／ 大隊（seed 0..19）・組ごと ／ 上位10 ／ ムド残し ／ 精鋭と両立 ／ 駒と席ごと ／ 死因（11 秒）
     dotnet run --project BattleSim -c Release 0 db356 boards            # 第356期 §5: 代表台 3 ＋ 試遊・呪い × 11 波（九体を含む）・seed 0..99・勇者の最大HPの推移（T1〜T14）（1 秒）
     dotnet run --project BattleSim -c Release 0 db356 axes              # 第356期 §5: 軸の横並び（第348期 §3）のデバフの行に代表台を足す（＋ 試遊・燃焼 ポンの台）（9 秒）
-    dotnet run --project BattleSim -c Release 0 db356 log <台> <波> [seed]   # 第356期: 1戦のログ（台 play ／ wall ／ 並びの名前「ウツ・ワタ・ネル・ムド・ツギ」）
+    dotnet run --project BattleSim -c Release 0 db356 log <台> <波> [seed]   # 第356期: 1戦のログ（台 play ／ now ／ wall ／ 並びの名前「ウツ・ワタ・ネル・ムド・ツギ」・play は第356期までの「試遊・呪い」・now は第357期からの「試遊・呪い」）
+    dotnet run --project BattleSim -c Release 0 db356 s357              # 第357期: いまの「試遊・呪い」（ネル中央）× ボス ／ 近衛 ／ 大隊 ／ 強 第2〜5波・seed 0..99 が第356期 §5 の C の列と同じか（1 秒）
     dotnet run --project BattleSim -c Release 0 db356 check             # 第356期 自己検査（母集団・段0 の駒・器具の有無で勝敗が変わらない・試遊の台・PickOne）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`

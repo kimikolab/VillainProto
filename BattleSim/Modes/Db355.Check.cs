@@ -72,7 +72,7 @@ static partial class Db355Diag
             Expect("版の定義: N-100 ＝ 旧のネル ＋ `CurseScar` ／ N-50 ＝ 旧のネル ＋ `CurseScarHalf` ／ U ＝ 規定のウツ ＋ `UtsuScar`・体と手番はそのまま・第356期から規定のネル ＝ N-100（`CurseScar` の保持者はネルだけ・ほかの2枚は 0 枚）", n1 && n5 && u && def356 && held.Length == 0, $"n100 {n1}・n50 {n5}・u {u}・規定 {def356}・{string.Join(",", held)}");
             // 第356期 段0: 規定のネル（「試遊・呪い」そのもの）で N-100 が働き、旧の定義（`Pin355`）では働かない
             long now = 0, old = 0;
-            var raw = Presets.Versions.First(r => r.Name == PlayRow).F;
+            var raw = CurseBoardH356;   // 第357期: 第351〜356期の「試遊・呪い」の並び
             foreach (var w in new[] { I.Boss, I.Guard, I.Bat }) for (int s = 0; s < 4; s++)
             {
                 var (rn, _, _) = I.Raw(raw, w, s); var (ro, _, _) = I.Raw(Pin355(raw), w, s);

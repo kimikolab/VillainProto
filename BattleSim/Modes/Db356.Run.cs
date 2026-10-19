@@ -161,6 +161,35 @@ static partial class Db356Diag
     }
 
     // ---------------------------------------------------------------------------------
+    // 第357期: 「試遊・呪い」をネル中央の並び（§5 の C）に替えた確かめ
+    // ---------------------------------------------------------------------------------
+    static void S357()
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var c = Reps[2];
+        var now = PlayNow; var rep = ByKey(c.Key);
+        I.W[] ws = new[] { I.Boss, I.Guard, I.Bat }.Concat(I.StrongWaves).ToArray();
+        Console.WriteLine($"# 第357期 「{D.PlayRow}」の入れ替えの確かめ —— いまの「{D.PlayRow}」（{Seats(now)}）と §5 の「{c.Label}」（{c.Key}）× 波・seed 0..{Seeds - 1}（`boards` と同じ計数）");
+        Console.WriteLine();
+        bool seat = Seats(now) == c.Key && now.Occupied().All(o => UnitCatalog.All.Contains(o.Def)) && Seats(Play) == "ワタ・ムド・クビ・ネル・ウツ";
+        Console.WriteLine($"いまの「{D.PlayRow}」＝ C の並び・規定の駒: {(seat ? "はい" : "**いいえ**")}。第356期までの「{D.PlayRow}」（`Common.CurseBoardH356`・過去の器具が引く）: {Seats(Play)}。");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | " + string.Join(" | ", ws.Select(w => w.Name)) + " |");
+        Console.WriteLine("|---|" + string.Concat(ws.Select(_ => "---|")));
+        var a = ws.Select(w => C5.Measure(now, w, Seeds, TrajT)).ToArray();
+        var b = ws.Select(w => C5.Measure(rep, w, Seeds, TrajT)).ToArray();
+        string Cell(C5.Fx x) => $"{F1(x.Win)}・{x.WinTs}T・倒 {Per2(x.Fell, x.N)}";
+        Console.WriteLine($"| いまの「{D.PlayRow}」 | " + string.Join(" | ", a.Select(Cell)) + " |");
+        Console.WriteLine("| §5 の C | " + string.Join(" | ", b.Select(Cell)) + " |");
+        int same = Enumerable.Range(0, ws.Length).Count(i => Cell(a[i]) == Cell(b[i]));
+        Console.WriteLine();
+        Console.WriteLine($"{ws.Length} 波のうち同じセル {same}。");
+        Console.WriteLine();
+        Console.WriteLine($"所要 {sw.Elapsed.TotalSeconds:F0} 秒。");
+        if (!seat || same != ws.Length) Environment.ExitCode = 1;
+    }
+
+    // ---------------------------------------------------------------------------------
     // 軸の横並び（第348期 §3）—— デバフの行に代表台を足す
     // ---------------------------------------------------------------------------------
     static void AxesAll()
