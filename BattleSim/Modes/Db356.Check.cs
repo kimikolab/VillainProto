@@ -52,7 +52,7 @@ static partial class Db356Diag
         var vr = Presets.Versions.Select(r => r.Name).ToArray();
         // 第358期: 「試遊・呪い 壁」の後ろに別の期の「版・」の台が続いてよい（第355期の「版・」の3台が無いことだけを見る）。
         bool rows = vr.Take(4).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", D.PlayRow }) && vr.Skip(4).Take(1).SequenceEqual(new[] { WallRow })
-            && vr.Skip(5).All(x => x.StartsWith("版・", StringComparison.Ordinal)) && !vr.Any(x => x.StartsWith("版・", StringComparison.Ordinal) && x.EndsWith(" 呪い", StringComparison.Ordinal));
+            && vr.Skip(5).All(x => x.StartsWith("版・", StringComparison.Ordinal)) && !vr.Any(x => x is "版・N-100 呪い" or "版・N-50 呪い" or "版・U 呪い");   // 第359期: 名前で第355期の3台を見る（「版・HB-f 破片 呪い」のような別の期の台を拾わない）
         Expect($"`Presets.Versions` ＝ 試遊の4台 ＋ 「{WallRow}」（第355期の「版・」の3台は外した・後ろは別の期の「版・」の台だけ）", rows, string.Join("、", vr));
         if (rows)
         {

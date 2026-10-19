@@ -77,7 +77,7 @@ static class BraceDiag
         // 弾きの宛先はこの2席に限られる（席番号最小＝中央が先）。
         ("台1 出口 (ササ×ガレ×ウロ)",
             Formation.Build(front1: sasa, front3: UnitCatalog.Mug,
-                            center: UnitCatalog.Gare, back1: UnitCatalog.Uro, back3: UnitCatalog.Rica)),
+                            center: UnitCatalog.GareH358, back1: UnitCatalog.Uro, back3: UnitCatalog.Rica)),
 
         // 壁だけ: 破片の読み手ゼロ・肩代わりゼロ。火力はある（台が床に落ちないように）。
         ("台2 壁だけ (ササ×読み手なし)",
@@ -260,7 +260,7 @@ static class BraceDiag
         // 台ごとに「動かさない駒」（ササは常に 前1）と、候補から埋める空き席を決める。
         (string Bed, (int Slot, UnitDef Def)[] Fixed)[] beds =
         {
-            ("台1 出口 (ササ×ガレ×ウロ)", new[] { (2, UnitCatalog.Gare), (3, UnitCatalog.Uro) }),
+            ("台1 出口 (ササ×ガレ×ウロ)", new[] { (2, UnitCatalog.GareH358), (3, UnitCatalog.Uro) }),
             ("台2 壁だけ (ササ×読み手なし)", new[] { (1, UnitCatalog.Dolga) }),
             ("台3 肩代わり (ササ×ゴルム)", new[] { (2, UnitCatalog.Golm) }),
             ("台4 手番市場 (ササ×ガン)", new[] { (2, UnitCatalog.Gan) }),

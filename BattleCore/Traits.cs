@@ -904,6 +904,10 @@ public enum TraitId
     // --- 第358期で足した札（指示書 design/PHASE358_SHARD_AXIS_SPEC.md §3）。破片軸の立て直し（ヒビ ／ ガレの版）。保持者 0 枚 ---
     ShardGift,          // 返しの破片（HB-r・ヒビ）: 手番（術）で、自分以外の生きている味方全員に破片を 6 ずつ配る。配った破片には返しの印（私有キー）が付き、敵の一撃で割れた量だけその一撃の主へ返す（攻撃ではない・返しで倒したらヒビの撃破・engine の `ApplyDamage`）
     ShardBare,          // 纏えない（HB-r・ヒビのマイナス）: 自分に付く破片は付かずに消える（`UnitState.SetCounter` の入口で増えた分を捨てる・**札そのものは挙動を持たない**）
+    // --- 第359期で足した札（指示書 design/PHASE359_SHARD_HIBI_SPEC.md §4）。ヒビの作り直し（版）。保持者 0 枚 ---
+    ShardOpen,          // 開戦の欠片（HB-s ／ HB-f・ヒビ）: 戦の始まり（最初の手番の前）に、自分以外の生きている味方全員へ返しの欠片を 6 ずつ1回配る（手番の配りは `ShardGift` のまま）
+    ShardBareNoPlank,   // 纏えない・板も来ない（HB-s ／ HB-f・ヒビのマイナス）: `ShardBare` と同じく自分に付く破片は付かずに消え、ツギの手番の板の宛先（最も危ない味方）から外れる（外すと誰もいなければ今のまま・**札そのものは挙動を持たない**）
+    ShardFull,          // 全量を返す（HB-f・ヒビ）: 返しの欠片が敵の一撃で1でも割れたら、割れた量ではなく、その一撃の全量（破片で止める前の量）を一撃の主へ返す（その一撃ではツギの板は返さない・**札そのものは挙動を持たない**・engine の `ApplyDamage`）
     PebbleGather,       // 礫を拾う（GR-r・ガレ）: 味方（自分を含む）の破片が敵の一撃で割れた量を礫として溜め（上限なし）、手番（術）で全部使って 礫 × 3 ＋ 攻撃力 を敵全体へ撃つ。礫が無い手番は何もできない（味方の破片は砕かない）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -9095,7 +9099,10 @@ public sealed class ShardGiftTrait : Trait
 
     public override TraitId Id => TraitId.ShardGift;
 
-    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action) => Give(ctx, self, opening: false);
+
+    /// <summary>自分以外の生きている味方全員へ欠片を配る（手番 ／ 第359期の開戦の配り <see cref="ShardOpenTrait"/> の共通の本体）。</summary>
+    internal static void Give(BattleContext ctx, UnitState self, bool opening)
     {
         if (!self.IsAlive) return;
         int given = 0, n = 0;
@@ -9113,8 +9120,16 @@ public sealed class ShardGiftTrait : Trait
         UnitTally t = ctx.TallyOf(self);
         t.Sh358Gifts++;
         t.Sh358Given += given;
-        if (given > 0) ctx.Log($"    ★ {self.Name} が砕けた盾の欠片を配った（味方 {n} 体へ {Gift} ずつ）", LogKind.Trigger, self);
+        if (opening) { t.Sh359OpenGifts++; t.Sh359OpenGiven += given; }
+        if (given > 0) ctx.Log($"    ★ {self.Name} が{(opening ? "戦の初めに" : "")}砕けた盾の欠片を配った（味方 {n} 体へ {Gift} ずつ）", LogKind.Trigger, self);
     }
+}
+
+/// <summary>開戦の欠片（第359期・HB-s ／ HB-f）。戦の始まりに1回、<see cref="ShardGiftTrait"/> と同じ配りをする（台本は同じ「欠片を配る」）。<b>乱数を引かない。</b></summary>
+public sealed class ShardOpenTrait : Trait
+{
+    public override TraitId Id => TraitId.ShardOpen;
+    public override void OnBattleStart(BattleContext ctx, UnitState self) => ShardGiftTrait.Give(ctx, self, opening: true);
 }
 
 /// <summary>
@@ -10406,6 +10421,8 @@ public sealed class PlankTrait : Trait
         if (foes.Count == 0) return;
 
         var allies = ctx.LivingMembers(self.TeamId);
+        // 第359期（HB-s ／ HB-f）: 板が付かない駒（`ShardBareNoPlank`）を宛先から外す（外すと誰もいなければ今のまま）。保持者がいなければ1行も変わらない。
+        if (allies.Any(a => a.PlankSkip) && allies.Any(a => !a.PlankSkip)) allies = allies.Where(a => !a.PlankSkip).ToList();
         // 第211期（Y1）: 実質の残り体力 (HP＋破片)÷最大HP が最も低い味方。第210期（Y0）の選び方は札が無いときのまま。
         List<UnitState> needy = Neediest(allies);
         UnitState? to;
@@ -18031,6 +18048,9 @@ public static class TraitCatalog
         new PlunderCumTrait(),                                // 第353期（奪う・累計 UK-c・ウケの転生）
         new ShardGiftTrait(),                                 // 第358期（返しの破片 HB-r・ヒビ）
         new MarkOnlyTrait(TraitId.ShardBare),                 // 第358期（纏えない HB-r・ヒビのマイナス・印だけ・本体は `UnitState.SetCounter`）
+        new ShardOpenTrait(),                                 // 第359期（開戦の欠片 HB-s ／ HB-f・ヒビ）
+        new MarkOnlyTrait(TraitId.ShardBareNoPlank),          // 第359期（纏えない・板も来ない HB-s ／ HB-f・印だけ・本体は `UnitState.SetCounter` と `PlankTrait.OnAction`）
+        new MarkOnlyTrait(TraitId.ShardFull),                 // 第359期（全量を返す HB-f・印だけ・本体は engine の `ApplyDamage`）
         new PebbleTrait(),                                    // 第358期（礫を拾って投げる GR-r・ガレ）
         new MarkOnlyTrait(TraitId.CurseScar),                 // 第355期（呪われた傷 N-100・ネル・印だけ）
         new MarkOnlyTrait(TraitId.CurseScarHalf),             // 第355期（呪われた傷・半分 N-50・ネル・印だけ）

@@ -9697,6 +9697,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.CurseScar)) { _scar355Live = true; _curseScarPct355[u.TeamId] = 100; }                                                       // 第355期（N-100）
         else if (u.HasTrait(TraitId.CurseScarHalf)) { _scar355Live = true; _curseScarPct355[u.TeamId] = Math.Max(_curseScarPct355[u.TeamId], 50); }     // 第355期（N-50）
         if (u.HasTrait(TraitId.ShardGift)) { _hibiRetLive = true; _hibiRet ??= u; }   // 第358期（HB-r・返しの破片）
+        if (u.HasTrait(TraitId.ShardFull)) _hibiFullLive = true;                      // 第359期（HB-f・全量を返す）
         if (u.HasTrait(TraitId.PebbleGather)) _pebbleHolders.Add(u);                  // 第358期（GR-r・礫を拾う）
         if (u.HasTrait(TraitId.UtsuScar)) _scar355Live = true;                                                                                            // 第355期（U）   // 第354期（M1 ／ M2・ムドは呪いを欲しがる）
         if (FireLevelRule.Holds(u)) { _fireLvLive = true; _fireLvTeams[u.TeamId] = true; }   // 第242期（火勢）
@@ -14139,12 +14140,16 @@ public sealed class BattleContext
             // 第358期（HB-r）: 返しの欠片（ヒビが配った分の残り・破片の先に減る層）が敵の一撃で割れた量。板と同じ条件（燃焼の刻み ／ 返しの中を除く）。
             // 板の印と重なったら、欠片の分は返しが、残りの破片の分だけ板が返す（二重に返さない）。保持者がいなければ比較1つで抜ける。
             int hret358 = 0;
+            bool full359 = false;
             if (_hibiRetLive && source is not null && source.TeamId != target.TeamId && !burnTick && !InReaction
                 && target.RawCounter(ShardGiftTrait.Key) is int hk358 and > 0)
             {
                 hret358 = Math.Min(soak, hk358);
-                _hretAmt358 += hret358;
+                // 第359期（HB-f）: 欠片が1でも割れたら、割れた量ではなく一撃の全量（破片で止める前の量）を返す。保持者がいなければ比較1つで抜ける。
+                full359 = _hibiFullLive && hret358 > 0;
+                _hretAmt358 += full359 ? amount : hret358;
                 _hretFrom358 = source;
+                if (full359) { UnitTally ft = TallyOf(_hibiRet!); ft.Sh359Full++; ft.Sh359FullExtra += amount - hret358; }
             }
             // 第358期（GR-r）: 味方の破片が敵の一撃で割れた量を、同じ陣営の生きている礫の保持者が拾う。保持者がいなければ比較1つで抜ける。
             if (_pebbleHolders.Count > 0 && source is not null && source.TeamId != target.TeamId && !burnTick)
@@ -14152,7 +14157,9 @@ public sealed class BattleContext
                     if (g358.IsAlive && g358.TeamId == target.TeamId) PebbleTrait.Gather(this, g358, target, soak);
             if (HarmCensus && source is not null && source.TeamId != target.TeamId && !burnTick) TallyOf(target).Sh358ArmorBroken += soak;   // 第358期（計数のみ・敵の一撃で割れた破片・受け手の側）
             // 第208期: 撃ち返す板（`PlankRebound`）。印は破片が 0 になると消えるので、減らす前に読む。
-            if (_reboundLive && soak > hret358 && source is not null && source.TeamId != target.TeamId && !burnTick && !InReaction
+            // 第359期（HB-f）: 全量の返しが出た一撃では板は返さない（全量は欠片 ＋ 板の分を含むので、足すと一撃の全量を超える）。
+            if (full359 && _reboundLive && (target.RawCounter(StatusKeys.Plank) & PlankTrait.Rebound) != 0 && soak > hret358) TallyOf(_hibiRet!).Sh359FullPlankSkipped++;
+            if (_reboundLive && !full359 && soak > hret358 && source is not null && source.TeamId != target.TeamId && !burnTick && !InReaction
                 && (target.RawCounter(StatusKeys.Plank) & PlankTrait.Rebound) != 0)
             {
                 soak -= hret358;   // 第358期: 返しの欠片の分は板では返さない（下で戻す）
@@ -17583,6 +17590,8 @@ public sealed class BattleContext
     /// <summary>第358期: 返しの破片（<see cref="TraitId.ShardGift"/>）の保持者が盤上にいるか ／ 最初の保持者（返しの撃破者）。</summary>
     bool _hibiRetLive;
     UnitState? _hibiRet;
+    /// <summary>第359期: 全量を返す（<see cref="TraitId.ShardFull"/>・HB-f）の保持者が盤上にいるか。</summary>
+    bool _hibiFullLive;
     /// <summary>第358期: 1回の <c>ApplyDamage</c> の枠で返しの欠片が割れた量と一撃の主（入れ子の呼び出しは退避・復帰する）。</summary>
     int _hretAmt358;
     UnitState? _hretFrom358;

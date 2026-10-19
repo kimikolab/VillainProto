@@ -100,7 +100,7 @@ static class GustDiag
             back1: basa, back3: Fill("pa"))),
 
         ("ササ同席", Formation.Build(
-            front1: UnitCatalog.Sasa, front3: UnitCatalog.Gare, center: UnitCatalog.Borg,
+            front1: UnitCatalog.Sasa, front3: UnitCatalog.GareH358, center: UnitCatalog.Borg,
             back1: basa, back3: Fill("pa"))),
 
         ("手番市場（据え）", Formation.Build(

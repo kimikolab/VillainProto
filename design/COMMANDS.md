@@ -1276,7 +1276,15 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sh358 axes              # 第358期 §6 の 4: 軸の横並び（第348期 §3）の破片の行 × 版と、物差しごとの順位（9 秒）
     dotnet run --project BattleSim -c Release 0 sh358 compare [版,…]    # 第358期 §6 の 5: `compare` 64 行 × 版（seed 0..199・17 秒）
     dotnet run --project BattleSim -c Release 0 sh358 log <版> <台> <波> [seed]   # 第358期: 1戦のログ（台 gare ／ uro ／ wall ／ 並びの名前「ドルガ・ササ・ゴルム・ヒビ・ガレ」・版 base ／ hb ／ gr ／ hbgr）
-    dotnet run --project BattleSim -c Release 0 sh358 check             # 第358期 自己検査（版の定義・HB-r ／ GR-r を盤面を直に組んで・ツギの板と二重に返さない・台の上の帳簿・verbose・試遊の台・PickOne）
+    dotnet run --project BattleSim -c Release 0 sh358 check             # 第358期 自己検査（版の定義・HB-r ／ GR-r を盤面を直に組んで・ツギの板と二重に返さない・台の上の帳簿・verbose・試遊の台・PickOne）。第359期: 「規定」の列と HB-r の版はガレを `GareH358` に固定・第358期の「版・」の台は器具の中に固定
+    dotnet run --project BattleSim -c Release 0 sh359 p0                # 第359期 §3 Phase 0: 段0 入りの規定の上で HB-r のヒビが受けたダメージ（範囲 ／ 単体 ／ ほか・ターンごとの累計・倒れた T）・脆弱なしで T5 に立つ HP（机上）・開戦の配りで勇者の T1 を何本で受けるか（1 秒）
+    dotnet run --project BattleSim -c Release 0 sh359 seats             # 第359期 §5: ヒビ ／ ガレ ＋ 7枚（ウロ ／ ツギ ／ ササ ／ ガルド ／ ドルガ ／ ゴルム ／ ネル）から3枚 × 席の全並び ＝ 4,200 並び × 規定 ／ HB-s ／ HB-f × ボス（seed 0..4）／ 近衛 ／ 大隊（seed 0..19）（44 秒）
+    dotnet run --project BattleSim -c Release 0 sh359 flow [版,…]       # 第359期 §7 の 1・2: ヒビの生存と配り（倒れた T ／ 最初に倒れる駒）／ 返しと礫 ／ ボスの1ターンの与ダメ（返し ／ 礫 ／ 板 ／ ほか）と回復 × 版（base ／ hbr ／ hbs ／ hbf）・代表台 6 × ボス ／ 大隊
+    dotnet run --project BattleSim -c Release 0 sh359 boards [版,…]     # 第359期 §7 の 3・6: 代表台 6 × 11 波 × 版・seed 0..99・壊れの兆し（返しで削った量が名目の 5 倍を超える台を含む）
+    dotnet run --project BattleSim -c Release 0 sh359 axes              # 第359期 §7 の 4: 軸の横並び（第348期 §3）の破片の行 × 版と、物差しごとの順位
+    dotnet run --project BattleSim -c Release 0 sh359 compare [版,…]    # 第359期 §7 の 5: `compare` 64 行 × 版（seed 0..199）＋ 段0 の前（`Pin358`）とのセルの差
+    dotnet run --project BattleSim -c Release 0 sh359 log <版> <台> <波> [seed]   # 第359期: 1戦のログ（台 gare ／ uro ／ a ／ b ／ 並びの名前「ササ・ゴルム・ドルガ・ガレ・ヒビ」・版 base ／ hbr ／ hbs ／ hbf）
+    dotnet run --project BattleSim -c Release 0 sh359 check             # 第359期 自己検査（段0 のガレ・版の定義・HB-s ／ HB-f を盤面を直に組んで・ツギの板と全量の返し・ツギの宛先・verbose・試遊の台・PickOne）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

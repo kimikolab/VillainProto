@@ -120,7 +120,7 @@ static class Tumult2Diag
 
         // ササ ＋ ガレ。**混乱は敵→敵なのでササの供給には化けないはず**（予測6）。
         ("ササ同席", Formation.Build(
-            front1: UnitCatalog.Sasa, front3: UnitCatalog.Gare, center: UnitCatalog.Borg,
+            front1: UnitCatalog.Sasa, front3: UnitCatalog.GareH358, center: UnitCatalog.Borg,
             back1: basa, back3: Fill("pa"))),
 
         // **手番市場**（この期に足した台）。据え（バン・そのターンの被ダメ −50%）が

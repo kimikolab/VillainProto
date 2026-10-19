@@ -610,7 +610,7 @@ static class ShardDiag
         Traits = Array.Empty<TraitId>()
     };
 
-    static readonly UnitDef GarePlain = Plain(UnitCatalog.Gare);
+    static readonly UnitDef GarePlain = Plain(UnitCatalog.GareH358);
 
     /// <summary>
     /// 段4 のローカル台（指示書 §4-2）。<b>V0 は「同じ台のガレを素体に落とした版」</b>
@@ -643,7 +643,7 @@ static class ShardDiag
     {
         Formation Rig(UnitDef center, UnitDef back1) => Formation.Build(
             front1: _fillers[0], front3: _fillers[1],
-            center: center, back1: back1, back3: UnitCatalog.Gare);
+            center: center, back1: back1, back3: UnitCatalog.GareH358);
 
         return new (string, Formation)[]
         {
@@ -795,7 +795,7 @@ static class ShardDiag
         Console.WriteLine();
         Console.WriteLine("| 台 | 発火/戦 | 捨て/戦 | 発火率 | **1回に砕ける量** | 破片由来/発火 | 攻撃力由来 | 条件1 を満たす最小 M |");
         Console.WriteLine("|---|---:|---:|---:|---:|---:|---:|---:|");
-        int atk = UnitCatalog.Gare.Attack;
+        int atk = UnitCatalog.GareH358.Attack;
         foreach ((string name, Formation f) in GareRigs())
         {
             GLed L = RunGare(f, ShrapnelRule.Default);
@@ -849,7 +849,7 @@ static class ShardDiag
                 GLed L = RunGare(f, new ShrapnelRule(m, 100, false));
                 double nominal = Per(L.Dealt, L.Battles), actual = Per(L.GareDealt, L.Battles);
                 double shardPart = L.Fires == 0 ? 0 : L.Shards / (double)L.Fires * m;
-                double atkPart = UnitCatalog.Gare.Attack;
+                double atkPart = UnitCatalog.GareH358.Attack;
                 Console.WriteLine($"| V1 M={m} | {W(L.Win)} | {Avg25(L.Win):F1} | {Avg25(L.Win) - Avg25(v0.Win):+0.0;-0.0;0.0} | "
                     + $"{Per(L.Fires, L.Battles):F2} | {Per(L.Idles, L.Battles):F2} | {Per(L.Shards, L.Battles):F1} | "
                     + $"{nominal:F1} | {actual:F1} | {(nominal <= 0 ? 0 : actual * 100.0 / nominal):F1}% | "
@@ -937,7 +937,7 @@ static class ShardDiag
         // (G-b) 札が正しく解決されること
         Console.WriteLine("## (G-b) —— 札と行動の形");
         Console.WriteLine();
-        UnitDef g = UnitCatalog.Gare;
+        UnitDef g = UnitCatalog.GareH358;
         Console.WriteLine($"- `Traits` ＝ {string.Join(" / ", g.Traits ?? Array.Empty<TraitId>())}");
         Console.WriteLine($"- `Actions` ＝ {(g.Actions is null ? "なし" : string.Join(" / ", g.Actions.Select(x => x.Kind.ToString())))}"
             + $"（**`[Skill]` 1要素であること**: {(g.Actions is { Count: 1 } && g.Actions[0].Kind == ActionKind.Skill ? "○" : "**×**")}）");

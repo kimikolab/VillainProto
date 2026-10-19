@@ -250,7 +250,7 @@ public sealed class UnitState
     {
         get => _traits;
         init { _traits = value; ControlProof = value.Any(t => t.BlocksControl); ControlTaxed = value.Any(t => t.TaxesControl); FlowWatch = value.Any(t => t.Id == TraitId.Grapple);
-              ArmorBare = value.Any(t => t.Id == TraitId.ShardBare);
+              ArmorBare = value.Any(t => t.Id is TraitId.ShardBare or TraitId.ShardBareNoPlank); PlankSkip = value.Any(t => t.Id == TraitId.ShardBareNoPlank);
               FlowMode = value.Any(t => t.Id == TraitId.ThreadFlowAll) ? 3 : value.Any(t => t.Id == TraitId.ThreadFlowMove) ? 2 : value.Any(t => t.Id == TraitId.ThreadFlowCopy) ? 1 : 0; }
     }
     private readonly IReadOnlyList<Trait> _traits = Array.Empty<Trait>();
@@ -263,6 +263,9 @@ public sealed class UnitState
 
     /// <summary>第358期: 破片を纏えない駒か（<see cref="TraitId.ShardBare"/>・HB-r のヒビ）。<see cref="SetCounter"/> の入口で破片の増えた分を捨てる。保持者でなければ bool の比較1つで抜ける。</summary>
     public bool ArmorBare { get; private init; }
+
+    /// <summary>第359期: ツギの手番の板の宛先から外れる駒か（<see cref="TraitId.ShardBareNoPlank"/>・HB-s ／ HB-f のヒビ）。</summary>
+    public bool PlankSkip { get; private init; }
 
     /// <summary>第266期: 手番を奪う状態が上がったことを知らせる札（<see cref="Trait.TaxesControl"/>・不屈）を持つ駒か。<see cref="SetCounter"/> の熱い経路は保持者がいなければ bool 1つで抜ける。</summary>
     public bool ControlTaxed { get; private init; }
@@ -2419,6 +2422,8 @@ public sealed class UnitTally
     public long Sh358Gifts, Sh358Given, Sh358Returns, Sh358ReturnNominal, Sh358ReturnDealt, Sh358ReturnKills, Sh358ReturnWasted, Sh358ReturnAfterDeath, Sh358ReturnInFrame,
                 Sh358ReturnYokeHits, Sh358ReturnYokeCut, Sh358Refused,
                 Sh358Picked, Sh358PickedSelf, Sh358Throws, Sh358Thrown, Sh358ThrowNominal, Sh358ThrowDealt, Sh358ThrowYokeHits, Sh358ThrowYokeCut, Sh358ArmorBroken;
+    /// <summary>第359期（<b>計数のみ</b>・ヒビの版）: 開戦の配りの回数 ／ 量・全量の返しが出た一撃の数 ／ 割れた量を超えて返した分（全量 − 割れた欠片）・全量の返しで板を返さなかった一撃。誰も読んで分岐しない。</summary>
+    public long Sh359OpenGifts, Sh359OpenGiven, Sh359Full, Sh359FullExtra, Sh359FullPlankSkipped;
     public long Rp345NormalDealt, Rp345Punches, Rp345PunchBack, Rp345PunchKills, Rp345PunchDealt, Rp345PunchAmount, Rp345AimEdible, Rp345GrabNoPunch, Rp345GrabAfter, Ga345Stomps, Ga345SplashHits, Ga345SplashDealt;
     public long[]? Fg339Spray, Fg339AllyHits, Fg339AllyDmg;
     /// <summary>第339期（計数のみ）: 乱射の1発をターンごとに数える（羽の乱射 ／ 乱射の札の両方）。</summary>
@@ -3693,6 +3698,7 @@ public sealed class UnitTally
         Sh358ReturnYokeHits += o.Sh358ReturnYokeHits; Sh358ReturnYokeCut += o.Sh358ReturnYokeCut; Sh358Refused += o.Sh358Refused;
         Sh358Picked += o.Sh358Picked; Sh358PickedSelf += o.Sh358PickedSelf; Sh358Throws += o.Sh358Throws; Sh358Thrown += o.Sh358Thrown; Sh358ThrowNominal += o.Sh358ThrowNominal;
         Sh358ThrowDealt += o.Sh358ThrowDealt; Sh358ThrowYokeHits += o.Sh358ThrowYokeHits; Sh358ThrowYokeCut += o.Sh358ThrowYokeCut; Sh358ArmorBroken += o.Sh358ArmorBroken;
+        Sh359OpenGifts += o.Sh359OpenGifts; Sh359OpenGiven += o.Sh359OpenGiven; Sh359Full += o.Sh359Full; Sh359FullExtra += o.Sh359FullExtra; Sh359FullPlankSkipped += o.Sh359FullPlankSkipped;   // 第359期
         Db354CurseRage += o.Db354CurseRage; Db354PickedMudo += o.Db354PickedMudo; Db354FedMudo += o.Db354FedMudo; Db354BurstYokeCut += o.Db354BurstYokeCut; Db354BurstYokeLost += o.Db354BurstYokeLost;   // 第354期
         Db353PlunderGain += o.Db353PlunderGain; Db353PlunderHits += o.Db353PlunderHits; Db353PlunderDry += o.Db353PlunderDry; Db353PlunderMiss += o.Db353PlunderMiss; Db353PlunderBoss += o.Db353PlunderBoss;   // 第353期
         Fg339Spray = AddArr(Fg339Spray, o.Fg339Spray); Fg339AllyHits = AddArr(Fg339AllyHits, o.Fg339AllyHits); Fg339AllyDmg = AddArr(Fg339AllyDmg, o.Fg339AllyDmg);

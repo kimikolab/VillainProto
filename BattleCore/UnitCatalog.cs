@@ -3456,8 +3456,9 @@ public static class UnitCatalog
     /// <para><b><c>Advances = false</c>。</b> 第131期の基準の (a)——
     /// <c>Actions</c> が <c>[Skill]</c> 1要素なので<b>一度も通常攻撃をしない</b>
     /// （ノノ・ミオ・ヒヨ・トモと同じ）。</para>
+    /// <para><b>第359期: 第139〜358期の規定（砕いて撒く）は <see cref="GareH358"/> の名前で残した</b>（定義は1文字も変えていない）。規定の <see cref="Gare"/> は第358期の GR-r（礫を拾って投げる）で、すぐ下に作った。</para>
     /// </summary>
-    public static readonly UnitDef Gare = new()
+    public static readonly UnitDef GareH358 = new()
     {
         Id = "gare",
         Name = "礫のガレ",
@@ -3473,6 +3474,21 @@ public static class UnitCatalog
         PlusText = "盤面で最も破片を纏っている1体を砕き、砕いた量と自分の攻撃力ぶん、敵全体を撃つ",
         MinusText = "砕かれた駒は、砕かれた量と同じダメージを受ける / 砕ける破片が無いターンは何もできない",
         Flavor = "守りを剥がして弾にする。味方の装備が次々に無くなるので部隊から追い出された。"
+    };
+
+    /// <summary>
+    /// 礫のガレ（第359期の規定 ＝ 第358期の GR-r・礫を拾って投げる）。味方（自分を含む）の破片が敵の一撃で割れた量を礫として溜め、
+    /// 手番（術）で全部使って 礫 × 3 ＋ 攻撃力 を敵全体へ撃つ（<see cref="TraitId.PebbleGather"/>）。味方の破片は砕かない。礫が無い手番は何もできない。
+    /// 数値（HP62 ／ 攻9 ／ 速6）・Id ・文面は <see cref="GareGRr"/> と同じ。旧は <see cref="GareH358"/>。
+    /// </summary>
+    public static readonly UnitDef Gare = new()
+    {
+        Id = GareH358.Id, Name = GareH358.Name, MaxHp = GareH358.MaxHp, Attack = GareH358.Attack, Speed = GareH358.Speed, Advances = false,
+        Traits = new[] { TraitId.PebbleGather },
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "礫を拾い集めている") },
+        PlusText = "仲間の欠片が割れるたび、散った礫を拾い集める。手番で、拾った礫を敵全体へ投げつける（礫の量と自分の攻撃力ぶん）",
+        MinusText = "拾う礫が無いターンは何もできない",
+        Flavor = GareH358.Flavor,
     };
 
     /// <summary>
@@ -6562,14 +6578,41 @@ public static class UnitCatalog
 
     /// <summary>第358期 GR-r 礫を拾って投げる: 味方（自分を含む）の破片が敵の一撃で割れた量を礫として溜め、手番（術）で全部使って 礫 × 3 ＋ 攻撃力 を敵全体へ撃つ。
     /// 味方の破片は砕かない。礫が無い手番は何もできない。</summary>
+    // ---------------------------------------------------------------------------------
+    // 第359期【軽い期】ヒビの作り直し（指示書 design/PHASE359_SHARD_HIBI_SPEC.md §4）。版はヒビの写し（Id ・攻撃力 ・速さは同じ・規定の上）。保持者 0 枚。
+    // ---------------------------------------------------------------------------------
+    /// <summary>第359期 HB-s ／ HB-f のヒビの HP（Phase 0 の机上: 脆弱なしで勇者の全体攻撃 23 ＋ 34 ＋ 45 ＋ 56 ＝ 158 を受けて T5 の頭に立っている値・design/PHASE359_SHARD_HIBI.md §1）。</summary>
+    public const int HibiSturdyHp = 160;
+    /// <summary>第359期 HB-s 倒れないヒビ: 脆弱を外し HP を <see cref="HibiSturdyHp"/> に・開戦にも配る（<see cref="TraitId.ShardOpen"/>）・纏えない ＋ ツギの板も来ない（<see cref="TraitId.ShardBareNoPlank"/>）。返す量は割れた量のまま。</summary>
+    public static readonly UnitDef HibiHBs = new()
+    {
+        Id = Hibi.Id, Name = Hibi.Name, MaxHp = HibiSturdyHp, Attack = Hibi.Attack, Speed = Hibi.Speed, Advances = false,
+        Traits = new[] { TraitId.ShardGift, TraitId.ShardOpen, TraitId.ShardBareNoPlank },
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "砕けた盾の欠片を配っている") },
+        PlusText = "戦の初めと手番で、砕けた盾の欠片を味方に配る（自分以外の全員に破片 6）。欠片で受け止めた一撃は、その主へ跳ね返る",
+        MinusText = "自分の盾はもう割れている——自分は欠片を纏えない（板も付かない）",
+        Flavor = Hibi.Flavor,
+    };
+    /// <summary>第359期 HB-f 全量を返す: HB-s ＋ <see cref="TraitId.ShardFull"/>（欠片が1でも割れたら一撃の全量を返す）。</summary>
+    public static readonly UnitDef HibiHBf = new()
+    {
+        Id = Hibi.Id, Name = Hibi.Name, MaxHp = HibiSturdyHp, Attack = Hibi.Attack, Speed = Hibi.Speed, Advances = false,
+        Traits = new[] { TraitId.ShardGift, TraitId.ShardOpen, TraitId.ShardBareNoPlank, TraitId.ShardFull },
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "砕けた盾の欠片を配っている") },
+        PlusText = "戦の初めと手番で、砕けた盾の欠片を味方に配る（自分以外の全員に破片 6）。欠片で受け止めた一撃は、丸ごとその主へ跳ね返る",
+        MinusText = "自分の盾はもう割れている——自分は欠片を纏えない（板も付かない）",
+        Flavor = Hibi.Flavor,
+    };
+
+    // 第359期: 規定のガレが GR-r になったので、版は旧（`GareH358`）から作る（中身は規定と同じ札・文面・残置）。
     public static readonly UnitDef GareGRr = new()
     {
-        Id = Gare.Id, Name = Gare.Name, MaxHp = Gare.MaxHp, Attack = Gare.Attack, Speed = Gare.Speed, Advances = false,
+        Id = GareH358.Id, Name = GareH358.Name, MaxHp = GareH358.MaxHp, Attack = GareH358.Attack, Speed = GareH358.Speed, Advances = false,
         Traits = new[] { TraitId.PebbleGather },
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "礫を拾い集めている") },
         PlusText = "仲間の欠片が割れるたび、散った礫を拾い集める。手番で、拾った礫を敵全体へ投げつける（礫の量と自分の攻撃力ぶん）",
         MinusText = "拾う礫が無いターンは何もできない",
-        Flavor = Gare.Flavor,
+        Flavor = GareH358.Flavor,
     };
 }
 

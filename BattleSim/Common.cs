@@ -643,7 +643,19 @@ public static Formation Pin354(Formation f)
 /// 第356期: 規定のネル（N-100・呪われた傷は癒えない）を第189〜355期の規定（`NelH355`）に替える。ほかの駒はそのまま返す。
 /// 古い口の終端の `PinM354` の後ろに置いた（`PinB349` ／ `Pin349` ／ `Pin351` ／ `Pin353` ／ `Pin354` を通る器具はネルも旧になる）。
 /// </summary>
-public static UnitDef PinN355(UnitDef d) => ReferenceEquals(d, UnitCatalog.Nel) ? UnitCatalog.NelH355 : d;
+public static UnitDef PinN355(UnitDef d) => ReferenceEquals(d, UnitCatalog.Nel) ? UnitCatalog.NelH355 : PinR358(d);   // 第359期: 規定のガレも（古い口の終端）
+
+/// <summary>第359期: 規定のガレ（GR-r・礫を拾って投げる）を第139〜358期の規定（`GareH358`・砕いて撒く）に替える。ほかの駒はそのまま返す。
+/// 古い口の終端の `PinN355` の後ろに置いた（`PinB349` ／ `Pin349` ／ `Pin351` ／ `Pin353` ／ `Pin354` ／ `Pin355` を通る器具はガレも旧になる）。</summary>
+public static UnitDef PinR358(UnitDef d) => ReferenceEquals(d, UnitCatalog.Gare) ? UnitCatalog.GareH358 : d;
+
+/// <summary>第359期: ガレの GR-r を規定にした。第358期までの規定のガレで測った器具はこれを通す。陣形とレリックは保つ。</summary>
+public static Formation Pin358(Formation f)
+{
+    var g = f.Clone();
+    foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinR358(d);
+    return g;
+}
 
 /// <summary>第356期: ネルの N-100 を規定にした。第355期までの規定のネルで測った器具はこれを通す。陣形とレリックは保つ。</summary>
 public static Formation Pin355(Formation f)

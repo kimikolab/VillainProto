@@ -64,8 +64,8 @@ static partial class Sh358Diag
     internal sealed record Ver(string Name, string Ascii, UnitDef Hibi, UnitDef Gare);
     internal static readonly Ver[] Vers =
     {
-        new("規定", "base", UnitCatalog.Hibi, UnitCatalog.Gare),
-        new("HB-r 返しの破片", "hb", UnitCatalog.HibiHBr, UnitCatalog.Gare),
+        new("規定", "base", UnitCatalog.Hibi, UnitCatalog.GareH358),             // 第359期: 規定のガレが GR-r になったので、第358期の「規定」は旧の定義に固定
+        new("HB-r 返しの破片", "hb", UnitCatalog.HibiHBr, UnitCatalog.GareH358),
         new("GR-r 礫を拾う", "gr", UnitCatalog.Hibi, UnitCatalog.GareGRr),
         new("HB-r ＋ GR-r", "hbgr", UnitCatalog.HibiHBr, UnitCatalog.GareGRr),
     };
@@ -73,7 +73,7 @@ static partial class Sh358Diag
     static Ver[] Pick(string only) => (string.IsNullOrEmpty(only) ? Vers : new[] { Vers[0] }.Concat(only.Split(',').Select(V).Where(v => v != Vers[0]))).ToArray();
     internal static Formation Apply(Formation f, Ver v) => S316.SwapId(S316.SwapId(f, "hibi", v.Hibi), "gare", v.Gare);
     static bool Has(Formation f, string id) => f.Occupied().Any(o => o.Def.Id == id);
-    static bool Touches(Formation f, Ver v) => (v.Hibi != UnitCatalog.Hibi && Has(f, "hibi")) || (v.Gare != UnitCatalog.Gare && Has(f, "gare"));
+    static bool Touches(Formation f, Ver v) => (v.Hibi != UnitCatalog.Hibi && Has(f, "hibi")) || (v.Gare != UnitCatalog.GareH358 && Has(f, "gare"));
 
     // ---------------------------------------------------------------------------------
     // 台
@@ -264,7 +264,7 @@ static partial class Sh358Diag
         Console.WriteLine();
         foreach (var b in boards) Console.WriteLine($"- {b.Name}: {Seats(b.F)}");
         Console.WriteLine();
-        var res = boards.SelectMany(b => P0Waves.Select(w => (b, w))).ToDictionary(x => (x.b.Name, x.w.Name), x => Measure(x.b.F, x.w));
+        var res = boards.SelectMany(b => P0Waves.Select(w => (b, w))).ToDictionary(x => (x.b.Name, x.w.Name), x => Measure(Apply(x.b.F, Vers[0]), x.w));   // 第359期: ガレは第358期の規定に固定
         Console.WriteLine("## 1〜3. 破片の流れ ／ ツギの板の返し ／ ヒビの砕け（台 × 波）");
         Console.WriteLine();
         foreach (var b in boards) foreach (var w in P0Waves) PrintFlow($"{b.Name} × {w.Name}", res[(b.Name, w.Name)]);

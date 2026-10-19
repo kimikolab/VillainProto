@@ -89,7 +89,7 @@ static class ConfuseDiag
         // ササ（身構え・上限7で切って切り落としを破片へ）＋ ガレ（礫・破片を出口へ）。
         // **混乱の一撃が供給に化けるか**（指示書 §3 予測2）。
         ("ササ同席", Formation.Build(
-            front1: UnitCatalog.Sasa, front3: UnitCatalog.Gare, center: UnitCatalog.Borg,
+            front1: UnitCatalog.Sasa, front3: UnitCatalog.GareH358, center: UnitCatalog.Borg,
             back1: UnitCatalog.Basa, back3: Fill("pa"))),
 
         // 動かす機構なし（陰性対照）。**台2 のバサを同数値・特性なしの素体に落としただけ**
