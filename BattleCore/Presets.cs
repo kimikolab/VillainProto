@@ -946,10 +946,19 @@ public static class Presets
         // 第361期: 第360期の「版・」の3台（SS-k ／ SS-w ／ SS-w 呪い）は外した（SS-w を規定にした・並びは `sh360` の中に固定）。
         // 第361期: 破片軸の試遊の台（ツギなし）。`sh361 seats` で規定（SS-w）・SS-s ・SS-n のどれでも「勇者に勝ち、精鋭もどちらも 90% 以上」の1位だった並び
         // （前1 ネル ／ 前3 ササ ／ 中央 ソム ／ 後1 ヒビ ／ 後3 ガレ）。規定の駒のまま残す試遊の台。版の2台は同じ並びでササだけ版。採否はポン。
+        // 第362期: 規定のササを SS-n にした。「試遊・破片」は規定の駒のまま（ササは SS-n になった）。第361期の「版・」の2台（SS-s ／ SS-n）は外した（並びは `sh361` の中に固定）。
         ("試遊・破片", ShardPlay(UnitCatalog.Sasa)),
-        ("版・SS-s 破片", ShardPlay(UnitCatalog.SasaSSs)),
-        ("版・SS-n 破片", ShardPlay(UnitCatalog.SasaSSn)),
+        // 第362期: 自傷軸（カドの二段構え）の版の台。`sh362 seats` の KD-r の総当たりから（勇者に勝つ並び ／ 両立はどの版でも 0）。
+        // KD-r の精鋭の最良はリリを含む並び（＝ リリを含む最良）だったので、KD-t ／ KD-r の2台はリリを含まない最良（前1 ドハ ／ 前3 カド ／ 中央 ミサ ／ 後1 アカ ／ 後3 ヒサ）、
+        // 「リリ」の台はリリを含む最良（前1 ミサ ／ 前3 カド ／ 中央 ヒサ ／ 後1 アカ ／ 後3 リリ）。採否はポン。
+        ("版・KD-t 自傷", SelfHarmPlay(UnitCatalog.KadoKDt)),
+        ("版・KD-r 自傷", SelfHarmPlay(UnitCatalog.KadoKDr)),
+        ("版・KD-r 自傷 リリ", Formation.Build(front1: UnitCatalog.Tome, front3: UnitCatalog.KadoKDr, center: UnitCatalog.Hisa, back1: UnitCatalog.Susu, back3: UnitCatalog.Lili)),
     };
+
+    /// <summary>第362期: 自傷軸の版の台（リリを含まない最良・前1 ドハ ／ 前3 カド ／ 中央 ミサ ／ 後1 アカ ／ 後3 ヒサ）。カドを差し替えて版の台を作る。</summary>
+    public static Formation SelfHarmPlay(UnitDef kado) =>
+        Formation.Build(front1: UnitCatalog.Doha, front3: kado, center: UnitCatalog.Tome, back1: UnitCatalog.Susu, back3: UnitCatalog.Hisa);
 
     /// <summary>第361期: 「試遊・破片」の並び（前1 ネル ／ 前3 ササ ／ 中央 ソム ／ 後1 ヒビ ／ 後3 ガレ）。ササを差し替えて版の台を作る。</summary>
     public static Formation ShardPlay(UnitDef sasa) =>

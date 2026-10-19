@@ -79,7 +79,7 @@ static partial class Sh361Diag
         Console.WriteLine($"所要 {sw.Elapsed.TotalSeconds:F0} 秒。");
     }
     /// <summary>`sh360` の母集団はササを旧（`SasaH360`）で組むので、規定のササ（SS-w）に戻す（版は <see cref="Apply"/> で替える）。</summary>
-    static Formation PinSasaNow(Formation f) => S316.SwapId(f, "sasa", UnitCatalog.Sasa);
+    static Formation PinSasaNow(Formation f) => S316.SwapId(f, "sasa", UnitCatalog.SasaH361);
 
     static void FlowAll(Ver[] vers)
     {

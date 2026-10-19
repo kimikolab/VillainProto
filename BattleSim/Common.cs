@@ -655,7 +655,18 @@ public static UnitDef PinHB359(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hibi
 
 /// <summary>第361期: 規定のササ（SS-w・構えを解かない ＋ 両隣へ）を第143〜360期の規定（`SasaH360`）に替える。ほかの駒はそのまま返す。
 /// 古い口の終端の `PinHB359` の後ろに置いた（`Pin349` 〜 `Pin359` を通る器具はササも旧になる）。</summary>
-public static UnitDef PinSa360(UnitDef d) => ReferenceEquals(d, UnitCatalog.Sasa) ? UnitCatalog.SasaH360 : d;
+public static UnitDef PinSa360(UnitDef d) => ReferenceEquals(d, UnitCatalog.Sasa) || ReferenceEquals(d, UnitCatalog.SasaH361) ? UnitCatalog.SasaH360 : PinSa361(d);   // 第362期: 第361期の規定（`SasaH361`）も旧へ・古い口の終端に `PinSa361`
+
+/// <summary>第362期: 規定のササ（SS-n・遠くへ）を第361期の規定（`SasaH361`・SS-w）に替える。ほかの駒はそのまま返す。古い口の終端（`PinSa360`）の後ろに置いた。</summary>
+public static UnitDef PinSa361(UnitDef d) => ReferenceEquals(d, UnitCatalog.Sasa) ? UnitCatalog.SasaH361 : d;
+
+/// <summary>第362期: ササの SS-n を規定にした。第361期の規定のササで測った器具はこれを通す。陣形とレリックは保つ。</summary>
+public static Formation Pin361(Formation f)
+{
+    var g = f.Clone();
+    foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinSa361(d);
+    return g;
+}
 
 /// <summary>第361期: ササの SS-w を規定にした。第360期までの規定のササで測った器具はこれを通す。陣形とレリックは保つ。</summary>
 public static Formation Pin360(Formation f)

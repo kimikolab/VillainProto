@@ -1301,6 +1301,14 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sh361 compare [版,…]    # 第361期 §6 の 4: `compare` 64 行 × 版 ＋ 段0 の前（`Pin360`）とのセルの差（17 秒）
     dotnet run --project BattleSim -c Release 0 sh361 log <版> <台> <波> [seed]   # 第361期: 1戦のログ（台 c ／ f ／ g ／ 並びの名前・版 base ／ sss ／ ssn）
     dotnet run --project BattleSim -c Release 0 sh361 check             # 第361期 自己検査（段0 のササ・SS-s の散る ／ 読み手が拾う ／ 読み手なしで消える ／ 返しを起こさない・SS-n の遠くへ ／ 隣がいれば今どおり・verbose・試遊の台・PickOne）
+    dotnet run --project BattleSim -c Release 0 sh362 p0                # 第362期 Phase 0: 自傷の流れ（味方が味方に与えた傷の書き手 ／ 読み手・compare 64 行 ＋ 試遊の台 × 本編5 ／ 近衛 ／ ボス・seed 0..19）・カドの診断（カドの行 10 × ボス ／ 近衛 ／ 大隊・素体との差）・勇者戦の傷の推移（数秒）
+    dotnet run --project BattleSim -c Release 0 sh362 seats             # 第362期 §5: カド ／ アカ ＋ リィカ・ミサ・グザ・ボルグ・ヒサ・ドハ・ムド・リリから3枚（56 組）× 120 ＝ 6,720 並び × 規定 ／ KD-t ／ KD-r・リリなし ／ あり・両立・カドの席・剥いた T
+    dotnet run --project BattleSim -c Release 0 sh362 flow [版,…]       # 第362期 §7 の 1・2: カドの一撃（反撃 ／ 殴りかかりの回数と1回の量・剥いた T・倒れた T）× 版・ボスの1ターンの与ダメ（カド ／ アカ ／ ほか）と勇者の回復・カドの傷
+    dotnet run --project BattleSim -c Release 0 sh362 boards [版,…]     # 第362期 §7 の 3・6: 代表台 4 × 11 波 × 版（base ／ kdt ／ kdr）・打ち切り %・壊れの兆し
+    dotnet run --project BattleSim -c Release 0 sh362 axes              # 第362期 §7 の 4: 軸の横並び（第348期 §3 の物差し・`inv348` の台から「反撃」を除いた軸 ＋ 自傷（カド）の行 × 版）
+    dotnet run --project BattleSim -c Release 0 sh362 compare [版,…]    # 第362期 §7 の 5: `compare` 64 行 × 版 ＋ 段0 の前（`Pin361`）とのセルの差
+    dotnet run --project BattleSim -c Release 0 sh362 log <版> <台> <波> [seed]   # 第362期: 1戦のログ（台 ＝ 並びの名前「リィカ・ミサ・カド・アカ・ボルグ」か compare の行名の頭・版 base ／ kdt ／ kdr）
+    dotnet run --project BattleSim -c Release 0 sh362 check             # 第362期 自己検査（段0 のササ（遠くへ ／ 旧は消える）・KD-t の重さ（傷 ／ 傷 0 ／ 削られた最大HP）・KD-r（剥く前 ／ 5割の境 ／ 次の手番から殴る ／ 最も手強い敵 ／ 巻き込み ／ 戻らない ／ 反撃は続く）・verbose・出来事・試遊の台・PickOne）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

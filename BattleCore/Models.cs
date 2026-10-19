@@ -2431,6 +2431,12 @@ public sealed class UnitTally
     public long Sh360HitBraced, Sh360HitBare, Sh360BareOver, Sh360BareOverAmt, Sh360HeldCuts, Sh360WideGiven, Sh360WideTargets, Sh360WideDelivers;
     /// <summary>第361期（<b>計数のみ</b>・ササ）: 散った量 ／ 回数（SS-s）・散った破片を拾った量（読み手の側: 礫 ／ 瓦礫）・遠くへ付けた量 ／ 回数（SS-n）。誰も読んで分岐しない。</summary>
     public long Sh361Scattered, Sh361Scatters, Sh361ScatterPebble, Sh361ScatterScrap, Sh361NearGiven, Sh361NearDelivers;
+    /// <summary>
+    /// 第362期（<b>計数のみ</b>・どの規則も読まない）。棘の反撃の重さの延べ（<c>Sh362RiposteSum</c>・回数は <c>ThornRipostes</c>）／ 巻き込みで伸びた攻撃力の延べ（<c>Sh362ThornGain</c>）／
+    /// KD-r の殴りかかり: 回数 ／ 重さの延べ ／ 主目標に実際に減らした量（<c>Sh362StrikeMain</c>）／ 剥いた回数（会戦なら戦ごと）と最初に剥いたターン（<c>Sh362BareTurn</c>・0 ＝ 剥いていない）。
+    /// </summary>
+    public long Sh362RiposteSum, Sh362ThornGain, Sh362Strikes, Sh362StrikeSum, Sh362StrikeMain, Sh362Bares;
+    public int Sh362BareTurn;
     public long Rp345NormalDealt, Rp345Punches, Rp345PunchBack, Rp345PunchKills, Rp345PunchDealt, Rp345PunchAmount, Rp345AimEdible, Rp345GrabNoPunch, Rp345GrabAfter, Ga345Stomps, Ga345SplashHits, Ga345SplashDealt;
     public long[]? Fg339Spray, Fg339AllyHits, Fg339AllyDmg;
     /// <summary>第339期（計数のみ）: 乱射の1発をターンごとに数える（羽の乱射 ／ 乱射の札の両方）。</summary>
@@ -3711,6 +3717,8 @@ public sealed class UnitTally
         Sh360WideGiven += o.Sh360WideGiven; Sh360WideTargets += o.Sh360WideTargets; Sh360WideDelivers += o.Sh360WideDelivers;
         Sh361Scattered += o.Sh361Scattered; Sh361Scatters += o.Sh361Scatters; Sh361ScatterPebble += o.Sh361ScatterPebble; Sh361ScatterScrap += o.Sh361ScatterScrap;   // 第361期
         Sh361NearGiven += o.Sh361NearGiven; Sh361NearDelivers += o.Sh361NearDelivers;
+        Sh362RiposteSum += o.Sh362RiposteSum; Sh362ThornGain += o.Sh362ThornGain; Sh362Strikes += o.Sh362Strikes; Sh362StrikeSum += o.Sh362StrikeSum; Sh362StrikeMain += o.Sh362StrikeMain; Sh362Bares += o.Sh362Bares;   // 第362期
+        if (Sh362BareTurn == 0) Sh362BareTurn = o.Sh362BareTurn;
         Db354CurseRage += o.Db354CurseRage; Db354PickedMudo += o.Db354PickedMudo; Db354FedMudo += o.Db354FedMudo; Db354BurstYokeCut += o.Db354BurstYokeCut; Db354BurstYokeLost += o.Db354BurstYokeLost;   // 第354期
         Db353PlunderGain += o.Db353PlunderGain; Db353PlunderHits += o.Db353PlunderHits; Db353PlunderDry += o.Db353PlunderDry; Db353PlunderMiss += o.Db353PlunderMiss; Db353PlunderBoss += o.Db353PlunderBoss;   // 第353期
         Fg339Spray = AddArr(Fg339Spray, o.Fg339Spray); Fg339AllyHits = AddArr(Fg339AllyHits, o.Fg339AllyHits); Fg339AllyDmg = AddArr(Fg339AllyDmg, o.Fg339AllyDmg);
@@ -4563,6 +4571,13 @@ public enum BattleEventKind
     /// 投げる: <c>ActorId</c> ＝ ガレ ／ <c>Amount</c> ＝ 1体あたりの威力 ／ <c>Slot</c> ＝ 使った礫。直後に敵全体への <c>Damage</c> が並ぶ。<b>どの規則も読まない。</b>規定のヒビ ／ ガレには出ない。
     /// </summary>
     Shard,
+
+    /// <summary>
+    /// 棘を剥く（第362期・カドの版 KD-r だけ・<b>表示専用</b>）。HP が最大HPの5割を切った瞬間に1度（その戦の間は戻らない）。
+    /// <c>ActorId</c> ＝ <c>TargetId</c> ＝ カド ／ <c>Amount</c> ＝ その時の傷（最大HP − 今のHP）／ <c>HpAfter</c> ＝ 今のHP。
+    /// 以後のカドの手番は術（構え）ではなく攻撃（<c>Attack</c> ＋ 主目標への <c>Damage</c> ＋ 巻き込みの <c>Damage</c>）になる。<b>どの規則も読まない。</b>規定のカドには出ない。
+    /// </summary>
+    ThornsBare,
 }
 /// <summary>`Shard`（第358期）の <c>Text</c>。</summary>
 public static class ShardLabels

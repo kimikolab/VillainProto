@@ -9760,6 +9760,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Numb)) _numbLive = true;     // 第195期（痺れ毒の減少を短絡させる）
         if (u.HasTrait(TraitId.Scrap)) _scrapHolders.Add(u); // 第207期（破片の減りを拾う口を短絡させる）
         if (u.HasTrait(TraitId.Thorns)) _thornsLive = true;
+        if (u.HasTrait(TraitId.ThornsBare)) _thornsBareLive = true;   // 第362期（棘を剥く KD-r・手番の頭と殴りかかりを短絡させる）
         if (u.HasTrait(TraitId.Brace)) _braceLive = true;   // 第213期（計数のみ）
         if (u.HasTrait(TraitId.BraceArmored) || u.HasTrait(TraitId.BraceCapFirst) || u.HasTrait(TraitId.BraceHeldDeliver)) _braceArmoredLive = true;   // 第213期に W1・W2 の札を足した   // 第212期（破片の前の身構え・受け切った一撃の弾き）  // 第211期（破片で受け切った一撃の棘・計数と Y3 の口を短絡させる）
         if (u.HasTrait(TraitId.PlankRebound)) { _reboundLive = true; _reboundTsugi ??= u; }   // 第208期（撃ち返す板）
@@ -12793,6 +12794,9 @@ public sealed class BattleContext
         // 第345期（ゴルムの RP ／ GA の版）: 一発の札を最初に読んで消す（打ち手が違えば触らない）。**保持者がいなければ比較1つで抜ける。**
         int golmBonus = 0; bool golmStomp = false;
         if (_golmHitActor is not null && _golmHitActor == actor) { golmBonus = _golmHitBonus; golmStomp = _golmHitStomp; _golmHitActor = null; }
+        // 第362期（KD-r）: 殴りかかりの一発の札（打ち手が違えば触らない）。**保持者がいなければ比較1つで抜ける。**
+        int thornsW = 0;
+        if (_thornsHitActor is not null && _thornsHitActor == actor) { thornsW = _thornsHitWeight; _thornsHitActor = null; }
 
         // 第243期（④・バサの版 `ConfuseHalf`）: 保持者がいる戦では、混乱した駒の攻撃は標的を選ぶ前に `Roll(100)` を1回——
         // 50% で今までどおり自軍へ、残りは混乱をここで消して普段どおり振る。**保持者がいなければ比較1つで抜ける。**
@@ -12859,6 +12863,7 @@ public sealed class BattleContext
             ? actor.CurrentAttack
             : actor.CurrentAttack * attackPercent / 100;
         if (golmBonus > 0) atk += golmBonus;   // 第345期（攻 ＋ 腹の 1 割）
+        if (thornsW > 0) atk = thornsW;        // 第362期（KD-r: 攻撃力 × 2 ＋ 傷・萎縮 ／ 痺れ毒 ／ §1 の +50% などはこの後ろで今までどおり）
 
         // 第277期（豆鉄砲）: 1発の打点は攻撃力に依らず `ShotDamage`（攻撃力は弾数の側・`PelletTrait.ModifyHitCount`）。
         // 萎縮・痺れ毒・澱み・止めの倍率はこの後ろなので、今までどおりこの 1 点に掛かる（切り捨てなので 1 は 1 のまま）。**保持者がいなければ比較1つで抜ける。**
@@ -15029,7 +15034,10 @@ public sealed class BattleContext
         // 無力化（痺れ・のろま）は何をするのも止めるが、不動（カド）が止めているのは
         // 攻撃だけ。何をしようとしているかが分からないと、この二つを区別できない。
         // Actions を持たない駒は Attack で問われるので従来とまったく同じ答えになる。
-        UnitAction? act = actor.CurrentAction;
+        // 第362期（KD-r）: 棘を剥いた駒の手番は術の周期を読まず、攻撃にする（不動は `ThornsBareTrait.IsBare` で外れる）。
+        // 剥く判定はここでも問う（被弾の後に問い損ねた分・HP の減りは `ApplyDamage` を通らない口もある）。**保持者がいなければ比較1つで抜ける。**
+        bool thornsBare = _thornsBareLive && actor.HasTrait(TraitId.ThornsBare) && ThornsBareTrait.Check(this, actor);
+        UnitAction? act = thornsBare ? null : actor.CurrentAction;
         ActionKind kind = act?.Kind ?? ActionKind.Attack;
 
         // 第105期。`All` の短絡とまったく同じ回数だけ `CanActProbed` を呼びつつ、
@@ -15178,6 +15186,9 @@ public sealed class BattleContext
 
         // 第299期: 仇指し（ザン）の手番。規定では数えるだけで、下の `SwingTurnHits` をそのまま振る。仇巡り（ZM）の札があり標の敵がいれば仇巡り。**保持者がいなければ比較1つで抜ける。**
         if (_vendettaTurnLive && actor.HasTrait(TraitId.Vendetta)) { VendettaTurn(actor, act); return; }
+
+        // 第362期（KD-r）: 棘を剥いたカドの手番は殴りかかり（最も手強い敵へ・反撃と同じ重さ ／ 巻き込み）。**保持者がいなければ比較1つで抜ける。**
+        if (_thornsBareLive && actor.HasTrait(TraitId.ThornsBare) && ThornsBareTrait.IsBare(actor)) { ThornsBareStrike(actor); return; }
 
         SwingTurnHits(actor, act);
     }
@@ -17655,6 +17666,46 @@ public sealed class BattleContext
             if (g.IsAlive && g.TeamId == sasa.TeamId) { PebbleTrait.Gather(this, g, sasa, amount); t.Sh361ScatterPebble += amount; }
         foreach (UnitState h in _scrapHolders)
             if (h.IsAlive && h.TeamId == sasa.TeamId) { ScrapTrait.Pick(this, h, sasa, amount, fall: false); t.Sh361ScatterScrap += amount; }
+    }
+
+    // =================================================================================
+    // 第362期 —— 棘を剥く（KD-r・カド）。指示書 design/PHASE362_SELFHARM_KADO_SPEC.md §4。
+    // 剥いた手番の一撃は `PerformAttack` を通す（萎縮 ／ 痺れ毒 ／ §1 の +50% ／ 回避 ／ 軽減 ／ 軛 ／ `OnAfterAttack` ／ 敵の反撃は通常攻撃と同じく起きる）。
+    // 的は固定（`_forcedTarget`・庇う ／ 後備え ／ 標 ／ 挑発 ／ 執着の鎖を通らない・第345期のロケットパンチと同じ作法）。**乱数を引かない**（狙いは決定的）。
+    // 殴った後に反撃と同じ巻き込み（`ThornsTrait.Splash`・隣の敵へ 6 割 ／ 隣の味方へ素の攻撃力の半分・味方の減りの半分が攻撃力に）。
+    // =================================================================================
+    bool _thornsBareLive;
+    /// <summary>第362期: 次の `PerformAttack` の本体1回にだけ効く、殴りかかりの一発の札（打ち手・重さ）。本体の最初の行で読んで消す。</summary>
+    UnitState? _thornsHitActor;
+    int _thornsHitWeight;
+
+    /// <summary>第362期: 棘を剥いたカドの手番。最も手強い敵（<see cref="GrappleTrait.Pick"/>）へ 攻撃力 × 2 ＋ 傷 で殴りかかり、反撃と同じく巻き込む。</summary>
+    void ThornsBareStrike(UnitState k)
+    {
+        UnitState? aim = GrappleTrait.Pick(this, k);
+        if (aim is null) return;
+        int w = ThornsTrait.Weight(k);
+        UnitTally t = TallyOf(k);
+        t.Sh362Strikes++;
+        t.Sh362StrikeSum += w;
+        long d0 = t.DamageToEnemy;
+        Log($"    {k.Name} が剥いた棘で {aim.Name} へ殴りかかる（攻 {k.CurrentAttack} × {ThornsTrait.Multiplier} ＋ 傷 {ThornsTrait.WoundOf(k)} ＝ {w}）", LogKind.Trigger);
+        _thornsHitActor = k; _thornsHitWeight = w;
+        _forcedTarget = aim;
+        try { PerformAttack(k, patternOverride: AttackPattern.Single); }
+        finally { _forcedTarget = null; _forcedLane = -1; _thornsHitActor = null; }
+        t.Sh362StrikeMain += t.DamageToEnemy - d0;
+        if (!k.IsAlive) return;
+        TraitMark m = this.BeginTrait(TraitId.Thorns, k);
+        ThornsTrait.Splash(this, k, aim, w);
+        this.EndTrait(m);
+    }
+
+    /// <summary>第362期（<b>表示専用</b>）: 棘を剥いた瞬間（<see cref="BattleEventKind.ThornsBare"/>）。verbose のときだけ積む。</summary>
+    internal void EmitThornsBare(UnitState k, int wound)
+    {
+        if (!_verbose) return;
+        Emit(new BattleEvent { Kind = BattleEventKind.ThornsBare, Turn = _turn, ActorId = k.InstanceId, TargetId = k.InstanceId, Amount = wound, HpAfter = Math.Max(0, k.Hp), Team = k.TeamId, SourceTrait = TraitId.ThornsBare });
     }
 
     /// <summary>第358期（<b>表示専用</b>）: 返しの破片 ／ 礫の出来事（<see cref="BattleEventKind.Shard"/>）。verbose のときだけ積む。</summary>

@@ -108,7 +108,7 @@ static partial class Sh360Diag
                 && s.Traits.SequenceEqual(new[] { TraitId.Brace });
             // 第361期: 規定のササ ＝ SS-w（`BraceHold` ／ `BraceWide` の保持者はササだけ）
             var held = UnitCatalog.All.Concat(UnitCatalog.Retired).Where(d => d.Traits.Any(t => t is TraitId.BraceHold or TraitId.BraceWide) && d.Id != "sasa").Select(d => d.Id).ToArray();
-            ok = ok && UnitCatalog.Sasa.Traits.SequenceEqual(w.Traits) && UnitCatalog.Sasa.PlusText == w.PlusText;
+            ok = ok && UnitCatalog.SasaH361.Traits.SequenceEqual(w.Traits) && UnitCatalog.SasaH361.PlusText == w.PlusText;
             Expect("版の定義: SS-k ＝ 身構え ＋ `BraceHold` ／ SS-w ＝ ＋ `BraceWide`（体 ／ 手番はササのまま）・旧のササ（`SasaH360`）は身構えだけ・第361期: 規定のササ ＝ SS-w（札 ／ 文面が同じ・ほかに保持者なし）", ok && held.Length == 0, held.Length == 0 ? "" : string.Join(",", held));
         }
 

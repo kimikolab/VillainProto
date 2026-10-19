@@ -62,7 +62,7 @@ static partial class Sh361Diag
     internal sealed record Ver(string Name, string Ascii, UnitDef Sasa);
     internal static readonly Ver[] Vers =
     {
-        new("規定（段0 入り・SS-w）", "base", UnitCatalog.Sasa),
+        new("規定（段0 入り・SS-w）", "base", UnitCatalog.SasaH361),
         new("SS-s 散る", "sss", UnitCatalog.SasaSSs),
         new("SS-n 遠くへ", "ssn", UnitCatalog.SasaSSn),
     };
@@ -71,7 +71,7 @@ static partial class Sh361Diag
     internal static Formation Apply(Formation f, Ver v) => S316.SwapId(f, "sasa", v.Sasa);
     static bool Has(Formation f, string id) => f.Occupied().Any(o => o.Def.Id == id);
 
-    internal static readonly UnitDef[] Fixed = { UnitCatalog.Sasa, UnitCatalog.Hibi, UnitCatalog.Gare };
+    internal static readonly UnitDef[] Fixed = { UnitCatalog.SasaH361, UnitCatalog.Hibi, UnitCatalog.Gare };
     internal static readonly UnitDef[] Pool = S0.Pool;
     internal static Formation ByKey(string key)
     {
@@ -141,7 +141,7 @@ static partial class Sh361Diag
         Console.WriteLine();
         Console.WriteLine($"## 2. 規定（段0 入り）の切り落としの行き先（代表台 × ボス ／ 大隊・seed 0..{P0Seeds - 1}）");
         Console.WriteLine();
-        foreach (var b in Boards()) foreach (var w in new[] { I.Boss, I.Bat }) Console.WriteLine(Dest($"{b.Name} × {w.Name}", S0.BraceOf(b.F, w, P0Seeds)));
+        foreach (var b in Boards()) foreach (var w in new[] { I.Boss, I.Bat }) Console.WriteLine(Dest($"{b.Name} × {w.Name}", S0.BraceOf(Apply(b.F, Vers[0]), w, P0Seeds)));   // 第362期: 規定のササが SS-n になったので第361期の規定（`SasaH361`）に固定
         Console.WriteLine();
         Console.WriteLine($"所要 {sw.Elapsed.TotalSeconds:F0} 秒。");
     }

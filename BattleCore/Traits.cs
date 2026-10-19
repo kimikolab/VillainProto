@@ -914,6 +914,9 @@ public enum TraitId
     // --- 第361期で足した札（指示書 design/PHASE361_SHARD_CLOSE_SPEC.md §3）。ササの版（行き場の無い切り落とし）。保持者 0 枚 ---
     BraceScatter,       // 散る（SS-s・ササ）: 切り落とした分のうち付ける相手（生きている隣）がいない分は、ササの席で砕けた破片として散る——敵の一撃で味方の破片が割れたのと同じく、割れた破片の読み手（礫を拾う ／ 瓦礫拾い）が拾う。返しは起こさない・ササの破片の数は変わらない（**札そのものは挙動を持たない**・engine の `ScatterShards`）
     BraceNear,          // 遠くへ（SS-n・ササ）: 付ける相手（生きている隣）がいない分は、生きている味方のうちササに最も近い者（席の距離・同じなら席番号の順）へ破片として付ける。ササ自身には付けない
+    // --- 第362期で足した札（指示書 design/PHASE362_SELFHARM_KADO_SPEC.md §4）。カドの版（傷つくほど強く・二段構え）。保持者 0 枚 ---
+    ThornsWound,        // 傷の棘（KD-t・カド）: 棘の反撃の重さを 攻撃力 × 2 ＋ 自分の傷（その時点の最大HP − 今のHP）にする（**札そのものは挙動を持たない**・`ThornsTrait.Weight`）
+    ThornsBare,         // 棘を剥く（KD-r・カド）: HP が最大HPの5割を切ったら、身代わりの構えを捨て（不動も外れ）、自分の手番に最も手強い敵（攻撃力が最も高い・同じなら席番号の順）へ 攻撃力 × 2 ＋ 傷 で殴りかかる（反撃と同じく隣の敵に届き、隣の味方も巻き込む）。その戦の間は戻らない
     PebbleGather,       // 礫を拾う（GR-r・ガレ）: 味方（自分を含む）の破片が敵の一撃で割れた量を礫として溜め（上限なし）、手番（術）で全部使って 礫 × 3 ＋ 攻撃力 を敵全体へ撃つ。礫が無い手番は何もできない（味方の破片は砕かない）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -2243,8 +2246,9 @@ public sealed class ImmobileTrait : Trait
 {
     public override TraitId Id => TraitId.Immobile;
 
+    // 第362期: 棘を剥いた駒（KD-r）は不動が外れる（`ThornsBareTrait.IsBare`・私有の印。剥いていない駒は 0 なので今までと同じ答え）。
     public override bool CanAct(BattleContext ctx, UnitState self, ActionKind kind)
-        => kind != ActionKind.Attack;
+        => kind != ActionKind.Attack || ThornsBareTrait.IsBare(self);
 
     // 最初から振らない型なので、差し出したターンとして数えない
     public override bool SurrendersTurn => false;
@@ -3119,8 +3123,10 @@ public sealed class ThornsTrait : Trait
     /// </summary>
     internal static void Riposte(BattleContext ctx, UnitState self, UnitState source)
     {
-        int back = Math.Max(1, self.CurrentAttack * Multiplier);
-        ctx.TallyOf(self).ThornRipostes++;   // 第211期（計数のみ）
+        int back = Weight(self);   // 第362期: 傷の棘（KD-t）の保持者だけ 攻撃力 × 2 ＋ 傷。持たない駒は第361期までと1命令も違わない
+        UnitTally rt = ctx.TallyOf(self);
+        rt.ThornRipostes++;   // 第211期（計数のみ）
+        rt.Sh362RiposteSum += back;   // 第362期（計数のみ）
         ctx.NoteAttackRead(self);   // 攻撃力を出力に変換した（第64期・死蔵の判定）
 
         // 反撃は範囲。自分から攻撃できず打点が自分しかない駒なので、
@@ -3138,46 +3144,68 @@ public sealed class ThornsTrait : Trait
                 if (w >= 0) ctx.Log($"    {self.Name} の棘が {source.Name} に残る（傷 {w}）", LogKind.Status);
             }
 
-            foreach (UnitState other in ctx.LivingMembersShuffled(source.TeamId))
-            {
-                if (other == source) continue;
-                // 敵に及ぶ範囲なので薙ぎと同じ表を引く。味方に及ぶものと定義を分けている。
-                if (!source.Shape.SweepTargets(source.Slot).Contains(other.Slot)) continue;
-                ctx.ApplyDamage(other, Math.Max(1, back * SplashPercent / 100), self);
-            }
-
-            // 棘は味方も巻き込み、巻き込んだぶんだけ据わる。
-            // 上昇源を「味方に与えた実ダメージ」だけに限っているのは、隣の味方が全員倒れたあとも
-            // 敵ダメージで無償に伸び続ける穴を作らないため（号令がカドに毎ターン +8 を
-            // 無償で払っていたのと同じ形になる）。代金は常に隣接味方のHPで支払われる。
-            // 味方に及ぶ範囲は隣接表（ボルグと同じ AreAdjacent）。敵に及ぶ範囲の薙ぎ表とは定義を分けている。
-            int spill = Math.Max(1, self.Def.Attack * FriendlySplashPercent / 100);
-            int gained = 0;
-
-            foreach (UnitState ally in ctx.LivingMembersShuffled(self.TeamId))
-            {
-                if (ally == self) continue;
-                if (!FormationRules.AreAdjacent(self, ally)) continue;
-
-                int before = ally.Hp;
-                ctx.Log($"    余波: {self.Name} の棘が {ally.Name} を巻き込む", LogKind.FriendlyFire);
-                ctx.ApplyDamage(ally, spill, self, isFriendlyFire: true);
-                gained += (before - ally.Hp) / GainDivisor;
-
-                // V2（自己検査・第84期）。巻き込んだ味方にも傷 1。`gained` の計算には触らない。
-                if (ctx.Thorn.Wound == ThornWound.Both && ally.IsAlive)
-                {
-                    int w = ctx.Wound(ally, 1, self, WoundRoute.ThornSplash);   // 第93期: 加算は窓口を通す
-                    if (w >= 0) ctx.Log($"    {self.Name} の棘が {ally.Name} に残る（傷 {w}）", LogKind.Status);
-                }
-            }
-
-            if (gained > 0)
-            {
-                self.AtkBonus += gained;
-                ctx.Log($"    {self.Name} は巻き込むほど据わる（攻撃 +{gained} → {self.CurrentAttack}）", LogKind.Trigger);
-            }
+            Splash(ctx, self, source, back);
         });
+    }
+
+    /// <summary>
+    /// 第362期: 棘の一撃の重さ。<b>規定</b>（傷の棘を持たない）は 攻撃力 × 2（最低 1）。<see cref="TraitId.ThornsWound"/>（KD-t ／ KD-r）の保持者は
+    /// それに<b>自分の傷</b>（<see cref="WoundOf"/>）を足す。乱数を引かない。
+    /// </summary>
+    internal static int Weight(UnitState self)
+        => Math.Max(1, self.CurrentAttack * Multiplier + (self.HasTrait(TraitId.ThornsWound) ? WoundOf(self) : 0));
+
+    /// <summary>第362期: 傷 ＝ <b>その時点の</b>最大HP − 今のHP（0 未満にしない）。削られた最大HP（縫い ／ 呪われた傷）は傷に入らない。</summary>
+    internal static int WoundOf(UnitState u) => Math.Max(0, u.MaxHp - Math.Max(0, u.Hp));
+
+    /// <summary>
+    /// 第362期: 棘の一撃の巻き込み（第361期までの <see cref="Riposte"/> の後半をそのまま切り出した・順序も同じ）。
+    /// 一撃の相手（<paramref name="source"/>）の薙ぎの表の敵へ <paramref name="back"/> の <see cref="SplashPercent"/>%、
+    /// 自分の隣の味方へ素の攻撃力の <see cref="FriendlySplashPercent"/>%（実際に減らした量の半分が攻撃力に）。
+    /// 反撃（<see cref="Riposte"/>・反撃の包みの中）と、棘を剥いた手番の殴りかかり（<see cref="ThornsBareTrait"/>・手番の中）の2口から来る。
+    /// </summary>
+    internal static void Splash(BattleContext ctx, UnitState self, UnitState source, int back)
+    {
+        foreach (UnitState other in ctx.LivingMembersShuffled(source.TeamId))
+        {
+            if (other == source) continue;
+            // 敵に及ぶ範囲なので薙ぎと同じ表を引く。味方に及ぶものと定義を分けている。
+            if (!source.Shape.SweepTargets(source.Slot).Contains(other.Slot)) continue;
+            ctx.ApplyDamage(other, Math.Max(1, back * SplashPercent / 100), self);
+        }
+
+        // 棘は味方も巻き込み、巻き込んだぶんだけ据わる。
+        // 上昇源を「味方に与えた実ダメージ」だけに限っているのは、隣の味方が全員倒れたあとも
+        // 敵ダメージで無償に伸び続ける穴を作らないため（号令がカドに毎ターン +8 を
+        // 無償で払っていたのと同じ形になる）。代金は常に隣接味方のHPで支払われる。
+        // 味方に及ぶ範囲は隣接表（ボルグと同じ AreAdjacent）。敵に及ぶ範囲の薙ぎ表とは定義を分けている。
+        int spill = Math.Max(1, self.Def.Attack * FriendlySplashPercent / 100);
+        int gained = 0;
+
+        foreach (UnitState ally in ctx.LivingMembersShuffled(self.TeamId))
+        {
+            if (ally == self) continue;
+            if (!FormationRules.AreAdjacent(self, ally)) continue;
+
+            int before = ally.Hp;
+            ctx.Log($"    余波: {self.Name} の棘が {ally.Name} を巻き込む", LogKind.FriendlyFire);
+            ctx.ApplyDamage(ally, spill, self, isFriendlyFire: true);
+            gained += (before - ally.Hp) / GainDivisor;
+
+            // V2（自己検査・第84期）。巻き込んだ味方にも傷 1。`gained` の計算には触らない。
+            if (ctx.Thorn.Wound == ThornWound.Both && ally.IsAlive)
+            {
+                int w = ctx.Wound(ally, 1, self, WoundRoute.ThornSplash);   // 第93期: 加算は窓口を通す
+                if (w >= 0) ctx.Log($"    {self.Name} の棘が {ally.Name} に残る（傷 {w}）", LogKind.Status);
+            }
+        }
+
+        if (gained > 0)
+        {
+            self.AtkBonus += gained;
+            ctx.TallyOf(self).Sh362ThornGain += gained;   // 第362期（計数のみ）
+            ctx.Log($"    {self.Name} は巻き込むほど据わる（攻撃 +{gained} → {self.CurrentAttack}）", LogKind.Trigger);
+        }
     }
 }
 
@@ -10888,6 +10916,44 @@ public sealed class ThornsArmoredTrait : Trait
     public override TraitId Id => TraitId.ThornsArmored;
 }
 
+/// <summary>
+/// 棘を剥く（第362期・カドの版 KD-r）。<b>HP が最大HPの5割を切ったら</b>（今のHP × 2 ＜ 最大HP）、その場で棘を剥く——
+/// 身代わりの構え（<see cref="ThornGuardTrait.PendingKey"/>）を捨て、以後は不動（<see cref="ImmobileTrait"/>）が外れて、
+/// 自分の手番が<b>攻撃</b>になる（engine の手番の頭が術の周期を読まない・`ThornsBareStrike`）。
+/// 一撃は最も手強い敵（<see cref="GrappleTrait.Pick"/> と同じ: 攻撃力が最も高い・同じなら席番号の小さい方・<b>乱数を引かない</b>）へ、
+/// 重さは反撃と同じ（<see cref="ThornsTrait.Weight"/>）。殴った後、反撃と同じ巻き込み（<see cref="ThornsTrait.Splash"/>）。
+/// <b>一度剥いたらその戦の間は戻らない</b>（回復して5割を超えても）。剥く判定は被弾の後（<see cref="OnDamaged"/>）と手番の頭の2口。
+/// </summary>
+public sealed class ThornsBareTrait : Trait
+{
+    /// <summary>剥いた印（私有キー・1 ＝ 剥いた）。<c>StatusKeys.All</c> には入れない（会戦の境界は <see cref="OnCarryOver"/> で消す）。</summary>
+    public const string Key = "thornsBare";
+
+    public override TraitId Id => TraitId.ThornsBare;
+
+    public static bool IsBare(UnitState u) => u.RawCounter(Key) > 0;
+
+    /// <summary>まだ剥いていず、生きていて、HP が最大HPの5割を切っていれば剥く。剥いていれば真。</summary>
+    internal static bool Check(BattleContext ctx, UnitState self)
+    {
+        if (IsBare(self)) return true;
+        if (!self.IsAlive || self.Hp * 2 >= self.MaxHp) return false;
+        self.SetCounter(Key, 1);
+        self.SetCounter(ThornGuardTrait.PendingKey, 0);   // 構えを捨てる（この先の身代わりは無い）
+        UnitTally t = ctx.TallyOf(self);
+        t.Sh362Bares++;
+        if (t.Sh362BareTurn == 0) t.Sh362BareTurn = ctx.Turn;
+        int wound = ThornsTrait.WoundOf(self);
+        ctx.EmitThornsBare(self, wound);   // 表示専用
+        ctx.Log($"  ★ {self.Name} が棘を剥いた（傷 {wound}）——構えを捨て、自分から殴りかかる", LogKind.Highlight, self);
+        return true;
+    }
+
+    public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source) => Check(ctx, self);
+
+    public override void OnCarryOver(UnitState self) => self.Counters.Remove(Key);
+}
+
 /// <summary>撃ち返す板（第208期）。<b>札そのものは何もしない</b>——<see cref="PlankTrait"/> が印に <see cref="PlankTrait.Rebound"/> を立て、engine の破片の段と `ReflectPlank` が読む。</summary>
 public sealed class PlankReboundTrait : Trait
 {
@@ -18191,6 +18257,8 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.ShardBareNoPlank),          // 第359期（纏えない・板も来ない HB-s ／ HB-f・印だけ・本体は `UnitState.SetCounter` と `PlankTrait.OnAction`）
         new MarkOnlyTrait(TraitId.ShardFull),                 // 第359期（全量を返す HB-f・印だけ・本体は engine の `ApplyDamage`）
         new PebbleTrait(),                                    // 第358期（礫を拾って投げる GR-r・ガレ）
+        new MarkOnlyTrait(TraitId.ThornsWound),               // 第362期（傷の棘 KD-t・カド・印だけ・本体は `ThornsTrait.Weight`）
+        new ThornsBareTrait(),                                // 第362期（棘を剥く KD-r・カド・殴りかかりの本体は engine の `ThornsBareStrike`）
         new MarkOnlyTrait(TraitId.CurseScar),                 // 第355期（呪われた傷 N-100・ネル・印だけ）
         new MarkOnlyTrait(TraitId.CurseScarHalf),             // 第355期（呪われた傷・半分 N-50・ネル・印だけ）
         new MarkOnlyTrait(TraitId.UtsuScar),                  // 第355期（ウツの爪痕 U・印だけ）

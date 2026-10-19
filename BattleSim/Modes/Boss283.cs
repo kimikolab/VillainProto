@@ -95,6 +95,8 @@ static class Boss283Diag
         ["ShrapnelTrait"] = ("—", false, "破片を消す側"),
         ["BraceTrait"] = ("味方", true, "破片"),
         ["PlankTrait"] = ("味方", true, "破片（板）"),
+        // 第362期: 第360期にヒビの規定が HB-f（返しの欠片・`ShardGiftTrait`）になってからこの表に無く、(a) が × ・ヒビがヒーラーの一覧から落ちていた。手番で自分以外の味方全員へ破片 6 を配る書き手。
+        ["ShardGiftTrait"] = ("味方", true, "破片（返しの欠片）"),
     };
 
     sealed record Writer(string Cls, int Line, string Kind, TraitId[] Ids);

@@ -9,6 +9,14 @@ static partial class Sh361Diag
     /// <summary>「試遊・破片」に選んだ並び（`seats` の規定の両立の最良・報告 §5）。</summary>
     internal const string PlayKey = "ネル・ササ・ソム・ヒビ・ガレ";   // 規定（SS-w）・SS-s ・SS-n のどれでも「両立の最良」の1位（勇者 40〜60%・近衛 ／ 大隊 100%）
 
+    /// <summary>第361期の試遊の台（第362期に「版・」の2台を `Presets.Versions` から外し、規定のササが SS-n になったので、第361期の並びと駒を器具の中に固定）。</summary>
+    internal static (string Name, Formation F)[] Boards361() => new (string, Formation)[]
+    {
+        ("試遊・破片", Presets.ShardPlay(UnitCatalog.SasaH361)),
+        ("版・SS-s 破片", Presets.ShardPlay(UnitCatalog.SasaSSs)),
+        ("版・SS-n 破片", Presets.ShardPlay(UnitCatalog.SasaSSn)),
+    };
+
     static readonly MethodInfo AddUnit = typeof(BattleContext).GetMethod("Add", BindingFlags.Instance | BindingFlags.NonPublic, new[] { typeof(UnitState) })!;
     static readonly PropertyInfo TurnP = typeof(BattleContext).GetProperty("Turn")!;
     static int _fail;
@@ -50,9 +58,9 @@ static partial class Sh361Diag
 
         // ---- 段0 ----
         {
-            bool def = UnitCatalog.Sasa.Traits.SequenceEqual(UnitCatalog.SasaSSw.Traits) && UnitCatalog.Sasa.PlusText == UnitCatalog.SasaSSw.PlusText
+            bool def = UnitCatalog.SasaH361.Traits.SequenceEqual(UnitCatalog.SasaSSw.Traits) && UnitCatalog.SasaH361.PlusText == UnitCatalog.SasaSSw.PlusText
                 && UnitCatalog.SasaH360.Traits.SequenceEqual(new[] { TraitId.Brace }) && UnitCatalog.All.Contains(UnitCatalog.Sasa) && !UnitCatalog.All.Contains(UnitCatalog.SasaH360)
-                && ReferenceEquals(PinHB359(UnitCatalog.Sasa), UnitCatalog.SasaH360) && ReferenceEquals(PinSa360(UnitCatalog.Sasa), UnitCatalog.SasaH360);
+                && ReferenceEquals(PinHB359(UnitCatalog.SasaH361), UnitCatalog.SasaH360) && ReferenceEquals(PinSa360(UnitCatalog.SasaH361), UnitCatalog.SasaH360);
             Expect("段0: 規定のササ ＝ SS-w（札 ／ 文面が `SasaSSw` と同じ）・旧（`SasaH360`）は身構えだけ・`All` は規定だけ・古い口の終端からササも旧へ", def);
             (int Held, int Nb) Run(UnitDef sasa)
             {
@@ -69,16 +77,18 @@ static partial class Sh361Diag
                 int h0 = s.Hp; ctx.ApplyDamage(s, 20, e[0]);
                 return (h0 - s.Hp, p.Count(u => u != s && Armor(u) > 0));
             }
-            var now = Run(UnitCatalog.Sasa); var old = Run(UnitCatalog.SasaH360);
+            var now = Run(UnitCatalog.SasaH361); var old = Run(UnitCatalog.SasaH360);
             Expect("段0: 規定のササは前のターンの構えで次の一撃も 7 に抑え、切り落とした分を隣の味方全員（中央なら4体）に配る・旧の定義では今までどおり（素のまま受け、配らない）",
                 now.Held == 7 && now.Nb == 4 && old.Held == 20 && old.Nb == 0, $"規定: 受けた {now.Held}・配った先 {now.Nb} ／ 旧: 受けた {old.Held}・配った先 {old.Nb}");
         }
 
         // ---- 版の定義 ----
         {
-            bool ok = UnitCatalog.SasaSSs.Traits.SequenceEqual(UnitCatalog.Sasa.Traits.Append(TraitId.BraceScatter)) && UnitCatalog.SasaSSn.Traits.SequenceEqual(UnitCatalog.Sasa.Traits.Append(TraitId.BraceNear));
-            var held = UnitCatalog.All.Concat(UnitCatalog.Retired).Where(d => d.Traits.Any(t => t is TraitId.BraceScatter or TraitId.BraceNear)).Select(d => d.Id).ToArray();
-            Expect("版の定義: SS-s ＝ 規定のササ ＋ `BraceScatter` ／ SS-n ＝ ＋ `BraceNear`・新しい札の保持者は 0 枚", ok && held.Length == 0, held.Length == 0 ? "" : string.Join(",", held));
+            bool ok = UnitCatalog.SasaSSs.Traits.SequenceEqual(UnitCatalog.SasaH361.Traits.Append(TraitId.BraceScatter)) && UnitCatalog.SasaSSn.Traits.SequenceEqual(UnitCatalog.SasaH361.Traits.Append(TraitId.BraceNear));
+            // 第362期: 規定のササが SS-n（`BraceNear` を持つ）になった。`BraceScatter` の保持者は 0 枚 ／ `BraceNear` の保持者は規定のササだけ。
+            var held = UnitCatalog.All.Concat(UnitCatalog.Retired).Where(d => d.Traits.Any(t => t is TraitId.BraceScatter or TraitId.BraceNear) && d != UnitCatalog.Sasa).Select(d => d.Id).ToArray();
+            ok = ok && UnitCatalog.Sasa.Traits.SequenceEqual(UnitCatalog.SasaSSn.Traits) && UnitCatalog.Sasa.PlusText == UnitCatalog.SasaSSn.PlusText;
+            Expect("版の定義: SS-s ＝ 第361期の規定のササ（`SasaH361`）＋ `BraceScatter` ／ SS-n ＝ ＋ `BraceNear`・`BraceScatter` の保持者は 0 枚・第362期: `BraceNear` の保持者は規定のササ（＝ SS-n）だけ", ok && held.Length == 0, held.Length == 0 ? "" : string.Join(",", held));
         }
 
         // ---- SS-s ----
@@ -95,7 +105,7 @@ static partial class Sh361Diag
             var c3 = Lone(UnitCatalog.SasaSSs, Plain("x"), out var s3, out var x3, out var f3);
             c3.ApplyDamage(s3, 20, f3);
             Expect("SS-s: 読み手がいなければ消える（誰にも付かない）", Armor(x3) == 0 && Tly(c3, "sasa").Sh361Scattered == 13 && Tly(c3, "sasa").Sh361ScatterPebble == 0 && Tly(c3, "sasa").Sh361ScatterScrap == 0);
-            var c4 = Lone(UnitCatalog.Sasa, UnitCatalog.Gare, out var s4, out var g4, out var f4);
+            var c4 = Lone(UnitCatalog.SasaH361, UnitCatalog.Gare, out var s4, out var g4, out var f4);
             c4.ApplyDamage(s4, 20, f4);
             Expect("規定のササ（SS-w）: 隣に誰もいなければ散らない（礫にならない・今どおり消える）", g4.RawCounter(PebbleTrait.Key) == 0 && Tly(c4, "sasa").Sh361Scattered == 0);
         }
@@ -131,16 +141,18 @@ static partial class Sh361Diag
 
         // ---- 試遊の台 ----
         {
+            // 第362期: 「版・」の2台は `Presets.Versions` から外した。第361期の3台は `Boards361` に固定して確かめる。
             var vr = Presets.Versions.Select(r => r.Name).ToArray();
             string[] want = { "試遊・破片", "版・SS-s 破片", "版・SS-n 破片" };
-            bool rows = vr.Take(5).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁" }) && vr.Skip(5).SequenceEqual(want);
-            Expect("`Presets.Versions` ＝ 試遊の5台 ＋ 「試遊・破片」＋ 「版・」の2台（第360期の「版・」の3台は外した）", rows, string.Join("、", vr));
-            if (rows)
+            bool rows = vr.Take(6).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片" }) && !vr.Any(want.Skip(1).Contains)
+                && Seats(Presets.Versions.First(r => r.Name == "試遊・破片").F) == PlayKey;
+            Expect("`Presets.Versions` ＝ 試遊の5台 ＋ 「試遊・破片」が頭に残る・第361期の「版・」の2台は第362期に外した", rows, string.Join("、", vr));
             {
-                Formation F(string nm) => Presets.Versions.First(r => r.Name == nm).F;
-                bool ok = want.All(nm => Seats(F(nm)) == PlayKey) && F(want[0]).Occupied().All(o => UnitCatalog.All.Contains(o.Def)) && !Has(F(want[0]), "tsugi")
+                var b361 = Boards361();
+                Formation F(string nm) => b361.First(r => r.Name == nm).F;
+                bool ok = want.All(nm => Seats(F(nm)) == PlayKey) && F(want[0]).Occupied().All(o => o.Def == UnitCatalog.SasaH361 || UnitCatalog.All.Contains(o.Def)) && !Has(F(want[0]), "tsugi")
                     && F(want[1]).Occupied().Any(o => o.Def == UnitCatalog.SasaSSs) && F(want[2]).Occupied().Any(o => o.Def == UnitCatalog.SasaSSn);
-                Expect("「試遊・破片」＝ ツギなしの並び（規定の駒）・「版・」の2台は同じ並びでササだけ版", ok, Seats(F(want[0])));
+                Expect("第361期の試遊の台（器具の中に固定）: 「試遊・破片」＝ ツギなしの並び（第361期の規定の駒）・「版・」の2台は同じ並びでササだけ版", ok && F(want[0]).Occupied().Any(o => o.Def == UnitCatalog.SasaH361), Seats(F(want[0])));
             }
         }
 

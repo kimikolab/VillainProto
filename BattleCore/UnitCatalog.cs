@@ -2385,13 +2385,24 @@ public static class UnitCatalog
 
     /// <summary>錯乱のササ（第361期の規定 ＝ 第360期の SS-w）。身構えが次の自分の手番まで続き（先に動く敵の一撃も 7 に抑える）、切り落とした分を、そのターン最初に殴られたときの席の隣の味方全員に破片として付ける。
     /// 旧は <see cref="SasaH360"/>。札と文面は <see cref="SasaSSw"/> と同じ。</summary>
-    public static readonly UnitDef Sasa = new()
+    // 第362期: 第361期の規定（SS-w）は `SasaH361` の名前で残した（定義は1文字も変えていない）。規定の `Sasa` は第361期の SS-n で、すぐ下に作った。
+    public static readonly UnitDef SasaH361 = new()
     {
         Id = SasaH360.Id, Name = SasaH360.Name, MaxHp = SasaH360.MaxHp, Attack = SasaH360.Attack, Speed = SasaH360.Speed, Advances = SasaH360.Advances, Actions = SasaH360.Actions,
         Traits = new[] { TraitId.Brace, TraitId.BraceHold, TraitId.BraceWide },
         PlusText = "手番で身を固め、次に動くまで、受ける一撃を7までに抑える。殴られると錯乱して隣の味方1体を別の席へ突き飛ばし（1ターン1回）、抑えて切り落とした分を、両隣の味方に破片として付ける",
         MinusText = "自分は決して攻撃しない ／ 弾く相手と行き先は選べない",
         Flavor = SasaH360.Flavor,
+    };
+
+    /// <summary>錯乱のササ（第362期の規定 ＝ 第361期の SS-n）。SS-w（構えを解かない ＋ 両隣へ）＋ 付ける相手（生きている隣）がいない分は、生きている味方のうちササに最も近い者へ。
+    /// 旧は <see cref="SasaH361"/>（SS-w）／ <see cref="SasaH360"/>（身構えだけ）。札と文面は <see cref="SasaSSn"/> と同じ。</summary>
+    public static readonly UnitDef Sasa = new()
+    {
+        Id = SasaH361.Id, Name = SasaH361.Name, MaxHp = SasaH361.MaxHp, Attack = SasaH361.Attack, Speed = SasaH361.Speed, Advances = SasaH361.Advances, Actions = SasaH361.Actions,
+        Traits = SasaH361.Traits.Append(TraitId.BraceNear).ToArray(),
+        PlusText = SasaH361.PlusText + "。隣に誰もいなければ、いちばん近い味方へ",
+        MinusText = SasaH361.MinusText, Flavor = SasaH361.Flavor,
     };
 
     public static readonly UnitDef Kubi = new()
@@ -6633,23 +6644,44 @@ public static class UnitCatalog
     // 第360期【軽い期】ツギなしの勝ち筋をササで（指示書 design/PHASE360_SHARD_SASA_SPEC.md §4）。版はササの写し（Id ・数値は同じ・規定の上）。保持者 0 枚。
     // ---------------------------------------------------------------------------------
     // ---------------------------------------------------------------------------------
+    // 第362期: 規定のササが SS-n になったので、SS-s ／ SS-n は旧（`SasaH361`）から作る（`SasaSSn` は規定と同じ札・文面・残置）。
     // 第361期【軽い期】行き場の無い切り落とし（指示書 design/PHASE361_SHARD_CLOSE_SPEC.md §3）。版は規定のササ（SS-w）の写し ＋ 札1枚。保持者 0 枚。
     // ---------------------------------------------------------------------------------
     /// <summary>第361期 SS-s 散る: 規定のササ ＋ <see cref="TraitId.BraceScatter"/>（付ける相手のいない分は砕けて散り、割れた破片の読み手が拾う）。</summary>
     public static readonly UnitDef SasaSSs = new()
     {
-        Id = Sasa.Id, Name = Sasa.Name, MaxHp = Sasa.MaxHp, Attack = Sasa.Attack, Speed = Sasa.Speed, Advances = Sasa.Advances, Actions = Sasa.Actions,
-        Traits = Sasa.Traits.Append(TraitId.BraceScatter).ToArray(),
-        PlusText = Sasa.PlusText + "。付ける相手がいなければ、破片はその場に砕け散る",
-        MinusText = Sasa.MinusText, Flavor = Sasa.Flavor,
+        Id = SasaH361.Id, Name = SasaH361.Name, MaxHp = SasaH361.MaxHp, Attack = SasaH361.Attack, Speed = SasaH361.Speed, Advances = SasaH361.Advances, Actions = SasaH361.Actions,
+        Traits = SasaH361.Traits.Append(TraitId.BraceScatter).ToArray(),
+        PlusText = SasaH361.PlusText + "。付ける相手がいなければ、破片はその場に砕け散る",
+        MinusText = SasaH361.MinusText, Flavor = SasaH361.Flavor,
     };
     /// <summary>第361期 SS-n 遠くへ: 規定のササ ＋ <see cref="TraitId.BraceNear"/>（隣に誰もいなければ、いちばん近い味方へ）。</summary>
     public static readonly UnitDef SasaSSn = new()
     {
-        Id = Sasa.Id, Name = Sasa.Name, MaxHp = Sasa.MaxHp, Attack = Sasa.Attack, Speed = Sasa.Speed, Advances = Sasa.Advances, Actions = Sasa.Actions,
-        Traits = Sasa.Traits.Append(TraitId.BraceNear).ToArray(),
-        PlusText = Sasa.PlusText + "。隣に誰もいなければ、いちばん近い味方へ",
-        MinusText = Sasa.MinusText, Flavor = Sasa.Flavor,
+        Id = SasaH361.Id, Name = SasaH361.Name, MaxHp = SasaH361.MaxHp, Attack = SasaH361.Attack, Speed = SasaH361.Speed, Advances = SasaH361.Advances, Actions = SasaH361.Actions,
+        Traits = SasaH361.Traits.Append(TraitId.BraceNear).ToArray(),
+        PlusText = SasaH361.PlusText + "。隣に誰もいなければ、いちばん近い味方へ",
+        MinusText = SasaH361.MinusText, Flavor = SasaH361.Flavor,
+    };
+
+    // 第362期【軽い期】自傷軸の立て直し①（指示書 design/PHASE362_SELFHARM_KADO_SPEC.md §4）。カドの版2つ（規定の上・体 ／ 手番 ／ 席の扱いは規定のカドのまま）。採否はポン。
+    /// <summary>棘鎧のカド・KD-t 傷の棘: 棘の反撃の重さを 攻撃力 × 2 ＋ 自分の傷（最大HP − 今のHP）に（`ThornsWound`）。ほかは規定のまま。</summary>
+    public static readonly UnitDef KadoKDt = new()
+    {
+        Id = Kado.Id, Name = Kado.Name, MaxHp = Kado.MaxHp, Attack = Kado.Attack, Speed = Kado.Speed, Advances = Kado.Advances, Actions = Kado.Actions,
+        Traits = Kado.Traits.Append(TraitId.ThornsWound).ToArray(),
+        PlusText = Kado.PlusText.Replace("自分の攻撃力の2倍を敵に返す", "自分の攻撃力の2倍と負った傷の深さを敵に返す"),
+        MinusText = Kado.MinusText, Flavor = Kado.Flavor,
+    };
+
+    /// <summary>棘鎧のカド・KD-r 棘を剥く: KD-t ＋ HP が最大HPの5割を切ったら棘を剥く（`ThornsBare`・構えを捨て、不動が外れ、手番で最も手強い敵へ殴りかかる・戻らない）。</summary>
+    public static readonly UnitDef KadoKDr = new()
+    {
+        Id = Kado.Id, Name = Kado.Name, MaxHp = Kado.MaxHp, Attack = Kado.Attack, Speed = Kado.Speed, Advances = Kado.Advances, Actions = Kado.Actions,
+        Traits = Kado.Traits.Append(TraitId.ThornsWound).Append(TraitId.ThornsBare).ToArray(),
+        PlusText = Kado.PlusText.Replace("自分の攻撃力の2倍を敵に返す", "自分の攻撃力の2倍と負った傷の深さを敵に返す")
+            + " / 傷が半ばを越えると棘を剥く——構えを捨て、自分から最も手強い敵へ殴りかかる（攻撃力の2倍と傷の深さ）。剥いた棘は二度と収まらない",
+        MinusText = Kado.MinusText.Replace("自分からは決して攻撃しない", "傷が浅いうちは、自分からは決して攻撃しない"), Flavor = Kado.Flavor,
     };
 
     // 第361期: 規定のササが SS-w になったので、SS-k ／ SS-w は旧（`SasaH360`）から作る（`SasaSSw` は規定と同じ札・文面・残置）。
