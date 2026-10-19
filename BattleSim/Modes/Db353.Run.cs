@@ -121,7 +121,7 @@ static partial class Db353Diag
     static void CompareAll(Ver[] vers)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = CompareBuilds().ToArray();
+        var rows = CompareBuilds().Select(r => (r.Name, F: Pin354(r.F))).ToArray();   // 第356期: ムド ／ ワタ ／ ネルは第353期の規定に固定（第355期 ／ 第356期に規定が動いた）
         int nw = EnemyCatalog.Stages.Count, last = nw - 1;
         var b = Grid(rows, f => Apply(f, vers[0]));
         bool Has(Formation f) => f.Occupied().Any(o => o.Def.Id is "utsu" or "uke");

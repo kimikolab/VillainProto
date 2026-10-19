@@ -150,15 +150,15 @@ static partial class Db351Diag
         {
             var top = Top1;
             bool row = Seats(top) == "ワタ・ムド・クビ・ネル・ウツ" && top.Occupied().All(o => ReferenceEquals(o.Def, UnitCatalog.WataH354) || ReferenceEquals(o.Def, UnitCatalog.MudoH354)
-                || ReferenceEquals(o.Def, UnitCatalog.Kubi) || ReferenceEquals(o.Def, UnitCatalog.Nel) || ReferenceEquals(o.Def, UnitCatalog.UtsuH353))
+                || ReferenceEquals(o.Def, UnitCatalog.Kubi) || ReferenceEquals(o.Def, UnitCatalog.NelH355) || ReferenceEquals(o.Def, UnitCatalog.UtsuH353))
                 && !CompareBuilds().Any(c => c.Name == PlayRow) && !Presets.Playtest.Any(c => c.Name == PlayRow);
             Expect("「試遊・呪い」＝ Phase 0 の1位（ワタ・ムド・クビ・ネル・ウツ）・規定の駒・`Presets.Versions` だけに置く", row, Seats(top));
             // 第352期: 規定化で第351期の「版・」の4台を外した（試遊の4台だけ）。第353期: 「版・」の台は期ごとに入れ替わるので、頭の4台（試遊）と、第351期の版の台が無いことだけを見る
             var vr = Presets.Versions.Where(r => r.Name.StartsWith("版・", StringComparison.Ordinal)).ToArray();
             bool vrows = !vr.Any(r => r.Name is "版・WT-a 呪い" or "版・WT-x 呪い" or "版・WT-u 呪い" or "版・UK-r 呪い")
                 && Presets.Versions.Select(r => r.Name).Take(4).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", PlayRow })
-                && Presets.Versions.Skip(4).All(r => r.Name.StartsWith("版・", StringComparison.Ordinal));
-            Expect("`Presets.Versions` の頭 ＝ 試遊の4台（感電 ／ ミサ ／ 燃焼 ／ 呪い）・第351期の「版・」の4台は無い（第352期に外した）", vrows, string.Join("、", Presets.Versions.Select(r => r.Name)));
+                && Presets.Versions.Skip(4).All(r => r.Name.StartsWith("版・", StringComparison.Ordinal) || r.Name.StartsWith("試遊・", StringComparison.Ordinal));   // 第356期: 頭の4台より後ろに「試遊・呪い 壁」のような試遊の台も足せる
+            Expect("`Presets.Versions` の頭 ＝ 試遊の4台（感電 ／ ミサ ／ 燃焼 ／ 呪い）・第351期の「版・」の4台は無い（第352期に外した）・後ろは「版・」か「試遊・」の台", vrows, string.Join("、", Presets.Versions.Select(r => r.Name)));
 
             long far = 0, sw = 0, fed = 0, pl = 0, plMiss = 0, base0 = 0, onPerv = 0;
             foreach (var w in new[] { I.Boss, I.Bat }) for (int s = 0; s < 4; s++)

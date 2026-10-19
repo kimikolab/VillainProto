@@ -60,13 +60,25 @@ static partial class Db355Diag
 
         // ---- 版の定義 ----
         {
-            var n = UnitCatalog.Nel;
+            var n = UnitCatalog.NelH355;   // 第356期: 規定のネルが N-100 になったので旧と比べる
             bool body(UnitDef d, UnitDef b) => d.Id == b.Id && d.MaxHp == b.MaxHp && d.Attack == b.Attack && d.Speed == b.Speed && d.Pattern == b.Pattern && d.Actions == b.Actions && d.Advances == b.Advances;
             bool n1 = body(UnitCatalog.NelN100, n) && UnitCatalog.NelN100.Traits.SequenceEqual(n.Traits.Append(TraitId.CurseScar));
             bool n5 = body(UnitCatalog.NelN50, n) && UnitCatalog.NelN50.Traits.SequenceEqual(n.Traits.Append(TraitId.CurseScarHalf));
             bool u = body(UnitCatalog.UtsuU, UnitCatalog.Utsu) && UnitCatalog.UtsuU.Traits.SequenceEqual(UnitCatalog.Utsu.Traits.Append(TraitId.UtsuScar));
-            var held = UnitCatalog.All.Concat(UnitCatalog.Retired).Where(d => d.Traits.Any(t => t is TraitId.CurseScar or TraitId.CurseScarHalf or TraitId.UtsuScar)).Select(d => d.Id).ToArray();
-            Expect("版の定義: N-100 ＝ ネル ＋ `CurseScar` ／ N-50 ＝ ネル ＋ `CurseScarHalf` ／ U ＝ 規定のウツ ＋ `UtsuScar`・体と手番はそのまま・保持者 0 枚", n1 && n5 && u && held.Length == 0, $"n100 {n1}・n50 {n5}・u {u}・{string.Join(",", held)}");
+            var held = UnitCatalog.All.Concat(UnitCatalog.Retired).Where(d => d.Traits.Any(t => t is TraitId.CurseScarHalf or TraitId.UtsuScar)).Select(d => d.Id).ToArray();
+            // 第356期: 規定のネル ＝ N-100（`CurseScar` の保持者はネルだけ）
+            bool def356 = UnitCatalog.Nel.Traits.SequenceEqual(UnitCatalog.NelN100.Traits) && UnitCatalog.Nel.PlusText == UnitCatalog.NelN100.PlusText
+                && UnitCatalog.All.Concat(UnitCatalog.Retired).Where(d => d.Traits.Contains(TraitId.CurseScar)).Select(d => d.Id).SequenceEqual(new[] { "nel" });
+            Expect("版の定義: N-100 ＝ 旧のネル ＋ `CurseScar` ／ N-50 ＝ 旧のネル ＋ `CurseScarHalf` ／ U ＝ 規定のウツ ＋ `UtsuScar`・体と手番はそのまま・第356期から規定のネル ＝ N-100（`CurseScar` の保持者はネルだけ・ほかの2枚は 0 枚）", n1 && n5 && u && def356 && held.Length == 0, $"n100 {n1}・n50 {n5}・u {u}・規定 {def356}・{string.Join(",", held)}");
+            // 第356期 段0: 規定のネル（「試遊・呪い」そのもの）で N-100 が働き、旧の定義（`Pin355`）では働かない
+            long now = 0, old = 0;
+            var raw = Presets.Versions.First(r => r.Name == PlayRow).F;
+            foreach (var w in new[] { I.Boss, I.Guard, I.Bat }) for (int s = 0; s < 4; s++)
+            {
+                var (rn, _, _) = I.Raw(raw, w, s); var (ro, _, _) = I.Raw(Pin355(raw), w, s);
+                now += rn.TallyByUnit.Values.Sum(t => t.Cs355ScarTaken); old += ro.TallyByUnit.Values.Sum(t => t.Cs355ScarTaken);
+            }
+            Expect("第356期 段0: 規定のネル（「試遊・呪い」そのもの）で N-100 が働き（最大HPが削れる）、旧の定義（`Pin355`）では働かない", now > 0 && old == 0, $"規定 {now}・旧 {old}");
         }
 
         // ---- N-100 ／ N-50 ----
@@ -90,7 +102,7 @@ static partial class Db355Diag
             e5[0].SetCounter(StatusKeys.Curse, 1);
             c5.ApplyDamage(e5[0], 101, U(p5, "ally"));
             Expect("N-50: 削る量は半分（切り捨て・101 → 50）", e5[0].MaxHp == 949 && e5[0].Hp == 898, $"最大HP {e5[0].MaxHp}・HP {e5[0].Hp}");
-            var c0 = Ctx(Formation.Build(front1: UnitCatalog.Nel, front3: Plain("ally")), Formation.Build(front1: Plain("cursed")), out var p0, out var e0);
+            var c0 = Ctx(Formation.Build(front1: UnitCatalog.NelH355, front3: Plain("ally")), Formation.Build(front1: Plain("cursed")), out var p0, out var e0);
             e0[0].SetCounter(StatusKeys.Curse, 1);
             c0.ApplyDamage(e0[0], 100, U(p0, "ally"));
             Expect("規定のネル（札なし）では呪われていても削れない（対照）", e0[0].MaxHp == 999, $"{e0[0].MaxHp}");
@@ -125,13 +137,10 @@ static partial class Db355Diag
 
         // ---- 台の上で ----
         {
+            // 第356期: 第355期の「版・」の3台は外した（試遊の4台は頭に残る）
             bool vrows = Presets.Versions.Select(r => r.Name).Take(4).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", PlayRow })
-                && Presets.Versions.Skip(4).Select(r => r.Name).SequenceEqual(VersionRows.Select(x => x.Row));
-            var f = Presets.Versions.ToDictionary(r => r.Name, r => r.F);
-            bool rows = vrows && VersionRows.All(x => Seats(f[x.Row]) == Seats(Play)
-                && f[x.Row].Occupied().Any(o => ReferenceEquals(o.Def, V(x.Ver).Nel)) && f[x.Row].Occupied().Any(o => ReferenceEquals(o.Def, V(x.Ver).Utsu))
-                && f[x.Row].Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Mudo)) && f[x.Row].Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Wata)));
-            Expect("`Presets.Versions` ＝ 試遊の4台 ＋ 「版・N-100 呪い」「版・N-50 呪い」「版・U 呪い」（並びは試遊・呪い・段0 のムド ／ ワタ）", rows, string.Join("、", Presets.Versions.Select(r => r.Name)));
+                && !Presets.Versions.Any(r => VersionRows.Any(x => x.Row == r.Name));
+            Expect("`Presets.Versions` の頭 ＝ 試遊の4台・第355期の「版・」の3台は無い（第356期に外した）", vrows, string.Join("、", Presets.Versions.Select(r => r.Name)));
 
             long s100 = 0, s50 = 0, su = 0, s0 = 0, suOther = 0;
             foreach (var w in new[] { I.Boss, I.Guard, I.Bat }) for (int s = 0; s < 4; s++)

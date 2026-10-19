@@ -932,9 +932,7 @@ public static class Presets
         ("試遊・燃焼 ポンの台", BurnPon(UnitCatalog.Borg, UnitCatalog.Hota, UnitCatalog.Hiyo)),
         // 第351期 Phase 0: 呪いの台の上位1並び（前1 ワタ ／ 前3 ムド ／ 中央 クビ ／ 後1 ネル ／ 後3 ウツ・`db351 seats` の1位）。規定の駒のまま残す試遊の台。
         ("試遊・呪い", CursePlay(UnitCatalog.Wata, UnitCatalog.Kubi)),
-        // 第355期（版・期ごとに入れ替える）: 試遊・呪いのネル（U はウツ）が版。
-        ("版・N-100 呪い", Formation.Build(front1: UnitCatalog.Wata, front3: UnitCatalog.Mudo, center: UnitCatalog.Kubi, back1: UnitCatalog.NelN100, back3: UnitCatalog.Utsu)),
-        ("版・N-50 呪い", Formation.Build(front1: UnitCatalog.Wata, front3: UnitCatalog.Mudo, center: UnitCatalog.Kubi, back1: UnitCatalog.NelN50, back3: UnitCatalog.Utsu)),
-        ("版・U 呪い", Formation.Build(front1: UnitCatalog.Wata, front3: UnitCatalog.Mudo, center: UnitCatalog.Kubi, back1: UnitCatalog.Nel, back3: UnitCatalog.UtsuU)),
+        // 第356期 §6: 「試遊・呪い 壁」（`db356 seats` の1位・ボス ／ 近衛 ／ 大隊のすべてで1位・ムドを残す並び）。前1 ウツ ／ 前3 ワタ ／ 中央 ネル ／ 後1 ムド ／ 後3 ツギ。採るか ／ 試遊・呪いと入れ替えるかはポン。
+        ("試遊・呪い 壁", Formation.Build(front1: UnitCatalog.Utsu, front3: UnitCatalog.Wata, center: UnitCatalog.Nel, back1: UnitCatalog.Mudo, back3: UnitCatalog.Tsugi)),
     };
 }

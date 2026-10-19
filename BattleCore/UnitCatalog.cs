@@ -362,7 +362,8 @@ public static class UnitCatalog
         Flavor = "敵前逃亡二回。三度目は無いと言われて処分場に送られた。"
     };
 
-    public static readonly UnitDef Nel = new()
+    /// <summary>第189〜355期の規定のネル（呪詛 ／ 呪いを広げる ／ 漏れ）。<b>第356期に第355期の N-100（呪われた傷は癒えない）を規定にした</b>ので明示の定義として残す。過去の器具は `Common.PinN355` ／ `Pin355` で固定する。</summary>
+    public static readonly UnitDef NelH355 = new()
     {
         Id = "nel",
         Name = "呪詛官ネル",
@@ -377,6 +378,22 @@ public static class UnitCatalog
         PlusText = "戦闘開始時、敵全体の攻撃力を下げる / 手番で、まだ呪われていない敵のうち最も攻撃力の高い1体を呪い（呪われた者同士は単体攻撃の痛みを半分分け合う）、そのたび呪われている敵全員の攻撃力を4下げる",
         MinusText = "呪詛が味方全体にも漏れる / 呪うたび、隣の味方の攻撃力が2下がる / 自分では攻撃しない",
         Flavor = "効果は本物。ただし味方の被害が計算に合わないとされた。"
+    };
+
+    /// <summary>第356期 N-100 の文面の足し（第355期の `NelN100` と同じ）。</summary>
+    const string NelScarText356 = "。呪われた者の傷は、癒えても元の体には戻らない（受けた傷の分だけ最大HPが削れる）";
+    /// <summary>
+    /// 呪詛官ネル（規定）。<b>第356期に第355期の N-100 を規定にした</b>（ポンの判断・指示書 design/PHASE356_CURSE_WALL_SPEC.md §2）——
+    /// 旧（<see cref="NelH355"/>）に <see cref="TraitId.CurseScar"/> を足した。札と文面は第355期の <see cref="NelN100"/> と同じ。
+    /// </summary>
+    public static readonly UnitDef Nel = new()
+    {
+        Id = NelH355.Id, Name = NelH355.Name, MaxHp = NelH355.MaxHp, Attack = NelH355.Attack, Speed = NelH355.Speed,
+        Advances = NelH355.Advances, Actions = NelH355.Actions, Pattern = NelH355.Pattern,
+        Traits = NelH355.Traits.Append(TraitId.CurseScar).ToArray(),
+        PlusText = NelH355.PlusText + NelScarText356,
+        MinusText = NelH355.MinusText,
+        Flavor = NelH355.Flavor
     };
 
     public static readonly UnitDef Gald = new()
@@ -6518,11 +6535,12 @@ public static class UnitCatalog
     // 第355期【軽い期】呪われた傷は癒えない（指示書 design/PHASE355_CURSE_SCAR_SPEC.md §4）。版はネル ／ ウツの写し（Id は同じ・規定の上）。保持者 0 枚。
     // ---------------------------------------------------------------------------------
     /// <summary>第355期 N-100 呪われた傷: ネル ＋ <see cref="TraitId.CurseScar"/>（呪われている敵が受けた傷と同じだけ最大HPが削れる）。</summary>
-    public static readonly UnitDef NelN100 = Re351(Nel, Nel.Traits.Append(TraitId.CurseScar).ToArray(), Nel.Name,
-        Nel.PlusText + "。呪われた者の傷は、癒えても元の体には戻らない（受けた傷の分だけ最大HPが削れる）", Nel.MinusText);
+    // 第356期: 規定のネルが N-100 になったので、版は旧（`NelH355`）から作る（`NelN100` は規定と同じ札・文面・残置）。
+    public static readonly UnitDef NelN100 = Re351(NelH355, NelH355.Traits.Append(TraitId.CurseScar).ToArray(), NelH355.Name,
+        NelH355.PlusText + NelScarText356, NelH355.MinusText);
     /// <summary>第355期 N-50 呪われた傷・半分: ネル ＋ <see cref="TraitId.CurseScarHalf"/>。</summary>
-    public static readonly UnitDef NelN50 = Re351(Nel, Nel.Traits.Append(TraitId.CurseScarHalf).ToArray(), Nel.Name,
-        Nel.PlusText + "。呪われた者の傷は、癒えても元の体には戻らない（受けた傷の半分だけ最大HPが削れる）", Nel.MinusText);
+    public static readonly UnitDef NelN50 = Re351(NelH355, NelH355.Traits.Append(TraitId.CurseScarHalf).ToArray(), NelH355.Name,
+        NelH355.PlusText + "。呪われた者の傷は、癒えても元の体には戻らない（受けた傷の半分だけ最大HPが削れる）", NelH355.MinusText);
     /// <summary>第355期 U ウツの爪痕: 規定のウツ ＋ <see cref="TraitId.UtsuScar"/>（ウツの直の一撃で減らした HP と同じだけ相手の最大HPが削れる）。</summary>
     public static readonly UnitDef UtsuU = Re351(Utsu, Utsu.Traits.Append(TraitId.UtsuScar).ToArray(), Utsu.Name,
         Utsu.PlusText + "。呪われて振るう一撃は、相手の体に消えない爪痕を残す（最大HPを削る）", Utsu.MinusText);

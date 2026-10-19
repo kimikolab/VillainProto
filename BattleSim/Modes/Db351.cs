@@ -96,7 +96,7 @@ static partial class Db351Diag
             {
                 if (n == w || n == u || w == u) continue;
                 var f = new Formation();
-                f[n] = UnitCatalog.Nel; f[w] = UnitCatalog.WataH354; f[u] = UnitCatalog.UtsuH353;   // 第354期: 規定のウツが UT-o になったので旧に固定
+                f[n] = UnitCatalog.NelH355; f[w] = UnitCatalog.WataH354; f[u] = UnitCatalog.UtsuH353;   // 第354期: 規定のウツが UT-o になったので旧に固定
                 var rest = Enumerable.Range(0, 5).Where(i => i != n && i != w && i != u).ToArray();
                 f[rest[0]] = Fillers[fi].A; f[rest[1]] = Fillers[fi].B;
                 list.Add(new Seat(Seats(f), n, w, u, fi, f));
@@ -108,7 +108,7 @@ static partial class Db351Diag
     internal static Formation Top1 => Pin353(Presets.Versions.First(r => r.Name == PlayRow).F);   // 第354期: ウツは第353期までの規定に固定
     internal const string PlayRow = "試遊・呪い";
     /// <summary>Phase 0 の上位2並び目。</summary>
-    internal static Formation Top2 => Formation.Build(front1: UnitCatalog.WataH354, front3: UnitCatalog.MudoH354, center: UnitCatalog.Nel, back1: UnitCatalog.Kubi, back3: UnitCatalog.UtsuH353);   // §2 の2位（第354期: ウツは旧）
+    internal static Formation Top2 => Formation.Build(front1: UnitCatalog.WataH354, front3: UnitCatalog.MudoH354, center: UnitCatalog.NelH355, back1: UnitCatalog.Kubi, back3: UnitCatalog.UtsuH353);   // §2 の2位（第354期: ウツは旧）
     /// <summary>UK-r の台（上位1並びの残り2枚のうち1枚をウケに替えた並び・報告 §1）。</summary>
     internal static Formation UkBoard => S316.SwapId(Top1, UkSwapOut, UnitCatalog.Uke);
     internal const string UkSwapOut = "kubi";   // 決めたこと: 弱体の書き手でないクビを外す（ムドの泥 ／ 呪いの印は残す）

@@ -1491,3 +1491,7 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - 段0: engine は変えていない（第354期の `_mudoCurseLive` ／ `EruptTrait.AddCurseRage` ／ 配りの枝が規定のムド ／ ワタで働くようになった）。
 - **`ApplyDamage` の HP を引いた直後**（`target.Hp -= amount` の次の行・軛より後ろなので上限の外の増減ではない——減った HP を最大HPに写すだけ）: `_scar355Live`（`CurseScar` ／ `CurseScarHalf` ／ `UtsuScar` の保持者が戦にいる）のときだけ `Scar355`。N は受け手が呪われていて（`StatusKeys.Curse`）相手の陣営に保持者がいれば、減った HP × 100 ／ 50%。U は出どころが `UtsuScar` の持ち主で直の一撃（`hexShare` ／ `relayed` でない）なら全量。大きいほうだけ最大HPを削る（下限 1・今の HP は新しい最大HPで切る）。ミサの炸裂の一撃が同じ的に爪痕を残すとき（`_ruptureTarget`）は削らない（二重に削らない）。倒れた傷は削らない。
 - 表示専用: 第291期の `Scar`（`ActorId` は出どころ・無ければ null）。計数だけ: `UnitTally.Cs355Scar*`。
+
+## 第356期 —— ネルの N-100（呪われた傷は癒えない）を規定に
+
+- engine は変えていない。第355期の `_scar355Live` ／ `Scar355` が規定のネルのいる戦で働くようになった（ネルのいない戦は比較1つで抜けるのは同じ）。

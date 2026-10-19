@@ -61,10 +61,10 @@ static partial class Db355Diag
     internal sealed record Ver(string Name, string Ascii, UnitDef Nel, UnitDef Utsu);
     internal static readonly Ver[] Vers =
     {
-        new("規定（段0 入り）", "base", UnitCatalog.Nel, UnitCatalog.Utsu),
+        new("規定（段0 入り）", "base", UnitCatalog.NelH355, UnitCatalog.Utsu),   // 第356期: 規定のネルが N-100 になったので、第355期の「規定」は旧の定義に固定
         new("N-100 呪われた傷（全量）", "n100", UnitCatalog.NelN100, UnitCatalog.Utsu),
         new("N-50 呪われた傷（半分）", "n50", UnitCatalog.NelN50, UnitCatalog.Utsu),
-        new("U ウツの爪痕", "u", UnitCatalog.Nel, UnitCatalog.UtsuU),
+        new("U ウツの爪痕", "u", UnitCatalog.NelH355, UnitCatalog.UtsuU),
     };
     internal static Ver V(string n) => Vers.First(v => v.Name == n || v.Ascii == n);
     static Ver[] Pick(string only) => (string.IsNullOrEmpty(only) ? Vers : new[] { Vers[0] }.Concat(only.Split(',').Select(V).Where(v => v != Vers[0]))).ToArray();
@@ -74,10 +74,10 @@ static partial class Db355Diag
     // 台
     // ---------------------------------------------------------------------------------
     internal const string PlayRow = D.PlayRow;   // 「試遊・呪い」（ワタ・ムド・クビ・ネル・ウツ・段0 のムド ／ ワタ）
-    internal static Formation Play => Presets.Versions.First(r => r.Name == PlayRow).F;
+    internal static Formation Play => Pin355(Presets.Versions.First(r => r.Name == PlayRow).F);   // 第356期: ネルは第355期までの規定に固定
     /// <summary>ネルのいる `compare` の行からもう1つ（決めたこと: ウツがいない・燃焼の刻み ／ ムドの暴発が削り手になる行・第354期のムドの行と同じ）。</summary>
     internal const string FastRow = "速攻 (ボルグ×ムド)";
-    static Formation Row(string n) => CompareBuilds().Concat(CrossBuilds()).First(r => r.Name == n).F;
+    static Formation Row(string n) => Pin355(CompareBuilds().Concat(CrossBuilds()).First(r => r.Name == n).F);   // 第356期: ネルは旧
     internal static I.Board[] Boards() => new[]
     {
         new I.Board("呪い", PlayRow, Play),
@@ -88,10 +88,10 @@ static partial class Db355Diag
     {
         "play" => Boards()[0], "fast" => Boards()[2],
         _ => Boards().FirstOrDefault(b => b.Name.StartsWith(n, StringComparison.Ordinal))
-            ?? CompareBuilds().Concat(CrossBuilds()).Where(r => r.Name.StartsWith(n, StringComparison.Ordinal)).Select(r => new I.Board("行", r.Name, r.F)).First(),   // `compare` ／ 交差帯の行も名前の頭で引ける
+            ?? CompareBuilds().Concat(CrossBuilds()).Where(r => r.Name.StartsWith(n, StringComparison.Ordinal)).Select(r => new I.Board("行", r.Name, Pin355(r.F))).First(),   // `compare` ／ 交差帯の行も名前の頭で引ける
     };
     static bool Has(Formation f, string id) => f.Occupied().Any(o => o.Def.Id == id);
-    static bool Applies(I.Board b, Ver v) => v == Vers[0] || (v.Nel != UnitCatalog.Nel ? Has(b.F, "nel") : Has(b.F, "utsu"));
+    static bool Applies(I.Board b, Ver v) => v == Vers[0] || (v.Nel != UnitCatalog.NelH355 ? Has(b.F, "nel") : Has(b.F, "utsu"));
 
     internal static readonly I.W[] Waves = D.Waves;
 
@@ -112,7 +112,9 @@ static partial class Db355Diag
         public readonly Dictionary<string, long> ScarBy = new(), CurseBy = new();
         public long ScarAll, ScarNoSrc;
         // ターンごと（そのターンまで戦が続いた戦の和 ／ 数）: ボスの最大HP（ターン末）／ 味方 → ボスの与ダメ（ウツ ／ ムド ／ ほか）／ ボスの回復 ／ 削った最大HP
-        public readonly long[] TMax = new long[TrajT + 1], TAll = new long[TrajT + 1], TUtsu = new long[TrajT + 1], TMudo = new long[TrajT + 1], THeal = new long[TrajT + 1], TScar = new long[TrajT + 1], TCnt = new long[TrajT + 1];
+        public readonly int T;   // 第356期: 追うターン数（既定 12・`db356` は 14）
+        public readonly long[] TMax, TAll, TUtsu, TMudo, THeal, TScar, TCnt;
+        public Fx(int t = TrajT) { T = t; TMax = new long[t + 1]; TAll = new long[t + 1]; TUtsu = new long[t + 1]; TMudo = new long[t + 1]; THeal = new long[t + 1]; TScar = new long[t + 1]; TCnt = new long[t + 1]; }
         public void Add(Fx o)
         {
             N += o.N; Wins += o.Wins; WinT += o.WinT; Fell += o.Fell; Lost += o.Lost; BossN += o.BossN; BossMax0 += o.BossMax0;
@@ -120,16 +122,16 @@ static partial class Db355Diag
             WipeT += o.WipeT; CursedT += o.CursedT; CursedN += o.CursedN; ScarAll += o.ScarAll; ScarNoSrc += o.ScarNoSrc;
             foreach (var (k, x) in o.ScarBy) ScarBy[k] = ScarBy.GetValueOrDefault(k) + x;
             foreach (var (k, x) in o.CurseBy) CurseBy[k] = CurseBy.GetValueOrDefault(k) + x;
-            for (int t = 0; t <= TrajT; t++) { TMax[t] += o.TMax[t]; TAll[t] += o.TAll[t]; TUtsu[t] += o.TUtsu[t]; TMudo[t] += o.TMudo[t]; THeal[t] += o.THeal[t]; TScar[t] += o.TScar[t]; TCnt[t] += o.TCnt[t]; }
+            for (int t = 0; t <= Math.Min(T, o.T); t++) { TMax[t] += o.TMax[t]; TAll[t] += o.TAll[t]; TUtsu[t] += o.TUtsu[t]; TMudo[t] += o.TMudo[t]; THeal[t] += o.THeal[t]; TScar[t] += o.TScar[t]; TCnt[t] += o.TCnt[t]; }
         }
         public double Win => N == 0 ? 0 : 100.0 * Wins / N;
         public string WinTs => Wins == 0 ? "—" : (WinT / (double)Wins).ToString("0.0");
     }
 
-    internal static Fx One(Formation f, I.W w, int seed)
+    internal static Fx One(Formation f, I.W w, int seed, int tt = TrajT)
     {
         var (r, p, e) = I.Raw(f, w, seed, verbose: true);
-        var a = new Fx { N = 1 };
+        var a = new Fx(tt) { N = 1 };
         if (r.PlayerWon) { a.Wins = 1; a.WinT = r.Turns; } else a.Lost = 1;
         a.Fell = p.Count(u => u.LastDeathTurn > 0);
         var utsu = p.FirstOrDefault(u => u.Def.Id == "utsu"); var mudo = p.FirstOrDefault(u => u.Def.Id == "mudo");
@@ -137,7 +139,7 @@ static partial class Db355Diag
         foreach (var x in r.Events) if (x.Kind == BattleEventKind.Summon && x.TargetId is int sid && x.Team == BattleContext.PlayerTeam) mine.Add(sid);
         var name = p.Concat(e).ToDictionary(u => u.InstanceId, u => Short(u.Def));
         int last = r.Events.Where(x => x.Kind == BattleEventKind.StatSnapshot && x.TargetId is int sn && mine.Contains(sn)).Select(x => x.Turn).DefaultIfEmpty(0).Max();
-        for (int t = 1; t <= Math.Min(TrajT, last); t++) a.TCnt[t] = 1;
+        for (int t = 1; t <= Math.Min(tt, last); t++) a.TCnt[t] = 1;
         if (!r.PlayerWon) a.WipeT = last;
         foreach (var x in r.Events)
             if (x.Kind == BattleEventKind.Scar && x.Team != BattleContext.PlayerTeam)
@@ -152,11 +154,11 @@ static partial class Db355Diag
             a.BossN = 1;
             int max0 = boss.Def.MaxHp; a.BossMax0 = max0;
             long low = max0, max = max0;
-            var maxAt = new long[TrajT + 2];
+            var maxAt = new long[tt + 2];
             int curT = 0; bool cursed = false;
             foreach (var x in r.Events)
             {
-                while (curT < x.Turn && curT <= TrajT) { maxAt[curT] = max; curT++; }
+                while (curT < x.Turn && curT <= tt) { maxAt[curT] = max; curT++; }
                 if (x.TargetId == boss.InstanceId && x.Kind is BattleEventKind.Damage or BattleEventKind.Heal) low = Math.Min(low, x.HpAfter);
                 if (x.Kind == BattleEventKind.Scar && x.TargetId == boss.InstanceId) max = x.Slot;
                 if (!cursed && x.Kind == BattleEventKind.StatusGain && x.Text == StatusKeys.Curse && x.TargetId == boss.InstanceId)
@@ -166,7 +168,7 @@ static partial class Db355Diag
                     a.CurseBy[k] = a.CurseBy.GetValueOrDefault(k) + 1;
                 }
                 int t = x.Turn;
-                if (t < 1 || t > TrajT || t > last) continue;
+                if (t < 1 || t > tt || t > last) continue;
                 if (x.Kind == BattleEventKind.Damage && x.TargetId == boss.InstanceId && x.ActorId is int ai && mine.Contains(ai))
                 {
                     a.TAll[t] += x.Amount;
@@ -176,18 +178,18 @@ static partial class Db355Diag
                 if (x.Kind == BattleEventKind.Heal && x.TargetId == boss.InstanceId) a.THeal[t] += x.Amount;
                 if (x.Kind == BattleEventKind.Scar && x.TargetId == boss.InstanceId) a.TScar[t] += x.Amount;
             }
-            while (curT <= TrajT) { maxAt[curT] = max; curT++; }
-            for (int t = 1; t <= TrajT; t++) if (a.TCnt[t] > 0) a.TMax[t] = maxAt[t];   // maxAt[t] ＝ ターン t の最後の出来事の後（ターン t+1 の最初の出来事の手前）
+            while (curT <= tt) { maxAt[curT] = max; curT++; }
+            for (int t = 1; t <= tt; t++) if (a.TCnt[t] > 0) a.TMax[t] = maxAt[t];   // maxAt[t] ＝ ターン t の最後の出来事の後（ターン t+1 の最初の出来事の手前）
             if (!r.PlayerWon) { a.LostLow = low; a.LostLowMin = low; a.LostMaxEnd = boss.MaxHp; a.LostMaxEndMin = boss.MaxHp; }
         }
         return a;
     }
 
-    internal static Fx Measure(Formation f, I.W w, int n = Seeds)
+    internal static Fx Measure(Formation f, I.W w, int n = Seeds, int tt = TrajT)
     {
         var parts = new Fx[n];
-        Parallel.For(0, n, i => parts[i] = One(f, w, i));
-        var all = new Fx();
+        Parallel.For(0, n, i => parts[i] = One(f, w, i, tt));
+        var all = new Fx(tt);
         foreach (var x in parts) all.Add(x);
         return all;
     }
@@ -202,7 +204,7 @@ static partial class Db355Diag
         Console.WriteLine();
         Console.WriteLine("| T | 続いた戦 | ボスの最大HP（ターン末） | 削った | 味方の与ダメ | うちウツ | うちムド | ほか | ボスの回復 |");
         Console.WriteLine("|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
-        for (int t = 1; t <= TrajT; t++)
+        for (int t = 1; t <= a.T; t++)
         {
             long c = a.TCnt[t];
             if (c == 0) continue;

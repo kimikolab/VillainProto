@@ -109,7 +109,7 @@ static partial class Db354Diag
     static void CompareAll(Ver[] vers)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = CompareBuilds().ToArray();
+        var rows = CompareBuilds().Select(r => (r.Name, F: Pin355(r.F))).ToArray();   // 第356期: ネルは第355期までの規定に固定
         int nw = EnemyCatalog.Stages.Count, last = nw - 1;
         var b = Grid(rows, f => Apply(f, vers[0]));
         var b353 = Grid(rows, Pin353);   // 段0 の前（第353期までの規定のウツ）

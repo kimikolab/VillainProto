@@ -629,13 +629,27 @@ public static Formation Pin353(Formation f)
 /// 第355期: 規定のムド（M1＋M2）／ ワタ（配り）を第354期までの規定（`MudoH354` ／ `WataH354`）に替える。ほかの駒はそのまま返す。
 /// 古い口の終端の `PinU353` の後ろに置いた（`PinB349` ／ `Pin349` ／ `Pin351` ／ `Pin353` を通る器具はムド ／ ワタも旧になる・`PinW351` が先にワタを `WataH351` へ替える器具はそちらのまま）。
 /// </summary>
-public static UnitDef PinM354(UnitDef d) => ReferenceEquals(d, UnitCatalog.Mudo) ? UnitCatalog.MudoH354 : ReferenceEquals(d, UnitCatalog.Wata) ? UnitCatalog.WataH354 : d;
+public static UnitDef PinM354(UnitDef d) => ReferenceEquals(d, UnitCatalog.Mudo) ? UnitCatalog.MudoH354 : ReferenceEquals(d, UnitCatalog.Wata) ? UnitCatalog.WataH354 : PinN355(d);   // 第356期: 規定のネルも（古い口の終端）
 
 /// <summary>第355期: ムドの M1＋M2 ／ ワタの配りを規定にした。第354期までの規定のムド ／ ワタで測った器具はこれを通す。陣形とレリックは保つ。</summary>
 public static Formation Pin354(Formation f)
 {
     var g = f.Clone();
     foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinM354(d);
+    return g;
+}
+
+/// <summary>
+/// 第356期: 規定のネル（N-100・呪われた傷は癒えない）を第189〜355期の規定（`NelH355`）に替える。ほかの駒はそのまま返す。
+/// 古い口の終端の `PinM354` の後ろに置いた（`PinB349` ／ `Pin349` ／ `Pin351` ／ `Pin353` ／ `Pin354` を通る器具はネルも旧になる）。
+/// </summary>
+public static UnitDef PinN355(UnitDef d) => ReferenceEquals(d, UnitCatalog.Nel) ? UnitCatalog.NelH355 : d;
+
+/// <summary>第356期: ネルの N-100 を規定にした。第355期までの規定のネルで測った器具はこれを通す。陣形とレリックは保つ。</summary>
+public static Formation Pin355(Formation f)
+{
+    var g = f.Clone();
+    foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinN355(d);
     return g;
 }
 
