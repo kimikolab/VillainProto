@@ -50,9 +50,10 @@ static partial class Db356Diag
         Expect("器具の有無で勝敗が変わらない（計数あり ／ なし ／ verbose の3つで勝敗 ／ T ／ 倒れた数が同じ・19 並び × 3波 × seed 0..2）", diff == 0, $"{n} 戦・差 {diff}");
 
         var vr = Presets.Versions.Select(r => r.Name).ToArray();
-        bool rows = vr.Take(4).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", D.PlayRow }) && vr.Skip(4).SequenceEqual(new[] { WallRow })
-            && !vr.Any(x => x.StartsWith("版・", StringComparison.Ordinal));
-        Expect($"`Presets.Versions` ＝ 試遊の4台 ＋ 「{WallRow}」（第355期の「版・」の3台は外した）", rows, string.Join("、", vr));
+        // 第358期: 「試遊・呪い 壁」の後ろに別の期の「版・」の台が続いてよい（第355期の「版・」の3台が無いことだけを見る）。
+        bool rows = vr.Take(4).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", D.PlayRow }) && vr.Skip(4).Take(1).SequenceEqual(new[] { WallRow })
+            && vr.Skip(5).All(x => x.StartsWith("版・", StringComparison.Ordinal)) && !vr.Any(x => x.StartsWith("版・", StringComparison.Ordinal) && x.EndsWith(" 呪い", StringComparison.Ordinal));
+        Expect($"`Presets.Versions` ＝ 試遊の4台 ＋ 「{WallRow}」（第355期の「版・」の3台は外した・後ろは別の期の「版・」の台だけ）", rows, string.Join("、", vr));
         if (rows)
         {
             var wall = Presets.Versions.First(r => r.Name == WallRow).F;

@@ -6544,6 +6544,33 @@ public static class UnitCatalog
     /// <summary>第355期 U ウツの爪痕: 規定のウツ ＋ <see cref="TraitId.UtsuScar"/>（ウツの直の一撃で減らした HP と同じだけ相手の最大HPが削れる）。</summary>
     public static readonly UnitDef UtsuU = Re351(Utsu, Utsu.Traits.Append(TraitId.UtsuScar).ToArray(), Utsu.Name,
         Utsu.PlusText + "。呪われて振るう一撃は、相手の体に消えない爪痕を残す（最大HPを削る）", Utsu.MinusText);
+
+    // ---------------------------------------------------------------------------------
+    // 第358期【軽い期】破片軸の立て直し①（指示書 design/PHASE358_SHARD_AXIS_SPEC.md §3）。版はヒビ ／ ガレの写し（Id ・数値は同じ・規定の上）。保持者 0 枚。
+    // ---------------------------------------------------------------------------------
+    /// <summary>第358期 HB-r 返しの破片: ヒビの手番（術）で、自分以外の味方全員に破片を 6 ずつ配る（敵の一撃で割れた分だけ一撃の主へ返す）。
+    /// 自分は破片を纏えない（<see cref="TraitId.ShardBare"/>）＋ 脆弱はそのまま。砕け（<see cref="TraitId.Shatter"/>）は外す。</summary>
+    public static readonly UnitDef HibiHBr = new()
+    {
+        Id = Hibi.Id, Name = Hibi.Name, MaxHp = Hibi.MaxHp, Attack = Hibi.Attack, Speed = Hibi.Speed, Advances = false,
+        Traits = new[] { TraitId.ShardGift, TraitId.ShardBare, TraitId.Frail },
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "砕けた盾の欠片を配っている") },
+        PlusText = "手番で、砕けた盾の欠片を味方に配る（自分以外の全員に破片 6）。欠片で受け止めた一撃は、その主へ跳ね返る（割れた量だけ）",
+        MinusText = "自分の盾はもう割れている——自分は欠片を纏えない。受けるダメージが5割増し",
+        Flavor = Hibi.Flavor,
+    };
+
+    /// <summary>第358期 GR-r 礫を拾って投げる: 味方（自分を含む）の破片が敵の一撃で割れた量を礫として溜め、手番（術）で全部使って 礫 × 3 ＋ 攻撃力 を敵全体へ撃つ。
+    /// 味方の破片は砕かない。礫が無い手番は何もできない。</summary>
+    public static readonly UnitDef GareGRr = new()
+    {
+        Id = Gare.Id, Name = Gare.Name, MaxHp = Gare.MaxHp, Attack = Gare.Attack, Speed = Gare.Speed, Advances = false,
+        Traits = new[] { TraitId.PebbleGather },
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "礫を拾い集めている") },
+        PlusText = "仲間の欠片が割れるたび、散った礫を拾い集める。手番で、拾った礫を敵全体へ投げつける（礫の量と自分の攻撃力ぶん）",
+        MinusText = "拾う礫が無いターンは何もできない",
+        Flavor = Gare.Flavor,
+    };
 }
 
 /// <summary>討伐に来る人間側。プレイヤーは編成できない。</summary>

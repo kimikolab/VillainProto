@@ -444,6 +444,7 @@ public static class EngagementEngine
             }
 
             foreach (string key in StatusKeys.All) u.Counters.Remove(key);
+            u.Counters.Remove(ShardGiftTrait.Key);   // 第358期（HB-r）: 破片と一緒に返しの欠片の帳簿も消す（無い駒では何もしない）
             // 第104期: 傷が消えるので、刻み手の記録も一緒に消す。**記録は戦闘をまたがない**
             // ——Carry（第102期・既定では選ばれない）で傷そのものを持ち越した場合も記録は消す。
             // 再行動は「この戦闘で刻んだ相手」に対する精算で、前の波の刻みを持ち込む筋合いが無い。

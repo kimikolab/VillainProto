@@ -250,6 +250,7 @@ public sealed class UnitState
     {
         get => _traits;
         init { _traits = value; ControlProof = value.Any(t => t.BlocksControl); ControlTaxed = value.Any(t => t.TaxesControl); FlowWatch = value.Any(t => t.Id == TraitId.Grapple);
+              ArmorBare = value.Any(t => t.Id == TraitId.ShardBare);
               FlowMode = value.Any(t => t.Id == TraitId.ThreadFlowAll) ? 3 : value.Any(t => t.Id == TraitId.ThreadFlowMove) ? 2 : value.Any(t => t.Id == TraitId.ThreadFlowCopy) ? 1 : 0; }
     }
     private readonly IReadOnlyList<Trait> _traits = Array.Empty<Trait>();
@@ -259,6 +260,9 @@ public sealed class UnitState
     /// ——<see cref="SetCounter"/> は熱い経路なので、保持者がいなければ bool の比較1つで抜ける。
     /// </summary>
     public bool ControlProof { get; private init; }
+
+    /// <summary>第358期: 破片を纏えない駒か（<see cref="TraitId.ShardBare"/>・HB-r のヒビ）。<see cref="SetCounter"/> の入口で破片の増えた分を捨てる。保持者でなければ bool の比較1つで抜ける。</summary>
+    public bool ArmorBare { get; private init; }
 
     /// <summary>第266期: 手番を奪う状態が上がったことを知らせる札（<see cref="Trait.TaxesControl"/>・不屈）を持つ駒か。<see cref="SetCounter"/> の熱い経路は保持者がいなければ bool 1つで抜ける。</summary>
     public bool ControlTaxed { get; private init; }
@@ -449,6 +453,8 @@ public sealed class UnitState
         int delta = v - (Counters.TryGetValue(key, out int had) ? had : 0);
         // 第347期: クグが浴びた状態異常（増えた分だけ）。版 FL の「移す」は組み付いた敵へ流してクグには付けない（偽が返る）。規定のクグは数えるだけ。
         if (FlowWatch && delta > 0 && Board is not null && !Board.StatusOnThread(this, key, v, delta)) return;
+        // 第358期（HB-r・纏えない）: 破片の増えた分は付かずに消える（減る ／ 0 に戻すのは通す）。捨てた量は計数だけ。
+        if (ArmorBare && delta > 0 && key == StatusKeys.Armor) { if (Board is not null) Board.TallyOf(this).Sh358Refused += delta; return; }
         Counters[key] = v;
         // 第266期: 不屈。手番を奪う状態が実際に上がったときだけ、札に知らせる（拒否はしない・動じないの1行の後ろ）。
         if (ControlTaxed && delta > 0 && StatusKeys.IsControl(key))
@@ -2406,6 +2412,13 @@ public sealed class UnitTally
     public long Db354CurseRage, Db354PickedMudo, Db354FedMudo, Db354BurstYokeCut, Db354BurstYokeLost;
     /// <summary>第355期（<b>計数のみ</b>・呪われた傷 ／ ウツの爪痕）: その駒の一撃で削れた最大HP（出どころの側・刻みなど出どころの無い分は受け手の <c>Cs355ScarTakenNoSource</c>）／ 削られた最大HP（受け手の側）。誰も読んで分岐しない。</summary>
     public long Cs355ScarDealt, Cs355ScarTaken, Cs355ScarTakenNoSource;
+    /// <summary>第358期（<b>計数のみ</b>・破片軸の版）。ヒビ（HB-r）: 配った手番 ／ 配った量 ／ 返した回数 ／ 返した量（名目）／ 実際に減らした HP ／ 返しで倒した数 ／
+    /// 主が倒れていて捨てた量 ／ ヒビが倒れた後に返した量 ／ 攻撃の枠の中で返した量 ／ 軛に切られた返しの回数 ／ 切られた量 ／ 纏えずに捨てた破片。
+    /// ガレ（GR-r）: 拾った礫 ／ そのうち自分の破片から ／ 投げた手番 ／ 使った礫 ／ 1体あたりの名目の延べ ／ 実際に減らした HP ／ 軛に切られた発 ／ 切られた量。
+    /// 受け手: 敵の一撃で割れた破片（<c>HarmCensus</c> のときだけ）。誰も読んで分岐しない。</summary>
+    public long Sh358Gifts, Sh358Given, Sh358Returns, Sh358ReturnNominal, Sh358ReturnDealt, Sh358ReturnKills, Sh358ReturnWasted, Sh358ReturnAfterDeath, Sh358ReturnInFrame,
+                Sh358ReturnYokeHits, Sh358ReturnYokeCut, Sh358Refused,
+                Sh358Picked, Sh358PickedSelf, Sh358Throws, Sh358Thrown, Sh358ThrowNominal, Sh358ThrowDealt, Sh358ThrowYokeHits, Sh358ThrowYokeCut, Sh358ArmorBroken;
     public long Rp345NormalDealt, Rp345Punches, Rp345PunchBack, Rp345PunchKills, Rp345PunchDealt, Rp345PunchAmount, Rp345AimEdible, Rp345GrabNoPunch, Rp345GrabAfter, Ga345Stomps, Ga345SplashHits, Ga345SplashDealt;
     public long[]? Fg339Spray, Fg339AllyHits, Fg339AllyDmg;
     /// <summary>第339期（計数のみ）: 乱射の1発をターンごとに数える（羽の乱射 ／ 乱射の札の両方）。</summary>
@@ -3675,6 +3688,11 @@ public sealed class UnitTally
         Db351PerverseFullT += o.Db351PerverseFullT; Db351PerverseFullN += o.Db351PerverseFullN;
         Db351HexSrcHits += o.Db351HexSrcHits; Db351HexSplits += o.Db351HexSplits; Db351HexDealt += o.Db351HexDealt; Db351HexKills += o.Db351HexKills;
         Cs355ScarDealt += o.Cs355ScarDealt; Cs355ScarTaken += o.Cs355ScarTaken; Cs355ScarTakenNoSource += o.Cs355ScarTakenNoSource;   // 第355期
+        Sh358Gifts += o.Sh358Gifts; Sh358Given += o.Sh358Given; Sh358Returns += o.Sh358Returns; Sh358ReturnNominal += o.Sh358ReturnNominal; Sh358ReturnDealt += o.Sh358ReturnDealt;   // 第358期
+        Sh358ReturnKills += o.Sh358ReturnKills; Sh358ReturnWasted += o.Sh358ReturnWasted; Sh358ReturnAfterDeath += o.Sh358ReturnAfterDeath; Sh358ReturnInFrame += o.Sh358ReturnInFrame;
+        Sh358ReturnYokeHits += o.Sh358ReturnYokeHits; Sh358ReturnYokeCut += o.Sh358ReturnYokeCut; Sh358Refused += o.Sh358Refused;
+        Sh358Picked += o.Sh358Picked; Sh358PickedSelf += o.Sh358PickedSelf; Sh358Throws += o.Sh358Throws; Sh358Thrown += o.Sh358Thrown; Sh358ThrowNominal += o.Sh358ThrowNominal;
+        Sh358ThrowDealt += o.Sh358ThrowDealt; Sh358ThrowYokeHits += o.Sh358ThrowYokeHits; Sh358ThrowYokeCut += o.Sh358ThrowYokeCut; Sh358ArmorBroken += o.Sh358ArmorBroken;
         Db354CurseRage += o.Db354CurseRage; Db354PickedMudo += o.Db354PickedMudo; Db354FedMudo += o.Db354FedMudo; Db354BurstYokeCut += o.Db354BurstYokeCut; Db354BurstYokeLost += o.Db354BurstYokeLost;   // 第354期
         Db353PlunderGain += o.Db353PlunderGain; Db353PlunderHits += o.Db353PlunderHits; Db353PlunderDry += o.Db353PlunderDry; Db353PlunderMiss += o.Db353PlunderMiss; Db353PlunderBoss += o.Db353PlunderBoss;   // 第353期
         Fg339Spray = AddArr(Fg339Spray, o.Fg339Spray); Fg339AllyHits = AddArr(Fg339AllyHits, o.Fg339AllyHits); Fg339AllyDmg = AddArr(Fg339AllyDmg, o.Fg339AllyDmg);
@@ -4517,6 +4535,24 @@ public enum BattleEventKind
     /// <see cref="CursePassLabels.Plunder"/>（奪う: 殴った敵 → ウケ）は殴った <c>Damage</c> の後。<b>どの規則も読まない。</b>規定のワタ ／ ウケには出ない。
     /// </summary>
     CursePass,
+
+    /// <summary>
+    /// 返しの破片 ／ 礫（第358期・破片軸の版 HB-r ／ GR-r だけ・<b>表示専用</b>）。<c>Text</c> ＝ <see cref="ShardLabels"/>。
+    /// 配る: <c>ActorId</c> ＝ ヒビ ／ <c>TargetId</c> ＝ 受けた味方 ／ <c>Amount</c> ＝ 付いた量 ／ <c>StatusRemaining</c> ＝ 付いた後の破片。
+    /// 返し: <c>ActorId</c> ＝ 欠片を持っていた味方 ／ <c>TargetId</c> ＝ 一撃の主 ／ <c>PartnerId</c> ＝ ヒビ ／ <c>Amount</c> ＝ 返した量 ／
+    /// <c>Slot</c> ＝ 攻撃の通し番号（同じ敵の1回の攻撃で返った返しは同じ番号・攻撃の外なら 0）。直後に一撃の主への <c>Damage</c> が並ぶ。
+    /// 拾う: <c>ActorId</c> ＝ ガレ ／ <c>TargetId</c> ＝ 破片が割れた味方 ／ <c>Amount</c> ＝ 拾った量 ／ <c>StatusRemaining</c> ＝ 礫の合計。
+    /// 投げる: <c>ActorId</c> ＝ ガレ ／ <c>Amount</c> ＝ 1体あたりの威力 ／ <c>Slot</c> ＝ 使った礫。直後に敵全体への <c>Damage</c> が並ぶ。<b>どの規則も読まない。</b>規定のヒビ ／ ガレには出ない。
+    /// </summary>
+    Shard,
+}
+/// <summary>`Shard`（第358期）の <c>Text</c>。</summary>
+public static class ShardLabels
+{
+    public const string Gift = "欠片を配る";
+    public const string Return = "返し";
+    public const string Pick = "礫を拾う";
+    public const string Throw = "礫を投げる";
 }
 /// <summary>`CursePass`（第351期）の <c>Text</c>。</summary>
 public static class CursePassLabels

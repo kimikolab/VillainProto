@@ -941,5 +941,15 @@ public static class Presets
         ("試遊・呪い", CurseCenterNel()),
         // 第356期 §6: 「試遊・呪い 壁」（`db356 seats` の1位・ボス ／ 近衛 ／ 大隊のすべてで1位・ムドを残す並び）。前1 ウツ ／ 前3 ワタ ／ 中央 ネル ／ 後1 ムド ／ 後3 ツギ。採るか ／ 試遊・呪いと入れ替えるかはポン。
         ("試遊・呪い 壁", Formation.Build(front1: UnitCatalog.Utsu, front3: UnitCatalog.Wata, center: UnitCatalog.Nel, back1: UnitCatalog.Mudo, back3: UnitCatalog.Tsugi)),
+        // 第358期: 破片軸の版（HB-r 返しの破片 ／ GR-r 礫を拾って投げる）。並びは `sh358 seats hbgr` のツギなしの最良（前1 ドルガ ／ 前3 ササ ／ 中央 ゴルム ／ 後1 ヒビ ／ 後3 ガレ）と、
+        // ツギありの最良（前1 ウロ ／ 前3 ガルド ／ 中央 ガレ ／ 後1 ツギ ／ 後3 ヒビ）。ヒビ ／ ガレだけが版。採否はポン。
+        ("版・HB-r 破片", ShardBoard(UnitCatalog.HibiHBr, UnitCatalog.Gare)),
+        ("版・GR-r 破片", ShardBoard(UnitCatalog.Hibi, UnitCatalog.GareGRr)),
+        ("版・HB-r＋GR-r 破片", ShardBoard(UnitCatalog.HibiHBr, UnitCatalog.GareGRr)),
+        ("版・HB-r＋GR-r 破片 ツギ", Formation.Build(front1: UnitCatalog.Uro, front3: UnitCatalog.Gald, center: UnitCatalog.GareGRr, back1: UnitCatalog.Tsugi, back3: UnitCatalog.HibiHBr)),
     };
+
+    /// <summary>第358期: 破片軸の版の台（`sh358 seats hbgr` のツギなしの最良）。前1 ドルガ ／ 前3 ササ ／ 中央 ゴルム ／ 後1 ヒビ ／ 後3 ガレ。</summary>
+    public static Formation ShardBoard(UnitDef hibi, UnitDef gare) =>
+        Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Sasa, center: UnitCatalog.Golm, back1: hibi, back3: gare);
 }

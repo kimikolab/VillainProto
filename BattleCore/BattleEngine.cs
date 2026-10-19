@@ -7843,6 +7843,9 @@ public sealed class BattleContext
             return;
         }
         TallyOf(u).Lv332ArmorLost += lost;   // 第332期・計数のみ（減った破片の延べ・衣か板かを問わない）
+        // 第358期（HB-r）: 破片が減ったら返しの欠片から先に減らす（残りは破片を超えない）。保持者がいなければ比較1つで抜ける。
+        if (_hibiRetLive && u.RawCounter(ShardGiftTrait.Key) is int hk and > 0)
+            u.SetCounter(ShardGiftTrait.Key, Math.Min(hk - Math.Min(hk, lost), after));
         // 第308期・**計数のみ**（光の衣）: 破片が減ったら衣の帳簿から先に減らし、減った分を「衣が受け止めた量」に数える。保持者がいなければ比較1つで抜ける。
         if (_veilLive && u.RawCounter(SparkTrait.VeilKey) is int vk and > 0)
         {
@@ -9693,6 +9696,8 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.MudoCurseRage) || u.HasTrait(TraitId.MudoCurseHeavy)) _mudoCurseLive = true;
         if (u.HasTrait(TraitId.CurseScar)) { _scar355Live = true; _curseScarPct355[u.TeamId] = 100; }                                                       // 第355期（N-100）
         else if (u.HasTrait(TraitId.CurseScarHalf)) { _scar355Live = true; _curseScarPct355[u.TeamId] = Math.Max(_curseScarPct355[u.TeamId], 50); }     // 第355期（N-50）
+        if (u.HasTrait(TraitId.ShardGift)) { _hibiRetLive = true; _hibiRet ??= u; }   // 第358期（HB-r・返しの破片）
+        if (u.HasTrait(TraitId.PebbleGather)) _pebbleHolders.Add(u);                  // 第358期（GR-r・礫を拾う）
         if (u.HasTrait(TraitId.UtsuScar)) _scar355Live = true;                                                                                            // 第355期（U）   // 第354期（M1 ／ M2・ムドは呪いを欲しがる）
         if (FireLevelRule.Holds(u)) { _fireLvLive = true; _fireLvTeams[u.TeamId] = true; }   // 第242期（火勢）
         if (u.HasTrait(TraitId.FireSpreadCap)) _spreadCapTeams[u.TeamId] = true;              // 第244期（燃え広がりの上限）
@@ -11359,7 +11364,7 @@ public sealed class BattleContext
         // 第185期 追補4: 殴られて積もる据えの層を「1回の攻撃につき1層・攻撃が終わってから」にする枠。
         // **保持者がいなければ比較1つで本体へ直行する**（既存の行が 0 件差分であることの根拠）。
         // 第208期: 撃ち返す板の「1回の攻撃に何本返ったか」を数える枠（計数・表示専用）。保持者がいなければ比較1つで抜ける。
-        if (_reboundLive)
+        if (_reboundLive || _hibiRetLive)   // 第358期: 返しの破片も同じ枠で通し番号を振る（計数・表示専用）
         {
             _reflectFrames.Push(new ReflectFrame { Actor = actor, Serial = ++_attackSerial });
             try { PerformAttackFramed(actor, prefix, attackPercent, patternOverride); }
@@ -13444,6 +13449,8 @@ public sealed class BattleContext
         int prevAmt = _reflectAmt; UnitState? prevFrom = _reflectFrom;
         int prevRest = _reflectRest, prevRatio = _reflectRatio;   // 第209期
         _reflectAmt = 0; _reflectFrom = null; _reflectRest = 0; _reflectRatio = 0;
+        int prevH358 = _hretAmt358; UnitState? prevHF358 = _hretFrom358;   // 第358期（返しの破片）
+        _hretAmt358 = 0; _hretFrom358 = null;
         if (_reboundLive && amount > 0) NoteFrameHit(target, source, burnTick);   // 第209期（計数のみ）
         // 第255期（被弾の燃焼）: 本体の前に「前から燃えていたか」と HP＋破片を控え、本体の後で減っていれば燃焼を刻む。札が無ければ比較1つで抜ける。
         bool burnHit = _burnHitLive && amount > 0 && BurnHitEligible(target, source, burnTick, relayed, hexShare, levy);
@@ -13452,6 +13459,7 @@ public sealed class BattleContext
         bool relayProbe = _burnHitLive && relayed && amount > 0 && source is not null && target.IsAlive && target.RawCounter(StatusKeys.Burn) > 0;
         int relayBefore = relayProbe ? target.Hp + target.RawCounter(StatusKeys.Armor) : 0;
         int myAmt, myRest, myRatio; UnitState? myFrom;
+        int myH358; UnitState? myHF358;
         try
         {
             ApplyDamageBody(target, amount, source, isFriendlyFire, lethal, burnTick, relayed,
@@ -13463,6 +13471,8 @@ public sealed class BattleContext
             CurrentHitSerial = prevHitSerial212;
             myAmt = _reflectAmt; myFrom = _reflectFrom; myRest = _reflectRest; myRatio = _reflectRatio;
             _reflectAmt = prevAmt; _reflectFrom = prevFrom; _reflectRest = prevRest; _reflectRatio = prevRatio;
+            myH358 = _hretAmt358; myHF358 = _hretFrom358;
+            _hretAmt358 = prevH358; _hretFrom358 = prevHF358;
         }
         if (burnHit && target.IsAlive && target.RawCounter(StatusKeys.Burn) > 0
             && target.Hp + target.RawCounter(StatusKeys.Armor) < burnHitBefore)
@@ -13479,6 +13489,7 @@ public sealed class BattleContext
             rc[0]++; rc[1] += Math.Max(1, FireLevelRule.Of(target));
         }
         if (myAmt > 0 && myFrom is not null) ReflectPlank(target, myFrom, myAmt, myRest, myRatio);
+        if (myH358 > 0 && myHF358 is not null) ShardReturn358(target, myHF358, myH358);   // 第358期（HB-r）
     }
 
     /// <summary>ダメージ処理の本体。<see cref="ApplyDamageCore"/> だけが呼ぶ。</summary>
@@ -14125,16 +14136,33 @@ public sealed class BattleContext
             if (source is not null && source.TeamId != target.TeamId && !burnTick && target.RawCounter(StatusKeys.Plank) != 0)
                 TallyOf(target).PlankHitsTaken++;
             if (_turn == 1 && _scrapHolders.Count > 0) TallyOf(target).FirstTurnArmorSoak += soak;   // 第212期（計数のみ）
+            // 第358期（HB-r）: 返しの欠片（ヒビが配った分の残り・破片の先に減る層）が敵の一撃で割れた量。板と同じ条件（燃焼の刻み ／ 返しの中を除く）。
+            // 板の印と重なったら、欠片の分は返しが、残りの破片の分だけ板が返す（二重に返さない）。保持者がいなければ比較1つで抜ける。
+            int hret358 = 0;
+            if (_hibiRetLive && source is not null && source.TeamId != target.TeamId && !burnTick && !InReaction
+                && target.RawCounter(ShardGiftTrait.Key) is int hk358 and > 0)
+            {
+                hret358 = Math.Min(soak, hk358);
+                _hretAmt358 += hret358;
+                _hretFrom358 = source;
+            }
+            // 第358期（GR-r）: 味方の破片が敵の一撃で割れた量を、同じ陣営の生きている礫の保持者が拾う。保持者がいなければ比較1つで抜ける。
+            if (_pebbleHolders.Count > 0 && source is not null && source.TeamId != target.TeamId && !burnTick)
+                foreach (UnitState g358 in _pebbleHolders)
+                    if (g358.IsAlive && g358.TeamId == target.TeamId) PebbleTrait.Gather(this, g358, target, soak);
+            if (HarmCensus && source is not null && source.TeamId != target.TeamId && !burnTick) TallyOf(target).Sh358ArmorBroken += soak;   // 第358期（計数のみ・敵の一撃で割れた破片・受け手の側）
             // 第208期: 撃ち返す板（`PlankRebound`）。印は破片が 0 になると消えるので、減らす前に読む。
-            if (_reboundLive && source is not null && source.TeamId != target.TeamId && !burnTick && !InReaction
+            if (_reboundLive && soak > hret358 && source is not null && source.TeamId != target.TeamId && !burnTick && !InReaction
                 && (target.RawCounter(StatusKeys.Plank) & PlankTrait.Rebound) != 0)
             {
+                soak -= hret358;   // 第358期: 返しの欠片の分は板では返さない（下で戻す）
                 _reflectAmt += soak;
                 _reflectFrom = source;
                 // 第209期: その一撃を受けた後に残った破片と、印の倍率（印は破片が 0 になると消えるので、ここで読む）。
-                _reflectRest = armor - soak;
+                _reflectRest = armor - soak - hret358;   // 第358期: 残りは一撃の後の破片（返しの欠片の分も引く・HB-r がいなければ 0）
                 _reflectRatio = PlankTrait.RatioOf(target.RawCounter(StatusKeys.Plank));
                 NotePlankSkill(soak);   // 第210期: 腕の累計（同じ条件・同じ量）
+                soak += hret358;
             }
             target.SetCounter(StatusKeys.Armor, armor - soak);
             amount -= soak;
@@ -17551,6 +17579,62 @@ public sealed class BattleContext
     }
 
     /// <summary>第351期・表示専用: 呪いの受け渡し（`CursePass`）。版の駒（`RelayWide` ／ `Plunder` の保持者）だけが呼ぶ。盤面は動かさない。</summary>
+    // ---- 第358期【軽い期】破片軸の版（HB-r 返しの破片 ／ GR-r 礫を拾って投げる）。保持者がいなければ比較1つで抜ける。 ----
+    /// <summary>第358期: 返しの破片（<see cref="TraitId.ShardGift"/>）の保持者が盤上にいるか ／ 最初の保持者（返しの撃破者）。</summary>
+    bool _hibiRetLive;
+    UnitState? _hibiRet;
+    /// <summary>第358期: 1回の <c>ApplyDamage</c> の枠で返しの欠片が割れた量と一撃の主（入れ子の呼び出しは退避・復帰する）。</summary>
+    int _hretAmt358;
+    UnitState? _hretFrom358;
+    /// <summary>第358期: 礫を拾う（<see cref="TraitId.PebbleGather"/>）の保持者。</summary>
+    readonly List<UnitState> _pebbleHolders = new();
+
+    /// <summary>
+    /// 第358期（HB-r）: 返しの欠片が敵の一撃で割れた量だけ、その一撃の主へ返す。<see cref="ApplyDamageCore"/> の出口から1回だけ来る（撃ち返す板 <see cref="ReflectPlank"/> と同じ形）。
+    /// <b>攻撃ではない</b>（合図にならない・庇い ／ 反撃 ／ 割り込みの対象にならない）が、ダメージは通常の入口（敵の破片・軛）を通す。<see cref="Reaction"/> で包む（中では返さない）。
+    /// 撃破者はヒビ（倒れていたら欠片を持っていた味方・決めたこと）。<b>乱数を引かない。</b>
+    /// </summary>
+    void ShardReturn358(UnitState holder, UnitState foe, int amount)
+    {
+        UnitState hibi = _hibiRet!;
+        UnitTally ht = TallyOf(hibi);
+        if (!foe.IsAlive) { ht.Sh358ReturnWasted += amount; return; }
+        UnitState src = hibi.IsAlive ? hibi : holder;
+        ht.Sh358Returns++;
+        ht.Sh358ReturnNominal += amount;
+        if (!hibi.IsAlive) ht.Sh358ReturnAfterDeath += amount;
+        if (YokeBinding && amount > Yoke.Cap) { ht.Sh358ReturnYokeHits++; ht.Sh358ReturnYokeCut += amount - Yoke.Cap; }
+        int serial = _reflectFrames.Count > 0 && _reflectFrames.Peek().Actor == foe ? _reflectFrames.Peek().Serial : 0;
+        if (serial > 0) ht.Sh358ReturnInFrame += amount;
+        if (_verbose)
+            Emit(new BattleEvent
+            {
+                Kind = BattleEventKind.Shard, Turn = _turn, Text = ShardLabels.Return, ActorId = holder.InstanceId, TargetId = foe.InstanceId,
+                PartnerId = hibi.InstanceId, Amount = amount, Slot = serial, Team = holder.TeamId, SourceTrait = TraitId.ShardGift,
+            });
+        int before = foe.Hp;
+        Reaction(() =>
+        {
+            Log($"    {holder.Name} の欠片が受け止めた一撃が {foe.Name} へ跳ね返った（{amount}）", LogKind.Trigger);
+            ApplyDamage(foe, amount, src);
+        });
+        ht.Sh358ReturnDealt += before - Math.Max(0, foe.Hp);
+        if (!foe.IsAlive) ht.Sh358ReturnKills++;
+    }
+
+    /// <summary>第358期（<b>表示専用</b>）: 返しの破片 ／ 礫の出来事（<see cref="BattleEventKind.Shard"/>）。verbose のときだけ積む。</summary>
+    internal void EmitShard(string label, UnitState actor, UnitState? target, int amount, int remainingOrSlot)
+    {
+        if (!_verbose || amount <= 0) return;
+        bool thr = label == ShardLabels.Throw;
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Shard, Turn = _turn, Text = label, ActorId = actor.InstanceId, TargetId = target?.InstanceId, Amount = amount,
+            StatusRemaining = thr ? null : remainingOrSlot, Slot = thr ? remainingOrSlot : 0, Team = actor.TeamId,
+            SourceTrait = label == ShardLabels.Gift ? TraitId.ShardGift : TraitId.PebbleGather,
+        });
+    }
+
     internal void EmitCursePass(string label, UnitState actor, UnitState to, UnitState? from, int amount)
     {
         if (!_verbose || amount <= 0) return;

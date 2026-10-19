@@ -901,6 +901,10 @@ public enum TraitId
     MudoCurseHeavy,     // 呪われるほど重い（M2・ムド）: 暴発の1発に下げ幅（`-AtkBonus`・0 未満は 0）× 2 を足す（自分の手番の通常攻撃は今どおり）。渡し（ワタ）はこの駒の弱体を拾わない
     RelayFeedMudo,      // ムドへも回す（配り・ワタ）: ウツへ回した余りを、ムドの下げ幅が 12 に届くまでムドへ回し、余りを最も強い敵へ（**札そのものは挙動を持たない**・engine の `RelayThrough`）
     PlunderCum,         // 奪う・累計（UK-c・ウケの転生）: 殴った敵がこの戦で弱体の窓口から受けた量の累計のうち、まだ奪っていない分の半分（切り捨て）だけ、自分の攻撃力がその戦の間上がる。累計 0 の敵を殴ると自分の攻撃力が 1 下がる
+    // --- 第358期で足した札（指示書 design/PHASE358_SHARD_AXIS_SPEC.md §3）。破片軸の立て直し（ヒビ ／ ガレの版）。保持者 0 枚 ---
+    ShardGift,          // 返しの破片（HB-r・ヒビ）: 手番（術）で、自分以外の生きている味方全員に破片を 6 ずつ配る。配った破片には返しの印（私有キー）が付き、敵の一撃で割れた量だけその一撃の主へ返す（攻撃ではない・返しで倒したらヒビの撃破・engine の `ApplyDamage`）
+    ShardBare,          // 纏えない（HB-r・ヒビのマイナス）: 自分に付く破片は付かずに消える（`UnitState.SetCounter` の入口で増えた分を捨てる・**札そのものは挙動を持たない**）
+    PebbleGather,       // 礫を拾う（GR-r・ガレ）: 味方（自分を含む）の破片が敵の一撃で割れた量を礫として溜め（上限なし）、手番（術）で全部使って 礫 × 3 ＋ 攻撃力 を敵全体へ撃つ。礫が無い手番は何もできない（味方の破片は砕かない）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -9073,6 +9077,96 @@ public sealed class ShrapnelTrait : Trait
             ctx.ApplyDamage(victim, back, self, isFriendlyFire: !foeSide, lethal: false);
         }
     }
+}
+
+/// <summary>
+/// 返しの破片（第358期・HB-r・ヒビの版）。<b>手番（術・殴らない）で、自分以外の生きている味方全員に破片を <see cref="Gift"/> ずつ配る。</b>
+/// <para>配った分は受けた味方の私有キー <see cref="Key"/>（返しの欠片の残り）に積む。<b>破片が減ったら返しの欠片から先に減らす</b>（engine の <c>NoteArmorLost</c>・光の衣の帳簿と同じ作法）。
+/// 敵の一撃（燃焼の刻み ／ 手番の外の返しの中を除く）で返しの欠片が割れた量だけ、engine がその一撃の主へ返す（<c>ApplyDamageCore</c> の出口・撃ち返す板 <c>ReflectPlank</c> と同じ形・攻撃ではない）。
+/// 板の印（ツギ）と同じ駒に付いたら、返しの欠片の分は返しが、残りの破片の分だけ板が返す（二重に返さない・第358期の決めたこと）。</para>
+/// <para>纏えない駒（<see cref="TraitId.ShardBare"/>・ヒビ自身）には付かない（<c>SetCounter</c> の入口で捨てられる）。<b>乱数を引かない。</b></para>
+/// </summary>
+public sealed class ShardGiftTrait : Trait
+{
+    /// <summary>1回の手番で味方1体に配る破片（叩き台・指示書 §3）。</summary>
+    public const int Gift = 6;
+    /// <summary>返しの欠片の帳簿（受けた味方の側の私有キー・<see cref="StatusKeys.All"/> に入れない）: 破片のうちヒビが配った分の残り。会戦の境界で消える（engine）。</summary>
+    public const string Key = "shardBack";
+
+    public override TraitId Id => TraitId.ShardGift;
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+    {
+        if (!self.IsAlive) return;
+        int given = 0, n = 0;
+        foreach (UnitState a in ctx.LivingMembers(self.TeamId))
+        {
+            if (a == self) continue;
+            int before = a.RawCounter(StatusKeys.Armor);
+            a.SetCounter(StatusKeys.Armor, before + Gift);
+            int got = a.RawCounter(StatusKeys.Armor) - before;   // 纏えない駒には付かない
+            if (got <= 0) continue;
+            a.SetCounter(Key, a.RawCounter(Key) + got);
+            given += got; n++;
+            ctx.EmitShard(ShardLabels.Gift, self, a, got, a.RawCounter(StatusKeys.Armor));
+        }
+        UnitTally t = ctx.TallyOf(self);
+        t.Sh358Gifts++;
+        t.Sh358Given += given;
+        if (given > 0) ctx.Log($"    ★ {self.Name} が砕けた盾の欠片を配った（味方 {n} 体へ {Gift} ずつ）", LogKind.Trigger, self);
+    }
+}
+
+/// <summary>
+/// 礫を拾って投げる（第358期・GR-r・ガレの版）。<b>味方（自分を含む）の破片が敵の一撃で割れた量を礫として溜め（私有キー <see cref="Key"/>・上限なし）、
+/// 手番（術）で全部使って 礫 × <see cref="ShrapnelRule.Multiplier"/> ＋ 自分の攻撃力 を敵全体へ撃つ</b>（いまの礫 <see cref="ShrapnelTrait"/> と同じ式）。
+/// <para>溜めるのは engine（<c>ApplyDamage</c> の破片の段・燃焼の刻みを除く敵の一撃・生きている保持者だけ）。味方の破片は砕かない。
+/// <b>礫が無い手番は何もできない</b>（<see cref="CanAct"/> が偽・いまのガレと同じ）。<see cref="BattleContext.PickOne"/> を呼ばない。</para>
+/// </summary>
+public sealed class PebbleTrait : Trait
+{
+    /// <summary>礫の帳簿（保持者の私有キー・<see cref="StatusKeys.All"/> に入れない・<see cref="OnCarryOver"/> で捨てる）。</summary>
+    public const string Key = "pebble";
+
+    public override TraitId Id => TraitId.PebbleGather;
+
+    public override bool CanAct(BattleContext ctx, UnitState self, ActionKind kind)
+        => kind != ActionKind.Skill || self.RawCounter(Key) > 0;
+
+    /// <summary>engine の破片の段から: 味方の破片が敵の一撃で <paramref name="broken"/> 割れた。</summary>
+    internal static void Gather(BattleContext ctx, UnitState holder, UnitState from, int broken)
+    {
+        holder.SetCounter(Key, holder.RawCounter(Key) + broken);
+        UnitTally t = ctx.TallyOf(holder);
+        t.Sh358Picked += broken;
+        if (from == holder) t.Sh358PickedSelf += broken;
+        ctx.EmitShard(ShardLabels.Pick, holder, from, broken, holder.RawCounter(Key));
+    }
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+    {
+        if (!self.IsAlive) return;
+        int p = self.RawCounter(Key);
+        if (p <= 0) return;
+        self.SetCounter(Key, 0);
+        int dmg = p * ctx.Shrapnel.Multiplier + self.CurrentAttack;
+        ctx.NoteAttackRead(self);
+        UnitTally t = ctx.TallyOf(self);
+        t.Sh358Throws++;
+        t.Sh358Thrown += p;
+        ctx.EmitShard(ShardLabels.Throw, self, null, dmg, p);
+        ctx.Log($"    ★ {self.Name} が拾い集めた礫を投げつけた（礫 {p}・{dmg}）", LogKind.Highlight, self);
+        foreach (UnitState foe in ctx.LivingMembers(ctx.Opponent(self.TeamId)))
+        {
+            int before = foe.Hp;
+            t.Sh358ThrowNominal += dmg;
+            if (ctx.YokeBinding && dmg > ctx.Yoke.Cap) { t.Sh358ThrowYokeHits++; t.Sh358ThrowYokeCut += dmg - ctx.Yoke.Cap; }
+            ctx.ApplyDamage(foe, dmg, self, pattern: AttackPattern.All);
+            t.Sh358ThrowDealt += before - Math.Max(0, foe.Hp);
+        }
+    }
+
+    public override void OnCarryOver(UnitState self) => self.Counters.Remove(Key);
 }
 
 /// <summary>
@@ -17935,6 +18029,9 @@ public static class TraitCatalog
         new PlunderTrait(),                                   // 第351期（奪う UK-r・ウケの転生）
         new PerverseOverTrait(),                              // 第353期（上限超え UT-o・ウツ）
         new PlunderCumTrait(),                                // 第353期（奪う・累計 UK-c・ウケの転生）
+        new ShardGiftTrait(),                                 // 第358期（返しの破片 HB-r・ヒビ）
+        new MarkOnlyTrait(TraitId.ShardBare),                 // 第358期（纏えない HB-r・ヒビのマイナス・印だけ・本体は `UnitState.SetCounter`）
+        new PebbleTrait(),                                    // 第358期（礫を拾って投げる GR-r・ガレ）
         new MarkOnlyTrait(TraitId.CurseScar),                 // 第355期（呪われた傷 N-100・ネル・印だけ）
         new MarkOnlyTrait(TraitId.CurseScarHalf),             // 第355期（呪われた傷・半分 N-50・ネル・印だけ）
         new MarkOnlyTrait(TraitId.UtsuScar),                  // 第355期（ウツの爪痕 U・印だけ）
