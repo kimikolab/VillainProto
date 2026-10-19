@@ -181,15 +181,15 @@ public static void Run(string[] args, int stageIndex)
     // ---------------------------------------------------------------------------------
     (string Name, Formation F)[] HdSasaRows() => new (string, Formation)[]
     {
-        ("ササ単騎（対照）", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sasa,
+        ("ササ単騎（対照）", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.SasaH360,
                                            center: UnitCatalog.Sero, back1: UnitCatalog.Dolga, back3: UnitCatalog.Nel)),
-        ("ササ×軋み (ヨミ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sasa,
+        ("ササ×軋み (ヨミ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.SasaH360,
                                            center: UnitCatalog.Yomi, back1: UnitCatalog.Dolga, back3: UnitCatalog.Sero)),
-        ("ササ×喧噪 (バサ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sasa,
+        ("ササ×喧噪 (バサ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.SasaH360,
                                            center: UnitCatalog.Basa, back1: UnitCatalog.Dolga, back3: UnitCatalog.Yomi)),
-        ("ササ×突き返し (ハネ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sasa,
+        ("ササ×突き返し (ハネ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.SasaH360,
                                               center: UnitCatalog.Hane, back1: UnitCatalog.Dolga, back3: UnitCatalog.Utsu)),
-        ("ササ×怯み (シオ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sasa,
+        ("ササ×怯み (シオ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.SasaH360,
                                            center: UnitCatalog.Shio, back1: UnitCatalog.Dolga, back3: UnitCatalog.Yomi)),
     };
 

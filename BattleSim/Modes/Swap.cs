@@ -63,23 +63,23 @@ public static void Run(string[] args, int stageIndex)
         // セロは前1 に置くこと——狙撃化には戦闘中に後退した実績が要るので、後列始まりでは発火しない。
         ("S3 攻め（削り2 / 回復2・ゴルム軸）", "ノノ",
             Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Golm,
-                            center: UnitCatalog.Lili, back1: UnitCatalog.Dolga, back3: UnitCatalog.Sasa)),
+                            center: UnitCatalog.Lili, back1: UnitCatalog.Dolga, back3: UnitCatalog.SasaH360)),
         ("S3 攻め（削り2 / 回復2・ゴルム軸）", "ナラ",
             Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Golm,
-                            center: UnitCatalog.Tsugi, back1: UnitCatalog.Dolga, back3: UnitCatalog.Sasa)),
+                            center: UnitCatalog.Tsugi, back1: UnitCatalog.Dolga, back3: UnitCatalog.SasaH360)),
         ("S3 攻め（削り2 / 回復2・ゴルム軸）", "4体（中央 空）",
             Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Golm,
-                            back1: UnitCatalog.Dolga, back3: UnitCatalog.Sasa)),
+                            back1: UnitCatalog.Dolga, back3: UnitCatalog.SasaH360)),
 
         ("S4 攻め（削り2 / 回復2・ガルド軸）", "ノノ",
             Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Gald,
-                            center: UnitCatalog.Lili, back1: UnitCatalog.Dolga, back3: UnitCatalog.Sasa)),
+                            center: UnitCatalog.Lili, back1: UnitCatalog.Dolga, back3: UnitCatalog.SasaH360)),
         ("S4 攻め（削り2 / 回復2・ガルド軸）", "ナラ",
             Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Gald,
-                            center: UnitCatalog.Tsugi, back1: UnitCatalog.Dolga, back3: UnitCatalog.Sasa)),
+                            center: UnitCatalog.Tsugi, back1: UnitCatalog.Dolga, back3: UnitCatalog.SasaH360)),
         ("S4 攻め（削り2 / 回復2・ガルド軸）", "4体（中央 空）",
             Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Gald,
-                            back1: UnitCatalog.Dolga, back3: UnitCatalog.Sasa)),
+                            back1: UnitCatalog.Dolga, back3: UnitCatalog.SasaH360)),
 
         // S5 は S4 と同じメンバーを、**compare へ採用した席**（reseat 1位）で測り直したもの。
         // S4 の席（中央ナラ）と採用席では波別の形がまるで違うので（S4 100/34/4/34/0 に対し
@@ -87,13 +87,13 @@ public static void Run(string[] args, int stageIndex)
         // 採用した席でも立っているかは、測らないと分からない。** 入れ替える枠は後1。
         // 割れ方は S4 と同じ 削り2（ガルド4・ドルガ6）／回復2（ササ12・セロ12）。
         ("S5 分散回復（採用席・削り2 / 回復2）", "ノノ",
-            Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Gald,
+            Formation.Build(front1: UnitCatalog.SasaH360, front3: UnitCatalog.Gald,
                             center: UnitCatalog.Sero, back1: UnitCatalog.Lili, back3: UnitCatalog.Dolga)),
         ("S5 分散回復（採用席・削り2 / 回復2）", "ナラ",
-            Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Gald,
+            Formation.Build(front1: UnitCatalog.SasaH360, front3: UnitCatalog.Gald,
                             center: UnitCatalog.Sero, back1: UnitCatalog.Tsugi, back3: UnitCatalog.Dolga)),
         ("S5 分散回復（採用席・削り2 / 回復2）", "4体（後1 空）",
-            Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Gald,
+            Formation.Build(front1: UnitCatalog.SasaH360, front3: UnitCatalog.Gald,
                             center: UnitCatalog.Sero, back3: UnitCatalog.Dolga)),
     };
 

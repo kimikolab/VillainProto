@@ -294,7 +294,7 @@ static class Tome282Diag
     // ---------------------------------------------------------------------------------
     // 段2 の Phase 0: 壁の選別（指示書 §3-1）
     // ---------------------------------------------------------------------------------
-    static readonly UnitDef[] WallCands = { UnitCatalog.Gald, UnitCatalog.GolmH344, UnitCatalog.Ban, UnitCatalog.DohaD0, UnitCatalog.Uke, UnitCatalog.Kado, UnitCatalog.Sasa, UnitCatalog.Dolga };
+    static readonly UnitDef[] WallCands = { UnitCatalog.Gald, UnitCatalog.GolmH344, UnitCatalog.Ban, UnitCatalog.DohaD0, UnitCatalog.Uke, UnitCatalog.Kado, UnitCatalog.SasaH360, UnitCatalog.Dolga };
 
     static void Wall()
     {

@@ -27,7 +27,7 @@ static partial class TsugiDiag
     static Formation ApplyB(Formation f, string tag)
     {
         Formation g = ApplyZ(f, "tsugi", "Z2");
-        var sasa = Clone(UnitCatalog.Sasa, BVersions.First(v => v.Tag == tag).Sasa);
+        var sasa = Clone(UnitCatalog.SasaH360, BVersions.First(v => v.Tag == tag).Sasa);
         var h = new Formation { Shape = g.Shape };
         foreach ((int slot, UnitDef u) in g.Occupied()) h[slot] = u.Id == "sasa" ? sasa : u;
         return h;
@@ -168,8 +168,8 @@ static partial class TsugiDiag
         void Req(bool ok, string what) { all &= ok; Console.WriteLine("- " + (ok ? "○" : "**×**") + " " + what); }
 
         // (1a) Z2 が第212期の Z2 列と一致: 第212期の Z2（ApplyZ("Z2")）と第213期の Z2（ApplyB("Z2")）は同じ札なので、ここでは台本で比べる。
-        //      規定（`UnitCatalog.Sasa`）が Z2 の札と同じことも確かめる。
-        Req(UnitCatalog.Sasa.Traits.SequenceEqual(BVersions[0].Sasa), "(1a) 規定のササの札は Z2 と同じ（" + string.Join("・", UnitCatalog.Sasa.Traits) + "）");
+        //      規定（`UnitCatalog.SasaH360`）が Z2 の札と同じことも確かめる。
+        Req(UnitCatalog.SasaH360.Traits.SequenceEqual(BVersions[0].Sasa), "(1a) 規定のササの札は Z2 と同じ（" + string.Join("・", UnitCatalog.SasaH360.Traits) + "）");
 
         // (1b) 第212期の表と比べる: ササのいない行は一致・ササのいる行（継ぎ当て×分散回復）の勝率も一致（第212期は Z2/Z3 で勝率 0 セル）
         string path = string.IsNullOrWhiteSpace(arg) ? ".tmp/balance212.md" : arg.Trim();

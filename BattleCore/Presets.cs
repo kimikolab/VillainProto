@@ -943,12 +943,17 @@ public static class Presets
         ("試遊・呪い 壁", Formation.Build(front1: UnitCatalog.Utsu, front3: UnitCatalog.Wata, center: UnitCatalog.Nel, back1: UnitCatalog.Mudo, back3: UnitCatalog.Tsugi)),
         // 第359期: 第358期の「版・」の4台（HB-r ／ GR-r ／ HB-r＋GR-r ／ HB-r＋GR-r ツギ）は外した（GR-r を規定にした・並びは `sh358` の中に固定）。
         // 第360期: 第359期の「版・」の3台（HB-s ／ HB-f ／ HB-f 呪い）は外した（HB-f を規定にした・並びは `sh359` の中に固定）。
-        // 第360期: ササの版（SS-k 構えを解かない ／ SS-w 両隣へ）。並びは `sh360 seats` の SS-w のネルを含まない最良（前1 ササ ／ 前3 ゴルム ／ 中央 ドルガ ／ 後1 ガレ ／ 後3 ヒビ）と、
-        // ネルを含む最良（＝ 1位・前1 ヒビ ／ 前3 ガレ ／ 中央 ササ ／ 後1 ソム ／ 後3 ネル）。ササだけが版。採否はポン。
-        ("版・SS-k 破片", Formation.Build(front1: UnitCatalog.SasaSSk, front3: UnitCatalog.Golm, center: UnitCatalog.Dolga, back1: UnitCatalog.Gare, back3: UnitCatalog.Hibi)),
-        ("版・SS-w 破片", Formation.Build(front1: UnitCatalog.SasaSSw, front3: UnitCatalog.Golm, center: UnitCatalog.Dolga, back1: UnitCatalog.Gare, back3: UnitCatalog.Hibi)),
-        ("版・SS-w 破片 呪い", Formation.Build(front1: UnitCatalog.Hibi, front3: UnitCatalog.Gare, center: UnitCatalog.SasaSSw, back1: UnitCatalog.Som, back3: UnitCatalog.Nel)),
+        // 第361期: 第360期の「版・」の3台（SS-k ／ SS-w ／ SS-w 呪い）は外した（SS-w を規定にした・並びは `sh360` の中に固定）。
+        // 第361期: 破片軸の試遊の台（ツギなし）。`sh361 seats` で規定（SS-w）・SS-s ・SS-n のどれでも「勇者に勝ち、精鋭もどちらも 90% 以上」の1位だった並び
+        // （前1 ネル ／ 前3 ササ ／ 中央 ソム ／ 後1 ヒビ ／ 後3 ガレ）。規定の駒のまま残す試遊の台。版の2台は同じ並びでササだけ版。採否はポン。
+        ("試遊・破片", ShardPlay(UnitCatalog.Sasa)),
+        ("版・SS-s 破片", ShardPlay(UnitCatalog.SasaSSs)),
+        ("版・SS-n 破片", ShardPlay(UnitCatalog.SasaSSn)),
     };
+
+    /// <summary>第361期: 「試遊・破片」の並び（前1 ネル ／ 前3 ササ ／ 中央 ソム ／ 後1 ヒビ ／ 後3 ガレ）。ササを差し替えて版の台を作る。</summary>
+    public static Formation ShardPlay(UnitDef sasa) =>
+        Formation.Build(front1: UnitCatalog.Nel, front3: sasa, center: UnitCatalog.Som, back1: UnitCatalog.Hibi, back3: UnitCatalog.Gare);
 
     /// <summary>第358期: 破片軸の版の台（`sh358 seats hbgr` のツギなしの最良）。第359期の版の台もこれで組む（ヒビ ／ ガレを差し替える）。前1 ドルガ ／ 前3 ササ ／ 中央 ゴルム ／ 後1 ヒビ ／ 後3 ガレ。</summary>
     public static Formation ShardBoard(UnitDef hibi, UnitDef gare) =>

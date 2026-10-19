@@ -60,7 +60,7 @@ static partial class FireScaleDiag
     /// <summary>雷＋ボルグ: ポンの席の前1 シガ → ボルグ（席はそのまま）。</summary>
     internal static Formation ThunderBorg => Formation.Build(front1: UnitCatalog.BorgL0, front3: UnitCatalog.Tsugi,
         center: UnitCatalog.Beni, back1: UnitCatalog.KataS3, back3: UnitCatalog.Mio);
-    internal static readonly UnitDef[] T31Members = { UnitCatalog.BorgL0, UnitCatalog.HotaL0, UnitCatalog.HiyoL0, UnitCatalog.Shio, UnitCatalog.Sasa };
+    internal static readonly UnitDef[] T31Members = { UnitCatalog.BorgL0, UnitCatalog.HotaL0, UnitCatalog.HiyoL0, UnitCatalog.Shio, UnitCatalog.SasaH360 };
 
     /// <summary>T3-1 の席（規定で 120 通りを総当たり・並びは 200/200 → 400/300 → 落ちた駒 → 決着T → 列挙順）。一度だけ決める。</summary>
     static Formation? _t31;

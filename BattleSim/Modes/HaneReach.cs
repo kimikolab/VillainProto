@@ -26,7 +26,7 @@ static partial class HaneReachDiag
     static partial void CheckImpl();
 
     /// <summary>ポンの画面の編成（前1 リリ ／ 前3 ササ ／ 中央 ツギ ／ 後1 ハネ ／ 後3 シオ）。</summary>
-    internal static Formation Pon(UnitDef hane) => Formation.Build(front1: UnitCatalog.Lili, front3: UnitCatalog.Sasa,
+    internal static Formation Pon(UnitDef hane) => Formation.Build(front1: UnitCatalog.Lili, front3: UnitCatalog.SasaH360,
         center: UnitCatalog.Tsugi, back1: hane, back3: UnitCatalog.Shio);
 
     internal static EnemyWave Levy9 => EnemyCatalog.TestStages.First(t => t.Name == "検証・九 / 農兵").Enemy;

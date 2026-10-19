@@ -93,7 +93,7 @@ static class WardcostDiag
             // 台1: `Burden` の唯一の量比例変換器（切り落とした超過が隣の味方の破片になる）。
             //      **ササは攻撃を1度も振らず、`CurrentAttack` も1度も読まない。**
             0 => ("台1 身構え (ノチ×ササ)",
-                Formation.Build(front1: UnitCatalog.Sasa, front3: A(),
+                Formation.Build(front1: UnitCatalog.SasaH360, front3: A(),
                                 center: B(), back1: nochi, back3: C())),
 
             // 台2: 攻撃しない前列。**ただし棘の反撃量は `CurrentAttack` で決まる。**
@@ -667,7 +667,7 @@ static class WardcostDiag
         {
             if (tag.StartsWith("V0")) continue;
             Acc a = Measure(Rig(0, nochi, FillerOf[0].Atk, FillerOf[0].Hp).F, rule);
-            a.By.TryGetValue(UnitCatalog.Sasa.Id, out var c);
+            a.By.TryGetValue(UnitCatalog.SasaH360.Id, out var c);
             Console.WriteLine("| " + tag + " | " + (a.Damage / (double)a.Battles).ToString("F1")
                 + " | " + (c.Burden / (double)a.Battles).ToString("F2")
                 + " | **" + (c.Refused / (double)a.Battles).ToString("F2") + "**"
@@ -679,7 +679,7 @@ static class WardcostDiag
         Console.WriteLine();
         Console.WriteLine("| 台 | 前列の駒 | 版 | 振られなかった打点/戦 | **その駒の与ダメ/戦** | 台の合計 |");
         Console.WriteLine("|---|---|---|---:|---:|---:|");
-        foreach ((int rig, string id) in new[] { (0, UnitCatalog.Sasa.Id), (1, UnitCatalog.Kado.Id) })
+        foreach ((int rig, string id) in new[] { (0, UnitCatalog.SasaH360.Id), (1, UnitCatalog.Kado.Id) })
             foreach (string tag in new[] { "Vp 預かりのみ", "V3 重り" })
             {
                 (string t3, UnitDef nochi, WardRule rule) = Versions(WardRule.Default).First(x => x.Tag == tag);

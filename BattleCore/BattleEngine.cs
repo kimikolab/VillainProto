@@ -17638,6 +17638,25 @@ public sealed class BattleContext
         if (!foe.IsAlive) ht.Sh358ReturnKills++;
     }
 
+    /// <summary>
+    /// 第361期（SS-s）: ササの切り落としのうち付ける相手のいない分が、ササの席で砕けた破片として散る。**敵の一撃で味方の破片が割れたのと同じ扱い**で、
+    /// 割れた破片の読み手が拾う——礫を拾う（<see cref="TraitId.PebbleGather"/>・同じ陣営の生きている保持者・敵の一撃で割れた分と同じ量）と
+    /// 瓦礫拾い（<see cref="TraitId.Scrap"/>・同じ陣営の生きている保持者・`NoteArmorLost` と同じ口）。誰も読まなければ消える。
+    /// **返し（ヒビの欠片 ／ ツギの板）は起こさない**（敵に返す一撃ではない）・ササの破片の数は変えない・乱数を引かない。
+    /// </summary>
+    internal void ScatterShards(UnitState sasa, int amount)
+    {
+        if (amount <= 0) return;
+        UnitTally t = TallyOf(sasa);
+        t.Sh361Scattered += amount; t.Sh361Scatters++;
+        EmitShard(ShardLabels.Scatter, sasa, sasa, amount, 0);
+        Log($"    {sasa.Name} の足元で、行き場の無い {amount} の破片が砕け散った", LogKind.Trigger);
+        foreach (UnitState g in _pebbleHolders)
+            if (g.IsAlive && g.TeamId == sasa.TeamId) { PebbleTrait.Gather(this, g, sasa, amount); t.Sh361ScatterPebble += amount; }
+        foreach (UnitState h in _scrapHolders)
+            if (h.IsAlive && h.TeamId == sasa.TeamId) { ScrapTrait.Pick(this, h, sasa, amount, fall: false); t.Sh361ScatterScrap += amount; }
+    }
+
     /// <summary>第358期（<b>表示専用</b>）: 返しの破片 ／ 礫の出来事（<see cref="BattleEventKind.Shard"/>）。verbose のときだけ積む。</summary>
     internal void EmitShard(string label, UnitState actor, UnitState? target, int amount, int remainingOrSlot)
     {
@@ -17647,7 +17666,7 @@ public sealed class BattleContext
         {
             Kind = BattleEventKind.Shard, Turn = _turn, Text = label, ActorId = actor.InstanceId, TargetId = target?.InstanceId, Amount = amount,
             StatusRemaining = thr ? null : remainingOrSlot, Slot = thr ? remainingOrSlot : 0, Team = actor.TeamId,
-            SourceTrait = label == ShardLabels.Gift ? TraitId.ShardGift : TraitId.PebbleGather,
+            SourceTrait = label == ShardLabels.Gift ? TraitId.ShardGift : label == ShardLabels.Scatter ? TraitId.BraceScatter : TraitId.PebbleGather,
         });
     }
 

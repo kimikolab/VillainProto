@@ -67,7 +67,7 @@ static partial class Sh360Diag
     internal sealed record Ver(string Name, string Ascii, UnitDef Sasa);
     internal static readonly Ver[] Vers =
     {
-        new("規定（段0 入り）", "base", UnitCatalog.Sasa),
+        new("規定（段0 入り）", "base", UnitCatalog.SasaH360),
         new("SS-k 構えを解かない", "ssk", UnitCatalog.SasaSSk),
         new("SS-w 両隣へ", "ssw", UnitCatalog.SasaSSw),
     };
@@ -79,7 +79,7 @@ static partial class Sh360Diag
     // ---------------------------------------------------------------------------------
     // 台
     // ---------------------------------------------------------------------------------
-    internal static readonly UnitDef[] Fixed = { UnitCatalog.Sasa, UnitCatalog.Hibi, UnitCatalog.Gare };
+    internal static readonly UnitDef[] Fixed = { UnitCatalog.SasaH360, UnitCatalog.Hibi, UnitCatalog.Gare };
     internal static readonly UnitDef[] Pool = { UnitCatalog.Uro, UnitCatalog.Gald, UnitCatalog.Dolga, UnitCatalog.Golm, UnitCatalog.Nel, UnitCatalog.Ban, UnitCatalog.Kubi, UnitCatalog.Som };
     internal static Formation ByKey(string key)
     {
@@ -120,11 +120,13 @@ static partial class Sh360Diag
     internal sealed class Bx
     {
         public long N, Wins, WinT, Draw, Braced, Bare, BareOver, BareOverAmt, Held, Cuts, Refused, Given, Shoves, Lost, SasaDied, SasaT, WideGiven, WideTargets, VeilSoaked, Picked, Broken;
+        public long Scattered, ScatterPebble, ScatterScrap, NearGiven, ScrapPicked;   // 第361期（`sh361` が読む）
         public readonly Dictionary<string, long> First = new();
         public void Add(Bx o)
         {
             N += o.N; Wins += o.Wins; WinT += o.WinT; Draw += o.Draw; Braced += o.Braced; Bare += o.Bare; BareOver += o.BareOver; BareOverAmt += o.BareOverAmt; Held += o.Held; Cuts += o.Cuts; Refused += o.Refused;
             Given += o.Given; Shoves += o.Shoves; Lost += o.Lost; SasaDied += o.SasaDied; SasaT += o.SasaT; WideGiven += o.WideGiven; WideTargets += o.WideTargets; VeilSoaked += o.VeilSoaked; Picked += o.Picked; Broken += o.Broken;
+            Scattered += o.Scattered; ScatterPebble += o.ScatterPebble; ScatterScrap += o.ScatterScrap; NearGiven += o.NearGiven; ScrapPicked += o.ScrapPicked;
             foreach (var (k, v) in o.First) First[k] = First.GetValueOrDefault(k) + v;
         }
         public double Win => N == 0 ? 0 : 100.0 * Wins / N;
@@ -142,11 +144,12 @@ static partial class Sh360Diag
         foreach (var u in p)
         {
             if (!r.TallyByUnit.TryGetValue(u.Def.Id, out var t)) continue;
-            b.VeilSoaked += t.SparkVeilSoaked; b.Picked += t.Sh358Picked; b.Broken += t.Sh358ArmorBroken;
+            b.VeilSoaked += t.SparkVeilSoaked; b.Picked += t.Sh358Picked; b.Broken += t.Sh358ArmorBroken; b.ScrapPicked += t.ScrapArmor;
             if (u.Def.Id != "sasa") continue;
             b.Braced += t.Sh360HitBraced; b.Bare += t.Sh360HitBare; b.BareOver += t.Sh360BareOver; b.BareOverAmt += t.Sh360BareOverAmt; b.Held += t.Sh360HeldCuts;
             b.Cuts += t.BraceCuts; b.Refused += t.BraceRefused; b.Given += t.BraceGiven; b.Shoves += t.BraceShoves; b.Lost += t.BraceLost;
             b.WideGiven += t.Sh360WideGiven; b.WideTargets += t.Sh360WideTargets;
+            b.Scattered += t.Sh361Scattered; b.ScatterPebble += t.Sh361ScatterPebble; b.ScatterScrap += t.Sh361ScatterScrap; b.NearGiven += t.Sh361NearGiven;
         }
         return b;
     }
@@ -158,7 +161,7 @@ static partial class Sh360Diag
         foreach (var x in parts) all.Add(x);
         return all;
     }
-    static string BraceLine(string title, Bx b) =>
+    internal static string BraceLine(string title, Bx b) =>
         $"- **{title}**（勝率 {F1(b.Win)}%・打ち切り {Pct(b.Draw, b.N)}%）: 敵の一撃を受けたとき 固めていた {Per2(b.Braced, b.N)} ／ いなかった {Per2(b.Bare, b.N)} 回 ／戦"
         + $"（固めていない一撃のうち 7 を超えた {Per2(b.BareOver, b.N)} 回・超えた量 {Per(b.BareOverAmt, b.N)}）・前のターンの構えで抑えた {Per2(b.Held, b.N)} 回・切り落とした {Per2(b.Cuts, b.N)} 回 ／ {Per(b.Refused, b.N)}"
         + $"・弾いた {Per2(b.Shoves, b.N)} 回・配った {Per(b.Given, b.N)}（両隣 {Per(b.WideGiven, b.N)} ／ 延べ {Per2(b.WideTargets, b.N)} 体）・宛先が無く消えた {Per(b.Lost, b.N)}"

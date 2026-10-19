@@ -10,7 +10,7 @@ static partial class Sh358Diag
     // §4 母集団
     // ---------------------------------------------------------------------------------
     internal static readonly UnitDef[] Fixed = { UnitCatalog.HibiH359, UnitCatalog.Gare };
-    internal static readonly UnitDef[] Pool = { UnitCatalog.Uro, UnitCatalog.Tsugi, UnitCatalog.Sasa, UnitCatalog.Gald, UnitCatalog.Dolga, UnitCatalog.Golm };
+    internal static readonly UnitDef[] Pool = { UnitCatalog.Uro, UnitCatalog.Tsugi, UnitCatalog.SasaH360, UnitCatalog.Gald, UnitCatalog.Dolga, UnitCatalog.Golm };
     internal sealed record Seat(string Key, string Trio, Formation F);
 
     /// <summary>20 組 × 5枚の席の全並び 120 ＝ 2,400 並び（駒は規定・版は <see cref="Apply"/> で替える）。並びの順は組 → 席の辞書順（乱数を引かない）。</summary>

@@ -109,7 +109,7 @@ static partial class BorgGuardDiag
         var boards = new List<Formation>();
         foreach (var (ver, _, borg) in Versions.Skip(1))
         {
-            boards.Add(BA.Seat(new[] { borg, UnitCatalog.Sasa, UnitCatalog.HiyoF0, UnitCatalog.Shio, UnitCatalog.HotaL0 }));
+            boards.Add(BA.Seat(new[] { borg, UnitCatalog.SasaH360, UnitCatalog.HiyoF0, UnitCatalog.Shio, UnitCatalog.HotaL0 }));
             boards.Add(BA.Seat(new[] { UnitCatalog.HotaL0, borg, UnitCatalog.HiyoF0, UnitCatalog.Kado, UnitCatalog.Nel }));
         }
         long battles = 0, diff = 0, deathMismatch = 0, deaths = 0, evMismatch = 0, borgTick = 0, fireEvents = 0;

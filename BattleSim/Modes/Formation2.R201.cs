@@ -80,7 +80,7 @@ static partial class Formation2Diag
         Console.WriteLine();
         Console.WriteLine("**前衛を固定しない**。括弧はタンクが座った席。第200期の列（`X・ガルド・200` ／ `P2・ガルド・200`）は同じ帯で測り直した値。");
         Console.WriteLine();
-        (string Tag, UnitDef D)[] tanks = { ("ゴルム", UnitCatalog.Golm), ("ササ", UnitCatalog.Sasa), ("スィド", SidDiag.SidS) };
+        (string Tag, UnitDef D)[] tanks = { ("ゴルム", UnitCatalog.Golm), ("ササ", UnitCatalog.SasaH360), ("スィド", SidDiag.SidS) };
         Console.WriteLine("| 行 | X・ガルド・200 | P2・ガルド・200 | **X・ガルド・選** | **P2・ガルド・選** | " + string.Join(" | ", tanks.Select(t => "P2・" + t.Tag + "・選"))
                           + " | 差 P2・選（ガルド − 3枚平均） |");
         Console.WriteLine("|---|--:|--:|--:|--:|" + string.Concat(tanks.Select(_ => "--:|")) + "--:|");

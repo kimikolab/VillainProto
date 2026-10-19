@@ -142,7 +142,7 @@ static partial class Formation2Diag
         (string Tag, string Id, UnitDef S, UnitDef R)[] tanks =
         {
             ("ガルド", "gald", UnitCatalog.Gald, UnitCatalog.Gald), ("ゴルム", "golm", UnitCatalog.Golm, UnitCatalog.Golm),
-            ("ササ", "sasa", UnitCatalog.Sasa, UnitCatalog.Sasa), ("スィド", "sid", SidDiag.SidS, UnitCatalog.Sid),
+            ("ササ", "sasa", UnitCatalog.SasaH360, UnitCatalog.SasaH360), ("スィド", "sid", SidDiag.SidS, UnitCatalog.Sid),
         };
         Console.WriteLine("| 行 | X・ガルド・201 | " + string.Join(" | ", tanks.Select(t => t.Tag + " 201 → **202**（席）")) + " | 上下 201 | 上下 202 | 上下 X（ガルド） |");
         Console.WriteLine("|---|--:|" + string.Concat(tanks.Select(_ => "---|")) + "---|---|--:|");

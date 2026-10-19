@@ -138,7 +138,7 @@ static partial class BorgFrontDiag
         var boards = new List<Formation>();
         foreach (var (_, _, _, borg) in Versions.Skip(1))
         {
-            boards.Add(BA.Seat(new[] { borg, UnitCatalog.HotaL0, UnitCatalog.HiyoF0, UnitCatalog.Beni, UnitCatalog.Sasa }));
+            boards.Add(BA.Seat(new[] { borg, UnitCatalog.HotaL0, UnitCatalog.HiyoF0, UnitCatalog.Beni, UnitCatalog.SasaH360 }));
             boards.Add(BA.Seat(new[] { UnitCatalog.GolmH344, borg, UnitCatalog.HotaL0, UnitCatalog.HiyoF0, UnitCatalog.Shio }));
             boards.Add(ThunderSwap(borg, true));
         }

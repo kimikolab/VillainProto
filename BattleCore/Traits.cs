@@ -911,6 +911,9 @@ public enum TraitId
     // --- 第360期で足した札（指示書 design/PHASE360_SHARD_SASA_SPEC.md §4）。ササの版。保持者 0 枚 ---
     BraceHold,          // 構えを解かない（SS-k・ササ）: 身構えが次の自分の手番まで続く（前のターンに固めた構えが、このターンの自分の手番の前に来る敵の一撃にも効く・毒 ／ 燃焼の刻みには効かない・倒れたら解ける）（**札そのものは挙動を持たない**・`BraceTrait.IsBraced`）
     BraceWide,          // 両隣へ（SS-w・ササ）: 切り落とした分を、そのターン最初に殴られたときの隣の味方全員に同じ量ずつ破片として付ける（弾くのは今どおり1体・1ターン1回）（**札そのものは挙動を持たない**・`BraceTrait.Deliver`）
+    // --- 第361期で足した札（指示書 design/PHASE361_SHARD_CLOSE_SPEC.md §3）。ササの版（行き場の無い切り落とし）。保持者 0 枚 ---
+    BraceScatter,       // 散る（SS-s・ササ）: 切り落とした分のうち付ける相手（生きている隣）がいない分は、ササの席で砕けた破片として散る——敵の一撃で味方の破片が割れたのと同じく、割れた破片の読み手（礫を拾う ／ 瓦礫拾い）が拾う。返しは起こさない・ササの破片の数は変わらない（**札そのものは挙動を持たない**・engine の `ScatterShards`）
+    BraceNear,          // 遠くへ（SS-n・ササ）: 付ける相手（生きている隣）がいない分は、生きている味方のうちササに最も近い者（席の距離・同じなら席番号の順）へ破片として付ける。ササ自身には付けない
     PebbleGather,       // 礫を拾う（GR-r・ガレ）: 味方（自分を含む）の破片が敵の一撃で割れた量を礫として溜め（上限なし）、手番（術）で全部使って 礫 × 3 ＋ 攻撃力 を敵全体へ撃つ。礫が無い手番は何もできない（味方の破片は砕かない）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -9796,7 +9799,20 @@ public sealed class BraceTrait : Trait
                 n++;
                 ctx.Log($"    {self.Name} がはね返した {pending} を {nb.Name} の破片にした", LogKind.Trigger);
             }
-            if (n == 0) return;
+            if (n == 0)
+            {
+                // 第361期: 付ける相手がいない分。SS-s は砕けて散り（割れた破片の読み手が拾う）、SS-n は最も近い味方へ。札が無ければ今どおり残す（ターンが変われば消える）。
+                if (self.HasTrait(TraitId.BraceScatter)) { self.SetCounter(PendingKey, 0); ctx.ScatterShards(self, pending); return; }
+                if (self.HasTrait(TraitId.BraceNear) && BraceNearTrait.Nearest(ctx, self) is UnitState far)
+                {
+                    far.SetCounter(StatusKeys.Armor, far.RawCounter(StatusKeys.Armor) + pending);
+                    self.SetCounter(PendingKey, 0);
+                    UnitTally tn = ctx.TallyOf(self);
+                    tn.BraceGiven += pending; tn.Sh361NearGiven += pending; tn.Sh361NearDelivers++;
+                    ctx.Log($"    {self.Name} がはね返した {pending} を、離れた {far.Name} の破片にした", LogKind.Trigger);
+                }
+                return;
+            }
             self.SetCounter(PendingKey, 0);
             UnitTally tw = ctx.TallyOf(self);
             tw.BraceGiven += pending * n;
@@ -9833,6 +9849,35 @@ public sealed class BraceTrait : Trait
         self.SetCounter(PendingKey, 0);
         self.SetCounter(TargetKey, 0);
         for (int i = 0; i < WideMax; i++) if (self.RawCounter(NeighborKey + i) != 0) self.SetCounter(NeighborKey + i, 0);   // 第360期（SS-w）
+    }
+}
+
+/// <summary>遠くへ（第361期・SS-n・ササの版）。隣に付ける相手がいないとき、いちばん近い味方を探す（席の距離 ＝ X 字の隣接表の歩数・同じなら席番号の順）。乱数を引かない。
+/// 席の距離の数え方だけをここに置く（保持者 0 枚の版の札——規定の身構えは隣を読まない・作戦マップの関係の表の門 R260）。</summary>
+public sealed class BraceNearTrait : Trait
+{
+    public override TraitId Id => TraitId.BraceNear;
+
+    /// <summary>ササ以外の生きている味方のうち、席の距離が最も短い者（同じなら席番号の若い順）。いなければ null。</summary>
+    internal static UnitState? Nearest(BattleContext ctx, UnitState self)
+    {
+        var dist = new int[9];   // 盤面の9マス（編成5 ＋ 召喚4）
+        for (int i = 0; i < dist.Length; i++) dist[i] = -1;
+        var q = new Queue<int>();
+        dist[self.Slot] = 0; q.Enqueue(self.Slot);
+        while (q.Count > 0)
+        {
+            int a = q.Dequeue();
+            for (int b = 0; b < dist.Length; b++)
+                if (dist[b] < 0 && self.Shape.AreAdjacent(a, b)) { dist[b] = dist[a] + 1; q.Enqueue(b); }
+        }
+        UnitState? best = null;
+        foreach (UnitState u in ctx.LivingMembers(self.TeamId))
+        {
+            if (u == self || dist[u.Slot] < 0) continue;
+            if (best is null || dist[u.Slot] < dist[best.Slot] || (dist[u.Slot] == dist[best.Slot] && u.Slot < best.Slot)) best = u;
+        }
+        return best;
     }
 }
 
@@ -18141,6 +18186,8 @@ public static class TraitCatalog
         new ShardOpenTrait(),                                 // 第359期（開戦の欠片 HB-s ／ HB-f・ヒビ）
         new MarkOnlyTrait(TraitId.BraceHold),                 // 第360期（構えを解かない SS-k・ササ・印だけ・本体は `BraceTrait.IsBraced`）
         new BraceWideTrait(),                                 // 第360期（両隣へ SS-w・ササ・隣の数え方だけ・配りの本体は `BraceTrait.Deliver`）
+        new MarkOnlyTrait(TraitId.BraceScatter),              // 第361期（散る SS-s・ササ・印だけ・本体は engine の `ScatterShards`）
+        new BraceNearTrait(),                                 // 第361期（遠くへ SS-n・ササ・席の距離の数え方だけ）
         new MarkOnlyTrait(TraitId.ShardBareNoPlank),          // 第359期（纏えない・板も来ない HB-s ／ HB-f・印だけ・本体は `UnitState.SetCounter` と `PlankTrait.OnAction`）
         new MarkOnlyTrait(TraitId.ShardFull),                 // 第359期（全量を返す HB-f・印だけ・本体は engine の `ApplyDamage`）
         new PebbleTrait(),                                    // 第358期（礫を拾って投げる GR-r・ガレ）

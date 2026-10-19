@@ -31,8 +31,8 @@ static partial class TsugiDiag
         return Clone(UnitCatalog.Tsugi, t.ToArray());
     }
 
-    static readonly UnitDef Sasa0 = Clone(UnitCatalog.Sasa, UnitCatalog.Sasa.Traits.Where(t => t != TraitId.BraceArmored).ToArray());
-    static readonly UnitDef Sasa3 = Clone(UnitCatalog.Sasa, UnitCatalog.Sasa.Traits.Where(t => t != TraitId.BraceArmored).Append(TraitId.BraceArmored).ToArray());
+    static readonly UnitDef Sasa0 = Clone(UnitCatalog.SasaH360, UnitCatalog.SasaH360.Traits.Where(t => t != TraitId.BraceArmored).ToArray());
+    static readonly UnitDef Sasa3 = Clone(UnitCatalog.SasaH360, UnitCatalog.SasaH360.Traits.Where(t => t != TraitId.BraceArmored).Append(TraitId.BraceArmored).ToArray());
     static readonly UnitDef KadoY3 = Clone(UnitCatalog.Kado, UnitCatalog.Kado.Traits.Where(t => t != TraitId.ThornsArmored).Append(TraitId.ThornsArmored).ToArray());
 
     static readonly (string Tag, UnitDef Tsugi, UnitDef Sasa)[] ZVersions =

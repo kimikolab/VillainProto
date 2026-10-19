@@ -12,7 +12,7 @@ using static Common;
 static partial class TsugiDiag
 {
     /// <summary>ポンが遊んだ編成（第211期 §3.7）: パターン2 で 中衛・上 ガン ／ 後衛 ツギ ／ 中衛・中央 ドルガ ／ 前衛 ササ ／ 中衛・下 セロ。</summary>
-    static Formation PonFormation() => Formation.BuildDiamond(UnitCatalog.Gan, UnitCatalog.Tsugi, UnitCatalog.Dolga, UnitCatalog.Sasa, UnitCatalog.Sero);
+    static Formation PonFormation() => Formation.BuildDiamond(UnitCatalog.Gan, UnitCatalog.Tsugi, UnitCatalog.Dolga, UnitCatalog.SasaH360, UnitCatalog.Sero);
 
     static partial void RunMore212(string mode, string arg, ref bool handled)
     {

@@ -59,7 +59,7 @@ static partial class FireBurstDiag
     internal static Formation T3238 => Formation.Build(front1: UnitCatalog.Hiyo, front3: UnitCatalog.Hota, center: UnitCatalog.Borg, back1: UnitCatalog.DohaD0, back3: UnitCatalog.SoraSR0);
     internal static Formation ThunderBorg => Formation.Build(front1: UnitCatalog.Borg, front3: UnitCatalog.Tsugi, center: UnitCatalog.Beni, back1: UnitCatalog.KataS3, back3: UnitCatalog.Mio);
     /// <summary>第242期 R3 の段1 の1位（ササ・ガレ・ボルグ前3）。Phase 0 の仮の T3。</summary>
-    internal static Formation T3r3 => Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Borg, center: UnitCatalog.Hota, back1: UnitCatalog.GareH358, back3: UnitCatalog.Hiyo);
+    internal static Formation T3r3 => Formation.Build(front1: UnitCatalog.SasaH360, front3: UnitCatalog.Borg, center: UnitCatalog.Hota, back1: UnitCatalog.GareH358, back3: UnitCatalog.Hiyo);
 
     internal static string Pct(long a, long n) => n == 0 ? "—" : (100.0 * a / n).ToString("F1");
     internal static string Per(long a, long n) => n == 0 ? "—" : ((double)a / n).ToString("F2");

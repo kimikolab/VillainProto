@@ -43,7 +43,7 @@ static class BraceDiag
     static UnitDef PlainSasa() => new()
     {
         Id = "sasa_plain", Name = "素体のササ", MaxHp = 96,
-        Attack = UnitCatalog.Sasa.Attack, Speed = UnitCatalog.Sasa.Speed,
+        Attack = UnitCatalog.SasaH360.Attack, Speed = UnitCatalog.SasaH360.Speed,
         Advances = false, Traits = Array.Empty<TraitId>()
     };
 
@@ -224,7 +224,7 @@ static class BraceDiag
         Console.WriteLine();
         Console.WriteLine("| 台 | V0 勝率（1..5波） | 第2〜5波平均 | 帯（40〜95%） |");
         Console.WriteLine("|---|---|---:|---|");
-        foreach ((string name, Formation f) in Rigs(UnitCatalog.Sasa))
+        foreach ((string name, Formation f) in Rigs(UnitCatalog.SasaH360))
         {
             var w = new double[5];
             for (int st = 0; st < 5; st++)
@@ -274,7 +274,7 @@ static class BraceDiag
             {
                 if (pick.Distinct().Count() != pick.Length) continue;
                 var f = new Formation();
-                f[0] = UnitCatalog.Sasa;
+                f[0] = UnitCatalog.SasaH360;
                 foreach ((int slot, UnitDef d) in fix) f[slot] = d;
                 for (int i = 0; i < free.Length; i++) f[free[i]] = cand[pick[i]];
                 if (f.Occupied().Select(o => o.Def.Id).Distinct().Count() != 5) continue;
@@ -320,7 +320,7 @@ static class BraceDiag
     // =================================================================================
 
     /// <summary>
-    /// <b>対照（V0）＝ 転生前のササ</b>。第143期に `UnitCatalog.Sasa` の側を転生させたので、
+    /// <b>対照（V0）＝ 転生前のササ</b>。第143期に `UnitCatalog.SasaH360` の側を転生させたので、
     /// <b>診断のローカルに置くのは「転生前の姿」</b>（第60期の作法。採用で既定が動いたら
     /// 検算の相手は V0 ではなく V1 に移る）。
     /// </summary>
@@ -404,13 +404,13 @@ static class BraceDiag
         var versions = new List<(string Tag, UnitDef Sasa, BraceRule Rule)>
         {
             ("V0 転生前", OldSasa(), BraceRule.Default),
-            ("段A 上限なし", UnitCatalog.Sasa, new BraceRule(0, false, false)),
+            ("段A 上限なし", UnitCatalog.SasaH360, new BraceRule(0, false, false)),
         };
-        foreach (int n in ns) versions.Add(($"段B N={n}", UnitCatalog.Sasa, new BraceRule(n, false, false)));
-        foreach (int n in ns) versions.Add(($"段C N={n} 配る", UnitCatalog.Sasa, new BraceRule(n, true, false)));
-        foreach (int n in ns) versions.Add(($"段D N={n} 配る+転倒", UnitCatalog.Sasa, new BraceRule(n, true, true)));
+        foreach (int n in ns) versions.Add(($"段B N={n}", UnitCatalog.SasaH360, new BraceRule(n, false, false)));
+        foreach (int n in ns) versions.Add(($"段C N={n} 配る", UnitCatalog.SasaH360, new BraceRule(n, true, false)));
+        foreach (int n in ns) versions.Add(($"段D N={n} 配る+転倒", UnitCatalog.SasaH360, new BraceRule(n, true, true)));
 
-        foreach ((string bedName, Formation _) in Rigs(UnitCatalog.Sasa))
+        foreach ((string bedName, Formation _) in Rigs(UnitCatalog.SasaH360))
         {
             Console.WriteLine($"## {bedName}");
             Console.WriteLine();
@@ -449,11 +449,11 @@ static class BraceDiag
         Console.WriteLine();
         Console.WriteLine("| 台 | 波 | 切った回数/戦 | 切り落とし/戦 | 配った/戦 |");
         Console.WriteLine("|---|---|---:|---:|---:|");
-        foreach ((string bedName, Formation _) in Rigs(UnitCatalog.Sasa))
+        foreach ((string bedName, Formation _) in Rigs(UnitCatalog.SasaH360))
         {
             var byWave = new long[5][];
             for (int i = 0; i < 5; i++) byWave[i] = new long[4];
-            Measure(Rigs(UnitCatalog.Sasa).First(x => x.Name == bedName).F,
+            Measure(Rigs(UnitCatalog.SasaH360).First(x => x.Name == bedName).F,
                     new BraceRule(nStar, true, false), byWave);
             for (int st = 1; st < 5; st++)
             {
@@ -483,7 +483,7 @@ static class BraceDiag
         if (a.Length > 1 && !int.TryParse(a[1], out n)) { Usage(); return; }
         if (a.Length > 2 && !int.TryParse(a[2], out seed)) { Usage(); return; }
 
-        var hit = Rigs(UnitCatalog.Sasa).Where(x => x.Name.Contains(bedKey)).ToList();
+        var hit = Rigs(UnitCatalog.SasaH360).Where(x => x.Name.Contains(bedKey)).ToList();
         if (hit.Count == 0) { Usage(); return; }
         Formation f = hit[0].F;
         BattleResult r = BattleEngine.Run(f, EnemyCatalog.Stages[1].Enemy, seed, verbose: true,
@@ -493,7 +493,7 @@ static class BraceDiag
         void Usage()
         {
             Console.WriteLine("brace log: 引数は \"<台名の部分一致> <N> <seed>\"（既定は 台3 7 0）。");
-            Console.WriteLine("台: " + string.Join(" / ", Rigs(UnitCatalog.Sasa).Select(x => x.Name)));
+            Console.WriteLine("台: " + string.Join(" / ", Rigs(UnitCatalog.SasaH360).Select(x => x.Name)));
         }
     }
 
@@ -537,7 +537,7 @@ static class BraceDiag
         // (a) `Cap = 0` なら `Refuse` は不活性（切り落としが1点も出ないので配るものが無い）。
         // **`Stagger` は上限ではなく弾きに付いているので `Cap` に依らない**——同じ検査で両方出す。
         int aDiff = 0, aStag = 0;
-        foreach ((string _, Formation f) in Rigs(UnitCatalog.Sasa))
+        foreach ((string _, Formation f) in Rigs(UnitCatalog.SasaH360))
             for (int st = 0; st < 5; st++)
                 for (int seed = 0; seed < 50; seed++)
                 {
@@ -570,7 +570,7 @@ static class BraceDiag
 
         // (c) 帳簿が閉じる（配った ≦ 切り落とし）／(d) 敵側に転倒が立たない。
         long refused = 0, given = 0, lost = 0, foeStagger = 0, muted = 0;
-        foreach ((string _, Formation f) in Rigs(UnitCatalog.Sasa))
+        foreach ((string _, Formation f) in Rigs(UnitCatalog.SasaH360))
             for (int st = 1; st < 5; st++)
                 for (int seed = 0; seed < 50; seed++)
                 {

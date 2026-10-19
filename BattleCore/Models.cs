@@ -2429,6 +2429,8 @@ public sealed class UnitTally
     /// <summary>第360期（<b>計数のみ</b>・ササ）: 敵の一撃（燃焼の刻みを除く）を受けたとき身を固めていた ／ いなかった回数・固めていなかった一撃のうち上限（7）を超えた回数と超えた量・
     /// そのうち前のターンの構え（SS-k）で抑えた回数・両隣へ配った量 ／ 延べの宛先 ／ 回数（SS-w）。誰も読んで分岐しない。</summary>
     public long Sh360HitBraced, Sh360HitBare, Sh360BareOver, Sh360BareOverAmt, Sh360HeldCuts, Sh360WideGiven, Sh360WideTargets, Sh360WideDelivers;
+    /// <summary>第361期（<b>計数のみ</b>・ササ）: 散った量 ／ 回数（SS-s）・散った破片を拾った量（読み手の側: 礫 ／ 瓦礫）・遠くへ付けた量 ／ 回数（SS-n）。誰も読んで分岐しない。</summary>
+    public long Sh361Scattered, Sh361Scatters, Sh361ScatterPebble, Sh361ScatterScrap, Sh361NearGiven, Sh361NearDelivers;
     public long Rp345NormalDealt, Rp345Punches, Rp345PunchBack, Rp345PunchKills, Rp345PunchDealt, Rp345PunchAmount, Rp345AimEdible, Rp345GrabNoPunch, Rp345GrabAfter, Ga345Stomps, Ga345SplashHits, Ga345SplashDealt;
     public long[]? Fg339Spray, Fg339AllyHits, Fg339AllyDmg;
     /// <summary>第339期（計数のみ）: 乱射の1発をターンごとに数える（羽の乱射 ／ 乱射の札の両方）。</summary>
@@ -3707,6 +3709,8 @@ public sealed class UnitTally
         Sh360AidSkipped += o.Sh360AidSkipped; Sh360OpenSkipped += o.Sh360OpenSkipped;   // 第360期
         Sh360HitBraced += o.Sh360HitBraced; Sh360HitBare += o.Sh360HitBare; Sh360BareOver += o.Sh360BareOver; Sh360BareOverAmt += o.Sh360BareOverAmt; Sh360HeldCuts += o.Sh360HeldCuts;
         Sh360WideGiven += o.Sh360WideGiven; Sh360WideTargets += o.Sh360WideTargets; Sh360WideDelivers += o.Sh360WideDelivers;
+        Sh361Scattered += o.Sh361Scattered; Sh361Scatters += o.Sh361Scatters; Sh361ScatterPebble += o.Sh361ScatterPebble; Sh361ScatterScrap += o.Sh361ScatterScrap;   // 第361期
+        Sh361NearGiven += o.Sh361NearGiven; Sh361NearDelivers += o.Sh361NearDelivers;
         Db354CurseRage += o.Db354CurseRage; Db354PickedMudo += o.Db354PickedMudo; Db354FedMudo += o.Db354FedMudo; Db354BurstYokeCut += o.Db354BurstYokeCut; Db354BurstYokeLost += o.Db354BurstYokeLost;   // 第354期
         Db353PlunderGain += o.Db353PlunderGain; Db353PlunderHits += o.Db353PlunderHits; Db353PlunderDry += o.Db353PlunderDry; Db353PlunderMiss += o.Db353PlunderMiss; Db353PlunderBoss += o.Db353PlunderBoss;   // 第353期
         Fg339Spray = AddArr(Fg339Spray, o.Fg339Spray); Fg339AllyHits = AddArr(Fg339AllyHits, o.Fg339AllyHits); Fg339AllyDmg = AddArr(Fg339AllyDmg, o.Fg339AllyDmg);
@@ -4567,6 +4571,8 @@ public static class ShardLabels
     public const string Return = "返し";
     public const string Pick = "礫を拾う";
     public const string Throw = "礫を投げる";
+    /// <summary>第361期（SS-s・ササ）: 行き場の無い切り落としがササの足元で砕け散った。<c>ActorId</c> ＝ <c>TargetId</c> ＝ ササ ／ <c>Amount</c> ＝ 散った量。直後に拾った読み手の「礫を拾う」などが続く。</summary>
+    public const string Scatter = "砕け散る";
 }
 /// <summary>`CursePass`（第351期）の <c>Text</c>。</summary>
 public static class CursePassLabels

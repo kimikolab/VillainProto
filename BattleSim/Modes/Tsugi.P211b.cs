@@ -534,7 +534,7 @@ static partial class TsugiDiag
     {
         Console.WriteLine("# 第211期 `tsugi pon5` —— ポンが遊んだ編成（パターン2・ガルド → ガン）× Y0〜Y3（seed 0..199）");
         Console.WriteLine();
-        Formation baseF = Formation.BuildDiamond(UnitCatalog.Gan, UnitCatalog.Tsugi, UnitCatalog.Dolga, UnitCatalog.Sasa, UnitCatalog.Sero);
+        Formation baseF = Formation.BuildDiamond(UnitCatalog.Gan, UnitCatalog.Tsugi, UnitCatalog.Dolga, UnitCatalog.SasaH360, UnitCatalog.Sero);
         Console.WriteLine("並び: " + string.Join(" ／ ", baseF.Occupied().Select(o => baseF.Shape.FrameNames[o.Slot] + " " + o.Def.Name)) + "。");
         Console.WriteLine();
         Console.WriteLine("**ササ倒れ** ＝ ササが倒れた戦の割合 ／ **ツギの破片** ＝ 戦の終わりにツギが持っていた破片の平均 ／ **ササが倒れる前のツギの板** ＝ ササが倒れた戦で、倒れる前にツギ自身へ貼った最後の板の直後の破片（台本から・その後に砕けた分は引いていないので上限の見当）。");
@@ -609,7 +609,7 @@ static partial class TsugiDiag
     {
         var a = (string.IsNullOrWhiteSpace(arg) ? "3 1 Y3" : arg).Split(' ', StringSplitOptions.RemoveEmptyEntries);
         int st = int.Parse(a[0]) - 1, seed = int.Parse(a[1]);
-        Formation g = ApplyY(Formation.BuildDiamond(UnitCatalog.Gan, UnitCatalog.Tsugi, UnitCatalog.Dolga, UnitCatalog.Sasa, UnitCatalog.Sero), "tsugi", a[2]);
+        Formation g = ApplyY(Formation.BuildDiamond(UnitCatalog.Gan, UnitCatalog.Tsugi, UnitCatalog.Dolga, UnitCatalog.SasaH360, UnitCatalog.Sero), "tsugi", a[2]);
         var r = BattleEngine.Run(g, EnemyCatalog.Stages[st].Enemy, seed, verbose: true);
         foreach (var l in r.Log) Console.WriteLine(l.Text);
     }

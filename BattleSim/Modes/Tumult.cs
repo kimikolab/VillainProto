@@ -74,7 +74,7 @@ static class TumultDiag
         // 破片の読み手を2枚（ガレ＝量で読む礫・ウロ＝二値で読む鱗）置いてあるので、
         // 宛先が飛ばされたぶんがそのまま勝率に出る。
         ("台3 ササ同席 (バサ×ササ×ガレ×ウロ)",
-            Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Uro,
+            Formation.Build(front1: UnitCatalog.SasaH360, front3: UnitCatalog.Uro,
                             center: UnitCatalog.GareH358, back1: UnitCatalog.Kado, back3: UnitCatalog.Basa)),
 
         // 肩代わりと同席。**味方側の入れ替えで壁が後ろへ飛ぶ代金**が現行と同じかを見る
@@ -306,7 +306,7 @@ static class TumultDiag
         {
             ("台1 読み手あり", new[] { (2, UnitCatalog.Shio), (3, UnitCatalog.Yomi) }),
             ("台2 読み手なし", Array.Empty<(int, UnitDef)>()),
-            ("台3 ササ同席", new[] { (0, UnitCatalog.Sasa), (2, UnitCatalog.GareH358) }),
+            ("台3 ササ同席", new[] { (0, UnitCatalog.SasaH360), (2, UnitCatalog.GareH358) }),
             ("台4 肩代わり", new[] { (0, UnitCatalog.Golm) }),
         };
         foreach ((string bed, var fix) in beds)

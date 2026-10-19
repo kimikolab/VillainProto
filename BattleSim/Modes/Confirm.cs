@@ -60,8 +60,8 @@ public static void Run(string[] args, int stageIndex)
         // **この編成は第21期に compare から外した**（100/0/0/0/0 で情報が出ていなかった）。
         // 行は記録として残す——消すと「追試して据え置いた」事実まで消える。
         ("置き去り×速攻",
-            Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Borg, center: UnitCatalog.Tsugi, back1: UnitCatalog.TouT0, back3: UnitCatalog.Sasa),
-            Formation.Build(front1: UnitCatalog.TouT0, front3: UnitCatalog.Sasa, center: UnitCatalog.Sero, back1: UnitCatalog.Borg, back3: UnitCatalog.Tsugi)),
+            Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Borg, center: UnitCatalog.Tsugi, back1: UnitCatalog.TouT0, back3: UnitCatalog.SasaH360),
+            Formation.Build(front1: UnitCatalog.TouT0, front3: UnitCatalog.SasaH360, center: UnitCatalog.Sero, back1: UnitCatalog.Borg, back3: UnitCatalog.Tsugi)),
         // route 診断（第19期）の V4。自傷の燃料をムドの被弾強化まで通す配置で、
         // seed 0..199 では -1.5pt と閾値の内側に入った。**閾値の境目なので追試が要る。**
         // reseat と違って勝率の探索から出た候補ではなく、「巨躯の被覆から出す」という
@@ -80,8 +80,8 @@ public static void Run(string[] args, int stageIndex)
         // **ナラは席を選ばない**（速さで対象を選ぶので隣接も列も見ない）ので、
         // 中央を要求する駒に譲るのが正しい。ここでは狙撃のセロが中央に上がる。
         ("継ぎ当て×分散回復",
-            Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Gald, center: UnitCatalog.Tsugi, back1: UnitCatalog.Dolga, back3: UnitCatalog.Sasa),
-            Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Gald, center: UnitCatalog.Sero, back1: UnitCatalog.Tsugi, back3: UnitCatalog.Dolga)),
+            Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Gald, center: UnitCatalog.Tsugi, back1: UnitCatalog.Dolga, back3: UnitCatalog.SasaH360),
+            Formation.Build(front1: UnitCatalog.SasaH360, front3: UnitCatalog.Gald, center: UnitCatalog.Sero, back1: UnitCatalog.Tsugi, back3: UnitCatalog.Dolga)),
         // 物理軸の連鎖・第1弾の新3編成（第26期）。旧＝計画書の仮置き（メンバーは組み直し後で同じ）、
         // 候補＝reseat 1位。3本とも狙い（ガルド前列）を満たす席が最良だったので、
         // 「狙いを満たす最良」と全体1位が食い違う行は無い。
@@ -210,8 +210,8 @@ public static void Run(string[] args, int stageIndex)
         // 候補は `docs/reseat.md` の粗順4（狙 ○・情報セル 4・帯A で第2〜5波 +22.1pt）。
         // **バサとは無関係の行**なので、この期の測定に入る前に独立して決める。
         ("継ぎ当て×分散回復",
-            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Tsugi, center: UnitCatalog.Sero, back1: UnitCatalog.Dolga, back3: UnitCatalog.Sasa),
-            Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Gald, center: UnitCatalog.Sero, back1: UnitCatalog.Dolga, back3: UnitCatalog.Tsugi)),
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Tsugi, center: UnitCatalog.Sero, back1: UnitCatalog.Dolga, back3: UnitCatalog.SasaH360),
+            Formation.Build(front1: UnitCatalog.SasaH360, front3: UnitCatalog.Gald, center: UnitCatalog.Sero, back1: UnitCatalog.Dolga, back3: UnitCatalog.Tsugi)),
         // ------------------------------------------------------------------
         // 第148期 段0 —— **席の棚卸し**（指示書 §0-1）。
         //

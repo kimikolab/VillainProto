@@ -14,6 +14,14 @@ static partial class Sh360Diag
         ("G SS-w の1位（ネル＋ソム）", "ヒビ・ガレ・ササ・ソム・ネル"),          // `seats` の SS-w §2 の1位 ＝ ネルを含む最良（ボス 100%・12.8T・近衛 ／ 大隊 0%）
     };
 
+    /// <summary>第360期の「版・」の3台（第361期に `Presets.Versions` から外した並びを器具の中に固定）。</summary>
+    internal static (string Name, Formation F)[] Boards360() => new (string, Formation)[]
+    {
+        ("版・SS-k 破片", Formation.Build(front1: UnitCatalog.SasaSSk, front3: UnitCatalog.Golm, center: UnitCatalog.Dolga, back1: UnitCatalog.Gare, back3: UnitCatalog.Hibi)),
+        ("版・SS-w 破片", Formation.Build(front1: UnitCatalog.SasaSSw, front3: UnitCatalog.Golm, center: UnitCatalog.Dolga, back1: UnitCatalog.Gare, back3: UnitCatalog.Hibi)),
+        ("版・SS-w 破片 呪い", Formation.Build(front1: UnitCatalog.Hibi, front3: UnitCatalog.Gare, center: UnitCatalog.SasaSSw, back1: UnitCatalog.Som, back3: UnitCatalog.Nel)),
+    };
+
     static readonly MethodInfo AddUnit = typeof(BattleContext).GetMethod("Add", BindingFlags.Instance | BindingFlags.NonPublic, new[] { typeof(UnitState) })!;
     static readonly PropertyInfo TurnP = typeof(BattleContext).GetProperty("Turn")!;
     static int _fail;
@@ -94,12 +102,14 @@ static partial class Sh360Diag
 
         // ---- 版の定義 ----
         {
-            var k = UnitCatalog.SasaSSk; var w = UnitCatalog.SasaSSw; var s = UnitCatalog.Sasa;
+            var k = UnitCatalog.SasaSSk; var w = UnitCatalog.SasaSSw; var s = UnitCatalog.SasaH360;
             bool ok = k.Traits.SequenceEqual(new[] { TraitId.Brace, TraitId.BraceHold }) && w.Traits.SequenceEqual(new[] { TraitId.Brace, TraitId.BraceHold, TraitId.BraceWide })
                 && new[] { k, w }.All(d => d.Id == s.Id && d.MaxHp == s.MaxHp && d.Attack == s.Attack && d.Speed == s.Speed && d.Actions == s.Actions)
                 && s.Traits.SequenceEqual(new[] { TraitId.Brace });
-            var held = UnitCatalog.All.Concat(UnitCatalog.Retired).Where(d => d.Traits.Any(t => t is TraitId.BraceHold or TraitId.BraceWide)).Select(d => d.Id).ToArray();
-            Expect("版の定義: SS-k ＝ 身構え ＋ `BraceHold` ／ SS-w ＝ ＋ `BraceWide`（体 ／ 手番はササのまま）・規定のササは触っていない・新しい札の保持者は 0 枚", ok && held.Length == 0, held.Length == 0 ? "" : string.Join(",", held));
+            // 第361期: 規定のササ ＝ SS-w（`BraceHold` ／ `BraceWide` の保持者はササだけ）
+            var held = UnitCatalog.All.Concat(UnitCatalog.Retired).Where(d => d.Traits.Any(t => t is TraitId.BraceHold or TraitId.BraceWide) && d.Id != "sasa").Select(d => d.Id).ToArray();
+            ok = ok && UnitCatalog.Sasa.Traits.SequenceEqual(w.Traits) && UnitCatalog.Sasa.PlusText == w.PlusText;
+            Expect("版の定義: SS-k ＝ 身構え ＋ `BraceHold` ／ SS-w ＝ ＋ `BraceWide`（体 ／ 手番はササのまま）・旧のササ（`SasaH360`）は身構えだけ・第361期: 規定のササ ＝ SS-w（札 ／ 文面が同じ・ほかに保持者なし）", ok && held.Length == 0, held.Length == 0 ? "" : string.Join(",", held));
         }
 
         // ---- SS-k ----
@@ -121,7 +131,7 @@ static partial class Sh360Diag
             s.SetCounter(BraceTrait.BracedKey, 4);
             ctx.ApplyDamage(s, 999, null);   // 出どころの無い一撃（構えは効かない）で倒す
             Expect("SS-k: 倒れたら構えが解ける", !s.IsAlive && s.RawCounter(BraceTrait.BracedKey) == 0);
-            var ctx0 = Ctx(Formation.Build(front1: Plain("a"), front3: UnitCatalog.Sasa, center: Plain("b")), Formation.Build(center: Plain("foe", hp: 999)), out var p0, out var e0, turn: 2);
+            var ctx0 = Ctx(Formation.Build(front1: Plain("a"), front3: UnitCatalog.SasaH360, center: Plain("b")), Formation.Build(center: Plain("foe", hp: 999)), out var p0, out var e0, turn: 2);
             var s0 = U(p0, "sasa"); s0.SetCounter(BraceTrait.BracedKey, 2);
             Expect("規定のササ: 前のターンの構えはこのターンの一撃に効かない（今どおり）", Hit(ctx0, s0, e0[0], 20) == 20);
         }
@@ -171,19 +181,16 @@ static partial class Sh360Diag
         }
 
         // ---- 試遊の台 ----
+        // 第361期: 第360期の「版・」の3台は `Presets.Versions` から外した。器具の中に旧の並びを固定して確かめる。
         {
             var vr = Presets.Versions.Select(r => r.Name).ToArray();
             string[] want = { "版・SS-k 破片", "版・SS-w 破片", "版・SS-w 破片 呪い" };
-            bool rows = vr.Take(5).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁" }) && vr.Skip(5).SequenceEqual(want);
-            Expect("`Presets.Versions` ＝ 試遊の5台 ＋ 「版・」の3台（第359期の「版・」の3台は外した）", rows, string.Join("、", vr));
-            if (rows)
-            {
-                Formation F(string nm) => Presets.Versions.First(r => r.Name == nm).F;
-                bool ok = Seats(F(want[0])) == KeyC && Seats(F(want[1])) == KeyC && Seats(F(want[2])) == RepKeys[1].Key
-                    && F(want[0]).Occupied().Any(o => o.Def == UnitCatalog.SasaSSk) && F(want[1]).Occupied().Any(o => o.Def == UnitCatalog.SasaSSw) && F(want[2]).Occupied().Any(o => o.Def == UnitCatalog.SasaSSw)
-                    && want.All(nm => F(nm).Occupied().All(o => o.Def.Id == "sasa" || UnitCatalog.All.Contains(o.Def)));
-                Expect("「版・」の台: 並びは §5 のネルを含まない最良（呪いの台はネルを含む最良）・ササだけが版・ほかは規定の駒", ok, $"{Seats(F(want[0]))} ／ {Seats(F(want[2]))}");
-            }
+            bool gone = vr.Take(5).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁" }) && !vr.Any(want.Contains);
+            Expect("`Presets.Versions` ＝ 試遊の5台が頭に残る・第360期の「版・」の3台は第361期に外した", gone, string.Join("、", vr));
+            var b = Boards360();
+            bool ok = Seats(b[0].F) == KeyC && Seats(b[1].F) == KeyC && Seats(b[2].F) == RepKeys[1].Key
+                && b[0].F.Occupied().Any(o => o.Def == UnitCatalog.SasaSSk) && b[1].F.Occupied().Any(o => o.Def == UnitCatalog.SasaSSw) && b[2].F.Occupied().Any(o => o.Def == UnitCatalog.SasaSSw);
+            Expect("第360期の「版・」の台（器具の中に固定）: 並びは §5 のネルを含まない最良（呪いの台はネルを含む最良）・ササだけが版", ok, $"{Seats(b[0].F)} ／ {Seats(b[2].F)}");
         }
 
         // ---- PickOne ----

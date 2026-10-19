@@ -2361,7 +2361,8 @@ public static class UnitCatalog
     // ＋ 被弾で隣を弾く）は `compare` 61 行のうち**在席1行**で、
     // **弾きの受け皿（移動軸）が無い編成では −35% しか働いていなかった**。
     // `LooseTrait` / `LooseRule` は**残置**（対照）。
-    public static readonly UnitDef Sasa = new()
+    // 第361期: 第143〜360期の規定（身構え・そのターンだけ・弾いた1体へ配る）は `SasaH360` の名前で残した（定義は1文字も変えていない）。規定の `Sasa` は第360期の SS-w で、すぐ下に作った。
+    public static readonly UnitDef SasaH360 = new()
     {
         Id = "sasa",
         Name = "錯乱のササ",
@@ -2380,6 +2381,17 @@ public static class UnitCatalog
         PlusText = "手番で身を固め、そのターンのあいだ受ける一撃を7までに抑える。殴られると錯乱して隣の味方1体を別の席へ突き飛ばし（1ターン1回）、その味方に、抑えて切り落とした分を破片として付ける",
         MinusText = "自分は決して攻撃しない ／ 弾く相手と行き先は選べない ／ 身を固めていないターンは素のまま受ける",
         Flavor = "誰かの隣に立つことができない。近づかれると錯乱する。"
+    };
+
+    /// <summary>錯乱のササ（第361期の規定 ＝ 第360期の SS-w）。身構えが次の自分の手番まで続き（先に動く敵の一撃も 7 に抑える）、切り落とした分を、そのターン最初に殴られたときの席の隣の味方全員に破片として付ける。
+    /// 旧は <see cref="SasaH360"/>。札と文面は <see cref="SasaSSw"/> と同じ。</summary>
+    public static readonly UnitDef Sasa = new()
+    {
+        Id = SasaH360.Id, Name = SasaH360.Name, MaxHp = SasaH360.MaxHp, Attack = SasaH360.Attack, Speed = SasaH360.Speed, Advances = SasaH360.Advances, Actions = SasaH360.Actions,
+        Traits = new[] { TraitId.Brace, TraitId.BraceHold, TraitId.BraceWide },
+        PlusText = "手番で身を固め、次に動くまで、受ける一撃を7までに抑える。殴られると錯乱して隣の味方1体を別の席へ突き飛ばし（1ターン1回）、抑えて切り落とした分を、両隣の味方に破片として付ける",
+        MinusText = "自分は決して攻撃しない ／ 弾く相手と行き先は選べない",
+        Flavor = SasaH360.Flavor,
     };
 
     public static readonly UnitDef Kubi = new()
@@ -6620,24 +6632,45 @@ public static class UnitCatalog
     // ---------------------------------------------------------------------------------
     // 第360期【軽い期】ツギなしの勝ち筋をササで（指示書 design/PHASE360_SHARD_SASA_SPEC.md §4）。版はササの写し（Id ・数値は同じ・規定の上）。保持者 0 枚。
     // ---------------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------------
+    // 第361期【軽い期】行き場の無い切り落とし（指示書 design/PHASE361_SHARD_CLOSE_SPEC.md §3）。版は規定のササ（SS-w）の写し ＋ 札1枚。保持者 0 枚。
+    // ---------------------------------------------------------------------------------
+    /// <summary>第361期 SS-s 散る: 規定のササ ＋ <see cref="TraitId.BraceScatter"/>（付ける相手のいない分は砕けて散り、割れた破片の読み手が拾う）。</summary>
+    public static readonly UnitDef SasaSSs = new()
+    {
+        Id = Sasa.Id, Name = Sasa.Name, MaxHp = Sasa.MaxHp, Attack = Sasa.Attack, Speed = Sasa.Speed, Advances = Sasa.Advances, Actions = Sasa.Actions,
+        Traits = Sasa.Traits.Append(TraitId.BraceScatter).ToArray(),
+        PlusText = Sasa.PlusText + "。付ける相手がいなければ、破片はその場に砕け散る",
+        MinusText = Sasa.MinusText, Flavor = Sasa.Flavor,
+    };
+    /// <summary>第361期 SS-n 遠くへ: 規定のササ ＋ <see cref="TraitId.BraceNear"/>（隣に誰もいなければ、いちばん近い味方へ）。</summary>
+    public static readonly UnitDef SasaSSn = new()
+    {
+        Id = Sasa.Id, Name = Sasa.Name, MaxHp = Sasa.MaxHp, Attack = Sasa.Attack, Speed = Sasa.Speed, Advances = Sasa.Advances, Actions = Sasa.Actions,
+        Traits = Sasa.Traits.Append(TraitId.BraceNear).ToArray(),
+        PlusText = Sasa.PlusText + "。隣に誰もいなければ、いちばん近い味方へ",
+        MinusText = Sasa.MinusText, Flavor = Sasa.Flavor,
+    };
+
+    // 第361期: 規定のササが SS-w になったので、SS-k ／ SS-w は旧（`SasaH360`）から作る（`SasaSSw` は規定と同じ札・文面・残置）。
     const string SasaPlus360 = "手番で身を固め、次に動くまで、受ける一撃を7までに抑える。殴られると錯乱して隣の味方1体を別の席へ突き飛ばし（1ターン1回）、";
     /// <summary>第360期 SS-k 構えを解かない: ササ ＋ <see cref="TraitId.BraceHold"/>（身構えが次の自分の手番まで続く）。</summary>
     public static readonly UnitDef SasaSSk = new()
     {
-        Id = Sasa.Id, Name = Sasa.Name, MaxHp = Sasa.MaxHp, Attack = Sasa.Attack, Speed = Sasa.Speed, Advances = Sasa.Advances, Actions = Sasa.Actions,
+        Id = SasaH360.Id, Name = SasaH360.Name, MaxHp = SasaH360.MaxHp, Attack = SasaH360.Attack, Speed = SasaH360.Speed, Advances = SasaH360.Advances, Actions = SasaH360.Actions,
         Traits = new[] { TraitId.Brace, TraitId.BraceHold },
         PlusText = SasaPlus360 + "その味方に、抑えて切り落とした分を破片として付ける",
         MinusText = "自分は決して攻撃しない ／ 弾く相手と行き先は選べない",
-        Flavor = Sasa.Flavor,
+        Flavor = SasaH360.Flavor,
     };
     /// <summary>第360期 SS-w 両隣へ: SS-k ＋ <see cref="TraitId.BraceWide"/>（切り落とした分を隣の味方それぞれに同じ量の破片として付ける）。</summary>
     public static readonly UnitDef SasaSSw = new()
     {
-        Id = Sasa.Id, Name = Sasa.Name, MaxHp = Sasa.MaxHp, Attack = Sasa.Attack, Speed = Sasa.Speed, Advances = Sasa.Advances, Actions = Sasa.Actions,
+        Id = SasaH360.Id, Name = SasaH360.Name, MaxHp = SasaH360.MaxHp, Attack = SasaH360.Attack, Speed = SasaH360.Speed, Advances = SasaH360.Advances, Actions = SasaH360.Actions,
         Traits = new[] { TraitId.Brace, TraitId.BraceHold, TraitId.BraceWide },
         PlusText = SasaPlus360 + "抑えて切り落とした分を、両隣の味方に破片として付ける",
         MinusText = "自分は決して攻撃しない ／ 弾く相手と行き先は選べない",
-        Flavor = Sasa.Flavor,
+        Flavor = SasaH360.Flavor,
     };
 
     // 第360期: 規定のヒビが HB-f になったので、HB-r ／ HB-s ／ HB-f は旧（`HibiH359`）から作る（`HibiHBf` は規定と同じ札・文面・残置）。

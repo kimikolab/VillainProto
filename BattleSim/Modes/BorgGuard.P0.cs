@@ -72,9 +72,9 @@ static partial class BorgGuardDiag
         var g0 = UnitCatalog.BorgF0;
         var boards = new (string Name, Formation F)[]
         {
-            ("233 B3-1（シオ＋ササ・1位）", BA.Seat(new[] { UnitCatalog.HotaL0, UnitCatalog.Sasa, UnitCatalog.HiyoF0, UnitCatalog.Shio, g0 })),
+            ("233 B3-1（シオ＋ササ・1位）", BA.Seat(new[] { UnitCatalog.HotaL0, UnitCatalog.SasaH360, UnitCatalog.HiyoF0, UnitCatalog.Shio, g0 })),
             ("233 B3-2（シオ＋ハネ・1位）", BA.Seat(new[] { UnitCatalog.HiyoF0, UnitCatalog.HotaL0, UnitCatalog.Shio, UnitCatalog.HaneR0, g0 })),
-            ("233 B3-1 のボルグとホタを入れ替え（ボルグ前1）", BA.Seat(new[] { g0, UnitCatalog.Sasa, UnitCatalog.HiyoF0, UnitCatalog.Shio, UnitCatalog.HotaL0 })),
+            ("233 B3-1 のボルグとホタを入れ替え（ボルグ前1）", BA.Seat(new[] { g0, UnitCatalog.SasaH360, UnitCatalog.HiyoF0, UnitCatalog.Shio, UnitCatalog.HotaL0 })),
             ("参考 燃焼（`compare` の行・ガルド入り）", BA.RefBurn),
         };
         Console.WriteLine("| 台 | 全員生存 ／ 勝率 | ボルグ 生きていたT/戦 | 燃えていた | 前列にいた | 受けた敵の一撃/戦 | 受けた被ダメ/戦（敵 ／ 巻き込み ／ 刻み） | ボルグが倒れた | ボルグの被ダメ ÷ 味方全体 |");
@@ -101,7 +101,7 @@ static partial class BorgGuardDiag
         Console.WriteLine($"- T3 の相方の候補: {c.Count} 枚（第233期と同じ）→ {pairs} 組 × 席 120");
         Console.WriteLine($"- T3′ の候補: {cp.Count} 枚（シオ・ササを除く）→ {pairs - pairsP} 組を除いた **{pairsP} 組**——**T3 の部分集合なので段1 を回し直さない**（T3 の表から抜き出す）");
         Console.WriteLine("- T3-1: シオ＋ササの 1 組（T3 の表から引く）");
-        var probe = CoreOf(Versions[1].Borg).Concat(new[] { UnitCatalog.Shio, UnitCatalog.Sasa }).ToArray();
+        var probe = CoreOf(Versions[1].Borg).Concat(new[] { UnitCatalog.Shio, UnitCatalog.SasaH360 }).ToArray();
         var t0 = sw.Elapsed;
         BA.AllSeats(probe, 20);
         double per = (sw.Elapsed - t0).TotalSeconds / (120 * 20);

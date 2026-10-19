@@ -1293,7 +1293,14 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sh360 axes              # 第360期 §7 の 4: 軸の横並び（第348期 §3）の破片の行 × 版（10 秒）
     dotnet run --project BattleSim -c Release 0 sh360 compare [版,…]    # 第360期 §7 の 5: `compare` 64 行 × 版 ＋ 段0 の前（`Pin359`）とのセルの差（16 秒）
     dotnet run --project BattleSim -c Release 0 sh360 log <版> <台> <波> [seed]   # 第360期: 1戦のログ（台 c ／ cn ／ d ／ 並びの名前・版 base ／ ssk ／ ssw）
-    dotnet run --project BattleSim -c Release 0 sh360 check             # 第360期 自己検査（段0 のヒビ ／ ツギの駆け込み ／ 出撃前の板・SS-k ／ SS-w を盤面を直に組んで・光の衣が礫になる・verbose・試遊の台・PickOne）
+    dotnet run --project BattleSim -c Release 0 sh360 check             # 第360期 自己検査（段0 のヒビ ／ ツギの駆け込み ／ 出撃前の板・SS-k ／ SS-w を盤面を直に組んで・光の衣が礫になる・verbose・試遊の台・PickOne）。第361期: 「規定」の列のササを `SasaH360` に固定・第360期の「版・」の台は器具の中に固定（`Boards360`）
+    dotnet run --project BattleSim -c Release 0 sh361 p0                # 第361期 Phase 0: 割れた破片を読む札の一覧（ソースの走査）・規定（SS-w）の切り落としの行き先（代表台 × ボス ／ 大隊・seed 0..19）（1 秒）
+    dotnet run --project BattleSim -c Release 0 sh361 seats             # 第361期 §5: 第360期 §5 と同じ母集団（3,360 並び）× 規定 ／ SS-s ／ SS-n・ソムなし ／ あり・ネルなし・両立・勝ち並びのササの席（45 秒）
+    dotnet run --project BattleSim -c Release 0 sh361 flow [版,…]       # 第361期 §6 の 1・2: 切り落としの行き先（隣 ／ 遠くへ ／ 散った（礫 ／ 瓦礫が拾った）／ 消えた）× 版・ボスの1ターンの与ダメ ／ 勇者の最大HP
+    dotnet run --project BattleSim -c Release 0 sh361 boards [版,…]     # 第361期 §6 の 3・5: 代表台 5 × 11 波 × 版（base ／ sss ／ ssn）・打ち切り %・壊れの兆し（5 秒）
+    dotnet run --project BattleSim -c Release 0 sh361 compare [版,…]    # 第361期 §6 の 4: `compare` 64 行 × 版 ＋ 段0 の前（`Pin360`）とのセルの差（17 秒）
+    dotnet run --project BattleSim -c Release 0 sh361 log <版> <台> <波> [seed]   # 第361期: 1戦のログ（台 c ／ f ／ g ／ 並びの名前・版 base ／ sss ／ ssn）
+    dotnet run --project BattleSim -c Release 0 sh361 check             # 第361期 自己検査（段0 のササ・SS-s の散る ／ 読み手が拾う ／ 読み手なしで消える ／ 返しを起こさない・SS-n の遠くへ ／ 隣がいれば今どおり・verbose・試遊の台・PickOne）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

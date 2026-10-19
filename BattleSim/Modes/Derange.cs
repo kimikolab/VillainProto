@@ -81,7 +81,7 @@ static class DerangeDiag
 
         // ササ ＋ ガレ。**混乱は敵→敵なので供給に化けないはず**（予測3）。
         ("ササ同席", Formation.Build(
-            front1: UnitCatalog.Sasa, front3: UnitCatalog.GareH358, center: UnitCatalog.Borg,
+            front1: UnitCatalog.SasaH360, front3: UnitCatalog.GareH358, center: UnitCatalog.Borg,
             back1: UnitCatalog.Basa, back3: Fill("pa"))),
 
         // 陰性対照。**バサを同数値・特性なしの素体に落としただけ**（HP56 / 攻7 / 速8）。
