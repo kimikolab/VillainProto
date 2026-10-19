@@ -97,16 +97,16 @@ public static void Run(string[] args, int stageIndex)
         // ザンは後3——**ザンが殴られにくい席ほど刃が出る**という読みと一致する。
         // 標的はヒサ(前1)の隣接＝中央ヒビ(55)と後1ドルガ(85)の最大でドルガに移る。
         ("仇討ち×砕け (ヒビ×ザン)",
-            Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Hibi, center: UnitCatalog.Hisa, back1: UnitCatalog.Zan, back3: UnitCatalog.Dolga),
-            Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Golm, center: UnitCatalog.Hibi, back1: UnitCatalog.Dolga, back3: UnitCatalog.Zan)),
+            Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.HibiH359, center: UnitCatalog.Hisa, back1: UnitCatalog.Zan, back3: UnitCatalog.Dolga),
+            Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Golm, center: UnitCatalog.HibiH359, back1: UnitCatalog.Dolga, back3: UnitCatalog.Zan)),
         // ザンの「1ターンに1回」撤去に伴う振り直し（第26期の追補）。**規則を変えたら席も測り直す**
         // ——上限があった頃は「殴られる回数」が出力に乗らなかったので、標的を誰に付けるかの
         // 価値が潰れていた。撤去後は**巨躯ゴルム(150)を中央に置いてそこへ標的を集める**形が
         // 最良になる（ヒサは前1で隣接＝中央ゴルムと後1ドルガ、最大HPはゴルム）。
         // 仇討ち (ヒサ×ザン) の方は撤去後も現行が「狙いを満たす最良」のままなので候補なし。
         ("仇討ち×砕け (ヒビ×ザン) / 上限撤去後",
-            Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Golm, center: UnitCatalog.Hibi, back1: UnitCatalog.Dolga, back3: UnitCatalog.Zan),
-            Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Hibi, center: UnitCatalog.Golm, back1: UnitCatalog.Dolga, back3: UnitCatalog.Zan)),
+            Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Golm, center: UnitCatalog.HibiH359, back1: UnitCatalog.Dolga, back3: UnitCatalog.Zan),
+            Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.HibiH359, center: UnitCatalog.Golm, back1: UnitCatalog.Dolga, back3: UnitCatalog.Zan)),
         // 物理軸の連鎖・第2弾の新2編成（第28期）。旧＝計画書の仮置き（顔ぶれは組み直し後で同じ）、
         // 候補＝reseat 1位。**どちらもガルド・セッキを含まないので狙いの制約が無く、
         // 「狙いを満たす最良」と全体1位が一致する。**
@@ -252,8 +252,8 @@ public static void Run(string[] args, int stageIndex)
             Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Borg, center: UnitCatalog.Lili, back1: UnitCatalog.Mudo, back3: UnitCatalog.Hota)),
         // 第148期 段0。帯A 83.2 → 89.8（+6.6）・狙 ○・情報セル 2 → 2・粗順 1。
         ("範囲耐性 (ヒビ×ボルグ)",
-            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, center: UnitCatalog.Hibi, back1: UnitCatalog.Borg, back3: UnitCatalog.Rica),
-            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Borg, center: UnitCatalog.Dolga, back1: UnitCatalog.Rica, back3: UnitCatalog.Hibi)),
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, center: UnitCatalog.HibiH359, back1: UnitCatalog.Borg, back3: UnitCatalog.Rica),
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Borg, center: UnitCatalog.Dolga, back1: UnitCatalog.Rica, back3: UnitCatalog.HibiH359)),
         // 第148期 段0。帯A 46.3 → 66.3（+20.0）・狙 ○・情報セル 3 → 4・粗順 2。
         ("縛め非収入型 (クグ×速攻)",
             Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.KuguKG0, center: UnitCatalog.Sero, back1: UnitCatalog.Mudo, back3: UnitCatalog.Borg),
@@ -264,8 +264,8 @@ public static void Run(string[] args, int stageIndex)
             Formation.Build(front1: UnitCatalog.Hagi, front3: UnitCatalog.Golm, center: UnitCatalog.Ban, back1: UnitCatalog.Rica, back3: UnitCatalog.Vel)),
         // 第148期 段0。帯A 56.5 → 84.3（+27.8）・狙 ○・情報セル 4 → 4・粗順 3。
         ("仇討ち×砕け (ヒビ×ザン)",
-            Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Hibi, center: UnitCatalog.Golm, back1: UnitCatalog.Dolga, back3: UnitCatalog.Zan),
-            Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Hibi, center: UnitCatalog.Dolga, back1: UnitCatalog.Zan, back3: UnitCatalog.Hisa)),
+            Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.HibiH359, center: UnitCatalog.Golm, back1: UnitCatalog.Dolga, back3: UnitCatalog.Zan),
+            Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.HibiH359, center: UnitCatalog.Dolga, back1: UnitCatalog.Zan, back3: UnitCatalog.Hisa)),
         // 第148期 段0。帯A 79.6 → 85.3（+5.7）・狙 ○・情報セル 3 → 3・粗順 9。
         ("駆り立て (カリ×ドルガ)",
             Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Gald, center: UnitCatalog.Gan, back1: UnitCatalog.Kari, back3: UnitCatalog.Zan),

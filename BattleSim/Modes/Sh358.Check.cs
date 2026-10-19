@@ -17,7 +17,7 @@ static partial class Sh358Diag
     internal static (string Name, Formation F)[] Boards358() => new (string, Formation)[]
     {
         ("版・HB-r 破片", Presets.ShardBoard(UnitCatalog.HibiHBr, UnitCatalog.GareH358)),
-        ("版・GR-r 破片", Presets.ShardBoard(UnitCatalog.Hibi, UnitCatalog.GareGRr)),
+        ("版・GR-r 破片", Presets.ShardBoard(UnitCatalog.HibiH359, UnitCatalog.GareGRr)),
         ("版・HB-r＋GR-r 破片", Presets.ShardBoard(UnitCatalog.HibiHBr, UnitCatalog.GareGRr)),
         ("版・HB-r＋GR-r 破片 ツギ", Formation.Build(front1: UnitCatalog.Uro, front3: UnitCatalog.Gald, center: UnitCatalog.GareGRr, back1: UnitCatalog.Tsugi, back3: UnitCatalog.HibiHBr)),
     };
@@ -60,16 +60,16 @@ static partial class Sh358Diag
         // ---- 版の定義 ----
         {
             var h = UnitCatalog.HibiHBr; var g = UnitCatalog.GareGRr;
-            bool hb = h.Traits.SequenceEqual(new[] { TraitId.ShardGift, TraitId.ShardBare, TraitId.Frail }) && h.Id == "hibi" && h.MaxHp == UnitCatalog.Hibi.MaxHp && h.Attack == UnitCatalog.Hibi.Attack
-                && h.Speed == UnitCatalog.Hibi.Speed && h.Actions.Count == 1 && h.Actions[0].Kind == ActionKind.Skill;
+            bool hb = h.Traits.SequenceEqual(new[] { TraitId.ShardGift, TraitId.ShardBare, TraitId.Frail }) && h.Id == "hibi" && h.MaxHp == UnitCatalog.HibiH359.MaxHp && h.Attack == UnitCatalog.HibiH359.Attack
+                && h.Speed == UnitCatalog.HibiH359.Speed && h.Actions.Count == 1 && h.Actions[0].Kind == ActionKind.Skill;
             bool gr = g.Traits.SequenceEqual(new[] { TraitId.PebbleGather }) && g.Id == "gare" && g.MaxHp == UnitCatalog.GareH358.MaxHp && g.Attack == UnitCatalog.GareH358.Attack
                 && g.Speed == UnitCatalog.GareH358.Speed && g.Actions.Count == 1 && g.Actions[0].Kind == ActionKind.Skill;
-            var held = UnitCatalog.All.Concat(UnitCatalog.Retired).Where(d => d.Traits.Any(t => t is TraitId.ShardGift or TraitId.ShardBare)).Select(d => d.Id).ToArray();
+            var held = UnitCatalog.All.Concat(UnitCatalog.Retired).Where(d => d.Traits.Any(t => t is TraitId.ShardBare)).Select(d => d.Id).ToArray();   // 第360期: `ShardGift` は規定のヒビ（HB-f）が持つ
             // 第359期: 規定のガレ ＝ GR-r（`PebbleGather`）・旧（`GareH358`）は礫（砕く）
-            bool def = UnitCatalog.Hibi.Traits.SequenceEqual(new[] { TraitId.Shatter, TraitId.Frail }) && UnitCatalog.GareH358.Traits.SequenceEqual(new[] { TraitId.Shrapnel })
+            bool def = UnitCatalog.HibiH359.Traits.SequenceEqual(new[] { TraitId.Shatter, TraitId.Frail }) && UnitCatalog.GareH358.Traits.SequenceEqual(new[] { TraitId.Shrapnel })
                 && UnitCatalog.Gare.Traits.SequenceEqual(new[] { TraitId.PebbleGather });
             Expect("版の定義: HB-r ＝ 体はヒビのまま・札は `ShardGift` ＋ `ShardBare` ＋ 脆弱（砕けは外す）・手番は術 ／ GR-r ＝ 体はガレのまま・札は `PebbleGather` だけ・手番は術", hb && gr, $"hb {hb}・gr {gr}");
-            Expect("規定のヒビは触っていない・`ShardGift` ／ `ShardBare` の保持者は 0 枚（`All` ／ `Retired`）・第359期: 規定のガレ ＝ GR-r（旧は `GareH358`）", def && held.Length == 0, held.Length == 0 ? "" : string.Join(",", held));
+            Expect("旧のヒビ（`HibiH359`）は砕け ＋ 脆弱のまま・`ShardBare` の保持者は 0 枚（`All` ／ `Retired`）・第359期: 規定のガレ ＝ GR-r（旧は `GareH358`）・第360期: 規定のヒビ ＝ HB-f（`ShardGift` を持つ）", def && held.Length == 0, held.Length == 0 ? "" : string.Join(",", held));
         }
 
         // ---- HB-r ----
@@ -189,7 +189,7 @@ static partial class Sh358Diag
             var b358 = Boards358();
             bool ok = Seats(b358[0].F) == RepKeys[1].Key && Seats(b358[3].F) == RepKeys[0].Key
                 && b358[0].F.Occupied().Any(o => o.Def == UnitCatalog.HibiHBr) && b358[0].F.Occupied().Any(o => o.Def == UnitCatalog.GareH358)
-                && b358[1].F.Occupied().Any(o => o.Def == UnitCatalog.Hibi) && b358[1].F.Occupied().Any(o => o.Def == UnitCatalog.GareGRr)
+                && b358[1].F.Occupied().Any(o => o.Def == UnitCatalog.HibiH359) && b358[1].F.Occupied().Any(o => o.Def == UnitCatalog.GareGRr)
                 && b358[2].F.Occupied().Any(o => o.Def == UnitCatalog.HibiHBr) && b358[2].F.Occupied().Any(o => o.Def == UnitCatalog.GareGRr)
                 && b358[3].F.Occupied().Any(o => o.Def == UnitCatalog.HibiHBr) && b358[3].F.Occupied().Any(o => o.Def == UnitCatalog.GareGRr);
             Expect("第358期の「版・」の台（器具の中に固定）: 並びは §4 のツギなしの最良（ツギありの台はツギありの最良）・ヒビ ／ ガレだけが版", ok, $"{Seats(b358[0].F)} ／ {Seats(b358[3].F)}");

@@ -72,23 +72,23 @@ static class ShardDiag
         // **破片の出どころが砕けだけになる**（`scan` で 65.0% ＝帯の中）。
         ("台1 変換 (ヒビ×ウロ)",
             Formation.Build(front1: UnitCatalog.Mudo, front3: UnitCatalog.Dolga,
-                            center: UnitCatalog.Hibi, back1: UnitCatalog.Uro, back3: UnitCatalog.Borg)),
+                            center: UnitCatalog.HibiH359, back1: UnitCatalog.Uro, back3: UnitCatalog.Borg)),
 
         // 変換率が低い: 破片の読み手ゼロ・肩代わりゼロ。火力はある（台が床に落ちないように）。
         ("台2 素通り (ヒビ×読み手なし)",
             Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Borg,
-                            center: UnitCatalog.Hibi, back1: UnitCatalog.Nel, back3: UnitCatalog.Egu)),
+                            center: UnitCatalog.HibiH359, back1: UnitCatalog.Nel, back3: UnitCatalog.Egu)),
 
         // ガルド同席: §1-5（破片の soak と受け流しの在庫が食い合うか）の切り分け。
         ("台3 ガルド (ヒビ×ガルド)",
             Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga,
-                            center: UnitCatalog.Hibi, back1: UnitCatalog.Borg, back3: UnitCatalog.Rica)),
+                            center: UnitCatalog.HibiH359, back1: UnitCatalog.Borg, back3: UnitCatalog.Rica)),
 
         // 肩代わり: 巨躯（ゴルム）が自傷の代金を横取りする＝自弁率が落ちる台。
         // **配る量は「実際に減った HP」なので、代金を肩代わりされると配布量も減る。**
         ("台4 肩代わり (ヒビ×ゴルム)",
             Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Dolga,
-                            center: UnitCatalog.Hibi, back1: UnitCatalog.Borg, back3: UnitCatalog.Egu)),
+                            center: UnitCatalog.HibiH359, back1: UnitCatalog.Borg, back3: UnitCatalog.Egu)),
     };
 
     // =================================================================================
@@ -648,17 +648,17 @@ static class ShardDiag
         return new (string, Formation)[]
         {
             // 供給あり・読み手あり: 礫とウロが同じ在庫を取り合う（予測 P2）。
-            ("台A 取り合い (ガレ×ヒビ×ウロ)", Rig(UnitCatalog.Hibi, UnitCatalog.Uro)),
+            ("台A 取り合い (ガレ×ヒビ×ウロ)", Rig(UnitCatalog.HibiH359, UnitCatalog.Uro)),
 
             // 供給あり・読み手なし: 出口だけがある。**台A との差は 後1 の1枚だけ。**
-            ("台B 出口だけ (ガレ×ヒビ)", Rig(UnitCatalog.Hibi, UnitCatalog.Egu)),
+            ("台B 出口だけ (ガレ×ヒビ)", Rig(UnitCatalog.HibiH359, UnitCatalog.Egu)),
 
             // 供給なし: 破片を1点も書かない4枚。**台B との差は 中央 の1枚だけ。**
             // **手番を捨て続ける台**（予測 P3）。
             ("台C 供給なし (ガレ単騎)", Rig(UnitCatalog.Nel, UnitCatalog.Egu)),
 
             // 手番市場: 号令（ガン）が礫の捨てた手番を買い取るか（Q0-4）。**台B との差は 後1 の1枚だけ。**
-            ("台D 手番市場 (ガレ×ヒビ×ガン)", Rig(UnitCatalog.Hibi, UnitCatalog.Gan)),
+            ("台D 手番市場 (ガレ×ヒビ×ガン)", Rig(UnitCatalog.HibiH359, UnitCatalog.Gan)),
         };
     }
 

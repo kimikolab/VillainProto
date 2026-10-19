@@ -14107,9 +14107,16 @@ public sealed class BattleContext
         // 第212期（`BraceArmored`・ササ）: 身を固めている間の一撃は、**破片より先に**上限で切る（切り落とした分は今までどおり保留へ）。
         // 破片が無いときは下の上限の段が同じことをするので、ここは破片があるときだけ——破片の無い駒・札の無い駒は1ビットも動かない。
         // 第213期（`BraceCapFirst`・W1 / W2）: 同じ門を通す（破片が受け切った一撃の扱いだけが `ArmorOnlyHit` で分かれる）。
+        // 第360期（計数のみ）: ササが敵の一撃を受けたとき身を固めていたか（破片の段の前・1回の ApplyDamage で1回）。保持者がいなければ比較1つで抜ける。
+        if (_braceLive && source is not null && source.TeamId != target.TeamId && !burnTick && target.HasTrait(TraitId.Brace))
+        {
+            UnitTally bt360 = TallyOf(target);
+            if (BraceTrait.IsBraced(this, target, source, burnTick)) { bt360.Sh360HitBraced++; if (!BraceTrait.IsBraced(this, target) && amount > Brace.Cap) bt360.Sh360HeldCuts++; }
+            else { bt360.Sh360HitBare++; if (Brace.Cap > 0 && amount > Brace.Cap) { bt360.Sh360BareOver++; bt360.Sh360BareOverAmt += amount - Brace.Cap; } }
+        }
         if (_braceArmoredLive && armor > 0 && Brace.Cap > 0 && amount > Brace.Cap
             && (target.HasTrait(TraitId.BraceArmored) || target.HasTrait(TraitId.BraceCapFirst))
-            && BraceTrait.IsBraced(this, target))
+            && BraceTrait.IsBraced(this, target, source, burnTick))
         {
             int refused = amount - Brace.Cap;
             amount = Brace.Cap;
@@ -14123,7 +14130,7 @@ public sealed class BattleContext
             int soak = Math.Min(armor, amount);
             // 第212期（計数のみ・Q0-3）: 身を固めている間に、上限を超える一撃を破片が先に受けた。
             if (Brace.Cap > 0 && amount > Brace.Cap && source is not null && source.TeamId != target.TeamId
-                && target.HasTrait(TraitId.Brace) && BraceTrait.IsBraced(this, target))
+                && target.HasTrait(TraitId.Brace) && BraceTrait.IsBraced(this, target, source, burnTick))
             {
                 UnitTally bt = TallyOf(target);
                 bt.BraceArmorHits++;
@@ -14376,7 +14383,7 @@ public sealed class BattleContext
         // Cap > 0 を先に見るのは、既定（0 ＝ 上限なし）で HasTrait の走査を1回も走らせないため
         // （軛の Cap 判定・粛の保持者走査と同じ短絡の作法）。
         if (Brace.Cap > 0 && amount > Brace.Cap && target.HasTrait(TraitId.Brace)
-            && BraceTrait.IsBraced(this, target))
+            && BraceTrait.IsBraced(this, target, source, burnTick))   // 第360期: SS-k の前のターンの構えも（札が無ければ今と同じ）
         {
             int refused = amount - Brace.Cap;
             amount = Brace.Cap;

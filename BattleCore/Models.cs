@@ -2424,6 +2424,11 @@ public sealed class UnitTally
                 Sh358Picked, Sh358PickedSelf, Sh358Throws, Sh358Thrown, Sh358ThrowNominal, Sh358ThrowDealt, Sh358ThrowYokeHits, Sh358ThrowYokeCut, Sh358ArmorBroken;
     /// <summary>第359期（<b>計数のみ</b>・ヒビの版）: 開戦の配りの回数 ／ 量・全量の返しが出た一撃の数 ／ 割れた量を超えて返した分（全量 − 割れた欠片）・全量の返しで板を返さなかった一撃。誰も読んで分岐しない。</summary>
     public long Sh359OpenGifts, Sh359OpenGiven, Sh359Full, Sh359FullExtra, Sh359FullPlankSkipped;
+    /// <summary>第360期（<b>計数のみ</b>）: ツギの駆け込み ／ 出撃前の板が板の付かない駒（規定のヒビ）を外した回数（ツギの側）。誰も読んで分岐しない。</summary>
+    public long Sh360AidSkipped, Sh360OpenSkipped;
+    /// <summary>第360期（<b>計数のみ</b>・ササ）: 敵の一撃（燃焼の刻みを除く）を受けたとき身を固めていた ／ いなかった回数・固めていなかった一撃のうち上限（7）を超えた回数と超えた量・
+    /// そのうち前のターンの構え（SS-k）で抑えた回数・両隣へ配った量 ／ 延べの宛先 ／ 回数（SS-w）。誰も読んで分岐しない。</summary>
+    public long Sh360HitBraced, Sh360HitBare, Sh360BareOver, Sh360BareOverAmt, Sh360HeldCuts, Sh360WideGiven, Sh360WideTargets, Sh360WideDelivers;
     public long Rp345NormalDealt, Rp345Punches, Rp345PunchBack, Rp345PunchKills, Rp345PunchDealt, Rp345PunchAmount, Rp345AimEdible, Rp345GrabNoPunch, Rp345GrabAfter, Ga345Stomps, Ga345SplashHits, Ga345SplashDealt;
     public long[]? Fg339Spray, Fg339AllyHits, Fg339AllyDmg;
     /// <summary>第339期（計数のみ）: 乱射の1発をターンごとに数える（羽の乱射 ／ 乱射の札の両方）。</summary>
@@ -3699,6 +3704,9 @@ public sealed class UnitTally
         Sh358Picked += o.Sh358Picked; Sh358PickedSelf += o.Sh358PickedSelf; Sh358Throws += o.Sh358Throws; Sh358Thrown += o.Sh358Thrown; Sh358ThrowNominal += o.Sh358ThrowNominal;
         Sh358ThrowDealt += o.Sh358ThrowDealt; Sh358ThrowYokeHits += o.Sh358ThrowYokeHits; Sh358ThrowYokeCut += o.Sh358ThrowYokeCut; Sh358ArmorBroken += o.Sh358ArmorBroken;
         Sh359OpenGifts += o.Sh359OpenGifts; Sh359OpenGiven += o.Sh359OpenGiven; Sh359Full += o.Sh359Full; Sh359FullExtra += o.Sh359FullExtra; Sh359FullPlankSkipped += o.Sh359FullPlankSkipped;   // 第359期
+        Sh360AidSkipped += o.Sh360AidSkipped; Sh360OpenSkipped += o.Sh360OpenSkipped;   // 第360期
+        Sh360HitBraced += o.Sh360HitBraced; Sh360HitBare += o.Sh360HitBare; Sh360BareOver += o.Sh360BareOver; Sh360BareOverAmt += o.Sh360BareOverAmt; Sh360HeldCuts += o.Sh360HeldCuts;
+        Sh360WideGiven += o.Sh360WideGiven; Sh360WideTargets += o.Sh360WideTargets; Sh360WideDelivers += o.Sh360WideDelivers;
         Db354CurseRage += o.Db354CurseRage; Db354PickedMudo += o.Db354PickedMudo; Db354FedMudo += o.Db354FedMudo; Db354BurstYokeCut += o.Db354BurstYokeCut; Db354BurstYokeLost += o.Db354BurstYokeLost;   // 第354期
         Db353PlunderGain += o.Db353PlunderGain; Db353PlunderHits += o.Db353PlunderHits; Db353PlunderDry += o.Db353PlunderDry; Db353PlunderMiss += o.Db353PlunderMiss; Db353PlunderBoss += o.Db353PlunderBoss;   // 第353期
         Fg339Spray = AddArr(Fg339Spray, o.Fg339Spray); Fg339AllyHits = AddArr(Fg339AllyHits, o.Fg339AllyHits); Fg339AllyDmg = AddArr(Fg339AllyDmg, o.Fg339AllyDmg);

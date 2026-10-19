@@ -3426,7 +3426,8 @@ public static class UnitCatalog
     ///
     /// 脆弱は罰ではなく燃料。浴びる量が増えるほど配れる破片も増える。
     /// </summary>
-    public static readonly UnitDef Hibi = new()
+    // 第360期: 第137〜359期の規定（砕け ＋ 脆弱）は `HibiH359` の名前で残した（定義は1文字も変えていない）。規定の `Hibi` は第359期の HB-f で、すぐ下に作った。
+    public static readonly UnitDef HibiH359 = new()
     {
         Id = "hibi",
         Name = "砕け盾のヒビ",
@@ -3438,6 +3439,18 @@ public static class UnitCatalog
         PlusText = "範囲攻撃を受けると、その4分の1を破片として味方全員に配る（HPの前に削られる／回復を受け付けない味方にも届く）",
         MinusText = "受けるダメージが5割増し / 単体攻撃しか飛んでこない相手には何も起きない",
         Flavor = "盾として不良品と判定された。割れながら破片を撒くので周りが危ないとも書かれている。"
+    };
+
+    /// <summary>砕け盾のヒビ（第360期の規定 ＝ 第359期の HB-f）。HP 160・脆弱なし・戦の初めと手番で自分以外の味方全員に返しの欠片 6・欠片が割れた一撃は全量を一撃の主へ返す・
+    /// 自分は欠片を纏えずツギの板も来ない（手番の板 ／ 駆け込み ／ 出撃前の板の宛先から外れる）。旧は <see cref="HibiH359"/>。札と文面は <see cref="HibiHBf"/> と同じ。</summary>
+    public static readonly UnitDef Hibi = new()
+    {
+        Id = HibiH359.Id, Name = HibiH359.Name, MaxHp = HibiSturdyHp, Attack = HibiH359.Attack, Speed = HibiH359.Speed, Advances = false,
+        Traits = new[] { TraitId.ShardGift, TraitId.ShardOpen, TraitId.ShardBareNoPlank, TraitId.ShardFull },
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "砕けた盾の欠片を配っている") },
+        PlusText = "戦の初めと手番で、砕けた盾の欠片を味方に配る（自分以外の全員に破片 6）。欠片で受け止めた一撃は、丸ごとその主へ跳ね返る",
+        MinusText = "自分の盾はもう割れている——自分は欠片を纏えない（板も付かない）",
+        Flavor = HibiH359.Flavor,
     };
 
     /// <summary>
@@ -6568,12 +6581,12 @@ public static class UnitCatalog
     /// 自分は破片を纏えない（<see cref="TraitId.ShardBare"/>）＋ 脆弱はそのまま。砕け（<see cref="TraitId.Shatter"/>）は外す。</summary>
     public static readonly UnitDef HibiHBr = new()
     {
-        Id = Hibi.Id, Name = Hibi.Name, MaxHp = Hibi.MaxHp, Attack = Hibi.Attack, Speed = Hibi.Speed, Advances = false,
+        Id = HibiH359.Id, Name = HibiH359.Name, MaxHp = HibiH359.MaxHp, Attack = HibiH359.Attack, Speed = HibiH359.Speed, Advances = false,
         Traits = new[] { TraitId.ShardGift, TraitId.ShardBare, TraitId.Frail },
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "砕けた盾の欠片を配っている") },
         PlusText = "手番で、砕けた盾の欠片を味方に配る（自分以外の全員に破片 6）。欠片で受け止めた一撃は、その主へ跳ね返る（割れた量だけ）",
         MinusText = "自分の盾はもう割れている——自分は欠片を纏えない。受けるダメージが5割増し",
-        Flavor = Hibi.Flavor,
+        Flavor = HibiH359.Flavor,
     };
 
     /// <summary>第358期 GR-r 礫を拾って投げる: 味方（自分を含む）の破片が敵の一撃で割れた量を礫として溜め、手番（術）で全部使って 礫 × 3 ＋ 攻撃力 を敵全体へ撃つ。
@@ -6586,24 +6599,48 @@ public static class UnitCatalog
     /// <summary>第359期 HB-s 倒れないヒビ: 脆弱を外し HP を <see cref="HibiSturdyHp"/> に・開戦にも配る（<see cref="TraitId.ShardOpen"/>）・纏えない ＋ ツギの板も来ない（<see cref="TraitId.ShardBareNoPlank"/>）。返す量は割れた量のまま。</summary>
     public static readonly UnitDef HibiHBs = new()
     {
-        Id = Hibi.Id, Name = Hibi.Name, MaxHp = HibiSturdyHp, Attack = Hibi.Attack, Speed = Hibi.Speed, Advances = false,
+        Id = HibiH359.Id, Name = HibiH359.Name, MaxHp = HibiSturdyHp, Attack = HibiH359.Attack, Speed = HibiH359.Speed, Advances = false,
         Traits = new[] { TraitId.ShardGift, TraitId.ShardOpen, TraitId.ShardBareNoPlank },
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "砕けた盾の欠片を配っている") },
         PlusText = "戦の初めと手番で、砕けた盾の欠片を味方に配る（自分以外の全員に破片 6）。欠片で受け止めた一撃は、その主へ跳ね返る",
         MinusText = "自分の盾はもう割れている——自分は欠片を纏えない（板も付かない）",
-        Flavor = Hibi.Flavor,
+        Flavor = HibiH359.Flavor,
     };
     /// <summary>第359期 HB-f 全量を返す: HB-s ＋ <see cref="TraitId.ShardFull"/>（欠片が1でも割れたら一撃の全量を返す）。</summary>
     public static readonly UnitDef HibiHBf = new()
     {
-        Id = Hibi.Id, Name = Hibi.Name, MaxHp = HibiSturdyHp, Attack = Hibi.Attack, Speed = Hibi.Speed, Advances = false,
+        Id = HibiH359.Id, Name = HibiH359.Name, MaxHp = HibiSturdyHp, Attack = HibiH359.Attack, Speed = HibiH359.Speed, Advances = false,
         Traits = new[] { TraitId.ShardGift, TraitId.ShardOpen, TraitId.ShardBareNoPlank, TraitId.ShardFull },
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "砕けた盾の欠片を配っている") },
         PlusText = "戦の初めと手番で、砕けた盾の欠片を味方に配る（自分以外の全員に破片 6）。欠片で受け止めた一撃は、丸ごとその主へ跳ね返る",
         MinusText = "自分の盾はもう割れている——自分は欠片を纏えない（板も付かない）",
-        Flavor = Hibi.Flavor,
+        Flavor = HibiH359.Flavor,
     };
 
+    // ---------------------------------------------------------------------------------
+    // 第360期【軽い期】ツギなしの勝ち筋をササで（指示書 design/PHASE360_SHARD_SASA_SPEC.md §4）。版はササの写し（Id ・数値は同じ・規定の上）。保持者 0 枚。
+    // ---------------------------------------------------------------------------------
+    const string SasaPlus360 = "手番で身を固め、次に動くまで、受ける一撃を7までに抑える。殴られると錯乱して隣の味方1体を別の席へ突き飛ばし（1ターン1回）、";
+    /// <summary>第360期 SS-k 構えを解かない: ササ ＋ <see cref="TraitId.BraceHold"/>（身構えが次の自分の手番まで続く）。</summary>
+    public static readonly UnitDef SasaSSk = new()
+    {
+        Id = Sasa.Id, Name = Sasa.Name, MaxHp = Sasa.MaxHp, Attack = Sasa.Attack, Speed = Sasa.Speed, Advances = Sasa.Advances, Actions = Sasa.Actions,
+        Traits = new[] { TraitId.Brace, TraitId.BraceHold },
+        PlusText = SasaPlus360 + "その味方に、抑えて切り落とした分を破片として付ける",
+        MinusText = "自分は決して攻撃しない ／ 弾く相手と行き先は選べない",
+        Flavor = Sasa.Flavor,
+    };
+    /// <summary>第360期 SS-w 両隣へ: SS-k ＋ <see cref="TraitId.BraceWide"/>（切り落とした分を隣の味方それぞれに同じ量の破片として付ける）。</summary>
+    public static readonly UnitDef SasaSSw = new()
+    {
+        Id = Sasa.Id, Name = Sasa.Name, MaxHp = Sasa.MaxHp, Attack = Sasa.Attack, Speed = Sasa.Speed, Advances = Sasa.Advances, Actions = Sasa.Actions,
+        Traits = new[] { TraitId.Brace, TraitId.BraceHold, TraitId.BraceWide },
+        PlusText = SasaPlus360 + "抑えて切り落とした分を、両隣の味方に破片として付ける",
+        MinusText = "自分は決して攻撃しない ／ 弾く相手と行き先は選べない",
+        Flavor = Sasa.Flavor,
+    };
+
+    // 第360期: 規定のヒビが HB-f になったので、HB-r ／ HB-s ／ HB-f は旧（`HibiH359`）から作る（`HibiHBf` は規定と同じ札・文面・残置）。
     // 第359期: 規定のガレが GR-r になったので、版は旧（`GareH358`）から作る（中身は規定と同じ札・文面・残置）。
     public static readonly UnitDef GareGRr = new()
     {

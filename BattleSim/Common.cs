@@ -647,7 +647,19 @@ public static UnitDef PinN355(UnitDef d) => ReferenceEquals(d, UnitCatalog.Nel) 
 
 /// <summary>第359期: 規定のガレ（GR-r・礫を拾って投げる）を第139〜358期の規定（`GareH358`・砕いて撒く）に替える。ほかの駒はそのまま返す。
 /// 古い口の終端の `PinN355` の後ろに置いた（`PinB349` ／ `Pin349` ／ `Pin351` ／ `Pin353` ／ `Pin354` ／ `Pin355` を通る器具はガレも旧になる）。</summary>
-public static UnitDef PinR358(UnitDef d) => ReferenceEquals(d, UnitCatalog.Gare) ? UnitCatalog.GareH358 : d;
+public static UnitDef PinR358(UnitDef d) => ReferenceEquals(d, UnitCatalog.Gare) ? UnitCatalog.GareH358 : PinHB359(d);   // 第360期: 規定のヒビも（古い口の終端）
+
+/// <summary>第360期: 規定のヒビ（HB-f・倒れない ＋ 全量を返す）を第137〜359期の規定（`HibiH359`・砕け ＋ 脆弱）に替える。ほかの駒はそのまま返す。
+/// 古い口の終端の `PinR358` の後ろに置いた（`Pin349` 〜 `Pin358` を通る器具はヒビも旧になる）。</summary>
+public static UnitDef PinHB359(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hibi) ? UnitCatalog.HibiH359 : d;
+
+/// <summary>第360期: ヒビの HB-f を規定にした。第359期までの規定のヒビで測った器具はこれを通す。陣形とレリックは保つ。</summary>
+public static Formation Pin359(Formation f)
+{
+    var g = f.Clone();
+    foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinHB359(d);
+    return g;
+}
 
 /// <summary>第359期: ガレの GR-r を規定にした。第358期までの規定のガレで測った器具はこれを通す。陣形とレリックは保つ。</summary>
 public static Formation Pin358(Formation f)

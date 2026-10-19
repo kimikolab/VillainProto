@@ -1284,7 +1284,16 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sh359 axes              # 第359期 §7 の 4: 軸の横並び（第348期 §3）の破片の行 × 版と、物差しごとの順位
     dotnet run --project BattleSim -c Release 0 sh359 compare [版,…]    # 第359期 §7 の 5: `compare` 64 行 × 版（seed 0..199）＋ 段0 の前（`Pin358`）とのセルの差
     dotnet run --project BattleSim -c Release 0 sh359 log <版> <台> <波> [seed]   # 第359期: 1戦のログ（台 gare ／ uro ／ a ／ b ／ 並びの名前「ササ・ゴルム・ドルガ・ガレ・ヒビ」・版 base ／ hbr ／ hbs ／ hbf）
-    dotnet run --project BattleSim -c Release 0 sh359 check             # 第359期 自己検査（段0 のガレ・版の定義・HB-s ／ HB-f を盤面を直に組んで・ツギの板と全量の返し・ツギの宛先・verbose・試遊の台・PickOne）
+    dotnet run --project BattleSim -c Release 0 sh359 check             # 第359期 自己検査（段0 のガレ・版の定義・HB-s ／ HB-f を盤面を直に組んで・ツギの板と全量の返し・ツギの宛先・verbose・試遊の台・PickOne）。第360期: 「規定」の列のヒビを `HibiH359` に固定・第359期の「版・」の台は器具の中に固定（`Boards359`）
+    dotnet run --project BattleSim -c Release 0 sh359 seatdiff          # 第359期 §5 の追い: 規定で精鋭 90% 以上 → 版で落ちる並びの内訳（ヒビの席 ／ 落ちた波 ／ 組）（38 秒）
+    dotnet run --project BattleSim -c Release 0 sh360 p0                # 第360期 §3 Phase 0: ササの構え（固めていた ／ いなかった一撃・切り落とした ／ 配った ／ 消えた）・倒れた T・ツギなしの台の1ターンの与ダメ ／ 勇者の最大HP（1 秒）
+    dotnet run --project BattleSim -c Release 0 sh360 seats             # 第360期 §5: ササ ／ ヒビ ／ ガレ ＋ 8枚（ウロ ／ ガルド ／ ドルガ ／ ゴルム ／ ネル ／ バン ／ クビ ／ ソム）から2枚 × 席の全並び ＝ 3,360 並び × 規定 ／ SS-k ／ SS-w・ソムを含む ／ 含まないに分ける
+    dotnet run --project BattleSim -c Release 0 sh360 flow [版,…]       # 第360期 §7 の 1・2: ササの構え × 版（ボス ／ 大隊）・破片の流れ・ボスの1ターンの与ダメ ／ 勇者の最大HP（ネルの台）
+    dotnet run --project BattleSim -c Release 0 sh360 boards [版,…]     # 第360期 §7 の 3・6: 代表台 5 × 11 波 × 版（base ／ ssk ／ ssw）・壊れの兆し（30T の打ち切り 5% 以上を含む）（5 秒）
+    dotnet run --project BattleSim -c Release 0 sh360 axes              # 第360期 §7 の 4: 軸の横並び（第348期 §3）の破片の行 × 版（10 秒）
+    dotnet run --project BattleSim -c Release 0 sh360 compare [版,…]    # 第360期 §7 の 5: `compare` 64 行 × 版 ＋ 段0 の前（`Pin359`）とのセルの差（16 秒）
+    dotnet run --project BattleSim -c Release 0 sh360 log <版> <台> <波> [seed]   # 第360期: 1戦のログ（台 c ／ cn ／ d ／ 並びの名前・版 base ／ ssk ／ ssw）
+    dotnet run --project BattleSim -c Release 0 sh360 check             # 第360期 自己検査（段0 のヒビ ／ ツギの駆け込み ／ 出撃前の板・SS-k ／ SS-w を盤面を直に組んで・光の衣が礫になる・verbose・試遊の台・PickOne）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

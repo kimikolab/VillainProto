@@ -908,6 +908,9 @@ public enum TraitId
     ShardOpen,          // 開戦の欠片（HB-s ／ HB-f・ヒビ）: 戦の始まり（最初の手番の前）に、自分以外の生きている味方全員へ返しの欠片を 6 ずつ1回配る（手番の配りは `ShardGift` のまま）
     ShardBareNoPlank,   // 纏えない・板も来ない（HB-s ／ HB-f・ヒビのマイナス）: `ShardBare` と同じく自分に付く破片は付かずに消え、ツギの手番の板の宛先（最も危ない味方）から外れる（外すと誰もいなければ今のまま・**札そのものは挙動を持たない**）
     ShardFull,          // 全量を返す（HB-f・ヒビ）: 返しの欠片が敵の一撃で1でも割れたら、割れた量ではなく、その一撃の全量（破片で止める前の量）を一撃の主へ返す（その一撃ではツギの板は返さない・**札そのものは挙動を持たない**・engine の `ApplyDamage`）
+    // --- 第360期で足した札（指示書 design/PHASE360_SHARD_SASA_SPEC.md §4）。ササの版。保持者 0 枚 ---
+    BraceHold,          // 構えを解かない（SS-k・ササ）: 身構えが次の自分の手番まで続く（前のターンに固めた構えが、このターンの自分の手番の前に来る敵の一撃にも効く・毒 ／ 燃焼の刻みには効かない・倒れたら解ける）（**札そのものは挙動を持たない**・`BraceTrait.IsBraced`）
+    BraceWide,          // 両隣へ（SS-w・ササ）: 切り落とした分を、そのターン最初に殴られたときの隣の味方全員に同じ量ずつ破片として付ける（弾くのは今どおり1体・1ターン1回）（**札そのものは挙動を持たない**・`BraceTrait.Deliver`）
     PebbleGather,       // 礫を拾う（GR-r・ガレ）: 味方（自分を含む）の破片が敵の一撃で割れた量を礫として溜め（上限なし）、手番（術）で全部使って 礫 × 3 ＋ 攻撃力 を敵全体へ撃つ。礫が無い手番は何もできない（味方の破片は砕かない）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -9666,14 +9669,33 @@ public sealed class BraceTrait : Trait
     {
         self.SetCounter(BracedKey, ctx.Turn + 1);
         ctx.TallyOf(self).BraceGuards++;
+        bool hold = self.HasTrait(TraitId.BraceHold);   // 第360期（SS-k）: 表示の文言だけ「次に動くまで」
         ctx.Log(ctx.Brace.Cap > 0
-                ? $"    {self.Name} が身を固めた（このターン、一撃は {ctx.Brace.Cap} まで）"
+                ? $"    {self.Name} が身を固めた（{(hold ? "次に動くまで" : "このターン")}、一撃は {ctx.Brace.Cap} まで）"
                 : $"    {self.Name} が身を固めた", LogKind.Trigger);
     }
 
     /// <summary>その駒がいま身を固めているか。<b>engine の上限の段だけが読む。</b></summary>
     public static bool IsBraced(BattleContext ctx, UnitState u)
         => u.Counter(BracedKey) == ctx.Turn + 1;
+
+    /// <summary>
+    /// 第360期: 一撃の出どころを見て、いま身を固めているか。<see cref="TraitId.BraceHold"/>（SS-k）の駒は、前のターンに固めた構え
+    /// （<c>BracedKey == Turn</c>・このターンはまだ固め直していない）も、出どころのある一撃（燃焼の刻み ／ 毒の刻みを除く）には効く。
+    /// 札が無ければ <see cref="IsBraced(BattleContext, UnitState)"/> と同じ。倒れたら <see cref="OnDeath"/> で解ける。
+    /// </summary>
+    public static bool IsBraced(BattleContext ctx, UnitState u, UnitState? source, bool burnTick)
+    {
+        int k = u.Counter(BracedKey);
+        if (k == ctx.Turn + 1) return true;
+        return k == ctx.Turn && k > 0 && source is not null && !burnTick && u.HasTrait(TraitId.BraceHold);
+    }
+
+    /// <summary>第360期（SS-k）: 倒れたら構えが解ける（蘇生されても前の構えを持ち越さない）。札が無ければ何もしない。</summary>
+    public override void OnDeath(BattleContext ctx, UnitState self)
+    {
+        if (self.HasTrait(TraitId.BraceHold)) self.SetCounter(BracedKey, 0);
+    }
 
     /// <summary>
     /// 切り落とした分を保留に積む。<b><c>ApplyDamageBody</c> の上限の段からだけ呼ぶ。</b>
@@ -9706,6 +9728,7 @@ public sealed class BraceTrait : Trait
     internal static void Struck(BattleContext ctx, UnitState self)
     {
         UnitTally t = ctx.TallyOf(self);
+        if (self.HasTrait(TraitId.BraceWide)) BraceWideTrait.RecordNeighbors(ctx, self);   // 第360期（SS-w）: 弾く前の席で隣を数える
         switch (ShoveRules.Shove(ctx, self, ShoveTurnKey, out UnitState? victim))
         {
             case ShoveOutcome.Shoved:
@@ -9743,6 +9766,11 @@ public sealed class BraceTrait : Trait
         self.SetCounter(TargetKey, 0);
     }
 
+    /// <summary>第360期（SS-w）: そのターンの両隣（<c>InstanceId + 1</c>・最大 <see cref="WideMax"/>）。控えたターンは <see cref="BraceWideTrait.TurnKey"/> で持つ（新しいターンの最初の被弾で数え直す）。<b><see cref="OnCarryOver"/> で必ず捨てる。</b></summary>
+    public const string NeighborKey = "braceNb";
+    public const int WideMax = 4;
+
+
     /// <summary>
     /// 保留をそのターンの宛先へ破片として渡す。宛先が無ければ何もしない（保留は残る）。
     /// 第213期: 破片が受け切った一撃（<see cref="TraitId.BraceHeldDeliver"/>・engine の `ArmorOnlyHit`）からも直に呼ぶ——弾きは起こさず、新しい宛先も作らない。
@@ -9753,6 +9781,28 @@ public sealed class BraceTrait : Trait
         if (self.Counter(TurnKey) != ctx.Turn + 1) return;
         int pending = self.RawCounter(PendingKey);
         if (pending <= 0) return;
+
+        // 第360期（SS-w）: 弾いた1体ではなく、控えた両隣それぞれに同じ量を付ける。
+        if (self.HasTrait(TraitId.BraceWide))
+        {
+            int n = 0;
+            for (int i = 0; i < WideMax; i++)
+            {
+                int nid = self.RawCounter(NeighborKey + i) - 1;
+                if (nid < 0) continue;
+                UnitState? nb = ctx.LivingMembers(self.TeamId).FirstOrDefault(u => u.InstanceId == nid);
+                if (nb is null) continue;
+                nb.SetCounter(StatusKeys.Armor, nb.RawCounter(StatusKeys.Armor) + pending);
+                n++;
+                ctx.Log($"    {self.Name} がはね返した {pending} を {nb.Name} の破片にした", LogKind.Trigger);
+            }
+            if (n == 0) return;
+            self.SetCounter(PendingKey, 0);
+            UnitTally tw = ctx.TallyOf(self);
+            tw.BraceGiven += pending * n;
+            tw.Sh360WideGiven += (long)pending * n; tw.Sh360WideTargets += n; tw.Sh360WideDelivers++;
+            return;
+        }
 
         int id = self.RawCounter(TargetKey) - 1;
         if (id < 0) return;
@@ -9782,6 +9832,40 @@ public sealed class BraceTrait : Trait
         self.SetCounter(TurnKey, 0);
         self.SetCounter(PendingKey, 0);
         self.SetCounter(TargetKey, 0);
+        for (int i = 0; i < WideMax; i++) if (self.RawCounter(NeighborKey + i) != 0) self.SetCounter(NeighborKey + i, 0);   // 第360期（SS-w）
+    }
+}
+
+/// <summary>両隣へ（第360期・SS-w・ササの版）。身構えの切り落としを隣の味方それぞれへ配る（配りの本体は <see cref="BraceTrait.Deliver"/>）。
+/// 隣の数え方（X 字の表）だけをここに置く——保持者 0 枚の版の札なので、規定の身構え（<see cref="BraceTrait"/>）は隣を読まない（作戦マップの関係の表の門 R260）。</summary>
+public sealed class BraceWideTrait : Trait
+{
+    public override TraitId Id => TraitId.BraceWide;
+
+    /// <summary>隣を控えたターン + 1（私有キー）。</summary>
+    public const string TurnKey = "braceNbTurn";
+
+    public override void OnCarryOver(UnitState self) => self.SetCounter(TurnKey, 0);
+
+    /// <summary>第360期（SS-w）: そのターン最初に殴られたときの隣の味方（X 字の表・席番号の順）を控える。乱数を引かない。</summary>
+    internal static void RecordNeighbors(BattleContext ctx, UnitState self)
+    {
+        // そのターンの控え（ターン番号で持つ・身構えの帳簿と同じ作法）。新しいターンなら控えを消して数え直す。
+        if (self.Counter(TurnKey) != ctx.Turn + 1)
+        {
+            self.SetCounter(TurnKey, ctx.Turn + 1);
+            for (int k = 0; k < BraceTrait.WideMax; k++) self.SetCounter(BraceTrait.NeighborKey + k, 0);
+        }
+        if (self.RawCounter(BraceTrait.NeighborKey + 0) != 0) return;
+        int i = 0;
+        foreach (UnitState u in ctx.LivingMembers(self.TeamId))
+        {
+            if (u == self || !FormationRules.AreAdjacent(self, u)) continue;
+            if (i >= BraceTrait.WideMax) break;
+            self.SetCounter(BraceTrait.NeighborKey + i, u.InstanceId + 1);
+            i++;
+        }
+        if (i == 0) self.SetCounter(BraceTrait.NeighborKey + 0, -1);   // 隣がいなかった（このターンはもう数えない）
     }
 }
 
@@ -10627,6 +10711,8 @@ public sealed class FirstAidTrait : Trait
     static void Try(BattleContext ctx, UnitState self, UnitState to, int dmg)
     {
         if (dmg <= 0 || !self.IsAlive || !NeedsFor(self, to)) return;
+        // 第360期: 板の付かない駒（`ShardBareNoPlank`・規定のヒビ）へは駆け込まない（ほかに宛先は無いので駆け込まない・1ターンの回数も使わない）。保持者がいなければ1行も変わらない。
+        if (to.PlankSkip) { ctx.TallyOf(self).Sh360AidSkipped++; return; }
         UnitTally t = ctx.TallyOf(self);
         // 第212期（計数のみ）: 同じ1回の被弾（`ApplyDamage` の枠）で判定が2回来たら数える（1回の被弾につき判定1回の検査）。
         if (self.RawCounter(HitKey) == ctx.CurrentHitSerial) t.FirstAidSameHit++;
@@ -10705,8 +10791,12 @@ public sealed class PlankOpeningTrait : Trait
         var allies = ctx.LivingMembers(self.TeamId);
         if (allies.Count == 0) return;
         int front = allies.Min(a => FormationRules.DepthOf(a.Row));
+        // 第360期: 板の付かない駒（`ShardBareNoPlank`・規定のヒビ）には出撃前の板を貼らない（前列のほかの味方だけ・次の列へは回さない）。
         foreach (UnitState a in allies.Where(a => FormationRules.DepthOf(a.Row) == front).ToList())
+        {
+            if (a.PlankSkip) { ctx.TallyOf(self).Sh360OpenSkipped++; continue; }
             PlankTrait.Paste(ctx, self, a, foes, firstAid: false, opening: true);
+        }
     }
 }
 
@@ -18049,6 +18139,8 @@ public static class TraitCatalog
         new ShardGiftTrait(),                                 // 第358期（返しの破片 HB-r・ヒビ）
         new MarkOnlyTrait(TraitId.ShardBare),                 // 第358期（纏えない HB-r・ヒビのマイナス・印だけ・本体は `UnitState.SetCounter`）
         new ShardOpenTrait(),                                 // 第359期（開戦の欠片 HB-s ／ HB-f・ヒビ）
+        new MarkOnlyTrait(TraitId.BraceHold),                 // 第360期（構えを解かない SS-k・ササ・印だけ・本体は `BraceTrait.IsBraced`）
+        new BraceWideTrait(),                                 // 第360期（両隣へ SS-w・ササ・隣の数え方だけ・配りの本体は `BraceTrait.Deliver`）
         new MarkOnlyTrait(TraitId.ShardBareNoPlank),          // 第359期（纏えない・板も来ない HB-s ／ HB-f・印だけ・本体は `UnitState.SetCounter` と `PlankTrait.OnAction`）
         new MarkOnlyTrait(TraitId.ShardFull),                 // 第359期（全量を返す HB-f・印だけ・本体は engine の `ApplyDamage`）
         new PebbleTrait(),                                    // 第358期（礫を拾って投げる GR-r・ガレ）

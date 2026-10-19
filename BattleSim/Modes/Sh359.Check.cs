@@ -13,6 +13,14 @@ static partial class Sh359Diag
         ("D HB-f のネルを含む最良", "ツギ・ゴルム・ガレ・ネル・ヒビ"),     // `seats` の HB-f §4 の1位（＝ 全体の1位・ボス 100%・10.0T）
     };
 
+    /// <summary>第359期の「版・」の3台（第360期に `Presets.Versions` から外した並びを器具の中に固定）。</summary>
+    internal static (string Name, Formation F)[] Boards359() => new (string, Formation)[]
+    {
+        ("版・HB-s 破片", Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Golm, center: UnitCatalog.Dolga, back1: UnitCatalog.Gare, back3: UnitCatalog.HibiHBs)),
+        ("版・HB-f 破片", Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Golm, center: UnitCatalog.Dolga, back1: UnitCatalog.Gare, back3: UnitCatalog.HibiHBf)),
+        ("版・HB-f 破片 呪い", Formation.Build(front1: UnitCatalog.Tsugi, front3: UnitCatalog.Golm, center: UnitCatalog.Gare, back1: UnitCatalog.Nel, back3: UnitCatalog.HibiHBf)),
+    };
+
     static readonly MethodInfo AddUnit = typeof(BattleContext).GetMethod("Add", BindingFlags.Instance | BindingFlags.NonPublic, new[] { typeof(UnitState) })!;
     static readonly MethodInfo StartM = typeof(Trait).GetMethod("OnBattleStart")!;
     static readonly PropertyInfo TurnP = typeof(BattleContext).GetProperty("Turn")!;
@@ -77,10 +85,15 @@ static partial class Sh359Diag
         {
             var s = UnitCatalog.HibiHBs; var f = UnitCatalog.HibiHBf;
             bool hs = s.Traits.SequenceEqual(new[] { TraitId.ShardGift, TraitId.ShardOpen, TraitId.ShardBareNoPlank }) && !s.Traits.Contains(TraitId.Frail) && s.MaxHp == UnitCatalog.HibiSturdyHp
-                && s.Attack == UnitCatalog.Hibi.Attack && s.Speed == UnitCatalog.Hibi.Speed && s.Id == "hibi";
+                && s.Attack == UnitCatalog.HibiH359.Attack && s.Speed == UnitCatalog.HibiH359.Speed && s.Id == "hibi";
             bool hf = f.Traits.SequenceEqual(s.Traits.Append(TraitId.ShardFull)) && f.MaxHp == s.MaxHp;
-            var held = UnitCatalog.All.Concat(UnitCatalog.Retired).Where(d => d.Traits.Any(t => t is TraitId.ShardOpen or TraitId.ShardBareNoPlank or TraitId.ShardFull or TraitId.ShardGift or TraitId.ShardBare)).Select(d => d.Id).ToArray();
-            Expect($"版の定義: HB-s ＝ 脆弱なし・HP {UnitCatalog.HibiSturdyHp}（攻 ／ 速はヒビのまま）・配る ＋ 開戦の配り ＋ 纏えない・板も来ない ／ HB-f ＝ HB-s ＋ 全量を返す・新しい札の保持者は 0 枚", hs && hf && held.Length == 0, held.Length == 0 ? "" : string.Join(",", held));
+            // 第360期: 規定のヒビ ＝ HB-f（札と HP が `HibiHBf` と同じ）。`ShardBare` の保持者は 0 枚、HB-f の4枚の保持者はヒビだけ。
+            var held = UnitCatalog.All.Concat(UnitCatalog.Retired).Where(d => d.Traits.Any(t => t is TraitId.ShardBare)).Select(d => d.Id).ToArray();
+            bool now = UnitCatalog.Hibi.Traits.SequenceEqual(f.Traits) && UnitCatalog.Hibi.MaxHp == f.MaxHp && UnitCatalog.Hibi.PlusText == f.PlusText
+                && UnitCatalog.All.Where(d => d.Traits.Any(t => t is TraitId.ShardOpen or TraitId.ShardBareNoPlank or TraitId.ShardFull or TraitId.ShardGift)).Select(d => d.Id).SequenceEqual(new[] { "hibi" })
+                && UnitCatalog.HibiH359.Traits.SequenceEqual(new[] { TraitId.Shatter, TraitId.Frail }) && ReferenceEquals(PinR358(UnitCatalog.Hibi), UnitCatalog.HibiH359);
+            hf = hf && now;
+            Expect($"版の定義: HB-s ＝ 脆弱なし・HP {UnitCatalog.HibiSturdyHp}（攻 ／ 速はヒビのまま）・配る ＋ 開戦の配り ＋ 纏えない・板も来ない ／ HB-f ＝ HB-s ＋ 全量を返す・第360期: 規定のヒビ ＝ HB-f（旧は `HibiH359`・古い口の終端からヒビも旧へ）・`ShardBare` の保持者は 0 枚", hs && hf && held.Length == 0, held.Length == 0 ? "" : string.Join(",", held));
         }
 
         // ---- HB-s ----
@@ -142,7 +155,7 @@ static partial class Sh359Diag
                 TraitCatalog.Get(TraitId.Plank).OnAction(ctx, U(p, "tsugi"), Skill);
                 return p.FirstOrDefault(u => u.RawCounter(StatusKeys.Plank) != 0);
             }
-            var tr = Target(UnitCatalog.HibiHBr); var ts = Target(UnitCatalog.HibiHBs); var t0 = Target(UnitCatalog.Hibi);
+            var tr = Target(UnitCatalog.HibiHBr); var ts = Target(UnitCatalog.HibiHBs); var t0 = Target(UnitCatalog.HibiH359);
             Expect("§4-3: ツギの手番の板は「板も来ない」ヒビ（HB-s ／ HB-f）を外して次に危ない味方へ・HB-r と規定のヒビでは今どおり（いちばん危ないヒビへ）",
                 ts?.Def.Id == "a" && tr?.Def.Id == "hibi" && t0?.Def.Id == "hibi", $"HB-s → {ts?.Def.Id}・HB-r → {tr?.Def.Id}・規定 → {t0?.Def.Id}");
         }
@@ -166,19 +179,16 @@ static partial class Sh359Diag
         }
 
         // ---- 試遊の台 ----
+        // 第360期: 第359期の「版・」の3台は `Presets.Versions` から外した。器具の中に旧の並びを固定して、並びと版の駒だけを確かめる。
         {
             var vr = Presets.Versions.Select(r => r.Name).ToArray();
             string[] want = { "版・HB-s 破片", "版・HB-f 破片", "版・HB-f 破片 呪い" };
-            bool rows = vr.Take(5).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁" }) && vr.Skip(5).SequenceEqual(want);
-            Expect("`Presets.Versions` ＝ 試遊の5台 ＋ 「版・」の3台（第358期の「版・」の4台は外した）", rows, string.Join("、", vr));
-            if (rows)
-            {
-                Formation F(string n) => Presets.Versions.First(r => r.Name == n).F;
-                bool ok = Seats(F(want[0])) == RepKeys[0].Key && Seats(F(want[1])) == RepKeys[0].Key && Seats(F(want[2])) == RepKeys[1].Key
-                    && F(want[0]).Occupied().Any(o => o.Def == UnitCatalog.HibiHBs) && F(want[1]).Occupied().Any(o => o.Def == UnitCatalog.HibiHBf) && F(want[2]).Occupied().Any(o => o.Def == UnitCatalog.HibiHBf)
-                    && new[] { want[0], want[1], want[2] }.All(n => F(n).Occupied().All(o => o.Def.Id == "hibi" || UnitCatalog.All.Contains(o.Def)));
-                Expect("「版・」の台: 並びは §5 のツギなしの最良（呪いの台はネルを含む最良）・ヒビだけが版・ほかは規定の駒（ガレ ＝ GR-r）", ok, $"{Seats(F(want[0]))} ／ {Seats(F(want[2]))}");
-            }
+            bool gone = vr.Take(5).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁" }) && !vr.Any(want.Contains);
+            Expect("`Presets.Versions` ＝ 試遊の5台が頭に残る・第359期の「版・」の3台は第360期に外した", gone, string.Join("、", vr));
+            var b = Boards359();
+            bool ok = Seats(b[0].F) == RepKeys[0].Key && Seats(b[1].F) == RepKeys[0].Key && Seats(b[2].F) == RepKeys[1].Key
+                && b[0].F.Occupied().Any(o => o.Def == UnitCatalog.HibiHBs) && b[1].F.Occupied().Any(o => o.Def == UnitCatalog.HibiHBf) && b[2].F.Occupied().Any(o => o.Def == UnitCatalog.HibiHBf);
+            Expect("第359期の「版・」の台（器具の中に固定）: 並びは §5 のツギなしの最良（呪いの台はネルを含む最良）・ヒビだけが版", ok, $"{Seats(b[0].F)} ／ {Seats(b[2].F)}");
         }
 
         // ---- PickOne ----

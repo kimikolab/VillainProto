@@ -9,7 +9,7 @@ static partial class Sh358Diag
     // ---------------------------------------------------------------------------------
     // §4 母集団
     // ---------------------------------------------------------------------------------
-    internal static readonly UnitDef[] Fixed = { UnitCatalog.Hibi, UnitCatalog.Gare };
+    internal static readonly UnitDef[] Fixed = { UnitCatalog.HibiH359, UnitCatalog.Gare };
     internal static readonly UnitDef[] Pool = { UnitCatalog.Uro, UnitCatalog.Tsugi, UnitCatalog.Sasa, UnitCatalog.Gald, UnitCatalog.Dolga, UnitCatalog.Golm };
     internal sealed record Seat(string Key, string Trio, Formation F);
 

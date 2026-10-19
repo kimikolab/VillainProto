@@ -66,7 +66,7 @@ static partial class Sh359Diag
     internal sealed record Ver(string Name, string Ascii, UnitDef Hibi);
     internal static readonly Ver[] Vers =
     {
-        new("規定（段0 入り）", "base", UnitCatalog.Hibi),
+        new("規定（段0 入り）", "base", UnitCatalog.HibiH359),
         new("HB-r（参照）", "hbr", UnitCatalog.HibiHBr),
         new("HB-s 倒れないヒビ", "hbs", UnitCatalog.HibiHBs),
         new("HB-f 全量を返す", "hbf", UnitCatalog.HibiHBf),
@@ -82,7 +82,7 @@ static partial class Sh359Diag
     internal const string GareRow = S8.GareRow, UroRow = S8.UroRow;
     static Formation Row(string n) => CompareBuilds().Concat(CrossBuilds()).First(r => r.Name == n).F;
     internal const string KeyA = "ウロ・ガルド・ガレ・ツギ・ヒビ", KeyB = "ドルガ・ササ・ゴルム・ヒビ・ガレ";   // 第358期の A ／ B（駒は規定・段0 入り）
-    internal static readonly UnitDef[] Fixed = { UnitCatalog.Hibi, UnitCatalog.Gare };
+    internal static readonly UnitDef[] Fixed = { UnitCatalog.HibiH359, UnitCatalog.Gare };
     internal static readonly UnitDef[] Pool = { UnitCatalog.Uro, UnitCatalog.Tsugi, UnitCatalog.Sasa, UnitCatalog.Gald, UnitCatalog.Dolga, UnitCatalog.Golm, UnitCatalog.Nel };
     internal static Formation ByKey(string key)
     {
