@@ -932,10 +932,9 @@ public static class Presets
         ("試遊・燃焼 ポンの台", BurnPon(UnitCatalog.Borg, UnitCatalog.Hota, UnitCatalog.Hiyo)),
         // 第351期 Phase 0: 呪いの台の上位1並び（前1 ワタ ／ 前3 ムド ／ 中央 クビ ／ 後1 ネル ／ 後3 ウツ・`db351 seats` の1位）。規定の駒のまま残す試遊の台。
         ("試遊・呪い", CursePlay(UnitCatalog.Wata, UnitCatalog.Kubi)),
-        // 第354期（版・期ごとに入れ替える）: 試遊・呪いのムド（とワタ）が版。
-        ("版・M1 呪い", Formation.Build(front1: UnitCatalog.Wata, front3: UnitCatalog.MudoM1, center: UnitCatalog.Kubi, back1: UnitCatalog.Nel, back3: UnitCatalog.Utsu)),
-        ("版・M2 呪い", Formation.Build(front1: UnitCatalog.Wata, front3: UnitCatalog.MudoM2, center: UnitCatalog.Kubi, back1: UnitCatalog.Nel, back3: UnitCatalog.Utsu)),
-        ("版・M1＋M2 呪い", Formation.Build(front1: UnitCatalog.Wata, front3: UnitCatalog.MudoM12, center: UnitCatalog.Kubi, back1: UnitCatalog.Nel, back3: UnitCatalog.Utsu)),
-        ("版・M1＋M2＋配り 呪い", Formation.Build(front1: UnitCatalog.WataFeedMudo, front3: UnitCatalog.MudoM12, center: UnitCatalog.Kubi, back1: UnitCatalog.Nel, back3: UnitCatalog.Utsu)),
+        // 第355期（版・期ごとに入れ替える）: 試遊・呪いのネル（U はウツ）が版。
+        ("版・N-100 呪い", Formation.Build(front1: UnitCatalog.Wata, front3: UnitCatalog.Mudo, center: UnitCatalog.Kubi, back1: UnitCatalog.NelN100, back3: UnitCatalog.Utsu)),
+        ("版・N-50 呪い", Formation.Build(front1: UnitCatalog.Wata, front3: UnitCatalog.Mudo, center: UnitCatalog.Kubi, back1: UnitCatalog.NelN50, back3: UnitCatalog.Utsu)),
+        ("版・U 呪い", Formation.Build(front1: UnitCatalog.Wata, front3: UnitCatalog.Mudo, center: UnitCatalog.Kubi, back1: UnitCatalog.Nel, back3: UnitCatalog.UtsuU)),
     };
 }

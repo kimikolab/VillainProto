@@ -893,6 +893,10 @@ public enum TraitId
     // --- 第353期で足した札（指示書 design/PHASE353_DEBUFF_BOSS_SPEC.md §3）。デバフ軸の版（ウツの上限超え ／ ウケの転生）。保持者 0 枚 ---
     PerverseOver,       // 上限超え（UT-o・ウツ）: 下げ幅のうち手数が上限（5発）に届く分（12）を超えた分は、下げ幅 1 につき攻撃力 +3（上限までは今どおり +1）。逆しま（`Perverse`）の後ろに置く
     // --- 第354期で足した札（指示書 design/PHASE354_UTSU_MUDO_SPEC.md §4）。ムドを呪いで動く二人目の火力に（版）。保持者 0 枚 ---
+    // --- 第355期で足した札（指示書 design/PHASE355_CURSE_SCAR_SPEC.md §4）。呪われた傷は癒えない（版）。保持者 0 枚 ---
+    CurseScar,          // 呪われた傷（N-100・ネル）: 保持者が戦にいれば、相手の陣営で呪われている（`StatusKeys.Curse`）駒が受けたダメージ（実際に減った HP）と同じ量だけ、その駒の最大HPを恒久に削る（下限 1）。誰が与えたダメージでもよい（**札そのものは挙動を持たない**・engine の `ApplyDamage`）
+    CurseScarHalf,      // 呪われた傷・半分（N-50・ネル）: 同じで、削る量を半分（切り捨て）
+    UtsuScar,           // ウツの爪痕（U・ウツ）: 保持者の一撃（分け合い ／ 中継を除く直の一撃）で相手が実際に減らした HP と同じ量だけ、その相手の最大HPを恒久に削る（呪われているかは問わない・**札そのものは挙動を持たない**・engine の `ApplyDamage`）
     MudoCurseRage,      // 呪いが怒りに（M1・ムド）: 受けた弱体（攻撃力が実際に下がった量）が下げ幅 3 につき怒り +1（端数は持ち越し・殴られた回数の怒りと同じ帳簿・閾を越えたらその場で暴発）。渡し（ワタ）はこの駒の弱体を拾わない
     MudoCurseHeavy,     // 呪われるほど重い（M2・ムド）: 暴発の1発に下げ幅（`-AtkBonus`・0 未満は 0）× 2 を足す（自分の手番の通常攻撃は今どおり）。渡し（ワタ）はこの駒の弱体を拾わない
     RelayFeedMudo,      // ムドへも回す（配り・ワタ）: ウツへ回した余りを、ムドの下げ幅が 12 に届くまでムドへ回し、余りを最も強い敵へ（**札そのものは挙動を持たない**・engine の `RelayThrough`）
@@ -17931,6 +17935,9 @@ public static class TraitCatalog
         new PlunderTrait(),                                   // 第351期（奪う UK-r・ウケの転生）
         new PerverseOverTrait(),                              // 第353期（上限超え UT-o・ウツ）
         new PlunderCumTrait(),                                // 第353期（奪う・累計 UK-c・ウケの転生）
+        new MarkOnlyTrait(TraitId.CurseScar),                 // 第355期（呪われた傷 N-100・ネル・印だけ）
+        new MarkOnlyTrait(TraitId.CurseScarHalf),             // 第355期（呪われた傷・半分 N-50・ネル・印だけ）
+        new MarkOnlyTrait(TraitId.UtsuScar),                  // 第355期（ウツの爪痕 U・印だけ）
         new MarkOnlyTrait(TraitId.MudoCurseRage),             // 第354期（呪いが怒りに M1・ムド・印だけ・本体は `EruptTrait.AddCurseRage`）
         new MudoCurseHeavyTrait(),                            // 第354期（呪われるほど重い M2・ムド）
         new MarkOnlyTrait(TraitId.RelayFeedMudo),             // 第354期（ムドへも回す 配り・ワタ・印だけ）

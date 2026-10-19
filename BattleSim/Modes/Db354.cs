@@ -59,10 +59,10 @@ static partial class Db354Diag
     internal sealed record Ver(string Name, string Ascii, UnitDef Mudo, UnitDef Wata);
     internal static readonly Ver[] Vers =
     {
-        new("規定（段0 入り）", "base", UnitCatalog.Mudo, UnitCatalog.Wata),
-        new("M1 呪いが怒りに", "m1", UnitCatalog.MudoM1, UnitCatalog.Wata),
-        new("M2 呪われるほど重い", "m2", UnitCatalog.MudoM2, UnitCatalog.Wata),
-        new("M1 ＋ M2", "m12", UnitCatalog.MudoM12, UnitCatalog.Wata),
+        new("規定（段0 入り）", "base", UnitCatalog.MudoH354, UnitCatalog.WataH354),   // 第355期: 規定のムド ／ ワタが G4 になったので、第354期の「規定」は旧の定義に固定
+        new("M1 呪いが怒りに", "m1", UnitCatalog.MudoM1, UnitCatalog.WataH354),
+        new("M2 呪われるほど重い", "m2", UnitCatalog.MudoM2, UnitCatalog.WataH354),
+        new("M1 ＋ M2", "m12", UnitCatalog.MudoM12, UnitCatalog.WataH354),
         new("M1 ＋ M2 ＋ 配り", "m12f", UnitCatalog.MudoM12, UnitCatalog.WataFeedMudo),
     };
     internal static Ver V(string n) => Vers.First(v => v.Name == n || v.Ascii == n);
@@ -73,10 +73,10 @@ static partial class Db354Diag
     // 台
     // ---------------------------------------------------------------------------------
     internal const string PlayRow = D.PlayRow;   // 「試遊・呪い」（ワタ・ムド・クビ・ネル・ウツ・段0 のウツ）
-    internal static Formation Play => Presets.Versions.First(r => r.Name == PlayRow).F;
+    internal static Formation Play => Pin354(Presets.Versions.First(r => r.Name == PlayRow).F);   // 第355期: ムド ／ ワタは第354期までの規定に固定（ウツは段0 の規定のまま）
     /// <summary>ムドのいる `compare` の行から1つ（決めたこと: ワタ ／ ウツがいない・ネルの呪詛の漏れでムドに呪いが乗る行）。</summary>
     internal const string FastRow = "速攻 (ボルグ×ムド)";
-    static Formation Row(string n) => CompareBuilds().Concat(CrossBuilds()).First(r => r.Name == n).F;
+    static Formation Row(string n) => Pin354(CompareBuilds().Concat(CrossBuilds()).First(r => r.Name == n).F);   // 第355期: ムド ／ ワタは旧
     internal static I.Board[] Boards() => new[]
     {
         new I.Board("呪い", PlayRow, Play),
@@ -90,7 +90,7 @@ static partial class Db354Diag
     };
     static bool Has(Formation f, string id) => f.Occupied().Any(o => o.Def.Id == id);
     /// <summary>その台で版が何かを差し替えるか（ムドがいなければ M は空・ワタがいなければ配りは空）。</summary>
-    static bool Applies(I.Board b, Ver v) => v == Vers[0] || Has(b.F, "mudo") && (v.Wata == UnitCatalog.Wata || Has(b.F, "wata"));
+    static bool Applies(I.Board b, Ver v) => v == Vers[0] || Has(b.F, "mudo") && (v.Wata == UnitCatalog.WataH354 || Has(b.F, "wata"));
 
     internal static readonly I.W[] Waves = D.Waves;
 

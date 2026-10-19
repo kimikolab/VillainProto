@@ -242,7 +242,8 @@ public static class UnitCatalog
         Flavor = "三度、味方の部隊を半壊させて追い出された。"
     };
 
-    public static readonly UnitDef Mudo = new()
+    /// <summary>第180〜354期の規定のムド（暴発 ／ 泥散り ／ 祟り）。<b>第355期に第354期の M1＋M2（呪いが怒りに ／ 呪われるほど重い）を規定にした</b>ので明示の定義として残す。過去の器具は `Common.PinM354` ／ `Pin354` で固定する。</summary>
+    public static readonly UnitDef MudoH354 = new()
     {
         Id = "mudo",
         Name = "泥人形ムド",
@@ -253,6 +254,19 @@ public static class UnitCatalog
         PlusText = "殴られた回数を溜め、3回で閾を越えた瞬間その場で割り込み、溜めた回数だけ殴り返す（1発ごとに少し回復する）。殴ってきた相手には呪いが付き、呪われた者どうしは単体の一撃の痛みを半分ずつ分け合う",
         MinusText = "暴れると泥が飛び散り、隣の味方の得物が鈍る（攻撃力低下）。素の攻撃力はほぼ無く、倒れると溜めた怒りは不発。味方の刃に殴られると、その味方にも呪いが付く",
         Flavor = "殴られないと働かないので、誰も連れて行きたがらない。"
+    };
+
+    /// <summary>
+    /// 泥人形ムド（規定）。<b>第355期に第354期の M1＋M2 を規定にした</b>（ポンの判断・指示書 design/PHASE355_CURSE_SCAR_SPEC.md §2）——
+    /// 旧（<see cref="MudoH354"/>）に <see cref="TraitId.MudoCurseRage"/> ／ <see cref="TraitId.MudoCurseHeavy"/> を足した。札と文面は第354期の <see cref="MudoM12"/> と同じ。
+    /// </summary>
+    public static readonly UnitDef Mudo = new()
+    {
+        Id = MudoH354.Id, Name = MudoH354.Name, MaxHp = MudoH354.MaxHp, Attack = MudoH354.Attack, Speed = MudoH354.Speed,
+        Traits = MudoH354.Traits.Append(TraitId.MudoCurseRage).Append(TraitId.MudoCurseHeavy).ToArray(),
+        PlusText = Must354(MudoH354.PlusText, MudoRageFind354, MudoRageText354) + MudoHeavyText354 + MudoWantText354,
+        MinusText = MudoH354.MinusText,
+        Flavor = MudoH354.Flavor
     };
 
     /// <summary>
@@ -5253,15 +5267,28 @@ public static class UnitCatalog
     /// 渡しのワタ（規定）。<b>第352期に第351期の WT-u を規定にした</b>（ポンの判断・指示書 design/PHASE352_WATA_WTU_SETTLE_SPEC.md）——
     /// 拾う範囲は味方全員（ワタ自身 ／ 逆しまのウツを除く・<see cref="TraitId.RelayWide"/>）、拾った弱体はまずウツへ手数が5発に届く下げ幅まで回し、
     /// 余りを最も強い敵へ渡す（<see cref="TraitId.RelayFeed"/>）。代金（拾った量 × 2）は今どおり。札は第351期の <see cref="WataWTu"/> と同じ。
-    /// 旧（第43〜351期の規定）は <see cref="WataH351"/>。
+    /// 旧（第43〜351期の規定）は <see cref="WataH351"/>。<b>第352〜354期の規定</b>——第355期に配りを規定にしたので明示の定義として残す（過去の器具は `Common.PinM354`）。
     /// </summary>
-    public static readonly UnitDef Wata = new()
+    public static readonly UnitDef WataH354 = new()
     {
         Id = WataH351.Id, Name = WataH351.Name, MaxHp = WataH351.MaxHp, Attack = WataH351.Attack, Speed = WataH351.Speed,
         Traits = new[] { TraitId.Relay, TraitId.RelayWide, TraitId.RelayFeed },
         PlusText = "味方の誰かが受ける攻撃力低下を引き受ける。呪いを欲しがる仲間（逆しまのウツ）がいれば先にそちらへ回し、余りを最も強い敵へそのまま渡す（ウツの分は拾わない）",
         MinusText = "拾った分だけ自分の身が削れる",
         Flavor = WataH351.Flavor,
+    };
+
+    /// <summary>
+    /// 渡しのワタ（規定）。<b>第355期に第354期の配り（ウツの次にムドへ回す）を規定にした</b>（ポンの判断）——旧（第352〜354期の規定・<see cref="WataH354"/>）に
+    /// <see cref="TraitId.RelayFeedMudo"/> を足した。札と文面は第354期の <see cref="WataFeedMudo"/> と同じ。
+    /// </summary>
+    public static readonly UnitDef Wata = new()
+    {
+        Id = WataH354.Id, Name = WataH354.Name, MaxHp = WataH354.MaxHp, Attack = WataH354.Attack, Speed = WataH354.Speed,
+        Traits = WataH354.Traits.Append(TraitId.RelayFeedMudo).ToArray(),
+        PlusText = WataFeedText354(WataH354.PlusText),
+        MinusText = WataH354.MinusText,
+        Flavor = WataH354.Flavor,
     };
 
     /// <summary>
@@ -6473,17 +6500,32 @@ public static class UnitCatalog
     const string MudoHeavyText354 = "。呪われているほど、殴り返しの泥は重くなる（暴発の1発に下げ幅 × 2）";
     const string MudoWantText354 = "。渡しのワタはこの泥人形の呪いを拾わない";
     /// <summary>第354期 M1 呪いが怒りに: 暴発の札の後ろに <see cref="TraitId.MudoCurseRage"/>（受けた弱体 3 につき怒り +1・閾を越えたらその場で暴発）。</summary>
-    public static readonly UnitDef MudoM1 = Re351(Mudo, Mudo.Traits.Append(TraitId.MudoCurseRage).ToArray(), Mudo.Name,
-        Must354(Mudo.PlusText, MudoRageFind354, MudoRageText354) + MudoWantText354, Mudo.MinusText);
+    // 第355期: 規定のムドが M1＋M2 になったので、版は旧（`MudoH354`）から作る（`MudoM12` は規定と同じ札・残置）。
+    public static readonly UnitDef MudoM1 = Re351(MudoH354, MudoH354.Traits.Append(TraitId.MudoCurseRage).ToArray(), MudoH354.Name,
+        Must354(MudoH354.PlusText, MudoRageFind354, MudoRageText354) + MudoWantText354, MudoH354.MinusText);
     /// <summary>第354期 M2 呪われるほど重い: <see cref="TraitId.MudoCurseHeavy"/>（暴発の1発に下げ幅 × 2）。</summary>
-    public static readonly UnitDef MudoM2 = Re351(Mudo, Mudo.Traits.Append(TraitId.MudoCurseHeavy).ToArray(), Mudo.Name,
-        Mudo.PlusText + MudoHeavyText354 + MudoWantText354, Mudo.MinusText);
+    public static readonly UnitDef MudoM2 = Re351(MudoH354, MudoH354.Traits.Append(TraitId.MudoCurseHeavy).ToArray(), MudoH354.Name,
+        MudoH354.PlusText + MudoHeavyText354 + MudoWantText354, MudoH354.MinusText);
     /// <summary>第354期 M1 ＋ M2。</summary>
-    public static readonly UnitDef MudoM12 = Re351(Mudo, Mudo.Traits.Append(TraitId.MudoCurseRage).Append(TraitId.MudoCurseHeavy).ToArray(), Mudo.Name,
-        Must354(Mudo.PlusText, MudoRageFind354, MudoRageText354) + MudoHeavyText354 + MudoWantText354, Mudo.MinusText);
+    public static readonly UnitDef MudoM12 = Re351(MudoH354, MudoH354.Traits.Append(TraitId.MudoCurseRage).Append(TraitId.MudoCurseHeavy).ToArray(), MudoH354.Name,
+        Must354(MudoH354.PlusText, MudoRageFind354, MudoRageText354) + MudoHeavyText354 + MudoWantText354, MudoH354.MinusText);
     /// <summary>第354期 配り: 規定のワタ ＋ <see cref="TraitId.RelayFeedMudo"/>（ウツ（5発まで）→ ムド（下げ幅 12 まで）→ 最も強い敵の順に回す）。</summary>
-    public static readonly UnitDef WataFeedMudo = Re351(Wata, Wata.Traits.Append(TraitId.RelayFeedMudo).ToArray(), Wata.Name,
-        Must354(Must354(Wata.PlusText, "（逆しまのウツ）", "（逆しまのウツ ／ 呪いで動くムド）"), "（ウツの分は拾わない）", "（ウツ ／ ムドの分は拾わない）"), Wata.MinusText);
+    public static readonly UnitDef WataFeedMudo = Re351(WataH354, WataH354.Traits.Append(TraitId.RelayFeedMudo).ToArray(), WataH354.Name,
+        WataFeedText354(WataH354.PlusText), WataH354.MinusText);
+    static string WataFeedText354(string plus) => Must354(Must354(plus, "（逆しまのウツ）", "（逆しまのウツ ／ 呪いで動くムド）"), "（ウツの分は拾わない）", "（ウツ ／ ムドの分は拾わない）");
+
+    // ---------------------------------------------------------------------------------
+    // 第355期【軽い期】呪われた傷は癒えない（指示書 design/PHASE355_CURSE_SCAR_SPEC.md §4）。版はネル ／ ウツの写し（Id は同じ・規定の上）。保持者 0 枚。
+    // ---------------------------------------------------------------------------------
+    /// <summary>第355期 N-100 呪われた傷: ネル ＋ <see cref="TraitId.CurseScar"/>（呪われている敵が受けた傷と同じだけ最大HPが削れる）。</summary>
+    public static readonly UnitDef NelN100 = Re351(Nel, Nel.Traits.Append(TraitId.CurseScar).ToArray(), Nel.Name,
+        Nel.PlusText + "。呪われた者の傷は、癒えても元の体には戻らない（受けた傷の分だけ最大HPが削れる）", Nel.MinusText);
+    /// <summary>第355期 N-50 呪われた傷・半分: ネル ＋ <see cref="TraitId.CurseScarHalf"/>。</summary>
+    public static readonly UnitDef NelN50 = Re351(Nel, Nel.Traits.Append(TraitId.CurseScarHalf).ToArray(), Nel.Name,
+        Nel.PlusText + "。呪われた者の傷は、癒えても元の体には戻らない（受けた傷の半分だけ最大HPが削れる）", Nel.MinusText);
+    /// <summary>第355期 U ウツの爪痕: 規定のウツ ＋ <see cref="TraitId.UtsuScar"/>（ウツの直の一撃で減らした HP と同じだけ相手の最大HPが削れる）。</summary>
+    public static readonly UnitDef UtsuU = Re351(Utsu, Utsu.Traits.Append(TraitId.UtsuScar).ToArray(), Utsu.Name,
+        Utsu.PlusText + "。呪われて振るう一撃は、相手の体に消えない爪痕を残す（最大HPを削る）", Utsu.MinusText);
 }
 
 /// <summary>討伐に来る人間側。プレイヤーは編成できない。</summary>

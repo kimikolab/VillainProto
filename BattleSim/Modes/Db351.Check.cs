@@ -57,7 +57,7 @@ static partial class Db351Diag
                 && UnitCatalog.UkeUKr.Speed == UnitCatalog.Uke.Speed && UnitCatalog.UkeUKr.Id == "uke" && UnitCatalog.UkeUKr.Actions == UnitCatalog.Uke.Actions;
             var held = UnitCatalog.All.Concat(UnitCatalog.Retired).Where(d => d.Traits.Any(t => t is TraitId.RelayWide or TraitId.RelaySwap or TraitId.RelayFeed or TraitId.Plunder)).Select(d => d.Id).ToArray();
             // 第352期: 規定のワタ ＝ WT-u（`RelayWide` ＋ `RelayFeed`）・旧（`WataH351`）は渡しだけ・`RelaySwap` ／ `Plunder` の保持者は 0 枚
-            bool def = UnitCatalog.Wata.Traits.SequenceEqual(UnitCatalog.WataWTu.Traits) && UnitCatalog.WataH351.Traits.SequenceEqual(new[] { TraitId.Relay })
+            bool def = UnitCatalog.WataH354.Traits.SequenceEqual(UnitCatalog.WataWTu.Traits) && UnitCatalog.WataH351.Traits.SequenceEqual(new[] { TraitId.Relay })
                 && UnitCatalog.Uke.Traits.SequenceEqual(new[] { TraitId.Bear })
                 && UnitCatalog.All.Concat(UnitCatalog.Retired).Where(d => d.Traits.Any(t => t is TraitId.RelayWide or TraitId.RelayFeed)).Select(d => d.Id).SequenceEqual(new[] { "wata" });
             held = UnitCatalog.All.Concat(UnitCatalog.Retired).Where(d => d.Traits.Any(t => t is TraitId.RelaySwap or TraitId.Plunder)).Select(d => d.Id).ToArray();
@@ -149,7 +149,7 @@ static partial class Db351Diag
         // ---- 台（呪いの台）の上で ----
         {
             var top = Top1;
-            bool row = Seats(top) == "ワタ・ムド・クビ・ネル・ウツ" && top.Occupied().All(o => ReferenceEquals(o.Def, UnitCatalog.Wata) || ReferenceEquals(o.Def, UnitCatalog.Mudo)
+            bool row = Seats(top) == "ワタ・ムド・クビ・ネル・ウツ" && top.Occupied().All(o => ReferenceEquals(o.Def, UnitCatalog.WataH354) || ReferenceEquals(o.Def, UnitCatalog.MudoH354)
                 || ReferenceEquals(o.Def, UnitCatalog.Kubi) || ReferenceEquals(o.Def, UnitCatalog.Nel) || ReferenceEquals(o.Def, UnitCatalog.UtsuH353))
                 && !CompareBuilds().Any(c => c.Name == PlayRow) && !Presets.Playtest.Any(c => c.Name == PlayRow);
             Expect("「試遊・呪い」＝ Phase 0 の1位（ワタ・ムド・クビ・ネル・ウツ）・規定の駒・`Presets.Versions` だけに置く", row, Seats(top));

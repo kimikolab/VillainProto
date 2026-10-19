@@ -601,7 +601,7 @@ public static UnitDef PinB349(UnitDef d) =>
 /// 第352期: 規定のワタ（WT-u・味方全員から拾ってウツへ回す）を第43〜351期の規定（`WataH351`・隣の味方だけ）に替える。ほかの駒はそのまま返す。
 /// 古い口の終端の `PinB349` の後ろに置いた（`PinG344` ／ `PinG345` ／ `Pin349` を通る器具はワタも旧になる）。
 /// </summary>
-public static UnitDef PinW351(UnitDef d) => ReferenceEquals(d, UnitCatalog.Wata) ? UnitCatalog.WataH351 : PinU353(d);   // 第354期: 規定のウツも（古い口の終端）
+public static UnitDef PinW351(UnitDef d) => ReferenceEquals(d, UnitCatalog.Wata) || ReferenceEquals(d, UnitCatalog.WataH354) ? UnitCatalog.WataH351 : PinU353(d);   // 第355期: 第352〜354期の規定（`WataH354`）も旧へ   // 第354期: 規定のウツも（古い口の終端）
 
 /// <summary>第352期: ワタの WT-u を規定にした。第351期までの規定のワタで測った器具はこれを通す。陣形とレリックは保つ。</summary>
 public static Formation Pin351(Formation f)
@@ -615,13 +615,27 @@ public static Formation Pin351(Formation f)
 /// 第354期: 規定のウツ（UT-o・上限超え）を第178〜353期の規定（`UtsuH353`・逆しまだけ）に替える。ほかの駒はそのまま返す。
 /// 古い口の終端の `PinW351` の後ろに置いた（`PinB349` ／ `Pin349` ／ `Pin351` を通る器具はウツも旧になる）。
 /// </summary>
-public static UnitDef PinU353(UnitDef d) => ReferenceEquals(d, UnitCatalog.Utsu) ? UnitCatalog.UtsuH353 : d;
+public static UnitDef PinU353(UnitDef d) => ReferenceEquals(d, UnitCatalog.Utsu) ? UnitCatalog.UtsuH353 : PinM354(d);   // 第355期: 規定のムド ／ ワタも（古い口の終端）
 
 /// <summary>第354期: ウツの UT-o を規定にした。第353期までの規定のウツで測った器具はこれを通す。陣形とレリックは保つ。</summary>
 public static Formation Pin353(Formation f)
 {
     var g = f.Clone();
     foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinU353(d);
+    return g;
+}
+
+/// <summary>
+/// 第355期: 規定のムド（M1＋M2）／ ワタ（配り）を第354期までの規定（`MudoH354` ／ `WataH354`）に替える。ほかの駒はそのまま返す。
+/// 古い口の終端の `PinU353` の後ろに置いた（`PinB349` ／ `Pin349` ／ `Pin351` ／ `Pin353` を通る器具はムド ／ ワタも旧になる・`PinW351` が先にワタを `WataH351` へ替える器具はそちらのまま）。
+/// </summary>
+public static UnitDef PinM354(UnitDef d) => ReferenceEquals(d, UnitCatalog.Mudo) ? UnitCatalog.MudoH354 : ReferenceEquals(d, UnitCatalog.Wata) ? UnitCatalog.WataH354 : d;
+
+/// <summary>第355期: ムドの M1＋M2 ／ ワタの配りを規定にした。第354期までの規定のムド ／ ワタで測った器具はこれを通す。陣形とレリックは保つ。</summary>
+public static Formation Pin354(Formation f)
+{
+    var g = f.Clone();
+    foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinM354(d);
     return g;
 }
 

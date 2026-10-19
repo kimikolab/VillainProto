@@ -9690,7 +9690,10 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.BurnHitNoMend)) _burnHitNoMend = true;   // 第349期（BN-a・被弾の燃焼では癒えない・両陣営）
         if (u.HasTrait(TraitId.RelayWide)) _relayWideLive = true;       // 第351期（WT-a・渡しが味方全員から拾う）
         if (u.HasTrait(TraitId.PlunderCum)) _plunderCumLive = true;     // 第353期（UK-c・弱体の累計を数える）
-        if (u.HasTrait(TraitId.MudoCurseRage) || u.HasTrait(TraitId.MudoCurseHeavy)) _mudoCurseLive = true;   // 第354期（M1 ／ M2・ムドは呪いを欲しがる）
+        if (u.HasTrait(TraitId.MudoCurseRage) || u.HasTrait(TraitId.MudoCurseHeavy)) _mudoCurseLive = true;
+        if (u.HasTrait(TraitId.CurseScar)) { _scar355Live = true; _curseScarPct355[u.TeamId] = 100; }                                                       // 第355期（N-100）
+        else if (u.HasTrait(TraitId.CurseScarHalf)) { _scar355Live = true; _curseScarPct355[u.TeamId] = Math.Max(_curseScarPct355[u.TeamId], 50); }     // 第355期（N-50）
+        if (u.HasTrait(TraitId.UtsuScar)) _scar355Live = true;                                                                                            // 第355期（U）   // 第354期（M1 ／ M2・ムドは呪いを欲しがる）
         if (FireLevelRule.Holds(u)) { _fireLvLive = true; _fireLvTeams[u.TeamId] = true; }   // 第242期（火勢）
         if (u.HasTrait(TraitId.FireSpreadCap)) _spreadCapTeams[u.TeamId] = true;              // 第244期（燃え広がりの上限）
         if (FireKindleRule.Holds(u)) _kindleLive = true;                                      // 第252期（ボルグが育つ口・あぶれた火）
@@ -14440,6 +14443,8 @@ public sealed class BattleContext
         }
 
         target.Hp -= amount;
+        // 第355期（N ／ U・版）: 呪われた傷 ／ ウツの爪痕。**実際に減った HP** を最大HPから削る。保持者がいなければ比較1つで抜ける。
+        if (_scar355Live && target.Hp > 0 && hpBefore120 > target.Hp) Scar355(target, source, hpBefore120 - target.Hp, hexShare || relayed);
         // 第304期（HB）: 粛の保持者が傷を受けたら、その保持者の次の手番の始まりまで沈黙が破れる。**版の保持者がいなければ比較1つで抜ける。**
         if (_hushBreakLive && amount > 0) HushWound(target);
         // 第120期。**盤面から実際に減った HP**（過剰分を除く）。誰も読んで分岐しない。
@@ -17472,6 +17477,37 @@ public sealed class BattleContext
             DullZeroedWho[receiver.Name] =
                 DullZeroedWho.TryGetValue(receiver.Name, out int z) ? z + 1 : 1;
         }
+    }
+
+    /// <summary>第355期 N ／ U: 呪われた傷 ／ ウツの爪痕の保持者がいる戦。</summary>
+    bool _scar355Live;
+    /// <summary>第355期 N: 陣営ごとの「呪われた傷」の割合（その陣営に保持者がいれば 100 ／ 50・相手の陣営の呪われた駒に効く）。</summary>
+    readonly int[] _curseScarPct355 = new int[2];
+    /// <summary>
+    /// 第355期 N ／ U（版）: <paramref name="lost"/>（実際に減った HP）のうち、N は「相手の陣営に保持者がいて呪われている」なら割合だけ、
+    /// U は出どころがウツの爪痕の持ち主で直の一撃（分け合い ／ 中継でない）なら全量、の<b>大きいほう</b>だけ最大HPを削る（下限 1・今の HP は新しい最大HPで切る）。
+    /// ミサの炸裂の一撃（抉りの鏃）がこの的に爪痕を残すなら、ここでは削らない（二重に削らない・炸裂の爪痕は全量）。乱数を引かない。
+    /// </summary>
+    void Scar355(UnitState target, UnitState? source, int lost, bool indirect)
+    {
+        if (source is not null && source.HasTrait(TraitId.RuptureScar) && ReferenceEquals(_ruptureTarget, target)) return;
+        int pct = target.RawCounter(StatusKeys.Curse) > 0 ? _curseScarPct355[Opponent(target.TeamId)] : 0;
+        int cut = lost * pct / 100;
+        if (!indirect && source is not null && source.TeamId != target.TeamId && source.HasTrait(TraitId.UtsuScar)) cut = Math.Max(cut, lost);
+        if (cut <= 0) return;
+        int maxBefore = target.MaxHp;
+        target.MaxHp = Math.Max(1, target.MaxHp - cut);
+        target.Hp = Math.Min(target.Hp, target.MaxHp);
+        int done = maxBefore - target.MaxHp;
+        if (done <= 0) return;
+        TallyOf(target).Cs355ScarTaken += done;
+        if (source is not null) TallyOf(source).Cs355ScarDealt += done; else TallyOf(target).Cs355ScarTakenNoSource += done;
+        if (_verbose)
+            Emit(new BattleEvent
+            {
+                Kind = BattleEventKind.Scar, Turn = _turn, ActorId = source?.InstanceId, TargetId = target.InstanceId,
+                Amount = done, Slot = target.MaxHp, HpAfter = target.Hp, Team = target.TeamId,
+            });
     }
 
     /// <summary>第354期 M1 ／ M2: 呪いを欲しがるムド（<see cref="TraitId.MudoCurseRage"/> ／ <see cref="TraitId.MudoCurseHeavy"/>）の保持者がいる戦。</summary>

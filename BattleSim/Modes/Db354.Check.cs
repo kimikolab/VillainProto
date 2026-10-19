@@ -55,20 +55,24 @@ static partial class Db354Diag
                 nowOver += rn.TallyByUnit["utsu"].DamageToEnemy; oldOver += ro.TallyByUnit["utsu"].DamageToEnemy;
             }
             Expect("段0: 規定のウツで上限超えが働き（下げ幅 20 → 攻 45）、旧の定義では働かない（29）・試遊・呪い × ボスのウツの与ダメは規定 > 旧", over && nowOver > oldOver, $"{now.CurrentAttack} ／ {old.CurrentAttack}・与ダメ {nowOver} ／ {oldOver}（seed 0..3）");
-            bool pin = ReferenceEquals(PinU353(UnitCatalog.Utsu), UnitCatalog.UtsuH353) && ReferenceEquals(PinB349(UnitCatalog.Utsu), UnitCatalog.UtsuH353) && ReferenceEquals(PinU353(UnitCatalog.Mudo), UnitCatalog.Mudo);
+            bool pin = ReferenceEquals(PinU353(UnitCatalog.Utsu), UnitCatalog.UtsuH353) && ReferenceEquals(PinB349(UnitCatalog.Utsu), UnitCatalog.UtsuH353) && ReferenceEquals(PinU353(UnitCatalog.Kubi), UnitCatalog.Kubi);
             Expect("段0: 過去の器具の固定（`PinU353` ／ 古い口の終端 `PinB349` → `PinW351` → `PinU353`）は規定のウツを旧に替える", pin);
         }
 
         // ---- 版の定義 ----
         {
-            var m = UnitCatalog.Mudo;
+            var m = UnitCatalog.MudoH354;   // 第355期: 規定のムドが M1＋M2 になったので旧と比べる
             bool body(UnitDef d) => d.Id == "mudo" && d.MaxHp == m.MaxHp && d.Attack == m.Attack && d.Speed == m.Speed && d.Pattern == m.Pattern && d.Actions == m.Actions;
             bool m1 = body(UnitCatalog.MudoM1) && UnitCatalog.MudoM1.Traits.SequenceEqual(m.Traits.Append(TraitId.MudoCurseRage));
             bool m2 = body(UnitCatalog.MudoM2) && UnitCatalog.MudoM2.Traits.SequenceEqual(m.Traits.Append(TraitId.MudoCurseHeavy));
             bool m12 = body(UnitCatalog.MudoM12) && UnitCatalog.MudoM12.Traits.SequenceEqual(m.Traits.Append(TraitId.MudoCurseRage).Append(TraitId.MudoCurseHeavy));
-            bool f = UnitCatalog.WataFeedMudo.Traits.SequenceEqual(UnitCatalog.Wata.Traits.Append(TraitId.RelayFeedMudo)) && UnitCatalog.WataFeedMudo.Id == "wata";
+            bool f = UnitCatalog.WataFeedMudo.Traits.SequenceEqual(UnitCatalog.WataH354.Traits.Append(TraitId.RelayFeedMudo)) && UnitCatalog.WataFeedMudo.Id == "wata";
             var held = UnitCatalog.All.Concat(UnitCatalog.Retired).Where(d => d.Traits.Any(t => t is TraitId.MudoCurseRage or TraitId.MudoCurseHeavy or TraitId.RelayFeedMudo)).Select(d => d.Id).ToArray();
-            Expect("版の定義: M1 ＝ ムド ＋ `MudoCurseRage` ／ M2 ＝ ＋ `MudoCurseHeavy`（暴発の後ろ）／ M1＋M2 ／ 配り ＝ 規定のワタ ＋ `RelayFeedMudo`・体はそのまま・保持者 0 枚", m1 && m2 && m12 && f && held.Length == 0,
+            // 第355期: 規定のムド ＝ M1＋M2・規定のワタ ＝ 配り（保持者はムドとワタだけ）
+            bool now = UnitCatalog.Mudo.Traits.SequenceEqual(UnitCatalog.MudoM12.Traits) && UnitCatalog.Wata.Traits.SequenceEqual(UnitCatalog.WataFeedMudo.Traits)
+                && UnitCatalog.Mudo.PlusText == UnitCatalog.MudoM12.PlusText && UnitCatalog.Wata.PlusText == UnitCatalog.WataFeedMudo.PlusText;
+            bool heldOk = held.Distinct().OrderBy(x => x, StringComparer.Ordinal).SequenceEqual(new[] { "mudo", "wata" }) && now;
+            Expect("版の定義: M1 ＝ 旧のムド ＋ `MudoCurseRage` ／ M2 ＝ ＋ `MudoCurseHeavy`（暴発の後ろ）／ M1＋M2 ／ 配り ＝ 旧のワタ ＋ `RelayFeedMudo`・体はそのまま・第355期から規定のムド ／ ワタ ＝ M1＋M2 ／ 配り（保持者はその2枚だけ）", m1 && m2 && m12 && f && heldOk,
                 $"m1 {m1}・m2 {m2}・m12 {m12}・配り {f}・{string.Join(",", held)}");
         }
 
@@ -85,14 +89,14 @@ static partial class Db354Diag
             bool fire = t.EruptFires == 1 && t.EruptSwings == 3 && EruptTrait.RageOf(mudo) == 0 && t.Db354CurseRage == 3;
             Expect("M1: 下げ幅 3 につき怒り +1・端数は持ち越す（4 → 怒り 1・端数 1 ／ ＋2 → 怒り 2・端数 0）", a && b, $"怒り {EruptTrait.RageOf(mudo)}");
             Expect("M1: 呪いで閾 3 に届いたらその場で暴発する（3 連撃・怒りは 0 に戻る）", fire, $"暴発 {t.EruptFires}・発 {t.EruptSwings}");
-            var c0 = Ctx(Formation.Build(front1: UnitCatalog.Mudo), Formation.Build(center: Plain("foe", hp: 999)), out var p0, out _);
+            var c0 = Ctx(Formation.Build(front1: UnitCatalog.MudoH354), Formation.Build(center: Plain("foe", hp: 999)), out var p0, out _);
             c0.Dull(p0[0], 9);
             Expect("M1: 規定のムドは呪いで怒りが溜まらない（対照）", EruptTrait.RageOf(p0[0]) == 0, $"{EruptTrait.RageOf(p0[0])}");
-            var cw = Ctx(Formation.Build(front1: UnitCatalog.MudoM1, back1: UnitCatalog.Wata), Formation.Build(center: Plain("foe", hp: 999)), out var pw, out var ew);
+            var cw = Ctx(Formation.Build(front1: UnitCatalog.MudoM1, back1: UnitCatalog.WataH354), Formation.Build(center: Plain("foe", hp: 999)), out var pw, out var ew);
             cw.Dull(U(pw, "mudo"), 4);
-            var cd = Ctx(Formation.Build(front1: UnitCatalog.Mudo, back1: UnitCatalog.Wata), Formation.Build(center: Plain("foe", hp: 999)), out var pd, out var ed);
+            var cd = Ctx(Formation.Build(front1: UnitCatalog.MudoH354, back1: UnitCatalog.WataH354), Formation.Build(center: Plain("foe", hp: 999)), out var pd, out var ed);
             cd.Dull(U(pd, "mudo"), 4);
-            var c2 = Ctx(Formation.Build(front1: UnitCatalog.MudoM2, back1: UnitCatalog.Wata), Formation.Build(center: Plain("foe", hp: 999)), out var p2, out var e2);
+            var c2 = Ctx(Formation.Build(front1: UnitCatalog.MudoM2, back1: UnitCatalog.WataH354), Formation.Build(center: Plain("foe", hp: 999)), out var p2, out var e2);
             c2.Dull(U(p2, "mudo"), 4);
             Expect("M1 ／ M2: ワタはムドの弱体を拾わない（規定のムドなら拾って敵へ渡す）", U(pw, "mudo").AtkBonus == -4 && ew[0].AtkBonus == 0 && U(pd, "mudo").AtkBonus == 0 && ed[0].AtkBonus == -4 && U(p2, "mudo").AtkBonus == -4 && e2[0].AtkBonus == 0,
                 $"M1 ムド {U(pw, "mudo").AtkBonus}・敵 {ew[0].AtkBonus} ／ 規定 ムド {U(pd, "mudo").AtkBonus}・敵 {ed[0].AtkBonus} ／ M2 ムド {U(p2, "mudo").AtkBonus}");
@@ -100,7 +104,7 @@ static partial class Db354Diag
 
         // ---- M2 ----
         {
-            var c = Ctx(Formation.Build(front1: UnitCatalog.MudoM2, front3: UnitCatalog.Mudo), Formation.Build(center: Plain("foe", hp: 999)), out var p, out _);
+            var c = Ctx(Formation.Build(front1: UnitCatalog.MudoM2, front3: UnitCatalog.MudoH354), Formation.Build(center: Plain("foe", hp: 999)), out var p, out _);
             var m2 = p[0]; var m0 = p[1];
             m2.AtkBonus = -6; m0.AtkBonus = -6;
             int n2 = m2.CurrentAttack, n0 = m0.CurrentAttack;
@@ -133,7 +137,7 @@ static partial class Db354Diag
             var c3 = Ctx(Formation.Build(front1: UnitCatalog.UtsuH353, front3: Plain("far"), back1: UnitCatalog.WataFeedMudo), Formation.Build(center: Plain("foe", hp: 9999)), out var p3, out var e3);
             U(p3, "utsu").AtkBonus = -12;
             c3.Dull(U(p3, "far"), 2);
-            var c4 = Ctx(Formation.Build(front1: UnitCatalog.UtsuH353, front3: Plain("far"), center: UnitCatalog.MudoM12, back1: UnitCatalog.Wata), Formation.Build(center: Plain("foe", hp: 9999)), out var p4, out var e4);
+            var c4 = Ctx(Formation.Build(front1: UnitCatalog.UtsuH353, front3: Plain("far"), center: UnitCatalog.MudoM12, back1: UnitCatalog.WataH354), Formation.Build(center: Plain("foe", hp: 9999)), out var p4, out var e4);
             U(p4, "utsu").AtkBonus = -12;
             c4.Dull(U(p4, "far"), 2);
             Expect("配り: ウツがいなければムドへ・ムドがいなければ敵へ（飛ばす）・規定のワタ（配りなし）はムドへ回さない", U(p2, "mudo").AtkBonus == -2 && e3[0].AtkBonus == -2 && U(p4, "mudo").AtkBonus == 0 && e4[0].AtkBonus == -2,
@@ -142,13 +146,10 @@ static partial class Db354Diag
 
         // ---- 台の上で ----
         {
+            // 第355期: 第354期の「版・」の4台は外した（試遊の4台は頭に残る）
             bool vrows = Presets.Versions.Select(r => r.Name).Take(4).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", PlayRow })
-                && Presets.Versions.Skip(4).Select(r => r.Name).SequenceEqual(VersionRows.Select(x => x.Row));
-            var f = Presets.Versions.ToDictionary(r => r.Name, r => r.F);
-            bool rows = vrows && VersionRows.All(x => Seats(f[x.Row]) == Seats(Play)
-                && f[x.Row].Occupied().Any(o => ReferenceEquals(o.Def, V(x.Ver).Mudo)) && f[x.Row].Occupied().Any(o => ReferenceEquals(o.Def, V(x.Ver).Wata))
-                && f[x.Row].Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Utsu)));
-            Expect("`Presets.Versions` ＝ 試遊の4台 ＋ 「版・M1 呪い」「版・M2 呪い」「版・M1＋M2 呪い」「版・M1＋M2＋配り 呪い」（並びは試遊・呪い・段0 のウツ）", rows, string.Join("、", Presets.Versions.Select(r => r.Name)));
+                && !Presets.Versions.Any(r => VersionRows.Any(x => x.Row == r.Name));
+            Expect("`Presets.Versions` の頭 ＝ 試遊の4台・第354期の「版・」の4台は無い（第355期に外した）", vrows, string.Join("、", Presets.Versions.Select(r => r.Name)));
             bool seat = Seats(Play) == "ワタ・ムド・クビ・ネル・ウツ" && Play.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Utsu));
             Expect("「試遊・呪い」＝ ワタ・ムド・クビ・ネル・ウツ（段0 の規定のウツが乗る）", seat, Seats(Play));
 

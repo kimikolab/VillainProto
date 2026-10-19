@@ -1257,6 +1257,12 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 db354 compare [版,…]    # 第354期 §6-4: `compare` 64 行 × 版 ＋ 段0 の前（`Pin353`）とのセルの差（26 秒）
     dotnet run --project BattleSim -c Release 0 db354 log <版> <台> <波> [seed]   # 第354期: 1戦のログ（台 play ／ fast ／ 逆しま・波は db351 と同じ）
     dotnet run --project BattleSim -c Release 0 db354 check             # 第354期 自己検査（段0 の規定 ／ 旧・M1 の端数 ／ 閾 ／ その場の暴発 ／ ワタが拾わない・M2 の1発・配りの順・台の上・台本・verbose・PickOne）
+    dotnet run --project BattleSim -c Release 0 db355 p0                # 第355期 §3 Phase 0: 「呪われている」の判定（勇者が呪われた T と書き手）・机上の到達（削る割合 × 倒せる T と全滅 T）・ボスの1ターンの推移（試遊・呪い・規定・seed 0..19）（1 秒）
+    dotnet run --project BattleSim -c Release 0 db355 boards [版,…]     # 第355期 §6: 代表台 3（試遊・呪い ／ 逆しま ／ 速攻 (ボルグ×ムド)）× 10 波 × 版（base ／ n100 ／ n50 ／ u）・ボスの最大HPの推移 ／ 削った最大HP（誰の一撃で）／ 勝率と決着T ／ 壊れの兆し（3 秒）。予測のファイルが無ければ走らない
+    dotnet run --project BattleSim -c Release 0 db355 axes              # 第355期 §6-3: 軸の横並び（第348期 §3）のデバフの行 × 版と、物差しごとの順位（9 秒）
+    dotnet run --project BattleSim -c Release 0 db355 compare [版,…]    # 第355期 §6-4: `compare` 64 行 × 版 ＋ 段0 の前（`Pin354`）とのセルの差（25 秒）
+    dotnet run --project BattleSim -c Release 0 db355 log <版> <台> <波> [seed]   # 第355期: 1戦のログ（台 play ／ 逆しま ／ fast ／ `compare` ／ 交差帯の行の名前の頭）
+    dotnet run --project BattleSim -c Release 0 db355 check             # 第355期 自己検査（段0 の規定 ／ 旧・N-100 ／ N-50 の削り（呪われていない敵 ／ 味方 ／ 下限 ／ 刻み）・ボスの回復・U・台の上・台本・verbose・PickOne）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

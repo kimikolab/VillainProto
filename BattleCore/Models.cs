@@ -2404,6 +2404,8 @@ public sealed class UnitTally
     public long Db353PlunderGain, Db353PlunderHits, Db353PlunderDry, Db353PlunderMiss, Db353PlunderBoss;
     /// <summary>第354期（<b>計数のみ</b>・ムド）: 呪いで溜まった怒り（M1）／ 渡しが拾ったうちムド（暴発の札の持ち主）から拾った量 ／ 渡しがムドへ回した量（配り）／ 暴発の発が軛に切られた発数 ／ 切られた量。誰も読んで分岐しない。</summary>
     public long Db354CurseRage, Db354PickedMudo, Db354FedMudo, Db354BurstYokeCut, Db354BurstYokeLost;
+    /// <summary>第355期（<b>計数のみ</b>・呪われた傷 ／ ウツの爪痕）: その駒の一撃で削れた最大HP（出どころの側・刻みなど出どころの無い分は受け手の <c>Cs355ScarTakenNoSource</c>）／ 削られた最大HP（受け手の側）。誰も読んで分岐しない。</summary>
+    public long Cs355ScarDealt, Cs355ScarTaken, Cs355ScarTakenNoSource;
     public long Rp345NormalDealt, Rp345Punches, Rp345PunchBack, Rp345PunchKills, Rp345PunchDealt, Rp345PunchAmount, Rp345AimEdible, Rp345GrabNoPunch, Rp345GrabAfter, Ga345Stomps, Ga345SplashHits, Ga345SplashDealt;
     public long[]? Fg339Spray, Fg339AllyHits, Fg339AllyDmg;
     /// <summary>第339期（計数のみ）: 乱射の1発をターンごとに数える（羽の乱射 ／ 乱射の札の両方）。</summary>
@@ -3672,6 +3674,7 @@ public sealed class UnitTally
         Db351PlunderGain += o.Db351PlunderGain; Db351PlunderHits += o.Db351PlunderHits; Db351PlunderMiss += o.Db351PlunderMiss; Db351PerverseMax = Math.Max(Db351PerverseMax, o.Db351PerverseMax);
         Db351PerverseFullT += o.Db351PerverseFullT; Db351PerverseFullN += o.Db351PerverseFullN;
         Db351HexSrcHits += o.Db351HexSrcHits; Db351HexSplits += o.Db351HexSplits; Db351HexDealt += o.Db351HexDealt; Db351HexKills += o.Db351HexKills;
+        Cs355ScarDealt += o.Cs355ScarDealt; Cs355ScarTaken += o.Cs355ScarTaken; Cs355ScarTakenNoSource += o.Cs355ScarTakenNoSource;   // 第355期
         Db354CurseRage += o.Db354CurseRage; Db354PickedMudo += o.Db354PickedMudo; Db354FedMudo += o.Db354FedMudo; Db354BurstYokeCut += o.Db354BurstYokeCut; Db354BurstYokeLost += o.Db354BurstYokeLost;   // 第354期
         Db353PlunderGain += o.Db353PlunderGain; Db353PlunderHits += o.Db353PlunderHits; Db353PlunderDry += o.Db353PlunderDry; Db353PlunderMiss += o.Db353PlunderMiss; Db353PlunderBoss += o.Db353PlunderBoss;   // 第353期
         Fg339Spray = AddArr(Fg339Spray, o.Fg339Spray); Fg339AllyHits = AddArr(Fg339AllyHits, o.Fg339AllyHits); Fg339AllyDmg = AddArr(Fg339AllyDmg, o.Fg339AllyDmg);

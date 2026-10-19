@@ -1485,3 +1485,9 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **`RelayThrough` の配りの枝**（渡しが `RelayFeedMudo` を持つときだけ）: ウツへ回した後、暴発の札の持ち主（席の若い順）へ `12 + AtkBonus` まで回す（`Relaying` で包んだ `Dull`）。余りを敵へ。
 - `MudoCurseHeavyTrait`（M2）は暴発の後ろに置く `ModifyAttack` だけ（暴発の連撃の最中に `-AtkBonus × 2` を足す）。
 - 計数だけ: `UnitTally.Db354*`（呪いの怒り ／ 渡しがムドから拾った量（暴発の札の持ち主から・規定でも数える）／ ムドへ回した量 ／ 暴発の発が軛に切られた発数と量（軛の段・`BurstKey` を読む））。表示専用 `CursePassLabels.Rage`（「怒り」・M1 のムドだけ）。
+
+## 第355期 —— ムドの M1＋M2 ／ ワタの配りを規定に ／ 呪われた傷（N-100 ／ N-50 ／ U）
+
+- 段0: engine は変えていない（第354期の `_mudoCurseLive` ／ `EruptTrait.AddCurseRage` ／ 配りの枝が規定のムド ／ ワタで働くようになった）。
+- **`ApplyDamage` の HP を引いた直後**（`target.Hp -= amount` の次の行・軛より後ろなので上限の外の増減ではない——減った HP を最大HPに写すだけ）: `_scar355Live`（`CurseScar` ／ `CurseScarHalf` ／ `UtsuScar` の保持者が戦にいる）のときだけ `Scar355`。N は受け手が呪われていて（`StatusKeys.Curse`）相手の陣営に保持者がいれば、減った HP × 100 ／ 50%。U は出どころが `UtsuScar` の持ち主で直の一撃（`hexShare` ／ `relayed` でない）なら全量。大きいほうだけ最大HPを削る（下限 1・今の HP は新しい最大HPで切る）。ミサの炸裂の一撃が同じ的に爪痕を残すとき（`_ruptureTarget`）は削らない（二重に削らない）。倒れた傷は削らない。
+- 表示専用: 第291期の `Scar`（`ActorId` は出どころ・無ければ null）。計数だけ: `UnitTally.Cs355Scar*`。
