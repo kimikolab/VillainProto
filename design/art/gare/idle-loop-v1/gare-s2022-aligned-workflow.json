@@ -1,0 +1,146 @@
+{
+  "1": {
+    "class_type": "LoadVideo",
+    "inputs": {
+      "file": "vp_gare_s2022_raw.mp4"
+    }
+  },
+  "2": {
+    "class_type": "GetVideoComponents",
+    "inputs": {
+      "video": [
+        "1",
+        0
+      ]
+    }
+  },
+  "40": {
+    "class_type": "VPIdleLoopFind",
+    "inputs": {
+      "images": [
+        "2",
+        0
+      ],
+      "min_length": 16,
+      "max_length": 48,
+      "skip_head": 8,
+      "min_motion": 3,
+      "compare_size": 192,
+      "min_step": 2.5,
+      "crossfade": 6
+    }
+  },
+  "41": {
+    "class_type": "BiRefNetRMBG",
+    "inputs": {
+      "image": [
+        "40",
+        0
+      ],
+      "model": "BiRefNet_toonout",
+      "sensitivity": 1,
+      "mask_blur": 0,
+      "mask_offset": 0,
+      "invert_output": false,
+      "refine_foreground": false,
+      "background": "Alpha",
+      "background_color": "#222222"
+    }
+  },
+  "42": {
+    "class_type": "VPGreenKeyAlpha",
+    "inputs": {
+      "images": [
+        "40",
+        0
+      ],
+      "mask": [
+        "41",
+        1
+      ],
+      "key_low": 25,
+      "key_high": 75,
+      "despill": true,
+      "edge_width": 12
+    }
+  },
+  "43": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "73",
+        0
+      ],
+      "filename_prefix": "VillainProto/idle_loop/gare_s2022_final_aligned_rgba/f"
+    }
+  },
+  "44": {
+    "class_type": "SaveAnimatedWEBP",
+    "inputs": {
+      "images": [
+        "73",
+        0
+      ],
+      "filename_prefix": "VillainProto/idle_loop/gare_s2022_final_aligned_loop",
+      "fps": 16,
+      "lossless": false,
+      "quality": 90,
+      "method": "default"
+    }
+  },
+  "45": {
+    "class_type": "PreviewAny",
+    "inputs": {
+      "source": [
+        "40",
+        4
+      ]
+    }
+  },
+  "70": {
+    "class_type": "EmptyImage",
+    "inputs": {
+      "width": 640,
+      "height": 960,
+      "batch_size": 30,
+      "color": 0
+    }
+  },
+  "71": {
+    "class_type": "SolidMask",
+    "inputs": {
+      "value": 1,
+      "width": 640,
+      "height": 960
+    }
+  },
+  "72": {
+    "class_type": "JoinImageWithAlpha",
+    "inputs": {
+      "image": [
+        "70",
+        0
+      ],
+      "alpha": [
+        "71",
+        0
+      ]
+    }
+  },
+  "73": {
+    "class_type": "ImageCompositeMasked",
+    "inputs": {
+      "destination": [
+        "72",
+        0
+      ],
+      "source": [
+        "42",
+        0
+      ],
+      "x": 0,
+      "y": 1,
+      "resize_source": false
+    }
+  }
+}

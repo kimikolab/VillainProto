@@ -1,0 +1,260 @@
+{
+  "tag": "gare_A70_coherent_aligned",
+  "date": "2026-10-20",
+  "seed": 2022,
+  "amplitude": 0.7,
+  "crossfade": 6,
+  "frames": 30,
+  "fps": 16,
+  "size": [
+    640,
+    960
+  ],
+  "foot_rows": [
+    939,
+    940
+  ],
+  "total_bytes": 19247946,
+  "files": [
+    {
+      "source": "design/art/gare/idle-loop-v3/frames/f_00001_.png",
+      "installed": "DemoApp/assets/portraits/battle/idle_loop/gare/gare_idle_00.png",
+      "source_sha256": "0004f0f4fcd35cdd130572ad39cde3ee12e9ef49ab67ffd2f37a25469725250e",
+      "installed_sha256": "adf2afc736f7076a7f7330e9a491de6afd223cbfc48e65bed8a7080e0c235ca9",
+      "bytes": 636898,
+      "pixels_equal": true
+    },
+    {
+      "source": "design/art/gare/idle-loop-v3/frames/f_00002_.png",
+      "installed": "DemoApp/assets/portraits/battle/idle_loop/gare/gare_idle_01.png",
+      "source_sha256": "4250d8b340a09687f31cdc5e4d4b57bc17c31c4cea0a1fa34cfabaf2bdd2ad8e",
+      "installed_sha256": "813f7a5e13d151dcbf8c94ad203a13b75fc9018e9601de3e7c5c42726131edca",
+      "bytes": 636496,
+      "pixels_equal": true
+    },
+    {
+      "source": "design/art/gare/idle-loop-v3/frames/f_00003_.png",
+      "installed": "DemoApp/assets/portraits/battle/idle_loop/gare/gare_idle_02.png",
+      "source_sha256": "194c2d742d54dfa36ae6f2770dbc9fc1b03ab7268b612c8e74fd6117fd3712f3",
+      "installed_sha256": "d6297cb94b32d8365dfbc55988d06023acd108ca58b6c84f585cb5e1411945cf",
+      "bytes": 635478,
+      "pixels_equal": true
+    },
+    {
+      "source": "design/art/gare/idle-loop-v3/frames/f_00004_.png",
+      "installed": "DemoApp/assets/portraits/battle/idle_loop/gare/gare_idle_03.png",
+      "source_sha256": "9baec66b3da6b8e27a23eb7552c4314208f16fa3682e1823c7c5283c73dc6098",
+      "installed_sha256": "0c5df434532b15891e6fb2bc47fe902b3d5c0a9d8a51981c55298023fd26f397",
+      "bytes": 635158,
+      "pixels_equal": true
+    },
+    {
+      "source": "design/art/gare/idle-loop-v3/frames/f_00005_.png",
+      "installed": "DemoApp/assets/portraits/battle/idle_loop/gare/gare_idle_04.png",
+      "source_sha256": "2e37919c5ce1c042755024a88325804aa2368f1a6179a85f5b8720dad94a1399",
+      "installed_sha256": "34fdf061f170115e23bd1af989855c85054896644ea5bcbb7ead7a8ec4d64509",
+      "bytes": 636684,
+      "pixels_equal": true
+    },
+    {
+      "source": "design/art/gare/idle-loop-v3/frames/f_00006_.png",
+      "installed": "DemoApp/assets/portraits/battle/idle_loop/gare/gare_idle_05.png",
+      "source_sha256": "724ba6776dd6f81ebd98938ce7d9bdea526e9c7ab046d6af06cb4c090f0376bc",
+      "installed_sha256": "53804bb3ca553193f493fffe8d45296d36b8722c4acb7288b48770c26bb26566",
+      "bytes": 637624,
+      "pixels_equal": true
+    },
+    {
+      "source": "design/art/gare/idle-loop-v3/frames/f_00007_.png",
+      "installed": "DemoApp/assets/portraits/battle/idle_loop/gare/gare_idle_06.png",
+      "source_sha256": "29cc88660baecb51483c0d7742af607c9816857ef6474818bad7a62d8b493bd5",
+      "installed_sha256": "439146710bd7da97fcdde80b08b93d5a55ff004096a2e8a34e3a207a1768db70",
+      "bytes": 637924,
+      "pixels_equal": true
+    },
+    {
+      "source": "design/art/gare/idle-loop-v3/frames/f_00008_.png",
+      "installed": "DemoApp/assets/portraits/battle/idle_loop/gare/gare_idle_07.png",
+      "source_sha256": "d7948a76b33714c7eb7f64b6b29eef51b87d4b96570991db09808869e1d7766f",
+      "installed_sha256": "c36cb293af35e10837df27c16146bd527c742f84de65515e68dff53b991635fe",
+      "bytes": 637402,
+      "pixels_equal": true
+    },
+    {
+      "source": "design/art/gare/idle-loop-v3/frames/f_00009_.png",
+      "installed": "DemoApp/assets/portraits/battle/idle_loop/gare/gare_idle_08.png",
+      "source_sha256": "3206c5f63e8b331b0d4bcdb3d418f6c36b9b7fab0fc509c844fdf51cc248d353",
+      "installed_sha256": "2be4ec64ee0a11fddb97ecd2ab9c1da24ddedbc18848470bb898ec8846ce5b29",
+      "bytes": 637546,
+      "pixels_equal": true
+    },
+    {
+      "source": "design/art/gare/idle-loop-v3/frames/f_00010_.png",
+      "installed": "DemoApp/assets/portraits/battle/idle_loop/gare/gare_idle_09.png",
+      "source_sha256": "eeade33f4573c9fdccbe81ac65fec1071614347d8c06672c511c7a21307b8f4f",
+      "installed_sha256": "eb507ac062864088b5bd7cd2bc513a0b204d1859f1a614bdef5e62f4a7049577",
+      "bytes": 636913,
+      "pixels_equal": true
+    },
+    {
+      "source": "design/art/gare/idle-loop-v3/frames/f_00011_.png",
+      "installed": "DemoApp/assets/portraits/battle/idle_loop/gare/gare_idle_10.png",
+      "source_sha256": "3ef0f74aca4da88144ca3c44a3955b3df2c816f2b97c0238b8677edcd7ed1ee1",
+      "installed_sha256": "897ac956071e1fbc8cb193da5c3c20fcf654b415555ad2f35a34778c75d66473",
+      "bytes": 639030,
+      "pixels_equal": true
+    },
+    {
+      "source": "design/art/gare/idle-loop-v3/frames/f_00012_.png",
+      "installed": "DemoApp/assets/portraits/battle/idle_loop/gare/gare_idle_11.png",
+      "source_sha256": "6b6c97739bc8c28be78f442cd2cef6af52c0e9e18e24f11794b2c0f6b22cea5b",
+      "installed_sha256": "3e5033238d549c32465b56dd1b63f415a1b8b270a6cd662145a4fdb7a5c85123",
+      "bytes": 639855,
+      "pixels_equal": true
+    },
+    {
+      "source": "design/art/gare/idle-loop-v3/frames/f_00013_.png",
+      "installed": "DemoApp/assets/portraits/battle/idle_loop/gare/gare_idle_12.png",
+      "source_sha256": "803e0a9813a2461c2829a14d8837f84e35def2d6da40d661c290a53fd193b432",
+      "installed_sha256": "331ad12cce0b2f07a51c0e540471846a96257a32eb06a5ea11508886805c7a88",
+      "bytes": 641488,
+      "pixels_equal": true
+    },
+    {
+      "source": "design/art/gare/idle-loop-v3/frames/f_00014_.png",
+      "installed": "DemoApp/assets/portraits/battle/idle_loop/gare/gare_idle_13.png",
+      "source_sha256": "95a950d852ad3fce03bd6a778cceccc4e9592cafbe2ebd6d8223c0c531d1e8ca",
+      "installed_sha256": "debacd7686c15de6583b0f1c8f8e2701a8310668582aa3bee78dd5ecb994428a",
+      "bytes": 642652,
+      "pixels_equal": true
+    },
+    {
+      "source": "design/art/gare/idle-loop-v3/frames/f_00015_.png",
+      "installed": "DemoApp/assets/portraits/battle/idle_loop/gare/gare_idle_14.png",
+      "source_sha256": "9de2f745f3384ecdff9b1c9d80d07a9668c0fafcf07852a93387dba9b0ef296f",
+      "installed_sha256": "509a8daa51d4be14fe6176f4ec3927d587562964fe360e7409bcba0c308fed37",
+      "bytes": 644015,
+      "pixels_equal": true
+    },
+    {
+      "source": "design/art/gare/idle-loop-v3/frames/f_00016_.png",
+      "installed": "DemoApp/assets/portraits/battle/idle_loop/gare/gare_idle_15.png",
+      "source_sha256": "8693c03524b9796cab2d7c341dceaf7423ad38e67aa99a16ea036267d17cc5ed",
+      "installed_sha256": "2b630d788e27a43271587e733698843731507b61c1ad2a48c6ff384e7431b553",
+      "bytes": 646230,
+      "pixels_equal": true
+    },
+    {
+      "source": "design/art/gare/idle-loop-v3/frames/f_00017_.png",
+      "installed": "DemoApp/assets/portraits/battle/idle_loop/gare/gare_idle_16.png",
+      "source_sha256": "5b6330cd31849a533ee4a24e63f5f1167e5ad90cb5c80d62a908ad5d3ee9cc7b",
+      "installed_sha256": "5e71b784e6f684447cdd2ee92601fff027b99d5230074d0cb3d1b7393273e7f3",
+      "bytes": 647360,
+      "pixels_equal": true
+    },
+    {
+      "source": "design/art/gare/idle-loop-v3/frames/f_00018_.png",
+      "installed": "DemoApp/assets/portraits/battle/idle_loop/gare/gare_idle_17.png",
+      "source_sha256": "901a045b42ff76475829d6c40c718708862a4c442f99e45b82d73f4a8a0e0a76",
+      "installed_sha256": "091fc2c9b0cd5c8e5a3203edbe0505f8ddeec52f01dd520b1b3ac43439434ad3",
+      "bytes": 648180,
+      "pixels_equal": true
+    },
+    {
+      "source": "design/art/gare/idle-loop-v3/frames/f_00019_.png",
+      "installed": "DemoApp/assets/portraits/battle/idle_loop/gare/gare_idle_18.png",
+      "source_sha256": "64210ea5ed9334f0a0e1feaed92e86a950b273df0d1167acd7f90270bf22fe66",
+      "installed_sha256": "d8ca79a92b82f94ba078f3d1a786b37ad645c6e926e75cedcab907048759c28e",
+      "bytes": 648772,
+      "pixels_equal": true
+    },
+    {
+      "source": "design/art/gare/idle-loop-v3/frames/f_00020_.png",
+      "installed": "DemoApp/assets/portraits/battle/idle_loop/gare/gare_idle_19.png",
+      "source_sha256": "b46fb24d10d9672389589e9a4ab7910206471dff2c469b9183d19367a0992bde",
+      "installed_sha256": "f58bb8f91248b6b96cc400246c516bdd20229e633b623e8cdf6f83498fd57fbe",
+      "bytes": 648856,
+      "pixels_equal": true
+    },
+    {
+      "source": "design/art/gare/idle-loop-v3/frames/f_00021_.png",
+      "installed": "DemoApp/assets/portraits/battle/idle_loop/gare/gare_idle_20.png",
+      "source_sha256": "e88e9ea84f269f6332dbe1d207dc6bd1a8d5d1862a2397690a3f24cc7b9eb838",
+      "installed_sha256": "6608520151d8cd86a92f6e6a2843f6377cd2a9fad048bc48d9b1f2b0db67e744",
+      "bytes": 647168,
+      "pixels_equal": true
+    },
+    {
+      "source": "design/art/gare/idle-loop-v3/frames/f_00022_.png",
+      "installed": "DemoApp/assets/portraits/battle/idle_loop/gare/gare_idle_21.png",
+      "source_sha256": "f39b7bbf291218d6674081175eaa51dca610ac41f580f0b40996cd57453b8dc8",
+      "installed_sha256": "83af7e38135c1b6543b1274ef029705f6b86ff7d5a6f7c7ad363065572898558",
+      "bytes": 647170,
+      "pixels_equal": true
+    },
+    {
+      "source": "design/art/gare/idle-loop-v3/frames/f_00023_.png",
+      "installed": "DemoApp/assets/portraits/battle/idle_loop/gare/gare_idle_22.png",
+      "source_sha256": "bc36496a0d9bade44ec15c7278e38d71551a722aee7c4fdebfefc6c502f71cca",
+      "installed_sha256": "6e3ba6d91db5e9057f60c33df98adb5e5251650d427634da1b678f4ff865da3b",
+      "bytes": 646059,
+      "pixels_equal": true
+    },
+    {
+      "source": "design/art/gare/idle-loop-v3/frames/f_00024_.png",
+      "installed": "DemoApp/assets/portraits/battle/idle_loop/gare/gare_idle_23.png",
+      "source_sha256": "0683c401e11bcc37e7537bdcf9e6ded1fa1f8cd29a7bec5b82570f60445e5540",
+      "installed_sha256": "aaff7d980df103d090cb84cc9170c3f8f169b44c3d12de1ba674cdf1b481c5a2",
+      "bytes": 644965,
+      "pixels_equal": true
+    },
+    {
+      "source": "design/art/gare/idle-loop-v3/frames/f_00025_.png",
+      "installed": "DemoApp/assets/portraits/battle/idle_loop/gare/gare_idle_24.png",
+      "source_sha256": "241b9db25a0472add63d9f500268bcec4ba7f970c923d88101bfe6230d59338e",
+      "installed_sha256": "29e81a102cc1e078f80cc06f68e01668e94e654cfc348c725992314fb89fd7fe",
+      "bytes": 644389,
+      "pixels_equal": true
+    },
+    {
+      "source": "design/art/gare/idle-loop-v3/frames/f_00026_.png",
+      "installed": "DemoApp/assets/portraits/battle/idle_loop/gare/gare_idle_25.png",
+      "source_sha256": "446e95f0cac0155f95f08a9367af9980c6dfed45e9c5f31c0f98770a6b6a2f0d",
+      "installed_sha256": "c564fe01b945993e9dfab01c342981c37d3fe6a9554d623b94dbb3c7202d2bc7",
+      "bytes": 643364,
+      "pixels_equal": true
+    },
+    {
+      "source": "design/art/gare/idle-loop-v3/frames/f_00027_.png",
+      "installed": "DemoApp/assets/portraits/battle/idle_loop/gare/gare_idle_26.png",
+      "source_sha256": "43205760e09801968aaea492bb8190ce69e0ebe40d231711d2962400d826e779",
+      "installed_sha256": "3089230a908a19b8838da00affeb85947259ac1d4e1b9d05ef7bd604aae36d29",
+      "bytes": 642516,
+      "pixels_equal": true
+    },
+    {
+      "source": "design/art/gare/idle-loop-v3/frames/f_00028_.png",
+      "installed": "DemoApp/assets/portraits/battle/idle_loop/gare/gare_idle_27.png",
+      "source_sha256": "b18d18ac557de2a11d04e5fac2d595ed32fc7f93058746538bdf2c2b7f1c8d53",
+      "installed_sha256": "bf1326262f04bd409c786ef4d103842870c846d57e0a3e4be219bc1c9871916f",
+      "bytes": 640609,
+      "pixels_equal": true
+    },
+    {
+      "source": "design/art/gare/idle-loop-v3/frames/f_00029_.png",
+      "installed": "DemoApp/assets/portraits/battle/idle_loop/gare/gare_idle_28.png",
+      "source_sha256": "457403db2ad8c4acede4027225cab88b27aa9d196b88c0b8ba24acbf9ac5170d",
+      "installed_sha256": "ea78620e03d7c3481c2bd10903cc8f4dc3c6af9d4fa2bf13d3a5eeed1690c76c",
+      "bytes": 638744,
+      "pixels_equal": true
+    },
+    {
+      "source": "design/art/gare/idle-loop-v3/frames/f_00030_.png",
+      "installed": "DemoApp/assets/portraits/battle/idle_loop/gare/gare_idle_29.png",
+      "source_sha256": "e15e87b031b1361cf7a67d2c1115a9fa746a05d7679f9675206e49d74910c00f",
+      "installed_sha256": "7a0769a3d0b2ce4f151c84b463fb03571755bfc624a812e9420f63aa4c624cdf",
+      "bytes": 638401,
+      "pixels_equal": true
+    }
+  ]
+}

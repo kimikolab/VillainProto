@@ -1,0 +1,166 @@
+{
+  "1": {
+    "class_type": "LoadVideo",
+    "inputs": {
+      "file": "vp_gare_s2022_raw.mp4"
+    }
+  },
+  "2": {
+    "class_type": "GetVideoComponents",
+    "inputs": {
+      "video": [
+        "1",
+        0
+      ]
+    }
+  },
+  "5": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "vp_gare.png"
+    }
+  },
+  "6": {
+    "class_type": "JoinImageWithAlpha",
+    "inputs": {
+      "image": [
+        "5",
+        0
+      ],
+      "alpha": [
+        "5",
+        1
+      ]
+    }
+  },
+  "7": {
+    "class_type": "ImageScale",
+    "inputs": {
+      "image": [
+        "6",
+        0
+      ],
+      "upscale_method": "lanczos",
+      "width": 640,
+      "height": 960,
+      "crop": "disabled"
+    }
+  },
+  "8": {
+    "class_type": "SplitImageWithAlpha",
+    "inputs": {
+      "image": [
+        "7",
+        0
+      ]
+    }
+  },
+  "9": {
+    "class_type": "InvertMask",
+    "inputs": {
+      "mask": [
+        "8",
+        1
+      ]
+    }
+  },
+  "20": {
+    "class_type": "EmptyImage",
+    "inputs": {
+      "width": 640,
+      "height": 960,
+      "batch_size": 1,
+      "color": 45376
+    }
+  },
+  "21": {
+    "class_type": "ImageCompositeMasked",
+    "inputs": {
+      "destination": [
+        "20",
+        0
+      ],
+      "source": [
+        "8",
+        0
+      ],
+      "x": 0,
+      "y": 0,
+      "resize_source": false,
+      "mask": [
+        "9",
+        0
+      ]
+    }
+  },
+  "22": {
+    "class_type": "VPScaleIdleMotion",
+    "inputs": {
+      "images": [
+        "40",
+        0
+      ],
+      "reference": [
+        "21",
+        0
+      ],
+      "amplitude": 0.8,
+      "frames": 30,
+      "harmonics": 3,
+      "spatial_smooth": 2,
+      "reference_rgba": [
+        "7",
+        0
+      ]
+    }
+  },
+  "23": {
+    "class_type": "PreviewAny",
+    "inputs": {
+      "source": [
+        "22",
+        1
+      ]
+    }
+  },
+  "24": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "22",
+        3
+      ],
+      "filename_prefix": "VillainProto/idle_loop/gare_A80_rgba/f"
+    }
+  },
+  "25": {
+    "class_type": "SaveAnimatedWEBP",
+    "inputs": {
+      "images": [
+        "22",
+        3
+      ],
+      "filename_prefix": "VillainProto/idle_loop/gare_A80_loop",
+      "fps": 16,
+      "lossless": false,
+      "quality": 90,
+      "method": "default"
+    }
+  },
+  "40": {
+    "class_type": "VPIdleLoopFind",
+    "inputs": {
+      "images": [
+        "2",
+        0
+      ],
+      "min_length": 16,
+      "max_length": 48,
+      "skip_head": 8,
+      "min_motion": 3,
+      "compare_size": 192,
+      "min_step": 2.5,
+      "crossfade": 6
+    }
+  }
+}

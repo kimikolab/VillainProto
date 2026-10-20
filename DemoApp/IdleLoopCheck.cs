@@ -19,6 +19,7 @@ public partial class IdleLoopCheck : Node3D
             Require(BattlePawn3D.IdleLoopFramesOf("borg").Length == 44, "ボルグの連番 44 コマ");
             Require(BattlePawn3D.IdleLoopFramesOf("hota").Length == 36, "ホタの連番 36 コマ");
             Require(BattlePawn3D.IdleLoopFramesOf("gald").Length == 32, "ガルドの連番 32 コマ");
+            Require(BattlePawn3D.IdleLoopFramesOf("gare").Length == 30, "ガレの連番 30 コマ");
             Require(BattlePawn3D.IdleLoopFramesOf("golm").Length == 0, "連番の無い駒は空");
             var still = UiKit.BattlePortrait(atlas, "hiyo");
 
@@ -30,6 +31,8 @@ public partial class IdleLoopCheck : Node3D
             var borg = MakePawn(atlas, 4, BattleContext.PlayerTeam, -2.6f, "borg");
             var hota = MakePawn(atlas, 5, BattleContext.PlayerTeam, 2.4f, "hota");
             var gald = MakePawn(atlas, 6, BattleContext.PlayerTeam, 4.8f, "gald");
+            var gare = MakePawn(atlas, 8, BattleContext.PlayerTeam, 8.0f, "gare");
+            var gareEnemy = MakePawn(atlas, 9, BattleContext.EnemyTeam, 9.8f, "gare");
             var sprite = SpriteOf(hiyo);
 
             // 開戦直後から連番。待機絵と同じ高さ（=同じ足元）で描く。
@@ -38,13 +41,27 @@ public partial class IdleLoopCheck : Node3D
             float worldHeight = sprite.Texture.GetHeight() * sprite.PixelSize;
             Require(Math.Abs(worldHeight - UiKit.PortraitWorldHeight("hiyo")) < 1e-4f, "待機絵と同じ高さ");
             Require(!golm.IdleLoopPlaying && SpriteOf(golm).Texture == UiKit.BattlePortrait(atlas, "golm"), "連番の無い駒は静止絵のまま");
-            foreach (var (pawn, key) in new[] { (borg, "borg"), (hota, "hota"), (gald, "gald") })
+            foreach (var (pawn, key) in new[] { (borg, "borg"), (hota, "hota"), (gald, "gald"), (gare, "gare") })
             {
                 var s = SpriteOf(pawn);
                 Require(pawn.IdleLoopPlaying && BattlePawn3D.IdleLoopFramesOf(key).Contains(s.Texture), $"{key} も開戦から連番");
                 Require(Math.Abs(s.Texture.GetHeight() * s.PixelSize - UiKit.PortraitWorldHeight(key)) < 1e-4f, $"{key} も待機絵と同じ高さ");
                 Require(Shader(s) == s.Texture, $"{key} もシェーダーと同じ連番");
             }
+            Require(CountDistinct(gare, 0.6) >= 6, "ガレの連番も進む");
+            gare.AnimationSpeed = 2;
+            Require(CountDistinct(gare, 0.3) >= 6, "ガレも倍速で進む");
+            gare.AnimationSpeed = 1;
+            gare.SetBurning(true);
+            Require(gare.IdleLoopPlaying, "ガレは燃焼中も回る");
+            gare.SetBurning(false);
+            gare.AnimateDeath();
+            var gareDead = SpriteOf(gare).Texture;
+            CountDistinct(gare, 0.3);
+            Require(!gare.IdleLoopPlaying && SpriteOf(gare).Texture == gareDead, "ガレも死亡で止まる");
+            gare.AnimateRevive();
+            Require(gare.IdleLoopPlaying && BattlePawn3D.IdleLoopFramesOf("gare").Contains(SpriteOf(gare).Texture), "ガレも蘇生で再開");
+            Require(SpriteOf(gareEnemy).FlipH && gareEnemy.IdleLoopPlaying, "敵側のガレも反転して回る");
             Require(CountDistinct(gald, 0.6) >= 6, "ガルドの連番も進む");
             gald.AnimateDeath();
             var galdDead = SpriteOf(gald).Texture;
@@ -118,12 +135,14 @@ public partial class IdleLoopCheck : Node3D
 
             // 勝利絵を連番で上書きしない。
             hiyo.AnimateVictory();
+            gare.AnimateVictory();
             await Wait(0.7);
             Require(!hiyo.IdleLoopPlaying && sprite.Texture == UiKit.Portrait(atlas, "hiyo"), "勝利絵を保つ");
             Require(!galdWinner.IdleLoopPlaying && SpriteOf(galdWinner).Texture == UiKit.Portrait(atlas, "gald"), "ガルドも勝利絵を保つ");
+            Require(!gare.IdleLoopPlaying && SpriteOf(gare).Texture == UiKit.Portrait(atlas, "gare"), "ガレも勝利絵を保つ");
             Require(still != frames[0], "静止絵と連番は別の画像");
 
-            GD.Print("IDLE_LOOP_CHECK_OK hiyo borg hota hota_burning gald start advance speed gift burning burning-variant death revive victory enemy fallback sword kneel");
+            GD.Print("IDLE_LOOP_CHECK_OK hiyo borg hota hota_burning gald gare start advance speed gift burning burning-variant death revive victory enemy fallback sword kneel");
             GetTree().Quit();
         }
         catch (Exception e)

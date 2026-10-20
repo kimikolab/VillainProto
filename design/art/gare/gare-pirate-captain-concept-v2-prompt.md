@@ -1,0 +1,13 @@
+# 巨大砲の女海賊キャプテン — 衣装試作 v2
+
+生成: 内蔵 image_gen（2026-10-19）。
+画像: `gare-pirate-captain-concept-v2.png`。
+編集元: `gare-pirate-captain-concept-v1.png`。
+用途: ミニスカートと露出を増やした衣装の別案。ゲームには適用しない。
+顔・赤髪・帽子・巨大砲・構え・海賊風の長い羽織りを維持。スカートをミニ丈へ変更し、脚・デコルテ・腰まわりの露出を増やす。
+
+## 編集プロンプト
+
+Use case: precise-object-edit. Edit the supplied adult red-haired female pirate captain concept into an outfit variation. Preserve EXACTLY the same visibly adult woman around 30: face identity, strong narrowed amber eyes, confident challenging smirk, long red-auburn hair, tricorn hat, natural adult body proportions, proud standing pose, both hand positions, entire enormous naval cannon resting across her shoulder, cannon's worn wood and iron materials, camera composition, light warm-gray background and soft ground shadow. Match the exact fine anime outlines and softly painted muted material treatment.
+USER-REQUESTED CLOTHING CHANGES: Keep the pirate outer COAT / ROBE essentially unchanged: same black/navy color, antique gold edging and brass buttons, rolled cuffs, open front, long flowing coat tails and worn fabric. The contrast should be LONG OUTER ROBE plus a SHORT MINI SKIRT underneath. Replace the existing long burgundy dress skirt and trailing ivory underskirt with a burgundy layered MINI SKIRT ending at the upper-to-mid thigh. It is clearly a short wearable skirt with a little volume and an asymmetric gathered hem, still reminiscent of her original pirate dress, but both thighs are now plainly visible; no long underskirt hanging below it. Keep the waist sash and broad leather belt, resized naturally for the outfit. Her existing knee-high brown leather boots remain, leaving a substantial visible bare-thigh gap between mini skirt and boot tops. Bare human skin, no leggings, tights or thigh-high stockings.
+Make the torso outfit somewhat more revealing in a confident adult pirate fashion: ivory blouse with a lower open neckline showing upper chest and a tasteful amount of cleavage, still fully covering breasts; fitted cropped brown leather bodice/waistcoat, and a modest strip of bare midriff above the skirt waistband. The silhouette is a powerful stylish captain, not a pinup. Keep the outer coat framing the body and its long tails clearly visible. Preserve natural anatomy, original chest size and grounded upright stance. No nudity, no exposed nipples or genitals, no transparent clothing, no underwear visible, no thong or extreme underboob. Avoid changing face, hair, age, weapon, pose or coat to accomplish the outfit change. No new props, extra people, firing effects, captions, panels or watermark. Entire hat, cannon, miniskirt, both legs and boot soles within the portrait canvas.

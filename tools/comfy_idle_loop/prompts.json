@@ -1,5 +1,24 @@
 {
   "_readme": "④b（キャラごとの文）。組み立ては idle_loop.py の compose(): HEAD + char + motion + 共通の縛り（sway を含む）。neg は共通の負のプロンプトの後ろに足す。新しいキャラは既存の項目を写して char / motion / sway を書き換える。motion には『膝がはっきり曲がって伸びる・弾む』を必ず入れる（『ゆっくり重く』『わずかに』と書くと止まる）。",
+  "gare": {
+    "still": "DemoApp/assets/portraits/battle/gare_idle_right.png",
+    "pronoun": "she",
+    "char": "The adult red-haired human pirate captain in a black tricorn hat, a long open black and gold pirate coat, an ivory blouse, a brown leather bodice, a short burgundy layered skirt and tall brown boots keeps the same right-facing planted stance. She holds ONE broad flared-muzzle blunderbuss scattergun horizontally at waist height in BOTH hands: her rear hand grips the wooden stock at the trigger, and her forward hand supports the wooden fore-end. Small silver mirror fragments remain inside the muzzle and in the two pouches at her hips. ",
+    "motion": "Like a confident fighting game gunner, she makes a steady measured rhythmic springy idle motion in place: her knees clearly bend and straighten, her hips and torso sink and rise together, and her shoulders and supported forearms rise and settle with her breathing. She keeps her back upright, chest lifted, chin level and eyes on the opponent. Her head and neck follow the torso naturally without nodding. Both hands keep exactly the same grips, and the scattergun moves together with her connected arms and shoulders as one heavy supported object. Repeat the same ready-guard breathing cycle several times; she is waiting, never aiming or attacking. ",
+    "sway": "Her long red hair and long coat tails softly sway and settle after the body, while the skirt and hip pouches follow the same connected movement. The hat stays seated on her head. The scattergun barrel and stock stay straight and rigid, with constant shape, length and muzzle diameter. The silver fragments stay inside the gun and pouches. No firing, no recoil, no reload, no loose shards, no sparks, no smoke, no flames, no glow.",
+    "neg": "hunched back, slouching, bowing head, exhausted posture, head nodding, extreme bounce, gun recoil, firing gun, muzzle flash, smoke, reloading, aiming gun, lifting gun, swinging gun, hand releasing stock, fingers leaving fore-end, bending barrel, changing gun length, shrinking muzzle, giant shoulder cannon, flying shards, changing hat, hat falling off, skirt changing length, disconnected neck, separate moving body parts",
+    "note": "2026-10-20 現行の海賊・散弾砲筒版ガレ。seed 2022 / 5055のv1比較でユーザーはAを選好。v2の髪・袖付近の揺らぎを修正し、Aの同じ周期で振幅0.7・空間平滑化6・両袖と砲筒の形状保持・周囲の連続変形を使うv3 gare_A70_coherent_aligned（30コマ・16fps・頭頂の上下18px）をユーザーが採用、ゲームへ反映。再現・比較・採用記録はdesign/art/gare/idle-loop-v3/。",
+    "adopted": {
+      "tag": "gare_A70_coherent_aligned",
+      "seed": 2022,
+      "amplitude": 0.7,
+      "crossfade": 6,
+      "frames": 30,
+      "fps": 16,
+      "loop": "gare",
+      "date": "2026-10-20"
+    }
+  },
   "gald": {
     "still": "DemoApp/assets/portraits/battle/gald_idle_right.png",
     "pronoun": "he",

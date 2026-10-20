@@ -1,0 +1,20 @@
+{
+  "A80": {
+    "head_range_px": 21,
+    "foot_rows": [
+      939,
+      939
+    ],
+    "border_contacts": 0,
+    "sleeve_nonrigid_residual_median_px": 1.2662118820155763
+  },
+  "A70": {
+    "head_range_px": 18,
+    "foot_rows": [
+      939,
+      940
+    ],
+    "border_contacts": 0,
+    "sleeve_nonrigid_residual_median_px": 0.42972409111410337
+  }
+}
