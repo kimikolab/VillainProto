@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 using I = Inv348Diag;
 using D = Db351Diag;
@@ -82,7 +82,7 @@ static partial class Sh359Diag
     internal const string GareRow = S8.GareRow, UroRow = S8.UroRow;
     static Formation Row(string n) => CompareBuilds().Concat(CrossBuilds()).First(r => r.Name == n).F;
     internal const string KeyA = "ウロ・ガルド・ガレ・ツギ・ヒビ", KeyB = "ドルガ・ササ・ゴルム・ヒビ・ガレ";   // 第358期の A ／ B（駒は規定・段0 入り）
-    internal static readonly UnitDef[] Fixed = { UnitCatalog.HibiH359, UnitCatalog.Gare };
+    internal static readonly UnitDef[] Fixed = { UnitCatalog.HibiH359, UnitCatalog.GareH364 };
     internal static readonly UnitDef[] Pool = { UnitCatalog.Uro, UnitCatalog.Tsugi, UnitCatalog.SasaH360, UnitCatalog.Gald, UnitCatalog.Dolga, UnitCatalog.Golm, UnitCatalog.Nel };
     internal static Formation ByKey(string key)
     {

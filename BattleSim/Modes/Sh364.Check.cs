@@ -54,6 +54,15 @@ static partial class Sh364Diag
     }
     static string S(int[] a) => string.Join("/", a);
 
+    /// <summary>第365期: 第364期の「版・」の4台（`Presets.Versions` から外した・並びはここに固定）。</summary>
+    internal static (string Name, Formation F)[] Boards364() => new (string, Formation)[]
+    {
+        ("版・AKn-A 自傷", Presets.SelfHarmPlay365(UnitCatalog.SusuAKnA)),
+        ("版・AKn-B 自傷", Presets.SelfHarmAka(UnitCatalog.SusuAKnB)),
+        ("版・GR-A 破片", Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Hibi, center: UnitCatalog.Som, back1: UnitCatalog.GareGRA, back3: UnitCatalog.Nel)),
+        ("版・GR-B 破片", Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Som, center: UnitCatalog.Nel, back1: UnitCatalog.GareGRB, back3: UnitCatalog.Hibi)),
+    };
+
     static void Check()
     {
         _fail = 0;
@@ -65,13 +74,13 @@ static partial class Sh364Diag
         // ---- 版の定義 ----
         {
             bool ok = UnitCatalog.SusuAKnA.Traits.SequenceEqual(UnitCatalog.SusuAKn.Traits.Append(TraitId.ScatterGather)) && UnitCatalog.SusuAKnB.Traits.SequenceEqual(UnitCatalog.SusuAKn.Traits.Append(TraitId.ScatterShot))
-                && UnitCatalog.GareGRA.Traits.SequenceEqual(UnitCatalog.Gare.Traits.Append(TraitId.ScatterGather)) && UnitCatalog.GareGRB.Traits.SequenceEqual(UnitCatalog.Gare.Traits.Append(TraitId.ScatterShot))
-                && new[] { UnitCatalog.SusuAKnA, UnitCatalog.SusuAKnB }.All(d => d.Id == "susu" && d.MaxHp == UnitCatalog.Susu.MaxHp && d.Speed == UnitCatalog.Susu.Speed)
-                && new[] { UnitCatalog.GareGRA, UnitCatalog.GareGRB }.All(d => d.Id == "gare" && d.MaxHp == UnitCatalog.Gare.MaxHp && d.Speed == UnitCatalog.Gare.Speed && d.Attack == UnitCatalog.Gare.Attack)
+                && UnitCatalog.GareGRA.Traits.SequenceEqual(UnitCatalog.GareH364.Traits.Append(TraitId.ScatterGather)) && UnitCatalog.GareGRB.Traits.SequenceEqual(UnitCatalog.GareH364.Traits.Append(TraitId.ScatterShot))
+                && new[] { UnitCatalog.SusuAKnA, UnitCatalog.SusuAKnB }.All(d => d.Id == "susu" && d.MaxHp == UnitCatalog.SusuH364.MaxHp && d.Speed == UnitCatalog.SusuH364.Speed)
+                && new[] { UnitCatalog.GareGRA, UnitCatalog.GareGRB }.All(d => d.Id == "gare" && d.MaxHp == UnitCatalog.GareH364.MaxHp && d.Speed == UnitCatalog.GareH364.Speed && d.Attack == UnitCatalog.GareH364.Attack)
                 && UnitCatalog.SusuAKnA.PlusText.Contains("一体に集まる") && UnitCatalog.SusuAKnB.PlusText.Contains("5発に分けて") && UnitCatalog.GareGRA.PlusText.Contains("一体に集まる") && UnitCatalog.GareGRB.PlusText.Contains("5発に分けて");
-            var held = UnitCatalog.All.Concat(UnitCatalog.Retired).Where(d => d.Traits.Any(x => x is TraitId.ScatterGather or TraitId.ScatterShot)).Select(d => d.Id).ToArray();
+            var held = UnitCatalog.All.Concat(UnitCatalog.Retired).Where(d => d != UnitCatalog.Susu && d != UnitCatalog.Gare && d.Traits.Any(x => x is TraitId.ScatterGather or TraitId.ScatterShot)).Select(d => d.Id).ToArray();
             Expect("版の定義: AKn-A ／ AKn-B ＝ AK-n ＋ `ScatterGather` ／ `ScatterShot`・GR-A ／ GR-B ＝ 規定のガレ ＋ 同じ札（体 ／ Id は今のまま・文面は叩き台）・新しい札の保持者は 0 枚・規定のアカ ／ ガレの札は今のまま",
-                ok && held.Length == 0 && UnitCatalog.Susu.Traits.SequenceEqual(new[] { TraitId.Ash }) && UnitCatalog.Gare.Traits.SequenceEqual(new[] { TraitId.PebbleGather }), held.Length == 0 ? "" : string.Join(",", held));
+                ok && held.Length == 0 && UnitCatalog.SusuH364.Traits.SequenceEqual(new[] { TraitId.Ash }) && UnitCatalog.GareH364.Traits.SequenceEqual(new[] { TraitId.PebbleGather }), held.Length == 0 ? "" : string.Join(",", held));
         }
 
         // ---- 形 A ----
@@ -100,7 +109,7 @@ static partial class Sh364Diag
         // ---- 規定は今どおり ----
         {
             var n1 = AkaShot(UnitCatalog.SusuAKn, 1, out _); var n5 = AkaShot(UnitCatalog.SusuAKn, 5, out _);
-            var g1 = GareShot(UnitCatalog.Gare, 1, out int d); var g5 = GareShot(UnitCatalog.Gare, 5, out _);
+            var g1 = GareShot(UnitCatalog.GareH364, 1, out int d); var g5 = GareShot(UnitCatalog.GareH364, 5, out _);
             Expect("札の無いアカ（AK-n）／ 規定のガレは今どおり（敵の数に依らず1体に1回・量そのまま）", n1.SequenceEqual(new[] { 20 }) && n5.All(x => x == 20) && g1.SequenceEqual(new[] { d }) && g5.All(x => x == d), $"AK-n {S(n1)} ／ {S(n5)}・ガレ {S(g1)} ／ {S(g5)}");
             var c = Board(R4, 1, out var me, out var foes);
             int h = foes[0].Hp; c.TakeTurn(me);
@@ -127,13 +136,15 @@ static partial class Sh364Diag
 
         // ---- 試遊の台 ----
         {
+            // 第365期: 「版・」の4台は `Presets.Versions` から外した。第364期の4台は `Boards364` に固定して確かめる。
             var vr = Presets.Versions.Select(r => r.Name).ToArray();
             string[] want = { "版・AKn-A 自傷", "版・AKn-B 自傷", "版・GR-A 破片", "版・GR-B 破片" };
-            bool rows = vr.Take(6).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片" }) && vr.Skip(6).SequenceEqual(want);
-            Expect("`Presets.Versions` ＝ 試遊の6台 ＋ 「版・」の4台（第363期の「版・」の3台は外した）", rows, string.Join("、", vr));
+            bool rows = vr.Take(6).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片" }) && !vr.Any(want.Contains);
+            Expect("`Presets.Versions` ＝ 試遊の6台が頭に残る・第364期の「版・」の4台は第365期に外した", rows, string.Join("、", vr));
             if (rows)
             {
-                Formation F(string nm) => Presets.Versions.First(r => r.Name == nm).F;
+                var b364 = Boards364();
+                Formation F(string nm) => b364.First(r => r.Name == nm).F;
                 bool ok = F(want[0]).Occupied().Any(o => o.Def == UnitCatalog.SusuAKnA) && F(want[1]).Occupied().Any(o => o.Def == UnitCatalog.SusuAKnB)
                     && F(want[2]).Occupied().Any(o => o.Def == UnitCatalog.GareGRA) && F(want[3]).Occupied().Any(o => o.Def == UnitCatalog.GareGRB)
                     && Seats(F(want[1])) == KeyB && !Trio(F(want[0])) && Has(F(want[2]), "nel") && Has(F(want[3]), "nel");

@@ -647,7 +647,7 @@ public static UnitDef PinN355(UnitDef d) => ReferenceEquals(d, UnitCatalog.Nel) 
 
 /// <summary>第359期: 規定のガレ（GR-r・礫を拾って投げる）を第139〜358期の規定（`GareH358`・砕いて撒く）に替える。ほかの駒はそのまま返す。
 /// 古い口の終端の `PinN355` の後ろに置いた（`PinB349` ／ `Pin349` ／ `Pin351` ／ `Pin353` ／ `Pin354` ／ `Pin355` を通る器具はガレも旧になる）。</summary>
-public static UnitDef PinR358(UnitDef d) => ReferenceEquals(d, UnitCatalog.Gare) ? UnitCatalog.GareH358 : PinHB359(d);   // 第360期: 規定のヒビも（古い口の終端）
+public static UnitDef PinR358(UnitDef d) => ReferenceEquals(d, UnitCatalog.Gare) || ReferenceEquals(d, UnitCatalog.GareH364) ? UnitCatalog.GareH358 : PinHB359(d);   // 第365期: 第364期までの規定（`GareH364`）も   // 第360期: 規定のヒビも（古い口の終端）
 
 /// <summary>第360期: 規定のヒビ（HB-f・倒れない ＋ 全量を返す）を第137〜359期の規定（`HibiH359`・砕け ＋ 脆弱）に替える。ほかの駒はそのまま返す。
 /// 古い口の終端の `PinR358` の後ろに置いた（`Pin349` 〜 `Pin358` を通る器具はヒビも旧になる）。</summary>
@@ -661,7 +661,18 @@ public static UnitDef PinSa360(UnitDef d) => ReferenceEquals(d, UnitCatalog.Sasa
 public static UnitDef PinSa361(UnitDef d) => ReferenceEquals(d, UnitCatalog.Sasa) ? UnitCatalog.SasaH361 : PinKd362(d);   // 第363期: 古い口の終端に `PinKd362`
 
 /// <summary>第363期: 規定のカド（KD-r・傷の棘 ＋ 棘を剥く）を第362期までの規定（`KadoH362`）に替える。ほかの駒はそのまま返す。古い口の終端（`PinSa361`）の後ろに置いた。</summary>
-public static UnitDef PinKd362(UnitDef d) => ReferenceEquals(d, UnitCatalog.Kado) ? UnitCatalog.KadoH362 : d;
+public static UnitDef PinKd362(UnitDef d) => ReferenceEquals(d, UnitCatalog.Kado) ? UnitCatalog.KadoH362 : PinAG364(d);   // 第365期: 古い口の終端に `PinAG364`
+
+/// <summary>第365期: 規定のアカ（AKn-A）／ ガレ（GR-A）を第364期までの規定（`SusuH364` ／ `GareH364`）に替える。ほかの駒はそのまま返す。古い口の終端（`PinKd362`）の後ろに置いた。</summary>
+public static UnitDef PinAG364(UnitDef d) => ReferenceEquals(d, UnitCatalog.Susu) ? UnitCatalog.SusuH364 : ReferenceEquals(d, UnitCatalog.Gare) ? UnitCatalog.GareH364 : d;
+
+/// <summary>第365期: アカの AKn-A ／ ガレの GR-A を規定にした。第364期までの規定で測った器具はこれを通す。陣形とレリックは保つ。</summary>
+public static Formation Pin364(Formation f)
+{
+    var g = f.Clone();
+    foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinAG364(d);
+    return g;
+}
 
 /// <summary>第363期: カドの KD-r を規定にした。第362期までの規定のカドで測った器具はこれを通す。陣形とレリックは保つ。</summary>
 public static Formation Pin362(Formation f)

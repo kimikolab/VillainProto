@@ -77,12 +77,12 @@ static partial class Sh363Diag
 
         // ---- 版の定義 ----
         {
-            var s = UnitCatalog.Susu; var n = UnitCatalog.SusuAKn; var x = UnitCatalog.SusuAKs;
+            var s = UnitCatalog.SusuH364; var n = UnitCatalog.SusuAKn; var x = UnitCatalog.SusuAKs;
             bool ok = n.Traits.SequenceEqual(new[] { TraitId.BloodRead }) && x.Traits.SequenceEqual(new[] { TraitId.BloodPool })
                 && new[] { n, x }.All(d => d.Id == s.Id && d.Name == s.Name && d.MaxHp == s.MaxHp && d.Attack == s.Attack && d.Speed == s.Speed && d.Actions == s.Actions && d.Advances == s.Advances && d.Flavor == s.Flavor)
                 && n.PlusText.Contains("傷の深さを詠み") && x.PlusText.Contains("残らず溜める") && !n.MinusText.Contains("敵から受けた傷") && !x.MinusText.Contains("敵から受けた傷")
                 && !UnitCatalog.All.Contains(n) && !UnitCatalog.All.Contains(x) && s.Traits.SequenceEqual(new[] { TraitId.Ash });
-            var held = UnitCatalog.All.Concat(UnitCatalog.Retired).Where(d => d.Traits.Any(y => y is TraitId.BloodRead or TraitId.BloodPool)).Select(d => d.Id).ToArray();
+            var held = UnitCatalog.All.Concat(UnitCatalog.Retired).Where(d => d != UnitCatalog.Susu && d.Traits.Any(y => y is TraitId.BloodRead or TraitId.BloodPool)).Select(d => d.Id).ToArray();
             Expect("版の定義: AK-n ＝ アカの体 ＋ `BloodRead` ／ AK-s ＝ ＋ `BloodPool`（`Ash` と差し替え・体 ／ 速さ ／ 手番 ／ Id は規定のまま・文面は叩き台・「敵から受けた傷は血にならない」は外した）・新しい札の保持者は 0 枚・規定のアカは `Ash` のまま", ok && held.Length == 0, held.Length == 0 ? "" : string.Join(",", held));
         }
 
@@ -102,7 +102,7 @@ static partial class Sh363Diag
             var c0 = AkaBoard(UnitCatalog.SusuAKn, out var k0, out _, out _, out var g1, out _);
             int g = g1.Hp + e0(c0); c0.TakeTurn(k0);
             int lostAll = g - g1.Hp - e0(c0);
-            Expect("AK-n: 傷が 0 の手番は素の一撃（撃たない・灰が無い手番と同じ・敵の誰かが 3 減る）", Tly(c0, "susu").Sh363Casts == 0 && Tly(c0, "susu").AshDry == 1 && lostAll == UnitCatalog.Susu.Attack, $"敵の減り {lostAll}");
+            Expect("AK-n: 傷が 0 の手番は素の一撃（撃たない・灰が無い手番と同じ・敵の誰かが 3 減る）", Tly(c0, "susu").Sh363Casts == 0 && Tly(c0, "susu").AshDry == 1 && lostAll == UnitCatalog.SusuH364.Attack, $"敵の減り {lostAll}");
             // 倒れたときに降りかかる量 ＝ そのときの（生きている）味方の傷の合計の半分（切り捨て）を、隣の生きている味方に等分。
             var c2 = AkaBoard(UnitCatalog.SusuAKn, out var k2, out var a2, out var b2, out var e1, out _);
             a2.Hp = 100; b2.Hp = 161;   // 傷 100 ＋ 39 ＝ 139 → 半分 69
@@ -143,7 +143,7 @@ static partial class Sh363Diag
             int nb = new[] { a2, b2 }.Count(u => FormationRules.AreAdjacent(k2, u));
             c2.ApplyDamage(k2, 999, e1);
             Expect($"AK-s: 血を溜めたまま倒れると隣の味方 {nb} 体に等分（{80 / nb} ずつ）で降る・倒れた保持者には溜まらない", 200 - a2.Hp == 80 / nb && 200 - b2.Hp == 80 / nb && AshTrait.AshOf(k2) == 0, $"a −{200 - a2.Hp}・b −{200 - b2.Hp}");
-            var c3 = AkaBoard(UnitCatalog.Susu, out var k3, out var a3, out _, out var e3, out _);
+            var c3 = AkaBoard(UnitCatalog.SusuH364, out var k3, out var a3, out _, out var e3, out _);
             c3.ApplyDamage(a3, 10, e3);
             Expect("規定のアカ: 敵から受けた傷は今どおり灰にならない", AshTrait.AshOf(k3) == 0);
         }

@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 using I = Inv348Diag;
 using D = Db351Diag;
@@ -79,7 +79,7 @@ static partial class Sh360Diag
     // ---------------------------------------------------------------------------------
     // 台
     // ---------------------------------------------------------------------------------
-    internal static readonly UnitDef[] Fixed = { UnitCatalog.SasaH360, UnitCatalog.Hibi, UnitCatalog.Gare };
+    internal static readonly UnitDef[] Fixed = { UnitCatalog.SasaH360, UnitCatalog.Hibi, UnitCatalog.GareH364 };
     internal static readonly UnitDef[] Pool = { UnitCatalog.Uro, UnitCatalog.Gald, UnitCatalog.Dolga, UnitCatalog.Golm, UnitCatalog.Nel, UnitCatalog.Ban, UnitCatalog.Kubi, UnitCatalog.Som };
     internal static Formation ByKey(string key)
     {

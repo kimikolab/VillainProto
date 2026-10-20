@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using BattleCore;
 using static Common;
 using I = Inv348Diag;
@@ -16,9 +16,9 @@ static partial class Sh359Diag
     /// <summary>第359期の「版・」の3台（第360期に `Presets.Versions` から外した並びを器具の中に固定）。</summary>
     internal static (string Name, Formation F)[] Boards359() => new (string, Formation)[]
     {
-        ("版・HB-s 破片", Formation.Build(front1: UnitCatalog.SasaH360, front3: UnitCatalog.Golm, center: UnitCatalog.Dolga, back1: UnitCatalog.Gare, back3: UnitCatalog.HibiHBs)),
-        ("版・HB-f 破片", Formation.Build(front1: UnitCatalog.SasaH360, front3: UnitCatalog.Golm, center: UnitCatalog.Dolga, back1: UnitCatalog.Gare, back3: UnitCatalog.HibiHBf)),
-        ("版・HB-f 破片 呪い", Formation.Build(front1: UnitCatalog.Tsugi, front3: UnitCatalog.Golm, center: UnitCatalog.Gare, back1: UnitCatalog.Nel, back3: UnitCatalog.HibiHBf)),
+        ("版・HB-s 破片", Formation.Build(front1: UnitCatalog.SasaH360, front3: UnitCatalog.Golm, center: UnitCatalog.Dolga, back1: UnitCatalog.GareH364, back3: UnitCatalog.HibiHBs)),
+        ("版・HB-f 破片", Formation.Build(front1: UnitCatalog.SasaH360, front3: UnitCatalog.Golm, center: UnitCatalog.Dolga, back1: UnitCatalog.GareH364, back3: UnitCatalog.HibiHBf)),
+        ("版・HB-f 破片 呪い", Formation.Build(front1: UnitCatalog.Tsugi, front3: UnitCatalog.Golm, center: UnitCatalog.GareH364, back1: UnitCatalog.Nel, back3: UnitCatalog.HibiHBf)),
     };
 
     static readonly MethodInfo AddUnit = typeof(BattleContext).GetMethod("Add", BindingFlags.Instance | BindingFlags.NonPublic, new[] { typeof(UnitState) })!;
@@ -59,10 +59,10 @@ static partial class Sh359Diag
 
         // ---- 段0 ----
         {
-            bool def = UnitCatalog.Gare.Traits.SequenceEqual(new[] { TraitId.PebbleGather }) && UnitCatalog.GareH358.Traits.SequenceEqual(new[] { TraitId.Shrapnel })
-                && UnitCatalog.All.Contains(UnitCatalog.Gare) && !UnitCatalog.All.Contains(UnitCatalog.GareH358) && UnitCatalog.Gare.PlusText == UnitCatalog.GareGRr.PlusText
+            bool def = UnitCatalog.GareH364.Traits.SequenceEqual(new[] { TraitId.PebbleGather }) && UnitCatalog.GareH358.Traits.SequenceEqual(new[] { TraitId.Shrapnel })
+                && UnitCatalog.All.Contains(UnitCatalog.Gare) && !UnitCatalog.All.Contains(UnitCatalog.GareH358) && UnitCatalog.GareH364.PlusText == UnitCatalog.GareGRr.PlusText
                 && UnitCatalog.All.Where(d => d.Traits.Contains(TraitId.PebbleGather)).Select(d => d.Id).SequenceEqual(new[] { "gare" })
-                && ReferenceEquals(PinR358(UnitCatalog.Gare), UnitCatalog.GareH358) && ReferenceEquals(PinN355(UnitCatalog.Gare), UnitCatalog.GareH358);
+                && ReferenceEquals(PinR358(UnitCatalog.GareH364), UnitCatalog.GareH358) && ReferenceEquals(PinN355(UnitCatalog.GareH364), UnitCatalog.GareH358);
             Expect("段0: 規定のガレ ＝ GR-r（`PebbleGather`・文面も第358期の版と同じ）・旧（`GareH358`）は礫（砕く）・`All` は規定だけ・古い口の終端（`PinN355`）からガレも旧へ", def);
             // 規定のガレで礫を拾って投げ、旧の定義では砕く（直に組む盤面）
             bool Run(UnitDef gare, out string note)
@@ -74,10 +74,10 @@ static partial class Sh359Diag
                 int peb = g.RawCounter(PebbleTrait.Key), a0 = Armor(a), f0 = e[0].Hp;
                 foreach (var t in g.Traits) if (t.CanAct(ctx, g, ActionKind.Skill)) t.OnAction(ctx, g, Skill);
                 note = $"礫 {peb}・味方の破片 {a0} → {Armor(a)}・敵 {f0} → {e[0].Hp}";
-                return gare == UnitCatalog.Gare ? peb == 7 && Armor(a) == 3 && f0 - e[0].Hp == 7 * ctx.Shrapnel.Multiplier + g.CurrentAttack
+                return gare == UnitCatalog.GareH364 ? peb == 7 && Armor(a) == 3 && f0 - e[0].Hp == 7 * ctx.Shrapnel.Multiplier + g.CurrentAttack
                                                 : peb == 0 && Armor(a) == 0 && f0 - e[0].Hp == 3 * ctx.Shrapnel.Multiplier + g.CurrentAttack;
             }
-            bool now = Run(UnitCatalog.Gare, out var n1), old = Run(UnitCatalog.GareH358, out var n2);
+            bool now = Run(UnitCatalog.GareH364, out var n1), old = Run(UnitCatalog.GareH358, out var n2);
             Expect("段0: 規定のガレは味方の破片が敵の一撃で割れた量（7）を礫にして投げる（味方の破片は残る）・旧の定義は最も破片を纏う味方を砕いて撃つ", now && old, $"規定 {n1} ／ 旧 {n2}");
         }
 

@@ -2446,6 +2446,8 @@ public sealed class UnitTally
     public long[]? Sh363CastByTurn, Sh363HavocLost;
     /// <summary>第364期（<b>計数のみ</b>・跳ね撃ち）: 跳ね撃ちの札を持つ駒が撃った回数（形 A ／ B）・形 B の弾の数 ／ 弾の量（名目）の延べ・形 A で集まった回数 ／ その倍率の延べ。</summary>
     public long Sh364Volleys, Sh364Shots, Sh364ShotSum, Sh364Gathered, Sh364GatherMult;
+    /// <summary>第365期（<b>計数のみ・計測専用</b>）: ヒサ×ミサの連鎖の矢印をターンごとに（<c>欄 × 32 ＋ ターン</c>・欄は <c>BattleContext.Ch365</c>）。<c>BattleContext.ChainCount365</c> が真の戦だけ書く。</summary>
+    public long[]? Ch365;
     public long Rp345NormalDealt, Rp345Punches, Rp345PunchBack, Rp345PunchKills, Rp345PunchDealt, Rp345PunchAmount, Rp345AimEdible, Rp345GrabNoPunch, Rp345GrabAfter, Ga345Stomps, Ga345SplashHits, Ga345SplashDealt;
     public long[]? Fg339Spray, Fg339AllyHits, Fg339AllyDmg;
     /// <summary>第339期（計数のみ）: 乱射の1発をターンごとに数える（羽の乱射 ／ 乱射の札の両方）。</summary>
@@ -3731,6 +3733,7 @@ public sealed class UnitTally
         Sh363Casts += o.Sh363Casts; Sh363CastSum += o.Sh363CastSum; Sh363BloodFoe += o.Sh363BloodFoe; Sh363BloodAlly += o.Sh363BloodAlly; Sh363BloodSelf += o.Sh363BloodSelf; Sh363BloodDot += o.Sh363BloodDot; Sh363BloodHavoc += o.Sh363BloodHavoc;   // 第363期
         if (Sh363FirstCastTurn == 0) Sh363FirstCastTurn = o.Sh363FirstCastTurn;
         Sh363CastByTurn = AddArr(Sh363CastByTurn, o.Sh363CastByTurn); Sh363HavocLost = AddArr(Sh363HavocLost, o.Sh363HavocLost);
+        Ch365 = AddArr(Ch365, o.Ch365);   // 第365期
         Sh364Volleys += o.Sh364Volleys; Sh364Shots += o.Sh364Shots; Sh364ShotSum += o.Sh364ShotSum; Sh364Gathered += o.Sh364Gathered; Sh364GatherMult += o.Sh364GatherMult;   // 第364期
         Db354CurseRage += o.Db354CurseRage; Db354PickedMudo += o.Db354PickedMudo; Db354FedMudo += o.Db354FedMudo; Db354BurstYokeCut += o.Db354BurstYokeCut; Db354BurstYokeLost += o.Db354BurstYokeLost;   // 第354期
         Db353PlunderGain += o.Db353PlunderGain; Db353PlunderHits += o.Db353PlunderHits; Db353PlunderDry += o.Db353PlunderDry; Db353PlunderMiss += o.Db353PlunderMiss; Db353PlunderBoss += o.Db353PlunderBoss;   // 第353期

@@ -1324,6 +1324,10 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sh364 compare           # 第364期 §6 の 4: `compare` 64 行 × 版（規定との差・(G2)）
     dotnet run --project BattleSim -c Release 0 sh364 log <版> <台> <波> [seed]   # 第364期: 1戦のログ（台 ＝ 並びの名前か compare ／ 試遊の行名の頭）
     dotnet run --project BattleSim -c Release 0 sh364 check             # 第364期 自己検査（版の定義・形 A（5 ／ 1 ／ 2 ／ 9 体）・形 B（5 発 ／ 半分 ／ 1 体 ／ 3 体で 2 ／ 2 ／ 1 ／ 倒れた敵を飛ばす ／ 1発ずつ一撃）・規定は今どおり・R4・verbose・試遊の台・PickOne）
+    dotnet run --project BattleSim -c Release 0 sh365 trace [seed]      # 第365期 §4-2: 台 B（ボルグ・ミサ・ヒサ・カド・アカ）× 勇者 × seed の T1〜T3 を出来事の順に（羽 ／ 層 ／ 玉 ／ 叫びの推移・後3 ＝ 規定のアカ ／ 何もしない素体）
+    dotnet run --project BattleSim -c Release 0 sh365 count             # 第365期 §4-3: 台 B × 勇者・seed 0..99・T1〜T5 の輪の数え上げ（羽の入口 ／ 羽の一撃 ／ 叫び ／ 溢れ ／ 玉 ／ 号令 ／ 上限 ／ 層 ／ ミサの与ダメ）（1 秒）
+    dotnet run --project BattleSim -c Release 0 sh365 cuts              # 第365期 §4-4: 計測専用の切り C0〜C6（engine の `ChainCut365`・既定 0）× 台 B × 勇者 ／ 近衛 ／ 大隊・seed 0..99（1 秒）
+    dotnet run --project BattleSim -c Release 0 sh365 check             # 第365期 自己検査（段0 のアカ ／ ガレ（集まる全体が働く ／ 旧では働かない ／ 固定の口）・計測のスイッチが盤面を変えない・verbose・切りが効く・試遊の台・PickOne ／ Roll）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

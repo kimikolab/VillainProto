@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using BattleCore;
 using static Common;
 using I = Inv348Diag;
@@ -93,7 +93,7 @@ static partial class Sh361Diag
 
         // ---- SS-s ----
         {
-            var c1 = Lone(UnitCatalog.SasaSSs, UnitCatalog.Gare, out var s1, out var g1, out var f1);
+            var c1 = Lone(UnitCatalog.SasaSSs, UnitCatalog.GareH364, out var s1, out var g1, out var f1);
             int fh = f1.Hp;
             c1.ApplyDamage(s1, 20, f1);
             int peb = g1.RawCounter(PebbleTrait.Key);
@@ -105,7 +105,7 @@ static partial class Sh361Diag
             var c3 = Lone(UnitCatalog.SasaSSs, Plain("x"), out var s3, out var x3, out var f3);
             c3.ApplyDamage(s3, 20, f3);
             Expect("SS-s: 読み手がいなければ消える（誰にも付かない）", Armor(x3) == 0 && Tly(c3, "sasa").Sh361Scattered == 13 && Tly(c3, "sasa").Sh361ScatterPebble == 0 && Tly(c3, "sasa").Sh361ScatterScrap == 0);
-            var c4 = Lone(UnitCatalog.SasaH361, UnitCatalog.Gare, out var s4, out var g4, out var f4);
+            var c4 = Lone(UnitCatalog.SasaH361, UnitCatalog.GareH364, out var s4, out var g4, out var f4);
             c4.ApplyDamage(s4, 20, f4);
             Expect("規定のササ（SS-w）: 隣に誰もいなければ散らない（礫にならない・今どおり消える）", g4.RawCounter(PebbleTrait.Key) == 0 && Tly(c4, "sasa").Sh361Scattered == 0);
         }

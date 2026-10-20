@@ -61,7 +61,7 @@ static partial class Sh363Diag
     internal sealed record Ver(string Name, string Ascii, UnitDef Aka);
     internal static readonly Ver[] Vers =
     {
-        new("規定（段0 入り）", "base", UnitCatalog.Susu),
+        new("規定（段0 入り）", "base", UnitCatalog.SusuH364),
         new("AK-n 今の傷を詠む", "akn", UnitCatalog.SusuAKn),
         new("AK-s 溜め血", "aks", UnitCatalog.SusuAKs),
     };
@@ -71,7 +71,7 @@ static partial class Sh363Diag
     static bool Has(Formation f, string id) => f.Occupied().Any(o => o.Def.Id == id);
 
     /// <summary>§5 の固定2枚（カド ／ アカ）と残り3枚の母集団（8枚・第362期 §5 と同じ）。</summary>
-    internal static readonly UnitDef[] Fixed = { UnitCatalog.Kado, UnitCatalog.Susu };
+    internal static readonly UnitDef[] Fixed = { UnitCatalog.Kado, UnitCatalog.SusuH364 };
     internal static readonly UnitDef[] Pool = { UnitCatalog.Rica, UnitCatalog.Tome, UnitCatalog.Guza, UnitCatalog.Borg, UnitCatalog.Hisa, UnitCatalog.Doha, UnitCatalog.Mudo, UnitCatalog.Lili };
     internal static Formation ByKey(string key)
     {

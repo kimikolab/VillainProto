@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 using I = Inv348Diag;
 using D = Db351Diag;
@@ -71,7 +71,7 @@ static partial class Sh361Diag
     internal static Formation Apply(Formation f, Ver v) => S316.SwapId(f, "sasa", v.Sasa);
     static bool Has(Formation f, string id) => f.Occupied().Any(o => o.Def.Id == id);
 
-    internal static readonly UnitDef[] Fixed = { UnitCatalog.SasaH361, UnitCatalog.Hibi, UnitCatalog.Gare };
+    internal static readonly UnitDef[] Fixed = { UnitCatalog.SasaH361, UnitCatalog.Hibi, UnitCatalog.GareH364 };
     internal static readonly UnitDef[] Pool = S0.Pool;
     internal static Formation ByKey(string key)
     {

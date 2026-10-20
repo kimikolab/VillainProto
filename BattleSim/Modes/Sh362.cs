@@ -79,7 +79,7 @@ static partial class Sh362Diag
     };
 
     /// <summary>§5 の固定2枚（カド ／ アカ）と残り3枚の母集団（8枚）。</summary>
-    internal static readonly UnitDef[] Fixed = { UnitCatalog.KadoH362, UnitCatalog.Susu };   // 第363期: 旧のカドに固定
+    internal static readonly UnitDef[] Fixed = { UnitCatalog.KadoH362, UnitCatalog.SusuH364 };   // 第363期: 旧のカドに固定
     internal static readonly UnitDef[] Pool = { UnitCatalog.Rica, UnitCatalog.Tome, UnitCatalog.Guza, UnitCatalog.Borg, UnitCatalog.Hisa, UnitCatalog.Doha, UnitCatalog.Mudo, UnitCatalog.Lili };
     internal static Formation ByKey(string key)
     {
@@ -324,7 +324,7 @@ static partial class Sh362Diag
     static void Phase0()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = CompareBuilds().Concat(Presets.Versions.Where(r => r.Name.StartsWith("試遊", StringComparison.Ordinal))).Select(r => (r.Name, F: Pin362(r.F))).ToArray();   // 第363期: 旧のカドに固定
+        var rows = CompareBuilds().Concat(Presets.Versions.Where(r => r.Name.StartsWith("試遊", StringComparison.Ordinal) && r.Name != "試遊・自傷")).Select(r => (r.Name, F: Pin362(r.F))).ToArray();   // 第363期: 旧のカドに固定・第365期: 第365期に足した試遊の台は除く（`Pin362` はアカ ／ ガレも旧へ）
         var waves = new[] { I.M5, I.Guard, I.Boss };
         Console.WriteLine($"# {Tag} §3 Phase 0（規定・段0 入り）");
         Console.WriteLine();

@@ -11,7 +11,7 @@ static partial class Sh362Diag
     {
         ("版・KD-t 自傷", Presets.SelfHarmPlay(UnitCatalog.KadoKDt)),
         ("版・KD-r 自傷", Presets.SelfHarmPlay(UnitCatalog.KadoKDr)),
-        ("版・KD-r 自傷 リリ", Formation.Build(front1: UnitCatalog.Tome, front3: UnitCatalog.KadoKDr, center: UnitCatalog.Hisa, back1: UnitCatalog.Susu, back3: UnitCatalog.Lili)),
+        ("版・KD-r 自傷 リリ", Formation.Build(front1: UnitCatalog.Tome, front3: UnitCatalog.KadoKDr, center: UnitCatalog.Hisa, back1: UnitCatalog.SusuH364, back3: UnitCatalog.Lili)),
     };
 
     static readonly MethodInfo AddUnit = typeof(BattleContext).GetMethod("Add", BindingFlags.Instance | BindingFlags.NonPublic, new[] { typeof(UnitState) })!;

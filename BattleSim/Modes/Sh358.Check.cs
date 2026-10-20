@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using BattleCore;
 using static Common;
 using I = Inv348Diag;
@@ -67,7 +67,7 @@ static partial class Sh358Diag
             var held = UnitCatalog.All.Concat(UnitCatalog.Retired).Where(d => d.Traits.Any(t => t is TraitId.ShardBare)).Select(d => d.Id).ToArray();   // 第360期: `ShardGift` は規定のヒビ（HB-f）が持つ
             // 第359期: 規定のガレ ＝ GR-r（`PebbleGather`）・旧（`GareH358`）は礫（砕く）
             bool def = UnitCatalog.HibiH359.Traits.SequenceEqual(new[] { TraitId.Shatter, TraitId.Frail }) && UnitCatalog.GareH358.Traits.SequenceEqual(new[] { TraitId.Shrapnel })
-                && UnitCatalog.Gare.Traits.SequenceEqual(new[] { TraitId.PebbleGather });
+                && UnitCatalog.GareH364.Traits.SequenceEqual(new[] { TraitId.PebbleGather });
             Expect("版の定義: HB-r ＝ 体はヒビのまま・札は `ShardGift` ＋ `ShardBare` ＋ 脆弱（砕けは外す）・手番は術 ／ GR-r ＝ 体はガレのまま・札は `PebbleGather` だけ・手番は術", hb && gr, $"hb {hb}・gr {gr}");
             Expect("旧のヒビ（`HibiH359`）は砕け ＋ 脆弱のまま・`ShardBare` の保持者は 0 枚（`All` ／ `Retired`）・第359期: 規定のガレ ＝ GR-r（旧は `GareH358`）・第360期: 規定のヒビ ＝ HB-f（`ShardGift` を持つ）", def && held.Length == 0, held.Length == 0 ? "" : string.Join(",", held));
         }

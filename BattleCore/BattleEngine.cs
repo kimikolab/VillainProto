@@ -15368,13 +15368,40 @@ public sealed class BattleContext
     // 枠が閉じたとき、標の敵に当たっていて、その枠の主と同じ陣営に生きている HK のヒサがいれば、最も深い層 × 6 を癒す。**乱数を引かない。**
     bool _rallyLive;
     readonly List<UnitState> _rallyHolders = new();
-    sealed class Bundle { public UnitState? Owner; public bool OutOfTurn; public int Layer; public UnitState? FreshVendetta; public List<UnitState>? MarkedHit; }
+    sealed class Bundle { public UnitState? Owner; public bool OutOfTurn; public int Layer; public UnitState? FreshVendetta; public List<UnitState>? MarkedHit; public bool Feather; }
+
+    // =====================================================================================
+    // 第365期 —— ヒサ×ミサの連鎖の解き明かし（**計測専用**・器具 `sh365` だけが立てる・指示書 design/PHASE365_SETTLE_CHAIN_TRACE_SPEC.md §4）。
+    // どちらもスレッドごと（`[ThreadStatic]`）で、**既定は 0 ／ 偽**——規定の戦では比較1つで抜け、盤面も乱数も1ビットも変えない（`compare` 0 セル・`sh365 check`）。
+    // =====================================================================================
+    /// <summary>連鎖の矢印を1本切る（計測専用）。0 切らない ／ 1 羽の一撃で叫ばない ／ 2 号令で羽が増えない ／ 3 『あいつがやった！』で羽が増えない ／
+    /// 4 羽が増えるのは1ターン <see cref="ChainCap365"/> 枚まで ／ 5 層が増えても羽が飛ばない（層の追加の発） ／ 6 叫びの溢れが玉にならない。</summary>
+    [ThreadStatic] public static int ChainCut365;
+    /// <summary>連鎖の矢印をターンごとに数えるか（計測専用・<see cref="UnitTally.Ch365"/>）。</summary>
+    [ThreadStatic] public static bool ChainCount365;
+    /// <summary>切り 4 の上限（1ターンに増える羽）。</summary>
+    public const int ChainCap365 = 3;
+    /// <summary>第365期の数え上げの欄（<see cref="UnitTally.Ch365"/> の <c>欄 × 32 ＋ ターン</c>）。</summary>
+    public static class Ch365
+    {
+        public const int GainAccuse = 0, GainBurst = 1, GainOther = 2, GainGrow = 3, GainCut = 4, VolleyChase = 5, VolleySpray = 6, MfFoe = 7, MfAlly = 8,
+            Rally = 9, RallyFeather = 10, Overflow = 11, Balls = 12, BurstLayers = 13, BurstCapped = 14, AccuseLayers = 15, RallyCut = 16, MfQueuedLayer = 17, MfCut = 18, Volleys = 19, PoolCut = 20;
+        public const int Fields = 21, Width = 32;
+    }
+    void Ch(UnitState u, int field, long v = 1)
+    {
+        if (!ChainCount365 || v == 0) return;
+        UnitTally t = TallyOf(u);
+        t.Ch365 ??= new long[Ch365.Fields * Ch365.Width];
+        t.Ch365[field * Ch365.Width + Math.Clamp(_turn, 0, Ch365.Width - 1)] += v;
+    }
     readonly List<Bundle> _bundles = new();
 
     /// <summary>回復の量（層 1 あたり・指示書が<b>測る前に固定</b>した値）。</summary>
     public const int RallyPerLayer = 6;
 
-    void BundlePush(UnitState? owner, bool outOfTurn) => _bundles.Add(new Bundle { Owner = owner, OutOfTurn = outOfTurn });
+    // 第365期: `Feather` ＝ ミサの羽のまとまり（手番の羽の一振り ／ 標撃ちの割り込み）。計測の切り 1 だけが読む。
+    void BundlePush(UnitState? owner, bool outOfTurn) => _bundles.Add(new Bundle { Owner = owner, OutOfTurn = outOfTurn, Feather = ChainCut365 != 0 || ChainCount365 ? _mfFiring || (owner is not null && owner.HasTrait(TraitId.Feathers)) : false });
 
     void BundleHit(UnitState target, UnitState? source)
     {
@@ -15400,7 +15427,9 @@ public sealed class BattleContext
         UnitTally ht = TallyOf(hisa);
         // 第302期（HV-s・`RallyQuiet`）: 叫びも手番の外の動作として `CanActOutOfTurn` を通す（粛 ／ 痺れで黙る）。札が無ければ問わない。
         if (hisa.HasTrait(TraitId.RallyQuiet) && !CanActOutOfTurn(hisa, OutOfTurnRoute.Rally)) { if (HushBindingNow) ht.RallyHushed++; else ht.RallyBlocked++; return; }
+        if (ChainCut365 == 1 && b.Feather) { Ch(hisa, Ch365.RallyCut); return; }   // 第365期（計測の切り 1）
         ht.RallyFires++;
+        Ch(hisa, Ch365.Rally); if (b.Feather) Ch(hisa, Ch365.RallyFeather);   // 第365期（計数のみ）
         if (b.FreshVendetta is not null) TallyOf(b.FreshVendetta).VendettaFreshShouts++;   // 第301期（計数のみ・初回の仇討ちで叫びが出た）
         int amt = b.Layer * RallyPerLayer;
         bool wide = hisa.HasTrait(TraitId.MarkRallyWide);
@@ -15441,7 +15470,9 @@ public sealed class BattleContext
         int got = Math.Max(0, to.Hp - before);
         ht.RallyOverflow += over;
         (ht.RallyOverByTurn ??= new long[21])[Math.Clamp(_turn, 0, 20)] += over;   // 計数のみ
-        if (over > 0 && CommandTrait.Pools(hisa)) CommandPoolAdd(hisa, over, ht);
+        Ch(hisa, Ch365.Overflow, over);   // 第365期（計数のみ）
+        if (over > 0 && CommandTrait.Pools(hisa) && ChainCut365 == 6) Ch(hisa, Ch365.PoolCut, over);   // 第365期（計測の切り 6）
+        else if (over > 0 && CommandTrait.Pools(hisa)) CommandPoolAdd(hisa, over, ht);
         ht.RallyHeals++;
         ht.RallyHealed += got;
         ht.RallyOver += amt - got;
@@ -15480,6 +15511,8 @@ public sealed class BattleContext
         {
             if (!misa.IsAlive || ReferenceEquals(misa, u)) continue;
             if (!fresh && !misa.HasTrait(TraitId.FeatherMarkLayer)) continue;
+            if (!fresh && ChainCut365 == 5) { Ch(misa, Ch365.MfCut); continue; }   // 第365期（計測の切り 5）
+            if (!fresh && !_mfFiring) Ch(misa, Ch365.MfQueuedLayer);   // 第365期（計数のみ）
             UnitTally t = TallyOf(misa);
             if (_mfFiring) { t.MfChainSkipped++; if (_commandCarving) t.CmdChainSkipped++; continue; }   // 第321期・計数のみ（号令の層が羽を呼ばなかった）
             if (fresh) t.MfQueuedFresh++; else t.MfQueuedLayer++;
@@ -15522,7 +15555,7 @@ public sealed class BattleContext
             _forcedTarget = tgt;
             try { PerformAttack(misa, patternOverride: AttackPattern.Single); }
             finally { _forcedTarget = null; _forcedLane = -1; }
-            t.MfShotsFoe++;
+            t.MfShotsFoe++; Ch(misa, Ch365.MfFoe);   // 第365期（計数のみ）
             t.MfDealtFoe += Math.Max(0, before - Math.Max(0, tgt.Hp));
         }
         else
@@ -15532,7 +15565,7 @@ public sealed class BattleContext
             Log($"  {misa.Name} の羽が、指差された味方の {tgt.Name} へ飛ぶ（{dmg}）", LogKind.FriendlyFire);
             ApplyDamage(tgt, dmg, misa, isFriendlyFire: true, pattern: AttackPattern.Single);
             int lost = Math.Max(0, before - Math.Max(0, tgt.Hp));
-            t.MfShotsAlly++;
+            t.MfShotsAlly++; Ch(misa, Ch365.MfAlly);   // 第365期（計数のみ）
             t.MfDealtAlly += lost;
             UnitTally vt = TallyOf(tgt);
             vt.MfTaken += lost; vt.MfTakenHits++;
@@ -15610,6 +15643,7 @@ public sealed class BattleContext
         Log($"    {hisa.Name} が叫ぶ——「あいつがやった！」（{foe.Name} を指差す）", LogKind.Trigger);
         if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.Framed, Turn = _turn, ActorId = hisa.InstanceId, TargetId = foe.InstanceId, PartnerId = ally.InstanceId, Text = FramedLabels.Accuse, Team = foe.TeamId });
         bool fresh = foe.RawCounter(StatusKeys.Marked) <= 0;
+        Ch(hisa, Ch365.AccuseLayers);   // 第365期（計数のみ）
         _accuseMarking = true;   // 第302期（計数のみ・この標が呼んだ羽を数える）
         try { LayerMark(foe, hisa); }
         finally { _accuseMarking = false; }
@@ -15767,6 +15801,7 @@ public sealed class BattleContext
             next = capPool;
         }
         hisa.SetCounter(CommandTrait.PoolKey, next);
+        Ch(hisa, Ch365.Balls, next / CommandTrait.EveryOf(hisa) - pool / CommandTrait.EveryOf(hisa));   // 第365期（計数のみ・できた玉）
         if ((capPool <= 0 && !_burstLive) || !_verbose) return;   // 第321期: あふれ版（上限なし）も玉が増えた瞬間は表示する
         int every = CommandTrait.EveryOf(hisa);
         if (next / every > pool / every) EmitCommandBall(hisa, CommandBallLabels.Gain);
@@ -15811,7 +15846,7 @@ public sealed class BattleContext
             if (hisa.RawCounter(CommandTrait.TurnKey) != _turn + 1) { hisa.SetCounter(CommandTrait.TurnKey, _turn + 1); hisa.SetCounter(CommandTrait.TurnCountKey, 0); }
             used = hisa.RawCounter(CommandTrait.TurnCountKey);
             int room = (cap - used) / unit * unit;
-            if (room <= 0) { if (used <= cap) { ht.BurstCapped++; hisa.SetCounter(CommandTrait.TurnCountKey, cap + 1); } return false; }
+            if (room <= 0) { Ch(hisa, Ch365.BurstCapped); if (used <= cap) { ht.BurstCapped++; hisa.SetCounter(CommandTrait.TurnCountKey, cap + 1); } return false; }
             want = Math.Min(want, room);
         }
         UnitState? foe = FramePick(hisa);
@@ -15823,6 +15858,7 @@ public sealed class BattleContext
         if (done <= 0) return false;
         if (cap > 0) hisa.SetCounter(CommandTrait.TurnCountKey, used + done);
         ht.BurstFires++; ht.BurstLayers += done;
+        Ch(hisa, Ch365.BurstLayers, done);   // 第365期（計数のみ）
         (ht.BurstHist ??= new long[13])[Math.Min(12, done)]++;
         EmitCommandBall(hisa, CommandBallLabels.Use);
         return true;
@@ -16921,6 +16957,9 @@ public sealed class BattleContext
         foreach (UnitState h in LivingMembers(writer.TeamId))
         {
             if (!h.HasTrait(TraitId.Feathers)) continue;
+            // 第365期（計測の切り 2 ／ 3 ／ 4・既定は 0 で比較1つ）。
+            if (ChainCut365 != 0 && ChainCutGain365(h)) { Ch(h, Ch365.GainCut); continue; }
+            Ch(h, _accuseMarking ? Ch365.GainAccuse : _commandCarving ? Ch365.GainBurst : Ch365.GainOther);   // 第365期（計数のみ・羽の入口）
             h.SetCounter(FeathersTrait.ExtraKey, h.RawCounter(FeathersTrait.ExtraKey) + 1);
             UnitTally t = TallyOf(h);
             t.FeatherGained++;
@@ -16929,6 +16968,19 @@ public sealed class BattleContext
             Log($"    {h.Name} の羽が1枚増えた（{f} 枚）", LogKind.Trigger);
             EmitFeather(FeatherLabels.Gain, writer, h, f, partner: marked);   // 第291期・表示専用
         }
+    }
+
+    /// <summary>第365期（計測専用）: この羽の増加を切りで捨てるか。切り 4 は保持者の私有キー（`ch365Turn` ／ `ch365N`）で1ターンの枚数を数える。</summary>
+    bool ChainCutGain365(UnitState h)
+    {
+        if (ChainCut365 == 2) return _commandCarving;
+        if (ChainCut365 == 3) return _accuseMarking;
+        if (ChainCut365 != 4) return false;
+        if (h.RawCounter("ch365Turn") != _turn + 1) { h.SetCounter("ch365Turn", _turn + 1); h.SetCounter("ch365N", 0); }
+        int n = h.RawCounter("ch365N");
+        if (n >= ChainCap365) return true;
+        h.SetCounter("ch365N", n + 1);
+        return false;
     }
 
     /// <summary>
@@ -16987,6 +17039,7 @@ public sealed class BattleContext
         }
         finally { _volley = prev; _featherLast = null; }
         t.FeatherChased += chased;
+        Ch(actor, Ch365.Volleys); Ch(actor, Ch365.VolleyChase, chased); Ch(actor, Ch365.VolleySpray, sprayed);   // 第365期（計数のみ）
         t.FeatherSprayed += sprayed;
         if (sprayed > 0 && actor.HasTrait(TraitId.FeatherLoss))
         {
@@ -17016,6 +17069,7 @@ public sealed class BattleContext
         actor.SetCounter(FeathersTrait.ExtraKey, actor.RawCounter(FeathersTrait.ExtraKey) + FeatherGrowTrait.Gain);
         int f = FeathersTrait.Count(actor);
         t.Fg339Grows++;
+        Ch(actor, Ch365.GainGrow, FeatherGrowTrait.Gain);   // 第365期（計数のみ）
         if (f > t.FeatherMax) t.FeatherMax = f;
         Log($"  {actor.Name} の羽が {FeatherGrowTrait.Gain} 枚増えた（{f} 枚）", LogKind.Trigger);
         EmitFeather(FeatherLabels.Gain, actor, actor, f, slot: FeatherGrowTrait.Gain);   // 第339期・表示専用（書き手 ＝ ミサ自身・PartnerId なし・Slot ＝ 増えた枚数）

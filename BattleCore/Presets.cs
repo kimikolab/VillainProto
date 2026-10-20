@@ -958,11 +958,14 @@ public static class Presets
         //   AKn-B: 勇者に勝つ並びはミサ＋ボルグ＋ヒサの組だけで、1位は台 B（前1 ボルグ ／ 前3 ミサ ／ 中央 ヒサ ／ 後1 カド ／ 後3 アカ）。
         //   GR-A: 1位（勇者 100%・6.0T・両立）＝ 前1 ササ ／ 前3 ヒビ ／ 中央 ソム ／ 後1 ガレ ／ 後3 ネル。
         //   GR-B: 1位はバン・ササ・ガレ・ヒビ・ソム（勇者 100% だが倒しT 27.2——30T の打ち切りの手前）なので、2位（100%・8.4T）＝ 前1 ササ ／ 前3 ソム ／ 中央 ネル ／ 後1 ガレ ／ 後3 ヒビ。
-        ("版・AKn-A 自傷", Formation.Build(front1: UnitCatalog.Kado, front3: UnitCatalog.Lili, center: UnitCatalog.Mudo, back1: UnitCatalog.Borg, back3: UnitCatalog.SusuAKnA)),
-        ("版・AKn-B 自傷", SelfHarmAka(UnitCatalog.SusuAKnB)),
-        ("版・GR-A 破片", Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Hibi, center: UnitCatalog.Som, back1: UnitCatalog.GareGRA, back3: UnitCatalog.Nel)),
-        ("版・GR-B 破片", Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Som, center: UnitCatalog.Nel, back1: UnitCatalog.GareGRB, back3: UnitCatalog.Hibi)),
+        // 第365期: 規定のアカ ／ ガレを AKn-A ／ GR-A にした。第364期の「版・」の4台は外した（並びは `sh364` の中に固定 `Boards364`）。「試遊・破片」は規定の駒のまま（ガレは GR-A になった）。
+        // 第365期: 自傷軸の試遊の台（第364期の「版・AKn-A 自傷」の並びを規定の駒で・ミサ＋ボルグ＋ヒサを含まない最良）——前1 カド ／ 前3 リリ ／ 中央 ムド ／ 後1 ボルグ ／ 後3 アカ。
+        ("試遊・自傷", SelfHarmPlay365()),
     };
+
+    /// <summary>第365期: 「試遊・自傷」の並び（前1 カド ／ 前3 リリ ／ 中央 ムド ／ 後1 ボルグ ／ 後3 アカ）。アカを差し替えて版の台を作る。</summary>
+    public static Formation SelfHarmPlay365(UnitDef? aka = null) =>
+        Formation.Build(front1: UnitCatalog.Kado, front3: UnitCatalog.Lili, center: UnitCatalog.Mudo, back1: UnitCatalog.Borg, back3: aka ?? UnitCatalog.Susu);
 
     /// <summary>第363期: 自傷軸②の版の台（`sh363 seats` の勇者に勝つ最良・前1 ボルグ ／ 前3 ミサ ／ 中央 ヒサ ／ 後1 カド ／ 後3 アカ）。アカを差し替えて版の台を作る。</summary>
     public static Formation SelfHarmAka(UnitDef aka) =>

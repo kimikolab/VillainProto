@@ -61,14 +61,14 @@ static partial class Sh364Diag
     internal sealed record Ver(string Name, string Ascii, string Id, UnitDef Def);
     internal static readonly Ver[] AkaVers =
     {
-        new("規定のアカ", "base", "susu", UnitCatalog.Susu),
+        new("規定のアカ", "base", "susu", UnitCatalog.SusuH364),
         new("AK-n", "akn", "susu", UnitCatalog.SusuAKn),
         new("AKn-A 集まる全体", "akna", "susu", UnitCatalog.SusuAKnA),
         new("AKn-B 跳ね弾", "aknb", "susu", UnitCatalog.SusuAKnB),
     };
     internal static readonly Ver[] GareVers =
     {
-        new("規定のガレ", "gare", "gare", UnitCatalog.Gare),
+        new("規定のガレ", "gare", "gare", UnitCatalog.GareH364),
         new("GR-A 集まる全体", "gra", "gare", UnitCatalog.GareGRA),
         new("GR-B 跳ね弾", "grb", "gare", UnitCatalog.GareGRB),
     };
@@ -78,9 +78,9 @@ static partial class Sh364Diag
     // ---------------------------------------------------------------------------------
     // 台
     // ---------------------------------------------------------------------------------
-    internal static readonly UnitDef[] AkaFixed = { UnitCatalog.Kado, UnitCatalog.Susu };
+    internal static readonly UnitDef[] AkaFixed = { UnitCatalog.Kado, UnitCatalog.SusuH364 };
     internal static readonly UnitDef[] AkaPool = { UnitCatalog.Rica, UnitCatalog.Tome, UnitCatalog.Guza, UnitCatalog.Borg, UnitCatalog.Hisa, UnitCatalog.Doha, UnitCatalog.Mudo, UnitCatalog.Lili };
-    internal static readonly UnitDef[] GareFixed = { UnitCatalog.Sasa, UnitCatalog.Hibi, UnitCatalog.Gare };
+    internal static readonly UnitDef[] GareFixed = { UnitCatalog.Sasa, UnitCatalog.Hibi, UnitCatalog.GareH364 };
     internal static readonly UnitDef[] GarePool = { UnitCatalog.Uro, UnitCatalog.Gald, UnitCatalog.Dolga, UnitCatalog.Golm, UnitCatalog.Nel, UnitCatalog.Ban, UnitCatalog.Kubi, UnitCatalog.Som };
     internal static Formation ByKey(string key)
     {
@@ -212,7 +212,7 @@ static partial class Sh364Diag
     // ---------------------------------------------------------------------------------
     internal static UnitDef Plain(string id, string name, AttackPattern pat, bool idle = false) => new()
     {
-        Id = id, Name = name, MaxHp = UnitCatalog.Susu.MaxHp, Attack = UnitCatalog.Susu.Attack, Speed = UnitCatalog.Susu.Speed, Advances = false,
+        Id = id, Name = name, MaxHp = UnitCatalog.SusuH364.MaxHp, Attack = UnitCatalog.SusuH364.Attack, Speed = UnitCatalog.SusuH364.Speed, Advances = false,
         Traits = Array.Empty<TraitId>(), Pattern = pat,
         Actions = idle ? new UnitAction[] { new(ActionKind.Skill, Label: "何もしない") } : Array.Empty<UnitAction>(),
     };
@@ -237,7 +237,7 @@ static partial class Sh364Diag
         Console.WriteLine();
         var reps = new (string, UnitDef)[]
         {
-            ("R0 AK-n のアカ（基準）", UnitCatalog.SusuAKn), ("R1 規定のアカ（灰）", UnitCatalog.Susu), ("R2 素体・毎手番全体（攻 3）", R2),
+            ("R0 AK-n のアカ（基準）", UnitCatalog.SusuAKn), ("R1 規定のアカ（灰）", UnitCatalog.SusuH364), ("R2 素体・毎手番全体（攻 3）", R2),
             ("R3 素体・毎手番単体（攻 3）", R3), ("R4 素体・何もしない", R4), ($"R5 {Short(r5)}", r5),
         };
         Console.WriteLine("| 替え | 波 | 勝率・倒しT（決着T） | 1ターンの与ダメの最大（出どころ） | 見る駒の勇者への与ダメ ／戦 | 勇者への一撃 T1〜T3（うち見る駒 ／戦） | 羽の標撃ち T1〜T3 | 勇者の標の層（最大） | 倒れた ／戦 |");

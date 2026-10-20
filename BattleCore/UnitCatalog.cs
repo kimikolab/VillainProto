@@ -3529,7 +3529,8 @@ public static class UnitCatalog
     /// 手番（術）で全部使って 礫 × 3 ＋ 攻撃力 を敵全体へ撃つ（<see cref="TraitId.PebbleGather"/>）。味方の破片は砕かない。礫が無い手番は何もできない。
     /// 数値（HP62 ／ 攻9 ／ 速6）・Id ・文面は <see cref="GareGRr"/> と同じ。旧は <see cref="GareH358"/>。
     /// </summary>
-    public static readonly UnitDef Gare = new()
+    // 第365期: 第364期までの規定のガレ（GR-r）は `GareH364` の名前で残した（定義は1文字も変えていない）。規定の `Gare` は第364期の GR-A で、すぐ下に作った。
+    public static readonly UnitDef GareH364 = new()
     {
         Id = GareH358.Id, Name = GareH358.Name, MaxHp = GareH358.MaxHp, Attack = GareH358.Attack, Speed = GareH358.Speed, Advances = false,
         Traits = new[] { TraitId.PebbleGather },
@@ -3537,6 +3538,14 @@ public static class UnitCatalog
         PlusText = "仲間の欠片が割れるたび、散った礫を拾い集める。手番で、拾った礫を敵全体へ投げつける（礫の量と自分の攻撃力ぶん）",
         MinusText = "拾う礫が無いターンは何もできない",
         Flavor = GareH358.Flavor,
+    };
+
+    /// <summary>礫のガレ（第365期の規定 ＝ 第364期の GR-A）。GR-r ＋ 集まる全体（`ScatterGather`・敵が少ないほど一体に集まる）。旧は <see cref="GareH364"/>。札と文面は <see cref="GareGRA"/> と同じ。</summary>
+    public static readonly UnitDef Gare = new()
+    {
+        Id = GareH364.Id, Name = GareH364.Name, MaxHp = GareH364.MaxHp, Attack = GareH364.Attack, Speed = GareH364.Speed, Advances = GareH364.Advances, Actions = GareH364.Actions,
+        Traits = GareH364.Traits.Append(TraitId.ScatterGather).ToArray(),
+        PlusText = GareH364.PlusText.Replace("敵全体へ投げつける", "敵全体へ投げつける（敵が少ないほど、一体に集まる）"), MinusText = GareH364.MinusText, Flavor = GareH364.Flavor,
     };
 
     /// <summary>
@@ -3557,7 +3566,8 @@ public static class UnitCatalog
     /// 乗せると「灰が少ないときは攻撃力、多いときは灰」の二本立てになり、
     /// <b>溜めた量に意味があるか</b>という問いが測れなくなる。</para>
     /// </summary>
-    public static readonly UnitDef Susu = new()
+    // 第365期: 第364期までの規定のアカ（灰）は `SusuH364` の名前で残した（定義は1文字も変えていない）。規定の `Susu` は第364期の AKn-A で、下に作った。
+    public static readonly UnitDef SusuH364 = new()
     {
         Id = "susu",
         // 第214期: 名前・文面だけ「血詠みのアカ」へ差し替えた（**仕組み・数値・札・Id はそのまま**。
@@ -3579,6 +3589,17 @@ public static class UnitCatalog
         PlusText = "味方が味方から受けた傷を血として溜め、2手番に1度、溜めた血で魔法を放ち敵全体を撃つ",
         MinusText = "血を溜めたまま倒れると、その血が隣接する味方に等分で降りかかる / 敵から受けた傷は血にならない",
         Flavor = "禁術に手を出して破門された。代償を払うのが自分である必要は、どこにも書いていなかった。"
+    };
+
+    /// <summary>血詠みのアカ（第365期の規定 ＝ 第364期の AKn-A）。今の傷を詠む（`BloodRead`）＋ 集まる全体（`ScatterGather`）。旧は <see cref="SusuH364"/>（灰）。
+    /// 札と文面は <see cref="SusuAKnA"/> と同じ（初期化の順に依らないよう、ここでは文面を直に書いた）。体 ／ 手番 ／ Id ／ 立ち絵のキーは旧のまま。</summary>
+    public static readonly UnitDef Susu = new()
+    {
+        Id = SusuH364.Id, Name = SusuH364.Name, MaxHp = SusuH364.MaxHp, Attack = SusuH364.Attack, Speed = SusuH364.Speed, Advances = SusuH364.Advances, Actions = SusuH364.Actions,
+        Traits = new[] { TraitId.BloodRead, TraitId.ScatterGather },
+        PlusText = "手番ごとに、仲間が負っている傷の深さを詠み、その血で敵全体を撃つ（敵が少ないほど、一体に集まる）",
+        MinusText = "仲間が癒えるほど、詠める血は薄くなる / 倒れると、詠みかけの血が隣の仲間に降りかかる",
+        Flavor = SusuH364.Flavor,
     };
 
     /// <summary>
@@ -6701,23 +6722,24 @@ public static class UnitCatalog
     /// <summary>血詠みのアカ・AK-n 今の傷を詠む: 血を溜めない。手番ごとに、生きている味方全員の今の傷の合計と同じ量を敵全体へ撃つ（`BloodRead`）。</summary>
     public static readonly UnitDef SusuAKn = new()
     {
-        Id = Susu.Id, Name = Susu.Name, MaxHp = Susu.MaxHp, Attack = Susu.Attack, Speed = Susu.Speed, Advances = Susu.Advances, Actions = Susu.Actions,
+        Id = SusuH364.Id, Name = SusuH364.Name, MaxHp = SusuH364.MaxHp, Attack = SusuH364.Attack, Speed = SusuH364.Speed, Advances = SusuH364.Advances, Actions = SusuH364.Actions,
         Traits = new[] { TraitId.BloodRead },
         PlusText = "手番ごとに、仲間が負っている傷の深さを詠み、その血で敵全体を撃つ",
         MinusText = "仲間が癒えるほど、詠める血は薄くなる / 倒れると、詠みかけの血が隣の仲間に降りかかる",
-        Flavor = Susu.Flavor,
+        Flavor = SusuH364.Flavor,
     };
 
     /// <summary>血詠みのアカ・AK-s 溜め血: 味方が受けた傷をすべて血として溜め、閾に達した手番で全部使って敵全体を撃つ（`BloodPool`）。</summary>
     public static readonly UnitDef SusuAKs = new()
     {
-        Id = Susu.Id, Name = Susu.Name, MaxHp = Susu.MaxHp, Attack = Susu.Attack, Speed = Susu.Speed, Advances = Susu.Advances, Actions = Susu.Actions,
+        Id = SusuH364.Id, Name = SusuH364.Name, MaxHp = SusuH364.MaxHp, Attack = SusuH364.Attack, Speed = SusuH364.Speed, Advances = SusuH364.Advances, Actions = SusuH364.Actions,
         Traits = new[] { TraitId.BloodPool },
         PlusText = "仲間が流した血を、敵の刃のものも仲間の刃のものも、残らず溜める。溜まりきった血で敵全体を撃つ",
         MinusText = "血が満ちるまで何もできない / 血を溜めたまま倒れると、その血が隣の仲間に降りかかる",
-        Flavor = Susu.Flavor,
+        Flavor = SusuH364.Flavor,
     };
 
+    // 第365期: 規定のアカ ／ ガレが AKn-A ／ GR-A になったので、版（AK-n ／ AK-s ／ AKn-B ／ GR-B ほか）は旧（`SusuH364` ／ `GareH364`）から作る（`SusuAKnA` ／ `GareGRA` は規定と同じ札・文面・残置）。
     // 第364期【軽い期】跳ね撃ち（指示書 design/PHASE364_SCATTER_SHOT_SPEC.md §3）。アカ（AK-n の上）／ ガレ（規定の上）に形 A ／ B の札を1枚ずつ。採否はポン。
     const string Gather364 = "（敵が少ないほど、一体に集まる）", Shot364 = "5発に分けて敵へ順に叩き込む（敵が少なければ同じ敵へ重ねて）";
     /// <summary>血詠みのアカ・AKn-A: AK-n ＋ 集まる全体（`ScatterGather`）。</summary>
@@ -6737,16 +6759,16 @@ public static class UnitCatalog
     /// <summary>ガレ・GR-A: 規定のガレ（礫を拾って投げる）＋ 集まる全体（`ScatterGather`）。</summary>
     public static readonly UnitDef GareGRA = new()
     {
-        Id = Gare.Id, Name = Gare.Name, MaxHp = Gare.MaxHp, Attack = Gare.Attack, Speed = Gare.Speed, Advances = Gare.Advances, Actions = Gare.Actions,
-        Traits = Gare.Traits.Append(TraitId.ScatterGather).ToArray(),
-        PlusText = Gare.PlusText.Replace("敵全体へ投げつける", "敵全体へ投げつける" + Gather364), MinusText = Gare.MinusText, Flavor = Gare.Flavor,
+        Id = GareH364.Id, Name = GareH364.Name, MaxHp = GareH364.MaxHp, Attack = GareH364.Attack, Speed = GareH364.Speed, Advances = GareH364.Advances, Actions = GareH364.Actions,
+        Traits = GareH364.Traits.Append(TraitId.ScatterGather).ToArray(),
+        PlusText = GareH364.PlusText.Replace("敵全体へ投げつける", "敵全体へ投げつける" + Gather364), MinusText = GareH364.MinusText, Flavor = GareH364.Flavor,
     };
     /// <summary>ガレ・GR-B: 規定のガレ ＋ 跳ね弾（`ScatterShot`）。</summary>
     public static readonly UnitDef GareGRB = new()
     {
-        Id = Gare.Id, Name = Gare.Name, MaxHp = Gare.MaxHp, Attack = Gare.Attack, Speed = Gare.Speed, Advances = Gare.Advances, Actions = Gare.Actions,
-        Traits = Gare.Traits.Append(TraitId.ScatterShot).ToArray(),
-        PlusText = Gare.PlusText.Replace("拾った礫を敵全体へ投げつける", "拾った礫を" + Shot364), MinusText = Gare.MinusText, Flavor = Gare.Flavor,
+        Id = GareH364.Id, Name = GareH364.Name, MaxHp = GareH364.MaxHp, Attack = GareH364.Attack, Speed = GareH364.Speed, Advances = GareH364.Advances, Actions = GareH364.Actions,
+        Traits = GareH364.Traits.Append(TraitId.ScatterShot).ToArray(),
+        PlusText = GareH364.PlusText.Replace("拾った礫を敵全体へ投げつける", "拾った礫を" + Shot364), MinusText = GareH364.MinusText, Flavor = GareH364.Flavor,
     };
 
     // 第361期: 規定のササが SS-w になったので、SS-k ／ SS-w は旧（`SasaH360`）から作る（`SasaSSw` は規定と同じ札・文面・残置）。
