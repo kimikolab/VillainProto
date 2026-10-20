@@ -1,0 +1,236 @@
+{
+  "front": "naval-front-v1",
+  "battle": "naval-battle-v4",
+  "world_height": 3.15,
+  "battle_bottom_padding_ratio": "146/1536",
+  "hud_height_ratio": "1212/1536",
+  "motion_installed": true,
+  "motion": {
+    "tag": "hibi_s2022",
+    "version": "idle-loop-v2/candidate-natural",
+    "seed": 2022,
+    "frames": 30,
+    "fps": 16,
+    "crossfade": 0,
+    "geometry_postprocessing": false,
+    "foot_row": 868,
+    "files": [
+      {
+        "file": "DemoApp/assets/portraits/battle/idle_loop/hibi/hibi_idle_00.png",
+        "sha256": "e263f30daada894e7a9969256494c547f0609add23d543ec102de29b204b828b",
+        "source_sha256": "8b957b6f925d7603db78868a261fcc87edf6c02141f12647a2823bd24b3ae16d",
+        "bytes": 801147
+      },
+      {
+        "file": "DemoApp/assets/portraits/battle/idle_loop/hibi/hibi_idle_01.png",
+        "sha256": "5faabe381770f784a0c6587f3fb91f24ed262e0c60c9e206878565c638d3a70b",
+        "source_sha256": "e28134d87d2f00c56ea7bb9aef609ff2cb9c3f644ebbacda8223d9f18ab7a7bd",
+        "bytes": 795964
+      },
+      {
+        "file": "DemoApp/assets/portraits/battle/idle_loop/hibi/hibi_idle_02.png",
+        "sha256": "06c02398240d293f79b69100af0fda84ba79216c17cbdfa8b5541f0538a4b10b",
+        "source_sha256": "5c85fcdee0cbc2067ca478905769a8e4ca56687ee7f478ce2cd40ad45a750a9b",
+        "bytes": 805654
+      },
+      {
+        "file": "DemoApp/assets/portraits/battle/idle_loop/hibi/hibi_idle_03.png",
+        "sha256": "6853d4d7f1abfbb35bcea0fb6dfa0898e2d56cdff187f29cd4df39f5076a200c",
+        "source_sha256": "5fb76bf88e5fc89cb52dad1a6a565a4caace2a749c1c1c37a1e04db021c24f91",
+        "bytes": 797119
+      },
+      {
+        "file": "DemoApp/assets/portraits/battle/idle_loop/hibi/hibi_idle_04.png",
+        "sha256": "14687445c37b516eae5568b4cec1af1829684d64284590481e463a11a88ed397",
+        "source_sha256": "747dc22ae7a6abc9a918762f1e4bf4d539b6fb80468bcd32fc387747a05a5dee",
+        "bytes": 795866
+      },
+      {
+        "file": "DemoApp/assets/portraits/battle/idle_loop/hibi/hibi_idle_05.png",
+        "sha256": "561b169c568d17e31947d9fb0e3fde9a500c6ae3dd1ab99ff85468e11e5c5cb0",
+        "source_sha256": "9e1f402e8c740d1d168adf5a0b365b3364cafbd3b2a9e240f061999da7c0bcc8",
+        "bytes": 792232
+      },
+      {
+        "file": "DemoApp/assets/portraits/battle/idle_loop/hibi/hibi_idle_06.png",
+        "sha256": "ca8b975aa11e543f5da99b14b7329f08c2d6c181d3c30d5cfa324908816af114",
+        "source_sha256": "837dc89b7ea815c37f699cf71a3fc97c20cb1f1f33224a2707e9e88929535f83",
+        "bytes": 804179
+      },
+      {
+        "file": "DemoApp/assets/portraits/battle/idle_loop/hibi/hibi_idle_07.png",
+        "sha256": "8b71d0ed2873d86c36bf61509e140eb3ab54ce3a6fdb63900a03dab1c6b0707f",
+        "source_sha256": "8432fd64367bae8f6b77ed911afedc45ee0fbc8bbe8d65535e191e97640576a0",
+        "bytes": 796464
+      },
+      {
+        "file": "DemoApp/assets/portraits/battle/idle_loop/hibi/hibi_idle_08.png",
+        "sha256": "6397ee0d5b978d9f4d0656d8db3af3144fc4350ae7dc71e9c7c688ad11e316ae",
+        "source_sha256": "24599f83b80a4736d93b8c25c1f19c11c3504b1aadd88ce87966a9bdadac178b",
+        "bytes": 799840
+      },
+      {
+        "file": "DemoApp/assets/portraits/battle/idle_loop/hibi/hibi_idle_09.png",
+        "sha256": "c6a934b596d106300c87211164572bebe3671f160a88968eeaa1fbebf0b102c9",
+        "source_sha256": "d2e0e028966aec96a0f578806d270930ff58980ba60288f0094567c87477f8fe",
+        "bytes": 798753
+      },
+      {
+        "file": "DemoApp/assets/portraits/battle/idle_loop/hibi/hibi_idle_10.png",
+        "sha256": "376d018538d27e68a4f545642cdb7327538d08708d5dfbe04305bc7c92702dfb",
+        "source_sha256": "d75260bc5d77f60844241c78048bc0a07cf96c74df3654171d48eadc5d7c1cd2",
+        "bytes": 808096
+      },
+      {
+        "file": "DemoApp/assets/portraits/battle/idle_loop/hibi/hibi_idle_11.png",
+        "sha256": "bffb300ad637bc2bf7bff5fbcdea6405fcf847ba464093e758b62b47333c4d97",
+        "source_sha256": "ce3eba8a5512b3d958830a9d55fdcdf2e56849e1b43fc24bc9760e3bd13fe210",
+        "bytes": 798895
+      },
+      {
+        "file": "DemoApp/assets/portraits/battle/idle_loop/hibi/hibi_idle_12.png",
+        "sha256": "08f18afa34717aa4551f4e9f9f32262665cbbd1ece9104b51af27d8c250a4553",
+        "source_sha256": "223d4cf4c1d420789c2d7d4e78588b1e64176ee5e0740bc296da3202844e1643",
+        "bytes": 799701
+      },
+      {
+        "file": "DemoApp/assets/portraits/battle/idle_loop/hibi/hibi_idle_13.png",
+        "sha256": "eaa0e85ec7e14de9134d09159bec3c71a4b1174feb79fa4f19a7034e9d8bd8b9",
+        "source_sha256": "4d89825f94d5013f0b10fb48160fdb154ddf75f3daa691eeb1e47d2c2f3e3758",
+        "bytes": 795570
+      },
+      {
+        "file": "DemoApp/assets/portraits/battle/idle_loop/hibi/hibi_idle_14.png",
+        "sha256": "7bf0215c6889e63cbbe3ac3f8a860b0f727a4345337c78848cbee471f0deb5ed",
+        "source_sha256": "9913e0d211d6cccb2ab094d3cec83cd37b1e46839448324616c664ba038150a2",
+        "bytes": 801437
+      },
+      {
+        "file": "DemoApp/assets/portraits/battle/idle_loop/hibi/hibi_idle_15.png",
+        "sha256": "0c522e76cf4f056c7d3e6e465121f45a0cefbfdfb4193f78dae18d3bcc4ede2c",
+        "source_sha256": "1ba8d66e54b27d26d95dd7f17afc62edebfa423734b601a500b224bfe2f24bf5",
+        "bytes": 792769
+      },
+      {
+        "file": "DemoApp/assets/portraits/battle/idle_loop/hibi/hibi_idle_16.png",
+        "sha256": "0a9e9ae5d4f04022a9df7ecf2ddb520aed8081aeac0f78a386fb2823b131d674",
+        "source_sha256": "46f22b1e38daf6e119cd9e7e8db93024e451f188963e037baa4223aed4ac758f",
+        "bytes": 784604
+      },
+      {
+        "file": "DemoApp/assets/portraits/battle/idle_loop/hibi/hibi_idle_17.png",
+        "sha256": "804eb8edc409d295525d800ffa5d80183eecbfeb0aed0e7c4b10eb6cedffe274",
+        "source_sha256": "a00f31fcbb8ec63f764d8706bac799cbd166e3a5db6d7524a167682a434db3cc",
+        "bytes": 779974
+      },
+      {
+        "file": "DemoApp/assets/portraits/battle/idle_loop/hibi/hibi_idle_18.png",
+        "sha256": "871ab55ed1c64e22c5f581122f0530bf74f0b232f83929a59b6425fe09691ea7",
+        "source_sha256": "340c3e3c02a8d121b947efa8a18afac9d7899f0446278736dea9c39a9c8c6d68",
+        "bytes": 788373
+      },
+      {
+        "file": "DemoApp/assets/portraits/battle/idle_loop/hibi/hibi_idle_19.png",
+        "sha256": "36dd0cc767b78dedba14ca03e0c739c4aad19000085010a162aafd426ffc2828",
+        "source_sha256": "9b7a42b1abd496ca1a5b2e90e9addb50a2d52f2d8aa186fe3ce05764a92b03e5",
+        "bytes": 777753
+      },
+      {
+        "file": "DemoApp/assets/portraits/battle/idle_loop/hibi/hibi_idle_20.png",
+        "sha256": "e2df4381e807c31cc28fbd315841ccee71997e5b900db21b481136fc975bd4e3",
+        "source_sha256": "24f44c30fe30d658063af33ebcf5361217cb9288632dc5d3cda47c967a4006b3",
+        "bytes": 786373
+      },
+      {
+        "file": "DemoApp/assets/portraits/battle/idle_loop/hibi/hibi_idle_21.png",
+        "sha256": "0c7d0427f2a158d105230bb7f90a0ce1378155ae9869070800b43fa5b0ea622c",
+        "source_sha256": "275e6ebb96da3c98629fbcac56eb069b8a1375a3d5e8772223729e39dc0eb814",
+        "bytes": 786227
+      },
+      {
+        "file": "DemoApp/assets/portraits/battle/idle_loop/hibi/hibi_idle_22.png",
+        "sha256": "1fee713980777cf20ab7a25145d0b9d0d2a2b710cb84d319d2f739c845800364",
+        "source_sha256": "00cd92b35aefcdd5744f5e68508e86ba727617947e79f8322fdcf637bc76756a",
+        "bytes": 803107
+      },
+      {
+        "file": "DemoApp/assets/portraits/battle/idle_loop/hibi/hibi_idle_23.png",
+        "sha256": "f895d32ca52bbb532d19d76d15de6c1a9f58f92bf2c0adf524070b1b15bc9d0c",
+        "source_sha256": "ae10a1b4b015e0ce9f422c7206c75cbd0dab537a000f061703ea13f1b86df6fc",
+        "bytes": 797710
+      },
+      {
+        "file": "DemoApp/assets/portraits/battle/idle_loop/hibi/hibi_idle_24.png",
+        "sha256": "867be9eaa53e2999a976d80b748e0e9e131b4249c67460b9f1f8fca660dfedb9",
+        "source_sha256": "7f90086e02fc9825d0350bc31e382b529023a40dcc570bb524efc9291c5f9d7a",
+        "bytes": 802515
+      },
+      {
+        "file": "DemoApp/assets/portraits/battle/idle_loop/hibi/hibi_idle_25.png",
+        "sha256": "347347ca6439c0412e48dd992ec53a94e6021f3a06a13f073ff840116b16329a",
+        "source_sha256": "06e0f5c2b1fa0aaa7fe21cfd4e64abdf30d88367b90e91a873510e2cdfba955b",
+        "bytes": 801178
+      },
+      {
+        "file": "DemoApp/assets/portraits/battle/idle_loop/hibi/hibi_idle_26.png",
+        "sha256": "3d363552e0881d8d2e49cc529f4f4d41c2013cdb27165ae7884e1f40e650cd95",
+        "source_sha256": "67fd5c531bbc5d31fe3aae9cb36adc041c8a7b9d3383f02d703a15cdb916bbe6",
+        "bytes": 808190
+      },
+      {
+        "file": "DemoApp/assets/portraits/battle/idle_loop/hibi/hibi_idle_27.png",
+        "sha256": "9fe2f067abcb0ae1e68ee47f85579252181feb5e49d5a2efeff766a9debd8d5f",
+        "source_sha256": "cc3c5147c2ae7815a1d36bad6bf0dc1f5c8536e8d6b2a689dc71750fed69a8a3",
+        "bytes": 797683
+      },
+      {
+        "file": "DemoApp/assets/portraits/battle/idle_loop/hibi/hibi_idle_28.png",
+        "sha256": "58461a2f8158ae811e0f56ccdbd40169e22a5276527623b4df0af61e4f452eda",
+        "source_sha256": "2bd7dbcb82c7b3fb486776a8cae95e10ebb8997e5ed0e0d20538a213a40afc1f",
+        "bytes": 798496
+      },
+      {
+        "file": "DemoApp/assets/portraits/battle/idle_loop/hibi/hibi_idle_29.png",
+        "sha256": "170692291c21817ac80ad6d1dd5229b1a7b4fec332f98a5ac7c9f725c384d044",
+        "source_sha256": "0f1011ca385ae960abaed3ed970915e85cf0305f3e8331546ca2a6bbb992a85d",
+        "bytes": 792285
+      }
+    ]
+  },
+  "files": [
+    {
+      "source": "design/art/hibi/hibi-naval-bodyguard-front-v1.png",
+      "installed": "DemoApp/assets/portraits/hibi.png",
+      "sha256": "b090542cc574a8e704d7a97f5ce123bcc0bf1983c3a06666589b8606a63aa9e5",
+      "bytes": 2316479,
+      "size": [
+        1024,
+        1536
+      ],
+      "foreground_bbox": [
+        154,
+        10,
+        926,
+        1489
+      ],
+      "bottom_padding": 47
+    },
+    {
+      "source": "design/art/hibi/hibi-naval-bodyguard-idle-right-v4.png",
+      "installed": "DemoApp/assets/portraits/battle/hibi_idle_right.png",
+      "sha256": "110b90584f9166ab0315035993b3940a27c77b7cc79469b3113802b97316f7ef",
+      "bytes": 2215461,
+      "size": [
+        1024,
+        1536
+      ],
+      "foreground_bbox": [
+        81,
+        178,
+        968,
+        1390
+      ],
+      "bottom_padding": 146
+    }
+  ]
+}

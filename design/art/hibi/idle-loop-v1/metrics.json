@@ -1,0 +1,42 @@
+{
+  "A": {
+    "tag": "hibi_s2022_coherent_a40_y0",
+    "seed": 2022,
+    "amplitude": 0.4,
+    "frames": 32,
+    "fps": 16,
+    "head_range_px": 9,
+    "foot_rows": [
+      868,
+      868
+    ],
+    "border_contacts": 0,
+    "seam_ratio": 0.7338433040850614,
+    "total_bytes": 21302493,
+    "shield_nonrigid_residual_median_px": 0.016933889594905216,
+    "shield_center_motion_range_px": [
+      2.24268078613278,
+      11.81784942626956
+    ]
+  },
+  "B": {
+    "tag": "hibi_s5055_coherent_a40_y0",
+    "seed": 5055,
+    "amplitude": 0.4,
+    "frames": 32,
+    "fps": 16,
+    "head_range_px": 5,
+    "foot_rows": [
+      868,
+      869
+    ],
+    "border_contacts": 0,
+    "seam_ratio": 0.9489118604301968,
+    "total_bytes": 21433185,
+    "shield_nonrigid_residual_median_px": 0.04104369241803542,
+    "shield_center_motion_range_px": [
+      5.757472290039061,
+      6.6881267089843845
+    ]
+  }
+}

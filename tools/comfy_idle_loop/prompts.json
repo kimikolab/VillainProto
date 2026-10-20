@@ -1,5 +1,24 @@
 {
   "_readme": "④b（キャラごとの文）。組み立ては idle_loop.py の compose(): HEAD + char + motion + 共通の縛り（sway を含む）。neg は共通の負のプロンプトの後ろに足す。新しいキャラは既存の項目を写して char / motion / sway を書き換える。motion には『膝がはっきり曲がって伸びる・弾む』を必ず入れる（『ゆっくり重く』『わずかに』と書くと止まる）。",
+  "hibi": {
+    "still": "DemoApp/assets/portraits/battle/hibi_idle_right.png",
+    "pronoun": "she",
+    "char": "The athletic adult female former-naval shield warrior Hibi keeps the exact same right-facing wide planted defensive stance. She has short charcoal hair with one silver-white fore-temple streak, stern gray eyes, a short dark navy brass-trimmed naval jacket, rolled ivory sleeves, brown leather and steel partial armor, dark trousers, a burgundy waist sash and heavy buckled steel-toed brown boots. Her left forearm stays braced BEHIND the one enormous broken oval mirror shield on screen right, guarding her shoulder, chest and abdomen. Her right arm stays freely extended to screen left with the same open gloved hand. ",
+    "motion": "Like a heavyweight fighting game shield fighter, she repeats a steady measured rhythmic guard-breathing cycle in place: her bent knees clearly flex and straighten, her hips and chest sink and rise together, and her shoulders and shield-bearing forearm settle and recover as one connected body supporting a heavy shield. She keeps the original forward defensive lean, chin lifted and eyes on the opponent; her head and neck follow her torso without nodding. Her free right arm and open hand follow the breathing without waving or grabbing the shield. Repeat the same planted guard cycle several times, never attacking or changing the stance. ",
+    "sway": "Her short hair tips and tattered navy, ivory and burgundy cloth softly follow through with the breathing and settle. The huge mirror shield stays in exactly the same guarding orientation in front of her body, moving only with the braced arm and shoulder. The oval metal rim stays straight, rigid and constant in shape and size; mirror panels, cracks, holes, straps and rivets remain fixed to that same rigid shield. No shield bash, no shield swing, no second hand touching the rim, no floating shards, no sparks, no fire, no glow.",
+    "neg": "extreme bounce, squatting deeply, standing upright, straightening the defensive posture, leaning farther forward, hunched back, slouching, looking down, nodding, waving hand, closing hand, changing grip, hugging mirror, lifting shield, lowering shield, shield bash, shield swing, spinning shield, shield on back, two shields, shield growing, shield shrinking, bending oval rim, rippling mirror, changing mirror cracks, repairing broken mirror, mirror fragments falling, reversed white hair streak, changing hair color, growing hair, camera dolly, camera rotation",
+    "note": "2026-10-21 ユーザーがリテイク版を承認し、正面v1・戦闘v4と待機モーションv2をゲームへ適用。待機v1のA/Bは元絵の歪みで不採用。v2はhibi_s2022の生成コマを変形せず直接使用し、30コマ・16fps・crossfade 0（頭頂19px・足868固定・継ぎ目0.90x）。光学フローによる振幅調整・周期平滑化・固定画像の上貼りは使わない。char / motion / sway / negは採用元の生成プロンプトと一致。別途試した新規プロンプトと除外したseed 2022 / 3033はidle-loop-v2/prompt.jsonに保存。再現・採用・実戦確認の記録はdesign/art/hibi/idle-loop-v2/。",
+    "adopted": {
+      "tag": "hibi_s2022",
+      "seed": 2022,
+      "crossfade": 0,
+      "frames": 30,
+      "fps": 16,
+      "geometry_postprocessing": false,
+      "loop": "hibi",
+      "version": "idle-loop-v2/candidate-natural"
+    }
+  },
   "gare": {
     "still": "DemoApp/assets/portraits/battle/gare_idle_right.png",
     "pronoun": "she",

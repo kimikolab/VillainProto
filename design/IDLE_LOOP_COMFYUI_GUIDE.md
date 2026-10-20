@@ -4,7 +4,7 @@
 Claude Code・Codex・人のどれが作業しても同じ結果になるように、操作は `tools/comfy_idle_loop/idle_loop.py` の命令にまとめてある。
 採用までの経緯と数値は `design/art/hane/hane-idle-loop-v1-notes.md`（方式の比較・ボルグ／ホタ／ヒヨ）と `design/art/hiyo/hiyo-idle-loop-comfyui-v1.md`（ゲームへの接続・燃焼差分）。
 
-**いまゲームに入っているもの**: ヒヨ（`hiyo`）・ボルグ（`borg`）・ホタ（`hota`）・ホタの燃焼差分（`hota_burning`）・ガルド（`gald`、v4 A・32コマ、記録は `design/art/gald/idle-loop-v4/notes.md`）・ガレ（`gare`、v3 A70・30コマ、記録は `design/art/gare/idle-loop-v3/notes.md`）。
+**いまゲームに入っているもの**: ヒヨ（`hiyo`）・ボルグ（`borg`）・ホタ（`hota`）・ホタの燃焼差分（`hota_burning`）・ガルド（`gald`、v4 A・32コマ、記録は `design/art/gald/idle-loop-v4/notes.md`）・ガレ（`gare`、v3 A70・30コマ、記録は `design/art/gare/idle-loop-v3/notes.md`）・ヒビ（`hibi`、v2・元動画の30コマを直接使用、記録は `design/art/hibi/idle-loop-v2/notes.md`）。
 
 ---
 
@@ -144,6 +144,8 @@ D:/comfyui/venv/Scripts/python.exe tools/comfy_idle_loop/idle_loop.py recut hota
 
 ガルドの顔と腕を元絵の固定レイヤーで止めた版は、ユーザーから「首が切られたように見える」と不採用になった。
 「揺れすぎない」を「動かさない」に置き換えない。自然さは全身のつながりと動画で確認する。
+ヒビv1では振幅縮小後のA/Bが「絵自体が歪む」として両方不採用になった。盾の追跡残差や継ぎ目が良くても、元絵の変形が自然な関節運動に見えるとは限らない。
+この場合は変形の係数を調整し続けず、生成動画のコマを直接使う版と比較する（`design/art/hibi/idle-loop-v2/`）。
 再現用ワークフロー・マスク・測定は `design/art/gald/idle-loop-v3/`、ノードの数値検証は同フォルダーの `verify-motion-node.py`。
 兜の突起の伸縮と剣周囲の波打ち・輪郭の検証は `design/art/gald/idle-loop-v4/`。
 
@@ -173,7 +175,7 @@ C:/tools/Godot_v4.7.2-stable_mono_win64/Godot_console.exe --path DemoApp --headl
 合否は `IDLE_LOOP_CHECK_OK` / `PORTRAIT_STATE_CHECK_OK` / `FIRE_CHECK_OK` / `MOVEMENT_PORTRAIT_CHECK_OK` の行で読む
 （終了時の `RID allocations … leaked` は既存の警告）。
 
-- **`IdleLoopCheck.cs` はコマ数を数えている**（ヒヨ 19・ボルグ 44・ホタ 36・ガルド 32・ガレ 30）。入れ替えたら数を直す。新しい駒を足したら、その駒の「開戦から連番・同じ高さ」の確認を足す。
+- **`IdleLoopCheck.cs` はコマ数を数えている**（ヒヨ 19・ボルグ 44・ホタ 36・ガルド 32・ガレ 30・ヒビ 30）。入れ替えたら数を直す。新しい駒を足したら、その駒の「開戦から連番・同じ高さ」の確認を足す。
 - 実戦の画面は窓ありで撮る:
   `Godot.exe --path DemoApp -- --demo-autoplay "--demo-preset=火選り (ヒヨ×ホタ)" --demo-stage=2 --demo-seed=1 "--demo-capture-dir=<出力先>"`（6 枚撮って終わる）。
 

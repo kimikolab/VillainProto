@@ -223,6 +223,7 @@ public static class UiKit
         "nel" => 2.50f,
         "utsu" => 2.50f,
         "gare" => 2.65f,
+        "hibi" => 3.15f,
         "axeman" => 2.65f,
         "knight" => 2.65f,
         "warden" => 3.10f,
@@ -230,6 +231,9 @@ public static class UiKit
         "axeman_g" => 2.65f,
         _ => 2.25f,
     };
+
+    public static float PortraitHudHeight(string key)
+        => PortraitWorldHeight(key) * (key == "hibi" ? 1212f / 1536f : 1f);
 
     /// <summary>
     /// 透過キャンバス下端から足元までの余白率。足元を地面へ固定するため、採用画像ごとに保持する。
@@ -320,6 +324,7 @@ public static class UiKit
         "nel" => 0.0378f,
         "utsu" => 0.0436f,
         "gare" => 31f / 1536f,
+        "hibi" => 146f / 1536f,
         "recruit" => 0.0260f,
         "axeman" => 0.0326f,
         "knight_g" => 0.0150f,

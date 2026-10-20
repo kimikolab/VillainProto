@@ -1,0 +1,665 @@
+{
+  "prompt": [
+    13,
+    "d4137382-1d8f-4482-bb23-1d0dbcd92d32",
+    {
+      "1": {
+        "class_type": "UNETLoader",
+        "inputs": {
+          "unet_name": "wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors",
+          "weight_dtype": "default"
+        }
+      },
+      "2": {
+        "class_type": "UNETLoader",
+        "inputs": {
+          "unet_name": "wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors",
+          "weight_dtype": "default"
+        }
+      },
+      "3": {
+        "class_type": "CLIPLoader",
+        "inputs": {
+          "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+          "type": "wan",
+          "device": "default"
+        }
+      },
+      "4": {
+        "class_type": "VAELoader",
+        "inputs": {
+          "vae_name": "wan_2.1_vae.safetensors"
+        }
+      },
+      "5": {
+        "class_type": "LoadImage",
+        "inputs": {
+          "image": "vp_hibi_native_v2.png"
+        }
+      },
+      "30": {
+        "class_type": "EmptyImage",
+        "inputs": {
+          "width": 1024,
+          "height": 1536,
+          "batch_size": 1,
+          "color": 45376
+        }
+      },
+      "31": {
+        "class_type": "InvertMask",
+        "inputs": {
+          "mask": [
+            "5",
+            1
+          ]
+        }
+      },
+      "32": {
+        "class_type": "ImageCompositeMasked",
+        "inputs": {
+          "destination": [
+            "30",
+            0
+          ],
+          "source": [
+            "5",
+            0
+          ],
+          "x": 0,
+          "y": 0,
+          "resize_source": false,
+          "mask": [
+            "31",
+            0
+          ]
+        }
+      },
+      "19": {
+        "class_type": "ImageScale",
+        "inputs": {
+          "image": [
+            "32",
+            0
+          ],
+          "upscale_method": "lanczos",
+          "width": 640,
+          "height": 960,
+          "crop": "disabled"
+        }
+      },
+      "6": {
+        "class_type": "CLIPTextEncode",
+        "inputs": {
+          "clip": [
+            "3",
+            0
+          ],
+          "text": "A 2D anime fighting game character idle animation, like a Street Fighter or Guilty Gear idle loop. The athletic adult female former-naval shield warrior Hibi keeps the exact same right-facing wide planted defensive stance. She has short charcoal hair with one silver-white fore-temple streak, stern gray eyes, a short dark navy brass-trimmed naval jacket, rolled ivory sleeves, brown leather and steel partial armor, dark trousers, a burgundy waist sash and heavy buckled steel-toed brown boots. Her left forearm stays braced BEHIND the one enormous broken oval mirror shield on screen right, guarding her shoulder, chest and abdomen. Her right arm stays freely extended to screen left with the same open gloved hand. Like a heavyweight fighting game shield fighter, she repeats a compact rhythmic ready-guard animation in place. Both bent knees visibly flex and extend at their joints; her hips lower and recover, her solid chest follows her hips, and her elbows naturally adjust to keep supporting the heavy shield. Her body is an articulated person with constant limb lengths, not a stretching illustration. She keeps the original forward defensive lean and wide stance throughout; her chin stays level and her eyes watch the opponent. Her head follows her shoulders, her free open right hand follows her elbow, and her shield follows her supporting left shoulder and forearm. Repeat this connected guard cycle several times without an attack or a change of pose. Both feet stay flat on the ground in exactly the same spots; she never jumps and never steps. Her body keeps facing right and does not turn toward the camera. Her short hair tips and tattered coat and burgundy sash follow the movement with a gentle delayed swish. Each boot stays firmly planted. The heavy oval mirror shield is a solid rigid object moving with her supporting arm, never deforming; the frame, cracks, mirror panels and rivets stay attached to the same rigid surface. No shield bash, no shield swing, no second hand touching the rim, no floating shards, no sparks, no fire, no glow. Same face, same costume, same colors. Fixed camera, no zoom, full body always visible, flat plain green background."
+        }
+      },
+      "7": {
+        "class_type": "CLIPTextEncode",
+        "inputs": {
+          "clip": [
+            "3",
+            0
+          ],
+          "text": "static image, frozen pose, walking, moving across the frame, turning around, camera movement, zoom, cuts, jumping, hopping, feet leaving the ground, stepping, turning to face the camera, cropped feet, cropped ears, multiple characters, changing costume, changing face, extra limbs, extra fingers, deformed hands, flicker, text, watermark, background change, shadows on background, rubber body, rubber sheet, elastic distortion, wavy outlines, wobbling drawing, stretching torso, squash and stretch, changing limb lengths, stretching boots, extreme bounce, squatting deeply, standing upright, straightening the defensive posture, leaning farther forward, hunched back, slouching, looking down, nodding, waving hand, closing hand, changing grip, hugging mirror, lifting shield, lowering shield, shield bash, shield swing, spinning shield, shield on back, two shields, shield growing, shield shrinking, bending oval rim, rippling mirror, changing mirror cracks, repairing broken mirror, mirror fragments falling, reversed white hair streak, changing hair color, growing hair, camera dolly, camera rotation"
+        }
+      },
+      "8": {
+        "class_type": "ModelSamplingSD3",
+        "inputs": {
+          "model": [
+            "1",
+            0
+          ],
+          "shift": 8.0
+        }
+      },
+      "9": {
+        "class_type": "ModelSamplingSD3",
+        "inputs": {
+          "model": [
+            "2",
+            0
+          ],
+          "shift": 8.0
+        }
+      },
+      "10": {
+        "class_type": "WanImageToVideo",
+        "inputs": {
+          "positive": [
+            "6",
+            0
+          ],
+          "negative": [
+            "7",
+            0
+          ],
+          "vae": [
+            "4",
+            0
+          ],
+          "width": 640,
+          "height": 960,
+          "length": 81,
+          "batch_size": 1,
+          "start_image": [
+            "19",
+            0
+          ]
+        }
+      },
+      "11": {
+        "class_type": "KSamplerAdvanced",
+        "inputs": {
+          "model": [
+            "8",
+            0
+          ],
+          "add_noise": "enable",
+          "noise_seed": 3033,
+          "steps": 20,
+          "cfg": 3.5,
+          "sampler_name": "euler",
+          "scheduler": "simple",
+          "positive": [
+            "10",
+            0
+          ],
+          "negative": [
+            "10",
+            1
+          ],
+          "latent_image": [
+            "10",
+            2
+          ],
+          "start_at_step": 0,
+          "end_at_step": 10,
+          "return_with_leftover_noise": "enable"
+        }
+      },
+      "12": {
+        "class_type": "KSamplerAdvanced",
+        "inputs": {
+          "model": [
+            "9",
+            0
+          ],
+          "add_noise": "disable",
+          "noise_seed": 0,
+          "steps": 20,
+          "cfg": 3.5,
+          "sampler_name": "euler",
+          "scheduler": "simple",
+          "positive": [
+            "10",
+            0
+          ],
+          "negative": [
+            "10",
+            1
+          ],
+          "latent_image": [
+            "11",
+            0
+          ],
+          "start_at_step": 10,
+          "end_at_step": 20,
+          "return_with_leftover_noise": "disable"
+        }
+      },
+      "13": {
+        "class_type": "VAEDecode",
+        "inputs": {
+          "samples": [
+            "12",
+            0
+          ],
+          "vae": [
+            "4",
+            0
+          ]
+        }
+      },
+      "14": {
+        "class_type": "CreateVideo",
+        "inputs": {
+          "images": [
+            "13",
+            0
+          ],
+          "fps": 16.0
+        }
+      },
+      "15": {
+        "class_type": "SaveVideo",
+        "inputs": {
+          "video": [
+            "14",
+            0
+          ],
+          "filename_prefix": "VillainProto/idle_loop/hibi_native_v2_s3033_raw",
+          "format": "auto",
+          "codec": "auto"
+        }
+      },
+      "40": {
+        "class_type": "VPIdleLoopFind",
+        "inputs": {
+          "images": [
+            "13",
+            0
+          ],
+          "min_length": 16,
+          "max_length": 48,
+          "skip_head": 8,
+          "min_motion": 3.0,
+          "compare_size": 192,
+          "min_step": 2.5,
+          "crossfade": 0
+        }
+      },
+      "45": {
+        "class_type": "PreviewAny",
+        "inputs": {
+          "source": [
+            "40",
+            4
+          ]
+        }
+      },
+      "41": {
+        "class_type": "BiRefNetRMBG",
+        "inputs": {
+          "image": [
+            "40",
+            0
+          ],
+          "model": "BiRefNet_toonout",
+          "sensitivity": 1.0,
+          "mask_blur": 0,
+          "mask_offset": 0,
+          "invert_output": false,
+          "refine_foreground": false,
+          "background": "Alpha",
+          "background_color": "#222222"
+        }
+      },
+      "42": {
+        "class_type": "VPGreenKeyAlpha",
+        "inputs": {
+          "images": [
+            "40",
+            0
+          ],
+          "mask": [
+            "41",
+            1
+          ],
+          "key_low": 25.0,
+          "key_high": 75.0,
+          "despill": true,
+          "edge_width": 12
+        }
+      },
+      "43": {
+        "class_type": "SaveImage",
+        "inputs": {
+          "images": [
+            "42",
+            0
+          ],
+          "filename_prefix": "VillainProto/idle_loop/hibi_native_v2_s3033_rgba/f"
+        }
+      },
+      "44": {
+        "class_type": "SaveAnimatedWEBP",
+        "inputs": {
+          "images": [
+            "42",
+            0
+          ],
+          "filename_prefix": "VillainProto/idle_loop/hibi_native_v2_s3033_loop",
+          "fps": 16.0,
+          "lossless": true,
+          "quality": 90,
+          "method": "default"
+        }
+      }
+    },
+    {
+      "client_id": "72b11bee-db5e-4db3-ba00-0e4249f9e490",
+      "create_time": 1792508095314
+    },
+    [
+      "15",
+      "43",
+      "44",
+      "45"
+    ]
+  ],
+  "outputs": {
+    "15": {
+      "images": [
+        {
+          "filename": "hibi_native_v2_s3033_raw_00001_.mp4",
+          "subfolder": "VillainProto\\idle_loop",
+          "type": "output"
+        }
+      ],
+      "animated": [
+        true
+      ]
+    },
+    "45": {
+      "text": [
+        "81 frames / loop [16, 59) = 43 frames / seam 5.09 = 2.63x of median step 1.93 (目立つ) / 動きが小さすぎる（1コマの差 1.93 < 2.5）: 動きの指示を強めるか seed を替える"
+      ]
+    },
+    "43": {
+      "images": [
+        {
+          "filename": "f_00001_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00002_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00003_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00004_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00005_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00006_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00007_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00008_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00009_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00010_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00011_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00012_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00013_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00014_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00015_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00016_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00017_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00018_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00019_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00020_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00021_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00022_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00023_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00024_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00025_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00026_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00027_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00028_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00029_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00030_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00031_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00032_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00033_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00034_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00035_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00036_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00037_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00038_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00039_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00040_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00041_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00042_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00043_.png",
+          "subfolder": "VillainProto\\idle_loop\\hibi_native_v2_s3033_rgba",
+          "type": "output"
+        }
+      ]
+    },
+    "44": {
+      "images": [
+        {
+          "filename": "hibi_native_v2_s3033_loop_00001_.webp",
+          "subfolder": "VillainProto\\idle_loop",
+          "type": "output"
+        }
+      ],
+      "animated": [
+        true
+      ]
+    }
+  },
+  "status": {
+    "status_str": "success",
+    "completed": true,
+    "messages": [
+      [
+        "execution_start",
+        {
+          "prompt_id": "d4137382-1d8f-4482-bb23-1d0dbcd92d32",
+          "timestamp": 1792508758209
+        }
+      ],
+      [
+        "execution_cached",
+        {
+          "nodes": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "30",
+            "31",
+            "32",
+            "19",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10"
+          ],
+          "prompt_id": "d4137382-1d8f-4482-bb23-1d0dbcd92d32",
+          "timestamp": 1792508758216
+        }
+      ],
+      [
+        "execution_success",
+        {
+          "prompt_id": "d4137382-1d8f-4482-bb23-1d0dbcd92d32",
+          "timestamp": 1792509358960
+        }
+      ]
+    ]
+  },
+  "meta": {
+    "15": {
+      "node_id": "15",
+      "display_node": "15",
+      "parent_node": null,
+      "real_node_id": "15"
+    },
+    "45": {
+      "node_id": "45",
+      "display_node": "45",
+      "parent_node": null,
+      "real_node_id": "45"
+    },
+    "43": {
+      "node_id": "43",
+      "display_node": "43",
+      "parent_node": null,
+      "real_node_id": "43"
+    },
+    "44": {
+      "node_id": "44",
+      "display_node": "44",
+      "parent_node": null,
+      "real_node_id": "44"
+    }
+  }
+}

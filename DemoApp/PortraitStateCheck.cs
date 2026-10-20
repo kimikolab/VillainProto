@@ -22,6 +22,19 @@ public partial class PortraitStateCheck : Node3D
                 enemy.QueueFree();
             }
             Require(UiKit.BattlePortraitTint("__missing_portrait__", true) == UiKit.Tint("__missing_portrait__", true), "戦闘用の仮画像は色分けを維持");
+            var hibiPortrait = UiKit.Portrait(atlas, "hibi");
+            var hibiBattle = UiKit.BattlePortrait(atlas, "hibi");
+            Require(hibiPortrait.GetSize() == new Vector2(1024, 1536) && hibiBattle.GetSize() == hibiPortrait.GetSize(), "ヒビの正面・戦闘画像の寸法");
+            Require(!hibiPortrait.GetImage().GetData().SequenceEqual(hibiBattle.GetImage().GetData()), "ヒビの正面と盾構えを分離");
+            var hibi = MakePawn(atlas, 110, BattleContext.PlayerTeam, 4.8f, "hibi");
+            var hibiEnemy = MakePawn(atlas, 111, BattleContext.EnemyTeam, 6.4f, "hibi");
+            CheckIdle(hibi, hibiBattle, "hibi");
+            CheckIdle(hibiEnemy, hibiBattle, "hibi");
+            var hibiSprite = hibi.GetChildren().OfType<Sprite3D>().Single();
+            Require(hibiEnemy.GetChildren().OfType<Sprite3D>().Single().FlipH, "ヒビの敵側反転");
+            Require(Math.Abs(hibiSprite.Texture.GetHeight() * hibiSprite.PixelSize - UiKit.PortraitWorldHeight("hibi")) < 1e-4f, "ヒビの盾構えの表示高");
+            Require(Math.Abs(UiKit.BattlePortraitBottomPaddingRatio("hibi") - 146f / 1536f) < 1e-6f, "ヒビの盾構えの足元余白");
+            Require(Math.Abs(UiKit.PortraitHudHeight("hibi") - UiKit.PortraitWorldHeight("hibi") * 1212f / 1536f) < 1e-6f, "ヒビの画像余白を除いたHUD高さ");
             var normal = UiKit.BattlePortrait(atlas, "hota");
             var burning = UiKit.BattlePortrait(atlas, "hota", true);
             Require(!UiKit.Portrait(atlas, "hota").GetImage().GetData().SequenceEqual(normal.GetImage().GetData()), "選択用と戦闘用の画像を分離");
@@ -44,8 +57,10 @@ public partial class PortraitStateCheck : Node3D
             left.SetBurning(true);
             CheckIdle(left, burning, "hota_burning");
             left.AnimateVictory();
+            hibi.AnimateVictory();
             await ToSignal(GetTree().CreateTimer(0.7), SceneTreeTimer.SignalName.Timeout);
             Check(left, UiKit.Portrait(atlas, "hota"));
+            Check(hibi, hibiPortrait);
             left.SetBurning(true);
             Check(left, UiKit.Portrait(atlas, "hota"));
             left.QueueFree();
@@ -61,7 +76,7 @@ public partial class PortraitStateCheck : Node3D
                 await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
                 GetViewport().GetTexture().GetImage().SavePng(ProjectSettings.GlobalizePath("res://../design/art/hota/portrait-state-check.png"));
             }
-            GD.Print("PORTRAIT_STATE_CHECK_OK normal burning extinguish death revive victory fallback enemy");
+            GD.Print("PORTRAIT_STATE_CHECK_OK normal burning extinguish death revive victory fallback enemy hibi");
             GetTree().Quit();
         }
         catch (Exception e)

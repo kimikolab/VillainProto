@@ -20,6 +20,8 @@ public partial class IdleLoopCheck : Node3D
             Require(BattlePawn3D.IdleLoopFramesOf("hota").Length == 36, "ホタの連番 36 コマ");
             Require(BattlePawn3D.IdleLoopFramesOf("gald").Length == 32, "ガルドの連番 32 コマ");
             Require(BattlePawn3D.IdleLoopFramesOf("gare").Length == 30, "ガレの連番 30 コマ");
+            Require(BattlePawn3D.IdleLoopFramesOf("hibi").Length == 30, "ヒビのリテイク版 30 コマ");
+            Require(BattlePawn3D.IdleLoopFramesOf("hibi").All(frame => frame.GetSize() == new Vector2(640, 960)), "ヒビの連番の寸法");
             Require(BattlePawn3D.IdleLoopFramesOf("golm").Length == 0, "連番の無い駒は空");
             var still = UiKit.BattlePortrait(atlas, "hiyo");
 
@@ -33,6 +35,8 @@ public partial class IdleLoopCheck : Node3D
             var gald = MakePawn(atlas, 6, BattleContext.PlayerTeam, 4.8f, "gald");
             var gare = MakePawn(atlas, 8, BattleContext.PlayerTeam, 8.0f, "gare");
             var gareEnemy = MakePawn(atlas, 9, BattleContext.EnemyTeam, 9.8f, "gare");
+            var hibi = MakePawn(atlas, 10, BattleContext.PlayerTeam, 11.6f, "hibi");
+            var hibiEnemy = MakePawn(atlas, 11, BattleContext.EnemyTeam, 13.4f, "hibi");
             var sprite = SpriteOf(hiyo);
 
             // 開戦直後から連番。待機絵と同じ高さ（=同じ足元）で描く。
@@ -41,7 +45,7 @@ public partial class IdleLoopCheck : Node3D
             float worldHeight = sprite.Texture.GetHeight() * sprite.PixelSize;
             Require(Math.Abs(worldHeight - UiKit.PortraitWorldHeight("hiyo")) < 1e-4f, "待機絵と同じ高さ");
             Require(!golm.IdleLoopPlaying && SpriteOf(golm).Texture == UiKit.BattlePortrait(atlas, "golm"), "連番の無い駒は静止絵のまま");
-            foreach (var (pawn, key) in new[] { (borg, "borg"), (hota, "hota"), (gald, "gald"), (gare, "gare") })
+            foreach (var (pawn, key) in new[] { (borg, "borg"), (hota, "hota"), (gald, "gald"), (gare, "gare"), (hibi, "hibi") })
             {
                 var s = SpriteOf(pawn);
                 Require(pawn.IdleLoopPlaying && BattlePawn3D.IdleLoopFramesOf(key).Contains(s.Texture), $"{key} も開戦から連番");
@@ -62,6 +66,20 @@ public partial class IdleLoopCheck : Node3D
             gare.AnimateRevive();
             Require(gare.IdleLoopPlaying && BattlePawn3D.IdleLoopFramesOf("gare").Contains(SpriteOf(gare).Texture), "ガレも蘇生で再開");
             Require(SpriteOf(gareEnemy).FlipH && gareEnemy.IdleLoopPlaying, "敵側のガレも反転して回る");
+            Require(CountDistinct(hibi, 2.0) == 30, "ヒビの全30コマが進み周期を跨ぐ");
+            hibi.AnimationSpeed = 2;
+            Require(CountDistinct(hibi, 0.3) >= 6, "ヒビも倍速で進む");
+            hibi.AnimationSpeed = 1;
+            hibi.SetBurning(true);
+            Require(hibi.IdleLoopPlaying && BattlePawn3D.IdleLoopFramesOf("hibi").Contains(SpriteOf(hibi).Texture), "ヒビは燃焼中も通常の連番が回る");
+            hibi.SetBurning(false);
+            hibi.AnimateDeath();
+            var hibiDead = SpriteOf(hibi).Texture;
+            CountDistinct(hibi, 0.3);
+            Require(!hibi.IdleLoopPlaying && SpriteOf(hibi).Texture == hibiDead && Shader(SpriteOf(hibi)) == hibiDead, "ヒビも死亡で止まる");
+            hibi.AnimateRevive();
+            Require(hibi.IdleLoopPlaying && BattlePawn3D.IdleLoopFramesOf("hibi").Contains(SpriteOf(hibi).Texture), "ヒビも蘇生で再開");
+            Require(SpriteOf(hibiEnemy).FlipH && hibiEnemy.IdleLoopPlaying, "敵側のヒビも反転して回る");
             Require(CountDistinct(gald, 0.6) >= 6, "ガルドの連番も進む");
             gald.AnimateDeath();
             var galdDead = SpriteOf(gald).Texture;
@@ -136,13 +154,15 @@ public partial class IdleLoopCheck : Node3D
             // 勝利絵を連番で上書きしない。
             hiyo.AnimateVictory();
             gare.AnimateVictory();
+            hibi.AnimateVictory();
             await Wait(0.7);
             Require(!hiyo.IdleLoopPlaying && sprite.Texture == UiKit.Portrait(atlas, "hiyo"), "勝利絵を保つ");
             Require(!galdWinner.IdleLoopPlaying && SpriteOf(galdWinner).Texture == UiKit.Portrait(atlas, "gald"), "ガルドも勝利絵を保つ");
             Require(!gare.IdleLoopPlaying && SpriteOf(gare).Texture == UiKit.Portrait(atlas, "gare"), "ガレも勝利絵を保つ");
+            Require(!hibi.IdleLoopPlaying && SpriteOf(hibi).Texture == UiKit.Portrait(atlas, "hibi") && Shader(SpriteOf(hibi)) == SpriteOf(hibi).Texture, "ヒビも勝利絵を保つ");
             Require(still != frames[0], "静止絵と連番は別の画像");
 
-            GD.Print("IDLE_LOOP_CHECK_OK hiyo borg hota hota_burning gald gare start advance speed gift burning burning-variant death revive victory enemy fallback sword kneel");
+            GD.Print("IDLE_LOOP_CHECK_OK hiyo borg hota hota_burning gald gare hibi start advance speed gift burning burning-variant death revive victory enemy fallback sword kneel");
             GetTree().Quit();
         }
         catch (Exception e)

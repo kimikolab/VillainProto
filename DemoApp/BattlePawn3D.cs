@@ -214,7 +214,7 @@ public partial class BattlePawn3D : Node3D
             : 0.0f;
         SetPortraitGeometry(portrait, bottomPadding);
         _fxHeight = Math.Clamp(_portraitHeight * 0.58f, 0.90f, 1.65f);
-        float seatY = hasCustomPortrait ? _portraitHeight + 0.06f : 1.88f;
+        float seatY = hasCustomPortrait ? UiKit.PortraitHudHeight(opening.UnitId) + 0.06f : 1.88f;
         float statsY = hasCustomPortrait ? seatY + 0.17f : 2.05f;
         _hudY = seatY;
         _headLabelBase = new Vector3(0, statsY, 0);
