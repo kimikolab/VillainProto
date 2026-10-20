@@ -920,6 +920,9 @@ public enum TraitId
     // --- 第363期で足した札（指示書 design/PHASE363_SELFHARM_AKA_SPEC.md §4）。アカの版（傷を血に変えて一気に撃つ・`Ash` と差し替える）。保持者 0 枚 ---
     BloodRead,          // 今の傷を詠む（AK-n・アカ）: 血を溜めない。手番ごとに、生きている味方全員の今の傷（最大HP − 今のHP・アカ自身を含む）の合計と同じ量を敵全体へ撃つ（傷が 0 なら素の一撃）。倒れると、そのときの味方全員の傷の合計の半分（切り捨て）が隣の味方に等分で降る
     BloodPool,          // 溜め血（AK-s・アカ）: 味方（自分を含む）が実際に減らした HP をすべて血として溜める（敵から ／ 味方から ／ 自分から ／ 刻み・破片で受けた分は入らない・上限なし・治しても減らない）。血が閾（`BloodPoolTrait.Threshold`）に達した手番で全部使って敵全体を撃つ。届かない手番は何もしない（engine の `NoteBloodPool`）
+    // --- 第364期で足した札（指示書 design/PHASE364_SCATTER_SHOT_SPEC.md §3）。跳ね撃ち（全体の一撃しか持たない駒の版・アカ ／ ガレ）。保持者 0 枚 ---
+    ScatterGather,      // 集まる全体（形 A）: 全体の一撃の1体あたりの量を 量 × max(1, 5 ÷ 生きている敵の数)（切り捨て）にする。当て方は今の全体のまま（1体に1回ずつ）（**札そのものは挙動を持たない**・`ScatterTrait.Fire`）
+    ScatterShot,        // 跳ね弾（形 B）: 全体の一撃をやめ、量 × ½（切り捨て）の弾を 5 発、生きている敵に席番号の順に1発ずつ（足りなければ先頭へ戻る）。1発ずつ別の一撃（**札そのものは挙動を持たない**・`ScatterTrait.Fire`）
     PebbleGather,       // 礫を拾う（GR-r・ガレ）: 味方（自分を含む）の破片が敵の一撃で割れた量を礫として溜め（上限なし）、手番（術）で全部使って 礫 × 3 ＋ 攻撃力 を敵全体へ撃つ。礫が無い手番は何もできない（味方の破片は砕かない）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -9208,14 +9211,15 @@ public sealed class PebbleTrait : Trait
         t.Sh358Thrown += p;
         ctx.EmitShard(ShardLabels.Throw, self, null, dmg, p);
         ctx.Log($"    ★ {self.Name} が拾い集めた礫を投げつけた（礫 {p}・{dmg}）", LogKind.Highlight, self);
-        foreach (UnitState foe in ctx.LivingMembers(ctx.Opponent(self.TeamId)))
+        // 第364期: 跳ね撃ちの版（形 A ／ B）は `ScatterTrait.Fire` が当て方を変える。札が無ければ今までどおり敵全体へ1回ずつ。
+        ScatterTrait.Fire(ctx, self, dmg, (foe, d) =>
         {
             int before = foe.Hp;
-            t.Sh358ThrowNominal += dmg;
-            if (ctx.YokeBinding && dmg > ctx.Yoke.Cap) { t.Sh358ThrowYokeHits++; t.Sh358ThrowYokeCut += dmg - ctx.Yoke.Cap; }
-            ctx.ApplyDamage(foe, dmg, self, pattern: AttackPattern.All);
+            t.Sh358ThrowNominal += d;
+            if (ctx.YokeBinding && d > ctx.Yoke.Cap) { t.Sh358ThrowYokeHits++; t.Sh358ThrowYokeCut += d - ctx.Yoke.Cap; }
+            ctx.ApplyDamage(foe, d, self, pattern: AttackPattern.All);
             t.Sh358ThrowDealt += before - Math.Max(0, foe.Hp);
-        }
+        });
     }
 
     public override void OnCarryOver(UnitState self) => self.Counters.Remove(Key);
@@ -9381,11 +9385,12 @@ public sealed class AshTrait : Trait
         if (dmg <= 0) return;
         ctx.EmitSkill(self, new UnitAction(ActionKind.Skill, Label: AshActionLabels.Release));
         ctx.Log($"    ★ {self.Name} が{text}（{blood}）", LogKind.Highlight, self);
-        foreach (UnitState foe in ctx.LivingMembers(ctx.Opponent(self.TeamId)))
+        // 第364期: 跳ね撃ちの版（形 A ／ B）は `ScatterTrait.Fire` が当て方を変える。札が無ければ今までどおり敵全体へ1回ずつ。
+        ScatterTrait.Fire(ctx, self, dmg, (foe, d) =>
         {
-            ctx.NoteAshHit(dmg);
-            ctx.ApplyDamage(foe, dmg, self, pattern: AttackPattern.All);
-        }
+            ctx.NoteAshHit(d);
+            ctx.ApplyDamage(foe, d, self, pattern: AttackPattern.All);
+        });
     }
 
     /// <summary>
@@ -9393,6 +9398,58 @@ public sealed class AshTrait : Trait
     /// <b>捨てるのは周期のカウンタだけ</b>（私有のキーは境界の掃除を通らない）。
     /// </summary>
     public override void OnCarryOver(UnitState self) => self.SetCounter(CycleKey, 0);
+}
+
+/// <summary>
+/// 跳ね撃ち（第364期・指示書 design/PHASE364_SCATTER_SHOT_SPEC.md §3）。<b>札そのものは挙動を持たない</b>——全体の一撃を撃つ駒（アカの版の <see cref="AshTrait.Cast"/> ／ ガレの <see cref="PebbleTrait"/>）が
+/// <see cref="Fire"/> を通して当て方を決める。
+/// <para><b>形 A 集まる全体</b>（<see cref="TraitId.ScatterGather"/>）: 1体あたり 量 × max(1, <see cref="Shots"/> ÷ 生きている敵の数)（切り捨て）。当て方は全体のまま（1体に1回ずつ・席番号の順）——一撃の数は変わらない。</para>
+/// <para><b>形 B 跳ね弾</b>（<see cref="TraitId.ScatterShot"/>）: 量 × ½（切り捨て）の弾を <see cref="Shots"/> 発、生きている敵に席番号の順に1発ずつ（最初は席番号の最も小さい敵・足りなければ先頭へ戻る・倒れた敵は飛ばす）。
+/// 1発ずつ別の一撃（標 ／ 羽 ／ 被弾の燃焼 ／ 軛が1発ごとに起きる）。撃ち手が倒れたら残りの弾は撃たない（ホタの燃えさしと同じ）。</para>
+/// <para>どちらも撃つ一撃の扱い（<c>pattern: All</c> の <c>ApplyDamage</c>・回避 ／ 軛）は今の全体の一撃と同じ。<b>乱数を引かない。</b></para>
+/// </summary>
+public sealed class ScatterTrait : Trait
+{
+    /// <summary>形 A の分母 ／ 形 B の弾の数。</summary>
+    public const int Shots = 5;
+
+    readonly TraitId _id;
+    public ScatterTrait(TraitId id) => _id = id;
+    public override TraitId Id => _id;
+
+    /// <summary>全体の一撃 <paramref name="dmg"/> を撃つ。<paramref name="hit"/> は1体への1回（的・量）。札が無ければ今までどおり敵全体へ <paramref name="dmg"/> を1回ずつ。</summary>
+    internal static void Fire(BattleContext ctx, UnitState self, int dmg, Action<UnitState, int> hit)
+    {
+        var foes = ctx.LivingMembers(ctx.Opponent(self.TeamId));
+        if (self.HasTrait(TraitId.ScatterShot))
+        {
+            int per = dmg / 2;
+            UnitTally t = ctx.TallyOf(self);
+            t.Sh364Volleys++;
+            int cursor = foes.Count == 0 ? 0 : foes.Min(f => f.Slot);
+            for (int k = 0; k < Shots; k++)
+            {
+                if (!self.IsAlive) break;
+                var live = ctx.LivingMembers(ctx.Opponent(self.TeamId)).OrderBy(f => f.Slot).ToList();
+                if (live.Count == 0) break;
+                UnitState tg = live.FirstOrDefault(f => f.Slot >= cursor) ?? live[0];
+                cursor = tg.Slot + 1;
+                t.Sh364Shots++;
+                t.Sh364ShotSum += per;
+                if (per > 0) hit(tg, per);
+            }
+            return;
+        }
+        int mult = 1;
+        if (foes.Count > 0 && self.HasTrait(TraitId.ScatterGather))
+        {
+            mult = Math.Max(1, Shots / foes.Count);
+            UnitTally t = ctx.TallyOf(self);
+            t.Sh364Volleys++;
+            if (mult > 1) { t.Sh364Gathered++; t.Sh364GatherMult += mult; }
+        }
+        foreach (UnitState foe in foes) hit(foe, dmg * mult);
+    }
 }
 
 /// <summary>
@@ -18442,6 +18499,8 @@ public static class TraitCatalog
         new AshTrait(),        // 第179期
         new BloodReadTrait(),  // 第363期（今の傷を詠む AK-n・アカ）
         new BloodPoolTrait(),  // 第363期（溜め血 AK-s・アカ・溜めるのは engine の `NoteBloodPool`）
+        new ScatterTrait(TraitId.ScatterGather),   // 第364期（集まる全体・形 A）
+        new ScatterTrait(TraitId.ScatterShot),     // 第364期（跳ね弾・形 B）
         new EruptTrait(),      // 第180期
         new SmearTrait(),      // 第180期
         new SpitTrait(),       // 第180期

@@ -1317,6 +1317,13 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sh363 compare [版,…]    # 第363期 §7 の 5: `compare` 64 行 × 版 ＋ 段0 の前（`Pin362`）とのセルの差・(G2)
     dotnet run --project BattleSim -c Release 0 sh363 log <版> <台> <波> [seed]   # 第363期: 1戦のログ（台 ＝ 並びの名前「ボルグ・ミサ・ヒサ・カド・アカ」か compare ／ 試遊の行名の頭・版 base ／ akn ／ aks）
     dotnet run --project BattleSim -c Release 0 sh363 check             # 第363期 自己検査（段0 のカド（剥く ／ 旧は剥かない ／ 固定の口）・AK-n（撃つ量 ／ 治すと減る ／ 倒れた味方は入らない ／ 無傷は素の一撃 ／ 倒れたとき降る量）・AK-s（敵 ／ 味方 ／ 自分 ／ 刻みが溜まる ／ 破片は入らない ／ 治しても減らない ／ 過剰分は入らない ／ 閾に届かない手番は溜め ／ 届いたら全部）・verbose・出来事・試遊の台・PickOne）
+    dotnet run --project BattleSim -c Release 0 sh364 p0                # 第364期 §2 Phase 0: 台 B（ボルグ・ミサ・ヒサ・カド・アカ）の後3 を R0 AK-n ／ R1 規定のアカ ／ R2 素体・全体 ／ R3 素体・単体 ／ R4 何もしない ／ R5（5 枚から選ぶ）に替える × ボス ／ 近衛 ／ 大隊・seed 0..99（1 秒）
+    dotnet run --project BattleSim -c Release 0 sh364 seats [aka|gare]  # 第364期 §4: アカ 6,720 並び × AK-n ／ AKn-A ／ AKn-B（ミサ＋ボルグ＋ヒサを含む ／ 含まない）・ガレ 3,360 並び × 規定 ／ GR-A ／ GR-B（ネルを含む ／ 含まない）（127 秒）
+    dotnet run --project BattleSim -c Release 0 sh364 reach             # 第364期 §6 の 2: 勇者への届き方（代表台 × 版・見る駒の勇者への与ダメ ／ 1回 ／ 回数・1ターンの最大と出どころ・勇者への一撃 T1〜T3）
+    dotnet run --project BattleSim -c Release 0 sh364 boards            # 第364期 §6 の 3・5: 代表台 8 × 11 波 × 版（アカ base ／ akn ／ akna ／ aknb・ガレ gare ／ gra ／ grb）・壊れの兆し
+    dotnet run --project BattleSim -c Release 0 sh364 compare           # 第364期 §6 の 4: `compare` 64 行 × 版（規定との差・(G2)）
+    dotnet run --project BattleSim -c Release 0 sh364 log <版> <台> <波> [seed]   # 第364期: 1戦のログ（台 ＝ 並びの名前か compare ／ 試遊の行名の頭）
+    dotnet run --project BattleSim -c Release 0 sh364 check             # 第364期 自己検査（版の定義・形 A（5 ／ 1 ／ 2 ／ 9 体）・形 B（5 発 ／ 半分 ／ 1 体 ／ 3 体で 2 ／ 2 ／ 1 ／ 倒れた敵を飛ばす ／ 1発ずつ一撃）・規定は今どおり・R4・verbose・試遊の台・PickOne）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

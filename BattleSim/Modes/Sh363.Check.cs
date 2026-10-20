@@ -6,6 +6,14 @@ using I = Inv348Diag;
 // sh363 の自己検査（第363期・指示書 §10）。版の規則は盤面を直に組んで1回ずつ確かめ、台の上では帳簿で確かめる（盤面は動かさない）。
 static partial class Sh363Diag
 {
+    /// <summary>第364期: 第363期の「版・」の3台（`Presets.Versions` から外した・並びはここに固定）。</summary>
+    internal static (string Name, Formation F)[] Boards363() => new (string, Formation)[]
+    {
+        ("版・AK-n 自傷", Presets.SelfHarmAka(UnitCatalog.SusuAKn)),
+        ("版・AK-s 自傷", Presets.SelfHarmAka(UnitCatalog.SusuAKs)),
+        ("版・AK-s 自傷 リリ", Formation.Build(front1: UnitCatalog.Doha, front3: UnitCatalog.Kado, center: UnitCatalog.Lili, back1: UnitCatalog.SusuAKs, back3: UnitCatalog.Hisa)),
+    };
+
     static readonly MethodInfo AddUnit = typeof(BattleContext).GetMethod("Add", BindingFlags.Instance | BindingFlags.NonPublic, new[] { typeof(UnitState) })!;
     static readonly PropertyInfo TurnP = typeof(BattleContext).GetProperty("Turn")!;
     static int _fail;
@@ -169,14 +177,16 @@ static partial class Sh363Diag
 
         // ---- 試遊の台 ----
         {
+            // 第364期: 「版・」の3台は `Presets.Versions` から外した。第363期の3台は `Boards363` に固定して確かめる。
             var vr = Presets.Versions.Select(r => r.Name).ToArray();
             string[] want = { "版・AK-n 自傷", "版・AK-s 自傷", "版・AK-s 自傷 リリ" };
-            bool rows = vr.Take(6).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片" }) && vr.Skip(6).SequenceEqual(want)
+            bool rows = vr.Take(6).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片" }) && !vr.Any(want.Contains)
                 && !vr.Any(x => x.Contains("KD-"));
-            Expect("`Presets.Versions` ＝ 試遊の6台 ＋ 「版・」の3台（第362期の「版・」の3台は外した）", rows, string.Join("、", vr));
+            Expect("`Presets.Versions` ＝ 試遊の6台が頭に残る・第363期の「版・」の3台は第364期に外した", rows, string.Join("、", vr));
             if (rows)
             {
-                Formation F(string nm) => Presets.Versions.First(r => r.Name == nm).F;
+                var b363 = Boards363();
+                Formation F(string nm) => b363.First(r => r.Name == nm).F;
                 bool ok = F(want[0]).Occupied().Any(o => o.Def == UnitCatalog.SusuAKn) && F(want[1]).Occupied().Any(o => o.Def == UnitCatalog.SusuAKs) && F(want[2]).Occupied().Any(o => o.Def == UnitCatalog.SusuAKs)
                     && Has(F(want[2]), "lili") && !Has(F(want[1]), "lili") && Seats(F(want[0])) == Seats(F(want[1]))
                     && want.All(nm => F(nm).Occupied().Any(o => o.Def == UnitCatalog.Kado));

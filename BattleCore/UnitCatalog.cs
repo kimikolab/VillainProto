@@ -6718,6 +6718,37 @@ public static class UnitCatalog
         Flavor = Susu.Flavor,
     };
 
+    // 第364期【軽い期】跳ね撃ち（指示書 design/PHASE364_SCATTER_SHOT_SPEC.md §3）。アカ（AK-n の上）／ ガレ（規定の上）に形 A ／ B の札を1枚ずつ。採否はポン。
+    const string Gather364 = "（敵が少ないほど、一体に集まる）", Shot364 = "5発に分けて敵へ順に叩き込む（敵が少なければ同じ敵へ重ねて）";
+    /// <summary>血詠みのアカ・AKn-A: AK-n ＋ 集まる全体（`ScatterGather`）。</summary>
+    public static readonly UnitDef SusuAKnA = new()
+    {
+        Id = SusuAKn.Id, Name = SusuAKn.Name, MaxHp = SusuAKn.MaxHp, Attack = SusuAKn.Attack, Speed = SusuAKn.Speed, Advances = SusuAKn.Advances, Actions = SusuAKn.Actions,
+        Traits = SusuAKn.Traits.Append(TraitId.ScatterGather).ToArray(),
+        PlusText = SusuAKn.PlusText.Replace("敵全体を撃つ", "敵全体を撃つ" + Gather364), MinusText = SusuAKn.MinusText, Flavor = SusuAKn.Flavor,
+    };
+    /// <summary>血詠みのアカ・AKn-B: AK-n ＋ 跳ね弾（`ScatterShot`）。</summary>
+    public static readonly UnitDef SusuAKnB = new()
+    {
+        Id = SusuAKn.Id, Name = SusuAKn.Name, MaxHp = SusuAKn.MaxHp, Attack = SusuAKn.Attack, Speed = SusuAKn.Speed, Advances = SusuAKn.Advances, Actions = SusuAKn.Actions,
+        Traits = SusuAKn.Traits.Append(TraitId.ScatterShot).ToArray(),
+        PlusText = SusuAKn.PlusText.Replace("敵全体を撃つ", Shot364), MinusText = SusuAKn.MinusText, Flavor = SusuAKn.Flavor,
+    };
+    /// <summary>ガレ・GR-A: 規定のガレ（礫を拾って投げる）＋ 集まる全体（`ScatterGather`）。</summary>
+    public static readonly UnitDef GareGRA = new()
+    {
+        Id = Gare.Id, Name = Gare.Name, MaxHp = Gare.MaxHp, Attack = Gare.Attack, Speed = Gare.Speed, Advances = Gare.Advances, Actions = Gare.Actions,
+        Traits = Gare.Traits.Append(TraitId.ScatterGather).ToArray(),
+        PlusText = Gare.PlusText.Replace("敵全体へ投げつける", "敵全体へ投げつける" + Gather364), MinusText = Gare.MinusText, Flavor = Gare.Flavor,
+    };
+    /// <summary>ガレ・GR-B: 規定のガレ ＋ 跳ね弾（`ScatterShot`）。</summary>
+    public static readonly UnitDef GareGRB = new()
+    {
+        Id = Gare.Id, Name = Gare.Name, MaxHp = Gare.MaxHp, Attack = Gare.Attack, Speed = Gare.Speed, Advances = Gare.Advances, Actions = Gare.Actions,
+        Traits = Gare.Traits.Append(TraitId.ScatterShot).ToArray(),
+        PlusText = Gare.PlusText.Replace("拾った礫を敵全体へ投げつける", "拾った礫を" + Shot364), MinusText = Gare.MinusText, Flavor = Gare.Flavor,
+    };
+
     // 第361期: 規定のササが SS-w になったので、SS-k ／ SS-w は旧（`SasaH360`）から作る（`SasaSSw` は規定と同じ札・文面・残置）。
     const string SasaPlus360 = "手番で身を固め、次に動くまで、受ける一撃を7までに抑える。殴られると錯乱して隣の味方1体を別の席へ突き飛ばし（1ターン1回）、";
     /// <summary>第360期 SS-k 構えを解かない: ササ ＋ <see cref="TraitId.BraceHold"/>（身構えが次の自分の手番まで続く）。</summary>

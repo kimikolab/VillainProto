@@ -952,9 +952,16 @@ public static class Presets
         // 第363期: 自傷軸②（アカの作り直し）の版の台。`sh363 seats` で勇者に勝つ並びは AK-n の総当たりにだけ出た（7 並び・どれもミサ＋ボルグ＋ヒサ）——
         // AK-n ／ AK-s の2台はその最良（前1 ボルグ ／ 前3 ミサ ／ 中央 ヒサ ／ 後1 カド ／ 後3 アカ・AK-n では両立 ＝ リリなしの最良も同じ並び）、
         // 「リリ」の台は AK-s の総当たりのリリを含む最良（＝ AK-s の精鋭の最良・前1 ドハ ／ 前3 カド ／ 中央 リリ ／ 後1 アカ ／ 後3 ヒサ）。採否はポン。
-        ("版・AK-n 自傷", SelfHarmAka(UnitCatalog.SusuAKn)),
-        ("版・AK-s 自傷", SelfHarmAka(UnitCatalog.SusuAKs)),
-        ("版・AK-s 自傷 リリ", Formation.Build(front1: UnitCatalog.Doha, front3: UnitCatalog.Kado, center: UnitCatalog.Lili, back1: UnitCatalog.SusuAKs, back3: UnitCatalog.Hisa)),
+        // 第364期: 第363期の「版・」の3台は外した（並びは `sh363` の中に固定 `Boards363`）。
+        // 第364期: 跳ね撃ちの版の台（`sh364 seats` の最良・採否はポン）。
+        //   AKn-A: 総当たりの1位は台 B（AK-n の1位と同じ並び・80%）なので、形 A が新しく届かせた「ミサ＋ボルグ＋ヒサを含まない最良」（両立）を置いた（前1 カド ／ 前3 リリ ／ 中央 ムド ／ 後1 ボルグ ／ 後3 アカ）。
+        //   AKn-B: 勇者に勝つ並びはミサ＋ボルグ＋ヒサの組だけで、1位は台 B（前1 ボルグ ／ 前3 ミサ ／ 中央 ヒサ ／ 後1 カド ／ 後3 アカ）。
+        //   GR-A: 1位（勇者 100%・6.0T・両立）＝ 前1 ササ ／ 前3 ヒビ ／ 中央 ソム ／ 後1 ガレ ／ 後3 ネル。
+        //   GR-B: 1位はバン・ササ・ガレ・ヒビ・ソム（勇者 100% だが倒しT 27.2——30T の打ち切りの手前）なので、2位（100%・8.4T）＝ 前1 ササ ／ 前3 ソム ／ 中央 ネル ／ 後1 ガレ ／ 後3 ヒビ。
+        ("版・AKn-A 自傷", Formation.Build(front1: UnitCatalog.Kado, front3: UnitCatalog.Lili, center: UnitCatalog.Mudo, back1: UnitCatalog.Borg, back3: UnitCatalog.SusuAKnA)),
+        ("版・AKn-B 自傷", SelfHarmAka(UnitCatalog.SusuAKnB)),
+        ("版・GR-A 破片", Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Hibi, center: UnitCatalog.Som, back1: UnitCatalog.GareGRA, back3: UnitCatalog.Nel)),
+        ("版・GR-B 破片", Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Som, center: UnitCatalog.Nel, back1: UnitCatalog.GareGRB, back3: UnitCatalog.Hibi)),
     };
 
     /// <summary>第363期: 自傷軸②の版の台（`sh363 seats` の勇者に勝つ最良・前1 ボルグ ／ 前3 ミサ ／ 中央 ヒサ ／ 後1 カド ／ 後3 アカ）。アカを差し替えて版の台を作る。</summary>
