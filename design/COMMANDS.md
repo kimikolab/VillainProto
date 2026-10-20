@@ -1309,6 +1309,14 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sh362 compare [版,…]    # 第362期 §7 の 5: `compare` 64 行 × 版 ＋ 段0 の前（`Pin361`）とのセルの差
     dotnet run --project BattleSim -c Release 0 sh362 log <版> <台> <波> [seed]   # 第362期: 1戦のログ（台 ＝ 並びの名前「リィカ・ミサ・カド・アカ・ボルグ」か compare の行名の頭・版 base ／ kdt ／ kdr）
     dotnet run --project BattleSim -c Release 0 sh362 check             # 第362期 自己検査（段0 のササ（遠くへ ／ 旧は消える）・KD-t の重さ（傷 ／ 傷 0 ／ 削られた最大HP）・KD-r（剥く前 ／ 5割の境 ／ 次の手番から殴る ／ 最も手強い敵 ／ 巻き込み ／ 戻らない ／ 反撃は続く）・verbose・出来事・試遊の台・PickOne）
+    dotnet run --project BattleSim -c Release 0 sh363 p0                # 第363期 Phase 0: 味方が受けた傷（実際に減った HP・ターンごと・敵 ／ 味方 ／ 自分 ／ 刻み・うち惨禍・累計）・今の傷の合計・勇者の残りHP（回復の前 ／ 後）・アカの手番 ／ 倒れた T（S ／ N ／ 反撃 (ヒサ×カド) × ボス ／ 近衛 ／ 大隊・seed 0..19・1 秒）
+    dotnet run --project BattleSim -c Release 0 sh363 seats             # 第363期 §5: カド ／ アカ ＋ リィカ・ミサ・グザ・ボルグ・ヒサ・ドハ・ムド・リリから3枚（56 組）× 120 ＝ 6,720 並び × 規定 ／ AK-n ／ AK-s・リリなし ／ あり・両立・アカの席・アカの一撃（70 秒）
+    dotnet run --project BattleSim -c Release 0 sh363 flow [版,…]       # 第363期 §7 の 1・2: アカの一撃（撃った回数 ／ 1回の量 ／ 最初の T・血の出どころ・倒れた T ／ 降りかかった血）× 版・ボスの1ターンの与ダメ（カド ／ アカ ／ ほか）と勇者の回復 ／ 残りHP ／ アカの血
+    dotnet run --project BattleSim -c Release 0 sh363 boards [版,…]     # 第363期 §7 の 3・6: 代表台 6 × 11 波 × 版（base ／ akn ／ aks）・打ち切り %・壊れの兆し
+    dotnet run --project BattleSim -c Release 0 sh363 axes              # 第363期 §7 の 4: 軸の横並び（第348期 §3 の物差し・`inv348` の台から「反撃」を除いた軸 ＋ 自傷の行 × 版）
+    dotnet run --project BattleSim -c Release 0 sh363 compare [版,…]    # 第363期 §7 の 5: `compare` 64 行 × 版 ＋ 段0 の前（`Pin362`）とのセルの差・(G2)
+    dotnet run --project BattleSim -c Release 0 sh363 log <版> <台> <波> [seed]   # 第363期: 1戦のログ（台 ＝ 並びの名前「ボルグ・ミサ・ヒサ・カド・アカ」か compare ／ 試遊の行名の頭・版 base ／ akn ／ aks）
+    dotnet run --project BattleSim -c Release 0 sh363 check             # 第363期 自己検査（段0 のカド（剥く ／ 旧は剥かない ／ 固定の口）・AK-n（撃つ量 ／ 治すと減る ／ 倒れた味方は入らない ／ 無傷は素の一撃 ／ 倒れたとき降る量）・AK-s（敵 ／ 味方 ／ 自分 ／ 刻みが溜まる ／ 破片は入らない ／ 治しても減らない ／ 過剰分は入らない ／ 閾に届かない手番は溜め ／ 届いたら全部）・verbose・出来事・試遊の台・PickOne）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

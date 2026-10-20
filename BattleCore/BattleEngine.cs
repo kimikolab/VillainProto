@@ -9761,6 +9761,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Scrap)) _scrapHolders.Add(u); // 第207期（破片の減りを拾う口を短絡させる）
         if (u.HasTrait(TraitId.Thorns)) _thornsLive = true;
         if (u.HasTrait(TraitId.ThornsBare)) _thornsBareLive = true;   // 第362期（棘を剥く KD-r・手番の頭と殴りかかりを短絡させる）
+        if (u.HasTrait(TraitId.BloodPool)) _bloodPoolHolders.Add(u);   // 第363期（溜め血 AK-s・アカ・`NoteBloodPool` を短絡させる）
         if (u.HasTrait(TraitId.Brace)) _braceLive = true;   // 第213期（計数のみ）
         if (u.HasTrait(TraitId.BraceArmored) || u.HasTrait(TraitId.BraceCapFirst) || u.HasTrait(TraitId.BraceHeldDeliver)) _braceArmoredLive = true;   // 第213期に W1・W2 の札を足した   // 第212期（破片の前の身構え・受け切った一撃の弾き）  // 第211期（破片で受け切った一撃の棘・計数と Y3 の口を短絡させる）
         if (u.HasTrait(TraitId.PlankRebound)) { _reboundLive = true; _reboundTsugi ??= u; }   // 第208期（撃ち返す板）
@@ -14521,6 +14522,9 @@ public sealed class BattleContext
         // **HP を引いた直後・死亡判定より手前**——実額で溜め、最後の一撃も落とさない。
         // 保持者が盤上にいなければ `AshBinding` の比較1つで抜ける。
         NoteAsh(target, amount, source, havocExtra, shockNote == 3);
+        // 第363期（AK-s・版）: 味方が実際に減らした HP を溜め血に。第363期（**計数のみ**）: 惨禍で増えた分のうち実際に減った HP（ターンごと・Phase 0）。
+        if (_bloodPoolHolders.Count > 0) NoteBloodPool(target, hpBefore120 - Math.Max(0, target.Hp), source, havocExtra);
+        if (havocExtra > 0 && hpBefore120 > target.Hp) TallyOf(target).Sh363HavocLost = AddAt(TallyOf(target).Sh363HavocLost, _turn, Math.Min(havocExtra, hpBefore120 - Math.Max(0, target.Hp)));
         Log($"    {target.Name} に {amount} ダメージ (残り {Math.Max(0, target.Hp)})",
             isFriendlyFire ? LogKind.FriendlyFire : LogKind.Damage);
         Emit(new BattleEvent
@@ -17675,6 +17679,53 @@ public sealed class BattleContext
     // 殴った後に反撃と同じ巻き込み（`ThornsTrait.Splash`・隣の敵へ 6 割 ／ 隣の味方へ素の攻撃力の半分・味方の減りの半分が攻撃力に）。
     // =================================================================================
     bool _thornsBareLive;
+
+    // =================================================================================
+    // 第363期 —— 溜め血（AK-s・アカの版）。指示書 design/PHASE363_SELFHARM_AKA_SPEC.md §4。**溜める側だけが engine にある**（撃つ ／ 降らすは `BloodPoolTrait`）。
+    // =================================================================================
+    /// <summary>溜め血の保持者（<see cref="Add"/> が積む）。<b>いなければ <c>ApplyDamage</c> は比較1つで抜ける。</b></summary>
+    readonly List<UnitState> _bloodPoolHolders = new();
+
+    /// <summary>
+    /// 味方（保持者自身を含む）が<b>実際に減らした HP</b>（<paramref name="lost"/>・過剰分を除く・破片で受けた分は入らない）を、同じ陣営の生きている保持者の血に足す。
+    /// 敵から ／ 味方から ／ 自分から ／ 出どころの無い刻みのすべて（第179期の灰と違い、敵の刃も数える）。上限なし。出どころの内訳は計数のみ。
+    /// </summary>
+    void NoteBloodPool(UnitState target, int lost, UnitState? source, int havocExtra)
+    {
+        if (lost <= 0) return;
+        for (int i = 0; i < _bloodPoolHolders.Count; i++)
+        {
+            UnitState h = _bloodPoolHolders[i];
+            if (!h.IsAlive || h.TeamId != target.TeamId) continue;
+            h.SetCounter(StatusKeys.Ash, h.RawCounter(StatusKeys.Ash) + lost);
+            AshGained += lost;
+            UnitTally t = TallyOf(h);
+            t.AshGained += lost;
+            if (source is null) t.Sh363BloodDot += lost;
+            else if (source == target) t.Sh363BloodSelf += lost;
+            else if (source.TeamId == target.TeamId) t.Sh363BloodAlly += lost;
+            else t.Sh363BloodFoe += lost;
+            if (havocExtra > 0) t.Sh363BloodHavoc += Math.Min(havocExtra, lost);
+        }
+    }
+
+    /// <summary>第363期（<b>計数のみ</b>）: 版のアカが撃った（量 ＝ 使った血 ／ 詠んだ傷・ターンごと）。</summary>
+    public void NoteBloodCast(UnitState self, int blood)
+    {
+        UnitTally t = TallyOf(self);
+        t.Sh363Casts++;
+        t.Sh363CastSum += blood;
+        if (t.Sh363FirstCastTurn == 0) t.Sh363FirstCastTurn = _turn;
+        t.Sh363CastByTurn = AddAt(t.Sh363CastByTurn, _turn, blood);
+    }
+
+    /// <summary>第363期（計数のみ）: ターン <paramref name="turn"/> の欄に足す（0〜<c>MaxTurns</c>・配列は初めて書くときに作る）。</summary>
+    static long[] AddAt(long[]? a, int turn, long v)
+    {
+        a ??= new long[BattleEngine.MaxTurns + 2];
+        if (turn >= 0 && turn < a.Length) a[turn] += v;
+        return a;
+    }
     /// <summary>第362期: 次の `PerformAttack` の本体1回にだけ効く、殴りかかりの一発の札（打ち手・重さ）。本体の最初の行で読んで消す。</summary>
     UnitState? _thornsHitActor;
     int _thornsHitWeight;

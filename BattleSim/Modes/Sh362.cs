@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 using I = Inv348Diag;
 using D = Db351Diag;
@@ -62,7 +62,7 @@ static partial class Sh362Diag
     internal sealed record Ver(string Name, string Ascii, UnitDef Kado);
     internal static readonly Ver[] Vers =
     {
-        new("規定（段0 入り）", "base", UnitCatalog.Kado),
+        new("規定（段0 入り）", "base", UnitCatalog.KadoH362),   // 第363期: 規定のカドが KD-r になったので第362期の規定（`KadoH362`）に固定
         new("KD-t 傷の棘", "kdt", UnitCatalog.KadoKDt),
         new("KD-r 棘を剥く", "kdr", UnitCatalog.KadoKDr),
     };
@@ -79,7 +79,7 @@ static partial class Sh362Diag
     };
 
     /// <summary>§5 の固定2枚（カド ／ アカ）と残り3枚の母集団（8枚）。</summary>
-    internal static readonly UnitDef[] Fixed = { UnitCatalog.Kado, UnitCatalog.Susu };
+    internal static readonly UnitDef[] Fixed = { UnitCatalog.KadoH362, UnitCatalog.Susu };   // 第363期: 旧のカドに固定
     internal static readonly UnitDef[] Pool = { UnitCatalog.Rica, UnitCatalog.Tome, UnitCatalog.Guza, UnitCatalog.Borg, UnitCatalog.Hisa, UnitCatalog.Doha, UnitCatalog.Mudo, UnitCatalog.Lili };
     internal static Formation ByKey(string key)
     {
@@ -88,8 +88,8 @@ static partial class Sh362Diag
         for (int s = 0; s < 5; s++) f[s] = defs[s];
         return f;
     }
-    internal static (string Name, Formation F)[] KadoRows() => CompareBuilds().Where(r => Has(r.F, "kado")).ToArray();
-    static Formation Row(string n) => CompareBuilds().Concat(CrossBuilds()).First(r => r.Name == n).F;
+    internal static (string Name, Formation F)[] KadoRows() => CompareBuilds().Where(r => Has(r.F, "kado")).Select(r => (r.Name, Pin362(r.F))).ToArray();   // 第363期: 旧のカドに固定
+    static Formation Row(string n) => Pin362(CompareBuilds().Concat(CrossBuilds()).First(r => r.Name == n).F);   // 第363期: 旧のカドに固定
 
     /// <summary>§7 の代表台（決めたこと: `p0` と `seats` の結果から選んだ・報告 §1）。</summary>
     // RowWorst: Phase 0 §3-2 でカドが素体より台を下げた量（ボス ／ 近衛 ／ 大隊の和）が最も大きい行。反撃改 (ドハ×カド) と 逸らし (ソラ×カド) が −65pt で並び、1つの波の落ち（近衛 −65）が大きい方を採った。
@@ -324,7 +324,7 @@ static partial class Sh362Diag
     static void Phase0()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = CompareBuilds().Concat(Presets.Versions.Where(r => r.Name.StartsWith("試遊", StringComparison.Ordinal))).ToArray();
+        var rows = CompareBuilds().Concat(Presets.Versions.Where(r => r.Name.StartsWith("試遊", StringComparison.Ordinal))).Select(r => (r.Name, F: Pin362(r.F))).ToArray();   // 第363期: 旧のカドに固定
         var waves = new[] { I.M5, I.Guard, I.Boss };
         Console.WriteLine($"# {Tag} §3 Phase 0（規定・段0 入り）");
         Console.WriteLine();

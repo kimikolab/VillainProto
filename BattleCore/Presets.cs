@@ -948,15 +948,21 @@ public static class Presets
         // （前1 ネル ／ 前3 ササ ／ 中央 ソム ／ 後1 ヒビ ／ 後3 ガレ）。規定の駒のまま残す試遊の台。版の2台は同じ並びでササだけ版。採否はポン。
         // 第362期: 規定のササを SS-n にした。「試遊・破片」は規定の駒のまま（ササは SS-n になった）。第361期の「版・」の2台（SS-s ／ SS-n）は外した（並びは `sh361` の中に固定）。
         ("試遊・破片", ShardPlay(UnitCatalog.Sasa)),
-        // 第362期: 自傷軸（カドの二段構え）の版の台。`sh362 seats` の KD-r の総当たりから（勇者に勝つ並び ／ 両立はどの版でも 0）。
-        // KD-r の精鋭の最良はリリを含む並び（＝ リリを含む最良）だったので、KD-t ／ KD-r の2台はリリを含まない最良（前1 ドハ ／ 前3 カド ／ 中央 ミサ ／ 後1 アカ ／ 後3 ヒサ）、
-        // 「リリ」の台はリリを含む最良（前1 ミサ ／ 前3 カド ／ 中央 ヒサ ／ 後1 アカ ／ 後3 リリ）。採否はポン。
-        ("版・KD-t 自傷", SelfHarmPlay(UnitCatalog.KadoKDt)),
-        ("版・KD-r 自傷", SelfHarmPlay(UnitCatalog.KadoKDr)),
-        ("版・KD-r 自傷 リリ", Formation.Build(front1: UnitCatalog.Tome, front3: UnitCatalog.KadoKDr, center: UnitCatalog.Hisa, back1: UnitCatalog.Susu, back3: UnitCatalog.Lili)),
+        // 第363期: 第362期の「版・」の3台（KD-t ／ KD-r ／ KD-r リリ）は外した（KD-r を規定にした・並びは `sh362` の中に固定）。
+        // 第363期: 自傷軸②（アカの作り直し）の版の台。`sh363 seats` で勇者に勝つ並びは AK-n の総当たりにだけ出た（7 並び・どれもミサ＋ボルグ＋ヒサ）——
+        // AK-n ／ AK-s の2台はその最良（前1 ボルグ ／ 前3 ミサ ／ 中央 ヒサ ／ 後1 カド ／ 後3 アカ・AK-n では両立 ＝ リリなしの最良も同じ並び）、
+        // 「リリ」の台は AK-s の総当たりのリリを含む最良（＝ AK-s の精鋭の最良・前1 ドハ ／ 前3 カド ／ 中央 リリ ／ 後1 アカ ／ 後3 ヒサ）。採否はポン。
+        ("版・AK-n 自傷", SelfHarmAka(UnitCatalog.SusuAKn)),
+        ("版・AK-s 自傷", SelfHarmAka(UnitCatalog.SusuAKs)),
+        ("版・AK-s 自傷 リリ", Formation.Build(front1: UnitCatalog.Doha, front3: UnitCatalog.Kado, center: UnitCatalog.Lili, back1: UnitCatalog.SusuAKs, back3: UnitCatalog.Hisa)),
     };
 
-    /// <summary>第362期: 自傷軸の版の台（リリを含まない最良・前1 ドハ ／ 前3 カド ／ 中央 ミサ ／ 後1 アカ ／ 後3 ヒサ）。カドを差し替えて版の台を作る。</summary>
+    /// <summary>第363期: 自傷軸②の版の台（`sh363 seats` の勇者に勝つ最良・前1 ボルグ ／ 前3 ミサ ／ 中央 ヒサ ／ 後1 カド ／ 後3 アカ）。アカを差し替えて版の台を作る。</summary>
+    public static Formation SelfHarmAka(UnitDef aka) =>
+        Formation.Build(front1: UnitCatalog.Borg, front3: UnitCatalog.Tome, center: UnitCatalog.Hisa, back1: UnitCatalog.Kado, back3: aka);
+
+    /// <summary>第362期: 自傷軸の版の台（リリを含まない最良・前1 ドハ ／ 前3 カド ／ 中央 ミサ ／ 後1 アカ ／ 後3 ヒサ）。カドを差し替えて版の台を作る。
+    /// 第363期: `Presets.Versions` からは外した（`sh362` の固定 `Boards362` が使う）。</summary>
     public static Formation SelfHarmPlay(UnitDef kado) =>
         Formation.Build(front1: UnitCatalog.Doha, front3: kado, center: UnitCatalog.Tome, back1: UnitCatalog.Susu, back3: UnitCatalog.Hisa);
 

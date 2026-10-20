@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using BattleCore;
 using static Common;
 using I = Inv348Diag;
@@ -6,6 +6,14 @@ using I = Inv348Diag;
 // sh362 の自己検査（第362期・指示書 §10）。版の規則は盤面を直に組んで1回ずつ確かめ、台の上では帳簿で確かめる（盤面は動かさない）。
 static partial class Sh362Diag
 {
+    /// <summary>第363期: 第362期の「版・」の3台（`Presets.Versions` から外した・並びはここに固定）。</summary>
+    internal static (string Name, Formation F)[] Boards362() => new (string, Formation)[]
+    {
+        ("版・KD-t 自傷", Presets.SelfHarmPlay(UnitCatalog.KadoKDt)),
+        ("版・KD-r 自傷", Presets.SelfHarmPlay(UnitCatalog.KadoKDr)),
+        ("版・KD-r 自傷 リリ", Formation.Build(front1: UnitCatalog.Tome, front3: UnitCatalog.KadoKDr, center: UnitCatalog.Hisa, back1: UnitCatalog.Susu, back3: UnitCatalog.Lili)),
+    };
+
     static readonly MethodInfo AddUnit = typeof(BattleContext).GetMethod("Add", BindingFlags.Instance | BindingFlags.NonPublic, new[] { typeof(UnitState) })!;
     static readonly PropertyInfo TurnP = typeof(BattleContext).GetProperty("Turn")!;
     static int _fail;
@@ -81,19 +89,19 @@ static partial class Sh362Diag
 
         // ---- 版の定義 ----
         {
-            var t = UnitCatalog.KadoKDt; var r = UnitCatalog.KadoKDr; var k = UnitCatalog.Kado;
+            var t = UnitCatalog.KadoKDt; var r = UnitCatalog.KadoKDr; var k = UnitCatalog.KadoH362;   // 第363期: 旧のカドに固定
             bool ok = t.Traits.SequenceEqual(k.Traits.Append(TraitId.ThornsWound)) && r.Traits.SequenceEqual(k.Traits.Append(TraitId.ThornsWound).Append(TraitId.ThornsBare))
                 && new[] { t, r }.All(d => d.Id == k.Id && d.MaxHp == k.MaxHp && d.Attack == k.Attack && d.Speed == k.Speed && d.Actions == k.Actions && d.Advances == k.Advances)
                 && t.PlusText.Contains("負った傷の深さ") && r.PlusText.Contains("棘を剥く") && r.MinusText.Contains("傷が浅いうちは") && !UnitCatalog.All.Contains(t) && !UnitCatalog.All.Contains(r);
-            var held = UnitCatalog.All.Concat(UnitCatalog.Retired).Where(d => d.Traits.Any(x => x is TraitId.ThornsWound or TraitId.ThornsBare)).Select(d => d.Id).ToArray();
+            var held = UnitCatalog.All.Concat(UnitCatalog.Retired).Where(d => d != UnitCatalog.Kado && d.Traits.Any(x => x is TraitId.ThornsWound or TraitId.ThornsBare)).Select(d => d.Id).ToArray();   // 第363期: 規定のカド（KD-r）は数えない
             Expect("版の定義: KD-t ＝ 規定のカド ＋ `ThornsWound` ／ KD-r ＝ ＋ `ThornsBare`（体 ／ 手番は規定のまま・文面は叩き台）・新しい札の保持者は 0 枚", ok && held.Length == 0, held.Length == 0 ? "" : string.Join(",", held));
         }
 
         // ---- KD-t ----
         {
-            long d0 = RipBack(UnitCatalog.Kado, 66, 96, 10), t1 = RipBack(UnitCatalog.KadoKDt, 66, 96, 10);
+            long d0 = RipBack(UnitCatalog.KadoH362, 66, 96, 10), t1 = RipBack(UnitCatalog.KadoKDt, 66, 96, 10);
             Expect("KD-t: 反撃 ＝ 攻撃力 × 2 ＋ 傷（HP 66 ／ 96 で 10 を受けた後の傷 40 → 22 ＋ 40 ＝ 62）・規定のカドは 22 のまま", t1 == 62 && d0 == 22, $"KD-t {t1}・規定 {d0}");
-            long t0 = RipBack(UnitCatalog.KadoKDt, 96, 96, 10, armor: 50), k0 = RipBack(UnitCatalog.Kado, 96, 96, 10, armor: 50);
+            long t0 = RipBack(UnitCatalog.KadoKDt, 96, 96, 10, armor: 50), k0 = RipBack(UnitCatalog.KadoH362, 96, 96, 10, armor: 50);
             Expect("KD-t: 傷 0（破片が一撃を受け切った）なら反撃は今と同じ（22）", t0 == 22 && k0 == 22, $"KD-t {t0}・規定 {k0}");
             long tm = RipBack(UnitCatalog.KadoKDt, 66, 70, 10);
             Expect("KD-t: 削られた最大HP は傷に入らない（最大HP 70 ／ HP 66 で 10 を受けた後の傷 14 → 22 ＋ 14 ＝ 36）", tm == 36, $"{tm}");
@@ -126,7 +134,7 @@ static partial class Sh362Diag
             long rip0 = Tly(c, "kado").Sh362RiposteSum;
             c.ApplyDamage(k, 5, small);
             Expect("KD-r: 剥いた後も反撃（棘）は続く", Tly(c, "kado").Sh362RiposteSum > rip0 && Tly(c, "kado").ThornRipostes == 1, $"反撃の重さ {Tly(c, "kado").Sh362RiposteSum - rip0}");
-            var c2 = KadoBoard(UnitCatalog.Kado, out var k2, out _, out _, out _, out _);
+            var c2 = KadoBoard(UnitCatalog.KadoH362, out var k2, out _, out _, out _, out _);
             k2.Hp = 20; c2.ApplyDamage(k2, 1, null);
             var o4 = c2.TakeTurn(k2);
             Expect("規定のカド: HP が5割を切っても今どおり構える（剥かない・殴らない）", o4 == TurnOutcome.Skill && !ThornsBareTrait.IsBare(k2) && Tly(c2, "kado").Sh362Strikes == 0, $"{o4}");
@@ -155,14 +163,16 @@ static partial class Sh362Diag
 
         // ---- 試遊の台 ----
         {
+            // 第363期: 「版・」の3台は `Presets.Versions` から外した。第362期の3台は `Boards362` に固定して確かめる。
             var vr = Presets.Versions.Select(r => r.Name).ToArray();
             string[] want = { "版・KD-t 自傷", "版・KD-r 自傷", "版・KD-r 自傷 リリ" };
-            bool rows = vr.Take(6).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片" }) && vr.Skip(6).SequenceEqual(want)
+            bool rows = vr.Take(6).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片" }) && !vr.Any(want.Contains)
                 && !vr.Any(x => x.Contains("SS-s") || x.Contains("SS-n"));
-            Expect("`Presets.Versions` ＝ 試遊の6台（「試遊・破片」を含む）＋ 「版・」の3台（第361期の「版・」の2台は外した）", rows, string.Join("、", vr));
+            Expect("`Presets.Versions` ＝ 試遊の6台（「試遊・破片」を含む）が頭に残る・第362期の「版・」の3台は第363期に外した", rows, string.Join("、", vr));
             if (rows)
             {
-                Formation F(string nm) => Presets.Versions.First(r => r.Name == nm).F;
+                var b362 = Boards362();
+                Formation F(string nm) => b362.First(r => r.Name == nm).F;
                 bool ok = F(want[0]).Occupied().Any(o => o.Def == UnitCatalog.KadoKDt) && F(want[1]).Occupied().Any(o => o.Def == UnitCatalog.KadoKDr) && F(want[2]).Occupied().Any(o => o.Def == UnitCatalog.KadoKDr)
                     && Has(F(want[2]), "lili") && !Has(F(want[1]), "lili") && Seats(F(want[0])) == Seats(F(want[1])) && Has(F(want[0]), "susu") && Has(F(want[2]), "susu");
                 Expect("「版・」の3台: KD-t ／ KD-r は同じ並び（リリなし）・リリの台はリリを含む・どれもアカを含む", ok, $"{Seats(F(want[1]))} ／ {Seats(F(want[2]))}");

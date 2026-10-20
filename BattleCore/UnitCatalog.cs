@@ -568,7 +568,8 @@ public static class UnitCatalog
         Flavor = "袋が破れるまで役に立たない。誰も隣に立ちたがらない。"
     };
 
-    public static readonly UnitDef Kado = new()
+    // 第363期: 第362期までの規定のカドは `KadoH362` の名前で残した（定義は1文字も変えていない）。規定の `Kado` は第362期の KD-r で、すぐ下に作った。
+    public static readonly UnitDef KadoH362 = new()
     {
         Id = "kado",
         Name = "棘鎧のカド",
@@ -588,6 +589,17 @@ public static class UnitCatalog
         PlusText = "殴られると、自分の攻撃力の2倍を敵に返す（破片で受け止めた一撃にも返す）。反撃は隣の敵にも届き、巻き込んだ味方のダメージ分だけ自分の攻撃力が上がる / 毎ターン構え、前か横の味方への単体攻撃を身代わりして、その味方と位置を入れ替える",
         MinusText = "自分からは決して攻撃しない / 反撃が隣の味方も巻き込む（身代わりした相手は入れ替え後も必ず隣にいるので、必ず巻き込む）/ 味方全体の受けるダメージが5割増える",
         Flavor = "命令しても動かない。庇われた者は、庇われたことを後で悔やむ。"
+    };
+
+    /// <summary>棘鎧のカド（第363期の規定 ＝ 第362期の KD-r）。棘の反撃 ／ 殴りかかりの重さは 攻撃力 × 2 ＋ 自分の傷。HP が5割を切ると棘を剥き、身代わりをやめて、
+    /// 自分の手番で最も手強い敵へ殴りかかる（隣の味方も巻き込む・戻らない）。旧は <see cref="KadoH362"/>。札と文面は <see cref="KadoKDr"/> と同じ。</summary>
+    public static readonly UnitDef Kado = new()
+    {
+        Id = KadoH362.Id, Name = KadoH362.Name, MaxHp = KadoH362.MaxHp, Attack = KadoH362.Attack, Speed = KadoH362.Speed, Advances = KadoH362.Advances, Actions = KadoH362.Actions,
+        Traits = KadoH362.Traits.Append(TraitId.ThornsWound).Append(TraitId.ThornsBare).ToArray(),
+        PlusText = KadoH362.PlusText.Replace("自分の攻撃力の2倍を敵に返す", "自分の攻撃力の2倍と負った傷の深さを敵に返す")
+            + " / 傷が半ばを越えると棘を剥く——構えを捨て、自分から最も手強い敵へ殴りかかる（攻撃力の2倍と傷の深さ）。剥いた棘は二度と収まらない",
+        MinusText = KadoH362.MinusText.Replace("自分からは決して攻撃しない", "傷が浅いうちは、自分からは決して攻撃しない"), Flavor = KadoH362.Flavor,
     };
 
     /// <summary>第301期の規定のヒサのプラスの文面（第302期の規定 <see cref="Hisa"/> と旧の規定 <see cref="HisaH301"/> が共有する・初期化の順に依らないよう定数で持つ）。</summary>
@@ -6665,23 +6677,45 @@ public static class UnitCatalog
     };
 
     // 第362期【軽い期】自傷軸の立て直し①（指示書 design/PHASE362_SELFHARM_KADO_SPEC.md §4）。カドの版2つ（規定の上・体 ／ 手番 ／ 席の扱いは規定のカドのまま）。採否はポン。
+    // 第363期: 規定のカドが KD-r になったので、KD-t ／ KD-r は旧（`KadoH362`）から作る（`KadoKDr` は規定と同じ札・文面・残置）。
     /// <summary>棘鎧のカド・KD-t 傷の棘: 棘の反撃の重さを 攻撃力 × 2 ＋ 自分の傷（最大HP − 今のHP）に（`ThornsWound`）。ほかは規定のまま。</summary>
     public static readonly UnitDef KadoKDt = new()
     {
-        Id = Kado.Id, Name = Kado.Name, MaxHp = Kado.MaxHp, Attack = Kado.Attack, Speed = Kado.Speed, Advances = Kado.Advances, Actions = Kado.Actions,
-        Traits = Kado.Traits.Append(TraitId.ThornsWound).ToArray(),
-        PlusText = Kado.PlusText.Replace("自分の攻撃力の2倍を敵に返す", "自分の攻撃力の2倍と負った傷の深さを敵に返す"),
-        MinusText = Kado.MinusText, Flavor = Kado.Flavor,
+        Id = KadoH362.Id, Name = KadoH362.Name, MaxHp = KadoH362.MaxHp, Attack = KadoH362.Attack, Speed = KadoH362.Speed, Advances = KadoH362.Advances, Actions = KadoH362.Actions,
+        Traits = KadoH362.Traits.Append(TraitId.ThornsWound).ToArray(),
+        PlusText = KadoH362.PlusText.Replace("自分の攻撃力の2倍を敵に返す", "自分の攻撃力の2倍と負った傷の深さを敵に返す"),
+        MinusText = KadoH362.MinusText, Flavor = KadoH362.Flavor,
     };
 
     /// <summary>棘鎧のカド・KD-r 棘を剥く: KD-t ＋ HP が最大HPの5割を切ったら棘を剥く（`ThornsBare`・構えを捨て、不動が外れ、手番で最も手強い敵へ殴りかかる・戻らない）。</summary>
     public static readonly UnitDef KadoKDr = new()
     {
-        Id = Kado.Id, Name = Kado.Name, MaxHp = Kado.MaxHp, Attack = Kado.Attack, Speed = Kado.Speed, Advances = Kado.Advances, Actions = Kado.Actions,
-        Traits = Kado.Traits.Append(TraitId.ThornsWound).Append(TraitId.ThornsBare).ToArray(),
-        PlusText = Kado.PlusText.Replace("自分の攻撃力の2倍を敵に返す", "自分の攻撃力の2倍と負った傷の深さを敵に返す")
+        Id = KadoH362.Id, Name = KadoH362.Name, MaxHp = KadoH362.MaxHp, Attack = KadoH362.Attack, Speed = KadoH362.Speed, Advances = KadoH362.Advances, Actions = KadoH362.Actions,
+        Traits = KadoH362.Traits.Append(TraitId.ThornsWound).Append(TraitId.ThornsBare).ToArray(),
+        PlusText = KadoH362.PlusText.Replace("自分の攻撃力の2倍を敵に返す", "自分の攻撃力の2倍と負った傷の深さを敵に返す")
             + " / 傷が半ばを越えると棘を剥く——構えを捨て、自分から最も手強い敵へ殴りかかる（攻撃力の2倍と傷の深さ）。剥いた棘は二度と収まらない",
-        MinusText = Kado.MinusText.Replace("自分からは決して攻撃しない", "傷が浅いうちは、自分からは決して攻撃しない"), Flavor = Kado.Flavor,
+        MinusText = KadoH362.MinusText.Replace("自分からは決して攻撃しない", "傷が浅いうちは、自分からは決して攻撃しない"), Flavor = KadoH362.Flavor,
+    };
+
+    // 第363期【軽い期】自傷軸の立て直し②（指示書 design/PHASE363_SELFHARM_AKA_SPEC.md §4）。アカの版2つ（体 ／ 速さ ／ 手番 ／ 席の扱い ／ Id ／ 立ち絵のキーは規定のアカのまま・札 `Ash` を差し替える）。採否はポン。
+    /// <summary>血詠みのアカ・AK-n 今の傷を詠む: 血を溜めない。手番ごとに、生きている味方全員の今の傷の合計と同じ量を敵全体へ撃つ（`BloodRead`）。</summary>
+    public static readonly UnitDef SusuAKn = new()
+    {
+        Id = Susu.Id, Name = Susu.Name, MaxHp = Susu.MaxHp, Attack = Susu.Attack, Speed = Susu.Speed, Advances = Susu.Advances, Actions = Susu.Actions,
+        Traits = new[] { TraitId.BloodRead },
+        PlusText = "手番ごとに、仲間が負っている傷の深さを詠み、その血で敵全体を撃つ",
+        MinusText = "仲間が癒えるほど、詠める血は薄くなる / 倒れると、詠みかけの血が隣の仲間に降りかかる",
+        Flavor = Susu.Flavor,
+    };
+
+    /// <summary>血詠みのアカ・AK-s 溜め血: 味方が受けた傷をすべて血として溜め、閾に達した手番で全部使って敵全体を撃つ（`BloodPool`）。</summary>
+    public static readonly UnitDef SusuAKs = new()
+    {
+        Id = Susu.Id, Name = Susu.Name, MaxHp = Susu.MaxHp, Attack = Susu.Attack, Speed = Susu.Speed, Advances = Susu.Advances, Actions = Susu.Actions,
+        Traits = new[] { TraitId.BloodPool },
+        PlusText = "仲間が流した血を、敵の刃のものも仲間の刃のものも、残らず溜める。溜まりきった血で敵全体を撃つ",
+        MinusText = "血が満ちるまで何もできない / 血を溜めたまま倒れると、その血が隣の仲間に降りかかる",
+        Flavor = Susu.Flavor,
     };
 
     // 第361期: 規定のササが SS-w になったので、SS-k ／ SS-w は旧（`SasaH360`）から作る（`SasaSSw` は規定と同じ札・文面・残置）。

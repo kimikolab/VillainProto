@@ -2437,6 +2437,13 @@ public sealed class UnitTally
     /// </summary>
     public long Sh362RiposteSum, Sh362ThornGain, Sh362Strikes, Sh362StrikeSum, Sh362StrikeMain, Sh362Bares;
     public int Sh362BareTurn;
+    /// <summary>
+    /// 第363期（<b>計数のみ</b>・どの規則も読まない）。版のアカ（AK-n ／ AK-s）が撃った回数 ／ 量の延べ（使った血 ／ 詠んだ傷）／ 最初に撃ったターン ／ ターンごとの量・
+    /// AK-s の血の出どころ（敵 ／ 味方 ／ 自分 ／ 刻み ／ うち惨禍の増分）・惨禍で増えた分のうち実際に減った HP（受けた駒の側・ターンごと・カドのいる戦だけ）。
+    /// </summary>
+    public long Sh363Casts, Sh363CastSum, Sh363BloodFoe, Sh363BloodAlly, Sh363BloodSelf, Sh363BloodDot, Sh363BloodHavoc;
+    public int Sh363FirstCastTurn;
+    public long[]? Sh363CastByTurn, Sh363HavocLost;
     public long Rp345NormalDealt, Rp345Punches, Rp345PunchBack, Rp345PunchKills, Rp345PunchDealt, Rp345PunchAmount, Rp345AimEdible, Rp345GrabNoPunch, Rp345GrabAfter, Ga345Stomps, Ga345SplashHits, Ga345SplashDealt;
     public long[]? Fg339Spray, Fg339AllyHits, Fg339AllyDmg;
     /// <summary>第339期（計数のみ）: 乱射の1発をターンごとに数える（羽の乱射 ／ 乱射の札の両方）。</summary>
@@ -3719,6 +3726,9 @@ public sealed class UnitTally
         Sh361NearGiven += o.Sh361NearGiven; Sh361NearDelivers += o.Sh361NearDelivers;
         Sh362RiposteSum += o.Sh362RiposteSum; Sh362ThornGain += o.Sh362ThornGain; Sh362Strikes += o.Sh362Strikes; Sh362StrikeSum += o.Sh362StrikeSum; Sh362StrikeMain += o.Sh362StrikeMain; Sh362Bares += o.Sh362Bares;   // 第362期
         if (Sh362BareTurn == 0) Sh362BareTurn = o.Sh362BareTurn;
+        Sh363Casts += o.Sh363Casts; Sh363CastSum += o.Sh363CastSum; Sh363BloodFoe += o.Sh363BloodFoe; Sh363BloodAlly += o.Sh363BloodAlly; Sh363BloodSelf += o.Sh363BloodSelf; Sh363BloodDot += o.Sh363BloodDot; Sh363BloodHavoc += o.Sh363BloodHavoc;   // 第363期
+        if (Sh363FirstCastTurn == 0) Sh363FirstCastTurn = o.Sh363FirstCastTurn;
+        Sh363CastByTurn = AddArr(Sh363CastByTurn, o.Sh363CastByTurn); Sh363HavocLost = AddArr(Sh363HavocLost, o.Sh363HavocLost);
         Db354CurseRage += o.Db354CurseRage; Db354PickedMudo += o.Db354PickedMudo; Db354FedMudo += o.Db354FedMudo; Db354BurstYokeCut += o.Db354BurstYokeCut; Db354BurstYokeLost += o.Db354BurstYokeLost;   // 第354期
         Db353PlunderGain += o.Db353PlunderGain; Db353PlunderHits += o.Db353PlunderHits; Db353PlunderDry += o.Db353PlunderDry; Db353PlunderMiss += o.Db353PlunderMiss; Db353PlunderBoss += o.Db353PlunderBoss;   // 第353期
         Fg339Spray = AddArr(Fg339Spray, o.Fg339Spray); Fg339AllyHits = AddArr(Fg339AllyHits, o.Fg339AllyHits); Fg339AllyDmg = AddArr(Fg339AllyDmg, o.Fg339AllyDmg);

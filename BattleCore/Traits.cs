@@ -917,6 +917,9 @@ public enum TraitId
     // --- 第362期で足した札（指示書 design/PHASE362_SELFHARM_KADO_SPEC.md §4）。カドの版（傷つくほど強く・二段構え）。保持者 0 枚 ---
     ThornsWound,        // 傷の棘（KD-t・カド）: 棘の反撃の重さを 攻撃力 × 2 ＋ 自分の傷（その時点の最大HP − 今のHP）にする（**札そのものは挙動を持たない**・`ThornsTrait.Weight`）
     ThornsBare,         // 棘を剥く（KD-r・カド）: HP が最大HPの5割を切ったら、身代わりの構えを捨て（不動も外れ）、自分の手番に最も手強い敵（攻撃力が最も高い・同じなら席番号の順）へ 攻撃力 × 2 ＋ 傷 で殴りかかる（反撃と同じく隣の敵に届き、隣の味方も巻き込む）。その戦の間は戻らない
+    // --- 第363期で足した札（指示書 design/PHASE363_SELFHARM_AKA_SPEC.md §4）。アカの版（傷を血に変えて一気に撃つ・`Ash` と差し替える）。保持者 0 枚 ---
+    BloodRead,          // 今の傷を詠む（AK-n・アカ）: 血を溜めない。手番ごとに、生きている味方全員の今の傷（最大HP − 今のHP・アカ自身を含む）の合計と同じ量を敵全体へ撃つ（傷が 0 なら素の一撃）。倒れると、そのときの味方全員の傷の合計の半分（切り捨て）が隣の味方に等分で降る
+    BloodPool,          // 溜め血（AK-s・アカ）: 味方（自分を含む）が実際に減らした HP をすべて血として溜める（敵から ／ 味方から ／ 自分から ／ 刻み・破片で受けた分は入らない・上限なし・治しても減らない）。血が閾（`BloodPoolTrait.Threshold`）に達した手番で全部使って敵全体を撃つ。届かない手番は何もしない（engine の `NoteBloodPool`）
     PebbleGather,       // 礫を拾う（GR-r・ガレ）: 味方（自分を含む）の破片が敵の一撃で割れた量を礫として溜め（上限なし）、手番（術）で全部使って 礫 × 3 ＋ 攻撃力 を敵全体へ撃つ。礫が無い手番は何もできない（味方の破片は砕かない）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -9342,7 +9345,15 @@ public sealed class AshTrait : Trait
         ctx.NoteAshAtDeath(self, ash);
         if (ash <= 0 || !ctx.Ash.FalloutOnDeath) return;
         self.SetCounter(StatusKeys.Ash, 0);
+        Fallout(ctx, self, ash);
+    }
 
+    /// <summary>
+    /// 倒れた保持者の血（灰）<paramref name="ash"/> を、隣接する生きている味方に等分（切り捨て）で降らせる（第363期にここへ切り出した・中身は第179期のまま）。
+    /// 版のアカ（<see cref="BloodReadTrait"/> ／ <see cref="BloodPoolTrait"/>）も同じ口を使う——隣の読み取りはこのクラスの中だけに置く。
+    /// </summary>
+    internal static void Fallout(BattleContext ctx, UnitState self, int ash)
+    {
         var neighbours = ctx.LivingMembers(self.TeamId)
             .Where(u => u != self && FormationRules.AreAdjacent(self, u)).ToList();
         if (neighbours.Count == 0) return;
@@ -9359,10 +9370,110 @@ public sealed class AshTrait : Trait
     }
 
     /// <summary>
+    /// 溜めた血で敵全体を撃つ（第363期・版のアカ <see cref="BloodReadTrait"/> ／ <see cref="BloodPoolTrait"/> の撃ち方）。<b>撃ち方は <see cref="OnAction"/> の撒く番と同じ</b>
+    /// （量 × <see cref="AshRule.Multiplier"/>・術の出来事 → 見せ場のログ → 敵全体へ <c>pattern: All</c> で <c>ApplyDamage</c>・軛で切られ ／ 回避は通常どおり・乱数は引かない）。
+    /// </summary>
+    internal static void Cast(BattleContext ctx, UnitState self, int blood, string text)
+    {
+        int dmg = blood * ctx.Ash.Multiplier / 100;
+        ctx.NoteAshThrow(self, blood, dmg);
+        ctx.NoteBloodCast(self, blood);
+        if (dmg <= 0) return;
+        ctx.EmitSkill(self, new UnitAction(ActionKind.Skill, Label: AshActionLabels.Release));
+        ctx.Log($"    ★ {self.Name} が{text}（{blood}）", LogKind.Highlight, self);
+        foreach (UnitState foe in ctx.LivingMembers(ctx.Opponent(self.TeamId)))
+        {
+            ctx.NoteAshHit(dmg);
+            ctx.ApplyDamage(foe, dmg, self, pattern: AttackPattern.All);
+        }
+    }
+
+    /// <summary>
     /// 灰そのものは <c>StatusKeys.All</c> に入っているので境界で消える。
     /// <b>捨てるのは周期のカウンタだけ</b>（私有のキーは境界の掃除を通らない）。
     /// </summary>
     public override void OnCarryOver(UnitState self) => self.SetCounter(CycleKey, 0);
+}
+
+/// <summary>
+/// 今の傷を詠む（第363期・アカの版 AK-n・指示書 design/PHASE363_SELFHARM_AKA_SPEC.md §4）。<b>血を溜めない。</b>
+/// 手番ごとに、生きている味方全員（アカ自身を含む・倒れた味方は入れない・召喚枠の駒も味方）の今の傷（最大HP − 今のHP・0 未満にしない）の合計と同じ量を敵全体へ撃つ。
+/// 治された分は撃てない——<b>治すと弱くなる</b>。傷が 0 の手番は素の一撃（第179期の「灰が無い手番」と同じ）。
+/// 倒れると、そのときの<b>生きている味方の傷の合計の半分（切り捨て）</b>が隣の味方に等分で降る（<see cref="AshTrait.Fallout"/>）。<b>乱数を引かない。</b>
+/// </summary>
+public sealed class BloodReadTrait : Trait
+{
+    public override TraitId Id => TraitId.BloodRead;
+
+    /// <summary>生きている味方の今の傷の合計（<paramref name="withSelf"/> が偽なら保持者を除く）。</summary>
+    public static int WoundSum(BattleContext ctx, UnitState self, bool withSelf)
+    {
+        int sum = 0;
+        foreach (UnitState u in ctx.LivingMembers(self.TeamId))
+            if (withSelf || u != self) sum += Math.Max(0, u.MaxHp - u.Hp);
+        return sum;
+    }
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+    {
+        if (!self.IsAlive) return;
+        int wound = WoundSum(ctx, self, withSelf: true);
+        if (wound <= 0)
+        {
+            ctx.NoteAshDry(self);
+            ctx.PerformAttack(self, "    ");
+            return;
+        }
+        AshTrait.Cast(ctx, self, wound, "仲間の傷の深さを詠み、その血で撃った");
+    }
+
+    public override void OnDeath(BattleContext ctx, UnitState self)
+    {
+        int half = WoundSum(ctx, self, withSelf: false) / 2;
+        ctx.NoteAshAtDeath(self, half);
+        if (half <= 0 || !ctx.Ash.FalloutOnDeath) return;
+        AshTrait.Fallout(ctx, self, half);
+    }
+}
+
+/// <summary>
+/// 溜め血（第363期・アカの版 AK-s・指示書 design/PHASE363_SELFHARM_AKA_SPEC.md §4）。
+/// 味方（自分を含む）が<b>実際に減らした HP</b>（敵から ／ 味方から ／ 自分から ／ 出どころの無い刻み・破片で受けた分は HP が減らないので入らない）を
+/// すべて血（<see cref="StatusKeys.Ash"/>・上限なし）として溜める——<b>溜めるのは engine の <c>NoteBloodPool</c></b>（<c>ApplyDamage</c> が HP を引いた直後）。
+/// 治しても溜まった血は減らない——<b>傷を受けた事実が力になる</b>。血が <see cref="Threshold"/> に達した手番で全部使って敵全体を撃ち、届かない手番は何もしない（溜め）。
+/// 血を溜めたまま倒れると、その血が隣の味方に等分で降る（第179期のマイナスのまま）。<b>乱数を引かない。</b>
+/// </summary>
+public sealed class BloodPoolTrait : Trait
+{
+    /// <summary>撃つ閾（第363期 Phase 0 で決めた・`design/PHASE363_SELFHARM_AKA.md` §1）。</summary>
+    public const int Threshold = 400;
+
+    public override TraitId Id => TraitId.BloodPool;
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+    {
+        if (!self.IsAlive) return;
+        int blood = AshTrait.AshOf(self);
+        if (blood < Threshold)
+        {
+            ctx.NoteAshHold(self, blood);
+            ctx.EmitCharge(self, new UnitAction(ActionKind.Charge, Label: AshActionLabels.Hold),
+                new UnitAction(ActionKind.Skill, PatternOverride: AttackPattern.All));
+            ctx.Log($"    {self.Name} は仲間の血を溜めている（{blood} ／ {Threshold}）", LogKind.Status);
+            return;
+        }
+        self.SetCounter(StatusKeys.Ash, 0);
+        AshTrait.Cast(ctx, self, blood, "溜まりきった血で撃った");
+    }
+
+    public override void OnDeath(BattleContext ctx, UnitState self)
+    {
+        int blood = AshTrait.AshOf(self);
+        ctx.NoteAshAtDeath(self, blood);
+        if (blood <= 0 || !ctx.Ash.FalloutOnDeath) return;
+        self.SetCounter(StatusKeys.Ash, 0);
+        AshTrait.Fallout(ctx, self, blood);
+    }
 }
 
 /// <summary>
@@ -18329,6 +18440,8 @@ public static class TraitCatalog
         new BurdenTrait(),     // 第154期
         new LadenTrait(),      // 第154期
         new AshTrait(),        // 第179期
+        new BloodReadTrait(),  // 第363期（今の傷を詠む AK-n・アカ）
+        new BloodPoolTrait(),  // 第363期（溜め血 AK-s・アカ・溜めるのは engine の `NoteBloodPool`）
         new EruptTrait(),      // 第180期
         new SmearTrait(),      // 第180期
         new SpitTrait(),       // 第180期
