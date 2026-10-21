@@ -48,12 +48,12 @@ static partial class Sh374Diag
         // ---- 版の定義 ／ 規定は今どおり ----
         {
             bool sid = new[] { (UnitCatalog.SidS10, TraitId.SidOpeningCloak10), (UnitCatalog.SidS20, TraitId.SidOpeningCloak20) }
-                .All(x => x.Item1.Traits.SequenceEqual(UnitCatalog.Sid.Traits.Append(x.Item2)) && x.Item1.Id == "sid" && x.Item1.PlusText == "戦いの前から毒をまとっている。" + UnitCatalog.Sid.PlusText && x.Item1.MinusText == UnitCatalog.Sid.MinusText);
+                .All(x => x.Item1.Traits.SequenceEqual(UnitCatalog.SidH374.Traits.Append(x.Item2)) && x.Item1.Id == "sid" && x.Item1.PlusText == "戦いの前から毒をまとっている。" + UnitCatalog.SidH374.PlusText && x.Item1.MinusText == UnitCatalog.SidH374.MinusText);
             bool vio = UnitCatalog.VioC.Traits.SequenceEqual(UnitCatalog.Vio.Traits.Append(TraitId.VioBloodSip)) && UnitCatalog.VioC.MinusText == "仲間が汚れていないターンは、飢えて隣の仲間の血を啜る" && UnitCatalog.VioC.PlusText == UnitCatalog.Vio.PlusText;
             bool none = new[] { UnitCatalog.SidS10, UnitCatalog.SidS20, UnitCatalog.VioC }.All(d => !UnitCatalog.All.Contains(d))
-                && !UnitCatalog.All.Any(d => d.Traits.Any(t => t is TraitId.SidOpeningCloak10 or TraitId.SidOpeningCloak20 or TraitId.VioBloodSip))
-                && !CompareBuilds().Any(r => r.F.Occupied().Any(o => o.Def.Traits.Any(t => t is TraitId.SidOpeningCloak10 or TraitId.SidOpeningCloak20 or TraitId.VioBloodSip)));
-            bool def = UnitCatalog.Sid.Traits.SequenceEqual(UnitCatalog.SidY.Traits) && UnitCatalog.Vio.Traits.SequenceEqual(UnitCatalog.VioVa.Traits);
+                && !UnitCatalog.All.Any(d => d != UnitCatalog.Sid && d.Traits.Any(t => t is TraitId.SidOpeningCloak10 or TraitId.SidOpeningCloak20 or TraitId.VioBloodSip))
+                && !CompareBuilds().Select(r => (r.Name, F: Pin374(r.F))).Any(r => r.F.Occupied().Any(o => o.Def.Traits.Any(t => t is TraitId.SidOpeningCloak10 or TraitId.SidOpeningCloak20 or TraitId.VioBloodSip)));
+            bool def = UnitCatalog.SidH374.Traits.SequenceEqual(UnitCatalog.SidY.Traits)   /* 第375期: 規定は S10・第374期の規定は `SidH374` */ && UnitCatalog.Vio.Traits.SequenceEqual(UnitCatalog.VioVa.Traits);
             int nr = Enum.GetValues<PoisonRoute>().Length;
             bool route = (int)PoisonRoute.CloakOpening == nr - 1 && BattleContext.SoakBurnRouteIx == nr && BattleContext.SoakRouteCount == nr + 1;
             Expect("版の定義: S10 ／ S20 ＝ 規定のスィド ＋ 開戦の衣（プラスの頭に一文）・C ＝ 規定のヴィオ ＋ 血を啜る（マイナスを差し替え）・`All` ／ `compare` の行には無い・規定のスィド ／ ヴィオは第373期のまま・経路 `CloakOpening` は末尾・燃焼の添字は後ろ",
@@ -68,7 +68,7 @@ static partial class Sh374Diag
                 var r = BattleEngine.Run(Formation.Build(front1: sid), Formation.Build(center: Foe), 0, verbose: true);
                 return r.Events.Where(e => e.Kind == BattleEventKind.StatusSnapshot && e.Turn == 1 && e.Text == psn).Select(e => e.Amount).DefaultIfEmpty(0).Max();
             }
-            int a10 = T1(UnitCatalog.SidS10), a20 = T1(UnitCatalog.SidS20), a0 = T1(UnitCatalog.Sid);
+            int a10 = T1(UnitCatalog.SidS10), a20 = T1(UnitCatalog.SidS20), a0 = T1(UnitCatalog.SidH374);
             var r10 = BattleEngine.Run(Formation.Build(front1: UnitCatalog.SidS10), Formation.Build(center: Foe), 0, verbose: true);
             bool noTick = !r10.Events.Any(e => e.Kind == BattleEventKind.Status && e.Text == psn && e.TargetId is int t && r10.Events.Any(o => o.Kind == BattleEventKind.StatusGain && o.PoisonRoute == PoisonRoute.CloakOpening && o.TargetId == t) && e.Amount > 0);
             Expect("開戦の衣: T1 の頭でスィドの層が 10 ／ 20（規定は 0）・毒の刻みでは削られない", a10 == 10 && a20 == 20 && a0 == 0 && noTick, $"S10 {a10}・S20 {a20}・規定 {a0}・刻み {(noTick ? "なし" : "あり")}");
@@ -167,13 +167,11 @@ static partial class Sh374Diag
 
         // ---- 試遊の台 ----
         {
+            // 第375期: 第374期の「版・S10 ／ S20 ／ C ／ S10C」は外した（S10 を規定にした・並びはこの器具の中で組む）。検査は「頭の10台」と「第374期の版の台が無い」に。
             var vr = Presets.Versions.Select(r => r.Name).ToArray();
-            bool rows = vr.SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒", "試遊・毒 席替え", "試遊・毒 紅",
-                "版・S10 開戦の衣", "版・S20 開戦の衣", "版・C 血を啜る", "版・S10C 両方" });
-            bool vers = new[] { ("版・S10 開戦の衣", Presets.PoisonHero367(sid: UnitCatalog.SidS10)), ("版・S20 開戦の衣", Presets.PoisonHero367(sid: UnitCatalog.SidS20)),
-                ("版・C 血を啜る", Presets.PoisonHero367(vio: UnitCatalog.VioC)), ("版・S10C 両方", Presets.PoisonHero367(vio: UnitCatalog.VioC, sid: UnitCatalog.SidS10)) }
-                .All(x => Presets.Versions.First(r => r.Name == x.Item1).F.Occupied().Select(o => o.Def).SequenceEqual(x.Item2.Occupied().Select(o => o.Def)));
-            Expect("`Presets.Versions` ＝ 試遊の8台 ＋「試遊・毒 席替え」＋「試遊・毒 紅」＋ 版の4台（試遊・毒の並び・版の駒だけ替える）・第373期の版の台は無い", rows && vers, string.Join("、", vr));
+            bool rows = vr.Take(10).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒", "試遊・毒 席替え", "試遊・毒 紅" })
+                && !vr.Any(n => n is "版・S10 開戦の衣" or "版・S20 開戦の衣" or "版・C 血を啜る" or "版・S10C 両方");
+            Expect("`Presets.Versions` の頭 ＝ 試遊の8台 ＋「試遊・毒 席替え」＋「試遊・毒 紅」・第374期の版の4台は無い（第375期に外した）", rows, string.Join("、", vr));
         }
 
         // ---- PickOne ／ Roll ----

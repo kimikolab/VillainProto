@@ -8,6 +8,8 @@ description: 第259期に `CLAUDE.md` の「現状値」節を**逐語で**移�
 
 ## 現状値
 
+**第375期は軽い期で、段0 でスィドの開戦の衣 S10 を規定にし、毒軸のまとめ（design/POISON_AXIS_SUMMARY.md）を書き、本体で飢えたヴィオ（C）を毒の外の台で数えた**（指示書は design/PHASE375_POISON_CLOSE_SPEC.md・報告は design/PHASE375_POISON_CLOSE.md）。旧のスィドは `UnitCatalog.SidH374`（`Common.PinS374` ／ `Pin374`）。`compare` は段0 で 0 セルで、全64行 100 / 94.8 / 91.2 / 87.8 / 86.8・主判定19行 100 / 92.7 / 91.5 / 84.8 / 87.3（歯止めの余裕 +54.1pt）・情報セル 60 / 19 のまま。`docs/` を再生成した。試遊の台は `Presets.Versions` ＝ 試遊の8台 ＋「試遊・毒 席替え」＋「試遊・毒 紅」＋「版・C 自傷にヴィオ」「版・C 台Bにヴィオ」（第374期の「版・」の4台は外した）。器具は `sh375`（boards / summary / check）。
+
 **第374期は軽い期で、規定は変えず、毒の立ち上がりを早める版（スィドの開戦の衣 S10 ／ S20・ヴィオの「飢えると血を啜る」C・両方 S10C）を並べた**（指示書は design/PHASE374_POISON_EARLY_SPEC.md・報告は design/PHASE374_POISON_EARLY.md）。版の駒は `UnitCatalog.SidS10` ／ `SidS20` ／ `VioC`（`All` に入れない）。`compare` は4版とも 0 セルで、全64行 100 / 94.8 / 91.2 / 87.8 / 86.8・主判定19行 100 / 92.7 / 91.5 / 84.8 / 87.3（歯止めの余裕 +54.1pt）・情報セル 60 / 19 のまま。`docs/` は再生成していない。試遊の台は `Presets.Versions` ＝ 試遊の8台 ＋「試遊・毒 席替え」＋「試遊・毒 紅」＋「版・S10 開戦の衣」「版・S20 開戦の衣」「版・C 血を啜る」「版・S10C 両方」（第373期の「版・」の3台は外した）。器具は `sh374`（boards / compare / check）。
 
 **第373期は軽い期で、段0 で第372期の Va（ヴィオの連撃の段・散らす）を規定にし、本体でヴィオのマイナス「溢れて吐く」の版（A1 半分 ／ A2 3分の1）と紅の台の確かめを並べた**（指示書は design/PHASE373_VIO_RETCH_SPEC.md・報告は design/PHASE373_VIO_RETCH.md）。旧のヴィオは `UnitCatalog.VioH372`（`Common.PinV372` ／ `Pin372`）。`compare` は段0 で 0 セル・版も2つとも 0 セルで、全64行 100 / 94.8 / 91.2 / 87.8 / 86.8・主判定19行 100 / 92.7 / 91.5 / 84.8 / 87.3（歯止めの余裕 +54.1pt）・情報セル 60 / 19 のまま。`docs/` を再生成した。試遊の台は `Presets.Versions` ＝ 試遊の8台 ＋「試遊・毒 席替え」＋「試遊・毒 紅」＋「版・A1 半分を吐く」「版・A2 3分の1を吐く」「版・A1 席替え」（第372期の「版・Va ／ Vb ／ Vc」は外した）。器具は `sh373`（boards / seats / guren / compare / check）。

@@ -971,11 +971,10 @@ public static class Presets
         // 第372期【軽い期】本体: ヴィオの連撃の段の版（並びは試遊・毒・ヴィオだけ版）。採否はポン。
         // 第373期: 第372期の「版・Va ／ Vb ／ Vc」は外した（規定のヴィオが Va になった）。「試遊・毒 紅」＝ ポンの試遊の台（前1 ボルグ ／ 前3 スィド ／ 中央 ベニ ／ 後1 ラウ ／ 後3 グザ・規定の駒）。
         ("試遊・毒 紅", PoisonGuren373()),
-        // 第374期: 第373期の「版・A1 ／ A2 ／ A1 席替え」は外した（採らない・並びは `sh373` の中に固定）。毒の立ち上がりを早める版（並びは試遊・毒・版の駒だけ替える）。採否はポン。
-        ("版・S10 開戦の衣", PoisonHero367(sid: UnitCatalog.SidS10)),
-        ("版・S20 開戦の衣", PoisonHero367(sid: UnitCatalog.SidS20)),
-        ("版・C 血を啜る", PoisonHero367(vio: UnitCatalog.VioC)),
-        ("版・S10C 両方", PoisonHero367(vio: UnitCatalog.VioC, sid: UnitCatalog.SidS10)),
+        // 第375期: S10 を規定にした（「試遊・毒」「試遊・毒 席替え」「試遊・毒 紅」は規定の駒のまま ＝ スィドは S10）。第374期の「版・S10 ／ S20 ／ C ／ S10C」は外した（並びは `sh374` の中に固定）。
+        // 第375期【軽い期】本体: 飢えたヴィオを毒の外で使う（ヴィオは C ＝ 飢えると血を啜る・並びは `sh375` の §4-2）。採否はポン。
+        ("版・C 自傷にヴィオ", SelfHarmVio375(UnitCatalog.VioC)),
+        ("版・C 台Bにヴィオ", BoardBVio375(UnitCatalog.VioC)),
     };
 
     /// <summary>第367期: 毒特化・勇者（`compare` の「毒爆弾 (ラウ×ヴィオ)」のラウの席 ＝ 後3 を守りに替えた台・前1 ガルド ／ 前3 スィド ／ 中央 グザ ／ 後1 ヴィオ ／ 後3 守り）。
@@ -996,6 +995,22 @@ public static class Presets
     /// <summary>第366期: 台 B（前1 ボルグ ／ 前3 ミサ ／ 中央 ヒサ ／ 後1 カド ／ 後3 アカ）。ヒサを差し替えて版の台を作る。</summary>
     public static Formation HisaBoard366(UnitDef? hisa = null) =>
         Formation.Build(front1: UnitCatalog.Borg, front3: UnitCatalog.Tome, center: hisa ?? UnitCatalog.Hisa, back1: UnitCatalog.Kado, back3: UnitCatalog.Susu);
+
+    /// <summary>第375期: 試遊・自傷のボルグ（後1）をヴィオに替えた台（カド・リリ・ムド・ヴィオ・アカ）。ヴィオの隣はカド（前1）とムド（中央）。ボルグの燃焼の巻き込み（味方の傷の出どころ）をヴィオの啜りで置き換える。</summary>
+    public static Formation SelfHarmVio375(UnitDef? vio = null)
+    {
+        var f = SelfHarmPlay365();
+        f[3] = vio ?? UnitCatalog.Vio;
+        return f;
+    }
+
+    /// <summary>第375期: 台 B のボルグ（前1）をヴィオに替えた台（ヴィオ・ミサ・ヒサ・カド・アカ）。ヴィオの隣はヒサ（中央）とカド（後1）。ヒサ × ミサの連鎖とアカはそのまま。</summary>
+    public static Formation BoardBVio375(UnitDef? vio = null)
+    {
+        var f = HisaBoard366();
+        f[0] = vio ?? UnitCatalog.Vio;
+        return f;
+    }
 
     /// <summary>第365期: 「試遊・自傷」の並び（前1 カド ／ 前3 リリ ／ 中央 ムド ／ 後1 ボルグ ／ 後3 アカ）。アカを差し替えて版の台を作る。</summary>
     public static Formation SelfHarmPlay365(UnitDef? aka = null) =>

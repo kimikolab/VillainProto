@@ -51,7 +51,7 @@ static partial class Sh373Diag
     static string Pct(long a, long n) => n == 0 ? "—" : F1(100.0 * a / n);
     static string Short(UnitDef d) => S307.Short(d);
     static string Nm(string id) => Short(UnitCatalog.Everyone.First(d => d.Id == id));
-    static Formation Row(string n) => CompareBuilds().First(r => r.Name == n).F;
+    static Formation Row(string n) => Pin374(CompareBuilds().First(r => r.Name == n).F);   // 第375期: 第374期までの規定のスィド（`SidH374`）に固定
     static bool Has(Formation f, string id) => f.Occupied().Any(o => o.Def.Id == id);
 
     internal static readonly S370.Ver[] Vers =
@@ -64,8 +64,8 @@ static partial class Sh373Diag
 
     internal static (string Name, Formation F)[] BoardList() => new (string, Formation)[]
     {
-        ("試遊・毒", Presets.Versions.First(r => r.Name == "試遊・毒").F),
-        ("試遊・毒 席替え", Presets.Versions.First(r => r.Name == "試遊・毒 席替え").F),
+        ("試遊・毒", Pin374(Presets.Versions.First(r => r.Name == "試遊・毒").F)),
+        ("試遊・毒 席替え", Pin374(Presets.Versions.First(r => r.Name == "試遊・毒 席替え").F)),
         ("毒特化・集団", Row(S367.BombRow)),
         ("澱み喰い (グザ×ヴィオ)", Row("澱み喰い (グザ×ヴィオ)")),
     };
@@ -247,7 +247,7 @@ static partial class Sh373Diag
 
     internal static Formation Seat(int[] order, S370.Ver v)
     {
-        var play = Presets.Versions.First(r => r.Name == "試遊・毒").F;
+        var play = Pin374(Presets.Versions.First(r => r.Name == "試遊・毒").F);
         var defs = Enumerable.Range(0, 5).Select(i => play[i]!).ToArray();
         var f = Formation.Build(front1: defs[order[0]], front3: defs[order[1]], center: defs[order[2]], back1: defs[order[3]], back3: defs[order[4]]);
         return Apply(f, v);
@@ -322,7 +322,7 @@ static partial class Sh373Diag
     /// <summary>並び（試遊・毒の5枚の席順）でヴィオの隣に来る駒の名前（名前順）。</summary>
     internal static string VioNeighbors(int[] order)
     {
-        var play = Presets.Versions.First(r => r.Name == "試遊・毒").F;
+        var play = Pin374(Presets.Versions.First(r => r.Name == "試遊・毒").F);
         int vioIx = Enumerable.Range(0, 5).First(i => play[i]!.Id == "vio");
         int slot = Array.IndexOf(order, vioIx);
         return string.Join("・", Enumerable.Range(0, 5).Where(s => s != slot && FormationRules.AreAdjacent(slot, s)).Select(s => Short(play[order[s]]!)).OrderBy(x => x));
@@ -399,7 +399,7 @@ static partial class Sh373Diag
     static void Guren()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var f = Presets.Versions.First(r => r.Name == "試遊・毒 紅").F;
+        var f = Pin374(Presets.Versions.First(r => r.Name == "試遊・毒 紅").F);
         Console.WriteLine($"# {Tag} §4 紅の台の確かめ（数えるだけ）—— 試遊・毒 紅（{S307.Seats(f)}・規定の駒）× {GurenWaves.Length} 波（seed 0..{Seeds - 1}）");
         Console.WriteLine();
         var res = new Gx[GurenWaves.Length];
@@ -472,7 +472,7 @@ static partial class Sh373Diag
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var v = ver switch { "A1" => Vers[1], "A2" => Vers[2], _ => throw new ArgumentException("sh373 compare の版は A1 / A2") };
-        var rows = CompareBuilds().ToArray();
+        var rows = CompareBuilds().Select(r => (r.Name, F: Pin374(r.F))).ToArray();   // 第375期: 第374期までの規定のスィドに固定
         int nw = EnemyCatalog.Stages.Count, last = nw - 1;
         Func<int, bool> only = ri => Has(rows[ri].F, "vio");
         var b = CGrid(rows, f => f, _ => true);

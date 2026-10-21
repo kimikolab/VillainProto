@@ -1542,3 +1542,7 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **開戦の衣（`OpeningCloakTrait`・札 `SidOpeningCloak10` ／ `20`）**: `OnBattleStart` で自分へ毒 +N（毒の窓口・経路 `PoisonRoute.CloakOpening`・添字 19）。engine の口は足していない。経路を足したので `SoakRouteCount` 20 → 21・`SoakBurnRouteIx` 19 → 20。
 - **血を啜る（`BloodSipTrait`・札 `VioBloodSip`）**: `BlightfedTrait.OnTurnStart` の「吸えた層が 0」の行で、隣接する生きている味方（席番号の小さい順）の `Hp` を直に 4 ずつ引き（HP 1 未満にしない・`ApplyDamage` を通らない ＝ `OnDamaged` も軽減も起きない）、啜った HP × 2 を `AtkBonus` に直に足す（自己強化）。engine の口は足していない。**乱数を引かない**。台本に出来事は出さない（ログだけ）。
 - 計数だけ: `UnitTally.Z374OpeningCloak` ／ `Z374SipTurns` ／ `Z374SipHp` ／ `Z374SippedFrom`。
+
+## 第375期 —— 段0: スィドの開戦の衣 S10 を規定に
+
+- engine は変えていない（第374期の `OpeningCloakTrait.OnBattleStart` と経路 `PoisonRoute.CloakOpening` が規定のスィドで働くようになった）。

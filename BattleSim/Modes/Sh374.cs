@@ -47,7 +47,7 @@ static partial class Sh374Diag
     static string Pct(long a, long n) => n == 0 ? "—" : F1(100.0 * a / n);
     static string Short(UnitDef d) => S307.Short(d);
     static string Nm(string id) => Short(UnitCatalog.Everyone.First(d => d.Id == id));
-    static Formation Row(string n) => CompareBuilds().First(r => r.Name == n).F;
+    static Formation Row(string n) => Pin374(CompareBuilds().First(r => r.Name == n).F);   // 第375期: 第374期までの規定のスィド（`SidH374`）に固定
     static bool Has(Formation f, string id) => f.Occupied().Any(o => o.Def.Id == id);
 
     internal static readonly S370.Ver V0 = new("規定", null, null, null), VS10 = new("S10 開戦の衣 +10", null, null, UnitCatalog.SidS10),
@@ -61,7 +61,7 @@ static partial class Sh374Diag
     /// </summary>
     internal static Formation WoundBoard()
     {
-        var f = Presets.Versions.First(r => r.Name == "試遊・毒").F.Clone();
+        var f = Pin374(Presets.Versions.First(r => r.Name == "試遊・毒").F).Clone();
         f[0] = UnitCatalog.Susu;
         f[4] = UnitCatalog.Gald;
         return f;
@@ -69,11 +69,11 @@ static partial class Sh374Diag
 
     internal static (string Name, Formation F, S370.Ver[] Vs)[] BoardList() => new (string, Formation, S370.Ver[])[]
     {
-        ("試遊・毒", Presets.Versions.First(r => r.Name == "試遊・毒").F, Vers),
-        ("試遊・毒 席替え", Presets.Versions.First(r => r.Name == "試遊・毒 席替え").F, Vers),
+        ("試遊・毒", Pin374(Presets.Versions.First(r => r.Name == "試遊・毒").F), Vers),
+        ("試遊・毒 席替え", Pin374(Presets.Versions.First(r => r.Name == "試遊・毒 席替え").F), Vers),
         ("毒特化・集団", Row(S367.BombRow), Vers),
         ("澱み喰い (グザ×ヴィオ)", Row("澱み喰い (グザ×ヴィオ)"), Vers),
-        ("試遊・毒 紅", Presets.Versions.First(r => r.Name == "試遊・毒 紅").F, new[] { V0, VS10, VS20 }),
+        ("試遊・毒 紅", Pin374(Presets.Versions.First(r => r.Name == "試遊・毒 紅").F), new[] { V0, VS10, VS20 }),
         ("傷の台（アカ・スィド・グザ・ヴィオ・ガルド）", WoundBoard(), new[] { V0, VC, VS10C }),
     };
     internal static readonly I.W[] Waves = S367.PWaves;
@@ -292,7 +292,7 @@ static partial class Sh374Diag
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var v = ver switch { "S10" => VS10, "S20" => VS20, "C" => VC, "S10C" => VS10C, _ => throw new ArgumentException("sh374 compare の版は S10 / S20 / C / S10C") };
-        var rows = CompareBuilds().ToArray();
+        var rows = CompareBuilds().Select(r => (r.Name, F: Pin374(r.F))).ToArray();   // 第375期: 第374期までの規定のスィドに固定
         int nw = EnemyCatalog.Stages.Count, last = nw - 1;
         Func<int, bool> only = ri => (v.Sid is not null && Has(rows[ri].F, "sid")) || (v.Vio is not null && Has(rows[ri].F, "vio"));
         var b = CGrid(rows, f => f, _ => true);

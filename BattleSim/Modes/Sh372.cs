@@ -59,7 +59,7 @@ static partial class Sh372Diag
     internal static Formation Apply(Formation f, S370.Ver v) => S370.Apply(f, v);
 
     /// <summary>攻撃力の台（第370期と同じ並び ＝ 試遊・毒のドルガ → ガン・駒は段0 の後の規定）。</summary>
-    internal static Formation AtkBoard() => Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sid, center: UnitCatalog.Guza, back1: UnitCatalog.VioH372, back3: UnitCatalog.Gan);   // 第373期: 第372期の規定に固定
+    internal static Formation AtkBoard() => Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.SidH374, center: UnitCatalog.Guza, back1: UnitCatalog.VioH372, back3: UnitCatalog.Gan);   // 第373期: 第372期の規定に固定
 
     internal static (string Name, Formation F)[] BoardList() => new (string, Formation)[]
     {

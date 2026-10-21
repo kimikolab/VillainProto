@@ -570,16 +570,30 @@ public static class UnitCatalog
     };
 
     /// <summary>
-    /// 毒吐きのスィド（規定）。<b>第372期に W5 のスィド（第371期の `SidY`）を規定にした</b>（ポンの判断・design/PHASE372_VIO_FLURRY_SPEC.md §2）——
+    /// 旧スィド（第372〜374期の規定・W5）。<b>第375期に開戦の衣 S10 を規定にしたので、名前を付けて残した</b>（`All` に入れない・第374期までの器具は `Common.Pin374` でこれに固定する）。
+    /// 第372期に W5 のスィド（第371期の `SidY`）を規定にした（ポンの判断・design/PHASE372_VIO_FLURRY_SPEC.md §2）——
     /// 手番は「毒を吐きかける」（`Spew`）・毒に強い・毒の衣（層 × 3%・最大 60%）・衣の返し（殴られると +2 の後に殴ってきた敵へ層と同じだけ・隣へ +1 の漏れ）・痺れ毒。毒撃 +8（`VenomHeavy`）は持たない。
     /// </summary>
-    public static readonly UnitDef Sid = new()
+    public static readonly UnitDef SidH374 = new()
     {
         Id = SidH371.Id, Name = SidH371.Name, MaxHp = SidH371.MaxHp, Attack = SidH371.Attack, Speed = SidH371.Speed, Advances = SidH371.Advances, Pattern = SidH371.Pattern, Actions = SidH371.Actions,
         Traits = new[] { TraitId.Spew, TraitId.PoisonProof, TraitId.PoisonCloak, TraitId.CloakRetort, TraitId.Numb },
         PlusText = "手番で、まだ毒を浴びていない一番手強い敵に毒を吐きかける。殴られると自分も毒をまとい、まとった毒が深いほど受ける傷が減る（最大6割）。殴ってきた敵にはまとった毒と同じだけ浴びせる。毒に蝕まれない",
         MinusText = "殴られると隣の仲間にも毒が漏れる",
         Flavor = SidH371.Flavor,
+    };
+
+    /// <summary>
+    /// 毒吐きのスィド（規定）。<b>第375期に第374期の版 S10（開戦の衣 +10）を規定にした</b>（ポンの判断・design/PHASE375_POISON_CLOSE_SPEC.md §2）——
+    /// 第372〜374期の規定（`SidH374`）＋ 開戦の衣（<see cref="TraitId.SidOpeningCloak10"/>・開戦時に自分へ毒 +10）。文面は第374期の版の文面。
+    /// </summary>
+    public static readonly UnitDef Sid = new()
+    {
+        Id = SidH374.Id, Name = SidH374.Name, MaxHp = SidH374.MaxHp, Attack = SidH374.Attack, Speed = SidH374.Speed, Advances = SidH374.Advances, Pattern = SidH374.Pattern, Actions = SidH374.Actions,
+        Traits = SidH374.Traits.Append(TraitId.SidOpeningCloak10).ToArray(),
+        PlusText = "戦いの前から毒をまとっている。" + SidH374.PlusText,
+        MinusText = SidH374.MinusText,
+        Flavor = SidH374.Flavor,
     };
 
     // 第363期: 第362期までの規定のカドは `KadoH362` の名前で残した（定義は1文字も変えていない）。規定の `Kado` は第362期の KD-r で、すぐ下に作った。
@@ -7017,10 +7031,11 @@ public static class UnitCatalog
     public static readonly UnitDef VioA2 = VioRetch373(TraitId.VioRetchThird, "吸った毒は腹に収まりきらず、3分の1はターンの終わりに隣の仲間へ吐き戻す");
 
     // 第374期【軽い期】（指示書 design/PHASE374_POISON_EARLY_SPEC.md §2・§3）。毒の立ち上がりを早める版——スィドの開戦の衣（S10 ／ S20）とヴィオの「飢えると血を啜る」（C）。どれも `All` に入れない・採否はポン。文面は叩き台。
+    // 第375期: 規定のスィドが S10 になったので、S10 ／ S20 は第374期の規定（`SidH374`）から作る（`SidS10` は規定と同じ札・文面・残置）。
     static UnitDef SidOpening374(TraitId card) => new()
     {
-        Id = Sid.Id, Name = Sid.Name, MaxHp = Sid.MaxHp, Attack = Sid.Attack, Speed = Sid.Speed, Advances = Sid.Advances, Pattern = Sid.Pattern, Actions = Sid.Actions,
-        Traits = Sid.Traits.Append(card).ToArray(), PlusText = "戦いの前から毒をまとっている。" + Sid.PlusText, MinusText = Sid.MinusText, Flavor = Sid.Flavor,
+        Id = SidH374.Id, Name = SidH374.Name, MaxHp = SidH374.MaxHp, Attack = SidH374.Attack, Speed = SidH374.Speed, Advances = SidH374.Advances, Pattern = SidH374.Pattern, Actions = SidH374.Actions,
+        Traits = SidH374.Traits.Append(card).ToArray(), PlusText = "戦いの前から毒をまとっている。" + SidH374.PlusText, MinusText = SidH374.MinusText, Flavor = SidH374.Flavor,
     };
     /// <summary>スィド・S10: 規定 ＋ 開戦の衣 +10。</summary>
     public static readonly UnitDef SidS10 = SidOpening374(TraitId.SidOpeningCloak10);

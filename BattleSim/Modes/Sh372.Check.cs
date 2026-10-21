@@ -57,16 +57,16 @@ static partial class Sh372Diag
 
         // ---- 段0: 規定 ＝ W5 ／ 旧の定義 ／ 固定の口 ----
         {
-            bool w5 = UnitCatalog.Guza.Traits.SequenceEqual(UnitCatalog.GuzaW3.Traits) && UnitCatalog.VioH372.Traits.SequenceEqual(UnitCatalog.VioW.Traits) && UnitCatalog.Sid.Traits.SequenceEqual(UnitCatalog.SidY.Traits)
-                && UnitCatalog.VioH372.Actions is null && UnitCatalog.Sid.Actions is { Count: 1 } sa && sa[0].Kind == ActionKind.Skill
+            bool w5 = UnitCatalog.Guza.Traits.SequenceEqual(UnitCatalog.GuzaW3.Traits) && UnitCatalog.VioH372.Traits.SequenceEqual(UnitCatalog.VioW.Traits) && UnitCatalog.SidH374.Traits.SequenceEqual(UnitCatalog.SidY.Traits)
+                && UnitCatalog.VioH372.Actions is null && UnitCatalog.SidH374.Actions is { Count: 1 } sa && sa[0].Kind == ActionKind.Skill
                 && new[] { UnitCatalog.Guza, UnitCatalog.Vio, UnitCatalog.Sid }.All(d => UnitCatalog.All.Contains(d)) && !UnitCatalog.All.Contains(UnitCatalog.VioH372) && UnitCatalog.All.Count == 52;   // 第373期: 規定のヴィオは Va・第372期の規定は `VioH372`（`All` の外）
-            bool txt = UnitCatalog.VioH372.PlusText.Contains("攻撃力と同じだけ毒") && UnitCatalog.Sid.PlusText.Contains("まとった毒と同じだけ") && UnitCatalog.Guza.MinusText.Contains("噴き出");
+            bool txt = UnitCatalog.VioH372.PlusText.Contains("攻撃力と同じだけ毒") && UnitCatalog.SidH374.PlusText.Contains("まとった毒と同じだけ") && UnitCatalog.Guza.MinusText.Contains("噴き出");
             bool old = UnitCatalog.GuzaH371.Traits.SequenceEqual(new[] { TraitId.Miasma, TraitId.ScatterGather }) && UnitCatalog.VioH371.Traits.SequenceEqual(new[] { TraitId.Blightfed, TraitId.BlightCatalyst })
                 && UnitCatalog.SidH371.Traits.SequenceEqual(new[] { TraitId.Spew, TraitId.VenomHeavy, TraitId.Numb })
                 && new[] { UnitCatalog.GuzaH371, UnitCatalog.VioH371, UnitCatalog.SidH371 }.All(d => !UnitCatalog.All.Contains(d));
-            bool pins = PinGVS371(UnitCatalog.Guza) == UnitCatalog.GuzaH371 && PinGVS371(UnitCatalog.VioH372) == UnitCatalog.VioH371 && PinGVS371(UnitCatalog.Sid) == UnitCatalog.SidH371
+            bool pins = PinGVS371(UnitCatalog.Guza) == UnitCatalog.GuzaH371 && PinGVS371(UnitCatalog.VioH372) == UnitCatalog.VioH371 && PinGVS371(UnitCatalog.SidH374) == UnitCatalog.SidH371
                 && PinGVH367(UnitCatalog.Guza) == UnitCatalog.GuzaH367 && PinGVH367(UnitCatalog.GuzaH371) == UnitCatalog.GuzaH367 && PinGVH367(UnitCatalog.VioH372) == UnitCatalog.VioH367 && PinGVH367(UnitCatalog.VioH371) == UnitCatalog.VioH367
-                && PinGVH367(UnitCatalog.Sid) == UnitCatalog.SidH371 && PinGVH367(UnitCatalog.Gald) == UnitCatalog.Gald
+                && PinGVH367(UnitCatalog.SidH374) == UnitCatalog.SidH371 && PinGVH367(UnitCatalog.Gald) == UnitCatalog.Gald
                 && Pin371(Presets.PoisonHero367()).Occupied().Select(o => o.Def).SequenceEqual(Presets.PoisonHero367(UnitCatalog.GuzaH371, UnitCatalog.VioH371, UnitCatalog.SidH371).Occupied().Select(o => o.Def));
             Expect("段0: 規定のグザ ／ ヴィオ ／ スィドの札 ＝ 第371期の W5（グザ W3 ／ ヴィオ W ／ スィド Y）・文面・旧の定義（`*H371`・`All` の外）・固定の口（`Pin371` ／ `PinGVH367` の終端 `PinS371`）", w5 && txt && old && pins);
         }
@@ -163,7 +163,7 @@ static partial class Sh372Diag
         // ---- checkup の札の表 ----
         {
             string src = File.ReadAllText("BattleSim/Modes/Checkup.cs");
-            var want = new[] { TraitId.VioFlurryA, TraitId.VioFlurryB, TraitId.VioFlurryC }.Concat(UnitCatalog.Guza.Traits).Concat(UnitCatalog.VioH372.Traits).Concat(UnitCatalog.Sid.Traits).Distinct();
+            var want = new[] { TraitId.VioFlurryA, TraitId.VioFlurryB, TraitId.VioFlurryC }.Concat(UnitCatalog.Guza.Traits).Concat(UnitCatalog.VioH372.Traits).Concat(UnitCatalog.SidH374.Traits).Distinct();
             var missing = want.Where(t => !src.Contains($"[TraitId.{t}]", StringComparison.Ordinal)).ToList();
             bool w5 = new[] { TraitId.MiasmaVent, TraitId.MiasmaSplash, TraitId.SplashUncapped, TraitId.StrikePoison, TraitId.PoisonCloak, TraitId.CloakRetort }
                 .All(t => System.Text.RegularExpressions.Regex.IsMatch(src, $@"\[TraitId\.{t}\][^\n]*第372期から規定"));

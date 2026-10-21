@@ -54,7 +54,7 @@ static partial class Sh373Diag
                 && v.Id == h.Id && v.MaxHp == h.MaxHp && v.Attack == h.Attack && UnitCatalog.All.Contains(v) && !UnitCatalog.All.Contains(h) && UnitCatalog.All.Count == 52
                 && h.Traits.SequenceEqual(UnitCatalog.VioW.Traits);
             bool pins = PinV372(v) == h && PinV372(UnitCatalog.Gald) == UnitCatalog.Gald && PinGVH367(h) == UnitCatalog.VioH367 && PinGVH367(v) == UnitCatalog.VioH367 && PinGVS371(h) == UnitCatalog.VioH371 && PinGVS371(v) == UnitCatalog.VioH371
-                && Pin372(Presets.PoisonHero367()).Occupied().Select(o => o.Def).SequenceEqual(Presets.PoisonHero367(vio: h).Occupied().Select(o => o.Def));
+                && Pin372(Presets.PoisonHero367()).Occupied().Select(o => o.Def).SequenceEqual(Presets.PoisonHero367(vio: h, sid: UnitCatalog.SidH374).Occupied().Select(o => o.Def));   // 第375期: `Pin372` はスィドも第374期までの規定へ
             Expect("段0: 規定のヴィオ ＝ 第372期の Va（`VioH372` ＋ 連撃・散らす）・文面は Va の文面・旧の定義 `VioH372`（`All` の外 ＝ 第372期の W5）・固定の口（`Pin372` ／ `PinGVH367` ／ `PinGVS371` が旧へ）", cards && pins);
         }
         {
