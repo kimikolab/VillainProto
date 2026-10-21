@@ -966,9 +966,12 @@ public static class Presets
         ("試遊・毒", PoisonHero367()),
         // 第368期: G ／ V ／ H1 を規定にした。第367期の「版・」の4台は外した（「試遊・毒」は規定の駒のまま ＝ 中身は GV）。
         // 第368期【軽い期】本体: 毒特化の耐久の版（並びは試遊・毒・スィド ／ グザ ／ ヴィオだけ版）。採否はポン。
-        ("版・R 毒に強い", PoisonHero367(UnitCatalog.GuzaR, UnitCatalog.VioR, UnitCatalog.SidR)),
-        ("版・RC 毒の衣", PoisonHero367(UnitCatalog.GuzaR, UnitCatalog.VioR, UnitCatalog.SidRC)),
+        // 第369期: 第368期の「版・R 毒に強い」「版・RC 毒の衣」は外した（並びは `sh368` の中に固定）。「版・RCS 吸い分け」は採否が保留なので残す。
         ("版・RCS 吸い分け", PoisonHero367(UnitCatalog.GuzaR, UnitCatalog.VioRCS, UnitCatalog.SidRC)),
+        // 第369期【軽い期】: 毒軸のループの版（並びは試遊・毒・版の駒だけ替える）。採否はポン。
+        ("版・Z1 グザ", PoisonHero367(UnitCatalog.GuzaZ, UnitCatalog.VioR, UnitCatalog.SidR)),
+        ("版・Z2 グザ＋ヴィオ", PoisonHero367(UnitCatalog.GuzaZ, UnitCatalog.VioZ, UnitCatalog.SidR)),
+        ("版・Z3 三人", PoisonHero367(UnitCatalog.GuzaZ, UnitCatalog.VioZ, UnitCatalog.SidZ)),
     };
 
     /// <summary>第367期: 毒特化・勇者（`compare` の「毒爆弾 (ラウ×ヴィオ)」のラウの席 ＝ 後3 を守りに替えた台・前1 ガルド ／ 前3 スィド ／ 中央 グザ ／ 後1 ヴィオ ／ 後3 守り）。

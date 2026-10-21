@@ -4187,20 +4187,41 @@ public sealed class BattleContext
         // 第273期（レリック・毒を招く）: 受ける層を2倍（滲みの後・書く直前）。保持者がいない戦は比較1つで抜ける。
         if (_poisonMagnetLive && target.HasTrait(TraitId.RelicPoisonMagnet)) add *= RelicPoisonMagnetTrait.Factor;
         target.SetCounter(StatusKeys.Poison, target.RawCounter(StatusKeys.Poison) + add);
+        if (_ventLive) NoteVentWrite(target, add);   // 第369期（噴き出しの段の累計・保持者がいなければ比較1つで抜ける）
         BurstBook.PoisonWrites[(int)route]++; BurstBook.PoisonAmount[(int)route] += add;   // 第220期・**計数のみ**
         EmitStatusGain(target, StatusKeys.Poison, add, writer, route, spreadFrom);   // 第97期・表示専用（滲みで増えたぶんも込み）。第183期 追補2: 経路と伝染元
         if (add != amount)
             Log($"    {target.Name} の{(deepW ? "深手" : "傷口")}から毒が滲みた（+{add - amount}）", LogKind.Status);
     }
 
+    /// <summary>第369期: 噴き出しの段の累計に足し、段に上がったターンを保持者の帳簿に控える（計数は帳簿だけ・段そのものは累計から引く）。</summary>
+    void NoteVentWrite(UnitState target, int add)
+    {
+        int team = target.TeamId;
+        if (team is < 0 or > 1) return;
+        int before = _poisonToTeam[team];
+        _poisonToTeam[team] = before + add;
+        foreach (UnitState g in _ventHolders)
+        {
+            if (Opponent(g.TeamId) != team) continue;
+            for (int i = 0; i < MiasmaVentTrait.Steps.Length; i++)
+                if (before < MiasmaVentTrait.Steps[i] && before + add >= MiasmaVentTrait.Steps[i])
+                {
+                    long[] st = TallyOf(g).Z369StageTurn ??= new long[MiasmaVentTrait.Steps.Length + 1];
+                    if (st[i + 1] == 0) st[i + 1] = Math.Max(1, _turn);
+                }
+        }
+    }
+
     /// <summary><see cref="UnitTally.SoakSeenByRoute"/> の長さ（毒 9 経路 ＋ 燃焼 1。第180期に吐き戻しで1本、
     /// 第183期に触れてうつす・その漏れで2本、第190期に澱み分けで1本、第195期にスィドの吐きで1本、第197期に紅蓮の奔流で1本、第216期に開戦の撒きで1本、第223期に状態の矢で1本増えた。
-    /// 第367期の触媒（添字 12）は燃焼の添字 13 の手前に収まったので、長さも燃焼の添字も変えていない）。**毒の経路を足したら燃焼の添字も後ろへずらすこと**
+    /// 第367期の触媒（添字 12）は燃焼の添字 13 の手前に収まったので、長さも燃焼の添字も変えていない。
+    /// 第369期に噴き出し ／ 返り毒 ／ 引き受けで3本（添字 13〜15）足したので、長さを 14 → 17・燃焼の添字を 13 → 16 にずらした）。**毒の経路を足したら燃焼の添字も後ろへずらすこと**
     /// ——ずらさないと新しい経路の添字が燃焼と重なる。</summary>
-    public const int SoakRouteCount = 14;
+    public const int SoakRouteCount = 17;
 
     /// <summary>燃焼の経路の添字（<see cref="UnitTally.SoakSeenByRoute"/> の末尾）。</summary>
-    public const int SoakBurnRouteIx = 13;
+    public const int SoakBurnRouteIx = 16;
 
     /// <summary>
     /// 巻き込み則（第85期）で最後にこの駒へ傷を書いた駒の <c>InstanceId + 1</c>（第90期の計数専用の札）。
@@ -9689,6 +9710,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.RallyFeatherQuiet)) _featherQuietLive = true;   // 第367期（H1・羽の一撃では叫ばない）
         if (u.HasTrait(TraitId.PoisonProof)) _poisonProofLive = true;   // 第368期（R・毒に強い）
         if (u.HasTrait(TraitId.PoisonCloak)) _cloakLive = true;         // 第368期（RC・毒の衣）
+        if (u.HasTrait(TraitId.MiasmaVent)) { _ventLive = true; _ventHolders.Add(u); }   // 第369期（Z・噴き出しの段は敵に書かれた毒の累計を読む）
         if (CommandTrait.BurstUnit(u) > 0) { _burstLive = true; _burstHolders.Add(u); }   // 第321期（HQ-a ／ HQ-b・溜まったら吐く）
         if (u.HasTrait(TraitId.HisaCover)) _coverHolders.Add(u);       // 第301期（HC・庇い）
         if (CommandTrait.IsRouse(u)) _rouseLive = true;                // 第302期（HB・鼓舞の受け手の計数）
@@ -15451,6 +15473,12 @@ public sealed class BattleContext
     bool _featherQuietLive;
     /// <summary>第368期: 毒に強い（R）／ 毒の衣（RC）の保持者が盤上にいるか（いなければ刻み ／ 軽減の口は比較1つで抜ける）。</summary>
     bool _poisonProofLive, _cloakLive;
+    /// <summary>第369期: 噴き出し（`MiasmaVent`）の保持者がいる戦か ／ 保持者 ／ 陣営ごとの「書かれた毒の層」の累計（保持者がいなければ数えない）。</summary>
+    bool _ventLive;
+    readonly List<UnitState> _ventHolders = new();
+    readonly int[] _poisonToTeam = new int[2];
+    /// <summary>第369期: この戦で陣営 <paramref name="team"/> の駒に書かれた毒の層の累計（`Poison` の窓口を通った分・滲み ／ 毒を招く込み）。噴き出しの保持者がいない戦では 0。</summary>
+    public int PoisonWrittenTo(int team) => team is >= 0 and < 2 ? _poisonToTeam[team] : 0;
 
     void BundleHit(UnitState target, UnitState? source)
     {

@@ -12,7 +12,7 @@
 4. **毒の衣の軽減は軽減の族の「据えの層」の直後**（火の鎧 ／ 肩代わり ／ 破片 ／ 軛より前）——同じ「層 × 割合」の軽減の隣に並べた。据えの層と同じく**種類を問わない**（燃焼の刻みも減る・毒の刻みは毒に強いで手前に来ない）。
 5. **毒の衣の「殴られると自分に毒 +2」の条件は毒撃（`VenomTrait.Hit`）と同じ**（出どころが敵）。毒の経路は新しく足さず `VenomLeak`（スィドの漏れ）を使った。
 6. **吸い分けは印だけの札**（`BlightfedSkipCloak`）で、`BlightfedTrait` が毒の衣の持ち主を飛ばす。
-7. **`checkup` の札の表**: `RallyFeatherQuiet` ／ `BlightCatalyst` は規定の札（プラス）・`PoisonProof` ／ `PoisonCloak` ／ `BlightfedSkipCloak` を足した。
+7. **`checkup` の札の表**: `RallyFeatherQuiet` ／ `BlightCatalyst` は規定の札（プラス）・`PoisonProof` ／ `PoisonCloak` ／ `BlightfedSkipCloak` を足した。**（第369期の訂正: この3枚は実際には表に足していなかった。第369期に足した——`design/PHASE369_POISON_LOOP.md` §1）**
 8. **反転の確かめの2台は「毒+耐久 (ベニ×トウ)」と「毒+ベニ+ラウ」**（指示書どおり）。前者は版の駒がグザだけ、後者はスィド ／ グザ。
 9. `tools/digest_cache.ps1` の駒の表に sid を足した（第367期の表には無く、`-Units sid` が何も選ばなかった）。
 

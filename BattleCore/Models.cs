@@ -2452,6 +2452,10 @@ public sealed class UnitTally
     public long[]? Yoke367TickCut, Yoke367TickLost, Yoke367TickSpared, Yoke367TickOver;
     /// <summary>第368期（<b>計数のみ</b>）: 毒に強いで消えた刻み（受けた駒の側・名目）／ その回数・毒の衣で減った傷 ／ 殴られて自分に付けた層（スィドの側）・ヴィオが吸った層の出どころ（衣の持ち主 ／ ほかの味方）。</summary>
     public long Pw368ProofErased, Pw368ProofTicks, Pw368CloakSaved, Pw368CloakSelf, Pw368DrawnCloak, Pw368DrawnOther;
+    /// <summary>第369期（<b>計数のみ</b>）: 噴き出しの名目（敵へ ／ 味方へ）・返り毒で敵へ移した層（合計 ／ ターンごと）・段に上がったターン（添字 1〜3・0 は未到達）・ヴィオが啜った層・スィドが引き受けた層 ／ 衣の返しで浴びせた層。</summary>
+    public long Z369VentFoe, Z369VentAlly, Z369Backlash, Z369Sipped, Z369Shouldered, Z369Retort;
+    public long[]? Z369BacklashByTurn, Z369StageTurn;
+    public const int Z369Len = 32;
     /// <summary>第365期（<b>計数のみ・計測専用</b>）: ヒサ×ミサの連鎖の矢印をターンごとに（<c>欄 × 32 ＋ ターン</c>・欄は <c>BattleContext.Ch365</c>）。<c>BattleContext.ChainCount365</c> が真の戦だけ書く。</summary>
     public long[]? Ch365;
     public long Rp345NormalDealt, Rp345Punches, Rp345PunchBack, Rp345PunchKills, Rp345PunchDealt, Rp345PunchAmount, Rp345AimEdible, Rp345GrabNoPunch, Rp345GrabAfter, Ga345Stomps, Ga345SplashHits, Ga345SplashDealt;
@@ -3742,6 +3746,8 @@ public sealed class UnitTally
         Ch365 = AddArr(Ch365, o.Ch365);   // 第365期
         Sh364Volleys += o.Sh364Volleys; Sh364Shots += o.Sh364Shots; Sh364ShotSum += o.Sh364ShotSum; Sh364Gathered += o.Sh364Gathered; Sh364GatherMult += o.Sh364GatherMult;   // 第364期
         Mia367ToFoe += o.Mia367ToFoe; Mia367ToAlly += o.Mia367ToAlly; Cat367Acts += o.Cat367Acts; Cat367Dry += o.Cat367Dry; Cat367Doubled += o.Cat367Doubled; Cat367Poured += o.Cat367Poured; Cat367BellyOnly += o.Cat367BellyOnly; Rally367FeatherQuiet += o.Rally367FeatherQuiet;   // 第367期
+        Z369VentFoe += o.Z369VentFoe; Z369VentAlly += o.Z369VentAlly; Z369Backlash += o.Z369Backlash; Z369Sipped += o.Z369Sipped; Z369Shouldered += o.Z369Shouldered; Z369Retort += o.Z369Retort;   // 第369期
+        Z369BacklashByTurn = AddArr(Z369BacklashByTurn, o.Z369BacklashByTurn); Z369StageTurn = AddArr(Z369StageTurn, o.Z369StageTurn);
         Pw368ProofErased += o.Pw368ProofErased; Pw368ProofTicks += o.Pw368ProofTicks; Pw368CloakSaved += o.Pw368CloakSaved; Pw368CloakSelf += o.Pw368CloakSelf; Pw368DrawnCloak += o.Pw368DrawnCloak; Pw368DrawnOther += o.Pw368DrawnOther;   // 第368期
         Yoke367TickCut = AddArr(Yoke367TickCut, o.Yoke367TickCut); Yoke367TickLost = AddArr(Yoke367TickLost, o.Yoke367TickLost); Yoke367TickSpared = AddArr(Yoke367TickSpared, o.Yoke367TickSpared); Yoke367TickOver = AddArr(Yoke367TickOver, o.Yoke367TickOver);
         Db354CurseRage += o.Db354CurseRage; Db354PickedMudo += o.Db354PickedMudo; Db354FedMudo += o.Db354FedMudo; Db354BurstYokeCut += o.Db354BurstYokeCut; Db354BurstYokeLost += o.Db354BurstYokeLost;   // 第354期

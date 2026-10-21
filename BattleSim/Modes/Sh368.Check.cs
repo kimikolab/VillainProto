@@ -161,19 +161,18 @@ static partial class Sh368Diag
         // ---- 試遊の台 ----
         {
             var vr = Presets.Versions.Select(r => r.Name).ToArray();
-            bool rows = vr.SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒", "版・R 毒に強い", "版・RC 毒の衣", "版・RCS 吸い分け" });
-            Expect("`Presets.Versions` ＝ 試遊の8台 ＋ 「版・R ／ RC ／ RCS」", rows, string.Join("、", vr));
+            // 第369期: 「版・R」「版・RC」は外した（RCS は採否が保留なので残る）。検査は「頭の8台」と「RCS が残る ／ R ／ RC が無い」に。
+            bool rows = vr.Take(8).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒" })
+                && vr.Contains("版・RCS 吸い分け") && !vr.Any(n => n is "版・R 毒に強い" or "版・RC 毒の衣");
+            Expect("`Presets.Versions` の頭 ＝ 試遊の8台・「版・RCS 吸い分け」が残る（「版・R ／ RC」は第369期に外した）", rows, string.Join("、", vr));
             if (rows)
             {
                 Formation V(string n) => Presets.Versions.First(r => r.Name == n).F;
                 var play = V("試遊・毒");
+                var f = V("版・RCS 吸い分け"); var want = Apply(play, Vers[3]);
                 bool ok = S307.Seats(play) == "ガルド・スィド・グザ・ヴィオ・ドルガ" && play.Occupied().All(o => UnitCatalog.All.Contains(o.Def))
-                    && new[] { ("版・R 毒に強い", Vers[1]), ("版・RC 毒の衣", Vers[2]), ("版・RCS 吸い分け", Vers[3]) }.All(x =>
-                    {
-                        var f = V(x.Item1); var want = Apply(play, x.Item2);
-                        return Enumerable.Range(0, 5).All(i => f[i] == want[i]);
-                    });
-                Expect("「試遊・毒」＝ 規定の駒（中身は GV）・「版・」の3台 ＝ 同じ並びでスィド ／ グザ ／ ヴィオだけ版", ok, S307.Seats(play));
+                    && Enumerable.Range(0, 5).All(i => f[i] == want[i]);
+                Expect("「試遊・毒」＝ 規定の駒（中身は GV）・「版・RCS 吸い分け」＝ 同じ並びでスィド ／ グザ ／ ヴィオだけ版", ok, S307.Seats(play));
             }
         }
 
@@ -186,7 +185,7 @@ static partial class Sh368Diag
             int e1 = Now("BattleCore/BattleEngine.cs", "PickOne("), t1 = Now("BattleCore/Traits.cs", "PickOne("), r1 = Now("BattleCore/Traits.cs", "Roll("), re1 = Now("BattleCore/BattleEngine.cs", "Roll(");
             string tok = "ctx." + "PickOne(";
             int mine = Directory.GetFiles("BattleSim/Modes", "Sh368*.cs").Sum(f => File.ReadAllText(f).Split(tok).Length - 1);
-            Expect("`ctx.PickOne` ／ `Roll(` を新たに使っていない（BattleEngine.cs ／ Traits.cs の数が第367期（bff6c82e）と同じ・器具の中も 0）", e0 == e1 && t0 == t1 && r0 == r1 && re0 == re1 && e0 > 0 && mine == 0,
+            Expect("`ctx.PickOne` ／ `Roll(` を新たに使っていない（BattleEngine.cs ／ Traits.cs の数が第367期（bff6c82e）と同じ・器具の中も 0）", e0 == e1 && t0 == t1 && r0 + RollsAdded369 == r1 /* 第369期: グザ Z の噴き出しの引き（`Common.RollsAdded369`）*/ && re0 == re1 && e0 > 0 && mine == 0,
                 $"engine {e0} → {e1}・traits {t0} → {t1}・Roll traits {r0} → {r1} ／ engine {re0} → {re1}・器具 {mine}");
         }
 

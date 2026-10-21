@@ -188,7 +188,7 @@ static partial class Sh362Diag
             int e1 = Now("BattleCore/BattleEngine.cs"), t1 = Now("BattleCore/Traits.cs"), r1 = File.ReadAllText("BattleCore/Traits.cs").Split("Roll(").Length - 1;
             string tok = "ctx." + "PickOne(";
             int mine = Directory.GetFiles("BattleSim/Modes", "Sh362*.cs").Sum(f => File.ReadAllText(f).Split(tok).Length - 1);
-            Expect("`ctx.PickOne` を新たに使っていない（BattleEngine.cs ／ Traits.cs の `PickOne(` の数が第361期（0d943ac3）と同じ・Traits.cs の `Roll(` も同じ・器具の中も 0）", e0 == e1 && t0 == t1 && r0 == r1 && e0 > 0 && mine == 0, $"engine {e0} → {e1}・traits {t0} → {t1}・Roll {r0} → {r1}・器具 {mine}");
+            Expect("`ctx.PickOne` を新たに使っていない（BattleEngine.cs ／ Traits.cs の `PickOne(` の数が第361期（0d943ac3）と同じ・Traits.cs の `Roll(` も同じ・器具の中も 0）", e0 == e1 && t0 == t1 && r0 + RollsAdded369 == r1 /* 第369期: グザ Z の噴き出しの引き（`Common.RollsAdded369`）*/ && e0 > 0 && mine == 0, $"engine {e0} → {e1}・traits {t0} → {t1}・Roll {r0} → {r1}・器具 {mine}");
         }
 
         Console.WriteLine();

@@ -670,6 +670,10 @@ public static UnitDef PinAG364(UnitDef d) => ReferenceEquals(d, UnitCatalog.Susu
 /// ヒサをもっと古い規定へ替える口は `IsHisaNow` で `HisaH367` も受ける（先に替わっていても同じ行き先になる）。</summary>
 public static UnitDef PinGVH367(UnitDef d) => ReferenceEquals(d, UnitCatalog.Guza) ? UnitCatalog.GuzaH367 : ReferenceEquals(d, UnitCatalog.Vio) ? UnitCatalog.VioH367 : ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaH367 : d;
 
+/// <summary>第369期: Traits.cs に足した `Roll(` の数（グザの版 Z の噴き出しの相手の引き・`MiasmaVentTrait.Draw`・保持者 0 枚なので規定の戦では引かれない）。
+/// 「`Roll(` を新たに使っていない」を自分の期の HEAD と比べる過去の器具（`sh362`〜`sh368 check`）はこの数を足して比べる。</summary>
+public const int RollsAdded369 = 1;
+
 /// <summary>第368期: グザの G ／ ヴィオの V ／ ヒサの H1 を規定にした。第367期までの規定で測った器具はこれを通す。陣形とレリックは保つ。</summary>
 public static Formation Pin367(Formation f)
 {

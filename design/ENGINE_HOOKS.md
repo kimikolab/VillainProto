@@ -1510,3 +1510,10 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **毒に強い（`PoisonProof`・印だけ）**: `PoisonTickOnce` の**反転（`InvertsTick`）の枝の後**に1段。`_poisonProofLive`（保持者がいる戦）かつ受け手が札を持てば、刻みを**起こさずに**返す（`ApplyDamage` を呼ばない・Status の出来事も出さない・層 ／ 印は残る）。消えた量は `UnitTally.Pw368ProofErased` ／ `Pw368ProofTicks`。起爆（`Detonate`）は通らないので今どおり受ける。
 - **毒の衣（`PoisonCloakTrait`）**: 軽減は `ApplyDamageBody` の**軽減の族・据えの層の直後**（火の鎧の前）に1段——`_cloakLive` かつ受け手が札を持てば `amount × min(60, 層 × 3) / 100`（切り捨て）を引く（種類を問わない）。札の本体は `OnDamaged`（出どころが敵なら自分に毒 +2・経路は `VenomLeak`）。計数 `Pw368CloakSaved` ／ `Pw368CloakSelf`。
 - **吸い分け（`BlightfedSkipCloak`・印だけ）**: `BlightfedTrait.OnTurnStart` が毒の衣の持ち主を飛ばす。計数 `Pw368DrawnCloak` ／ `Pw368DrawnOther`（規定でも数える）。
+
+## 第369期 —— 毒軸のループ（グザ Z の噴き出し ／ 段 ／ 返り毒・ヴィオ Z・スィド Z）（版）
+
+- **毒の窓口 `Poison`**: `_ventLive`（`MiasmaVent` の保持者がいる戦）のときだけ、書いた層（滲み ／ 毒を招く込み）を陣営ごとの累計に足す（`NoteVentWrite`・段の閾 30 ／ 80 ／ 200 を越えたターンを保持者の `Z369StageTurn` に控える）。読み口は `BattleContext.PoisonWrittenTo(team)`。保持者がいなければ比較1つで抜ける。
+- 噴き出し ／ 返り毒 ／ 啜り ／ 引き受け ／ 衣の返しは札（`MiasmaVentTrait` ／ `CatalystSipTrait` ／ `PoisonShoulderTrait` ／ `CloakRetortTrait`）の中。瘴気（`MiasmaTrait.Spread`）は `MiasmaVent` の持ち主なら味方全体への漏れを撒かない。
+- 毒の経路を3本（`Vent` ／ `Backlash` ／ `Shoulder`・添字 13〜15）足したので `SoakRouteCount` 14 → 17・`SoakBurnRouteIx` 13 → 16。
+- 噴き出しの相手は `ctx.Roll`（Traits.cs の `Roll(` が 1 増えた・`Common.RollsAdded369`）。保持者 0 枚なので規定の戦では引かれない。

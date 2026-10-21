@@ -6867,6 +6867,38 @@ public static class UnitCatalog
     /// <summary>ヴィオ・RCS: 規定（V）＋ 毒に強い ＋ 吸い分け（`BlightfedSkipCloak`・毒の衣を持つ味方からは吸わない）。</summary>
     public static readonly UnitDef VioRCS = Ward368(Vio, new[] { TraitId.PoisonProof, TraitId.BlightfedSkipCloak }, ProofClause368 + "。毒をまとう味方からは吸わない");
 
+    // 第369期【軽い期】（指示書 design/PHASE369_POISON_LOOP_SPEC.md §2）。毒軸のループ——グザの転生（噴き出し ＋ 段 ＋ 返り毒）にヴィオ ／ スィドを合わせる版。
+    // 3枚とも毒に強い（`PoisonProof`）。どれも `All` に入れない・採否はポン。文面は叩き台。
+    /// <summary>グザ・Z: 手番は今のまま（集まる瘴気）＋ 噴き出し ／ 段 ／ 返り毒（`MiasmaVent`・味方全体への漏れは外す）＋ 毒に強い。</summary>
+    public static readonly UnitDef GuzaZ = new()
+    {
+        Id = Guza.Id, Name = Guza.Name, MaxHp = Guza.MaxHp, Attack = Guza.Attack, Speed = Guza.Speed, Advances = Guza.Advances, Pattern = Guza.Pattern, Actions = Guza.Actions,
+        Traits = Guza.Traits.Append(TraitId.MiasmaVent).Append(TraitId.PoisonProof).ToArray(),
+        PlusText = "手番で、敵全体へ瘴気を撒く（敵が少ないほど濃い）。瘴気を浴びた仲間が殴られると、その毒の半分が殴った敵へ移る。毒に蝕まれない",
+        MinusText = "袋の口がゆるく、毎ターンのはじめに瘴気が噴き出して、敵味方の誰かに毒が付く。敵が毒に染まるほど瘴気は濃くなり、噴き出す相手も増える",
+        Flavor = Guza.Flavor,
+    };
+    /// <summary>ヴィオ・Z: 啜って注ぐ（`CatalystSip`・手番で味方の毒を啜り、最も深い敵を倍にして注ぐ・ターンの頭には吸わない）＋ 毒に強い。殴らない。</summary>
+    public static readonly UnitDef VioZ = new()
+    {
+        Id = Vio.Id, Name = Vio.Name, MaxHp = Vio.MaxHp, Attack = Vio.Attack, Speed = Vio.Speed, Advances = Vio.Advances, Pattern = Vio.Pattern,
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "啜って注ぐ") },
+        Traits = new[] { TraitId.CatalystSip, TraitId.PoisonProof },
+        PlusText = "手番で、仲間に残った毒を啜り、最も毒の深い敵の毒を倍にして、啜った毒も注ぎ込む。毒に蝕まれない",
+        MinusText = "自分では攻撃しない。仲間が汚れていなければ注ぐ毒が無い",
+        Flavor = Vio.Flavor,
+    };
+    /// <summary>スィド・Z: 毒を引き受ける（`PoisonShoulder`・手番）＋ 毒に強い ＋ 毒の衣 ＋ 衣の返し（`CloakRetort`・吐く ／ 毒撃 +8 と置き換える）＋ 痺れ毒。</summary>
+    public static readonly UnitDef SidZ = new()
+    {
+        Id = Sid.Id, Name = Sid.Name, MaxHp = Sid.MaxHp, Attack = Sid.Attack, Speed = Sid.Speed, Advances = Sid.Advances, Pattern = Sid.Pattern,
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "毒を引き受ける") },
+        Traits = new[] { TraitId.PoisonShoulder, TraitId.PoisonProof, TraitId.PoisonCloak, TraitId.CloakRetort, TraitId.Numb },
+        PlusText = "手番で、隣の仲間の毒を引き受けてまとう。まとった毒が深いほど受ける傷が減り（最大6割）、殴ってきた敵にはまとった毒と同じだけ浴びせる。毒に蝕まれない",
+        MinusText = "自分からは毒を吐かない。殴られると隣の仲間にも毒が漏れる",
+        Flavor = Sid.Flavor,
+    };
+
     // 第361期: 規定のササが SS-w になったので、SS-k ／ SS-w は旧（`SasaH360`）から作る（`SasaSSw` は規定と同じ札・文面・残置）。
     const string SasaPlus360 = "手番で身を固め、次に動くまで、受ける一撃を7までに抑える。殴られると錯乱して隣の味方1体を別の席へ突き飛ばし（1ターン1回）、";
     /// <summary>第360期 SS-k 構えを解かない: ササ ＋ <see cref="TraitId.BraceHold"/>（身構えが次の自分の手番まで続く）。</summary>

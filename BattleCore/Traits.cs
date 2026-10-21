@@ -936,6 +936,11 @@ public enum TraitId
     PoisonProof,          // 毒に強い（R・スィド ／ グザ ／ ヴィオ）: 毒の刻みが HP を削らない（刻みそのものを起こさない・層 ／ 印は今どおり持つ）。ベニの反転が先——反転される刻みは今どおり回復になる。起爆は刻みではないので今どおり受ける（**札そのものは挙動を持たない**・engine の `PoisonTickOnce`）
     PoisonCloak,          // 毒の衣（RC・スィド）: 自分の毒の層 1 につき受ける傷が 3% 減る（最大 60%・切り捨て・軽減の族の据えの層の直後）。殴られると自分にも毒 +2（`PoisonCloakTrait`・軽減は engine の `ApplyDamageBody`）
     BlightfedSkipCloak,   // 吸い分け（RCS・ヴィオ）: 毒の衣を持つ味方からは吸わない（ほかの味方からは今どおり全部吸う）（**札そのものは挙動を持たない**・`BlightfedTrait`）
+    // --- 第369期で足した札（指示書 design/PHASE369_POISON_LOOP_SPEC.md §2）。毒軸のループ（グザの転生 ／ ヴィオ ／ スィドの版）。保持者 0 枚 ---
+    MiasmaVent,           // 噴き出し ＋ 段 ＋ 返り毒（Z・グザ）: ターンの頭に袋から瘴気が噴き出し、ランダムな敵 k 体と味方 k 体に毒（段で k ／ 量が増える・味方全体への漏れは外す）。段 ＝ この戦で敵に書かれた毒の層の累計が 30 ／ 80 ／ 200 を越えるたび（下がらない）。グザが生きている間、毒を持つ味方が敵に殴られると、その毒の半分（切り捨て）が殴った敵へ移る（毒の衣の持ち主からは移らない）（`MiasmaVentTrait`・累計は engine の `Poison`）
+    CatalystSip,          // 啜って注ぐ（Z・ヴィオ）: 手番で（攻撃しない）、味方に残った毒を啜り（自分と毒の衣の持ち主は除く・啜った味方は 0 に）、最も毒の深い敵の毒を倍にし、啜った分もその敵へ注ぐ。ターンの頭には吸わない（`CatalystSipTrait`）
+    PoisonShoulder,       // 毒を引き受ける（Z・スィド）: 手番で（攻撃しない）、隣接する味方の毒をすべて自分へ移す（`PoisonShoulderTrait`）
+    CloakRetort,          // 衣の返し（Z・スィド）: 殴られると（毒の衣の +2 の後に）殴ってきた敵へ自分の層と同じだけ毒を浴びせ（衣は減らない）、痺れ毒の印を付け、隣の味方に毒 +1 が漏れる（`CloakRetortTrait`・毒撃の +8 と置き換える）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -2994,7 +2999,13 @@ public enum PoisonRoute
     /// <summary>状態の矢（セロの版 E2・矢が当たった敵へ。第223期）。</summary>
     Arrow,
     /// <summary>触媒（ヴィオの版 V・最も深い敵の毒を倍にし、腹の層を注ぐ。第367期）。</summary>
-    Catalyst
+    Catalyst,
+    /// <summary>噴き出し（グザの版 Z・ターンの頭にランダムな敵 ／ 味方へ。第369期）。</summary>
+    Vent,
+    /// <summary>返り毒（グザの版 Z・殴られた味方の毒の半分を殴った敵へ。第369期）。</summary>
+    Backlash,
+    /// <summary>毒を引き受ける（スィドの版 Z・隣の味方の毒を自分へ。第369期）。</summary>
+    Shoulder
 }
 
 /// <summary>
@@ -5953,7 +5964,8 @@ public sealed class MiasmaTrait : Trait
 
         // 瘴気は敵味方を選ばない。撒く側にも代償を負わせる。
         // **味方漏れも同じ窓口を通す**——両陣営に等しくかかるのが滲み則の要点（第90期 §2-2）。
-        var allies = ctx.LivingMembers(self.TeamId);
+        // 第369期（Z・`MiasmaVent`）: 噴き出しの持ち主は味方全体への漏れを撒かない（漏れは噴き出しに置き換えた）。札が無ければ今と同じ。
+        var allies = self.HasTrait(TraitId.MiasmaVent) ? (IReadOnlyList<UnitState>)Array.Empty<UnitState>() : ctx.LivingMembers(self.TeamId);
         foreach (UnitState ally in allies)
             ctx.Poison(ally, AllyLeak, self, PoisonRoute.MiasmaLeak);
 
@@ -13232,6 +13244,190 @@ public sealed class PoisonCloakTrait : Trait
 }
 
 /// <summary>
+/// 噴き出し ＋ 段 ＋ 返り毒（第369期・グザの転生 Z・指示書 design/PHASE369_POISON_LOOP_SPEC.md §2-1）。
+/// <para><b>噴き出し</b>（ターンの頭・マイナス）: 生きている敵から k 体・生きている味方（自分を含む）から k 体を乱数で選び（足りなければ全員）、敵へ +<c>Foe</c> ／ 味方へ +<c>Ally</c>。
+/// 選び方はバサの入れ替え（<see cref="ShufflerTrait"/>）と同じ <c>ctx.Roll</c>（残りの中から1体ずつ・重ねない）。毒は窓口（<see cref="PoisonRoute.Vent"/>）を通す。</para>
+/// <para><b>段</b>: この戦で敵（自分の相手の陣営）に書かれた毒の層の累計（誰が書いても・倒れた敵の分も含む・engine の <c>Poison</c> が数える）が
+/// <see cref="Steps"/>（30 ／ 80 ／ 200）を越えるたびに上がる。累計なので下がらない。</para>
+/// <para><b>返り毒</b>（プラス）: 自分が生きている間、毒を持つ味方（自分を含む）が敵に殴られると、その味方の毒の半分（切り捨て）が殴った敵へ移る（味方の層は減る・1層は移らない）。
+/// 毒の衣（<see cref="TraitId.PoisonCloak"/>）の持ち主からは移らない。殴った敵が倒れていれば移さない。窓口（<see cref="PoisonRoute.Backlash"/>）を通す。</para>
+/// <para>瘴気の手番は今のまま（<see cref="MiasmaTrait"/>・味方全体への漏れだけ外す）。</para>
+/// </summary>
+public sealed class MiasmaVentTrait : Trait
+{
+    public static readonly int[] Steps = { 30, 80, 200 };
+    /// <summary>段ごとの（k ／ 敵へ ／ 味方へ）。k ＝ 0 は全員。</summary>
+    public static readonly (int K, int Foe, int Ally)[] Table = { (2, 2, 1), (3, 3, 1), (4, 4, 2), (0, 6, 3) };
+
+    public override TraitId Id => TraitId.MiasmaVent;
+
+    /// <summary>いまの段（0〜3）。</summary>
+    public static int StageOf(BattleContext ctx, UnitState self)
+    {
+        int sum = ctx.PoisonWrittenTo(ctx.Opponent(self.TeamId)), st = 0;
+        foreach (int s in Steps) if (sum >= s) st++;
+        return st;
+    }
+
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+        int st = StageOf(ctx, self);
+        var (k, foe, ally) = Table[st];
+        UnitTally t = ctx.TallyOf(self);
+        var foes = Draw(ctx, ctx.LivingMembers(ctx.Opponent(self.TeamId)), k);
+        var mates = Draw(ctx, ctx.LivingMembers(self.TeamId), k);
+        foreach (UnitState u in foes) { ctx.Poison(u, foe, self, PoisonRoute.Vent); t.Z369VentFoe += foe; }
+        foreach (UnitState u in mates) { ctx.Poison(u, ally, self, PoisonRoute.Vent); t.Z369VentAlly += ally; }
+        ctx.Log($"    {self.Name} の袋から瘴気が噴き出した（段 {st}・敵 {foes.Count} 体に +{foe} ／ 味方 {mates.Count} 体に +{ally}）", LogKind.FriendlyFire);
+    }
+
+    /// <summary>k 体を乱数で選ぶ（k ≦ 0 か足りなければ全員・席順のまま返す）。候補が k 体以下なら乱数を引かない。</summary>
+    static List<UnitState> Draw(BattleContext ctx, IReadOnlyList<UnitState> pool, int k)
+    {
+        if (k <= 0 || pool.Count <= k) return pool.ToList();
+        var rest = pool.ToList();
+        var pick = new List<UnitState>();
+        for (int i = 0; i < k; i++) { int j = ctx.Roll(rest.Count); pick.Add(rest[j]); rest.RemoveAt(j); }
+        return pick;
+    }
+
+    public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source) => Backlash(ctx, self, self, source);
+
+    public override void OnAllyDamaged(BattleContext ctx, UnitState self, UnitState ally, int dmg, UnitState? source) => Backlash(ctx, self, ally, source);
+
+    static void Backlash(BattleContext ctx, UnitState guza, UnitState hit, UnitState? source)
+    {
+        if (!guza.IsAlive || source is null || source.TeamId == hit.TeamId || !source.IsAlive || !hit.IsAlive) return;
+        if (hit.HasTrait(TraitId.PoisonCloak)) return;
+        int layers = hit.RawCounter(StatusKeys.Poison), move = layers / 2;
+        if (move <= 0) return;
+        hit.SetCounter(StatusKeys.Poison, layers - move);
+        ctx.Poison(source, move, guza, PoisonRoute.Backlash);
+        UnitTally t = ctx.TallyOf(guza);
+        t.Z369Backlash += move;
+        (t.Z369BacklashByTurn ??= new long[UnitTally.Z369Len])[Math.Clamp(ctx.Turn, 0, UnitTally.Z369Len - 1)] += move;
+        ctx.Log($"    {hit.Name} の毒が殴った {source.Name} へ跳ね返った（毒 {move}）", LogKind.Trigger);
+    }
+}
+
+/// <summary>
+/// 啜って注ぐ（第369期・ヴィオの版 Z・指示書 §2-2）。<b>手番で</b>（攻撃しない）、味方（自分と毒の衣の持ち主を除く）の毒を啜って 0 にし、
+/// 最も毒の深い敵（同じ層なら席番号の小さい方・<see cref="BlightCatalystTrait.Deepest"/>）の毒を倍にして、啜った分もその敵へ注ぐ。
+/// 毒の敵がいなければ啜った分だけを席番号の最も小さい敵へ。ターンの頭には吸わない（澱み喰いを持たない）・攻撃力は上がらない。
+/// 倍と注ぎは触媒と同じく窓口（<see cref="PoisonRoute.Catalyst"/>）を別々に通す。<b>乱数を引かない。</b>
+/// </summary>
+public sealed class CatalystSipTrait : Trait
+{
+    public override TraitId Id => TraitId.CatalystSip;
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action) => Act(ctx, self);
+
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!ActsOnPattern(self)) Act(ctx, self);
+    }
+
+    static void Act(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+        UnitTally t = ctx.TallyOf(self);
+        t.Cat367Acts++;
+        int sipped = 0;
+        foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
+        {
+            if (ally == self || ally.HasTrait(TraitId.PoisonCloak)) continue;
+            int p = ally.RawCounter(StatusKeys.Poison);
+            if (p <= 0) continue;
+            ally.SetCounter(StatusKeys.Poison, 0);
+            sipped += p;
+        }
+        t.Z369Sipped += sipped;
+        UnitState? pick = BlightCatalystTrait.Deepest(ctx, self);
+        if (pick is null)
+        {
+            if (sipped <= 0) { t.Cat367Dry++; return; }
+            foreach (UnitState u in ctx.LivingMembers(ctx.Opponent(self.TeamId)))
+                if (pick is null || u.Slot < pick.Slot) pick = u;
+            if (pick is null) { t.Cat367Dry++; return; }
+            t.Cat367BellyOnly++;
+        }
+        else
+        {
+            int layers = pick.RawCounter(StatusKeys.Poison);
+            ctx.Log($"    {self.Name} が {pick.Name} の毒を煮立たせた（毒 {layers} → 倍）", LogKind.Trigger);
+            ctx.Poison(pick, layers, self, PoisonRoute.Catalyst);
+            t.Cat367Doubled += layers;
+        }
+        if (sipped <= 0) return;
+        ctx.Log($"    {self.Name} が仲間の澱みを啜り、{pick.Name} に注ぎ込んだ（毒 +{sipped}）", LogKind.Trigger);
+        ctx.Poison(pick, sipped, self, PoisonRoute.Catalyst);
+        t.Cat367Poured += sipped;
+    }
+}
+
+/// <summary>
+/// 毒を引き受ける（第369期・スィドの版 Z・指示書 §2-3）。<b>手番で</b>（攻撃しない）、隣接する味方の毒をすべて自分へ移す
+/// （移した味方は 0 に・自分へは窓口 <see cref="PoisonRoute.Shoulder"/> を通して足す）。自分からは敵に毒を書かない。<b>乱数を引かない。</b>
+/// </summary>
+public sealed class PoisonShoulderTrait : Trait
+{
+    public override TraitId Id => TraitId.PoisonShoulder;
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action) => Act(ctx, self);
+
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!ActsOnPattern(self)) Act(ctx, self);
+    }
+
+    static void Act(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+        int moved = 0;
+        foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
+        {
+            if (ally == self || !FormationRules.AreAdjacent(self, ally)) continue;
+            int p = ally.RawCounter(StatusKeys.Poison);
+            if (p <= 0) continue;
+            ally.SetCounter(StatusKeys.Poison, 0);
+            moved += p;
+        }
+        if (moved <= 0) return;
+        ctx.Poison(self, moved, self, PoisonRoute.Shoulder);
+        ctx.TallyOf(self).Z369Shouldered += moved;
+        ctx.Log($"    {self.Name} が隣の仲間の毒を引き受けた（毒 +{moved}）", LogKind.Trigger);
+    }
+}
+
+/// <summary>
+/// 衣の返し（第369期・スィドの版 Z・指示書 §2-3）。殴られると（毒の衣の +2 の後・札の並びで <see cref="PoisonCloakTrait"/> が先）、
+/// 殴ってきた敵へ自分の層と同じだけ毒を浴びせる（衣は減らない・窓口 <see cref="PoisonRoute.Venom"/>）。痺れ毒の札を持てば印を付け、
+/// 隣の味方に毒 +1 が漏れる（毒撃と同じ）。条件は毒撃（<see cref="VenomTrait.Hit"/>）と同じ（出どころが敵で生きている）。<b>乱数を引かない。</b>
+/// </summary>
+public sealed class CloakRetortTrait : Trait
+{
+    public override TraitId Id => TraitId.CloakRetort;
+
+    public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source)
+    {
+        if (source is null || source.TeamId == self.TeamId || !source.IsAlive) return;
+        int layers = self.RawCounter(StatusKeys.Poison);
+        if (layers > 0)
+        {
+            ctx.Poison(source, layers, self, PoisonRoute.Venom);
+            ctx.TallyOf(self).Z369Retort += layers;
+        }
+        if (self.HasTrait(TraitId.Numb) && ctx.MarkNumbed(self, source, SpewTrait.OriginVenom)) ctx.TallyOf(self).VenomMarks++;
+        foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
+        {
+            if (ally == self || !FormationRules.AreAdjacent(self, ally)) continue;
+            ctx.Poison(ally, 1, self, PoisonRoute.VenomLeak);
+        }
+    }
+}
+
+/// <summary>
 /// 叩き起こし（第180期・鬨の号令ガン）。<b>自分の手番の攻撃が終わった直後、
 /// 前のターンに手番を差し出した味方1体が、その場で割り込んで1回攻撃する。</b>
 ///
@@ -18643,6 +18839,10 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.PoisonProof),           // 第368期（毒に強い R・印だけ）
         new PoisonCloakTrait(),                           // 第368期（毒の衣 RC・スィド）
         new MarkOnlyTrait(TraitId.BlightfedSkipCloak),    // 第368期（吸い分け RCS・印だけ）
+        new MiasmaVentTrait(),                            // 第369期（噴き出し ＋ 段 ＋ 返り毒 Z・グザ）
+        new CatalystSipTrait(),                           // 第369期（啜って注ぐ Z・ヴィオ）
+        new PoisonShoulderTrait(),                        // 第369期（毒を引き受ける Z・スィド）
+        new CloakRetortTrait(),                           // 第369期（衣の返し Z・スィド）
         new EruptTrait(),      // 第180期
         new SmearTrait(),      // 第180期
         new SpitTrait(),       // 第180期
