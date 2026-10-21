@@ -1546,3 +1546,8 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 ## 第375期 —— 段0: スィドの開戦の衣 S10 を規定に
 
 - engine は変えていない（第374期の `OpeningCloakTrait.OnBattleStart` と経路 `PoisonRoute.CloakOpening` が規定のスィドで働くようになった）。
+
+## 第376期 —— 段0: ヴィオの血を啜るを規定に ／ 啜りの出来事
+
+- 段0: engine の口は変えていない（第374期の `BloodSipTrait.Sip` が規定のヴィオで働くようになった）。
+- **出来事 `BattleEventKind.BloodSip`（表示専用）**: `BattleContext.EmitBloodSip`（verbose のときだけ）を `BloodSipTrait.Sip` が HP を引いた直後に呼ぶ。`ActorId` ＝ ヴィオ ／ `TargetId` ＝ 啜られた味方 ／ `Amount` ＝ 啜った HP ／ `HpAfter` ＝ 啜られた後の HP。どの規則も読まない。

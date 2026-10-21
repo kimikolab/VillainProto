@@ -1367,6 +1367,8 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sh375 boards              # 第375期 §4-3: 4 台（試遊・自傷 ／ 自傷 ＋ ヴィオ ／ 台 B ／ 台 B ＋ ヴィオ）× 版（規定のヴィオ ／ C）× 5 波・seed 0..99・誰が何Tに倒れたか・飢えたターン ／ 啜った HP ／ ヴィオの攻撃力 ／ 段・アカ ／ カドの量・壊れの兆し（1 秒）
     dotnet run --project BattleSim -c Release 0 sh375 summary             # 第375期 §3 の 5: 毒軸の代表の台 × 勇者 ／ 蝕みなし ／ 近衛 ／ 大隊（段0 の後の規定・seed 0..99）（1 秒）
     dotnet run --project BattleSim -c Release 0 sh375 check               # 第375期 自己検査（段0 の規定 ＝ S10・旧 ／ 固定の口・規定の台と第374期の S10 の台が一致・C の台に毒の供給役がいない・並び・verbose と再現性・`checkup` の札・試遊の台・PickOne ／ Roll）
+    dotnet run --project BattleSim -c Release 0 sh376 check               # 第376期 自己検査（段0 の規定 ＝ C・旧 ／ 固定の口・規定の台と第375期の台の差は啜りが起きた戦だけ・試遊・ヴィオ 台B ＝ 第375期の版の台・出来事 `BloodSip` の数 ／ 量 ／ HP・verbose と再現性・`checkup` の札・試遊の台・PickOne ／ Roll）
+    dotnet run --project BattleSim -c Release 0 sh376 summary             # 第376期: 毒の代表の台 ＋ 試遊・ヴィオ 台B × 4 波の段0 の動き（第375期の規定 → 規定）と1戦の啜り（seed 0..99・1 秒）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

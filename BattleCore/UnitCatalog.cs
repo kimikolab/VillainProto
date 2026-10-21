@@ -1729,16 +1729,30 @@ public static class UnitCatalog
     };
 
     /// <summary>
-    /// 澱み喰いのヴィオ（規定）。<b>第373期に第372期の版 Va（連撃の段・散らす）を規定にした</b>（ポンの判断・design/PHASE373_VIO_RETCH_SPEC.md §2）——
+    /// 旧ヴィオ（第373〜375期の規定・Va）。<b>第376期に「飢えると血を啜る」（第374期の版 C）を規定にしたので、名前を付けて残した</b>（`All` に入れない・第375期までの器具は `Common.Pin375` ／ `Pin374` でこれに固定する）。
+    /// 第373期に第372期の版 Va（連撃の段・散らす）を規定にした（ポンの判断・design/PHASE373_VIO_RETCH_SPEC.md §2）——
     /// 第372期の規定（`VioH372`）＋ 連撃の段の札（<see cref="TraitId.VioFlurryA"/>・攻撃力 50 ／ 150 で2連撃 ／ 3連撃・2発目からは別の敵へ）。文面は第372期の版の文面。
     /// </summary>
-    public static readonly UnitDef Vio = new()
+    public static readonly UnitDef VioH375 = new()
     {
         Id = VioH372.Id, Name = VioH372.Name, MaxHp = VioH372.MaxHp, Attack = VioH372.Attack, Speed = VioH372.Speed, Advances = VioH372.Advances, Pattern = VioH372.Pattern, Actions = VioH372.Actions,
         Traits = VioH372.Traits.Append(TraitId.VioFlurryA).ToArray(),
         PlusText = VioH372.PlusText + "。毒を吸って力が満ちるほど、牙が増える（攻撃力 50 ／ 150 で2連撃 ／ 3連撃・2発目からは別の敵へ）",
         MinusText = VioH372.MinusText,
         Flavor = VioH372.Flavor,
+    };
+
+    /// <summary>
+    /// 澱み喰いのヴィオ（規定）。<b>第376期に第374期の版 C（飢えると血を啜る）を規定にした</b>（ポンの判断・design/PHASE376_VIO_HUNGER_SPEC.md §2）——
+    /// 第373〜375期の規定（`VioH375` ＝ Va）＋ <see cref="TraitId.VioBloodSip"/>（吸えた毒が 0 のターンの頭に隣の味方の HP を 4 ずつ啜り、1 につき攻撃力 +2）。マイナスの文面は第374期の版 C の文面。
+    /// </summary>
+    public static readonly UnitDef Vio = new()
+    {
+        Id = VioH375.Id, Name = VioH375.Name, MaxHp = VioH375.MaxHp, Attack = VioH375.Attack, Speed = VioH375.Speed, Advances = VioH375.Advances, Pattern = VioH375.Pattern, Actions = VioH375.Actions,
+        Traits = VioH375.Traits.Append(TraitId.VioBloodSip).ToArray(),
+        PlusText = VioH375.PlusText,
+        MinusText = "仲間が汚れていないターンは、飢えて隣の仲間の血を啜る",
+        Flavor = VioH375.Flavor,
     };
 
     public static readonly UnitDef Yomi = new()
@@ -7020,10 +7034,11 @@ public static class UnitCatalog
     public static readonly UnitDef VioVc = VioFlurry372(TraitId.VioFlurryC, "。毒を吸って力が満ちるほど、牙が増える（攻撃力 50 ／ 150 で2連撃 ／ 3連撃・同じ敵へ）");
 
     // 第373期【軽い期】本体（指示書 design/PHASE373_VIO_RETCH_SPEC.md §3-1）。ヴィオのマイナス「溢れて吐く」（規定のヴィオ ＝ Va ＋ 札1枚・マイナスの文面を差し替え）。どれも `All` に入れない・採否はポン。文面は叩き台。
+    // 第376期: 規定のヴィオが C になったので、A1 ／ A2 は第373〜375期の規定（`VioH375`）から作る（その期の数字を保つ）。
     static UnitDef VioRetch373(TraitId card, string minus) => new()
     {
-        Id = Vio.Id, Name = Vio.Name, MaxHp = Vio.MaxHp, Attack = Vio.Attack, Speed = Vio.Speed, Advances = Vio.Advances, Pattern = Vio.Pattern, Actions = Vio.Actions,
-        Traits = Vio.Traits.Append(card).ToArray(), PlusText = Vio.PlusText, MinusText = minus, Flavor = Vio.Flavor,
+        Id = VioH375.Id, Name = VioH375.Name, MaxHp = VioH375.MaxHp, Attack = VioH375.Attack, Speed = VioH375.Speed, Advances = VioH375.Advances, Pattern = VioH375.Pattern, Actions = VioH375.Actions,
+        Traits = VioH375.Traits.Append(card).ToArray(), PlusText = VioH375.PlusText, MinusText = minus, Flavor = VioH375.Flavor,
     };
     /// <summary>ヴィオ・A1: 規定 ＋ 溢れて吐く・半分（吸った層の半分（切り上げ）だけが攻撃力に・残りはターンの終わりに隣の味方へ）。</summary>
     public static readonly UnitDef VioA1 = VioRetch373(TraitId.VioRetchHalf, "吸った毒は腹に収まりきらず、半分はターンの終わりに隣の仲間へ吐き戻す");
@@ -7042,10 +7057,11 @@ public static class UnitCatalog
     /// <summary>スィド・S20: 規定 ＋ 開戦の衣 +20。</summary>
     public static readonly UnitDef SidS20 = SidOpening374(TraitId.SidOpeningCloak20);
     /// <summary>ヴィオ・C: 規定 ＋ 飢えると血を啜る（マイナスの文面を差し替え）。</summary>
+    // 第376期: 規定のヴィオが C になったので、`VioC` は第373〜375期の規定（`VioH375`）から作る（規定と同じ札・文面・残置）。
     public static readonly UnitDef VioC = new()
     {
-        Id = Vio.Id, Name = Vio.Name, MaxHp = Vio.MaxHp, Attack = Vio.Attack, Speed = Vio.Speed, Advances = Vio.Advances, Pattern = Vio.Pattern, Actions = Vio.Actions,
-        Traits = Vio.Traits.Append(TraitId.VioBloodSip).ToArray(), PlusText = Vio.PlusText, MinusText = "仲間が汚れていないターンは、飢えて隣の仲間の血を啜る", Flavor = Vio.Flavor,
+        Id = VioH375.Id, Name = VioH375.Name, MaxHp = VioH375.MaxHp, Attack = VioH375.Attack, Speed = VioH375.Speed, Advances = VioH375.Advances, Pattern = VioH375.Pattern, Actions = VioH375.Actions,
+        Traits = VioH375.Traits.Append(TraitId.VioBloodSip).ToArray(), PlusText = VioH375.PlusText, MinusText = "仲間が汚れていないターンは、飢えて隣の仲間の血を啜る", Flavor = VioH375.Flavor,
     };
 
     // 第361期: 規定のササが SS-w になったので、SS-k ／ SS-w は旧（`SasaH360`）から作る（`SasaSSw` は規定と同じ札・文面・残置）。

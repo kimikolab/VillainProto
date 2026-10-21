@@ -52,9 +52,9 @@ static partial class Sh375Diag
     internal static (string Name, Formation[] Vs)[] BoardList() => new (string, Formation[])[]
     {
         ("試遊・自傷（替える前）", new[] { Presets.SelfHarmPlay365() }),
-        ("自傷 ＋ ヴィオ（ボルグ → ヴィオ）", new[] { Presets.SelfHarmVio375(UnitCatalog.Vio), Presets.SelfHarmVio375(UnitCatalog.VioC) }),
+        ("自傷 ＋ ヴィオ（ボルグ → ヴィオ）", new[] { Presets.SelfHarmVio375(UnitCatalog.VioH375), Presets.SelfHarmVio375(UnitCatalog.VioC) }),
         ("台 B（替える前）", new[] { Presets.HisaBoard366() }),
-        ("台 B ＋ ヴィオ（ボルグ → ヴィオ）", new[] { Presets.BoardBVio375(UnitCatalog.Vio), Presets.BoardBVio375(UnitCatalog.VioC) }),
+        ("台 B ＋ ヴィオ（ボルグ → ヴィオ）", new[] { Presets.BoardBVio375(UnitCatalog.VioH375), Presets.BoardBVio375(UnitCatalog.VioC) }),
     };
     static readonly string[] VerNames = { "規定のヴィオ", "C 血を啜る" };
 
@@ -191,10 +191,10 @@ static partial class Sh375Diag
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var boards = new (string Name, Formation F)[]
         {
-            ("試遊・毒", Presets.Versions.First(r => r.Name == "試遊・毒").F),
-            ("試遊・毒 席替え", Presets.Versions.First(r => r.Name == "試遊・毒 席替え").F),
-            ("試遊・毒 紅", Presets.Versions.First(r => r.Name == "試遊・毒 紅").F),
-            ("毒特化・集団", CompareBuilds().First(r => r.Name == S367.BombRow).F),
+            ("試遊・毒", Pin375(Presets.Versions.First(r => r.Name == "試遊・毒").F)),
+            ("試遊・毒 席替え", Pin375(Presets.Versions.First(r => r.Name == "試遊・毒 席替え").F)),
+            ("試遊・毒 紅", Pin375(Presets.Versions.First(r => r.Name == "試遊・毒 紅").F)),
+            ("毒特化・集団", Pin375(CompareBuilds().First(r => r.Name == S367.BombRow).F)),   // 第376期: 第375期までの規定のヴィオに固定
         };
         Console.WriteLine($"# {Tag} §3 の 5 毒軸の代表の台と今の数字（段0 の後の規定・seed 0..{Seeds - 1}）");
         Console.WriteLine();

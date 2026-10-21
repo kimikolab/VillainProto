@@ -13476,6 +13476,7 @@ public sealed class BloodSipTrait : Trait
             ally.Hp -= take;
             total += take;
             ctx.TallyOf(ally).Z374SippedFrom += take;   // 計数のみ（啜られた側）
+            ctx.EmitBloodSip(self, ally, take);   // 第376期・表示専用
         }
         if (total <= 0) return;
         self.AtkBonus += total * GainPerHp;

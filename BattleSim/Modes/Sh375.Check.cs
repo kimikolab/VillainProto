@@ -30,16 +30,16 @@ static partial class Sh375Diag
                 && h.Traits.SequenceEqual(UnitCatalog.SidY.Traits);
             bool pins = PinS374(s) == h && PinS374(UnitCatalog.Gald) == UnitCatalog.Gald && PinV372(s) == h && PinS371(s) == UnitCatalog.SidH371 && PinS371(h) == UnitCatalog.SidH371
                 && PinGVS371(h) == UnitCatalog.SidH371 && PinGVH367(s) == UnitCatalog.SidH371
-                && Pin374(Presets.PoisonHero367()).Occupied().Select(o => o.Def).SequenceEqual(Presets.PoisonHero367(sid: h).Occupied().Select(o => o.Def));
+                && Pin374(Presets.PoisonHero367()).Occupied().Select(o => o.Def).SequenceEqual(Presets.PoisonHero367(vio: UnitCatalog.VioH375, sid: h).Occupied().Select(o => o.Def));   // 第376期: `Pin374` はヴィオも第375期までの規定へ
             Expect("段0: 規定のスィド ＝ 第374期の S10（`SidH374` ＋ 開戦の衣 +10）・文面は S10 の文面・旧の定義 `SidH374`（`All` の外 ＝ 第372〜374期の規定）・固定の口（`Pin374` ／ `PinV372` ／ `PinS371` ／ `PinGVS371` が旧へ）", cards && pins);
         }
         {
             long diff = 0, cells = 0;
             var pairs = new (Formation Now, Formation S10)[]
             {
-                (Presets.Versions.First(r => r.Name == "試遊・毒").F, Presets.PoisonHero367(sid: UnitCatalog.SidS10)),
-                (Presets.Versions.First(r => r.Name == "試遊・毒 席替え").F, Presets.PoisonSeat372(sid: UnitCatalog.SidS10)),
-                (Presets.Versions.First(r => r.Name == "試遊・毒 紅").F, Formation.Build(front1: UnitCatalog.Borg, front3: UnitCatalog.SidS10, center: UnitCatalog.Beni, back1: UnitCatalog.Rau, back3: UnitCatalog.Guza)),
+                (Pin375(Presets.Versions.First(r => r.Name == "試遊・毒").F), Pin375(Presets.PoisonHero367(sid: UnitCatalog.SidS10))),
+                (Pin375(Presets.Versions.First(r => r.Name == "試遊・毒 席替え").F), Pin375(Presets.PoisonSeat372(sid: UnitCatalog.SidS10))),
+                (Pin375(Presets.Versions.First(r => r.Name == "試遊・毒 紅").F), Formation.Build(front1: UnitCatalog.Borg, front3: UnitCatalog.SidS10, center: UnitCatalog.Beni, back1: UnitCatalog.Rau, back3: UnitCatalog.Guza)),
             };
             foreach (var (now, s10) in pairs)
                 foreach (var w in Sh367Diag.PWaves)
@@ -57,11 +57,11 @@ static partial class Sh375Diag
             bool noSupplier = bl.SelectMany(b => b.Vs).All(f => !f.Occupied().Any(o => PoisonSuppliers.Contains(o.Def.Id)));
             var sh = bl[1].Vs; var bb = bl[3].Vs;
             bool seats = S307.Seats(sh[0]) == "カド・リリ・ムド・ヴィオ・アカ" && S307.Seats(bb[0]) == "ヴィオ・ミサ・ヒサ・カド・アカ"
-                && sh[0][3] == UnitCatalog.Vio && sh[1][3] == UnitCatalog.VioC && bb[0][0] == UnitCatalog.Vio && bb[1][0] == UnitCatalog.VioC
+                && sh[0][3] == UnitCatalog.VioH375 && sh[1][3] == UnitCatalog.VioC && bb[0][0] == UnitCatalog.VioH375 && bb[1][0] == UnitCatalog.VioC
                 && FormationRules.AreAdjacent(3, 0) && FormationRules.AreAdjacent(0, 3);
             Expect("C の台に毒の供給役（グザ ／ スィド ／ ベニ ／ ミオ ／ ラウ）がいない・自傷 ＋ ヴィオ ＝ カド・リリ・ムド・ヴィオ・アカ（ヴィオの隣はカド ／ ムド）・台 B ＋ ヴィオ ＝ ヴィオ・ミサ・ヒサ・カド・アカ（ヴィオの隣はヒサ ／ カド）",
                 noSupplier && seats, $"{S307.Seats(sh[0])} ／ {S307.Seats(bb[0])}");
-            bool vc = UnitCatalog.VioC.Traits.SequenceEqual(UnitCatalog.Vio.Traits.Append(TraitId.VioBloodSip)) && !UnitCatalog.All.Contains(UnitCatalog.VioC);
+            bool vc = UnitCatalog.VioC.Traits.SequenceEqual(UnitCatalog.VioH375.Traits.Append(TraitId.VioBloodSip)) && !UnitCatalog.All.Contains(UnitCatalog.VioC);
             Expect("C ＝ 規定のヴィオ ＋ 飢えると血を啜る（第374期の札のまま・`All` の外）", vc);
         }
 
@@ -90,11 +90,11 @@ static partial class Sh375Diag
 
         // ---- 試遊の台 ----
         {
+            // 第376期: 第375期の「版・C 自傷にヴィオ」「版・C 台Bにヴィオ」は外した（C を規定にした・並びはこの器具の中で組む）。検査は「頭の10台」と「第375期の版の台が無い」に。
             var vr = Presets.Versions.Select(r => r.Name).ToArray();
-            bool rows = vr.SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒", "試遊・毒 席替え", "試遊・毒 紅", "版・C 自傷にヴィオ", "版・C 台Bにヴィオ" });
-            bool vers = Presets.Versions.First(r => r.Name == "版・C 自傷にヴィオ").F.Occupied().Select(o => o.Def).SequenceEqual(Presets.SelfHarmVio375(UnitCatalog.VioC).Occupied().Select(o => o.Def))
-                && Presets.Versions.First(r => r.Name == "版・C 台Bにヴィオ").F.Occupied().Select(o => o.Def).SequenceEqual(Presets.BoardBVio375(UnitCatalog.VioC).Occupied().Select(o => o.Def));
-            Expect("`Presets.Versions` ＝ 試遊の8台 ＋「試遊・毒 席替え」＋「試遊・毒 紅」＋ 版の2台（§4-2 の並び・ヴィオは C）・第374期の版の台は無い", rows && vers, string.Join("、", vr));
+            bool rows = vr.Take(10).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒", "試遊・毒 席替え", "試遊・毒 紅" })
+                && !vr.Any(n => n is "版・C 自傷にヴィオ" or "版・C 台Bにヴィオ");
+            Expect("`Presets.Versions` の頭 ＝ 試遊の8台 ＋「試遊・毒 席替え」＋「試遊・毒 紅」・第375期の版の2台は無い（第376期に外した）", rows, string.Join("、", vr));
         }
 
         // ---- PickOne ／ Roll ----

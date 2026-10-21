@@ -154,6 +154,10 @@ public static class Map11Relations
         [TraitId.CloakRetort] = new(Shape.Adjacent, "毒が漏れる",
             "自分が殴られるたび、この駒にも毒が1層積む（毒は毎ターン層の分だけ削る）",
             LinkSign.Loss, true, "漏れる"),
+        // 第376期: 規定のヴィオに「飢えると血を啜る」（`VioBloodSip`）が付いた。**吸える毒が無いターンの頭だけ**隣の味方の HP を 4 啜るので点線（(b) 型）。毒の台では噴き出しで飢えないのでほぼ起きない。
+        [TraitId.VioBloodSip] = new(Shape.Adjacent, "血を啜られる",
+            "仲間が汚れていないターンは、ヴィオが飢えてこの駒の HP を 4 啜る（ダメージではない・HP 1 未満にはしない・傷は残る）",
+            LinkSign.Loss, true, "啜"),
         [TraitId.Goad] = new(Shape.AdjacentAcceptsSupport, "前に押し出す",
             "毎ターン、隣でいちばん攻撃力が高い1体に力を渡して前へ出す（渡した相手は狙われる）",
             LinkSign.Both, true, "押し出す"),

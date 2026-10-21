@@ -4628,6 +4628,13 @@ public enum BattleEventKind
     /// 以後のカドの手番は術（構え）ではなく攻撃（<c>Attack</c> ＋ 主目標への <c>Damage</c> ＋ 巻き込みの <c>Damage</c>）になる。<b>どの規則も読まない。</b>規定のカドには出ない。
     /// </summary>
     ThornsBare,
+
+    /// <summary>
+    /// 血を啜る（第376期・規定のヴィオ・<b>表示専用</b>）。ターンの頭の吸いで吸えた毒が 0 層のとき、ヴィオが隣の味方1体の HP を直に減らした瞬間に1つ（啜られた味方ごと）。
+    /// <c>ActorId</c> ＝ ヴィオ ／ <c>TargetId</c> ＝ 啜られた味方 ／ <c>Amount</c> ＝ 啜った HP ／ <c>HpAfter</c> ＝ 啜られた後の HP。
+    /// ダメージではない（<c>Damage</c> は出ない・被弾で起きる札は起きない）。<b>どの規則も読まない。</b>
+    /// </summary>
+    BloodSip,
 }
 /// <summary>`Shard`（第358期）の <c>Text</c>。</summary>
 public static class ShardLabels

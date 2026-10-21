@@ -17970,6 +17970,13 @@ public sealed class BattleContext
         Emit(new BattleEvent { Kind = BattleEventKind.ThornsBare, Turn = _turn, ActorId = k.InstanceId, TargetId = k.InstanceId, Amount = wound, HpAfter = Math.Max(0, k.Hp), Team = k.TeamId, SourceTrait = TraitId.ThornsBare });
     }
 
+    /// <summary>第376期（<b>表示専用</b>）: 血を啜る（<see cref="BattleEventKind.BloodSip"/>）。verbose のときだけ積む・盤面は読むだけ。</summary>
+    internal void EmitBloodSip(UnitState vio, UnitState from, int amount)
+    {
+        if (!_verbose || amount <= 0) return;
+        Emit(new BattleEvent { Kind = BattleEventKind.BloodSip, Turn = _turn, ActorId = vio.InstanceId, TargetId = from.InstanceId, Amount = amount, HpAfter = Math.Max(0, from.Hp), Team = vio.TeamId, SourceTrait = TraitId.VioBloodSip });
+    }
+
     /// <summary>第358期（<b>表示専用</b>）: 返しの破片 ／ 礫の出来事（<see cref="BattleEventKind.Shard"/>）。verbose のときだけ積む。</summary>
     internal void EmitShard(string label, UnitState actor, UnitState? target, int amount, int remainingOrSlot)
     {

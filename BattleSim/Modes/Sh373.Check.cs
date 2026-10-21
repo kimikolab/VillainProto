@@ -49,9 +49,9 @@ static partial class Sh373Diag
 
         // ---- 段0 ----
         {
-            var v = UnitCatalog.Vio; var h = UnitCatalog.VioH372;
+            var v = UnitCatalog.VioH375; var h = UnitCatalog.VioH372;
             bool cards = v.Traits.SequenceEqual(h.Traits.Append(TraitId.VioFlurryA)) && v.Traits.SequenceEqual(UnitCatalog.VioVa.Traits) && v.PlusText == UnitCatalog.VioVa.PlusText && v.MinusText == UnitCatalog.VioVa.MinusText
-                && v.Id == h.Id && v.MaxHp == h.MaxHp && v.Attack == h.Attack && UnitCatalog.All.Contains(v) && !UnitCatalog.All.Contains(h) && UnitCatalog.All.Count == 52
+                && v.Id == h.Id && v.MaxHp == h.MaxHp && v.Attack == h.Attack && !UnitCatalog.All.Contains(v) && UnitCatalog.All.Contains(UnitCatalog.Vio) && !UnitCatalog.All.Contains(h)   /* 第376期: Va は `VioH375`（`All` の外） */ && UnitCatalog.All.Count == 52
                 && h.Traits.SequenceEqual(UnitCatalog.VioW.Traits);
             bool pins = PinV372(v) == h && PinV372(UnitCatalog.Gald) == UnitCatalog.Gald && PinGVH367(h) == UnitCatalog.VioH367 && PinGVH367(v) == UnitCatalog.VioH367 && PinGVS371(h) == UnitCatalog.VioH371 && PinGVS371(v) == UnitCatalog.VioH371
                 && Pin372(Presets.PoisonHero367()).Occupied().Select(o => o.Def).SequenceEqual(Presets.PoisonHero367(vio: h, sid: UnitCatalog.SidH374).Occupied().Select(o => o.Def));   // 第375期: `Pin372` はスィドも第374期までの規定へ
@@ -61,8 +61,8 @@ static partial class Sh373Diag
             long diff = 0, cells = 0;
             var pairs = new (Formation Now, Formation Va)[]
             {
-                (Presets.Versions.First(r => r.Name == "試遊・毒").F, Presets.PoisonHero367(vio: UnitCatalog.VioVa)),
-                (Presets.Versions.First(r => r.Name == "試遊・毒 席替え").F, Presets.PoisonSeat372(vio: UnitCatalog.VioVa)),
+                (Pin375(Presets.Versions.First(r => r.Name == "試遊・毒").F), Presets.PoisonHero367(vio: UnitCatalog.VioVa)),   // 第376期: 第375期までの規定のヴィオに固定
+                (Pin375(Presets.Versions.First(r => r.Name == "試遊・毒 席替え").F), Presets.PoisonSeat372(vio: UnitCatalog.VioVa)),
             };
             foreach (var (now, va) in pairs)
                 foreach (var w in Waves)
@@ -125,7 +125,7 @@ static partial class Sh373Diag
             Expect("A1: 隣がいなければ吐かない（5 層は消える）・ヴィオが倒れていたら吐かない", lost && dead, $"隣なし: 消えた {t.Z373RetchLost} ／ 倒れた: 吐かなかった {t2.Z373RetchDead}・隣 {Psn(at2[nb[0]])}");
         }
         {
-            var (ctx, v, at) = Board(UnitCatalog.Vio, (far, Mate), (nb[0], Mate));
+            var (ctx, v, at) = Board(UnitCatalog.VioH375, (far, Mate), (nb[0], Mate));
             ctx.Poison(at[far], 10, at[far], PoisonRoute.Venom);
             int a0 = v.AtkBonus;
             TurnHead(ctx, v);
@@ -136,7 +136,7 @@ static partial class Sh373Diag
         // ---- 版の定義 ／ 経路 ----
         {
             bool vers = new[] { (UnitCatalog.VioA1, TraitId.VioRetchHalf), (UnitCatalog.VioA2, TraitId.VioRetchThird) }
-                .All(x => x.Item1.Traits.SequenceEqual(UnitCatalog.Vio.Traits.Append(x.Item2)) && x.Item1.Id == UnitCatalog.Vio.Id && !UnitCatalog.All.Contains(x.Item1) && x.Item1.PlusText == UnitCatalog.Vio.PlusText && x.Item1.MinusText.Contains("吐き戻す"));
+                .All(x => x.Item1.Traits.SequenceEqual(UnitCatalog.VioH375.Traits.Append(x.Item2)) && x.Item1.Id == UnitCatalog.VioH375.Id && !UnitCatalog.All.Contains(x.Item1) && x.Item1.PlusText == UnitCatalog.VioH375.PlusText && x.Item1.MinusText.Contains("吐き戻す"));
             bool none = !UnitCatalog.All.Any(d => d.Traits.Any(t => t is TraitId.VioRetchHalf or TraitId.VioRetchThird))
                 && !CompareBuilds().Any(r => r.F.Occupied().Any(o => o.Def.Traits.Any(t => t is TraitId.VioRetchHalf or TraitId.VioRetchThird)));
             int nr = Enum.GetValues<PoisonRoute>().Length;
@@ -168,7 +168,7 @@ static partial class Sh373Diag
         // ---- checkup の札の表 ----
         {
             string src = File.ReadAllText("BattleSim/Modes/Checkup.cs");
-            var missing = new[] { TraitId.VioRetchHalf, TraitId.VioRetchThird }.Concat(UnitCatalog.Vio.Traits).Where(t => !src.Contains($"[TraitId.{t}]", StringComparison.Ordinal)).ToList();
+            var missing = new[] { TraitId.VioRetchHalf, TraitId.VioRetchThird }.Concat(UnitCatalog.VioH375.Traits).Where(t => !src.Contains($"[TraitId.{t}]", StringComparison.Ordinal)).ToList();
             bool va = System.Text.RegularExpressions.Regex.IsMatch(src, @"\[TraitId\.VioFlurryA\][^\n]*第373期から規定");
             Expect("`checkup` の札の表に吐き戻しの2枚と規定のヴィオの札がそろい、連撃・散らすは「第373期から規定」（ソースを読んで確かめる）", missing.Count == 0 && va, missing.Count == 0 ? "そろっている" : "無い: " + string.Join("・", missing));
         }

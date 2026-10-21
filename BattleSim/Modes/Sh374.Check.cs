@@ -49,11 +49,11 @@ static partial class Sh374Diag
         {
             bool sid = new[] { (UnitCatalog.SidS10, TraitId.SidOpeningCloak10), (UnitCatalog.SidS20, TraitId.SidOpeningCloak20) }
                 .All(x => x.Item1.Traits.SequenceEqual(UnitCatalog.SidH374.Traits.Append(x.Item2)) && x.Item1.Id == "sid" && x.Item1.PlusText == "戦いの前から毒をまとっている。" + UnitCatalog.SidH374.PlusText && x.Item1.MinusText == UnitCatalog.SidH374.MinusText);
-            bool vio = UnitCatalog.VioC.Traits.SequenceEqual(UnitCatalog.Vio.Traits.Append(TraitId.VioBloodSip)) && UnitCatalog.VioC.MinusText == "仲間が汚れていないターンは、飢えて隣の仲間の血を啜る" && UnitCatalog.VioC.PlusText == UnitCatalog.Vio.PlusText;
+            bool vio = UnitCatalog.VioC.Traits.SequenceEqual(UnitCatalog.VioH375.Traits.Append(TraitId.VioBloodSip)) && UnitCatalog.VioC.MinusText == "仲間が汚れていないターンは、飢えて隣の仲間の血を啜る" && UnitCatalog.VioC.PlusText == UnitCatalog.VioH375.PlusText;
             bool none = new[] { UnitCatalog.SidS10, UnitCatalog.SidS20, UnitCatalog.VioC }.All(d => !UnitCatalog.All.Contains(d))
-                && !UnitCatalog.All.Any(d => d != UnitCatalog.Sid && d.Traits.Any(t => t is TraitId.SidOpeningCloak10 or TraitId.SidOpeningCloak20 or TraitId.VioBloodSip))
+                && !UnitCatalog.All.Any(d => d != UnitCatalog.Sid && d != UnitCatalog.Vio && d.Traits.Any(t => t is TraitId.SidOpeningCloak10 or TraitId.SidOpeningCloak20 or TraitId.VioBloodSip))
                 && !CompareBuilds().Select(r => (r.Name, F: Pin374(r.F))).Any(r => r.F.Occupied().Any(o => o.Def.Traits.Any(t => t is TraitId.SidOpeningCloak10 or TraitId.SidOpeningCloak20 or TraitId.VioBloodSip)));
-            bool def = UnitCatalog.SidH374.Traits.SequenceEqual(UnitCatalog.SidY.Traits)   /* 第375期: 規定は S10・第374期の規定は `SidH374` */ && UnitCatalog.Vio.Traits.SequenceEqual(UnitCatalog.VioVa.Traits);
+            bool def = UnitCatalog.SidH374.Traits.SequenceEqual(UnitCatalog.SidY.Traits)   /* 第375期: 規定は S10・第374期の規定は `SidH374` */ && UnitCatalog.VioH375.Traits.SequenceEqual(UnitCatalog.VioVa.Traits);
             int nr = Enum.GetValues<PoisonRoute>().Length;
             bool route = (int)PoisonRoute.CloakOpening == nr - 1 && BattleContext.SoakBurnRouteIx == nr && BattleContext.SoakRouteCount == nr + 1;
             Expect("版の定義: S10 ／ S20 ＝ 規定のスィド ＋ 開戦の衣（プラスの頭に一文）・C ＝ 規定のヴィオ ＋ 血を啜る（マイナスを差し替え）・`All` ／ `compare` の行には無い・規定のスィド ／ ヴィオは第373期のまま・経路 `CloakOpening` は末尾・燃焼の添字は後ろ",
@@ -131,7 +131,7 @@ static partial class Sh374Diag
             var v = p.First(u => u.Def.Id == "vio"); var fa = p.First(u => u.Slot == far);
             int a0 = v.AtkBonus;
             TurnHead(ctx, v);
-            var (ctx2, p2, _) = Board(Seat(UnitCatalog.Vio, Mate, Mate, null));
+            var (ctx2, p2, _) = Board(Seat(UnitCatalog.VioH375, Mate, Mate, null));
             var v2 = p2.First(u => u.Def.Id == "vio");
             int b0 = v2.AtkBonus;
             TurnHead(ctx2, v2);
