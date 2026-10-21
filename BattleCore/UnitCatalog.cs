@@ -6771,6 +6771,21 @@ public static class UnitCatalog
         PlusText = GareH364.PlusText.Replace("拾った礫を敵全体へ投げつける", "拾った礫を" + Shot364), MinusText = GareH364.MinusText, Flavor = GareH364.Flavor,
     };
 
+    // 第366期【軽い期】本体1（指示書 design/PHASE366_HISA_POOL_POISON_P0_SPEC.md §2-1）。ヒサの玉を持ち越さない版（規定のヒサの上に札1枚）。採否はポン。
+    // 文面は号令の句（`HisaBallClause322`）の直後に括弧書きを足す（叩き台）。
+    static UnitDef HisaPool366(TraitId card, string clause) => new()
+    {
+        Id = Hisa.Id, Name = Hisa.Name, MaxHp = Hisa.MaxHp, Attack = Hisa.Attack, Speed = Hisa.Speed, Advances = Hisa.Advances, Pattern = Hisa.Pattern, Actions = Hisa.Actions,
+        Traits = Hisa.Traits.Append(card).ToArray(),
+        PlusText = Hisa.PlusText.Replace(HisaBallClause322, HisaBallClause322 + clause, StringComparison.Ordinal), MinusText = Hisa.MinusText, Flavor = Hisa.Flavor,
+    };
+    /// <summary>ヒサ・P-t: 規定 ＋ 玉はターンで散る（`CommandPoolTurnDrop`・溜まりをターンの終わりに捨てる）。</summary>
+    public static readonly UnitDef HisaPt = HisaPool366(TraitId.CommandPoolTurnDrop, "（声援はそのターンのうちに使わなければ散る）");
+    /// <summary>ヒサ・P-60: 規定 ＋ 溜まり 60 まで（`CommandPoolCap60`・玉 3 つ）。</summary>
+    public static readonly UnitDef HisaP60 = HisaPool366(TraitId.CommandPoolCap60, "（玉は 3 つまでしか溜まらない）");
+    /// <summary>ヒサ・P-180: 規定 ＋ 溜まり 180 まで（`CommandPoolCap180`・玉 9 つ）。</summary>
+    public static readonly UnitDef HisaP180 = HisaPool366(TraitId.CommandPoolCap180, "（玉は 9 つまでしか溜まらない）");
+
     // 第361期: 規定のササが SS-w になったので、SS-k ／ SS-w は旧（`SasaH360`）から作る（`SasaSSw` は規定と同じ札・文面・残置）。
     const string SasaPlus360 = "手番で身を固め、次に動くまで、受ける一撃を7までに抑える。殴られると錯乱して隣の味方1体を別の席へ突き飛ばし（1ターン1回）、";
     /// <summary>第360期 SS-k 構えを解かない: ササ ＋ <see cref="TraitId.BraceHold"/>（身構えが次の自分の手番まで続く）。</summary>

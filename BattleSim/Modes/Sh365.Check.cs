@@ -107,8 +107,8 @@ static partial class Sh365Diag
         // ---- 試遊の台 ----
         {
             var vr = Presets.Versions.Select(r => r.Name).ToArray();
-            bool rows = vr.SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷" });
-            Expect("`Presets.Versions` ＝ 試遊の7台（「試遊・自傷」を足した・第364期の「版・」の4台は外した）", rows, string.Join("、", vr));
+            bool rows = vr.Take(7).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷" });
+            Expect("`Presets.Versions` の頭 ＝ 試遊の7台（「試遊・自傷」を足した・第364期の「版・」の4台は外した・第366期から後ろに「版・」の台）", rows, string.Join("、", vr));
             if (rows)
             {
                 var f = Presets.Versions.First(r => r.Name == "試遊・自傷").F; var sh = Presets.Versions.First(r => r.Name == "試遊・破片").F;

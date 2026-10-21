@@ -961,7 +961,15 @@ public static class Presets
         // 第365期: 規定のアカ ／ ガレを AKn-A ／ GR-A にした。第364期の「版・」の4台は外した（並びは `sh364` の中に固定 `Boards364`）。「試遊・破片」は規定の駒のまま（ガレは GR-A になった）。
         // 第365期: 自傷軸の試遊の台（第364期の「版・AKn-A 自傷」の並びを規定の駒で・ミサ＋ボルグ＋ヒサを含まない最良）——前1 カド ／ 前3 リリ ／ 中央 ムド ／ 後1 ボルグ ／ 後3 アカ。
         ("試遊・自傷", SelfHarmPlay365()),
+        // 第366期【軽い期】本体1: ヒサの玉を持ち越さない版（並びは台 B ＝ 前1 ボルグ ／ 前3 ミサ ／ 中央 ヒサ ／ 後1 カド ／ 後3 アカ・ヒサだけ版）。採否はポン。
+        ("版・P-t ヒサ", HisaBoard366(UnitCatalog.HisaPt)),
+        ("版・P-60 ヒサ", HisaBoard366(UnitCatalog.HisaP60)),
+        ("版・P-180 ヒサ", HisaBoard366(UnitCatalog.HisaP180)),
     };
+
+    /// <summary>第366期: 台 B（前1 ボルグ ／ 前3 ミサ ／ 中央 ヒサ ／ 後1 カド ／ 後3 アカ）。ヒサを差し替えて版の台を作る。</summary>
+    public static Formation HisaBoard366(UnitDef? hisa = null) =>
+        Formation.Build(front1: UnitCatalog.Borg, front3: UnitCatalog.Tome, center: hisa ?? UnitCatalog.Hisa, back1: UnitCatalog.Kado, back3: UnitCatalog.Susu);
 
     /// <summary>第365期: 「試遊・自傷」の並び（前1 カド ／ 前3 リリ ／ 中央 ムド ／ 後1 ボルグ ／ 後3 アカ）。アカを差し替えて版の台を作る。</summary>
     public static Formation SelfHarmPlay365(UnitDef? aka = null) =>

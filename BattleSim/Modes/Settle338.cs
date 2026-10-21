@@ -136,7 +136,7 @@ static partial class Settle338Diag
             var v = Presets.Versions;
             Expect("試遊の台: `Presets.Versions` ＝ 「試遊・感電 ポンの台」1台（第337期の「版・MI」の3台は外した）・`Playtest` は 17 台のまま",
                 v.Length >= 1 && v[0].Name == "試遊・感電 ポンの台" && v.Skip(1).All(r => r.Name.StartsWith("版・", StringComparison.Ordinal) || r.Name.StartsWith("試遊・", StringComparison.Ordinal))   /* 第340期: 「試遊・ミサ 書き手なし」も */
-                && v.SelectMany(r => r.F.Occupied()).All(o => o.Def.Id != "hisa" || ReferenceEquals(o.Def, H)) && Presets.Playtest.Length == 17);
+                && v.Where(r => !r.Name.StartsWith("版・", StringComparison.Ordinal)).SelectMany(r => r.F.Occupied()).All(o => o.Def.Id != "hisa" || ReferenceEquals(o.Def, H)) && Presets.Playtest.Length == 17);   // 第366期: 「版・」の台のヒサは版（P-t ／ P-60 ／ P-180）
         }
         {
             long nNew = 0, nOld = 0; int diff = 0, n = 0;
