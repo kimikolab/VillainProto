@@ -1353,6 +1353,9 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sh371 seats               # 第371期 §3-2: 試遊・毒の5枚の並べ替え 120 通り × W2 ／ W5 × 勇者 ／ 蝕みなし ／ 近衛（seed 0..19）・上位5並び・スィドの隣の組ごとの吸い（2 秒）
     dotnet run --project BattleSim -c Release 0 sh371 compare <W4|W5>     # 第371期: `compare` 64 行 × 版（スィド ／ グザ ／ ヴィオのいる行だけを版で回す・(G2)）（7 秒）
     dotnet run --project BattleSim -c Release 0 sh371 check               # 第371期 自己検査（規定は今どおり・スィド Y ／ W4 の上限なしを直に・verbose と再現性・器具の中だけ・`checkup` の札がそろう・試遊の台（席替えの台は1位を組み直す）・PickOne ／ Roll）
+    dotnet run --project BattleSim -c Release 0 sh372 boards              # 第372期 §3-2: 5 台（試遊・毒 ／ 試遊・毒 席替え ／ 毒特化・集団 ／ 澱み喰い ／ 攻撃力の台）× 版（規定 ／ Va ／ Vb ／ Vc）× 6 波・seed 0..99・誰が何Tに倒れたか・ループの表（撃った数つき）・ヴィオの毒の行き先（敵の数 ／ 最も深い敵）・段に上がったターン・壊れの兆し（3 秒）
+    dotnet run --project BattleSim -c Release 0 sh372 compare <Va|Vb|Vc>  # 第372期: `compare` 64 行 × 版（ヴィオのいる行だけを版で回す）（12 秒）
+    dotnet run --project BattleSim -c Release 0 sh372 check               # 第372期 自己検査（段0 の規定 ＝ W5・旧 ／ 固定の口・規定の台と W5 の駒の台が一致・連撃の段 ／ 的 ／ 途中で倒れる・規定のヴィオは1発・verbose と再現性・`checkup` の札・試遊の台・PickOne ／ Roll）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

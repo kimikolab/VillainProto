@@ -54,7 +54,7 @@ static partial class Sh367Diag
     static string Sg(double x) => x.ToString("+0.0;-0.0;±0.0");
     // 第368期: 台は第367期までの規定（`Common.Pin367`・グザ ／ ヴィオ ／ ヒサ）に固定する（この期の数字を保つ）。
     static Formation Row(string n) => Pin367(CompareBuilds().First(r => r.Name == n).F);
-    static Formation Hero367() => Presets.PoisonHero367(UnitCatalog.GuzaH367, UnitCatalog.VioH367);
+    static Formation Hero367() => Presets.PoisonHero367(UnitCatalog.GuzaH367, UnitCatalog.VioH367, UnitCatalog.SidH371);   // 第372期: スィドも第371期までの規定に
     static bool Has(Formation f, string id) => f.Occupied().Any(o => o.Def.Id == id);
 
     // ---------------------------------------------------------------------------------

@@ -53,7 +53,7 @@ static partial class ShockDiag
             var (tag, row, _, _) = BaseRows[i];
             var rep = ReplacedOf(i, print: false);
             var members = RowOf(row).Occupied().Select(o => o.Def)
-                .Select(d => ReferenceEquals(d, UnitCatalog.Borg) ? UnitCatalog.BorgF0 : d).ToList();   // 第239期: ボルグの規定化で台3 の席が動かないよう、旧ボルグに固定
+                .Select(d => ReferenceEquals(d, UnitCatalog.Borg) ? UnitCatalog.BorgF0 : Common.PinGVH367(d)).ToList();   // 第239期: ボルグの規定化で台3 の席が動かないよう、旧ボルグに固定・第372期: グザ ／ ヴィオ ／ スィドも第367期までの規定へ（W5 の規定化で台3 の席が動いた）
             UnitDef? original = null;
             if (i == 3)
             {

@@ -965,23 +965,23 @@ public static class Presets
         // 第367期: 毒軸の試遊の台（毒特化・勇者 ＝ 前1 ガルド ／ 前3 スィド ／ 中央 グザ ／ 後1 ヴィオ ／ 後3 ドルガ・規定の駒）と、その並びでグザ ／ ヴィオだけ版の3台・台 B でヒサだけ版の1台。採否はポン。
         ("試遊・毒", PoisonHero367()),
         // 第368期: G ／ V ／ H1 を規定にした。第367期の「版・」の4台は外した（「試遊・毒」は規定の駒のまま ＝ 中身は GV）。
-        // 第368期【軽い期】本体: 毒特化の耐久の版（並びは試遊・毒・スィド ／ グザ ／ ヴィオだけ版）。採否はポン。
-        // 第369期: 第368期の「版・R 毒に強い」「版・RC 毒の衣」は外した（並びは `sh368` の中に固定）。「版・RCS 吸い分け」は採否が保留なので残す。
-        ("版・RCS 吸い分け", PoisonHero367(UnitCatalog.GuzaR, UnitCatalog.VioRCS, UnitCatalog.SidRC)),
-        // 第370期: 第369期の「版・Z1 ／ Z2 ／ Z3」は外した（並びは `sh369` の中に固定）。
-        // 第371期: 第370期の「版・W1 ／ W2 ／ W3」は外した（並びは `sh370` の中に固定）。
-        // 第371期【軽い期】: 毒軸のループ③の版（並びは試遊・毒・版の駒だけ替える ／ 席替えの台は `sh371 seats` の1位）。採否はポン。
-        ("版・W4 ヴィオ型", PoisonHero367(UnitCatalog.GuzaW3, UnitCatalog.VioW, UnitCatalog.SidR)),
-        ("版・W5 両立", PoisonHero367(UnitCatalog.GuzaW3, UnitCatalog.VioW, UnitCatalog.SidY)),
-        // 第371期 §3-2 の席の確かめ（`sh371 seats`・試遊・毒の5枚の並べ替え 120 通り）の1位。W2 は蝕みなしの勇者に届く並びが 0 だったので、ボスの倒しT の最良。
-        ("版・W2 席替え", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.GuzaW, center: UnitCatalog.VioW, back1: UnitCatalog.SidZ, back3: UnitCatalog.Dolga)),
-        ("版・W5 席替え", Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Gald, center: UnitCatalog.SidY, back1: UnitCatalog.GuzaW3, back3: UnitCatalog.VioW)),
+        // 第372期: W5 を規定にした（「試遊・毒」の中身は W5 になった）。第368〜371期の「版・」の台（RCS 吸い分け ／ W4 ／ W5 ／ W2 席替え ／ W5 席替え）はすべて外した（並びは `sh368`〜`sh371` の中で組む）。
+        // 第372期: 「試遊・毒 席替え」＝ 第371期の W5 の席の確かめの1位（前1 ドルガ ／ 前3 ガルド ／ 中央 スィド ／ 後1 グザ ／ 後3 ヴィオ・規定の駒）。
+        ("試遊・毒 席替え", PoisonSeat372()),
+        // 第372期【軽い期】本体: ヴィオの連撃の段の版（並びは試遊・毒・ヴィオだけ版）。採否はポン。
+        ("版・Va 散らす", PoisonHero367(vio: UnitCatalog.VioVa)),
+        ("版・Vb 高い段", PoisonHero367(vio: UnitCatalog.VioVb)),
+        ("版・Vc 集中", PoisonHero367(vio: UnitCatalog.VioVc)),
     };
 
     /// <summary>第367期: 毒特化・勇者（`compare` の「毒爆弾 (ラウ×ヴィオ)」のラウの席 ＝ 後3 を守りに替えた台・前1 ガルド ／ 前3 スィド ／ 中央 グザ ／ 後1 ヴィオ ／ 後3 守り）。
     /// 守りは `sh367 pick`（GV の勇者・seed 0..19 で最も勝つ）で選んだ。グザ ／ ヴィオを差し替えて版の台を作る。</summary>
     public static Formation PoisonHero367(UnitDef? guza = null, UnitDef? vio = null, UnitDef? sid = null) =>
         Formation.Build(front1: UnitCatalog.Gald, front3: sid ?? UnitCatalog.Sid, center: guza ?? UnitCatalog.Guza, back1: vio ?? UnitCatalog.Vio, back3: PoisonGuard367);   // 第368期: スィドも差し替えられるように
+    /// <summary>第372期: 「試遊・毒 席替え」の並び（前1 ドルガ ／ 前3 ガルド ／ 中央 スィド ／ 後1 グザ ／ 後3 ヴィオ）。グザ ／ ヴィオ ／ スィドを差し替えて版の台を作る。</summary>
+    public static Formation PoisonSeat372(UnitDef? guza = null, UnitDef? vio = null, UnitDef? sid = null) =>
+        Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Gald, center: sid ?? UnitCatalog.Sid, back1: guza ?? UnitCatalog.Guza, back3: vio ?? UnitCatalog.Vio);
+
     /// <summary>第367期: 毒特化・勇者の守り（`sh367 pick` の結果・GV の勇者 seed 0..19 でゴルム ／ ドルガ ／ ササとも 100%、倒しT ドルガ 7.0 ／ ササ 7.2 ／ ゴルム 8.0）。</summary>
     public static UnitDef PoisonGuard367 => UnitCatalog.Dolga;
 

@@ -2459,6 +2459,9 @@ public sealed class UnitTally
     /// <summary>第370期（<b>計数のみ</b>）: 返り毒（向きを戻した W）で味方に跳ねた層（グザの側・合計 ／ ターンごと）・跳ねた毒を受けた層（受けた味方の側）・ヴィオが攻撃力ぶん乗せた毒（合計 ／ ターンごと）・スィドの衣の返し（ターンごと）。</summary>
     public long Z370Splash, Z370SplashGot, Z370Strike;
     public long[]? Z370SplashByTurn, Z370StrikeByTurn, Z370RetortByTurn;
+    /// <summary>第372期（<b>計数のみ</b>）: ヴィオの連撃の札を持つ駒が手番に撃った数（ターンごと）・2連撃 ／ 3連撃に初めて上がったターン（0 は未到達）。</summary>
+    public long[]? Z372HitsByTurn;
+    public int Z372Stage2Turn, Z372Stage3Turn;
     /// <summary>第365期（<b>計数のみ・計測専用</b>）: ヒサ×ミサの連鎖の矢印をターンごとに（<c>欄 × 32 ＋ ターン</c>・欄は <c>BattleContext.Ch365</c>）。<c>BattleContext.ChainCount365</c> が真の戦だけ書く。</summary>
     public long[]? Ch365;
     public long Rp345NormalDealt, Rp345Punches, Rp345PunchBack, Rp345PunchKills, Rp345PunchDealt, Rp345PunchAmount, Rp345AimEdible, Rp345GrabNoPunch, Rp345GrabAfter, Ga345Stomps, Ga345SplashHits, Ga345SplashDealt;
@@ -3752,6 +3755,9 @@ public sealed class UnitTally
         Z369VentFoe += o.Z369VentFoe; Z369VentAlly += o.Z369VentAlly; Z369Backlash += o.Z369Backlash; Z369Sipped += o.Z369Sipped; Z369Shouldered += o.Z369Shouldered; Z369Retort += o.Z369Retort;   // 第369期
         Z369BacklashByTurn = AddArr(Z369BacklashByTurn, o.Z369BacklashByTurn); Z369StageTurn = AddArr(Z369StageTurn, o.Z369StageTurn);
         Z370Splash += o.Z370Splash; Z370SplashGot += o.Z370SplashGot; Z370Strike += o.Z370Strike;   // 第370期
+        Z372HitsByTurn = AddArr(Z372HitsByTurn, o.Z372HitsByTurn);   // 第372期
+        if (Z372Stage2Turn == 0) Z372Stage2Turn = o.Z372Stage2Turn;
+        if (Z372Stage3Turn == 0) Z372Stage3Turn = o.Z372Stage3Turn;
         Z370SplashByTurn = AddArr(Z370SplashByTurn, o.Z370SplashByTurn); Z370StrikeByTurn = AddArr(Z370StrikeByTurn, o.Z370StrikeByTurn); Z370RetortByTurn = AddArr(Z370RetortByTurn, o.Z370RetortByTurn);
         Pw368ProofErased += o.Pw368ProofErased; Pw368ProofTicks += o.Pw368ProofTicks; Pw368CloakSaved += o.Pw368CloakSaved; Pw368CloakSelf += o.Pw368CloakSelf; Pw368DrawnCloak += o.Pw368DrawnCloak; Pw368DrawnOther += o.Pw368DrawnOther;   // 第368期
         Yoke367TickCut = AddArr(Yoke367TickCut, o.Yoke367TickCut); Yoke367TickLost = AddArr(Yoke367TickLost, o.Yoke367TickLost); Yoke367TickSpared = AddArr(Yoke367TickSpared, o.Yoke367TickSpared); Yoke367TickOver = AddArr(Yoke367TickOver, o.Yoke367TickOver);

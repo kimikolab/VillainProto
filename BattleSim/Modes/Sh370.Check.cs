@@ -41,14 +41,14 @@ static partial class Sh370Diag
 
         // ---- 版の定義 ／ 規定は今どおり ----
         {
-            bool def = UnitCatalog.Guza.Traits.SequenceEqual(new[] { TraitId.Miasma, TraitId.ScatterGather }) && UnitCatalog.Vio.Traits.SequenceEqual(new[] { TraitId.Blightfed, TraitId.BlightCatalyst })
-                && UnitCatalog.Sid.Traits.SequenceEqual(new[] { TraitId.Spew, TraitId.VenomHeavy, TraitId.Numb });
-            bool w = UnitCatalog.GuzaW.Traits.SequenceEqual(UnitCatalog.Guza.Traits.Concat(new[] { TraitId.MiasmaVent, TraitId.MiasmaSplash, TraitId.PoisonProof }))
-                && UnitCatalog.GuzaW3.Traits.SequenceEqual(UnitCatalog.Guza.Traits.Concat(new[] { TraitId.MiasmaVent, TraitId.MiasmaSplash, TraitId.SplashUncapped, TraitId.PoisonProof }))
+            bool def = UnitCatalog.GuzaH371.Traits.SequenceEqual(new[] { TraitId.Miasma, TraitId.ScatterGather }) && UnitCatalog.VioH371.Traits.SequenceEqual(new[] { TraitId.Blightfed, TraitId.BlightCatalyst })
+                && UnitCatalog.SidH371.Traits.SequenceEqual(new[] { TraitId.Spew, TraitId.VenomHeavy, TraitId.Numb });
+            bool w = UnitCatalog.GuzaW.Traits.SequenceEqual(UnitCatalog.GuzaH371.Traits.Concat(new[] { TraitId.MiasmaVent, TraitId.MiasmaSplash, TraitId.PoisonProof }))
+                && UnitCatalog.GuzaW3.Traits.SequenceEqual(UnitCatalog.GuzaH371.Traits.Concat(new[] { TraitId.MiasmaVent, TraitId.MiasmaSplash, TraitId.SplashUncapped, TraitId.PoisonProof }))
                 && UnitCatalog.VioW.Traits.SequenceEqual(new[] { TraitId.Blightfed, TraitId.BlightfedSkipCloak, TraitId.StrikePoison, TraitId.PoisonProof }) && UnitCatalog.VioW.Actions is null
                 && !UnitCatalog.VioW.Traits.Any(t => t is TraitId.BlightCatalyst or TraitId.Spit or TraitId.CatalystSip)
                 && new[] { UnitCatalog.GuzaW, UnitCatalog.GuzaW3, UnitCatalog.VioW }.All(d => !UnitCatalog.All.Contains(d))
-                && !UnitCatalog.All.Any(d => d.Traits.Any(t => t is TraitId.MiasmaSplash or TraitId.SplashUncapped or TraitId.StrikePoison or TraitId.VentOff370 or TraitId.BacklashOff370));
+                && !UnitCatalog.All.Any(d => !IsW5Default372(d) && d.Traits.Any(t => t is TraitId.MiasmaSplash or TraitId.SplashUncapped or TraitId.StrikePoison or TraitId.VentOff370 or TraitId.BacklashOff370));
             Expect("規定のグザ ／ ヴィオ ／ スィドは今どおり・版 W の札（グザ W ＝ 噴き出し ＋ 向きを戻した返り毒 ＋ 毒に強い・W3 は上限なし・ヴィオ W ＝ 吸い ＋ 吸い分け ＋ 攻撃力ぶんの毒 ＋ 毒に強い・ふつうに殴る・触媒 ／ 吐き戻しなし）・`All` に入れない・新しい札の保持者 0 枚", def && w);
         }
 
@@ -129,7 +129,7 @@ static partial class Sh370Diag
             Expect("verbose の有無で勝敗 ／ T ／ 生存数が同じ・同じ seed で同じ結果（6台 × 4版 × 勇者 ／ 近衛 ／ 蝕みなし・seed 0..4）", diff == 0 && det == 0, $"{cells} 戦・verbose の差 {diff}・再現の差 {det}");
             bool noTax = !S366.BossNoTax.Make().Any(u => u.HasTrait(TraitId.VenomTaxSeal)) && EnemyCatalog.BossRegular.Traits.Contains(TraitId.VenomTaxSeal);
             bool cuts = BeniCuts().SelectMany(c => c.F.Occupied()).All(o => !UnitCatalog.All.Contains(o.Def) || o.Def.Traits.All(t => t is not (TraitId.VentOff370 or TraitId.BacklashOff370)))
-                && !UnitCatalog.Everyone.Any(d => d.Traits.Any(t => t is TraitId.VentOff370 or TraitId.BacklashOff370)) && !CompareBuilds().Any(r => Has(r.F, "guza") && r.F.Occupied().Any(o => o.Def.Traits.Contains(TraitId.MiasmaVent)));
+                && !UnitCatalog.Everyone.Any(d => d.Traits.Any(t => t is TraitId.VentOff370 or TraitId.BacklashOff370)) && !CompareBuilds().Select(r => (r.Name, F: Pin371(r.F))).Any(r => Has(r.F, "guza") && r.F.Occupied().Any(o => o.Def.Traits.Contains(TraitId.MiasmaVent)));
             Expect("蝕みなしの勇者 ／ ベニの台の切り分けは器具の中だけ（規定の勇者は蝕みを持つ・切り分けの札の保持者は器具の外に 0 枚）", noTax && cuts);
         }
 
@@ -144,18 +144,11 @@ static partial class Sh370Diag
 
         // ---- 試遊の台 ----
         {
+            // 第372期: 第368〜371期の「版・」の台（RCS 吸い分け ／ W4 ／ W5 ／ W2 席替え ／ W5 席替え ほか）はすべて外した（並びはこの器具の中で組む）。検査は「頭の8台」と「版の台が無い」に。
             var vr = Presets.Versions.Select(r => r.Name).ToArray();
-            // 第371期: 「版・W1 ／ W2 ／ W3」は外した（並びはこの器具の中で `Apply(試遊・毒, 版)` として組む）。検査は「頭の9台」と「W の3台が無い」に。
-            bool rows = vr.Take(9).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒", "版・RCS 吸い分け" })
-                && !vr.Any(n => n is "版・W1 返り毒＋ヴィオ" or "版・W2 三人" or "版・W3 上限なし");
-            Expect("`Presets.Versions` の頭 ＝ 試遊の8台 ＋ 「版・RCS 吸い分け」・第370期の「版・W1 ／ W2 ／ W3」は無い（第371期に外した）", rows, string.Join("、", vr));
-            if (rows)
-            {
-                Formation V(string n) => Presets.Versions.First(r => r.Name == n).F;
-                var play = V("試遊・毒");
-                var f = V("版・RCS 吸い分け"); var want = Apply(play, Vers[1]);
-                Expect("「版・RCS 吸い分け」＝ 試遊・毒の並びで版の駒だけ替えた台", Enumerable.Range(0, 5).All(i => f[i] == want[i]), S307.Seats(play));
-            }
+            bool rows = vr.Take(8).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒" })
+                && !vr.Any(n => n is "版・RCS 吸い分け" or "版・W4 ヴィオ型" or "版・W5 両立" or "版・W2 席替え" or "版・W5 席替え" or "版・W1 返り毒＋ヴィオ" or "版・W2 三人" or "版・W3 上限なし");
+            Expect("`Presets.Versions` の頭 ＝ 試遊の8台・第368〜371期の「版・」の台は無い（第372期に外した）", rows, string.Join("、", vr));
         }
 
         // ---- PickOne ／ Roll ----

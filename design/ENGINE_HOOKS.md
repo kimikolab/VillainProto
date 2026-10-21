@@ -1523,3 +1523,9 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - engine の口は第369期のまま（`_ventLive` の毒の累計・`NoteVentWrite`）。段の閾は保持者ごとに `MiasmaVentTrait.StepsOf(g)`（印 `MiasmaSplash` を持てば 50 ／ 150 ／ 400）で引くように直した。
 - 返り毒の向きを戻す ／ 上限なし ／ 切り分けの印（`MiasmaSplash` ／ `SplashUncapped` ／ `VentOff370` ／ `BacklashOff370`）は `MiasmaVentTrait` の中だけで読む。攻撃力ぶんの毒は `StrikePoisonTrait.OnAfterAttack`（`Def.Attack + AtkBonus`）。
 - 毒の経路 `Strike`（添字 16）を足したので `SoakRouteCount` 17 → 18・`SoakBurnRouteIx` 16 → 17。乱数は足していない。
+
+## 第372期 —— 段0: W5 を規定に ／ ヴィオの連撃の段（Va ／ Vb ／ Vc）（版）
+
+- 段0: engine は変えていない（第368〜370期の口——毒に強い ／ 毒の衣 ／ 吸い分け ／ 噴き出しの累計 ／ 返り毒 ／ 攻撃力ぶんの毒——が規定のグザ ／ ヴィオ ／ スィドで働くようになった）。
+- **連撃（`VioFlurryTrait`・札 `VioFlurryA` ／ `B` ／ `C`）**: 発数は `Trait.ModifyHitCount`（窓口の1本・手番の中だけ）で `max(今の数, 段)`。`SwingTurnHits` は `_vioFlurryLive`（保持者がいる戦）のときだけ札を引き、手番の頭で私有キー `vioFlurryFirst`（1発目の的の `InstanceId + 1`）を 0 に戻し、2発目以降は `NextTarget` の的を `_forcedTarget` に置く（ホタの5連撃の `_burstLock` と同じ口・庇う ／ 標 ／ 挑発を通らない）。1発目の的は札の `OnAfterAttack` が控える。**乱数を引かない**。
+- 計数だけ: `UnitTally.Z372HitsByTurn` ／ `Z372Stage2Turn` ／ `Z372Stage3Turn`。

@@ -45,9 +45,9 @@ static partial class Sh369Diag
     static string Per(long a, long n) => n == 0 ? "—" : F1((double)a / n);
     static string Pct(long a, long n) => n == 0 ? "—" : F1(100.0 * a / n);
     static string Short(UnitDef d) => S307.Short(d);
-    static string Nm(string id) => Short(UnitCatalog.Everyone.Concat(new[] { UnitCatalog.Sid }).First(d => d.Id == id));
+    static string Nm(string id) => Short(UnitCatalog.Everyone.Concat(new[] { UnitCatalog.SidH371 }).First(d => d.Id == id));
     static string Sg(double x) => x.ToString("+0.0;-0.0;±0.0");
-    static Formation Row(string n) => CompareBuilds().First(r => r.Name == n).F;
+    static Formation Row(string n) => Pin371(CompareBuilds().First(r => r.Name == n).F);   // 第372期: 第371期までの規定（グザ ／ ヴィオ ／ スィド）に固定
     static bool Has(Formation f, string id) => f.Occupied().Any(o => o.Def.Id == id);
 
     // ---------------------------------------------------------------------------------
@@ -73,7 +73,7 @@ static partial class Sh369Diag
 
     internal static (string Name, Formation F)[] BoardList() => new (string, Formation)[]
     {
-        ("試遊・毒", Presets.Versions.First(r => r.Name == "試遊・毒").F),
+        ("試遊・毒", Pin371(Presets.Versions.First(r => r.Name == "試遊・毒").F)),
         ("毒特化・集団", Row(S367.BombRow)),
         ("澱み喰い (グザ×ヴィオ)", Row("澱み喰い (グザ×ヴィオ)")),
         ("毒+ベニ+ラウ", Row("毒+ベニ+ラウ")),
@@ -287,7 +287,7 @@ static partial class Sh369Diag
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var v = ver switch { "RCS" => Vers[1], "Z1" => Vers[2], "Z2" => Vers[3], "Z3" => Vers[4], _ => throw new ArgumentException("sh369 compare の版は RCS / Z1 / Z2 / Z3") };
-        var rows = CompareBuilds().ToArray();
+        var rows = CompareBuilds().Select(r => (r.Name, F: Pin371(r.F))).ToArray();   // 第372期: 第371期までの規定に固定
         int nw = EnemyCatalog.Stages.Count, last = nw - 1;
         Func<int, bool> only = ri => new[] { "sid", "guza", "vio" }.Any(id => Has(rows[ri].F, id));
         var b = CGrid(rows, f => f, _ => true);

@@ -9713,6 +9713,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.PoisonProof)) _poisonProofLive = true;   // 第368期（R・毒に強い）
         if (u.HasTrait(TraitId.PoisonCloak)) _cloakLive = true;         // 第368期（RC・毒の衣）
         if (u.HasTrait(TraitId.MiasmaVent)) { _ventLive = true; _ventHolders.Add(u); }   // 第369期（Z・噴き出しの段は敵に書かれた毒の累計を読む・第370期の W も同じ札を持つ）
+        if (u.HasTrait(TraitId.VioFlurryA) || u.HasTrait(TraitId.VioFlurryB) || u.HasTrait(TraitId.VioFlurryC)) _vioFlurryLive = true;   // 第372期（ヴィオの連撃）
         if (CommandTrait.BurstUnit(u) > 0) { _burstLive = true; _burstHolders.Add(u); }   // 第321期（HQ-a ／ HQ-b・溜まったら吐く）
         if (u.HasTrait(TraitId.HisaCover)) _coverHolders.Add(u);       // 第301期（HC・庇い）
         if (CommandTrait.IsRouse(u)) _rouseLive = true;                // 第302期（HB・鼓舞の受け手の計数）
@@ -15277,12 +15278,23 @@ public sealed class BattleContext
         bool burst = _fireLvLive && hits > 1 && actor.HasTrait(TraitId.PyreStage);
         // 第321期（SA+ ／ SA+k）: 溜まった電気が増やした2振り目以降は電気鞭も怖気の判定もない（鞭の枠が `_flurryLater` を読む）。保持者がいなければ比較1つで抜ける。
         bool flurry = _chargeLive && hits > 1 && actor.HasTrait(TraitId.ChargeFlurry);
+        // 第372期（ヴィオの連撃 Va ／ Vb ／ Vc）: 2発目以降の的は札が決める（1発目の的を控える私有キーを手番の頭で 0 に戻す）。保持者がいなければ比較1つで抜ける。
+        VioFlurryTrait? vfl = _vioFlurryLive ? VioFlurryTrait.Of(actor) : null;
+        if (vfl is not null)
+        {
+            actor.SetCounter(VioFlurryTrait.FirstKey, 0);
+            UnitTally vt = TallyOf(actor);
+            (vt.Z372HitsByTurn ??= new long[UnitTally.Z369Len])[Math.Clamp(_turn, 0, UnitTally.Z369Len - 1)] += hits;   // 計数のみ
+            if (hits >= 2 && vt.Z372Stage2Turn == 0) vt.Z372Stage2Turn = Math.Max(1, _turn);
+            if (hits >= 3 && vt.Z372Stage3Turn == 0) vt.Z372Stage3Turn = Math.Max(1, _turn);
+        }
         _burstLock = null;
         for (int i = 0; i < hits; i++)
         {
             if (!actor.IsAlive) break;
             if (i > 0) TallyOf(actor).ExtraSwings++;   // 第178期・**計数専用**
             if (burst && i > 0 && _burstLock is { IsAlive: true } lk) _forcedTarget = lk;
+            if (vfl is not null && i > 0 && vfl.NextTarget(this, actor, i) is { } vt2) _forcedTarget = vt2;   // 第372期
             if (flurry) EmitShockGauge(ShockGaugeLabels.Flurry, actor, actor, i + 1, hits);   // 表示専用（何振り目か）
             if (flurry && i > 0) _flurryLater = actor;
             if (act is null) PerformAttack(actor);
@@ -15477,6 +15489,8 @@ public sealed class BattleContext
     bool _poisonProofLive, _cloakLive;
     /// <summary>第369期: 噴き出し（`MiasmaVent`）の保持者がいる戦か ／ 保持者 ／ 陣営ごとの「書かれた毒の層」の累計（保持者がいなければ数えない）。</summary>
     bool _ventLive;
+    /// <summary>第372期: ヴィオの連撃の札の保持者がいる戦か（いなければ `SwingTurnHits` は比較1つで抜ける）。</summary>
+    bool _vioFlurryLive;
     readonly List<UnitState> _ventHolders = new();
     readonly int[] _poisonToTeam = new int[2];
     /// <summary>第369期: この戦で陣営 <paramref name="team"/> の駒に書かれた毒の層の累計（`Poison` の窓口を通った分・滲み ／ 毒を招く込み）。噴き出しの保持者がいない戦では 0。</summary>

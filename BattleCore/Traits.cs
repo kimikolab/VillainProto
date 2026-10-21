@@ -947,6 +947,10 @@ public enum TraitId
     StrikePoison,         // 攻撃力ぶんの毒（W・ヴィオ）: 手番の攻撃が当たった敵に、その攻撃力（素の値 ＋ 上昇分・増減の前）と同じだけ毒を乗せる（毒は窓口を通す・軛に切られない）（`StrikePoisonTrait`）
     VentOff370,           // 噴き出しを止める（第370期 §4-1 の切り分け・器具の中だけ）（**札そのものは挙動を持たない**・`MiasmaVentTrait`）
     BacklashOff370,       // 返り毒を止める（第370期 §4-1 の切り分け・器具の中だけ）（**札そのものは挙動を持たない**・`MiasmaVentTrait`）
+    // --- 第372期で足した札（指示書 design/PHASE372_VIO_FLURRY_SPEC.md §3）。ヴィオの連撃の段（規定のヴィオ ＋ 札1枚）。保持者 0 枚 ---
+    VioFlurryA,           // 連撃・散らす（Va・ヴィオ）: 手番の頭の攻撃力（素の値 ＋ 上昇分）が 50 以上で2連撃 ／ 150 以上で3連撃。2発目からは別の敵（1発目の的を除いて席番号の小さい順・足りなければ1発目の的へ戻る）（`VioFlurryTrait`・的は engine の `SwingTurnHits`）
+    VioFlurryB,           // 連撃・散らす・高い段（Vb・ヴィオ）: 100 以上で2連撃 ／ 300 以上で3連撃・的は Va と同じ（`VioFlurryTrait`）
+    VioFlurryC,           // 連撃・集中（Vc・ヴィオ）: 50 以上で2連撃 ／ 150 以上で3連撃・2発目からも1発目と同じ敵（倒れていたら席番号の最も小さい生きている敵）（`VioFlurryTrait`）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -13350,6 +13354,60 @@ public sealed class MiasmaVentTrait : Trait
 /// その攻撃力（素の値 ＋ 上昇分 ＝ <c>Def.Attack + AtkBonus</c>・萎縮や軛などの増減の前）と同じだけ毒を乗せる。毒は窓口（<see cref="PoisonRoute.Strike"/>）を通す——
 /// 一撃のダメージは軛に切られても、乗せる毒は切られない。号令などの攻撃力の上昇もそのまま毒の量になる。<b>乱数を引かない。</b>
 /// </summary>
+/// <summary>
+/// 連撃の段（第372期・ヴィオの版 Va ／ Vb ／ Vc・指示書 design/PHASE372_VIO_FLURRY_SPEC.md §3-1）。手番の頭の攻撃力（素の値 ＋ 上昇分 ＝ <c>Def.Attack + AtkBonus</c>）が
+/// <c>T2</c> 以上で2連撃 ／ <c>T3</c> 以上で3連撃（<see cref="Trait.ModifyHitCount"/>・手番の中で1回だけ問われる ＝ 段は手番の頭で決まる）。
+/// 2発目以降の的は engine の <c>SwingTurnHits</c> が <see cref="NextTarget"/> で決めて「的の固定」に渡す。1発目の的はこの札の <see cref="OnAfterAttack"/> が控える
+/// （主目標・その手番の最初の1回だけ・私有キー <see cref="FirstKey"/>）。各発は通常の一撃（ダメージ ＋ 攻撃力ぶんの毒・攻撃1回ごとの札も1発ごと）。<b>乱数を引かない。</b>
+/// </summary>
+public sealed class VioFlurryTrait : Trait
+{
+    readonly TraitId _id;
+    public readonly int T2, T3;
+    public readonly bool Scatter;
+    public VioFlurryTrait(TraitId id, int t2, int t3, bool scatter) { _id = id; T2 = t2; T3 = t3; Scatter = scatter; }
+    public override TraitId Id => _id;
+
+    /// <summary>その手番の1発目の主目標の <c>InstanceId + 1</c>（0 は未設定・`SwingTurnHits` が手番の頭で 0 に戻す）。</summary>
+    public const string FirstKey = "vioFlurryFirst";
+
+    /// <summary>この駒の連撃の札（無ければ null）。</summary>
+    public static VioFlurryTrait? Of(UnitState u) => u.Traits.OfType<VioFlurryTrait>().FirstOrDefault();
+
+    /// <summary>攻撃力 <paramref name="atk"/> のときの撃つ数（1〜3）。</summary>
+    public int HitsAt(int atk) => atk >= T3 ? 3 : atk >= T2 ? 2 : 1;
+
+    public override int ModifyHitCount(UnitState self, int hits) => Math.Max(hits, HitsAt(self.Def.Attack + self.AtkBonus));
+
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+    {
+        if (target.TeamId == self.TeamId || self.RawCounter(FirstKey) != 0) return;
+        self.SetCounter(FirstKey, target.InstanceId + 1);
+    }
+
+    /// <summary>
+    /// <paramref name="swing"/> 発目（1 始まり・1 以上）の的。散らす: 1発目の的を除いた生きている敵を席番号の小さい順に（足りなければ1発目の的・それも倒れていれば席番号の最も小さい生きている敵）。
+    /// 集中: 1発目の的（倒れていれば席番号の最も小さい生きている敵）。1発目の的が控えられていなければ null（通常の標的選択）。<b>乱数を引かない。</b>
+    /// </summary>
+    public UnitState? NextTarget(BattleContext ctx, UnitState self, int swing)
+    {
+        int first = self.RawCounter(FirstKey) - 1;
+        if (first < 0) return null;
+        var foes = ctx.LivingMembers(ctx.Opponent(self.TeamId)).OrderBy(u => u.Slot).ToList();
+        if (foes.Count == 0) return null;
+        UnitState? firstFoe = foes.FirstOrDefault(u => u.InstanceId == first);
+        if (Scatter)
+        {
+            var others = foes.Where(u => u.InstanceId != first).ToList();
+            if (swing - 1 < others.Count) return others[swing - 1];
+        }
+        return firstFoe ?? foes[0];
+    }
+
+    /// <summary>連撃の印の記憶は戦闘ごとに捨てる（`InstanceId` を持つ）。</summary>
+    public override void OnCarryOver(UnitState self) => self.SetCounter(FirstKey, 0);
+}
+
 public sealed class StrikePoisonTrait : Trait
 {
     public override TraitId Id => TraitId.StrikePoison;
@@ -18906,6 +18964,9 @@ public static class TraitCatalog
         new StrikePoisonTrait(),                          // 第370期（攻撃力ぶんの毒 W・ヴィオ）
         new MarkOnlyTrait(TraitId.VentOff370),            // 第370期（切り分け・噴き出しを止める・印だけ）
         new MarkOnlyTrait(TraitId.BacklashOff370),        // 第370期（切り分け・返り毒を止める・印だけ）
+        new VioFlurryTrait(TraitId.VioFlurryA, 50, 150, scatter: true),    // 第372期（連撃・散らす Va）
+        new VioFlurryTrait(TraitId.VioFlurryB, 100, 300, scatter: true),   // 第372期（連撃・散らす・高い段 Vb）
+        new VioFlurryTrait(TraitId.VioFlurryC, 50, 150, scatter: false),   // 第372期（連撃・集中 Vc）
         new EruptTrait(),      // 第180期
         new SmearTrait(),      // 第180期
         new SpitTrait(),       // 第180期

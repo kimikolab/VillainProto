@@ -41,10 +41,10 @@ static partial class Sh371Diag
 
         // ---- 版の定義 ／ 規定は今どおり ----
         {
-            bool def = UnitCatalog.Guza.Traits.SequenceEqual(new[] { TraitId.Miasma, TraitId.ScatterGather }) && UnitCatalog.Vio.Traits.SequenceEqual(new[] { TraitId.Blightfed, TraitId.BlightCatalyst })
-                && UnitCatalog.Sid.Traits.SequenceEqual(new[] { TraitId.Spew, TraitId.VenomHeavy, TraitId.Numb });
+            bool def = UnitCatalog.GuzaH371.Traits.SequenceEqual(new[] { TraitId.Miasma, TraitId.ScatterGather }) && UnitCatalog.VioH371.Traits.SequenceEqual(new[] { TraitId.Blightfed, TraitId.BlightCatalyst })
+                && UnitCatalog.SidH371.Traits.SequenceEqual(new[] { TraitId.Spew, TraitId.VenomHeavy, TraitId.Numb });
             bool y = UnitCatalog.SidY.Traits.SequenceEqual(new[] { TraitId.Spew, TraitId.PoisonProof, TraitId.PoisonCloak, TraitId.CloakRetort, TraitId.Numb })
-                && UnitCatalog.SidY.Actions is { Count: 1 } a && a[0].Kind == ActionKind.Skill && UnitCatalog.SidY.Id == UnitCatalog.Sid.Id && UnitCatalog.SidY.MaxHp == UnitCatalog.Sid.MaxHp
+                && UnitCatalog.SidY.Actions is { Count: 1 } a && a[0].Kind == ActionKind.Skill && UnitCatalog.SidY.Id == UnitCatalog.SidH371.Id && UnitCatalog.SidY.MaxHp == UnitCatalog.SidH371.MaxHp
                 && !UnitCatalog.SidY.Traits.Any(t => t is TraitId.PoisonShoulder or TraitId.VenomHeavy) && !UnitCatalog.All.Contains(UnitCatalog.SidY);
             bool w = Vers[3].Guza == UnitCatalog.GuzaW3 && Vers[3].Vio == UnitCatalog.VioW && Vers[3].Sid == UnitCatalog.SidR && Vers[4].Guza == UnitCatalog.GuzaW3 && Vers[4].Sid == UnitCatalog.SidY;
             Expect("規定のグザ ／ ヴィオ ／ スィドは今どおり・スィド Y の札（吐く ＋ 毒に強い ＋ 衣 ＋ 返し ＋ 痺れ毒・引き受け ／ 毒撃 +8 なし・手番は `Skill`）・W4 ＝ グザ W ＋ 上限なし ＋ ヴィオ W ＋ スィド R・W5 ＝ W4 のスィドを Y に", def && y && w);
@@ -93,7 +93,7 @@ static partial class Sh371Diag
                         }
             Expect("verbose の有無で勝敗 ／ T ／ 生存数が同じ・同じ seed で同じ結果（5台 × W4 ／ W5 × 勇者 ／ 近衛 ／ 蝕みなし・seed 0..4）", diff == 0 && det == 0, $"{cells} 戦・verbose の差 {diff}・再現の差 {det}");
             bool noTax = !S366.BossNoTax.Make().Any(u => u.HasTrait(TraitId.VenomTaxSeal)) && EnemyCatalog.BossRegular.Traits.Contains(TraitId.VenomTaxSeal);
-            bool seats = Perms().Count() == 120 && Perms().Select(p => string.Join(",", p)).Distinct().Count() == 120 && !CompareBuilds().Any(r => r.F.Occupied().Any(o => o.Def == UnitCatalog.SidY));
+            bool seats = Perms().Count() == 120 && Perms().Select(p => string.Join(",", p)).Distinct().Count() == 120 && !CompareBuilds().Select(r => (r.Name, F: Pin371(r.F))).Any(r => r.F.Occupied().Any(o => o.Def == UnitCatalog.SidY));
             Expect("蝕みなしの勇者 ／ 席の並べ替え（120 通り・重なりなし）は器具の中だけ", noTax && seats);
         }
 
@@ -104,31 +104,13 @@ static partial class Sh371Diag
             Expect("`checkup` の札の表に W4 ／ W5 の駒の札がそろっている（この期に足した札は無い・ソースを読んで確かめる）", missing.Count == 0, missing.Count == 0 ? "そろっている" : "無い: " + string.Join("・", missing));
         }
 
-        // ---- 試遊の台（席替えの台は席の確かめの1位） ----
+        // ---- 試遊の台 ----
         {
+            // 第372期: 第368〜371期の「版・」の台（RCS 吸い分け ／ W4 ／ W5 ／ W2 席替え ／ W5 席替え ほか）はすべて外した（並びはこの器具の中で組む）。検査は「頭の8台」と「版の台が無い」に。
             var vr = Presets.Versions.Select(r => r.Name).ToArray();
-            bool rows = vr.SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒", "版・RCS 吸い分け", "版・W4 ヴィオ型", "版・W5 両立", "版・W2 席替え", "版・W5 席替え" });
-            Expect("`Presets.Versions` ＝ 試遊の8台 ＋ 「版・RCS 吸い分け」＋ 「版・W4 ／ W5 ／ W2 席替え ／ W5 席替え」（「版・W1 ／ W2 ／ W3」は外した）", rows, string.Join("、", vr));
-            if (rows)
-            {
-                Formation V(string n) => Presets.Versions.First(r => r.Name == n).F;
-                var play = V("試遊・毒");
-                bool same(Formation a, Formation b) => Enumerable.Range(0, 5).All(i => a[i] == b[i]);
-                bool ok = same(V("版・W4 ヴィオ型"), Apply(play, Vers[3])) && same(V("版・W5 両立"), Apply(play, Vers[4]));
-                // 席替えの台 ＝ 席の確かめの1位（蝕みなし → 倒しT → ボス → 倒しT の順・seed 0..19）を組み直して比べる
-                var perms = Perms().ToArray();
-                double TOf(S370.Agg a) => a.Wins == 0 ? 99 : (double)a.WinT / a.Wins;
-                int Top(S370.Ver v)
-                {
-                    var r = new S370.Agg[perms.Length, 2];
-                    Parallel.For(0, perms.Length * 2, k => r[k / 2, k % 2] = S370.Measure(Seat(perms[k / 2], v), k % 2 == 0 ? I.Boss : S366.BossNoTax, SeatSeeds));
-                    return Enumerable.Range(0, perms.Length).OrderByDescending(pi => r[pi, 1].Win).ThenBy(pi => TOf(r[pi, 1])).ThenByDescending(pi => r[pi, 0].Win).ThenBy(pi => TOf(r[pi, 0])).First();
-                }
-                int t2 = Top(Vers[2]), t5 = Top(Vers[4]);
-                bool seat = same(V("版・W2 席替え"), Seat(perms[t2], Vers[2])) && same(V("版・W5 席替え"), Seat(perms[t5], Vers[4]));
-                Expect("「版・W4 ／ W5」＝ 試遊・毒の並びで版の駒だけ替えた台・「版・W2 ／ W5 席替え」＝ 席の確かめの1位（組み直して同じ）", ok && seat,
-                    $"W2 の1位 {S307.Seats(Seat(perms[t2], Vers[0]))}・W5 の1位 {S307.Seats(Seat(perms[t5], Vers[0]))}");
-            }
+            bool rows = vr.Take(8).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒" })
+                && !vr.Any(n => n is "版・RCS 吸い分け" or "版・W4 ヴィオ型" or "版・W5 両立" or "版・W2 席替え" or "版・W5 席替え" or "版・W1 返り毒＋ヴィオ" or "版・W2 三人" or "版・W3 上限なし");
+            Expect("`Presets.Versions` の頭 ＝ 試遊の8台・第368〜371期の「版・」の台は無い（第372期に外した）", rows, string.Join("、", vr));
         }
 
         // ---- PickOne ／ Roll ----

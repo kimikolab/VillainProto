@@ -47,7 +47,7 @@ static partial class Sh368Diag
     static string Short(UnitDef d) => S307.Short(d);
     static string Nm(string id) => Short(UnitCatalog.Everyone.First(d => d.Id == id));
     static string Sg(double x) => x.ToString("+0.0;-0.0;±0.0");
-    static Formation Row(string n) => CompareBuilds().First(r => r.Name == n).F;
+    static Formation Row(string n) => Pin371(CompareBuilds().First(r => r.Name == n).F);   // 第372期: 第371期までの規定（グザ ／ ヴィオ ／ スィド）に固定
     static bool Has(Formation f, string id) => f.Occupied().Any(o => o.Def.Id == id);
 
     // ---------------------------------------------------------------------------------
@@ -73,7 +73,7 @@ static partial class Sh368Diag
     /// <summary>§3-3 の6台（駒はいまの規定 ＝ 段0 の後）。反転の確かめの2台はベニのいる行。</summary>
     internal static (string Name, Formation F)[] BoardList() => new (string, Formation)[]
     {
-        ("試遊・毒", Presets.Versions.First(r => r.Name == "試遊・毒").F),
+        ("試遊・毒", Pin371(Presets.Versions.First(r => r.Name == "試遊・毒").F)),
         ("毒特化・集団", Row(S367.BombRow)),
         ("澱み喰い (グザ×ヴィオ)", Row("澱み喰い (グザ×ヴィオ)")),
         ("毒 (グザ×ミオ×ラウ)", Row("毒 (グザ×ミオ×ラウ)")),
@@ -315,7 +315,7 @@ static partial class Sh368Diag
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var v = ver switch { "R" => Vers[1], "RC" => Vers[2], "RCS" => Vers[3], _ => throw new ArgumentException("sh368 compare の版は R / RC / RCS") };
-        var rows = CompareBuilds().ToArray();
+        var rows = CompareBuilds().Select(r => (r.Name, F: Pin371(r.F))).ToArray();   // 第372期: 第371期までの規定に固定
         int nw = EnemyCatalog.Stages.Count, last = nw - 1;
         Func<int, bool> only = ri => Trio.Any(id => Has(rows[ri].F, id));
         var b = CGrid(rows, f => f, _ => true);

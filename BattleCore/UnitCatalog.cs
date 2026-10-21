@@ -547,7 +547,8 @@ public static class UnitCatalog
     /// <summary>S+HP の版（第196期・<b>診断だけ</b>）のスィドの最大HP。規定の版は 84 のまま。</summary>
     public const int SidHardyHp = 100;
 
-    public static readonly UnitDef Sid = new()
+    /// <summary>旧スィド（第202〜371期の規定・吐く ＋ 毒撃 +8 ＋ 痺れ毒）。<b>第372期に W5 のスィド（第371期の Y）を規定にしたので、名前を付けて残した</b>（`All` に入れない・第371期までの器具は `Common.Pin371` ／ 古い口の終端でこれに固定する）。</summary>
+    public static readonly UnitDef SidH371 = new()
     {
         Id = "sid",
         Name = "毒吐きのスィド",
@@ -566,6 +567,19 @@ public static class UnitCatalog
         PlusText = "手番で、まだ毒を浴びていない一番手強い敵に毒を吐きかける。殴ってきた相手には濃い毒を浴びせる / スィドの毒を浴びた敵は、毒が深いほど手が鈍る（最大6割）",
         MinusText = "殴られると、隣接する味方にも毒が漏れる / 自分では攻撃しない",
         Flavor = "袋が破れるまで役に立たない。誰も隣に立ちたがらない。"
+    };
+
+    /// <summary>
+    /// 毒吐きのスィド（規定）。<b>第372期に W5 のスィド（第371期の `SidY`）を規定にした</b>（ポンの判断・design/PHASE372_VIO_FLURRY_SPEC.md §2）——
+    /// 手番は「毒を吐きかける」（`Spew`）・毒に強い・毒の衣（層 × 3%・最大 60%）・衣の返し（殴られると +2 の後に殴ってきた敵へ層と同じだけ・隣へ +1 の漏れ）・痺れ毒。毒撃 +8（`VenomHeavy`）は持たない。
+    /// </summary>
+    public static readonly UnitDef Sid = new()
+    {
+        Id = SidH371.Id, Name = SidH371.Name, MaxHp = SidH371.MaxHp, Attack = SidH371.Attack, Speed = SidH371.Speed, Advances = SidH371.Advances, Pattern = SidH371.Pattern, Actions = SidH371.Actions,
+        Traits = new[] { TraitId.Spew, TraitId.PoisonProof, TraitId.PoisonCloak, TraitId.CloakRetort, TraitId.Numb },
+        PlusText = "手番で、まだ毒を浴びていない一番手強い敵に毒を吐きかける。殴られると自分も毒をまとい、まとった毒が深いほど受ける傷が減る（最大6割）。殴ってきた敵にはまとった毒と同じだけ浴びせる。毒に蝕まれない",
+        MinusText = "殴られると隣の仲間にも毒が漏れる",
+        Flavor = SidH371.Flavor,
     };
 
     // 第363期: 第362期までの規定のカドは `KadoH362` の名前で残した（定義は1文字も変えていない）。規定の `Kado` は第362期の KD-r で、すぐ下に作った。
@@ -1336,12 +1350,26 @@ public static class UnitCatalog
         Flavor = "近くにいるだけで具合が悪くなるので、天幕にすら入れてもらえない。"
     };
 
-    /// <summary>瘴気袋のグザ（規定）。<b>第368期に G（集まる瘴気）を規定にした</b>（ポンの判断）——第1〜367期の規定（<see cref="GuzaH367"/>）＋ 集まる全体（<see cref="TraitId.ScatterGather"/>・瘴気の敵1体あたりの層 ＝ 2 × max(1, 5 ÷ 生きている敵の数)）。札と文面は第367期の版 G（<see cref="GuzaG"/>）と同じ。</summary>
-    public static readonly UnitDef Guza = new()
+    /// <summary>旧グザ（第368〜371期の規定・G 集まる瘴気）。<b>第372期に W5 のグザ（第370期の `GuzaW3`）を規定にしたので、名前を付けて残した</b>（`All` に入れない・第371期までの器具は `Common.Pin371` でこれに固定する）。
+    /// 第368期に G（集まる瘴気）を規定にした（ポンの判断）——第1〜367期の規定（<see cref="GuzaH367"/>）＋ 集まる全体（<see cref="TraitId.ScatterGather"/>・瘴気の敵1体あたりの層 ＝ 2 × max(1, 5 ÷ 生きている敵の数)）。札と文面は第367期の版 G（<see cref="GuzaG"/>）と同じ。</summary>
+    public static readonly UnitDef GuzaH371 = new()
     {
         Id = GuzaH367.Id, Name = GuzaH367.Name, MaxHp = GuzaH367.MaxHp, Attack = GuzaH367.Attack, Speed = GuzaH367.Speed, Advances = GuzaH367.Advances, Pattern = GuzaH367.Pattern, Actions = GuzaH367.Actions,
         Traits = GuzaH367.Traits.Append(TraitId.ScatterGather).ToArray(),
         PlusText = "毎ターン、敵全体へ薄く毒を撒く。敵が少ないほど、一体に濃く集まる", MinusText = GuzaH367.MinusText, Flavor = GuzaH367.Flavor,
+    };
+
+    /// <summary>
+    /// 瘴気袋のグザ（規定）。<b>第372期に W5 のグザ（第370期の `GuzaW3`）を規定にした</b>（ポンの判断・design/PHASE372_VIO_FLURRY_SPEC.md §2）——
+    /// 手番は集まる瘴気・ターンの頭に噴き出し（`MiasmaVent`・ランダムな敵 ／ 味方・段 0〜3）・段の閾 50 ／ 150 ／ 400・返り毒（`MiasmaSplash` ＋ 上限なし `SplashUncapped`：毒を持つ敵が味方を殴ると、その敵の毒の 1 割が殴られた味方に跳ねる）・毒に強い。味方全体への漏れは無い。
+    /// </summary>
+    public static readonly UnitDef Guza = new()
+    {
+        Id = GuzaH371.Id, Name = GuzaH371.Name, MaxHp = GuzaH371.MaxHp, Attack = GuzaH371.Attack, Speed = GuzaH371.Speed, Advances = GuzaH371.Advances, Pattern = GuzaH371.Pattern, Actions = GuzaH371.Actions,
+        Traits = GuzaH371.Traits.Concat(new[] { TraitId.MiasmaVent, TraitId.MiasmaSplash, TraitId.SplashUncapped, TraitId.PoisonProof }).ToArray(),
+        PlusText = "手番で、敵全体へ瘴気を撒く（敵が少ないほど濃い）。毒に侵された敵が仲間を殴ると、その毒の1割が仲間に跳ねる。毒に蝕まれない",
+        MinusText = "袋の口がゆるく、毎ターンのはじめに瘴気が噴き出して、敵味方の誰かに毒が付く。敵が毒に染まるほど瘴気は濃くなり、噴き出す相手も増える",
+        Flavor = GuzaH371.Flavor,
     };
 
     /// <summary>
@@ -1660,8 +1688,9 @@ public static class UnitCatalog
         Flavor = "仲間の膿を舐めて回る。治るのは事実だが、誰も礼を言わない。"
     };
 
-    /// <summary>澱み喰いのヴィオ（規定）。<b>第368期に V（触媒）を規定にした</b>（ポンの判断）——吐き戻し（`Spit`）を触媒（<see cref="TraitId.BlightCatalyst"/>）に置き換え、手番は触媒（攻撃しない）。札と文面は第367期の版 V（<see cref="VioV"/>）と同じ。</summary>
-    public static readonly UnitDef Vio = new()
+    /// <summary>旧ヴィオ（第368〜371期の規定・V 触媒）。<b>第372期に W5 のヴィオ（第370期の `VioW`）を規定にしたので、名前を付けて残した</b>（`All` に入れない・第371期までの器具は `Common.Pin371` でこれに固定する）。
+    /// 第368期に V（触媒）を規定にした（ポンの判断）——吐き戻し（`Spit`）を触媒（<see cref="TraitId.BlightCatalyst"/>）に置き換え、手番は触媒（攻撃しない）。札と文面は第367期の版 V（<see cref="VioV"/>）と同じ。</summary>
+    public static readonly UnitDef VioH371 = new()
     {
         Id = VioH367.Id, Name = VioH367.Name, MaxHp = VioH367.MaxHp, Attack = VioH367.Attack, Speed = VioH367.Speed, Advances = VioH367.Advances, Pattern = VioH367.Pattern,
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "触媒") },
@@ -1669,6 +1698,19 @@ public static class UnitCatalog
         PlusText = "味方が負った毒を吸い取って腹に溜める。手番で、最も毒の深い敵の毒を倍にし、溜めた毒もすべて注ぎ込む",
         MinusText = "自分では攻撃しない。味方が汚れていなければ注ぐ毒が足りない",
         Flavor = VioH367.Flavor,
+    };
+
+    /// <summary>
+    /// 澱み喰いのヴィオ（規定）。<b>第372期に W5 のヴィオ（第370期の `VioW`）を規定にした</b>（ポンの判断・design/PHASE372_VIO_FLURRY_SPEC.md §2）——
+    /// ターンの頭に味方の毒を吸い 1層につき攻撃力 +4（澱み喰い・毒の衣の持ち主からは吸わない ＝ 吸い分け）・殴った敵に攻撃力ぶんの毒（`StrikePoison`・軛に切られない）・毒に強い。ふつうに殴る（触媒 ／ 吐き戻しは無い）。
+    /// </summary>
+    public static readonly UnitDef Vio = new()
+    {
+        Id = VioH371.Id, Name = VioH371.Name, MaxHp = VioH371.MaxHp, Attack = VioH371.Attack, Speed = VioH371.Speed, Advances = VioH371.Advances, Pattern = VioH371.Pattern,
+        Traits = new[] { TraitId.Blightfed, TraitId.BlightfedSkipCloak, TraitId.StrikePoison, TraitId.PoisonProof },
+        PlusText = "仲間が負った毒を吸い取り（毒をまとう仲間からは吸わない）、その層の分だけ攻撃力が上がる。攻撃した敵に、攻撃力と同じだけ毒を乗せる。毒に蝕まれない",
+        MinusText = "仲間が汚れていなければ、ただの穀潰し",
+        Flavor = VioH371.Flavor,
     };
 
     public static readonly UnitDef Yomi = new()
@@ -6849,6 +6891,7 @@ public static class UnitCatalog
     /// <summary>ヒサの叫びの句（H1 の括弧書きはこの直後に足す）。</summary>
     public const string HisaShoutClause367 = "攻撃した味方と最も傷ついた味方を癒す";
 
+    // 第372期: 規定のグザ ／ ヴィオ ／ スィドが W5 になったので、第368〜371期の版は第371期までの規定（`GuzaH371` ／ `VioH371` ／ `SidH371`）から作る（その期の数字を保つ）。
     // 第368期【軽い期】本体（指示書 design/PHASE368_POISON_WARD_SPEC.md §3-2）。毒特化の耐久の版（規定のスィド ／ グザ ／ ヴィオの上に札）。どれも `All` に入れない・採否はポン。文面は叩き台。
     const string ProofClause368 = "。毒に蝕まれない";
     static UnitDef Ward368(UnitDef d, TraitId[] cards, string plusTail) => new()
@@ -6857,46 +6900,46 @@ public static class UnitCatalog
         Traits = d.Traits.Concat(cards).ToArray(), PlusText = d.PlusText + plusTail, MinusText = d.MinusText, Flavor = d.Flavor,
     };
     /// <summary>スィド・R: 規定 ＋ 毒に強い（`PoisonProof`）。</summary>
-    public static readonly UnitDef SidR = Ward368(Sid, new[] { TraitId.PoisonProof }, ProofClause368);
+    public static readonly UnitDef SidR = Ward368(SidH371, new[] { TraitId.PoisonProof }, ProofClause368);
     /// <summary>スィド・RC: 規定 ＋ 毒に強い ＋ 毒の衣（`PoisonCloak`）。</summary>
-    public static readonly UnitDef SidRC = Ward368(Sid, new[] { TraitId.PoisonProof, TraitId.PoisonCloak }, ProofClause368 + "。殴られると自分も毒をまとい、まとった毒が深いほど受ける傷が減る（最大6割）");
+    public static readonly UnitDef SidRC = Ward368(SidH371, new[] { TraitId.PoisonProof, TraitId.PoisonCloak }, ProofClause368 + "。殴られると自分も毒をまとい、まとった毒が深いほど受ける傷が減る（最大6割）");
     /// <summary>グザ・R: 規定（G）＋ 毒に強い。</summary>
-    public static readonly UnitDef GuzaR = Ward368(Guza, new[] { TraitId.PoisonProof }, ProofClause368);
+    public static readonly UnitDef GuzaR = Ward368(GuzaH371, new[] { TraitId.PoisonProof }, ProofClause368);
     /// <summary>ヴィオ・R: 規定（V）＋ 毒に強い。</summary>
-    public static readonly UnitDef VioR = Ward368(Vio, new[] { TraitId.PoisonProof }, ProofClause368);
+    public static readonly UnitDef VioR = Ward368(VioH371, new[] { TraitId.PoisonProof }, ProofClause368);
     /// <summary>ヴィオ・RCS: 規定（V）＋ 毒に強い ＋ 吸い分け（`BlightfedSkipCloak`・毒の衣を持つ味方からは吸わない）。</summary>
-    public static readonly UnitDef VioRCS = Ward368(Vio, new[] { TraitId.PoisonProof, TraitId.BlightfedSkipCloak }, ProofClause368 + "。毒をまとう味方からは吸わない");
+    public static readonly UnitDef VioRCS = Ward368(VioH371, new[] { TraitId.PoisonProof, TraitId.BlightfedSkipCloak }, ProofClause368 + "。毒をまとう味方からは吸わない");
 
     // 第369期【軽い期】（指示書 design/PHASE369_POISON_LOOP_SPEC.md §2）。毒軸のループ——グザの転生（噴き出し ＋ 段 ＋ 返り毒）にヴィオ ／ スィドを合わせる版。
     // 3枚とも毒に強い（`PoisonProof`）。どれも `All` に入れない・採否はポン。文面は叩き台。
     /// <summary>グザ・Z: 手番は今のまま（集まる瘴気）＋ 噴き出し ／ 段 ／ 返り毒（`MiasmaVent`・味方全体への漏れは外す）＋ 毒に強い。</summary>
     public static readonly UnitDef GuzaZ = new()
     {
-        Id = Guza.Id, Name = Guza.Name, MaxHp = Guza.MaxHp, Attack = Guza.Attack, Speed = Guza.Speed, Advances = Guza.Advances, Pattern = Guza.Pattern, Actions = Guza.Actions,
-        Traits = Guza.Traits.Append(TraitId.MiasmaVent).Append(TraitId.PoisonProof).ToArray(),
+        Id = GuzaH371.Id, Name = GuzaH371.Name, MaxHp = GuzaH371.MaxHp, Attack = GuzaH371.Attack, Speed = GuzaH371.Speed, Advances = GuzaH371.Advances, Pattern = GuzaH371.Pattern, Actions = GuzaH371.Actions,
+        Traits = GuzaH371.Traits.Append(TraitId.MiasmaVent).Append(TraitId.PoisonProof).ToArray(),
         PlusText = "手番で、敵全体へ瘴気を撒く（敵が少ないほど濃い）。瘴気を浴びた仲間が殴られると、その毒の半分が殴った敵へ移る。毒に蝕まれない",
         MinusText = "袋の口がゆるく、毎ターンのはじめに瘴気が噴き出して、敵味方の誰かに毒が付く。敵が毒に染まるほど瘴気は濃くなり、噴き出す相手も増える",
-        Flavor = Guza.Flavor,
+        Flavor = GuzaH371.Flavor,
     };
     /// <summary>ヴィオ・Z: 啜って注ぐ（`CatalystSip`・手番で味方の毒を啜り、最も深い敵を倍にして注ぐ・ターンの頭には吸わない）＋ 毒に強い。殴らない。</summary>
     public static readonly UnitDef VioZ = new()
     {
-        Id = Vio.Id, Name = Vio.Name, MaxHp = Vio.MaxHp, Attack = Vio.Attack, Speed = Vio.Speed, Advances = Vio.Advances, Pattern = Vio.Pattern,
+        Id = VioH371.Id, Name = VioH371.Name, MaxHp = VioH371.MaxHp, Attack = VioH371.Attack, Speed = VioH371.Speed, Advances = VioH371.Advances, Pattern = VioH371.Pattern,
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "啜って注ぐ") },
         Traits = new[] { TraitId.CatalystSip, TraitId.PoisonProof },
         PlusText = "手番で、仲間に残った毒を啜り、最も毒の深い敵の毒を倍にして、啜った毒も注ぎ込む。毒に蝕まれない",
         MinusText = "自分では攻撃しない。仲間が汚れていなければ注ぐ毒が無い",
-        Flavor = Vio.Flavor,
+        Flavor = VioH371.Flavor,
     };
     /// <summary>スィド・Z: 毒を引き受ける（`PoisonShoulder`・手番）＋ 毒に強い ＋ 毒の衣 ＋ 衣の返し（`CloakRetort`・吐く ／ 毒撃 +8 と置き換える）＋ 痺れ毒。</summary>
     public static readonly UnitDef SidZ = new()
     {
-        Id = Sid.Id, Name = Sid.Name, MaxHp = Sid.MaxHp, Attack = Sid.Attack, Speed = Sid.Speed, Advances = Sid.Advances, Pattern = Sid.Pattern,
+        Id = SidH371.Id, Name = SidH371.Name, MaxHp = SidH371.MaxHp, Attack = SidH371.Attack, Speed = SidH371.Speed, Advances = SidH371.Advances, Pattern = SidH371.Pattern,
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "毒を引き受ける") },
         Traits = new[] { TraitId.PoisonShoulder, TraitId.PoisonProof, TraitId.PoisonCloak, TraitId.CloakRetort, TraitId.Numb },
         PlusText = "手番で、隣の仲間の毒を引き受けてまとう。まとった毒が深いほど受ける傷が減り（最大6割）、殴ってきた敵にはまとった毒と同じだけ浴びせる。毒に蝕まれない",
         MinusText = "自分からは毒を吐かない。殴られると隣の仲間にも毒が漏れる",
-        Flavor = Sid.Flavor,
+        Flavor = SidH371.Flavor,
     };
 
     // 第370期【軽い期】（指示書 design/PHASE370_POISON_SPLASH_SPEC.md §2）。毒軸のループ②——返り毒の向きを戻す（敵の毒が味方に跳ねる）／ ヴィオは吸って攻撃力 → 攻撃力ぶんの毒。
@@ -6907,32 +6950,45 @@ public static class UnitCatalog
     public static readonly UnitDef GuzaW3 = GuzaW370(new[] { TraitId.MiasmaSplash, TraitId.SplashUncapped });
     static UnitDef GuzaW370(TraitId[] cards) => new()
     {
-        Id = Guza.Id, Name = Guza.Name, MaxHp = Guza.MaxHp, Attack = Guza.Attack, Speed = Guza.Speed, Advances = Guza.Advances, Pattern = Guza.Pattern, Actions = Guza.Actions,
-        Traits = Guza.Traits.Append(TraitId.MiasmaVent).Concat(cards).Append(TraitId.PoisonProof).ToArray(),
+        Id = GuzaH371.Id, Name = GuzaH371.Name, MaxHp = GuzaH371.MaxHp, Attack = GuzaH371.Attack, Speed = GuzaH371.Speed, Advances = GuzaH371.Advances, Pattern = GuzaH371.Pattern, Actions = GuzaH371.Actions,
+        Traits = GuzaH371.Traits.Append(TraitId.MiasmaVent).Concat(cards).Append(TraitId.PoisonProof).ToArray(),
         PlusText = "手番で、敵全体へ瘴気を撒く（敵が少ないほど濃い）。毒に侵された敵が仲間を殴ると、その毒が仲間に跳ねる。毒に蝕まれない",
         MinusText = "袋の口がゆるく、毎ターンのはじめに瘴気が噴き出して、敵味方の誰かに毒が付く。敵が毒に染まるほど瘴気は濃くなり、噴き出す相手も増える",
-        Flavor = Guza.Flavor,
+        Flavor = GuzaH371.Flavor,
     };
     /// <summary>ヴィオ・W: 澱み喰い（ターンの頭に吸って攻撃力 +4／層）＋ 吸い分け（毒の衣の持ち主からは吸わない）＋ 攻撃力ぶんの毒（`StrikePoison`）＋ 毒に強い。ふつうに殴る（触媒 ／ 吐き戻しは持たない）。</summary>
     public static readonly UnitDef VioW = new()
     {
-        Id = Vio.Id, Name = Vio.Name, MaxHp = Vio.MaxHp, Attack = Vio.Attack, Speed = Vio.Speed, Advances = Vio.Advances, Pattern = Vio.Pattern,
+        Id = VioH371.Id, Name = VioH371.Name, MaxHp = VioH371.MaxHp, Attack = VioH371.Attack, Speed = VioH371.Speed, Advances = VioH371.Advances, Pattern = VioH371.Pattern,
         Traits = new[] { TraitId.Blightfed, TraitId.BlightfedSkipCloak, TraitId.StrikePoison, TraitId.PoisonProof },
         PlusText = "仲間が負った毒を吸い取り、その層の分だけ攻撃力が上がる。攻撃した敵に、攻撃力と同じだけ毒を乗せる。毒に蝕まれない",
         MinusText = "仲間が汚れていなければ、ただの穀潰し",
-        Flavor = Vio.Flavor,
+        Flavor = VioH371.Flavor,
     };
 
     // 第371期【軽い期】（指示書 design/PHASE371_POISON_CARRIERS_SPEC.md §2-1）。スィドの引き受けをやめる版。グザ W4 は第370期の `GuzaW3`（上限なし）をそのまま使う。
     /// <summary>スィド・Y: 手番は今の規定の「毒を吐きかける」（`Spew`）＋ 毒に強い ＋ 毒の衣 ＋ 衣の返し（`CloakRetort`・毒撃 +8 と置き換える）＋ 痺れ毒。引き受け（`PoisonShoulder`）は持たない。`All` に入れない。</summary>
     public static readonly UnitDef SidY = new()
     {
-        Id = Sid.Id, Name = Sid.Name, MaxHp = Sid.MaxHp, Attack = Sid.Attack, Speed = Sid.Speed, Advances = Sid.Advances, Pattern = Sid.Pattern, Actions = Sid.Actions,
+        Id = SidH371.Id, Name = SidH371.Name, MaxHp = SidH371.MaxHp, Attack = SidH371.Attack, Speed = SidH371.Speed, Advances = SidH371.Advances, Pattern = SidH371.Pattern, Actions = SidH371.Actions,
         Traits = new[] { TraitId.Spew, TraitId.PoisonProof, TraitId.PoisonCloak, TraitId.CloakRetort, TraitId.Numb },
         PlusText = "手番で、まだ毒を浴びていない一番手強い敵に毒を吐きかける。殴られると自分も毒をまとい、まとった毒が深いほど受ける傷が減る（最大6割）。殴ってきた敵にはまとった毒と同じだけ浴びせる。毒に蝕まれない",
         MinusText = "殴られると隣の仲間にも毒が漏れる",
-        Flavor = Sid.Flavor,
+        Flavor = SidH371.Flavor,
     };
+
+    // 第372期【軽い期】本体（指示書 design/PHASE372_VIO_FLURRY_SPEC.md §3-1）。ヴィオの連撃の段（規定のヴィオ ＝ W5 ＋ 札1枚）。どれも `All` に入れない・採否はポン。文面は叩き台。
+    static UnitDef VioFlurry372(TraitId card, string tail) => new()
+    {
+        Id = Vio.Id, Name = Vio.Name, MaxHp = Vio.MaxHp, Attack = Vio.Attack, Speed = Vio.Speed, Advances = Vio.Advances, Pattern = Vio.Pattern, Actions = Vio.Actions,
+        Traits = Vio.Traits.Append(card).ToArray(), PlusText = Vio.PlusText + tail, MinusText = Vio.MinusText, Flavor = Vio.Flavor,
+    };
+    /// <summary>ヴィオ・Va: 規定 ＋ 連撃・散らす（50 ／ 150）。</summary>
+    public static readonly UnitDef VioVa = VioFlurry372(TraitId.VioFlurryA, "。毒を吸って力が満ちるほど、牙が増える（攻撃力 50 ／ 150 で2連撃 ／ 3連撃・2発目からは別の敵へ）");
+    /// <summary>ヴィオ・Vb: 規定 ＋ 連撃・散らす・高い段（100 ／ 300）。</summary>
+    public static readonly UnitDef VioVb = VioFlurry372(TraitId.VioFlurryB, "。毒を吸って力が満ちるほど、牙が増える（攻撃力 100 ／ 300 で2連撃 ／ 3連撃・2発目からは別の敵へ）");
+    /// <summary>ヴィオ・Vc: 規定 ＋ 連撃・集中（50 ／ 150）。</summary>
+    public static readonly UnitDef VioVc = VioFlurry372(TraitId.VioFlurryC, "。毒を吸って力が満ちるほど、牙が増える（攻撃力 50 ／ 150 で2連撃 ／ 3連撃・同じ敵へ）");
 
     // 第361期: 規定のササが SS-w になったので、SS-k ／ SS-w は旧（`SasaH360`）から作る（`SasaSSw` は規定と同じ札・文面・残置）。
     const string SasaPlus360 = "手番で身を固め、次に動くまで、受ける一撃を7までに抑える。殴られると錯乱して隣の味方1体を別の席へ突き飛ばし（1ターン1回）、";

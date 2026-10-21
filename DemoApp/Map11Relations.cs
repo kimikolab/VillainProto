@@ -149,7 +149,9 @@ public static class Map11Relations
             LinkSign.Loss, true, "火が移る"),
         // 第202期: スィドの規定の札が `Venom` → `VenomHeavy`（殴ってきた敵への毒が +8。隣への漏れは同じ1層）。
         // `Venom` は保持者 0 枚になったので外した（第173期の門は「表の札には保持者がいること」を求める）。
-        [TraitId.VenomHeavy] = new(Shape.Adjacent, "毒が漏れる",
+        // 第372期: 規定のスィドが W5（第371期の Y）になり、`VenomHeavy` は保持者 0 枚になったので、隣へ1層漏らす口を持つ `CloakRetort`（衣の返し）に替えた
+        // （第202期の `Venom` → `VenomHeavy` ／ 第365期の `Ash` → `BloodRead` と同じ・第173期の門は「表の札には保持者がいること」を求める）。線の形 ／ 語 ／ 得損は同じ。
+        [TraitId.CloakRetort] = new(Shape.Adjacent, "毒が漏れる",
             "自分が殴られるたび、この駒にも毒が1層積む（毒は毎ターン層の分だけ削る）",
             LinkSign.Loss, true, "漏れる"),
         [TraitId.Goad] = new(Shape.AdjacentAcceptsSupport, "前に押し出す",

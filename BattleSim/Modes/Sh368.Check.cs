@@ -46,24 +46,24 @@ static partial class Sh368Diag
 
         // ---- 段0 ----
         {
-            var (g, v, h) = (UnitCatalog.Guza, UnitCatalog.Vio, UnitCatalog.Hisa);
+            var (g, v, h) = (UnitCatalog.GuzaH371, UnitCatalog.VioH371, UnitCatalog.Hisa);
             bool def = g.Traits.SequenceEqual(UnitCatalog.GuzaG.Traits) && g.PlusText == UnitCatalog.GuzaG.PlusText && g.MinusText == UnitCatalog.GuzaG.MinusText
                 && v.Traits.SequenceEqual(UnitCatalog.VioV.Traits) && v.PlusText == UnitCatalog.VioV.PlusText && v.MinusText == UnitCatalog.VioV.MinusText && v.Actions is { Count: 1 } va && va[0].Kind == ActionKind.Skill
                 && h.Traits.SequenceEqual(UnitCatalog.HisaY1.Traits) && h.PlusText == UnitCatalog.HisaY1.PlusText && h.MinusText == UnitCatalog.HisaY1.MinusText
-                && UnitCatalog.All.Contains(g) && UnitCatalog.All.Contains(v) && UnitCatalog.All.Contains(h) && UnitCatalog.All.Count == 52;
+                && !UnitCatalog.All.Contains(g) && !UnitCatalog.All.Contains(v) && UnitCatalog.All.Contains(h) && UnitCatalog.All.Count == 52;   /* 第372期: グザ ／ ヴィオは `*H371`（`All` の外） */
             Expect("段0: 規定のグザ ／ ヴィオ ／ ヒサ ＝ 第367期の版 G ／ V ／ H1（札 ／ 文面 ／ 手番）・`All` は 52 枚のまま", def);
             bool old = UnitCatalog.GuzaH367.Traits.SequenceEqual(new[] { TraitId.Miasma }) && UnitCatalog.VioH367.Traits.SequenceEqual(new[] { TraitId.Blightfed, TraitId.Spit }) && UnitCatalog.VioH367.Actions is null
                 && UnitCatalog.HisaH367.Traits.SequenceEqual(UnitCatalog.HisaH337.Traits.Append(TraitId.MarkInheritSpread))
                 && new[] { UnitCatalog.GuzaH367, UnitCatalog.VioH367, UnitCatalog.HisaH367 }.All(d => !UnitCatalog.All.Contains(d) && UnitCatalog.Everyone.Contains(d) == false)
                 && new[] { (g, UnitCatalog.GuzaH367), (v, UnitCatalog.VioH367), (h, UnitCatalog.HisaH367) }.All(x => x.Item1.Id == x.Item2.Id && x.Item1.MaxHp == x.Item2.MaxHp && x.Item1.Attack == x.Item2.Attack && x.Item1.Speed == x.Item2.Speed);
             Expect("段0: 旧の定義（`GuzaH367` ／ `VioH367` ／ `HisaH367`）＝ 第367期までの規定の札・体は同じ・`All` に入れない", old);
-            var pinned = Pin367(Formation.Build(front1: g, front3: v, center: h, back1: UnitCatalog.Sid, back3: UnitCatalog.Gald));
-            bool pin = pinned[0] == UnitCatalog.GuzaH367 && pinned[1] == UnitCatalog.VioH367 && pinned[2] == UnitCatalog.HisaH367 && pinned[3] == UnitCatalog.Sid
+            var pinned = Pin367(Formation.Build(front1: g, front3: v, center: h, back1: UnitCatalog.SidH371, back3: UnitCatalog.Gald));
+            bool pin = pinned[0] == UnitCatalog.GuzaH367 && pinned[1] == UnitCatalog.VioH367 && pinned[2] == UnitCatalog.HisaH367 && pinned[3] == UnitCatalog.SidH371
                 && PinAG364(g) == UnitCatalog.GuzaH367 && PinH337(UnitCatalog.HisaH367) == UnitCatalog.HisaH337 && IsHisaNow(UnitCatalog.HisaH367) && IsHisaNow(h);
             Expect("段0: 固定の口（`Pin367` ／ 古い口の終端 `PinAG364` → `PinGVH367` ／ `PinH337` ／ `IsHisaNow` が `HisaH367` も受ける）", pin);
             int same = 0, n = 0;
-            var play = Presets.Versions.First(r => r.Name == "試遊・毒").F;
-            var v367 = Presets.PoisonHero367(UnitCatalog.GuzaG, UnitCatalog.VioV);
+            var play = Pin371(Presets.Versions.First(r => r.Name == "試遊・毒").F);   // 第372期: 第371期までの規定に固定
+            var v367 = Presets.PoisonHero367(UnitCatalog.GuzaG, UnitCatalog.VioV, UnitCatalog.SidH371);
             var bB = Presets.HisaBoard366(); var bB367 = Presets.HisaBoard366(UnitCatalog.HisaY1);
             foreach (var w in new[] { I.Boss, I.Guard, I.M5, S366.BossNoTax })
                 for (int s = 0; s < 10; s++)
@@ -87,10 +87,10 @@ static partial class Sh368Diag
                 ctx.TickStatuses();
                 return (h0, u.Hp, u.RawCounter(StatusKeys.Poison), TallyOf(ctx, u).DamageTaken - d0);
             }
-            var g0 = Tick(UnitCatalog.Guza, 10); var gR = Tick(UnitCatalog.GuzaR, 10); var sR = Tick(UnitCatalog.SidR, 10); var vR = Tick(UnitCatalog.VioR, 10);
+            var g0 = Tick(UnitCatalog.GuzaH371, 10); var gR = Tick(UnitCatalog.GuzaR, 10); var sR = Tick(UnitCatalog.SidR, 10); var vR = Tick(UnitCatalog.VioR, 10);
             Expect("毒に強い: 刻みで HP が減らない ／ 層は残る（グザ ／ スィド ／ ヴィオ・毒 10）・規定のグザは今どおり 10 削られる", gR.Hp0 == gR.Hp1 && sR.Hp0 == sR.Hp1 && vR.Hp0 == vR.Hp1 && gR.Layers == 10 && sR.Layers == 10 && vR.Layers == 10 && g0.Hp0 - g0.Hp1 == 10 && g0.Layers == 10,
                 $"規定 {g0.Hp0} → {g0.Hp1}・R グザ {gR.Hp0} → {gR.Hp1}（層 {gR.Layers}）・スィド {sR.Hp0} → {sR.Hp1}・ヴィオ {vR.Hp0} → {vR.Hp1}");
-            var bn = Tick(UnitCatalog.Guza, 6, beni: true, hurt: 30); var bR = Tick(UnitCatalog.GuzaR, 6, beni: true, hurt: 30);
+            var bn = Tick(UnitCatalog.GuzaH371, 6, beni: true, hurt: 30); var bR = Tick(UnitCatalog.GuzaR, 6, beni: true, hurt: 30);
             Expect("毒に強い: ベニの隣では今どおり刻みが回復になる（グザ ／ グザ R が同じだけ癒える）", bn.Hp1 > bn.Hp0 && bR.Hp1 - bR.Hp0 == bn.Hp1 - bn.Hp0, $"規定 {bn.Hp0} → {bn.Hp1}・R {bR.Hp0} → {bR.Hp1}");
             var m0 = Tick(UnitCatalog.Mudo, 10); var mR = Tick(With(UnitCatalog.Mudo, TraitId.PoisonProof), 10);
             Expect("毒に強い: 刻みそのものを起こさない（浴びた量を読む札が発火しない・被ダメの帳簿に段が残らない・対照の規定のムドは刻みを浴びる）", m0.Dmg > 0 && mR.Dmg == 0 && mR.Hp0 == mR.Hp1, $"規定のムド 被ダメ {m0.Dmg}・毒に強いムド {mR.Dmg}");
@@ -133,11 +133,11 @@ static partial class Sh368Diag
 
         // ---- 版の定義 ----
         {
-            bool ok = UnitCatalog.SidR.Traits.SequenceEqual(UnitCatalog.Sid.Traits.Append(TraitId.PoisonProof)) && UnitCatalog.SidRC.Traits.SequenceEqual(UnitCatalog.Sid.Traits.Append(TraitId.PoisonProof).Append(TraitId.PoisonCloak))
-                && UnitCatalog.GuzaR.Traits.SequenceEqual(UnitCatalog.Guza.Traits.Append(TraitId.PoisonProof)) && UnitCatalog.VioR.Traits.SequenceEqual(UnitCatalog.Vio.Traits.Append(TraitId.PoisonProof))
-                && UnitCatalog.VioRCS.Traits.SequenceEqual(UnitCatalog.Vio.Traits.Append(TraitId.PoisonProof).Append(TraitId.BlightfedSkipCloak))
+            bool ok = UnitCatalog.SidR.Traits.SequenceEqual(UnitCatalog.SidH371.Traits.Append(TraitId.PoisonProof)) && UnitCatalog.SidRC.Traits.SequenceEqual(UnitCatalog.SidH371.Traits.Append(TraitId.PoisonProof).Append(TraitId.PoisonCloak))
+                && UnitCatalog.GuzaR.Traits.SequenceEqual(UnitCatalog.GuzaH371.Traits.Append(TraitId.PoisonProof)) && UnitCatalog.VioR.Traits.SequenceEqual(UnitCatalog.VioH371.Traits.Append(TraitId.PoisonProof))
+                && UnitCatalog.VioRCS.Traits.SequenceEqual(UnitCatalog.VioH371.Traits.Append(TraitId.PoisonProof).Append(TraitId.BlightfedSkipCloak))
                 && new[] { UnitCatalog.SidR, UnitCatalog.SidRC, UnitCatalog.GuzaR, UnitCatalog.VioR, UnitCatalog.VioRCS }.All(d => !UnitCatalog.All.Contains(d) && d.PlusText.Contains("毒に蝕まれない", StringComparison.Ordinal))
-                && !UnitCatalog.All.Any(d => d.Traits.Any(t => t is TraitId.PoisonProof or TraitId.PoisonCloak or TraitId.BlightfedSkipCloak));
+                && !UnitCatalog.All.Any(d => !IsW5Default372(d) && d.Traits.Any(t => t is TraitId.PoisonProof or TraitId.PoisonCloak or TraitId.BlightfedSkipCloak));
             Expect("版の定義: R ／ RC ／ RCS の札（規定の末尾に足す）・`All` に入れない・文面の末尾・新しい札の保持者 0 枚", ok);
         }
 
@@ -160,20 +160,11 @@ static partial class Sh368Diag
 
         // ---- 試遊の台 ----
         {
+            // 第372期: 第368〜371期の「版・」の台（RCS 吸い分け ／ W4 ／ W5 ／ W2 席替え ／ W5 席替え ほか）はすべて外した（並びはこの器具の中で組む）。検査は「頭の8台」と「版の台が無い」に。
             var vr = Presets.Versions.Select(r => r.Name).ToArray();
-            // 第369期: 「版・R」「版・RC」は外した（RCS は採否が保留なので残る）。検査は「頭の8台」と「RCS が残る ／ R ／ RC が無い」に。
             bool rows = vr.Take(8).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒" })
-                && vr.Contains("版・RCS 吸い分け") && !vr.Any(n => n is "版・R 毒に強い" or "版・RC 毒の衣");
-            Expect("`Presets.Versions` の頭 ＝ 試遊の8台・「版・RCS 吸い分け」が残る（「版・R ／ RC」は第369期に外した）", rows, string.Join("、", vr));
-            if (rows)
-            {
-                Formation V(string n) => Presets.Versions.First(r => r.Name == n).F;
-                var play = V("試遊・毒");
-                var f = V("版・RCS 吸い分け"); var want = Apply(play, Vers[3]);
-                bool ok = S307.Seats(play) == "ガルド・スィド・グザ・ヴィオ・ドルガ" && play.Occupied().All(o => UnitCatalog.All.Contains(o.Def))
-                    && Enumerable.Range(0, 5).All(i => f[i] == want[i]);
-                Expect("「試遊・毒」＝ 規定の駒（中身は GV）・「版・RCS 吸い分け」＝ 同じ並びでスィド ／ グザ ／ ヴィオだけ版", ok, S307.Seats(play));
-            }
+                && !vr.Any(n => n is "版・RCS 吸い分け" or "版・W4 ヴィオ型" or "版・W5 両立" or "版・W2 席替え" or "版・W5 席替え" or "版・W1 返り毒＋ヴィオ" or "版・W2 三人" or "版・W3 上限なし");
+            Expect("`Presets.Versions` の頭 ＝ 試遊の8台・第368〜371期の「版・」の台は無い（第372期に外した）", rows, string.Join("、", vr));
         }
 
         // ---- PickOne ----

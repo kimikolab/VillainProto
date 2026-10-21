@@ -50,7 +50,7 @@ static partial class Sh371Diag
     static string Pct(long a, long n) => n == 0 ? "—" : F1(100.0 * a / n);
     static string Short(UnitDef d) => S307.Short(d);
     static string Sg(double x) => x.ToString("+0.0;-0.0;±0.0");
-    static Formation Row(string n) => CompareBuilds().First(r => r.Name == n).F;
+    static Formation Row(string n) => Pin371(CompareBuilds().First(r => r.Name == n).F);   // 第372期: 第371期までの規定（グザ ／ ヴィオ ／ スィド）に固定
     static bool Has(Formation f, string id) => f.Occupied().Any(o => o.Def.Id == id);
 
     // ---------------------------------------------------------------------------------
@@ -68,7 +68,7 @@ static partial class Sh371Diag
 
     internal static (string Name, Formation F)[] BoardList() => new (string, Formation)[]
     {
-        ("試遊・毒", Presets.Versions.First(r => r.Name == "試遊・毒").F),
+        ("試遊・毒", Pin371(Presets.Versions.First(r => r.Name == "試遊・毒").F)),
         ("毒特化・集団", Row(S367.BombRow)),
         ("澱み喰い (グザ×ヴィオ)", Row("澱み喰い (グザ×ヴィオ)")),
         ("毒+ベニ+ラウ", Row("毒+ベニ+ラウ")),
@@ -210,7 +210,7 @@ static partial class Sh371Diag
 
     internal static Formation Seat(int[] order, S370.Ver v)
     {
-        var play = Presets.Versions.First(r => r.Name == "試遊・毒").F;
+        var play = Pin371(Presets.Versions.First(r => r.Name == "試遊・毒").F);
         var defs = Enumerable.Range(0, 5).Select(i => play[i]!).ToArray();
         var f = Formation.Build(front1: defs[order[0]], front3: defs[order[1]], center: defs[order[2]], back1: defs[order[3]], back3: defs[order[4]]);
         return Apply(f, v);
@@ -261,7 +261,7 @@ static partial class Sh371Diag
         Console.WriteLine();
         Console.WriteLine("| スィドの隣 | 並びの数 | ヴィオが吸った（W2） | スィドが引き受けた（W2） | ヴィオが吸った（W5） | 蝕みなし（W2 ／ W5 の平均） |");
         Console.WriteLine("|---|--:|--:|--:|--:|---|");
-        var play = Presets.Versions.First(r => r.Name == "試遊・毒").F;
+        var play = Pin371(Presets.Versions.First(r => r.Name == "試遊・毒").F);
         int sidIx = Enumerable.Range(0, 5).First(i => play[i]!.Id == "sid");
         var groups = Enumerable.Range(0, perms.Length).GroupBy(pi =>
         {
@@ -301,7 +301,7 @@ static partial class Sh371Diag
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var v = ver switch { "W4" => Vers[3], "W5" => Vers[4], _ => throw new ArgumentException("sh371 compare の版は W4 / W5") };
-        var rows = CompareBuilds().ToArray();
+        var rows = CompareBuilds().Select(r => (r.Name, F: Pin371(r.F))).ToArray();   // 第372期: 第371期までの規定に固定
         int nw = EnemyCatalog.Stages.Count, last = nw - 1;
         Func<int, bool> only = ri => new[] { "sid", "guza", "vio" }.Any(id => Has(rows[ri].F, id));
         var b = CGrid(rows, f => f, _ => true);

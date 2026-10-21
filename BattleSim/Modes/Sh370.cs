@@ -49,7 +49,7 @@ static partial class Sh370Diag
     static string Short(UnitDef d) => S307.Short(d);
     static string Nm(string id) => Short(UnitCatalog.Everyone.First(d => d.Id == id));
     static string Sg(double x) => x.ToString("+0.0;-0.0;±0.0");
-    static Formation Row(string n) => CompareBuilds().First(r => r.Name == n).F;
+    static Formation Row(string n) => Pin371(CompareBuilds().First(r => r.Name == n).F);   // 第372期: 第371期までの規定（グザ ／ ヴィオ ／ スィド）に固定
     static bool Has(Formation f, string id) => f.Occupied().Any(o => o.Def.Id == id);
 
     // ---------------------------------------------------------------------------------
@@ -74,11 +74,11 @@ static partial class Sh370Diag
     }
 
     /// <summary>攻撃力の台: 試遊・毒のドルガ（後3）を鬨の号令ガンに替えた台（決めたこと: 後3 から後1 のヴィオへ届く攻撃力の上昇はガンの開戦の号令だけ——カリは隣接 ／ トモは最も遅い味方（グザ）に向く）。</summary>
-    internal static Formation AtkBoard() => Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sid, center: UnitCatalog.Guza, back1: UnitCatalog.Vio, back3: UnitCatalog.Gan);
+    internal static Formation AtkBoard() => Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.SidH371, center: UnitCatalog.GuzaH371, back1: UnitCatalog.VioH371, back3: UnitCatalog.Gan);   // 第372期: 第371期までの規定に固定
 
     internal static (string Name, Formation F)[] BoardList() => new (string, Formation)[]
     {
-        ("試遊・毒", Presets.Versions.First(r => r.Name == "試遊・毒").F),
+        ("試遊・毒", Pin371(Presets.Versions.First(r => r.Name == "試遊・毒").F)),
         ("攻撃力の台（ガン）", AtkBoard()),
         ("毒特化・集団", Row(S367.BombRow)),
         ("澱み喰い (グザ×ヴィオ)", Row("澱み喰い (グザ×ヴィオ)")),
@@ -104,7 +104,10 @@ static partial class Sh370Diag
         public readonly long[] Splash = new long[LoopT + 1], VAtk = new long[LoopT + 1], VAlive = new long[LoopT + 1], Strike = new long[LoopT + 1],
             SLayer = new long[LoopT + 1], SAlive = new long[LoopT + 1], Retort = new long[LoopT + 1], HLayer = new long[LoopT + 1], HAlive = new long[LoopT + 1];
         public readonly long[] HWrote = new long[7];
-        public long SplashAll, GotVio, GotSid, GotOther, Drained, Ticked, StrikeAll, VioWhet, RetortAll, Shouldered;   // 第371期: Shouldered（スィドが引き受けた層・`sh371 seats` が読む）
+        public long SplashAll, GotVio, GotSid, GotOther, Drained, Ticked, StrikeAll, VioWhet, RetortAll, Shouldered;
+        /// <summary>第372期（`sh372` が読む・この器具の出力は変わらない）: ヴィオが撃った数（ターンごと）・2 ／ 3連撃に上がった戦 ／ ターンの和・攻撃力ぶんの毒を受けた敵の数 ／ 最も多く受けた敵の層（1戦）。</summary>
+        public readonly long[] Hits = new long[LoopT + 1];
+        public long Stage2N, Stage2T, Stage3N, Stage3T, StrikeTargets, StrikeTop;   // 第371期: Shouldered（スィドが引き受けた層・`sh371 seats` が読む）
         public void Add(Agg o)
         {
             N += o.N; Wins += o.Wins; WinT += o.WinT; Win1 += o.Win1; Draw += o.Draw; Fell += o.Fell;
@@ -116,7 +119,9 @@ static partial class Sh370Diag
                 SLayer[t] += o.SLayer[t]; SAlive[t] += o.SAlive[t]; Retort[t] += o.Retort[t]; HLayer[t] += o.HLayer[t]; HAlive[t] += o.HAlive[t];
             }
             for (int i = 0; i < HWrote.Length; i++) HWrote[i] += o.HWrote[i];
-            SplashAll += o.SplashAll; Shouldered += o.Shouldered; GotVio += o.GotVio; GotSid += o.GotSid; GotOther += o.GotOther; Drained += o.Drained; Ticked += o.Ticked; StrikeAll += o.StrikeAll; VioWhet += o.VioWhet; RetortAll += o.RetortAll;
+            SplashAll += o.SplashAll; Shouldered += o.Shouldered;
+            for (int t = 0; t <= LoopT; t++) Hits[t] += o.Hits[t];
+            Stage2N += o.Stage2N; Stage2T += o.Stage2T; Stage3N += o.Stage3N; Stage3T += o.Stage3T; StrikeTargets += o.StrikeTargets; StrikeTop += o.StrikeTop; GotVio += o.GotVio; GotSid += o.GotSid; GotOther += o.GotOther; Drained += o.Drained; Ticked += o.Ticked; StrikeAll += o.StrikeAll; VioWhet += o.VioWhet; RetortAll += o.RetortAll;
         }
         public double Win => N == 0 ? 0 : 100.0 * Wins / N;
         public string WinTs => Wins == 0 ? "—" : F1((double)WinT / Wins);
@@ -142,7 +147,7 @@ static partial class Sh370Diag
                 if (t.Z370SplashByTurn is { } sb) for (int k = 1; k <= LoopT; k++) a.Splash[k] += sb[k];
                 a.SplashAll += t.Z370Splash;
             }
-            if (id == "vio") { a.Drained += t.SpitStored; a.StrikeAll += t.Z370Strike; if (t.Z370StrikeByTurn is { } vb) for (int k = 1; k <= LoopT; k++) a.Strike[k] += vb[k]; a.GotVio += t.Z370SplashGot; }
+            if (id == "vio") { if (t.Z372HitsByTurn is { } hb) for (int k = 1; k <= LoopT; k++) a.Hits[k] += hb[k]; if (t.Z372Stage2Turn > 0) { a.Stage2N++; a.Stage2T += t.Z372Stage2Turn; } if (t.Z372Stage3Turn > 0) { a.Stage3N++; a.Stage3T += t.Z372Stage3Turn; } a.Drained += t.SpitStored; a.StrikeAll += t.Z370Strike; if (t.Z370StrikeByTurn is { } vb) for (int k = 1; k <= LoopT; k++) a.Strike[k] += vb[k]; a.GotVio += t.Z370SplashGot; }
             else if (id == "sid") { a.Shouldered += t.Z369Shouldered; a.GotSid += t.Z370SplashGot; a.RetortAll += t.Z369Retort; if (t.Z370RetortByTurn is { } rb) for (int k = 1; k <= LoopT; k++) a.Retort[k] += rb[k]; }
             else a.GotOther += t.Z370SplashGot;
         }
@@ -150,8 +155,10 @@ static partial class Sh370Diag
         if (vio is not null) a.VioWhet = vio.WhetReceived;
         var mine = p.ToDictionary(u => u.InstanceId);
         var hero = w.Boss ? e.FirstOrDefault(u => u.HasTrait(TraitId.BossMend40)) : null;
+        var strikeTo = new Dictionary<int, long>();   // 第372期: 攻撃力ぶんの毒を受けた敵ごと
         foreach (var x in r.Events)
         {
+            if (x.Kind == BattleEventKind.StatusGain && x.PoisonRoute == PoisonRoute.Strike && x.TargetId is int st0) strikeTo[st0] = strikeTo.GetValueOrDefault(st0) + x.Amount;
             if (x.Turn is < 1 or > LoopT && x.Kind is BattleEventKind.StatusSnapshot or BattleEventKind.StatSnapshot) continue;
             switch (x.Kind)
             {
@@ -172,6 +179,7 @@ static partial class Sh370Diag
                     break;
             }
         }
+        a.StrikeTargets = strikeTo.Count; a.StrikeTop = strikeTo.Count == 0 ? 0 : strikeTo.Values.Max();
         if (sid is not null) { int last = sid.LastDeathTurn > 0 ? sid.LastDeathTurn : r.Turns; for (int t = 1; t <= Math.Min(LoopT, last); t++) a.SAlive[t] = 1; }
         if (hero is not null) { int last = hero.LastDeathTurn > 0 ? hero.LastDeathTurn : r.Turns; for (int t = 1; t <= Math.Min(LoopT, last); t++) a.HAlive[t] = 1; }
         return a;
@@ -310,8 +318,8 @@ static partial class Sh370Diag
         {
             ("規定", b),
             ("Z1（第369期）", Z1(UnitCatalog.GuzaZ, UnitCatalog.SidR)),
-            ("(a) グザだけ規定に戻す", Z1(UnitCatalog.Guza, UnitCatalog.SidR)),
-            ("(b) スィドの毒に強いだけ外す", Z1(UnitCatalog.GuzaZ, UnitCatalog.Sid)),
+            ("(a) グザだけ規定に戻す", Z1(UnitCatalog.GuzaH371, UnitCatalog.SidR)),   // 第372期: 「規定」＝ 第371期までの規定
+            ("(b) スィドの毒に強いだけ外す", Z1(UnitCatalog.GuzaZ, UnitCatalog.SidH371)),
             ("(c) グザの毒に強いだけ外す", Z1(With(UnitCatalog.GuzaZ, none, new[] { TraitId.PoisonProof }), UnitCatalog.SidR)),
             ("(d) 噴き出しだけ止める", Z1(With(UnitCatalog.GuzaZ, new[] { TraitId.VentOff370 }, none), UnitCatalog.SidR)),
             ("(e) 返り毒だけ止める", Z1(With(UnitCatalog.GuzaZ, new[] { TraitId.BacklashOff370 }, none), UnitCatalog.SidR)),
@@ -391,7 +399,7 @@ static partial class Sh370Diag
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var v = ver switch { "W1" => Vers[2], "W2" => Vers[3], "W3" => Vers[4], _ => throw new ArgumentException("sh370 compare の版は W1 / W2 / W3") };
-        var rows = CompareBuilds().ToArray();
+        var rows = CompareBuilds().Select(r => (r.Name, F: Pin371(r.F))).ToArray();   // 第372期: 第371期までの規定に固定
         int nw = EnemyCatalog.Stages.Count, last = nw - 1;
         Func<int, bool> only = ri => new[] { "sid", "guza", "vio" }.Any(id => Has(rows[ri].F, id));
         var b = CGrid(rows, f => f, _ => true);
