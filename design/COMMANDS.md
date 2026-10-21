@@ -1361,6 +1361,9 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sh373 guren               # 第373期 §4: 試遊・毒 紅 × 7 波（seed 0..99）＋ ポンの試遊の条件の1戦（第4波・HP 1000% ／ 攻 300%・seed 7）＋ あふれの見積り（HP 1,000,000%・30T）（1 秒）
     dotnet run --project BattleSim -c Release 0 sh373 compare <A1|A2>     # 第373期: `compare` 64 行 × 版（ヴィオのいる行だけを版で回す）（7 秒）
     dotnet run --project BattleSim -c Release 0 sh373 check               # 第373期 自己検査（段0 の規定 ＝ Va・旧 ／ 固定の口・規定の台と第372期の Va の台が一致・吐き戻しの量 ／ 等分 ／ 衣の持ち主 ／ 隣なし ／ 倒れていた・規定のヴィオは吐かない・経路と添字・verbose と再現性・`checkup` の札・試遊の台・PickOne ／ Roll）
+    dotnet run --project BattleSim -c Release 0 sh374 boards                     # 第374期 §4: 6 台（試遊・毒 ／ 席替え ／ 毒特化・集団 ／ 澱み喰い ／ 試遊・毒 紅 ／ 傷の台）× 版（規定 ／ S10 ／ S20 ／ C ／ S10C）× 6 波（紅の台は強い第4波も）・seed 0..99・誰が何Tに倒れたか・スィドの層 ／ 衣 ／ 返し・ヴィオの攻撃力 ／ 段 ／ 血を啜った・アカの撃った血・紅の台・壊れの兆し（3 秒）
+    dotnet run --project BattleSim -c Release 0 sh374 compare <S10|S20|C|S10C>  # 第374期: `compare` 64 行 × 版（スィド ／ ヴィオのいる行だけを版で回す）（7 秒）
+    dotnet run --project BattleSim -c Release 0 sh374 check                      # 第374期 自己検査（版の定義・規定は今どおり・経路と添字・開戦の衣（T1 の層・刻まれない・衣と返しが読む・会戦の次の戦）・血を啜る（起きる条件・量・HP 1 未満にしない・被弾の札が起きない・隣なし）・verbose と再現性・`checkup` の札・試遊の台・PickOne ／ Roll）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

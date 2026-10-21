@@ -1536,3 +1536,9 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **吐き戻し（`VioRetchTrait`・札 `VioRetchHalf` ／ `VioRetchThird`）**: 澱み喰い（`BlightfedTrait.OnTurnStart`）が吸った層のうち `VioRetchTrait.Keep`（切り上げ）だけを攻撃力にし、残りを私有キー `vioRetchPending` に控える（札が無ければ kept ＝ drawn で結果は変わらない）。ターンの終わり（全員の手番の後・`CommandPoolTurnEnd` の後）に `BattleContext.VioRetchTurnEnd` が、生きていれば隣接する生きている味方へ等分して吐く（余りは席番号の小さい方から・毒の窓口・経路 `PoisonRoute.Retch`）。`_retchLive`（保持者がいる戦）の比較1つで抜ける。**乱数を引かない**。
 - 毒の経路 `Retch`（添字 18）を足した。**第367期から添字を1つ少なく数えていた**（`Miasma` が 0 なので触媒 13・攻撃力ぶんの毒 17 が燃焼の添字と重なっていた・計数の列 `SoakSeenByRoute` だけ）ので、`SoakRouteCount` 18 → 20・`SoakBurnRouteIx` 17 → 19 に直した。
 - 計数だけ: `UnitTally.Z373RetchHeld` ／ `Z373RetchOut` ／ `Z373RetchLost` ／ `Z373RetchDead`。
+
+## 第374期 —— スィドの開戦の衣（S10 ／ S20）／ ヴィオの血を啜る（C）（版・規定は変えない）
+
+- **開戦の衣（`OpeningCloakTrait`・札 `SidOpeningCloak10` ／ `20`）**: `OnBattleStart` で自分へ毒 +N（毒の窓口・経路 `PoisonRoute.CloakOpening`・添字 19）。engine の口は足していない。経路を足したので `SoakRouteCount` 20 → 21・`SoakBurnRouteIx` 19 → 20。
+- **血を啜る（`BloodSipTrait`・札 `VioBloodSip`）**: `BlightfedTrait.OnTurnStart` の「吸えた層が 0」の行で、隣接する生きている味方（席番号の小さい順）の `Hp` を直に 4 ずつ引き（HP 1 未満にしない・`ApplyDamage` を通らない ＝ `OnDamaged` も軽減も起きない）、啜った HP × 2 を `AtkBonus` に直に足す（自己強化）。engine の口は足していない。**乱数を引かない**。台本に出来事は出さない（ログだけ）。
+- 計数だけ: `UnitTally.Z374OpeningCloak` ／ `Z374SipTurns` ／ `Z374SipHp` ／ `Z374SippedFrom`。

@@ -2464,6 +2464,8 @@ public sealed class UnitTally
     public int Z372Stage2Turn, Z372Stage3Turn;
     /// <summary>第373期（<b>計数のみ</b>）: ヴィオの吐き戻し——収まらずに控えた層 ／ 隣へ吐いた層 ／ 隣がいなくて消えた層 ／ 倒れていて吐かなかった層。</summary>
     public long Z373RetchHeld, Z373RetchOut, Z373RetchLost, Z373RetchDead;
+    /// <summary>第374期（<b>計数のみ</b>）: 開戦の衣で付けた層（スィドの側）／ 血を啜ったターンの数と啜った HP（ヴィオの側）／ 啜られた HP（啜られた味方の側）。</summary>
+    public long Z374OpeningCloak, Z374SipTurns, Z374SipHp, Z374SippedFrom;
     /// <summary>第365期（<b>計数のみ・計測専用</b>）: ヒサ×ミサの連鎖の矢印をターンごとに（<c>欄 × 32 ＋ ターン</c>・欄は <c>BattleContext.Ch365</c>）。<c>BattleContext.ChainCount365</c> が真の戦だけ書く。</summary>
     public long[]? Ch365;
     public long Rp345NormalDealt, Rp345Punches, Rp345PunchBack, Rp345PunchKills, Rp345PunchDealt, Rp345PunchAmount, Rp345AimEdible, Rp345GrabNoPunch, Rp345GrabAfter, Ga345Stomps, Ga345SplashHits, Ga345SplashDealt;
@@ -3759,6 +3761,7 @@ public sealed class UnitTally
         Z370Splash += o.Z370Splash; Z370SplashGot += o.Z370SplashGot; Z370Strike += o.Z370Strike;   // 第370期
         Z372HitsByTurn = AddArr(Z372HitsByTurn, o.Z372HitsByTurn);   // 第372期
         Z373RetchHeld += o.Z373RetchHeld; Z373RetchOut += o.Z373RetchOut; Z373RetchLost += o.Z373RetchLost; Z373RetchDead += o.Z373RetchDead;   // 第373期
+        Z374OpeningCloak += o.Z374OpeningCloak; Z374SipTurns += o.Z374SipTurns; Z374SipHp += o.Z374SipHp; Z374SippedFrom += o.Z374SippedFrom;   // 第374期
         if (Z372Stage2Turn == 0) Z372Stage2Turn = o.Z372Stage2Turn;
         if (Z372Stage3Turn == 0) Z372Stage3Turn = o.Z372Stage3Turn;
         Z370SplashByTurn = AddArr(Z370SplashByTurn, o.Z370SplashByTurn); Z370StrikeByTurn = AddArr(Z370StrikeByTurn, o.Z370StrikeByTurn); Z370RetortByTurn = AddArr(Z370RetortByTurn, o.Z370RetortByTurn);

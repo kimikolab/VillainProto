@@ -951,6 +951,9 @@ public enum TraitId
     VioFlurryA,           // 連撃・散らす（Va・ヴィオ）: 手番の頭の攻撃力（素の値 ＋ 上昇分）が 50 以上で2連撃 ／ 150 以上で3連撃。2発目からは別の敵（1発目の的を除いて席番号の小さい順・足りなければ1発目の的へ戻る）（`VioFlurryTrait`・的は engine の `SwingTurnHits`）
     VioFlurryB,           // 連撃・散らす・高い段（Vb・ヴィオ）: 100 以上で2連撃 ／ 300 以上で3連撃・的は Va と同じ（`VioFlurryTrait`）
     VioRetchHalf,         // 溢れて吐く・半分（A1・ヴィオ）: 吸った層の半分（切り上げ）だけが攻撃力になり、残りはターンの終わりに隣の味方へ吐き戻す（`VioRetchTrait`・第373期）
+    SidOpeningCloak10,    // 開戦の衣 +10（S10・スィド）: 開戦時に自分へ毒 +10（`OpeningCloakTrait`・第374期）
+    SidOpeningCloak20,    // 開戦の衣 +20（S20・スィド）: 開戦時に自分へ毒 +20（`OpeningCloakTrait`・第374期）
+    VioBloodSip,          // 飢えると血を啜る（C・ヴィオ）: 吸えた毒が 0 のターンの頭に、隣の味方それぞれから HP 4 を啜り 1 につき攻撃力 +2（`BloodSipTrait`・第374期）
     VioRetchThird,        // 溢れて吐く・3分の1（A2・ヴィオ）: 収まるのは 3分の2（切り上げ）・吐くのは残り（`VioRetchTrait`・第373期）
     VioFlurryC,           // 連撃・集中（Vc・ヴィオ）: 50 以上で2連撃 ／ 150 以上で3連撃・2発目からも1発目と同じ敵（倒れていたら席番号の最も小さい生きている敵）（`VioFlurryTrait`）
 
@@ -3021,7 +3024,9 @@ public enum PoisonRoute
     /// <summary>攻撃力ぶんの毒（ヴィオの版 W・殴った敵へ。第370期）。</summary>
     Strike,
     /// <summary>溢れて吐く（ヴィオの版 A1 ／ A2・収まらなかった層をターンの終わりに隣の味方へ。第373期）。</summary>
-    Retch
+    Retch,
+    /// <summary>開戦の衣（スィドの版 S10 ／ S20・開戦時に自分へ。第374期）。</summary>
+    CloakOpening
 }
 
 /// <summary>
@@ -7314,7 +7319,12 @@ public sealed class BlightfedTrait : Trait
             drawn += poison;
             shown?.Add((ally, poison));
         }
-        if (drawn == 0) return;
+        if (drawn == 0)
+        {
+            // 第374期（飢えると血を啜る C）: 吸えた毒が 0 層のターンだけ、隣の味方の HP を啜る。札が無ければ第373期と1命令も違わない。
+            if (self.HasTrait(TraitId.VioBloodSip)) BloodSipTrait.Sip(ctx, self);
+            return;
+        }
 
         // 第373期（溢れて吐く A1 ／ A2）: 札を持てば、吸った層のうち収まる分だけが攻撃力になり、残りはターンの終わりに吐き戻す（`VioRetchTrait`）。札が無ければ kept ＝ drawn で第372期と1命令も違わない。
         int kept = VioRetchTrait.Keep(self, drawn);
@@ -13423,6 +13433,57 @@ public sealed class VioFlurryTrait : Trait
 /// （余りは席番号の小さい方から・毒の窓口 <see cref="PoisonRoute.Retch"/>・滲み則は窓口のまま）。隣がいなければ吐かずに消える。
 /// 倒れていたら吐かない。<b>乱数を引かない。</b>
 /// </summary>
+/// <summary>
+/// 開戦の衣（第374期・スィドの版 S10 ／ S20・指示書 design/PHASE374_POISON_EARLY_SPEC.md §2-1）。開戦時に自分へ毒 +<see cref="Amount"/>
+/// （毒の窓口・経路 <see cref="PoisonRoute.CloakOpening"/>）。毒に強い（<see cref="TraitId.PoisonProof"/>）ので刻まれず、毒の衣の軽減と衣の返しがその層を読む。
+/// 戦ごとに1回（会戦は境界で状態を消し、次の戦の開戦でまた付く）。<b>乱数を引かない。</b>
+/// </summary>
+public sealed class OpeningCloakTrait : Trait
+{
+    readonly TraitId _id;
+    public readonly int Amount;
+    public OpeningCloakTrait(TraitId id, int amount) { _id = id; Amount = amount; }
+    public override TraitId Id => _id;
+
+    public override void OnBattleStart(BattleContext ctx, UnitState self)
+    {
+        ctx.Poison(self, Amount, self, PoisonRoute.CloakOpening);
+        ctx.TallyOf(self).Z374OpeningCloak += Amount;   // 計数のみ
+        ctx.Log($"    {self.Name} は戦いの前から毒をまとっている（毒 +{Amount}）", LogKind.Trigger);
+    }
+}
+
+/// <summary>
+/// 飢えると血を啜る（第374期・ヴィオの版 C・指示書 design/PHASE374_POISON_EARLY_SPEC.md §2-2）。<see cref="BlightfedTrait"/> のターンの頭の吸いで
+/// 吸えた毒が 0 層のとき、隣接する生きている味方それぞれ（席番号の小さい順）から HP <see cref="PerAlly"/> を啜り、啜った HP 1 につき攻撃力 +<see cref="GainPerHp"/>（自己強化・直叩き）。
+/// <b>ダメージではなく HP を減らす</b>（`ApplyDamage` を通らない ＝ 被弾で起きる札・返り毒・衣の返し・反撃は起きない）。HP 1 未満にはしない。傷（最大HP − 今のHP）としては残る。
+/// 隣がいなければ何も起きない。<b>乱数を引かない。</b>
+/// </summary>
+public sealed class BloodSipTrait : Trait
+{
+    public const int PerAlly = 4, GainPerHp = 2;
+    public override TraitId Id => TraitId.VioBloodSip;
+
+    internal static void Sip(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+        int total = 0;
+        UnitTally vt = ctx.TallyOf(self);
+        foreach (UnitState ally in ctx.LivingMembers(self.TeamId).Where(a => a != self && FormationRules.AreAdjacent(self, a)).OrderBy(a => a.Slot))
+        {
+            int take = Math.Min(PerAlly, ally.Hp - 1);
+            if (take <= 0) continue;
+            ally.Hp -= take;
+            total += take;
+            ctx.TallyOf(ally).Z374SippedFrom += take;   // 計数のみ（啜られた側）
+        }
+        if (total <= 0) return;
+        self.AtkBonus += total * GainPerHp;
+        vt.Z374SipTurns++; vt.Z374SipHp += total;   // 計数のみ
+        ctx.Log($"    {self.Name} が飢えて隣の仲間の血を啜った（HP {total} / 攻撃 +{total * GainPerHp}）", LogKind.Trigger);
+    }
+}
+
 public sealed class VioRetchTrait : Trait
 {
     readonly TraitId _id;
@@ -19015,6 +19076,9 @@ public static class TraitCatalog
         new VioFlurryTrait(TraitId.VioFlurryC, 50, 150, scatter: false),   // 第372期（連撃・集中 Vc）
         new VioRetchTrait(TraitId.VioRetchHalf, 1, 2),   // 第373期（溢れて吐く・半分 A1）
         new VioRetchTrait(TraitId.VioRetchThird, 2, 3),  // 第373期（溢れて吐く・3分の1 A2）
+        new OpeningCloakTrait(TraitId.SidOpeningCloak10, 10),   // 第374期（開戦の衣 S10）
+        new OpeningCloakTrait(TraitId.SidOpeningCloak20, 20),   // 第374期（開戦の衣 S20）
+        new BloodSipTrait(),                                    // 第374期（飢えると血を啜る C）
         new EruptTrait(),      // 第180期
         new SmearTrait(),      // 第180期
         new SpitTrait(),       // 第180期

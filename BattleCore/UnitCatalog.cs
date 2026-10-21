@@ -7016,6 +7016,23 @@ public static class UnitCatalog
     /// <summary>ヴィオ・A2: 規定 ＋ 溢れて吐く・3分の1（収まるのは 3分の2（切り上げ）・吐くのは残り）。</summary>
     public static readonly UnitDef VioA2 = VioRetch373(TraitId.VioRetchThird, "吸った毒は腹に収まりきらず、3分の1はターンの終わりに隣の仲間へ吐き戻す");
 
+    // 第374期【軽い期】（指示書 design/PHASE374_POISON_EARLY_SPEC.md §2・§3）。毒の立ち上がりを早める版——スィドの開戦の衣（S10 ／ S20）とヴィオの「飢えると血を啜る」（C）。どれも `All` に入れない・採否はポン。文面は叩き台。
+    static UnitDef SidOpening374(TraitId card) => new()
+    {
+        Id = Sid.Id, Name = Sid.Name, MaxHp = Sid.MaxHp, Attack = Sid.Attack, Speed = Sid.Speed, Advances = Sid.Advances, Pattern = Sid.Pattern, Actions = Sid.Actions,
+        Traits = Sid.Traits.Append(card).ToArray(), PlusText = "戦いの前から毒をまとっている。" + Sid.PlusText, MinusText = Sid.MinusText, Flavor = Sid.Flavor,
+    };
+    /// <summary>スィド・S10: 規定 ＋ 開戦の衣 +10。</summary>
+    public static readonly UnitDef SidS10 = SidOpening374(TraitId.SidOpeningCloak10);
+    /// <summary>スィド・S20: 規定 ＋ 開戦の衣 +20。</summary>
+    public static readonly UnitDef SidS20 = SidOpening374(TraitId.SidOpeningCloak20);
+    /// <summary>ヴィオ・C: 規定 ＋ 飢えると血を啜る（マイナスの文面を差し替え）。</summary>
+    public static readonly UnitDef VioC = new()
+    {
+        Id = Vio.Id, Name = Vio.Name, MaxHp = Vio.MaxHp, Attack = Vio.Attack, Speed = Vio.Speed, Advances = Vio.Advances, Pattern = Vio.Pattern, Actions = Vio.Actions,
+        Traits = Vio.Traits.Append(TraitId.VioBloodSip).ToArray(), PlusText = Vio.PlusText, MinusText = "仲間が汚れていないターンは、飢えて隣の仲間の血を啜る", Flavor = Vio.Flavor,
+    };
+
     // 第361期: 規定のササが SS-w になったので、SS-k ／ SS-w は旧（`SasaH360`）から作る（`SasaSSw` は規定と同じ札・文面・残置）。
     const string SasaPlus360 = "手番で身を固め、次に動くまで、受ける一撃を7までに抑える。殴られると錯乱して隣の味方1体を別の席へ突き飛ばし（1ターン1回）、";
     /// <summary>第360期 SS-k 構えを解かない: ササ ＋ <see cref="TraitId.BraceHold"/>（身構えが次の自分の手番まで続く）。</summary>

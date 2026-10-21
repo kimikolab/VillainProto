@@ -140,8 +140,8 @@ static partial class Sh373Diag
             bool none = !UnitCatalog.All.Any(d => d.Traits.Any(t => t is TraitId.VioRetchHalf or TraitId.VioRetchThird))
                 && !CompareBuilds().Any(r => r.F.Occupied().Any(o => o.Def.Traits.Any(t => t is TraitId.VioRetchHalf or TraitId.VioRetchThird)));
             int nr = Enum.GetValues<PoisonRoute>().Length;
-            bool route = (int)PoisonRoute.Retch == nr - 1 && BattleContext.SoakBurnRouteIx == nr && BattleContext.SoakRouteCount == nr + 1;
-            Expect("版 A1 ／ A2 ＝ 規定のヴィオ ＋ 札1枚（マイナスの文面を差し替え・`All` ／ `compare` の行には無い）・経路 `Retch` は末尾・燃焼の添字は後ろへずらした", vers && none && route,
+            bool route = (int)PoisonRoute.Retch == 18 && BattleContext.SoakBurnRouteIx == nr && BattleContext.SoakRouteCount == nr + 1;   // 第374期: 開戦の衣（19）が後ろに足された
+            Expect("版 A1 ／ A2 ＝ 規定のヴィオ ＋ 札1枚（マイナスの文面を差し替え・`All` ／ `compare` の行には無い）・経路 `Retch` は添字 18・燃焼の添字は経路の後ろ", vers && none && route,
                 $"経路 {nr} 本・`SoakRouteCount` {BattleContext.SoakRouteCount}・燃焼の添字 {BattleContext.SoakBurnRouteIx}");
         }
 
@@ -175,15 +175,12 @@ static partial class Sh373Diag
 
         // ---- 試遊の台 ----
         {
+            // 第374期: 第373期の「版・A1 ／ A2 ／ A1 席替え」は外した（採らない・並びはこの器具の中で組む）。検査は「頭の10台」と「第373期の版の台が無い」に。
             var vr = Presets.Versions.Select(r => r.Name).ToArray();
-            bool rows = vr.Take(12).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒", "試遊・毒 席替え", "試遊・毒 紅", "版・A1 半分を吐く", "版・A2 3分の1を吐く" })
-                && !vr.Any(n => n is "版・Va 散らす" or "版・Vb 高い段" or "版・Vc 集中") && vr.Skip(12).All(n => n == "版・A1 席替え");
+            bool rows = vr.Take(10).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒", "試遊・毒 席替え", "試遊・毒 紅" })
+                && !vr.Any(n => n is "版・Va 散らす" or "版・Vb 高い段" or "版・Vc 集中" or "版・A1 半分を吐く" or "版・A2 3分の1を吐く" or "版・A1 席替え");
             string guren = S307.Seats(Presets.Versions.First(r => r.Name == "試遊・毒 紅").F);
-            bool vers = new[] { ("版・A1 半分を吐く", UnitCatalog.VioA1), ("版・A2 3分の1を吐く", UnitCatalog.VioA2) }
-                .All(x => Presets.Versions.First(r => r.Name == x.Item1).F.Occupied().Select(o => o.Def).SequenceEqual(Presets.PoisonHero367(vio: x.Item2).Occupied().Select(o => o.Def)));
-            bool seat = !vr.Contains("版・A1 席替え") || Presets.Versions.First(r => r.Name == "版・A1 席替え").F.Occupied().Any(o => o.Def == UnitCatalog.VioA1);
-            Expect("`Presets.Versions` ＝ 試遊の8台 ＋「試遊・毒 席替え」＋「試遊・毒 紅」（ボルグ・スィド・ベニ・ラウ・グザ）＋ 版の2台（試遊・毒のヴィオだけ版）（＋ あれば「版・A1 席替え」）・第372期の版の台は無い",
-                rows && guren == "ボルグ・スィド・ベニ・ラウ・グザ" && vers && seat, $"{string.Join("、", vr)}・紅 {guren}");
+            Expect("`Presets.Versions` の頭 ＝ 試遊の8台 ＋「試遊・毒 席替え」＋「試遊・毒 紅」（ボルグ・スィド・ベニ・ラウ・グザ）・第372 ／ 373期の版の台は無い（第374期に外した）", rows && guren == "ボルグ・スィド・ベニ・ラウ・グザ", $"{string.Join("、", vr)}・紅 {guren}");
         }
 
         // ---- PickOne ／ Roll ----

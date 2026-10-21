@@ -971,10 +971,11 @@ public static class Presets
         // 第372期【軽い期】本体: ヴィオの連撃の段の版（並びは試遊・毒・ヴィオだけ版）。採否はポン。
         // 第373期: 第372期の「版・Va ／ Vb ／ Vc」は外した（規定のヴィオが Va になった）。「試遊・毒 紅」＝ ポンの試遊の台（前1 ボルグ ／ 前3 スィド ／ 中央 ベニ ／ 後1 ラウ ／ 後3 グザ・規定の駒）。
         ("試遊・毒 紅", PoisonGuren373()),
-        ("版・A1 半分を吐く", PoisonHero367(vio: UnitCatalog.VioA1)),
-        ("版・A2 3分の1を吐く", PoisonHero367(vio: UnitCatalog.VioA2)),
-        // 第373期: 席の確かめ（`sh373 seats`）の A1 の1位（近衛 → 蝕みなしの勇者の順）＝ 前1 ガルド ／ 前3 ドルガ ／ 中央 スィド ／ 後1 グザ ／ 後3 ヴィオ（試遊・毒の並びと違うので足した）。
-        ("版・A1 席替え", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, center: UnitCatalog.Sid, back1: UnitCatalog.Guza, back3: UnitCatalog.VioA1)),
+        // 第374期: 第373期の「版・A1 ／ A2 ／ A1 席替え」は外した（採らない・並びは `sh373` の中に固定）。毒の立ち上がりを早める版（並びは試遊・毒・版の駒だけ替える）。採否はポン。
+        ("版・S10 開戦の衣", PoisonHero367(sid: UnitCatalog.SidS10)),
+        ("版・S20 開戦の衣", PoisonHero367(sid: UnitCatalog.SidS20)),
+        ("版・C 血を啜る", PoisonHero367(vio: UnitCatalog.VioC)),
+        ("版・S10C 両方", PoisonHero367(vio: UnitCatalog.VioC, sid: UnitCatalog.SidS10)),
     };
 
     /// <summary>第367期: 毒特化・勇者（`compare` の「毒爆弾 (ラウ×ヴィオ)」のラウの席 ＝ 後3 を守りに替えた台・前1 ガルド ／ 前3 スィド ／ 中央 グザ ／ 後1 ヴィオ ／ 後3 守り）。
