@@ -167,7 +167,10 @@ public partial class BattlefieldView3D
         // 集束砲の決め音はビームと銃声だけ。結晶のシャキーンは弾幕に残す。
         if (!focused) fx.Sound("gare_crystal_shine", -8, .35f, offset: .10f, fadeOut: .22f);
         fx.Sound("gare_shotgun", focused ? -11 : -12, fireAt, fadeOut: .22f);
-        fx.Sound("armor_break", -17, .70f + delay);
+        float hitAt = .70f + delay;
+        // 対象の人数分は重ねず、一斉着弾の芯と、その後の結晶の飛散を一回ずつ鳴らす。
+        fx.Sound(focused ? "gare_hit_focus.wav" : "gare_hit_scatter.wav", focused ? -7 : -10, hitAt, fadeOut: .16f);
+        fx.Sound("gare_crystal_scatter.wav", focused ? -6 : -8, hitAt + .07f, fadeOut: .22f);
         fx.At(.28f, () => {
             actor.BeginGatherPose("gare_fire");
             Vector3 muzzle = actor.GatherPortraitPoint(new Vector2(984, 350), _camera);

@@ -437,7 +437,7 @@ Copy-Item -LiteralPath 'D:/Assets/SE/効果音ラボ/戦闘/ショットガン�
 
 集団向け弾幕は発射と反動の開始0.32秒にショットガンを-12dBで再生し、0.03秒後にシャキーンを-8dBで重ねる。シャキーンは立ち上がりの弱い冒頭0.10秒を再生時に飛ばす。単体への集束砲は下記の専用音を加えた配分にする。
 初回のシャキーン-6dB／ショットガン-17dBから、ユーザーの「銃から放つ感を強めたい」に合わせてショットガンを5dB上げ、シャキーンを2dB下げた。発射直後の銃声が先に立ち、その後に結晶の響きが広がる。
-汎用の `charge_magic_release` を置き換え、着弾0.70秒の `armor_break` は維持する。
+汎用の `charge_magic_release` を置き換える。着弾の `armor_break` は当初維持していたが、現在は下記の専用の着弾・飛散音へ差し替えた。
 演出末尾0.22秒を共通時計で滑らかにフェードし、1.40秒の終了で切れ目が目立たないようにする。原音程、一時停止・中断・再戦の後片付けは既存の演出所有プレイヤーに従う。原本は変更しない。
 
 ### ガレの集束砲専用の溜め・発射（2026-10-21）
@@ -457,3 +457,22 @@ Copy-Item -LiteralPath 'D:/Assets/SE/効果音ラボ/戦闘/ビーム砲1.mp3' -
 溜めは0.04〜1.02秒、-2dB、原音程。素材先頭0.08秒を飛ばし、0.82秒かけて立ち上げ、発射前の0.04秒で落として発射時に停止する。以前の0.28秒の抜粋から0.70秒延ばし、光と音の高まりを作った。元の3.75秒を全尺再生しない。
 1.02秒にビーム砲-6dBとショットガン-11dBを重ねる。ユーザー指定により単体への集束砲ではシャキーンを再生しない。ビーム砲を中心に銃の衝撃を添える。命中1.40秒、演出終了2.10秒、末尾0.22秒をフェードする。集団向け弾幕の配分・発射と命中の時刻は維持する。
 購入素材の `gare_focus_charge.wav` と `.import` はGitの対象外。再配置は上記コマンドを使う。原本・共有音源は変更しない。
+
+### ガレの発散・集束の命中と結晶の飛散（2026-10-22）
+
+ユーザー指定の3音を無加工コピーで採用。原本とのSHA-256一致を確認した。
+
+| アプリ内ファイル | 原本（`D:/Assets/SE/Helton Yan's Pixel Combat - Single Files/`） | SHA-256 |
+|---|---|---|
+| `gare_hit_scatter.wav` | `DSGNMisc_HIT-Mecha Laser Pistol_HY_PC-003.wav` | `4A26AA7D74BF545360CFE45C98CEA1DF70D2BE4BCBCF2AD515F40D51C9D545C7` |
+| `gare_hit_focus.wav` | `DSGNMisc_HIT-Mecha Laser Pistol_HY_PC-006.wav` | `76C31C89F84E3B5A763898484937621F95FC97FE5003E725AE3C83D8B1D23F31` |
+| `gare_crystal_scatter.wav` | `DSGNMisc_SKILL IMPACT-Glassy Sprites_HY_PC-005.wav` | `D8DAF9C1C7DC89D633A07086036BE8E8F5900FA030E442B462F5E0CDA23D25BF` |
+
+```powershell
+Copy-Item -LiteralPath "D:/Assets/SE/Helton Yan's Pixel Combat - Single Files/DSGNMisc_HIT-Mecha Laser Pistol_HY_PC-003.wav" -Destination DemoApp/assets/audio/se/gare_hit_scatter.wav
+Copy-Item -LiteralPath "D:/Assets/SE/Helton Yan's Pixel Combat - Single Files/DSGNMisc_HIT-Mecha Laser Pistol_HY_PC-006.wav" -Destination DemoApp/assets/audio/se/gare_hit_focus.wav
+Copy-Item -LiteralPath "D:/Assets/SE/Helton Yan's Pixel Combat - Single Files/DSGNMisc_SKILL IMPACT-Glassy Sprites_HY_PC-005.wav" -Destination DemoApp/assets/audio/se/gare_crystal_scatter.wav
+```
+
+発散は命中0.70秒に003を-10dB、集束は命中1.40秒に006を-7dBで鳴らす。それぞれ0.07秒後に005を発散-8dB／集束-6dBで重ねる。敵の人数分は鳴らさず、一斉着弾の芯と飛散を各1回にまとめる。原音程、命中音は演出末尾0.16秒、飛散音は末尾0.22秒でフェードする。
+購入素材3音と各 `.import` はGit対象外。上記手順で配置する。原本は変更せず、一時停止・速度変更・中断・再戦は既存の演出時計と後片付けへ従う。

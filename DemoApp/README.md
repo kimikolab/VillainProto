@@ -465,4 +465,6 @@ Godot_console.exe --path DemoApp res://ShockMarkCheck.tscn -- --dust-reaction --
 
 ガレの弾幕は購入済みの結晶メッシュと星のきらめきを使い、銃口と弾の軌跡に青紫の破片が散る。単体には巻き込み式の集光と4つの光輪を通る集束砲を撃ち、反動で全身が後ろへ跳ね飛んで着地する。確認動画は `design/art/gare-aka/gare-prism-demo.mp4`。`GatherCastCheck.tscn -- --gare-clip` で動画用の連番も書き出せる。
 
-集束砲は約1秒かけて結晶・銃口の光・溜め音を高め、ビーム砲と銃声で一気に発射する。集束砲のシャキーンは外し、集団向け弾幕に残す。太い光束・5本の螺旋と、着弾時の結晶の炸裂・3重の衝撃波を追加した。着弾に合わせて画面が小さく揺れ、0.26秒で収まる。最新の効果音付き比較動画は `design/art/gare-aka/gare-impact-shake-sfx.mp4`（弾幕2秒→集束砲3秒）。`--gare-clip` の出力は現在150フレーム／30fps。
+集束砲は約1秒かけて結晶・銃口の光・溜め音を高め、ビーム砲と銃声で一気に発射する。集束砲のシャキーンは外し、集団向け弾幕に残す。太い光束・5本の螺旋と、着弾時の結晶の炸裂・3重の衝撃波を追加した。着弾に合わせて画面が小さく揺れ、0.26秒で収まる。最新の効果音付き比較動画は `design/art/gare-aka/gare-selected-impact-sfx.mp4`（弾幕2秒→集束砲3秒）。`--gare-clip` の出力は現在150フレーム／30fps。
+
+命中音はユーザー指定のMecha Laser Pistol 003（発散）／006（集束）に分け、0.07秒後にGlassy Sprites 005の結晶の飛散音を重ねる。購入素材の配置手順は `assets/audio/se/SOURCES.md`。
