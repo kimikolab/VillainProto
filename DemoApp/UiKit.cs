@@ -202,6 +202,8 @@ public static class UiKit
         "fodder" => 1.72f, // 手番の雷人形。割り込みは専用ノードで小柄な雷精を描く。
         "kado" => 2.40f,
         "sid" => 2.55f,
+        "guza" => 2.00f, // 大袋を抱えた低頭身の運び手。
+        "vio" => 2.25f, // 四足の毒竜。横に広がる尾を含む。
         "borg" => 2.65f,
         "gald" => 2.85f,
         "sero" => 2.15f,
@@ -247,6 +249,8 @@ public static class UiKit
         "susu_cast" => 24f / 1536f,
         "rica" => 0.0600f,
         "sid" => 0.0040f,
+        "guza" => 78f / 1536f,
+        "vio" => 17f / 1024f,
         "borg" => 0.0384f,
         "borg_guard" => 0.030f,
         "borg_release" => 0.055f,
