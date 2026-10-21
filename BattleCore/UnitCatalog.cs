@@ -6923,6 +6923,17 @@ public static class UnitCatalog
         Flavor = Vio.Flavor,
     };
 
+    // 第371期【軽い期】（指示書 design/PHASE371_POISON_CARRIERS_SPEC.md §2-1）。スィドの引き受けをやめる版。グザ W4 は第370期の `GuzaW3`（上限なし）をそのまま使う。
+    /// <summary>スィド・Y: 手番は今の規定の「毒を吐きかける」（`Spew`）＋ 毒に強い ＋ 毒の衣 ＋ 衣の返し（`CloakRetort`・毒撃 +8 と置き換える）＋ 痺れ毒。引き受け（`PoisonShoulder`）は持たない。`All` に入れない。</summary>
+    public static readonly UnitDef SidY = new()
+    {
+        Id = Sid.Id, Name = Sid.Name, MaxHp = Sid.MaxHp, Attack = Sid.Attack, Speed = Sid.Speed, Advances = Sid.Advances, Pattern = Sid.Pattern, Actions = Sid.Actions,
+        Traits = new[] { TraitId.Spew, TraitId.PoisonProof, TraitId.PoisonCloak, TraitId.CloakRetort, TraitId.Numb },
+        PlusText = "手番で、まだ毒を浴びていない一番手強い敵に毒を吐きかける。殴られると自分も毒をまとい、まとった毒が深いほど受ける傷が減る（最大6割）。殴ってきた敵にはまとった毒と同じだけ浴びせる。毒に蝕まれない",
+        MinusText = "殴られると隣の仲間にも毒が漏れる",
+        Flavor = Sid.Flavor,
+    };
+
     // 第361期: 規定のササが SS-w になったので、SS-k ／ SS-w は旧（`SasaH360`）から作る（`SasaSSw` は規定と同じ札・文面・残置）。
     const string SasaPlus360 = "手番で身を固め、次に動くまで、受ける一撃を7までに抑える。殴られると錯乱して隣の味方1体を別の席へ突き飛ばし（1ターン1回）、";
     /// <summary>第360期 SS-k 構えを解かない: ササ ＋ <see cref="TraitId.BraceHold"/>（身構えが次の自分の手番まで続く）。</summary>

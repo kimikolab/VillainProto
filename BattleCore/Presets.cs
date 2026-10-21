@@ -969,10 +969,13 @@ public static class Presets
         // 第369期: 第368期の「版・R 毒に強い」「版・RC 毒の衣」は外した（並びは `sh368` の中に固定）。「版・RCS 吸い分け」は採否が保留なので残す。
         ("版・RCS 吸い分け", PoisonHero367(UnitCatalog.GuzaR, UnitCatalog.VioRCS, UnitCatalog.SidRC)),
         // 第370期: 第369期の「版・Z1 ／ Z2 ／ Z3」は外した（並びは `sh369` の中に固定）。
-        // 第370期【軽い期】: 毒軸のループ②の版（並びは試遊・毒・版の駒だけ替える）。採否はポン。
-        ("版・W1 返り毒＋ヴィオ", PoisonHero367(UnitCatalog.GuzaW, UnitCatalog.VioW, UnitCatalog.SidR)),
-        ("版・W2 三人", PoisonHero367(UnitCatalog.GuzaW, UnitCatalog.VioW, UnitCatalog.SidZ)),
-        ("版・W3 上限なし", PoisonHero367(UnitCatalog.GuzaW3, UnitCatalog.VioW, UnitCatalog.SidZ)),
+        // 第371期: 第370期の「版・W1 ／ W2 ／ W3」は外した（並びは `sh370` の中に固定）。
+        // 第371期【軽い期】: 毒軸のループ③の版（並びは試遊・毒・版の駒だけ替える ／ 席替えの台は `sh371 seats` の1位）。採否はポン。
+        ("版・W4 ヴィオ型", PoisonHero367(UnitCatalog.GuzaW3, UnitCatalog.VioW, UnitCatalog.SidR)),
+        ("版・W5 両立", PoisonHero367(UnitCatalog.GuzaW3, UnitCatalog.VioW, UnitCatalog.SidY)),
+        // 第371期 §3-2 の席の確かめ（`sh371 seats`・試遊・毒の5枚の並べ替え 120 通り）の1位。W2 は蝕みなしの勇者に届く並びが 0 だったので、ボスの倒しT の最良。
+        ("版・W2 席替え", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.GuzaW, center: UnitCatalog.VioW, back1: UnitCatalog.SidZ, back3: UnitCatalog.Dolga)),
+        ("版・W5 席替え", Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Gald, center: UnitCatalog.SidY, back1: UnitCatalog.GuzaW3, back3: UnitCatalog.VioW)),
     };
 
     /// <summary>第367期: 毒特化・勇者（`compare` の「毒爆弾 (ラウ×ヴィオ)」のラウの席 ＝ 後3 を守りに替えた台・前1 ガルド ／ 前3 スィド ／ 中央 グザ ／ 後1 ヴィオ ／ 後3 守り）。

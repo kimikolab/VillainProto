@@ -104,7 +104,7 @@ static partial class Sh370Diag
         public readonly long[] Splash = new long[LoopT + 1], VAtk = new long[LoopT + 1], VAlive = new long[LoopT + 1], Strike = new long[LoopT + 1],
             SLayer = new long[LoopT + 1], SAlive = new long[LoopT + 1], Retort = new long[LoopT + 1], HLayer = new long[LoopT + 1], HAlive = new long[LoopT + 1];
         public readonly long[] HWrote = new long[7];
-        public long SplashAll, GotVio, GotSid, GotOther, Drained, Ticked, StrikeAll, VioWhet, RetortAll;
+        public long SplashAll, GotVio, GotSid, GotOther, Drained, Ticked, StrikeAll, VioWhet, RetortAll, Shouldered;   // 第371期: Shouldered（スィドが引き受けた層・`sh371 seats` が読む）
         public void Add(Agg o)
         {
             N += o.N; Wins += o.Wins; WinT += o.WinT; Win1 += o.Win1; Draw += o.Draw; Fell += o.Fell;
@@ -116,7 +116,7 @@ static partial class Sh370Diag
                 SLayer[t] += o.SLayer[t]; SAlive[t] += o.SAlive[t]; Retort[t] += o.Retort[t]; HLayer[t] += o.HLayer[t]; HAlive[t] += o.HAlive[t];
             }
             for (int i = 0; i < HWrote.Length; i++) HWrote[i] += o.HWrote[i];
-            SplashAll += o.SplashAll; GotVio += o.GotVio; GotSid += o.GotSid; GotOther += o.GotOther; Drained += o.Drained; Ticked += o.Ticked; StrikeAll += o.StrikeAll; VioWhet += o.VioWhet; RetortAll += o.RetortAll;
+            SplashAll += o.SplashAll; Shouldered += o.Shouldered; GotVio += o.GotVio; GotSid += o.GotSid; GotOther += o.GotOther; Drained += o.Drained; Ticked += o.Ticked; StrikeAll += o.StrikeAll; VioWhet += o.VioWhet; RetortAll += o.RetortAll;
         }
         public double Win => N == 0 ? 0 : 100.0 * Wins / N;
         public string WinTs => Wins == 0 ? "—" : F1((double)WinT / Wins);
@@ -143,7 +143,7 @@ static partial class Sh370Diag
                 a.SplashAll += t.Z370Splash;
             }
             if (id == "vio") { a.Drained += t.SpitStored; a.StrikeAll += t.Z370Strike; if (t.Z370StrikeByTurn is { } vb) for (int k = 1; k <= LoopT; k++) a.Strike[k] += vb[k]; a.GotVio += t.Z370SplashGot; }
-            else if (id == "sid") { a.GotSid += t.Z370SplashGot; a.RetortAll += t.Z369Retort; if (t.Z370RetortByTurn is { } rb) for (int k = 1; k <= LoopT; k++) a.Retort[k] += rb[k]; }
+            else if (id == "sid") { a.Shouldered += t.Z369Shouldered; a.GotSid += t.Z370SplashGot; a.RetortAll += t.Z369Retort; if (t.Z370RetortByTurn is { } rb) for (int k = 1; k <= LoopT; k++) a.Retort[k] += rb[k]; }
             else a.GotOther += t.Z370SplashGot;
         }
         var vio = p.FirstOrDefault(u => u.Def.Id == "vio"); var sid = p.FirstOrDefault(u => u.Def.Id == "sid");
