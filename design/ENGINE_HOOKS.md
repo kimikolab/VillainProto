@@ -1495,3 +1495,11 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 ## 第356期 —— ネルの N-100（呪われた傷は癒えない）を規定に
 
 - engine は変えていない。第355期の `_scar355Live` ／ `Scar355` が規定のネルのいる戦で働くようになった（ネルのいない戦は比較1つで抜けるのは同じ）。
+
+## 第367期 —— 毒の版（G ／ V）・軛は刻みを切らない（Y）・ヒサ H1（版だけ・規定は変えない）
+
+- **G（集まる瘴気）**: engine は変えていない。`MiasmaTrait.Spread` が保持者の `ScatterGather`（第364期の札）を読み、敵1体あたりの層を `PerTurn × max(1, ScatterTrait.Shots ÷ 生きている敵の数)` にする。味方への漏れは今のまま。
+- **V（触媒）**: 新しい札 `BlightCatalystTrait`（手番・`OnAction`）。腹は `SpitTrait.BellyKey` をそのまま使う。毒の経路 `PoisonRoute.Catalyst` を足した（添字 12・燃焼の添字 `SoakBurnRouteIx` 13 はずらさずに済んだので `SoakRouteCount` も 14 のまま）。
+- **Y（`YokeRule.SparesTicks`・既定 偽）**: 1回の呼び出しにだけ効く札 `_tickNext` を `PoisonTickOnce` ／ `BurnTickOnce` が `ApplyDamage` の直前に立てる（**軛の保持者がいる戦だけ**）。`ApplyDamageBody` の最初の行で読んで消し、軛の段で「刻みかつ上限超え」なら版に依らず数え（`UnitTally.Yoke367Tick*`）、`SparesTicks` のときだけ切らない。`NoteTickLayer` の「切られた刻み」も `SparesTicks` では立たない。既定の文字列を変えないため `YokeRule` の `PrintMembers` を手で書いた（`docs/rules.md` の既定値の列が動かない）。起爆（`Detonate`）は刻みではない（今どおり切る）・肩代わりで分かれた段は別の呼び出しなので切られる。
+- **H1（`RallyFeatherQuiet`・印だけ）**: `_featherQuietLive`（保持者がいる戦）のときも `BundlePush` が羽のまとまりを見分け、`BundlePop` の第365期の切り 1 の直後で、保持者のヒサなら叫ばない（`UnitTally.Rally367FeatherQuiet`・`Ch365.RallyCut` にも数える）。
+- 計数だけ: `UnitTally.Mia367ToFoe` ／ `Mia367ToAlly` ／ `Cat367*` ／ `Rally367FeatherQuiet` ／ `Yoke367Tick*`。

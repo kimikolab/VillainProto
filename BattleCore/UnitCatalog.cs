@@ -6786,6 +6786,34 @@ public static class UnitCatalog
     /// <summary>ヒサ・P-180: 規定 ＋ 溜まり 180 まで（`CommandPoolCap180`・玉 9 つ）。</summary>
     public static readonly UnitDef HisaP180 = HisaPool366(TraitId.CommandPoolCap180, "（玉は 9 つまでしか溜まらない）");
 
+    // 第367期【軽い期】（指示書 design/PHASE367_POISON_LEVERS_SPEC.md §3-1 ／ §5-1）。毒軸の版（グザ ／ ヴィオ）とヒサの版。どれも `All` に入れない・採否はポン。文面は叩き台。
+    /// <summary>グザ・G 集まる瘴気: 規定のグザ ＋ 集まる全体（`ScatterGather`・瘴気の敵1体あたりの層 ＝ 2 × max(1, 5 ÷ 生きている敵の数)・味方への漏れは今のまま）。</summary>
+    public static readonly UnitDef GuzaG = new()
+    {
+        Id = Guza.Id, Name = Guza.Name, MaxHp = Guza.MaxHp, Attack = Guza.Attack, Speed = Guza.Speed, Advances = Guza.Advances, Pattern = Guza.Pattern, Actions = Guza.Actions,
+        Traits = Guza.Traits.Append(TraitId.ScatterGather).ToArray(),
+        PlusText = "毎ターン、敵全体へ薄く毒を撒く。敵が少ないほど、一体に濃く集まる", MinusText = Guza.MinusText, Flavor = Guza.Flavor,
+    };
+    /// <summary>ヴィオ・V 触媒: 吐き戻し（`Spit`）を触媒（`BlightCatalyst`・手番で最も深い敵の毒を倍にし、腹の層を注ぐ）に置き換える。吸い（`Blightfed`）はそのまま。攻撃しない。</summary>
+    public static readonly UnitDef VioV = new()
+    {
+        Id = Vio.Id, Name = Vio.Name, MaxHp = Vio.MaxHp, Attack = Vio.Attack, Speed = Vio.Speed, Advances = Vio.Advances, Pattern = Vio.Pattern,
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "触媒") },
+        Traits = new[] { TraitId.Blightfed, TraitId.BlightCatalyst },
+        PlusText = "味方が負った毒を吸い取って腹に溜める。手番で、最も毒の深い敵の毒を倍にし、溜めた毒もすべて注ぎ込む",
+        MinusText = "自分では攻撃しない。味方が汚れていなければ注ぐ毒が足りない",
+        Flavor = Vio.Flavor,
+    };
+    /// <summary>ヒサ・H1: 規定 ＋ 羽の一撃では叫ばない（`RallyFeatherQuiet`・第365期の切り 1 を札にした）。</summary>
+    public static readonly UnitDef HisaY1 = new()
+    {
+        Id = Hisa.Id, Name = Hisa.Name, MaxHp = Hisa.MaxHp, Attack = Hisa.Attack, Speed = Hisa.Speed, Advances = Hisa.Advances, Pattern = Hisa.Pattern, Actions = Hisa.Actions,
+        Traits = Hisa.Traits.Append(TraitId.RallyFeatherQuiet).ToArray(),
+        PlusText = Hisa.PlusText.Replace(HisaShoutClause367, HisaShoutClause367 + "（羽の一撃では叫ばない）", StringComparison.Ordinal), MinusText = Hisa.MinusText, Flavor = Hisa.Flavor,
+    };
+    /// <summary>ヒサの叫びの句（H1 の括弧書きはこの直後に足す）。</summary>
+    public const string HisaShoutClause367 = "攻撃した味方と最も傷ついた味方を癒す";
+
     // 第361期: 規定のササが SS-w になったので、SS-k ／ SS-w は旧（`SasaH360`）から作る（`SasaSSw` は規定と同じ札・文面・残置）。
     const string SasaPlus360 = "手番で身を固め、次に動くまで、受ける一撃を7までに抑える。殴られると錯乱して隣の味方1体を別の席へ突き飛ばし（1ターン1回）、";
     /// <summary>第360期 SS-k 構えを解かない: ササ ＋ <see cref="TraitId.BraceHold"/>（身構えが次の自分の手番まで続く）。</summary>

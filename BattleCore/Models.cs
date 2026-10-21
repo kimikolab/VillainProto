@@ -2446,6 +2446,10 @@ public sealed class UnitTally
     public long[]? Sh363CastByTurn, Sh363HavocLost;
     /// <summary>第364期（<b>計数のみ</b>・跳ね撃ち）: 跳ね撃ちの札を持つ駒が撃った回数（形 A ／ B）・形 B の弾の数 ／ 弾の量（名目）の延べ・形 A で集まった回数 ／ その倍率の延べ。</summary>
     public long Sh364Volleys, Sh364Shots, Sh364ShotSum, Sh364Gathered, Sh364GatherMult;
+    /// <summary>第367期（<b>計数のみ</b>・どの規則も読まない）。瘴気が書いた層の名目（敵へ ／ 味方へ・滲みの前）・触媒（V）の手番 ／ 空振り（毒の敵も腹も無い）／ 倍で足した層 ／ 腹から注いだ層 ／ 毒の敵がいなくて腹だけ注いだ回数・
+    /// H1 で羽の一撃に叫ばなかった回数（ヒサの側）・軛と刻み（受けた駒の側・添字 [0] 毒 ／ [1] 燃焼）: 上限を超えた刻みが切られた回数 ／ 切られた量・Y で切られずに通った回数 ／ 上限を超えて通った量。</summary>
+    public long Mia367ToFoe, Mia367ToAlly, Cat367Acts, Cat367Dry, Cat367Doubled, Cat367Poured, Cat367BellyOnly, Rally367FeatherQuiet;
+    public long[]? Yoke367TickCut, Yoke367TickLost, Yoke367TickSpared, Yoke367TickOver;
     /// <summary>第365期（<b>計数のみ・計測専用</b>）: ヒサ×ミサの連鎖の矢印をターンごとに（<c>欄 × 32 ＋ ターン</c>・欄は <c>BattleContext.Ch365</c>）。<c>BattleContext.ChainCount365</c> が真の戦だけ書く。</summary>
     public long[]? Ch365;
     public long Rp345NormalDealt, Rp345Punches, Rp345PunchBack, Rp345PunchKills, Rp345PunchDealt, Rp345PunchAmount, Rp345AimEdible, Rp345GrabNoPunch, Rp345GrabAfter, Ga345Stomps, Ga345SplashHits, Ga345SplashDealt;
@@ -3735,6 +3739,8 @@ public sealed class UnitTally
         Sh363CastByTurn = AddArr(Sh363CastByTurn, o.Sh363CastByTurn); Sh363HavocLost = AddArr(Sh363HavocLost, o.Sh363HavocLost);
         Ch365 = AddArr(Ch365, o.Ch365);   // 第365期
         Sh364Volleys += o.Sh364Volleys; Sh364Shots += o.Sh364Shots; Sh364ShotSum += o.Sh364ShotSum; Sh364Gathered += o.Sh364Gathered; Sh364GatherMult += o.Sh364GatherMult;   // 第364期
+        Mia367ToFoe += o.Mia367ToFoe; Mia367ToAlly += o.Mia367ToAlly; Cat367Acts += o.Cat367Acts; Cat367Dry += o.Cat367Dry; Cat367Doubled += o.Cat367Doubled; Cat367Poured += o.Cat367Poured; Cat367BellyOnly += o.Cat367BellyOnly; Rally367FeatherQuiet += o.Rally367FeatherQuiet;   // 第367期
+        Yoke367TickCut = AddArr(Yoke367TickCut, o.Yoke367TickCut); Yoke367TickLost = AddArr(Yoke367TickLost, o.Yoke367TickLost); Yoke367TickSpared = AddArr(Yoke367TickSpared, o.Yoke367TickSpared); Yoke367TickOver = AddArr(Yoke367TickOver, o.Yoke367TickOver);
         Db354CurseRage += o.Db354CurseRage; Db354PickedMudo += o.Db354PickedMudo; Db354FedMudo += o.Db354FedMudo; Db354BurstYokeCut += o.Db354BurstYokeCut; Db354BurstYokeLost += o.Db354BurstYokeLost;   // 第354期
         Db353PlunderGain += o.Db353PlunderGain; Db353PlunderHits += o.Db353PlunderHits; Db353PlunderDry += o.Db353PlunderDry; Db353PlunderMiss += o.Db353PlunderMiss; Db353PlunderBoss += o.Db353PlunderBoss;   // 第353期
         Fg339Spray = AddArr(Fg339Spray, o.Fg339Spray); Fg339AllyHits = AddArr(Fg339AllyHits, o.Fg339AllyHits); Fg339AllyDmg = AddArr(Fg339AllyDmg, o.Fg339AllyDmg);

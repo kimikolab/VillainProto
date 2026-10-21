@@ -900,6 +900,7 @@ public sealed class BattleContext
             }
 
             MarkTickHit();   // 第214期（刻みは K2 のときだけ感電を起爆する）
+            _tickNext = _yokeHolders.Count > 0;   // 第367期（軛と刻み・1回の呼び出しにだけ効く札。軛の保持者がいなければ立てない）
             ApplyDamage(u, poison, null);
         }
     }
@@ -1011,6 +1012,7 @@ public sealed class BattleContext
                 _burnTickSelf = true;
                 if (burnDmg > baseD && BrittleApplies(u)) BrittleBook.PlankTimesBrittle++;   // 計数のみ
             }
+            _tickNext = _yokeHolders.Count > 0;   // 第367期（軛と刻み）
             ApplyDamage(u, burnDmg, null, burnTick: true);
             _burnTickSelf = false;
             if (!u.IsAlive) bt.BurnDeaths++;
@@ -4183,7 +4185,8 @@ public sealed class BattleContext
     }
 
     /// <summary><see cref="UnitTally.SoakSeenByRoute"/> の長さ（毒 9 経路 ＋ 燃焼 1。第180期に吐き戻しで1本、
-    /// 第183期に触れてうつす・その漏れで2本、第190期に澱み分けで1本、第195期にスィドの吐きで1本、第197期に紅蓮の奔流で1本、第216期に開戦の撒きで1本、第223期に状態の矢で1本増えた）。**毒の経路を足したら燃焼の添字も後ろへずらすこと**
+    /// 第183期に触れてうつす・その漏れで2本、第190期に澱み分けで1本、第195期にスィドの吐きで1本、第197期に紅蓮の奔流で1本、第216期に開戦の撒きで1本、第223期に状態の矢で1本増えた。
+    /// 第367期の触媒（添字 12）は燃焼の添字 13 の手前に収まったので、長さも燃焼の添字も変えていない）。**毒の経路を足したら燃焼の添字も後ろへずらすこと**
     /// ——ずらさないと新しい経路の添字が燃焼と重なる。</summary>
     public const int SoakRouteCount = 14;
 
@@ -6016,6 +6019,8 @@ public sealed class BattleContext
 
     /// <summary>燃焼の刻みそのものの札（第219期・<see cref="ApplyDamageBody"/> の頭で読んで消す）。</summary>
     bool _burnTickSelf;
+    /// <summary>第367期: 次の <c>ApplyDamage</c> が毒 ／ 燃焼の刻みそのものか（軛の保持者がいる戦だけ立てる・本体の最初の行で読んで消す）。</summary>
+    bool _tickNext;
     /// <summary>叩きつけ・通電の札（第219期・<b>計数の経路だけ</b>）。</summary>
     bool _brittleSlamNext;
 
@@ -9672,6 +9677,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.ColossusToStriker)) _glLive = true;     // 第335期（GL・力は殴る味方へ）
         if (u.HasTrait(TraitId.MarkInheritSpread) || u.HasTrait(TraitId.MarkInheritOne)) _miLive = true;   // 第337期（MI・標の引き継ぎ）
         if (u.HasTrait(TraitId.CommandNow)) _commandNowLive = true;    // 第301期（HL-i・まとまりで叩かれた標の敵を控える）
+        if (u.HasTrait(TraitId.RallyFeatherQuiet)) _featherQuietLive = true;   // 第367期（H1・羽の一撃では叫ばない）
         if (CommandTrait.BurstUnit(u) > 0) { _burstLive = true; _burstHolders.Add(u); }   // 第321期（HQ-a ／ HQ-b・溜まったら吐く）
         if (u.HasTrait(TraitId.HisaCover)) _coverHolders.Add(u);       // 第301期（HC・庇い）
         if (CommandTrait.IsRouse(u)) _rouseLive = true;                // 第302期（HB・鼓舞の受け手の計数）
@@ -10559,7 +10565,7 @@ public sealed class BattleContext
     void NoteTickLayer(UnitState u, int amount, bool burn, bool second)
     {
         UnitTally t = TallyOf(u);
-        bool cut = amount > Yoke.Cap && YokeBinding;
+        bool cut = amount > Yoke.Cap && !Yoke.SparesTicks && YokeBinding;   // 第367期: Y では刻みは切られない
         if (second) (t.ConcExtraByTurn ??= new long[8])[Math.Clamp(_turn, 0, 7)] += amount;   // 第218期・**計数のみ**
         if (burn)
         {
@@ -13529,6 +13535,8 @@ public sealed class BattleContext
         // 第219期: 燃焼の刻みそのものの札・叩きつけの札（1回の呼び出しにだけ効く・ここで読んで消す）。
         bool burnTickSelf = _burnTickSelf;
         _burnTickSelf = false;
+        bool tickHit = _tickNext;        // 第367期: 毒 ／ 燃焼の刻みそのものの一撃（軛の版 Y・1回の呼び出しにだけ効く・ここで読んで消す）
+        _tickNext = false;
         bool slamHit = _brittleSlamNext;
         _brittleSlamNext = false;
         bool burstHit = _burstHitNext;   // 第220期（計数の経路だけ）
@@ -14401,6 +14409,18 @@ public sealed class BattleContext
         // （`Yoke.Active && AllUnits.Any(u => u.IsAlive && u.HasTrait(TraitId.Yoke))`）で、
         // 走査の対象が全駒から保持者のキャッシュに変わっただけ。
         bool yokeBinding = amount > Yoke.Cap ? YokeBinding : false;
+        // 第367期（版 Y・`YokeRule.SparesTicks`）: 毒 ／ 燃焼の刻みは切らない。計数は版に依らず（切られた ／ 通った刻みを受けた駒の側に・[0] 毒 ／ [1] 燃焼）。
+        if (yokeBinding && tickHit)
+        {
+            UnitTally yt = TallyOf(target);
+            int k = burnTick ? 1 : 0;
+            if (Yoke.SparesTicks)
+            {
+                (yt.Yoke367TickSpared ??= new long[2])[k]++; (yt.Yoke367TickOver ??= new long[2])[k] += amount - Yoke.Cap;
+                yokeBinding = false;
+            }
+            else { (yt.Yoke367TickCut ??= new long[2])[k]++; (yt.Yoke367TickLost ??= new long[2])[k] += amount - Yoke.Cap; }
+        }
         if (yokeBinding)
         {
             // 第132期 段1・**計数のみ**。切る前にしか取れない量（切り落とされた量）をここで記録する。
@@ -15402,8 +15422,10 @@ public sealed class BattleContext
     /// <summary>回復の量（層 1 あたり・指示書が<b>測る前に固定</b>した値）。</summary>
     public const int RallyPerLayer = 6;
 
-    // 第365期: `Feather` ＝ ミサの羽のまとまり（手番の羽の一振り ／ 標撃ちの割り込み）。計測の切り 1 だけが読む。
-    void BundlePush(UnitState? owner, bool outOfTurn) => _bundles.Add(new Bundle { Owner = owner, OutOfTurn = outOfTurn, Feather = ChainCut365 != 0 || ChainCount365 ? _mfFiring || (owner is not null && owner.HasTrait(TraitId.Feathers)) : false });
+    // 第365期: `Feather` ＝ ミサの羽のまとまり（手番の羽の一振り ／ 標撃ちの割り込み）。計測の切り 1 と、第367期の H1（`RallyFeatherQuiet`）だけが読む。
+    void BundlePush(UnitState? owner, bool outOfTurn) => _bundles.Add(new Bundle { Owner = owner, OutOfTurn = outOfTurn, Feather = ChainCut365 != 0 || ChainCount365 || _featherQuietLive ? _mfFiring || (owner is not null && owner.HasTrait(TraitId.Feathers)) : false });
+    /// <summary>第367期（H1）: 「羽の一撃では叫ばない」の保持者が盤上にいるか（いなければ <c>BundlePush</c> は羽を見分けない・比較1つで抜ける）。</summary>
+    bool _featherQuietLive;
 
     void BundleHit(UnitState target, UnitState? source)
     {
@@ -15430,6 +15452,8 @@ public sealed class BattleContext
         // 第302期（HV-s・`RallyQuiet`）: 叫びも手番の外の動作として `CanActOutOfTurn` を通す（粛 ／ 痺れで黙る）。札が無ければ問わない。
         if (hisa.HasTrait(TraitId.RallyQuiet) && !CanActOutOfTurn(hisa, OutOfTurnRoute.Rally)) { if (HushBindingNow) ht.RallyHushed++; else ht.RallyBlocked++; return; }
         if (ChainCut365 == 1 && b.Feather) { Ch(hisa, Ch365.RallyCut); return; }   // 第365期（計測の切り 1）
+        // 第367期（H1・`RallyFeatherQuiet`）: 羽のまとまりでは叫ばない——第365期の切り 1 と同じ所を、ヒサの札で切る。羽以外のまとまりは今どおり。
+        if (b.Feather && _featherQuietLive && hisa.HasTrait(TraitId.RallyFeatherQuiet)) { ht.Rally367FeatherQuiet++; Ch(hisa, Ch365.RallyCut); return; }
         ht.RallyFires++;
         Ch(hisa, Ch365.Rally); if (b.Feather) Ch(hisa, Ch365.RallyFeather);   // 第365期（計数のみ）
         if (b.FreshVendetta is not null) TallyOf(b.FreshVendetta).VendettaFreshShouts++;   // 第301期（計数のみ・初回の仇討ちで叫びが出た）

@@ -961,11 +961,21 @@ public static class Presets
         // 第365期: 規定のアカ ／ ガレを AKn-A ／ GR-A にした。第364期の「版・」の4台は外した（並びは `sh364` の中に固定 `Boards364`）。「試遊・破片」は規定の駒のまま（ガレは GR-A になった）。
         // 第365期: 自傷軸の試遊の台（第364期の「版・AKn-A 自傷」の並びを規定の駒で・ミサ＋ボルグ＋ヒサを含まない最良）——前1 カド ／ 前3 リリ ／ 中央 ムド ／ 後1 ボルグ ／ 後3 アカ。
         ("試遊・自傷", SelfHarmPlay365()),
-        // 第366期【軽い期】本体1: ヒサの玉を持ち越さない版（並びは台 B ＝ 前1 ボルグ ／ 前3 ミサ ／ 中央 ヒサ ／ 後1 カド ／ 後3 アカ・ヒサだけ版）。採否はポン。
-        ("版・P-t ヒサ", HisaBoard366(UnitCatalog.HisaPt)),
-        ("版・P-60 ヒサ", HisaBoard366(UnitCatalog.HisaP60)),
-        ("版・P-180 ヒサ", HisaBoard366(UnitCatalog.HisaP180)),
+        // 第367期: 第366期の「版・」の3台（P-t ／ P-60 ／ P-180 ヒサ）は外した（規定は変えていない・並びは `sh366` の中に固定 `Presets.HisaBoard366`）。
+        // 第367期: 毒軸の試遊の台（毒特化・勇者 ＝ 前1 ガルド ／ 前3 スィド ／ 中央 グザ ／ 後1 ヴィオ ／ 後3 ドルガ・規定の駒）と、その並びでグザ ／ ヴィオだけ版の3台・台 B でヒサだけ版の1台。採否はポン。
+        ("試遊・毒", PoisonHero367()),
+        ("版・G グザ", PoisonHero367(guza: UnitCatalog.GuzaG)),
+        ("版・V ヴィオ", PoisonHero367(vio: UnitCatalog.VioV)),
+        ("版・GV", PoisonHero367(UnitCatalog.GuzaG, UnitCatalog.VioV)),
+        ("版・H1 ヒサ", HisaBoard366(UnitCatalog.HisaY1)),
     };
+
+    /// <summary>第367期: 毒特化・勇者（`compare` の「毒爆弾 (ラウ×ヴィオ)」のラウの席 ＝ 後3 を守りに替えた台・前1 ガルド ／ 前3 スィド ／ 中央 グザ ／ 後1 ヴィオ ／ 後3 守り）。
+    /// 守りは `sh367 pick`（GV の勇者・seed 0..19 で最も勝つ）で選んだ。グザ ／ ヴィオを差し替えて版の台を作る。</summary>
+    public static Formation PoisonHero367(UnitDef? guza = null, UnitDef? vio = null) =>
+        Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sid, center: guza ?? UnitCatalog.Guza, back1: vio ?? UnitCatalog.Vio, back3: PoisonGuard367);
+    /// <summary>第367期: 毒特化・勇者の守り（`sh367 pick` の結果・GV の勇者 seed 0..19 でゴルム ／ ドルガ ／ ササとも 100%、倒しT ドルガ 7.0 ／ ササ 7.2 ／ ゴルム 8.0）。</summary>
+    public static UnitDef PoisonGuard367 => UnitCatalog.Dolga;
 
     /// <summary>第366期: 台 B（前1 ボルグ ／ 前3 ミサ ／ 中央 ヒサ ／ 後1 カド ／ 後3 アカ）。ヒサを差し替えて版の台を作る。</summary>
     public static Formation HisaBoard366(UnitDef? hisa = null) =>

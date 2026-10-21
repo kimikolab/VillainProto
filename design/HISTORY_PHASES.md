@@ -8,6 +8,8 @@ description: 第259期に `CLAUDE.md` の「現状値」節を**逐語で**移�
 
 ## 現状値
 
+**第367期は軽い期で、規定は変えず、本体1 で毒軸のテコ入れ①（G グザの集まる瘴気 ／ V ヴィオの触媒 ／ GV）、本体2 で波の規則「軛は刻みを切らない」（Y）、本体3 でヒサ Y1（H1・羽の一撃では叫ばない）の版を並べた**（指示書は design/PHASE367_POISON_LEVERS_SPEC.md・報告は design/PHASE367_POISON_LEVERS.md）。版の駒は `UnitCatalog.GuzaG` ／ `VioV` ／ `HisaY1`（`All` に入れない）・Y は `YokeRule { SparesTicks = true }` を器具が渡す。`compare` は5版とも 0 セルで、全64行 100 / 94.8 / 91.2 / 87.8 / 86.8・主判定19行 100 / 92.7 / 91.5 / 84.8 / 87.3（歯止めの余裕 +54.1pt）・情報セル 60 / 19 のまま。`docs/` は再生成していない。試遊の台は `Presets.Versions` の末尾に「試遊・毒」（毒特化・勇者 ＝ ガルド・スィド・グザ・ヴィオ・ドルガ）と「版・G グザ」「版・V ヴィオ」「版・GV」「版・H1 ヒサ」（第366期の「版・」の3台は外した）。器具は `sh367`（pick / poison / yoke / hisa / compare / check）。
+
 **第366期は軽い期で、規定は変えず、本体1 でヒサの玉を持ち越さない版（P-t ／ P-60 ／ P-180）を並べ、本体2 で毒軸を棚卸しした（数えるだけ）**（指示書は design/PHASE366_HISA_POOL_POISON_P0_SPEC.md・報告は design/PHASE366_HISA_POOL_POISON.md）。版の駒は `UnitCatalog.HisaPt` ／ `HisaP60` ／ `HisaP180`（`All` に入れない）。3版とも台 B の勇者 54%・3.0T は変わらず、`compare` も 0 セルで、全64行 100 / 94.8 / 91.2 / 87.8 / 86.8・主判定19行 100 / 92.7 / 91.5 / 84.8 / 87.3（歯止めの余裕 +54.1pt）・情報セル 60 / 19 のまま。`docs/` は再生成していない。試遊の台は `Presets.Versions` の末尾に「版・P-t ヒサ」「版・P-60 ヒサ」「版・P-180 ヒサ」（並びは台 B）。器具は `sh366`（boards / compare / flow / swap / check）。
 
 **第365期は軽い期で、段0 でアカ ＝ 第364期の AKn-A・ガレ ＝ GR-A を規定にし、本体でヒサ × ミサの連鎖を数えて解き明かした（規則は変えていない）**（指示書は design/PHASE365_SETTLE_CHAIN_TRACE_SPEC.md・報告は design/PHASE365_SETTLE_CHAIN_TRACE.md）。旧は `SusuH364` ／ `GareH364`（`Common.PinAG364` ／ `Pin364`・古い口の終端 `PinKd362` の後ろ）。`compare` は 0 セルで、全64行 100 / 94.8 / 91.2 / 87.8 / 86.8・主判定19行 100 / 92.7 / 91.5 / 84.8 / 87.3（歯止めの余裕 +54.1pt）・情報セル 60 / 19 のまま。試遊の台は `Presets.Versions` の末尾に「試遊・自傷」（第364期の「版・」の4台は外した）。自傷軸のまとめは design/SELFHARM_AXIS_SUMMARY.md。

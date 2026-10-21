@@ -928,6 +928,10 @@ public enum TraitId
     CommandPoolTurnDrop,  // 玉はターンで散る（P-t・ヒサ）: 叫びの溢れの溜まりを、そのターンの終わりに捨てる（そのターンのうちは今どおり使える・1ターン 9 層の上限はそのまま）（**札そのものは挙動を持たない**・engine の `CommandPoolTurnEnd`）
     CommandPoolCap60,     // 溜まり 60 まで（P-60・ヒサ）: 叫びの溢れの溜まりは 60（玉 3 つ）まで・超えて入る溢れは捨てる（**札そのものは挙動を持たない**・`CommandTrait.PoolCapOf`）
     CommandPoolCap180,    // 溜まり 180 まで（P-180・ヒサ）: 叫びの溢れの溜まりは 180（玉 9 つ）まで・超えて入る溢れは捨てる（**札そのものは挙動を持たない**・`CommandTrait.PoolCapOf`）
+    // --- 第367期で足した札（指示書 design/PHASE367_POISON_LEVERS_SPEC.md §3 ／ §5）。毒軸の版（ヴィオの触媒）・ヒサの版（羽の一撃では叫ばない）。保持者 0 枚 ---
+    // （グザの集まる瘴気 G は札を足さない——第364期の `ScatterGather` を瘴気も読む・`MiasmaTrait.Spread`）
+    BlightCatalyst,       // 触媒（V・ヴィオ）: 手番で（攻撃しない）、最も毒の層が深い敵（同じ層なら席番号の小さい方）の毒を倍にし、腹に溜めた層（澱み喰いが吸った分）を全部その敵へ足す（腹は空になる）。毒のある敵がいなければ腹の分だけを席番号の最も小さい敵へ。倍に上限なし・乱数を引かない（`BlightCatalystTrait`・経路 `PoisonRoute.Catalyst`）
+    RallyFeatherQuiet,    // 羽の一撃では叫ばない（H1・ヒサ）: ミサの羽のまとまり（標撃ち ／ 手番の羽）が標の敵に当たっても叫ばない。羽以外の一撃は今どおり（**札そのものは挙動を持たない**・engine の `BundlePop`・第365期の切り 1 と同じ所）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -2984,7 +2988,9 @@ public enum PoisonRoute
     /// <summary>開戦の撒き（ベニの版 O1〜O4・開戦時に全体へ。第216期）。</summary>
     Opening,
     /// <summary>状態の矢（セロの版 E2・矢が当たった敵へ。第223期）。</summary>
-    Arrow
+    Arrow,
+    /// <summary>触媒（ヴィオの版 V・最も深い敵の毒を倍にし、腹の層を注ぐ。第367期）。</summary>
+    Catalyst
 }
 
 /// <summary>
@@ -5933,8 +5939,13 @@ public sealed class MiasmaTrait : Trait
         var foes = ctx.LivingMembers(ctx.Opponent(self.TeamId));
         if (foes.Count == 0) return;
 
+        // 第367期（版 G・集まる瘴気）: 保持者が集まる全体（`ScatterGather`）を持てば、敵1体あたりの層を
+        // PerTurn × max(1, 5 ÷ 生きている敵の数)（切り捨て・`ScatterTrait.Shots`）にする。**味方への漏れは変えない。** 札が無ければ今と同じ。
+        int per = PerTurn;
+        if (self.HasTrait(TraitId.ScatterGather)) per *= Math.Max(1, ScatterTrait.Shots / foes.Count);
+
         foreach (UnitState foe in foes)
-            ctx.Poison(foe, PerTurn, self, PoisonRoute.Miasma);      // 毒の窓口（第90期）
+            ctx.Poison(foe, per, self, PoisonRoute.Miasma);      // 毒の窓口（第90期）
 
         // 瘴気は敵味方を選ばない。撒く側にも代償を負わせる。
         // **味方漏れも同じ窓口を通す**——両陣営に等しくかかるのが滲み則の要点（第90期 §2-2）。
@@ -5943,9 +5954,11 @@ public sealed class MiasmaTrait : Trait
             ctx.Poison(ally, AllyLeak, self, PoisonRoute.MiasmaLeak);
 
         // 第61期の計数。**盤面には触らない。**
-        ctx.NoteMiasma(foes.Count * PerTurn, allies.Count * AllyLeak);
+        ctx.NoteMiasma(foes.Count * per, allies.Count * AllyLeak);
+        UnitTally mt = ctx.TallyOf(self);   // 第367期（計数のみ）
+        mt.Mia367ToFoe += foes.Count * per; mt.Mia367ToAlly += allies.Count * AllyLeak;
 
-        ctx.Log($"    {self.Name} が瘴気を撒いた（敵 毒 +{PerTurn} / 味方 毒 +{AllyLeak}）", LogKind.FriendlyFire);
+        ctx.Log($"    {self.Name} が瘴気を撒いた（敵 毒 +{per} / 味方 毒 +{AllyLeak}）", LogKind.FriendlyFire);
     }
 }
 
@@ -11365,6 +11378,20 @@ public sealed class YokeTrait : Trait
 public readonly record struct YokeRule(int Cap, bool Active)
 {
     public static YokeRule Default => new(YokeTrait.Cap, Active: true);
+
+    /// <summary>
+    /// 第367期（版 Y「軛は刻みを切らない」・指示書 design/PHASE367_POISON_LEVERS_SPEC.md §4）。真なら毒 ／ 燃焼の刻み（`PoisonTickOnce` ／ `BurnTickOnce` の一撃）だけは
+    /// 上限で切らない。刻み以外の一撃は今どおり切る。<b>既定は偽（今どおり切る）</b>——器具が版の規則として渡す（static のノブにしない理由は上の doc）。
+    /// </summary>
+    public bool SparesTicks { get; init; }
+
+    // 既定の文字列を動かさない（`derive rules` の既定値の列 ＝ `docs/rules.md` が `ToString` を写す）。版を渡したときだけ書き足す。
+    bool PrintMembers(System.Text.StringBuilder b)
+    {
+        b.Append("Cap = ").Append(Cap).Append(", Active = ").Append(Active);
+        if (SparesTicks) b.Append(", SparesTicks = True");
+        return true;
+    }
 }
 
 /// <summary>
@@ -13103,6 +13130,75 @@ public sealed class SpitTrait : Trait
 
     /// <summary>腹は戦闘ごとに空にする（私有キーは会戦の境界の掃除を通らない）。</summary>
     public override void OnCarryOver(UnitState self) => self.SetCounter(BellyKey, 0);
+}
+
+/// <summary>
+/// 触媒（第367期・ヴィオの版 V・指示書 design/PHASE367_POISON_LEVERS_SPEC.md §3-1）。<b>手番で</b>（攻撃しない・`Actions` が `Skill` 1要素）、
+/// 敵のうち毒の層が最も深い1体（同じ層なら席番号の小さい方）の毒を<b>倍</b>にし（今の層と同じ数を足す）、続けて腹（<see cref="SpitTrait.BellyKey"/>
+/// ——澱み喰いがターンの頭に味方から吸った層・<see cref="BlightfedTrait"/> は今のまま）を全部その敵へ注ぐ（腹は 0 になる）。
+/// 毒のある敵がいなければ、腹の分だけを席番号の最も小さい敵へ注ぐ。
+///
+/// <para>倍と注ぎは<b>別々に</b>毒の窓口（<see cref="BattleContext.Poison"/>・<see cref="PoisonRoute.Catalyst"/>）を通す——滲み則 ／ 毒を招くはそれぞれに乗る。
+/// <b>倍に上限を付けない</b>（壊れたら報告に書く・この期では直さない）。<b><see cref="BattleContext.PickOne"/> を使わない・乱数を引かない。</b></para>
+/// </summary>
+public sealed class BlightCatalystTrait : Trait
+{
+    public override TraitId Id => TraitId.BlightCatalyst;
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action) => Act(ctx, self);
+
+    // 行動パターンを持たない保持者は従来どおりターン頭に発火する（Trait.ActsOnPattern）。
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!ActsOnPattern(self)) Act(ctx, self);
+    }
+
+    /// <summary>毒の層が最も深い敵（同じ層なら席番号の小さい方・毒のある敵がいなければ null）。<b>乱数を引かない。</b></summary>
+    internal static UnitState? Deepest(BattleContext ctx, UnitState self)
+    {
+        UnitState? pick = null;
+        foreach (UnitState u in ctx.LivingMembers(ctx.Opponent(self.TeamId)))
+        {
+            int p = u.RawCounter(StatusKeys.Poison);
+            if (p <= 0) continue;
+            if (pick is null) { pick = u; continue; }
+            int q = pick.RawCounter(StatusKeys.Poison);
+            if (p > q || (p == q && u.Slot < pick.Slot)) pick = u;
+        }
+        return pick;
+    }
+
+    static void Act(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+        UnitTally t = ctx.TallyOf(self);
+        t.Cat367Acts++;
+        UnitState? pick = Deepest(ctx, self);
+        int belly = SpitTrait.BellyOf(self);
+        if (pick is null)
+        {
+            if (belly <= 0) { t.Cat367Dry++; return; }
+            foreach (UnitState u in ctx.LivingMembers(ctx.Opponent(self.TeamId)))
+                if (pick is null || u.Slot < pick.Slot) pick = u;
+            if (pick is null) { t.Cat367Dry++; return; }
+            t.Cat367BellyOnly++;
+        }
+        else
+        {
+            int layers = pick.RawCounter(StatusKeys.Poison);
+            ctx.Log($"    {self.Name} が {pick.Name} の毒を煮立たせた（毒 {layers} → 倍）", LogKind.Trigger);
+            ctx.Poison(pick, layers, self, PoisonRoute.Catalyst);
+            t.Cat367Doubled += layers;
+        }
+        if (belly <= 0) return;
+        self.SetCounter(SpitTrait.BellyKey, 0);
+        ctx.Log($"    {self.Name} が腹の澱みを {pick.Name} に注ぎ込んだ（毒 +{belly}）", LogKind.Trigger);
+        ctx.Poison(pick, belly, self, PoisonRoute.Catalyst);
+        t.Cat367Poured += belly;
+    }
+
+    /// <summary>腹は戦闘ごとに空にする（吐き戻しと同じ私有キー・会戦の境界の掃除を通らない）。</summary>
+    public override void OnCarryOver(UnitState self) => self.SetCounter(SpitTrait.BellyKey, 0);
 }
 
 /// <summary>
@@ -18512,6 +18608,8 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.CommandPoolTurnDrop),   // 第366期（玉はターンで散る P-t・印だけ）
         new MarkOnlyTrait(TraitId.CommandPoolCap60),      // 第366期（溜まり 60 まで P-60・印だけ）
         new MarkOnlyTrait(TraitId.CommandPoolCap180),     // 第366期（溜まり 180 まで P-180・印だけ）
+        new BlightCatalystTrait(),                        // 第367期（触媒 V・ヴィオ）
+        new MarkOnlyTrait(TraitId.RallyFeatherQuiet),     // 第367期（羽の一撃では叫ばない H1・印だけ）
         new EruptTrait(),      // 第180期
         new SmearTrait(),      // 第180期
         new SpitTrait(),       // 第180期

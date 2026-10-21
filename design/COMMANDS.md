@@ -1333,6 +1333,12 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sh366 flow              # 第366期 §3-2: 毒の流れ（`compare` の毒 ／ 澱みの行 8 台 × 本編 第5波 ／ 近衛 ／ 大隊 ／ ボス・seed 0..19・書いた層 ／ 減らした層（`CounterProbe`）・刻み・与ダメ・勇者の蝕み・蝕みなしの勇者の対照）（3 秒）
     dotnet run --project BattleSim -c Release 0 sh366 swap              # 第366期 §3-3: 毒の駒を同じ席の素体に替えた差（毒の行 × 4 波・seed 0..99）（7 秒）
     dotnet run --project BattleSim -c Release 0 sh366 check             # 第366期 自己検査（版の定義・P-t はターンの終わりに 0 ／ T1 までは規定と同じ・P-60 ／ P-180 は上限を超えない・verbose ／ 計数のスイッチ・素体の替え ／ 蝕みなしは器具の中だけ・試遊の台・PickOne ／ Roll）
+    dotnet run --project BattleSim -c Release 0 sh367 pick              # 第367期 §3-2: 毒特化・勇者の守り（毒爆弾のラウの席にゴルム ／ ドルガ ／ ササ）を GV の勇者（seed 0..19）で選ぶ
+    dotnet run --project BattleSim -c Release 0 sh367 poison            # 第367期 §3-3: 毒の4台 × 版（規定 ／ G ／ V ／ GV）× 6 波（ボス ／ 近衛 ／ 大隊 ／ 本編 第2 ／ 5波 ／ 蝕みなしの勇者）・seed 0..99・勇者の層 ／ 書き手 ／ 刻みの割合 ／ 漏れと吸い ／ 誰が何Tに倒れたか ／ 壊れの兆し
+    dotnet run --project BattleSim -c Release 0 sh367 yoke              # 第367期 §4-2: 軛は刻みを切らない（Y）—— 8 台 × 第4波 ／ 強い条件の第4波 × 規定 ／ Y・切られた ／ 通った刻み
+    dotnet run --project BattleSim -c Release 0 sh367 hisa              # 第367期 §5-2: ヒサ H1（羽の一撃では叫ばない）—— 標軸の5台 × 9 波 × 規定 ／ H1・叫びと癒し
+    dotnet run --project BattleSim -c Release 0 sh367 compare <G|V|GV|Y|H1>  # 第367期: `compare` 64 行 × 版（版の駒のいる行だけを版で回す・Y は全行・(G2)）
+    dotnet run --project BattleSim -c Release 0 sh367 check             # 第367期 自己検査（版の定義・規定は今どおり・G ／ V ／ Y を直に・H1 は第365期の切り 1 と全戦同じ・verbose・器具の中だけ・試遊の台・PickOne ／ Roll）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）
