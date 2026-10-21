@@ -924,6 +924,10 @@ public enum TraitId
     ScatterGather,      // 集まる全体（形 A）: 全体の一撃の1体あたりの量を 量 × max(1, 5 ÷ 生きている敵の数)（切り捨て）にする。当て方は今の全体のまま（1体に1回ずつ）（**札そのものは挙動を持たない**・`ScatterTrait.Fire`）
     ScatterShot,        // 跳ね弾（形 B）: 全体の一撃をやめ、量 × ½（切り捨て）の弾を 5 発、生きている敵に席番号の順に1発ずつ（足りなければ先頭へ戻る）。1発ずつ別の一撃（**札そのものは挙動を持たない**・`ScatterTrait.Fire`）
     PebbleGather,       // 礫を拾う（GR-r・ガレ）: 味方（自分を含む）の破片が敵の一撃で割れた量を礫として溜め（上限なし）、手番（術）で全部使って 礫 × 3 ＋ 攻撃力 を敵全体へ撃つ。礫が無い手番は何もできない（味方の破片は砕かない）
+    // --- 第366期で足した札（指示書 design/PHASE366_HISA_POOL_POISON_P0_SPEC.md §2-1）。ヒサの版（叫びの溢れの溜まり ＝ 玉を持ち越さない・規定の上に1枚）。保持者 0 枚 ---
+    CommandPoolTurnDrop,  // 玉はターンで散る（P-t・ヒサ）: 叫びの溢れの溜まりを、そのターンの終わりに捨てる（そのターンのうちは今どおり使える・1ターン 9 層の上限はそのまま）（**札そのものは挙動を持たない**・engine の `CommandPoolTurnEnd`）
+    CommandPoolCap60,     // 溜まり 60 まで（P-60・ヒサ）: 叫びの溢れの溜まりは 60（玉 3 つ）まで・超えて入る溢れは捨てる（**札そのものは挙動を持たない**・`CommandTrait.PoolCapOf`）
+    CommandPoolCap180,    // 溜まり 180 まで（P-180・ヒサ）: 叫びの溢れの溜まりは 180（玉 9 つ）まで・超えて入る溢れは捨てる（**札そのものは挙動を持たない**・`CommandTrait.PoolCapOf`）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -13688,7 +13692,11 @@ public sealed class CommandTrait : Trait
     public static int EveryOf(UnitState u) => IsRouse(u) ? HeavyEvery : Every;
 
     /// <summary>第302期: 溜まりの上限（0 ＝ 上限なし・第301期の HL-i ／ HL-t）。規定の玉は 60・HB は 120。</summary>
-    public static int PoolCapOf(UnitState u) => u.HasTrait(TraitId.CommandBall) || IsRouse(u) ? BallCap * EveryOf(u) : 0;
+    public static int PoolCapOf(UnitState u) => u.HasTrait(TraitId.CommandBall) || IsRouse(u) ? BallCap * EveryOf(u)
+        : u.HasTrait(TraitId.CommandPoolCap60) ? Cap60 : u.HasTrait(TraitId.CommandPoolCap180) ? Cap180 : 0;
+
+    /// <summary>第366期 P-60 ／ P-180: 溜まりの上限（玉 3 つ ＝ 号令1回ぶん ／ 玉 9 つ ＝ 1ターンの上限 9 層ぶん・指示書が<b>測る前に固定</b>した値）。</summary>
+    public const int Cap60 = 60, Cap180 = 180;
 
     public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
     {
@@ -18501,6 +18509,9 @@ public static class TraitCatalog
         new BloodPoolTrait(),  // 第363期（溜め血 AK-s・アカ・溜めるのは engine の `NoteBloodPool`）
         new ScatterTrait(TraitId.ScatterGather),   // 第364期（集まる全体・形 A）
         new ScatterTrait(TraitId.ScatterShot),     // 第364期（跳ね弾・形 B）
+        new MarkOnlyTrait(TraitId.CommandPoolTurnDrop),   // 第366期（玉はターンで散る P-t・印だけ）
+        new MarkOnlyTrait(TraitId.CommandPoolCap60),      // 第366期（溜まり 60 まで P-60・印だけ）
+        new MarkOnlyTrait(TraitId.CommandPoolCap180),     // 第366期（溜まり 180 まで P-180・印だけ）
         new EruptTrait(),      // 第180期
         new SmearTrait(),      // 第180期
         new SpitTrait(),       // 第180期

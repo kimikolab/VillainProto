@@ -1328,6 +1328,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sh365 count             # 第365期 §4-3: 台 B × 勇者・seed 0..99・T1〜T5 の輪の数え上げ（羽の入口 ／ 羽の一撃 ／ 叫び ／ 溢れ ／ 玉 ／ 号令 ／ 上限 ／ 層 ／ ミサの与ダメ）（1 秒）
     dotnet run --project BattleSim -c Release 0 sh365 cuts              # 第365期 §4-4: 計測専用の切り C0〜C6（engine の `ChainCut365`・既定 0）× 台 B × 勇者 ／ 近衛 ／ 大隊・seed 0..99（1 秒）
     dotnet run --project BattleSim -c Release 0 sh365 check             # 第365期 自己検査（段0 のアカ ／ ガレ（集まる全体が働く ／ 旧では働かない ／ 固定の口）・計測のスイッチが盤面を変えない・verbose・切りが効く・試遊の台・PickOne ／ Roll）
+    dotnet run --project BattleSim -c Release 0 sh366 boards            # 第366期 §2-2: 代表台（台 B ／ 標の守り型 ／ 標経済 ／ 試遊・標 三人組 ／ 反撃 (ヒサ×カド)）× 11 波 × 版（規定 ／ P-t ／ P-60 ／ P-180）・seed 0..99・台 B × 勇者の輪の数え上げ（羽 ／ 号令 ／ 玉 ／ 持ち越し ／ 捨てた）・壊れの兆し（12 秒）
+    dotnet run --project BattleSim -c Release 0 sh366 compare           # 第366期 §2-2 の 4: `compare` 64 行 × 版（ヒサのいる行だけを版で回す・(G2)）（33 秒）
+    dotnet run --project BattleSim -c Release 0 sh366 flow              # 第366期 §3-2: 毒の流れ（`compare` の毒 ／ 澱みの行 8 台 × 本編 第5波 ／ 近衛 ／ 大隊 ／ ボス・seed 0..19・書いた層 ／ 減らした層（`CounterProbe`）・刻み・与ダメ・勇者の蝕み・蝕みなしの勇者の対照）（3 秒）
+    dotnet run --project BattleSim -c Release 0 sh366 swap              # 第366期 §3-3: 毒の駒を同じ席の素体に替えた差（毒の行 × 4 波・seed 0..99）（7 秒）
+    dotnet run --project BattleSim -c Release 0 sh366 check             # 第366期 自己検査（版の定義・P-t はターンの終わりに 0 ／ T1 までは規定と同じ・P-60 ／ P-180 は上限を超えない・verbose ／ 計数のスイッチ・素体の替え ／ 蝕みなしは器具の中だけ・試遊の台・PickOne ／ Roll）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

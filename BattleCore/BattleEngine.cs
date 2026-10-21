@@ -15386,7 +15386,9 @@ public sealed class BattleContext
     {
         public const int GainAccuse = 0, GainBurst = 1, GainOther = 2, GainGrow = 3, GainCut = 4, VolleyChase = 5, VolleySpray = 6, MfFoe = 7, MfAlly = 8,
             Rally = 9, RallyFeather = 10, Overflow = 11, Balls = 12, BurstLayers = 13, BurstCapped = 14, AccuseLayers = 15, RallyCut = 16, MfQueuedLayer = 17, MfCut = 18, Volleys = 19, PoolCut = 20;
-        public const int Fields = 21, Width = 32;
+        /// <summary>第366期（同じ計数のスイッチ）: ターンの終わりに溜まりに残っていた溢れ（次のターンへの持ち越し・P-t の駒は捨てるので数えない）／ 捨てた溢れ（P-t のターンの終わり ／ P-60 ／ P-180 の上限）。</summary>
+        public const int PoolCarry = 21, PoolDropped = 22;
+        public const int Fields = 23, Width = 32;
     }
     void Ch(UnitState u, int field, long v = 1)
     {
@@ -15798,6 +15800,7 @@ public sealed class BattleContext
         {
             ht.CommandDropped += next - capPool;
             ht.CommandDropEvents++;
+            Ch(hisa, Ch365.PoolDropped, next - capPool);   // 第366期（計数のみ）
             next = capPool;
         }
         hisa.SetCounter(CommandTrait.PoolKey, next);
@@ -15862,6 +15865,28 @@ public sealed class BattleContext
         (ht.BurstHist ??= new long[13])[Math.Min(12, done)]++;
         EmitCommandBall(hisa, CommandBallLabels.Use);
         return true;
+    }
+
+    /// <summary>
+    /// 第366期（P-t `CommandPoolTurnDrop`・指示書 design/PHASE366_HISA_POOL_POISON_P0_SPEC.md §2-1）: ターンの終わり（全員の手番の後）に、
+    /// 札を持つヒサの溜まり（叫びの溢れ）を捨てる——使い切れなかった玉は次のターンに持ち越さない。捨てた量は計数だけ（盤面に出さない）。
+    /// 計数のスイッチ（`ChainCount365`）が立っている戦は、札の無いヒサの溜まり（次のターンへ持ち越す溢れ）も数える。
+    /// **「溜まったら吐く」の保持者がいなければ `_burstLive` の比較1つで抜ける。乱数を引かない。**
+    /// </summary>
+    public void CommandPoolTurnEnd()
+    {
+        if (!_burstLive) return;
+        foreach (UnitState h in _burstHolders)
+        {
+            int pool = h.RawCounter(CommandTrait.PoolKey);
+            if (pool <= 0) continue;
+            if (!h.HasTrait(TraitId.CommandPoolTurnDrop)) { Ch(h, Ch365.PoolCarry, pool); continue; }   // 計数のみ（次のターンへ持ち越す溢れ）
+            h.SetCounter(CommandTrait.PoolKey, 0);
+            UnitTally ht = TallyOf(h);
+            ht.CommandDropped += pool;
+            ht.CommandDropEvents++;
+            Ch(h, Ch365.PoolDropped, pool);   // 計数のみ
+        }
     }
 
     void EmitCommandBall(UnitState hisa, string label)
@@ -18924,6 +18949,7 @@ public static class BattleEngine
             }
 
             ctx.WiltFire();         // 第242期: 育たなかった駒の火勢が萎む（ターンの終わり）。保持者がいなければ比較1つで抜ける
+            ctx.CommandPoolTurnEnd();   // 第366期（P-t・ヒサの溜まりをターンの終わりに捨てる）。「溜まったら吐く」の保持者がいなければ比較1つで抜ける
             ctx.NoteFoeStalled();   // 第185期（計数のみ）: このターンに手番を失った敵の数の分布
         }
 
