@@ -46,7 +46,7 @@ static partial class Sh372Diag
     static string Pct(long a, long n) => n == 0 ? "—" : F1(100.0 * a / n);
     static string Short(UnitDef d) => S307.Short(d);
     static string Sg(double x) => x.ToString("+0.0;-0.0;±0.0");
-    static Formation Row(string n) => CompareBuilds().First(r => r.Name == n).F;
+    static Formation Row(string n) => Pin372(CompareBuilds().First(r => r.Name == n).F);   // 第373期: 第372期の規定のヴィオ（`VioH372`）に固定
     static bool Has(Formation f, string id) => f.Occupied().Any(o => o.Def.Id == id);
 
     internal static readonly S370.Ver[] Vers =
@@ -59,12 +59,12 @@ static partial class Sh372Diag
     internal static Formation Apply(Formation f, S370.Ver v) => S370.Apply(f, v);
 
     /// <summary>攻撃力の台（第370期と同じ並び ＝ 試遊・毒のドルガ → ガン・駒は段0 の後の規定）。</summary>
-    internal static Formation AtkBoard() => Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sid, center: UnitCatalog.Guza, back1: UnitCatalog.Vio, back3: UnitCatalog.Gan);
+    internal static Formation AtkBoard() => Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sid, center: UnitCatalog.Guza, back1: UnitCatalog.VioH372, back3: UnitCatalog.Gan);   // 第373期: 第372期の規定に固定
 
     internal static (string Name, Formation F)[] BoardList() => new (string, Formation)[]
     {
-        ("試遊・毒", Presets.Versions.First(r => r.Name == "試遊・毒").F),
-        ("試遊・毒 席替え", Presets.Versions.First(r => r.Name == "試遊・毒 席替え").F),
+        ("試遊・毒", Pin372(Presets.Versions.First(r => r.Name == "試遊・毒").F)),
+        ("試遊・毒 席替え", Pin372(Presets.Versions.First(r => r.Name == "試遊・毒 席替え").F)),
         ("毒特化・集団", Row(S367.BombRow)),
         ("澱み喰い (グザ×ヴィオ)", Row("澱み喰い (グザ×ヴィオ)")),
         ("攻撃力の台（ガン）", AtkBoard()),
@@ -210,7 +210,7 @@ static partial class Sh372Diag
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var v = ver switch { "Va" => Vers[1], "Vb" => Vers[2], "Vc" => Vers[3], _ => throw new ArgumentException("sh372 compare の版は Va / Vb / Vc") };
-        var rows = CompareBuilds().ToArray();
+        var rows = CompareBuilds().Select(r => (r.Name, F: Pin372(r.F))).ToArray();   // 第373期: 第372期の規定のヴィオに固定
         int nw = EnemyCatalog.Stages.Count, last = nw - 1;
         Func<int, bool> only = ri => Has(rows[ri].F, "vio");
         var b = CGrid(rows, f => f, _ => true);

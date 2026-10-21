@@ -1529,3 +1529,10 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - 段0: engine は変えていない（第368〜370期の口——毒に強い ／ 毒の衣 ／ 吸い分け ／ 噴き出しの累計 ／ 返り毒 ／ 攻撃力ぶんの毒——が規定のグザ ／ ヴィオ ／ スィドで働くようになった）。
 - **連撃（`VioFlurryTrait`・札 `VioFlurryA` ／ `B` ／ `C`）**: 発数は `Trait.ModifyHitCount`（窓口の1本・手番の中だけ）で `max(今の数, 段)`。`SwingTurnHits` は `_vioFlurryLive`（保持者がいる戦）のときだけ札を引き、手番の頭で私有キー `vioFlurryFirst`（1発目の的の `InstanceId + 1`）を 0 に戻し、2発目以降は `NextTarget` の的を `_forcedTarget` に置く（ホタの5連撃の `_burstLock` と同じ口・庇う ／ 標 ／ 挑発を通らない）。1発目の的は札の `OnAfterAttack` が控える。**乱数を引かない**。
 - 計数だけ: `UnitTally.Z372HitsByTurn` ／ `Z372Stage2Turn` ／ `Z372Stage3Turn`。
+
+## 第373期 —— 段0: ヴィオの連撃 Va を規定に ／ ヴィオの吐き戻し（A1 ／ A2）（版）
+
+- 段0: engine は変えていない（第372期の `_vioFlurryLive` ／ `VioFlurryTrait` が規定のヴィオで働くようになった）。
+- **吐き戻し（`VioRetchTrait`・札 `VioRetchHalf` ／ `VioRetchThird`）**: 澱み喰い（`BlightfedTrait.OnTurnStart`）が吸った層のうち `VioRetchTrait.Keep`（切り上げ）だけを攻撃力にし、残りを私有キー `vioRetchPending` に控える（札が無ければ kept ＝ drawn で結果は変わらない）。ターンの終わり（全員の手番の後・`CommandPoolTurnEnd` の後）に `BattleContext.VioRetchTurnEnd` が、生きていれば隣接する生きている味方へ等分して吐く（余りは席番号の小さい方から・毒の窓口・経路 `PoisonRoute.Retch`）。`_retchLive`（保持者がいる戦）の比較1つで抜ける。**乱数を引かない**。
+- 毒の経路 `Retch`（添字 18）を足した。**第367期から添字を1つ少なく数えていた**（`Miasma` が 0 なので触媒 13・攻撃力ぶんの毒 17 が燃焼の添字と重なっていた・計数の列 `SoakSeenByRoute` だけ）ので、`SoakRouteCount` 18 → 20・`SoakBurnRouteIx` 17 → 19 に直した。
+- 計数だけ: `UnitTally.Z373RetchHeld` ／ `Z373RetchOut` ／ `Z373RetchLost` ／ `Z373RetchDead`。

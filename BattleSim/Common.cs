@@ -670,7 +670,7 @@ public static UnitDef PinAG364(UnitDef d) => ReferenceEquals(d, UnitCatalog.Susu
 /// ヒサをもっと古い規定へ替える口は `IsHisaNow` で `HisaH367` も受ける（先に替わっていても同じ行き先になる）。</summary>
 public static UnitDef PinGVH367(UnitDef d) =>
     ReferenceEquals(d, UnitCatalog.Guza) || ReferenceEquals(d, UnitCatalog.GuzaH371) ? UnitCatalog.GuzaH367
-    : ReferenceEquals(d, UnitCatalog.Vio) || ReferenceEquals(d, UnitCatalog.VioH371) ? UnitCatalog.VioH367
+    : ReferenceEquals(d, UnitCatalog.Vio) || ReferenceEquals(d, UnitCatalog.VioH371) || ReferenceEquals(d, UnitCatalog.VioH372) ? UnitCatalog.VioH367
     : ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaH367 : PinS371(d);   // 第372期: 第368〜371期の規定（`GuzaH371` ／ `VioH371`）も旧へ・古い口の終端に `PinS371`
 
 /// <summary>第372期: 規定のスィド（W5 ＝ 第371期の Y）を第202〜371期の規定（`SidH371`）に替える。ほかの駒はそのまま返す。古い口の終端（`PinGVH367`）の後ろに置いた（グザ ／ ヴィオはその手前で第367期までの規定へ替わる）。</summary>
@@ -678,10 +678,21 @@ public static UnitDef PinS371(UnitDef d) => ReferenceEquals(d, UnitCatalog.Sid) 
 
 /// <summary>第372期: 規定のグザ ／ ヴィオ ／ スィド（W5）を第368〜371期の規定（`GuzaH371` ／ `VioH371` ／ `SidH371`）に替える。ほかの駒はそのまま返す。第368〜371期の器具（`sh368`〜`sh371`）が通す。</summary>
 public static UnitDef PinGVS371(UnitDef d) =>
-    ReferenceEquals(d, UnitCatalog.Guza) ? UnitCatalog.GuzaH371 : ReferenceEquals(d, UnitCatalog.Vio) ? UnitCatalog.VioH371 : ReferenceEquals(d, UnitCatalog.Sid) ? UnitCatalog.SidH371 : d;
+    ReferenceEquals(d, UnitCatalog.Guza) ? UnitCatalog.GuzaH371 : ReferenceEquals(d, UnitCatalog.Vio) || ReferenceEquals(d, UnitCatalog.VioH372) ? UnitCatalog.VioH371 : ReferenceEquals(d, UnitCatalog.Sid) ? UnitCatalog.SidH371 : d;   // 第373期: 第372期の規定のヴィオ（`VioH372`）も
 
 /// <summary>第372期: 規定のグザ ／ ヴィオ ／ スィド（W5）か。第368〜371期の器具の「新しい札の保持者は 0 枚」の検査がこれを除いて数える（W5 の札を規定の3枚が持つようになった）。</summary>
 public static bool IsW5Default372(UnitDef d) => ReferenceEquals(d, UnitCatalog.Guza) || ReferenceEquals(d, UnitCatalog.Vio) || ReferenceEquals(d, UnitCatalog.Sid);
+
+/// <summary>第373期: 規定のヴィオ（Va）を第372期の規定（`VioH372`）に替える。ほかの駒はそのまま返す。第372期の器具（`sh372`）が通す。</summary>
+public static UnitDef PinV372(UnitDef d) => ReferenceEquals(d, UnitCatalog.Vio) ? UnitCatalog.VioH372 : d;
+
+/// <summary>第373期: 連撃の段 Va を規定にした。第372期の規定で測った器具はこれを通す。陣形とレリックは保つ。</summary>
+public static Formation Pin372(Formation f)
+{
+    var g = f.Clone();
+    foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinV372(d);
+    return g;
+}
 
 /// <summary>第372期: W5 を規定にした。第368〜371期の規定で測った器具はこれを通す。陣形とレリックは保つ。</summary>
 public static Formation Pin371(Formation f)

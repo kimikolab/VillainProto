@@ -1701,16 +1701,30 @@ public static class UnitCatalog
     };
 
     /// <summary>
-    /// 澱み喰いのヴィオ（規定）。<b>第372期に W5 のヴィオ（第370期の `VioW`）を規定にした</b>（ポンの判断・design/PHASE372_VIO_FLURRY_SPEC.md §2）——
+    /// 旧ヴィオ（第372期の規定・W5）。<b>第373期に連撃の段 Va を規定にしたので、名前を付けて残した</b>（`All` に入れない・第372期の器具は `Common.Pin372` でこれに固定する）。
+    /// 第372期に W5 のヴィオ（第370期の `VioW`）を規定にした（ポンの判断・design/PHASE372_VIO_FLURRY_SPEC.md §2）——
     /// ターンの頭に味方の毒を吸い 1層につき攻撃力 +4（澱み喰い・毒の衣の持ち主からは吸わない ＝ 吸い分け）・殴った敵に攻撃力ぶんの毒（`StrikePoison`・軛に切られない）・毒に強い。ふつうに殴る（触媒 ／ 吐き戻しは無い）。
     /// </summary>
-    public static readonly UnitDef Vio = new()
+    public static readonly UnitDef VioH372 = new()
     {
         Id = VioH371.Id, Name = VioH371.Name, MaxHp = VioH371.MaxHp, Attack = VioH371.Attack, Speed = VioH371.Speed, Advances = VioH371.Advances, Pattern = VioH371.Pattern,
         Traits = new[] { TraitId.Blightfed, TraitId.BlightfedSkipCloak, TraitId.StrikePoison, TraitId.PoisonProof },
         PlusText = "仲間が負った毒を吸い取り（毒をまとう仲間からは吸わない）、その層の分だけ攻撃力が上がる。攻撃した敵に、攻撃力と同じだけ毒を乗せる。毒に蝕まれない",
         MinusText = "仲間が汚れていなければ、ただの穀潰し",
         Flavor = VioH371.Flavor,
+    };
+
+    /// <summary>
+    /// 澱み喰いのヴィオ（規定）。<b>第373期に第372期の版 Va（連撃の段・散らす）を規定にした</b>（ポンの判断・design/PHASE373_VIO_RETCH_SPEC.md §2）——
+    /// 第372期の規定（`VioH372`）＋ 連撃の段の札（<see cref="TraitId.VioFlurryA"/>・攻撃力 50 ／ 150 で2連撃 ／ 3連撃・2発目からは別の敵へ）。文面は第372期の版の文面。
+    /// </summary>
+    public static readonly UnitDef Vio = new()
+    {
+        Id = VioH372.Id, Name = VioH372.Name, MaxHp = VioH372.MaxHp, Attack = VioH372.Attack, Speed = VioH372.Speed, Advances = VioH372.Advances, Pattern = VioH372.Pattern, Actions = VioH372.Actions,
+        Traits = VioH372.Traits.Append(TraitId.VioFlurryA).ToArray(),
+        PlusText = VioH372.PlusText + "。毒を吸って力が満ちるほど、牙が増える（攻撃力 50 ／ 150 で2連撃 ／ 3連撃・2発目からは別の敵へ）",
+        MinusText = VioH372.MinusText,
+        Flavor = VioH372.Flavor,
     };
 
     public static readonly UnitDef Yomi = new()
@@ -6978,10 +6992,11 @@ public static class UnitCatalog
     };
 
     // 第372期【軽い期】本体（指示書 design/PHASE372_VIO_FLURRY_SPEC.md §3-1）。ヴィオの連撃の段（規定のヴィオ ＝ W5 ＋ 札1枚）。どれも `All` に入れない・採否はポン。文面は叩き台。
+    // 第373期: 規定のヴィオが Va になったので、3つの版は第372期の規定（`VioH372`）から作る（`VioVa` は規定と同じ札・文面・残置）。
     static UnitDef VioFlurry372(TraitId card, string tail) => new()
     {
-        Id = Vio.Id, Name = Vio.Name, MaxHp = Vio.MaxHp, Attack = Vio.Attack, Speed = Vio.Speed, Advances = Vio.Advances, Pattern = Vio.Pattern, Actions = Vio.Actions,
-        Traits = Vio.Traits.Append(card).ToArray(), PlusText = Vio.PlusText + tail, MinusText = Vio.MinusText, Flavor = Vio.Flavor,
+        Id = VioH372.Id, Name = VioH372.Name, MaxHp = VioH372.MaxHp, Attack = VioH372.Attack, Speed = VioH372.Speed, Advances = VioH372.Advances, Pattern = VioH372.Pattern, Actions = VioH372.Actions,
+        Traits = VioH372.Traits.Append(card).ToArray(), PlusText = VioH372.PlusText + tail, MinusText = VioH372.MinusText, Flavor = VioH372.Flavor,
     };
     /// <summary>ヴィオ・Va: 規定 ＋ 連撃・散らす（50 ／ 150）。</summary>
     public static readonly UnitDef VioVa = VioFlurry372(TraitId.VioFlurryA, "。毒を吸って力が満ちるほど、牙が増える（攻撃力 50 ／ 150 で2連撃 ／ 3連撃・2発目からは別の敵へ）");
@@ -6989,6 +7004,17 @@ public static class UnitCatalog
     public static readonly UnitDef VioVb = VioFlurry372(TraitId.VioFlurryB, "。毒を吸って力が満ちるほど、牙が増える（攻撃力 100 ／ 300 で2連撃 ／ 3連撃・2発目からは別の敵へ）");
     /// <summary>ヴィオ・Vc: 規定 ＋ 連撃・集中（50 ／ 150）。</summary>
     public static readonly UnitDef VioVc = VioFlurry372(TraitId.VioFlurryC, "。毒を吸って力が満ちるほど、牙が増える（攻撃力 50 ／ 150 で2連撃 ／ 3連撃・同じ敵へ）");
+
+    // 第373期【軽い期】本体（指示書 design/PHASE373_VIO_RETCH_SPEC.md §3-1）。ヴィオのマイナス「溢れて吐く」（規定のヴィオ ＝ Va ＋ 札1枚・マイナスの文面を差し替え）。どれも `All` に入れない・採否はポン。文面は叩き台。
+    static UnitDef VioRetch373(TraitId card, string minus) => new()
+    {
+        Id = Vio.Id, Name = Vio.Name, MaxHp = Vio.MaxHp, Attack = Vio.Attack, Speed = Vio.Speed, Advances = Vio.Advances, Pattern = Vio.Pattern, Actions = Vio.Actions,
+        Traits = Vio.Traits.Append(card).ToArray(), PlusText = Vio.PlusText, MinusText = minus, Flavor = Vio.Flavor,
+    };
+    /// <summary>ヴィオ・A1: 規定 ＋ 溢れて吐く・半分（吸った層の半分（切り上げ）だけが攻撃力に・残りはターンの終わりに隣の味方へ）。</summary>
+    public static readonly UnitDef VioA1 = VioRetch373(TraitId.VioRetchHalf, "吸った毒は腹に収まりきらず、半分はターンの終わりに隣の仲間へ吐き戻す");
+    /// <summary>ヴィオ・A2: 規定 ＋ 溢れて吐く・3分の1（収まるのは 3分の2（切り上げ）・吐くのは残り）。</summary>
+    public static readonly UnitDef VioA2 = VioRetch373(TraitId.VioRetchThird, "吸った毒は腹に収まりきらず、3分の1はターンの終わりに隣の仲間へ吐き戻す");
 
     // 第361期: 規定のササが SS-w になったので、SS-k ／ SS-w は旧（`SasaH360`）から作る（`SasaSSw` は規定と同じ札・文面・残置）。
     const string SasaPlus360 = "手番で身を固め、次に動くまで、受ける一撃を7までに抑える。殴られると錯乱して隣の味方1体を別の席へ突き飛ばし（1ターン1回）、";

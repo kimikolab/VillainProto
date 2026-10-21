@@ -57,15 +57,15 @@ static partial class Sh372Diag
 
         // ---- 段0: 規定 ＝ W5 ／ 旧の定義 ／ 固定の口 ----
         {
-            bool w5 = UnitCatalog.Guza.Traits.SequenceEqual(UnitCatalog.GuzaW3.Traits) && UnitCatalog.Vio.Traits.SequenceEqual(UnitCatalog.VioW.Traits) && UnitCatalog.Sid.Traits.SequenceEqual(UnitCatalog.SidY.Traits)
-                && UnitCatalog.Vio.Actions is null && UnitCatalog.Sid.Actions is { Count: 1 } sa && sa[0].Kind == ActionKind.Skill
-                && new[] { UnitCatalog.Guza, UnitCatalog.Vio, UnitCatalog.Sid }.All(d => UnitCatalog.All.Contains(d)) && UnitCatalog.All.Count == 52;
-            bool txt = UnitCatalog.Vio.PlusText.Contains("攻撃力と同じだけ毒") && UnitCatalog.Sid.PlusText.Contains("まとった毒と同じだけ") && UnitCatalog.Guza.MinusText.Contains("噴き出");
+            bool w5 = UnitCatalog.Guza.Traits.SequenceEqual(UnitCatalog.GuzaW3.Traits) && UnitCatalog.VioH372.Traits.SequenceEqual(UnitCatalog.VioW.Traits) && UnitCatalog.Sid.Traits.SequenceEqual(UnitCatalog.SidY.Traits)
+                && UnitCatalog.VioH372.Actions is null && UnitCatalog.Sid.Actions is { Count: 1 } sa && sa[0].Kind == ActionKind.Skill
+                && new[] { UnitCatalog.Guza, UnitCatalog.Vio, UnitCatalog.Sid }.All(d => UnitCatalog.All.Contains(d)) && !UnitCatalog.All.Contains(UnitCatalog.VioH372) && UnitCatalog.All.Count == 52;   // 第373期: 規定のヴィオは Va・第372期の規定は `VioH372`（`All` の外）
+            bool txt = UnitCatalog.VioH372.PlusText.Contains("攻撃力と同じだけ毒") && UnitCatalog.Sid.PlusText.Contains("まとった毒と同じだけ") && UnitCatalog.Guza.MinusText.Contains("噴き出");
             bool old = UnitCatalog.GuzaH371.Traits.SequenceEqual(new[] { TraitId.Miasma, TraitId.ScatterGather }) && UnitCatalog.VioH371.Traits.SequenceEqual(new[] { TraitId.Blightfed, TraitId.BlightCatalyst })
                 && UnitCatalog.SidH371.Traits.SequenceEqual(new[] { TraitId.Spew, TraitId.VenomHeavy, TraitId.Numb })
                 && new[] { UnitCatalog.GuzaH371, UnitCatalog.VioH371, UnitCatalog.SidH371 }.All(d => !UnitCatalog.All.Contains(d));
-            bool pins = PinGVS371(UnitCatalog.Guza) == UnitCatalog.GuzaH371 && PinGVS371(UnitCatalog.Vio) == UnitCatalog.VioH371 && PinGVS371(UnitCatalog.Sid) == UnitCatalog.SidH371
-                && PinGVH367(UnitCatalog.Guza) == UnitCatalog.GuzaH367 && PinGVH367(UnitCatalog.GuzaH371) == UnitCatalog.GuzaH367 && PinGVH367(UnitCatalog.Vio) == UnitCatalog.VioH367 && PinGVH367(UnitCatalog.VioH371) == UnitCatalog.VioH367
+            bool pins = PinGVS371(UnitCatalog.Guza) == UnitCatalog.GuzaH371 && PinGVS371(UnitCatalog.VioH372) == UnitCatalog.VioH371 && PinGVS371(UnitCatalog.Sid) == UnitCatalog.SidH371
+                && PinGVH367(UnitCatalog.Guza) == UnitCatalog.GuzaH367 && PinGVH367(UnitCatalog.GuzaH371) == UnitCatalog.GuzaH367 && PinGVH367(UnitCatalog.VioH372) == UnitCatalog.VioH367 && PinGVH367(UnitCatalog.VioH371) == UnitCatalog.VioH367
                 && PinGVH367(UnitCatalog.Sid) == UnitCatalog.SidH371 && PinGVH367(UnitCatalog.Gald) == UnitCatalog.Gald
                 && Pin371(Presets.PoisonHero367()).Occupied().Select(o => o.Def).SequenceEqual(Presets.PoisonHero367(UnitCatalog.GuzaH371, UnitCatalog.VioH371, UnitCatalog.SidH371).Occupied().Select(o => o.Def));
             Expect("段0: 規定のグザ ／ ヴィオ ／ スィドの札 ＝ 第371期の W5（グザ W3 ／ ヴィオ W ／ スィド Y）・文面・旧の定義（`*H371`・`All` の外）・固定の口（`Pin371` ／ `PinGVH367` の終端 `PinS371`）", w5 && txt && old && pins);
@@ -74,8 +74,8 @@ static partial class Sh372Diag
             long diff = 0, cells = 0;
             var pairs = new (Formation Now, Formation W5)[]
             {
-                (Presets.Versions.First(r => r.Name == "試遊・毒").F, Presets.PoisonHero367(UnitCatalog.GuzaW3, UnitCatalog.VioW, UnitCatalog.SidY)),
-                (Presets.Versions.First(r => r.Name == "試遊・毒 席替え").F, Presets.PoisonSeat372(UnitCatalog.GuzaW3, UnitCatalog.VioW, UnitCatalog.SidY)),
+                (Pin372(Presets.Versions.First(r => r.Name == "試遊・毒").F), Presets.PoisonHero367(UnitCatalog.GuzaW3, UnitCatalog.VioW, UnitCatalog.SidY)),   // 第373期: 第372期の規定に固定
+                (Pin372(Presets.Versions.First(r => r.Name == "試遊・毒 席替え").F), Presets.PoisonSeat372(UnitCatalog.GuzaW3, UnitCatalog.VioW, UnitCatalog.SidY)),
             };
             foreach (var (now, w5) in pairs)
                 foreach (var w in Waves)
@@ -94,14 +94,14 @@ static partial class Sh372Diag
                 (UnitCatalog.VioVa, 49, 1), (UnitCatalog.VioVa, 50, 2), (UnitCatalog.VioVa, 149, 2), (UnitCatalog.VioVa, 150, 3), (UnitCatalog.VioVa, 400, 3),
                 (UnitCatalog.VioVb, 99, 1), (UnitCatalog.VioVb, 100, 2), (UnitCatalog.VioVb, 299, 2), (UnitCatalog.VioVb, 300, 3),
                 (UnitCatalog.VioVc, 49, 1), (UnitCatalog.VioVc, 50, 2), (UnitCatalog.VioVc, 150, 3),
-                (UnitCatalog.Vio, 49, 1), (UnitCatalog.Vio, 150, 1), (UnitCatalog.Vio, 400, 1),
+                (UnitCatalog.VioH372, 49, 1), (UnitCatalog.VioH372, 150, 1), (UnitCatalog.VioH372, 400, 1),
             };
             var bad = new List<string>();
             foreach (var (v, atk, want) in cases)
             {
                 var r = SwingAt(v, atk, Three);
                 int strikes = r.Got.Sum() / atk;
-                bool isDefault = ReferenceEquals(v, UnitCatalog.Vio);
+                bool isDefault = ReferenceEquals(v, UnitCatalog.VioH372);
                 if (strikes != want || (!isDefault && r.Hits != want) || (isDefault && r.Hits != 0) || r.Got.Sum() != want * atk)
                     bad.Add($"{(isDefault ? "規定" : ReferenceEquals(v, UnitCatalog.VioVa) ? "Va" : ReferenceEquals(v, UnitCatalog.VioVb) ? "Vb" : "Vc")} 攻 {atk}: 撃 {strikes}（計数 {r.Hits}）");
             }
@@ -135,9 +135,9 @@ static partial class Sh372Diag
         // ---- 規定のヴィオ ／ 版の定義 ----
         {
             bool vers = new[] { (UnitCatalog.VioVa, TraitId.VioFlurryA), (UnitCatalog.VioVb, TraitId.VioFlurryB), (UnitCatalog.VioVc, TraitId.VioFlurryC) }
-                .All(x => x.Item1.Traits.SequenceEqual(UnitCatalog.Vio.Traits.Append(x.Item2)) && x.Item1.Id == UnitCatalog.Vio.Id && !UnitCatalog.All.Contains(x.Item1) && x.Item1.PlusText.StartsWith(UnitCatalog.Vio.PlusText));
-            bool none = !UnitCatalog.All.Any(d => d.Traits.Any(t => t is TraitId.VioFlurryA or TraitId.VioFlurryB or TraitId.VioFlurryC))
-                && !CompareBuilds().Any(r => r.F.Occupied().Any(o => o.Def.Traits.Any(t => t is TraitId.VioFlurryA or TraitId.VioFlurryB or TraitId.VioFlurryC)));
+                .All(x => x.Item1.Traits.SequenceEqual(UnitCatalog.VioH372.Traits.Append(x.Item2)) && x.Item1.Id == UnitCatalog.VioH372.Id && !UnitCatalog.All.Contains(x.Item1) && x.Item1.PlusText.StartsWith(UnitCatalog.VioH372.PlusText));
+            bool none = !UnitCatalog.All.Any(d => d != UnitCatalog.Vio && d.Traits.Any(t => t is TraitId.VioFlurryA or TraitId.VioFlurryB or TraitId.VioFlurryC))   // 第373期: 規定のヴィオは Va（`VioFlurryA`）を持つ
+                && !CompareBuilds().Select(r => (r.Name, F: Pin372(r.F))).Any(r => r.F.Occupied().Any(o => o.Def.Traits.Any(t => t is TraitId.VioFlurryA or TraitId.VioFlurryB or TraitId.VioFlurryC)));
             Expect("版 Va ／ Vb ／ Vc ＝ 規定のヴィオ ＋ 札1枚（`All` ／ `compare` の行には無い）", vers && none);
         }
 
@@ -163,7 +163,7 @@ static partial class Sh372Diag
         // ---- checkup の札の表 ----
         {
             string src = File.ReadAllText("BattleSim/Modes/Checkup.cs");
-            var want = new[] { TraitId.VioFlurryA, TraitId.VioFlurryB, TraitId.VioFlurryC }.Concat(UnitCatalog.Guza.Traits).Concat(UnitCatalog.Vio.Traits).Concat(UnitCatalog.Sid.Traits).Distinct();
+            var want = new[] { TraitId.VioFlurryA, TraitId.VioFlurryB, TraitId.VioFlurryC }.Concat(UnitCatalog.Guza.Traits).Concat(UnitCatalog.VioH372.Traits).Concat(UnitCatalog.Sid.Traits).Distinct();
             var missing = want.Where(t => !src.Contains($"[TraitId.{t}]", StringComparison.Ordinal)).ToList();
             bool w5 = new[] { TraitId.MiasmaVent, TraitId.MiasmaSplash, TraitId.SplashUncapped, TraitId.StrikePoison, TraitId.PoisonCloak, TraitId.CloakRetort }
                 .All(t => System.Text.RegularExpressions.Regex.IsMatch(src, $@"\[TraitId\.{t}\][^\n]*第372期から規定"));
@@ -172,12 +172,12 @@ static partial class Sh372Diag
 
         // ---- 試遊の台 ----
         {
+            // 第373期: 第372期の「版・Va ／ Vb ／ Vc」は外した（Va を規定にした・並びはこの器具の中で組む）。検査は「頭の9台」と「第372期の版の台が無い」に。
             var vr = Presets.Versions.Select(r => r.Name).ToArray();
-            bool rows = vr.SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒", "試遊・毒 席替え", "版・Va 散らす", "版・Vb 高い段", "版・Vc 集中" });
+            bool rows = vr.Take(9).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒", "試遊・毒 席替え" })
+                && !vr.Any(n => n is "版・Va 散らす" or "版・Vb 高い段" or "版・Vc 集中");
             string seat = S307.Seats(Presets.Versions.First(r => r.Name == "試遊・毒 席替え").F);
-            bool vers = new[] { ("版・Va 散らす", UnitCatalog.VioVa), ("版・Vb 高い段", UnitCatalog.VioVb), ("版・Vc 集中", UnitCatalog.VioVc) }
-                .All(x => Presets.Versions.First(r => r.Name == x.Item1).F.Occupied().Select(o => o.Def).SequenceEqual(Presets.PoisonHero367(vio: x.Item2).Occupied().Select(o => o.Def)));
-            Expect("`Presets.Versions` ＝ 試遊の8台 ＋「試遊・毒 席替え」（ドルガ・ガルド・スィド・グザ・ヴィオ）＋ 版の3台（試遊・毒のヴィオだけ版）", rows && seat == "ドルガ・ガルド・スィド・グザ・ヴィオ" && vers, $"{string.Join("、", vr)}・席替え {seat}");
+            Expect("`Presets.Versions` の頭 ＝ 試遊の8台 ＋「試遊・毒 席替え」（ドルガ・ガルド・スィド・グザ・ヴィオ）・第372期の「版・」の3台は無い（第373期に外した）", rows && seat == "ドルガ・ガルド・スィド・グザ・ヴィオ", $"{string.Join("、", vr)}・席替え {seat}");
         }
 
         // ---- PickOne ／ Roll ----

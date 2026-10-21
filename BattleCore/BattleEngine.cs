@@ -4218,12 +4218,14 @@ public sealed class BattleContext
     /// 第183期に触れてうつす・その漏れで2本、第190期に澱み分けで1本、第195期にスィドの吐きで1本、第197期に紅蓮の奔流で1本、第216期に開戦の撒きで1本、第223期に状態の矢で1本増えた。
     /// 第367期の触媒（添字 12）は燃焼の添字 13 の手前に収まったので、長さも燃焼の添字も変えていない。
     /// 第369期に噴き出し ／ 返り毒 ／ 引き受けで3本（添字 13〜15）足したので、長さを 14 → 17・燃焼の添字を 13 → 16 にずらした。
-    /// 第370期に攻撃力ぶんの毒（添字 16）を足したので、長さを 17 → 18・燃焼の添字を 16 → 17 にずらした）。**毒の経路を足したら燃焼の添字も後ろへずらすこと**
+    /// 第370期に攻撃力ぶんの毒（添字 16）を足したので、長さを 17 → 18・燃焼の添字を 16 → 17 にずらした。
+    /// 第373期に溢れて吐く（添字 18）を足したので、長さを 18 → 20・燃焼の添字を 17 → 19 にずらした——**第367期から添字を1つ少なく数えていた**
+    /// （`Miasma` が 0 なので触媒は 13・攻撃力ぶんの毒は 17。第367〜372期は触媒 ／ 攻撃力ぶんの毒が燃焼の添字と重なっていた・計数の列だけで盤面には影響しない・第373期に直した））。**毒の経路を足したら燃焼の添字も後ろへずらすこと**
     /// ——ずらさないと新しい経路の添字が燃焼と重なる。</summary>
-    public const int SoakRouteCount = 18;
+    public const int SoakRouteCount = 20;
 
     /// <summary>燃焼の経路の添字（<see cref="UnitTally.SoakSeenByRoute"/> の末尾）。</summary>
-    public const int SoakBurnRouteIx = 17;
+    public const int SoakBurnRouteIx = 19;
 
     /// <summary>
     /// 巻き込み則（第85期）で最後にこの駒へ傷を書いた駒の <c>InstanceId + 1</c>（第90期の計数専用の札）。
@@ -9714,6 +9716,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.PoisonCloak)) _cloakLive = true;         // 第368期（RC・毒の衣）
         if (u.HasTrait(TraitId.MiasmaVent)) { _ventLive = true; _ventHolders.Add(u); }   // 第369期（Z・噴き出しの段は敵に書かれた毒の累計を読む・第370期の W も同じ札を持つ）
         if (u.HasTrait(TraitId.VioFlurryA) || u.HasTrait(TraitId.VioFlurryB) || u.HasTrait(TraitId.VioFlurryC)) _vioFlurryLive = true;   // 第372期（ヴィオの連撃）
+        if (u.HasTrait(TraitId.VioRetchHalf) || u.HasTrait(TraitId.VioRetchThird)) { _retchLive = true; _retchHolders.Add(u); }   // 第373期（ヴィオの吐き戻し A1 ／ A2）
         if (CommandTrait.BurstUnit(u) > 0) { _burstLive = true; _burstHolders.Add(u); }   // 第321期（HQ-a ／ HQ-b・溜まったら吐く）
         if (u.HasTrait(TraitId.HisaCover)) _coverHolders.Add(u);       // 第301期（HC・庇い）
         if (CommandTrait.IsRouse(u)) _rouseLive = true;                // 第302期（HB・鼓舞の受け手の計数）
@@ -15491,6 +15494,39 @@ public sealed class BattleContext
     bool _ventLive;
     /// <summary>第372期: ヴィオの連撃の札の保持者がいる戦か（いなければ `SwingTurnHits` は比較1つで抜ける）。</summary>
     bool _vioFlurryLive;
+    /// <summary>第373期: ヴィオの吐き戻しの札の保持者がいる戦か（いなければ `VioRetchTurnEnd` は比較1つで抜ける）と、その保持者。</summary>
+    bool _retchLive;
+    readonly List<UnitState> _retchHolders = new();
+
+    /// <summary>
+    /// 第373期（溢れて吐く A1 ／ A2・指示書 design/PHASE373_VIO_RETCH_SPEC.md §3-1）: ターンの終わり（全員の手番の後）に、札を持つヴィオが
+    /// ターンの頭に収めきれなかった層（<see cref="VioRetchTrait.PendingKey"/>）を、隣接する生きている味方へ等分して吐き戻す（余りは席番号の小さい方から）。
+    /// 倒れていたら吐かない・隣がいなければ吐かずに消える。毒は窓口（<see cref="PoisonRoute.Retch"/>）を通す。
+    /// **保持者がいなければ `_retchLive` の比較1つで抜ける。乱数を引かない。**
+    /// </summary>
+    public void VioRetchTurnEnd()
+    {
+        if (!_retchLive) return;
+        foreach (UnitState v in _retchHolders)
+        {
+            int pending = v.RawCounter(VioRetchTrait.PendingKey);
+            if (pending <= 0) continue;
+            v.SetCounter(VioRetchTrait.PendingKey, 0);
+            UnitTally vt = TallyOf(v);
+            if (!v.IsAlive) { vt.Z373RetchDead += pending; continue; }
+            List<UnitState> adj = LivingMembers(v.TeamId).Where(a => a != v && FormationRules.AreAdjacent(v, a)).OrderBy(a => a.Slot).ToList();
+            if (adj.Count == 0) { vt.Z373RetchLost += pending; Log($"    {v.Name} の腹から溢れた澱みは行き場が無く、消えた（{pending}層）", LogKind.Trigger); continue; }
+            int each = pending / adj.Count, rest = pending % adj.Count;
+            for (int i = 0; i < adj.Count; i++)
+            {
+                int amt = each + (i < rest ? 1 : 0);
+                if (amt <= 0) continue;
+                Poison(adj[i], amt, v, PoisonRoute.Retch);
+                vt.Z373RetchOut += amt;
+            }
+            Log($"    {v.Name} が収まりきらない澱みを隣の仲間へ吐き戻した（{pending}層）", LogKind.Trigger);
+        }
+    }
     readonly List<UnitState> _ventHolders = new();
     readonly int[] _poisonToTeam = new int[2];
     /// <summary>第369期: この戦で陣営 <paramref name="team"/> の駒に書かれた毒の層の累計（`Poison` の窓口を通った分・滲み ／ 毒を招く込み）。噴き出しの保持者がいない戦では 0。</summary>
@@ -19043,6 +19079,7 @@ public static class BattleEngine
 
             ctx.WiltFire();         // 第242期: 育たなかった駒の火勢が萎む（ターンの終わり）。保持者がいなければ比較1つで抜ける
             ctx.CommandPoolTurnEnd();   // 第366期（P-t・ヒサの溜まりをターンの終わりに捨てる）。「溜まったら吐く」の保持者がいなければ比較1つで抜ける
+            ctx.VioRetchTurnEnd();      // 第373期（A1 ／ A2・ヴィオの吐き戻し）。保持者がいなければ比較1つで抜ける
             ctx.NoteFoeStalled();   // 第185期（計数のみ）: このターンに手番を失った敵の数の分布
         }
 

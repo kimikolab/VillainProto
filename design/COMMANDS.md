@@ -1356,6 +1356,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sh372 boards              # 第372期 §3-2: 5 台（試遊・毒 ／ 試遊・毒 席替え ／ 毒特化・集団 ／ 澱み喰い ／ 攻撃力の台）× 版（規定 ／ Va ／ Vb ／ Vc）× 6 波・seed 0..99・誰が何Tに倒れたか・ループの表（撃った数つき）・ヴィオの毒の行き先（敵の数 ／ 最も深い敵）・段に上がったターン・壊れの兆し（3 秒）
     dotnet run --project BattleSim -c Release 0 sh372 compare <Va|Vb|Vc>  # 第372期: `compare` 64 行 × 版（ヴィオのいる行だけを版で回す）（12 秒）
     dotnet run --project BattleSim -c Release 0 sh372 check               # 第372期 自己検査（段0 の規定 ＝ W5・旧 ／ 固定の口・規定の台と W5 の駒の台が一致・連撃の段 ／ 的 ／ 途中で倒れる・規定のヴィオは1発・verbose と再現性・`checkup` の札・試遊の台・PickOne ／ Roll）
+    dotnet run --project BattleSim -c Release 0 sh373 boards              # 第373期 §3-2: 4 台（試遊・毒 ／ 席替え ／ 毒特化・集団 ／ 澱み喰い）× 版（規定 ／ A1 ／ A2）× 6 波・seed 0..99・誰が何Tに倒れたか・スィドが倒れた戦とターン（精鋭）・吐いた毒の行き先・ヴィオの攻撃力 ／ 段・スィドの層 ／ 衣・壊れの兆し（2 秒）
+    dotnet run --project BattleSim -c Release 0 sh373 seats               # 第373期 §3-3: 試遊・毒の5枚の並べ替え 120 通り × 規定 ／ A1 × ボス ／ 蝕みなし ／ 近衛（seed 0..19）・上位5並び・ヴィオの隣の組ごと（2 秒）
+    dotnet run --project BattleSim -c Release 0 sh373 guren               # 第373期 §4: 試遊・毒 紅 × 7 波（seed 0..99）＋ ポンの試遊の条件の1戦（第4波・HP 1000% ／ 攻 300%・seed 7）＋ あふれの見積り（HP 1,000,000%・30T）（1 秒）
+    dotnet run --project BattleSim -c Release 0 sh373 compare <A1|A2>     # 第373期: `compare` 64 行 × 版（ヴィオのいる行だけを版で回す）（7 秒）
+    dotnet run --project BattleSim -c Release 0 sh373 check               # 第373期 自己検査（段0 の規定 ＝ Va・旧 ／ 固定の口・規定の台と第372期の Va の台が一致・吐き戻しの量 ／ 等分 ／ 衣の持ち主 ／ 隣なし ／ 倒れていた・規定のヴィオは吐かない・経路と添字・verbose と再現性・`checkup` の札・試遊の台・PickOne ／ Roll）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

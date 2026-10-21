@@ -969,15 +969,22 @@ public static class Presets
         // 第372期: 「試遊・毒 席替え」＝ 第371期の W5 の席の確かめの1位（前1 ドルガ ／ 前3 ガルド ／ 中央 スィド ／ 後1 グザ ／ 後3 ヴィオ・規定の駒）。
         ("試遊・毒 席替え", PoisonSeat372()),
         // 第372期【軽い期】本体: ヴィオの連撃の段の版（並びは試遊・毒・ヴィオだけ版）。採否はポン。
-        ("版・Va 散らす", PoisonHero367(vio: UnitCatalog.VioVa)),
-        ("版・Vb 高い段", PoisonHero367(vio: UnitCatalog.VioVb)),
-        ("版・Vc 集中", PoisonHero367(vio: UnitCatalog.VioVc)),
+        // 第373期: 第372期の「版・Va ／ Vb ／ Vc」は外した（規定のヴィオが Va になった）。「試遊・毒 紅」＝ ポンの試遊の台（前1 ボルグ ／ 前3 スィド ／ 中央 ベニ ／ 後1 ラウ ／ 後3 グザ・規定の駒）。
+        ("試遊・毒 紅", PoisonGuren373()),
+        ("版・A1 半分を吐く", PoisonHero367(vio: UnitCatalog.VioA1)),
+        ("版・A2 3分の1を吐く", PoisonHero367(vio: UnitCatalog.VioA2)),
+        // 第373期: 席の確かめ（`sh373 seats`）の A1 の1位（近衛 → 蝕みなしの勇者の順）＝ 前1 ガルド ／ 前3 ドルガ ／ 中央 スィド ／ 後1 グザ ／ 後3 ヴィオ（試遊・毒の並びと違うので足した）。
+        ("版・A1 席替え", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, center: UnitCatalog.Sid, back1: UnitCatalog.Guza, back3: UnitCatalog.VioA1)),
     };
 
     /// <summary>第367期: 毒特化・勇者（`compare` の「毒爆弾 (ラウ×ヴィオ)」のラウの席 ＝ 後3 を守りに替えた台・前1 ガルド ／ 前3 スィド ／ 中央 グザ ／ 後1 ヴィオ ／ 後3 守り）。
     /// 守りは `sh367 pick`（GV の勇者・seed 0..19 で最も勝つ）で選んだ。グザ ／ ヴィオを差し替えて版の台を作る。</summary>
     public static Formation PoisonHero367(UnitDef? guza = null, UnitDef? vio = null, UnitDef? sid = null) =>
         Formation.Build(front1: UnitCatalog.Gald, front3: sid ?? UnitCatalog.Sid, center: guza ?? UnitCatalog.Guza, back1: vio ?? UnitCatalog.Vio, back3: PoisonGuard367);   // 第368期: スィドも差し替えられるように
+    /// <summary>第373期: 「試遊・毒 紅」の並び（前1 ボルグ ／ 前3 スィド ／ 中央 ベニ ／ 後1 ラウ ／ 後3 グザ・規定の駒・ポンの試遊の台）。</summary>
+    public static Formation PoisonGuren373() =>
+        Formation.Build(front1: UnitCatalog.Borg, front3: UnitCatalog.Sid, center: UnitCatalog.Beni, back1: UnitCatalog.Rau, back3: UnitCatalog.Guza);
+
     /// <summary>第372期: 「試遊・毒 席替え」の並び（前1 ドルガ ／ 前3 ガルド ／ 中央 スィド ／ 後1 グザ ／ 後3 ヴィオ）。グザ ／ ヴィオ ／ スィドを差し替えて版の台を作る。</summary>
     public static Formation PoisonSeat372(UnitDef? guza = null, UnitDef? vio = null, UnitDef? sid = null) =>
         Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Gald, center: sid ?? UnitCatalog.Sid, back1: guza ?? UnitCatalog.Guza, back3: vio ?? UnitCatalog.Vio);

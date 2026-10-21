@@ -950,6 +950,8 @@ public enum TraitId
     // --- 第372期で足した札（指示書 design/PHASE372_VIO_FLURRY_SPEC.md §3）。ヴィオの連撃の段（規定のヴィオ ＋ 札1枚）。保持者 0 枚 ---
     VioFlurryA,           // 連撃・散らす（Va・ヴィオ）: 手番の頭の攻撃力（素の値 ＋ 上昇分）が 50 以上で2連撃 ／ 150 以上で3連撃。2発目からは別の敵（1発目の的を除いて席番号の小さい順・足りなければ1発目の的へ戻る）（`VioFlurryTrait`・的は engine の `SwingTurnHits`）
     VioFlurryB,           // 連撃・散らす・高い段（Vb・ヴィオ）: 100 以上で2連撃 ／ 300 以上で3連撃・的は Va と同じ（`VioFlurryTrait`）
+    VioRetchHalf,         // 溢れて吐く・半分（A1・ヴィオ）: 吸った層の半分（切り上げ）だけが攻撃力になり、残りはターンの終わりに隣の味方へ吐き戻す（`VioRetchTrait`・第373期）
+    VioRetchThird,        // 溢れて吐く・3分の1（A2・ヴィオ）: 収まるのは 3分の2（切り上げ）・吐くのは残り（`VioRetchTrait`・第373期）
     VioFlurryC,           // 連撃・集中（Vc・ヴィオ）: 50 以上で2連撃 ／ 150 以上で3連撃・2発目からも1発目と同じ敵（倒れていたら席番号の最も小さい生きている敵）（`VioFlurryTrait`）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -3017,7 +3019,9 @@ public enum PoisonRoute
     /// <summary>毒を引き受ける（スィドの版 Z・隣の味方の毒を自分へ。第369期）。</summary>
     Shoulder,
     /// <summary>攻撃力ぶんの毒（ヴィオの版 W・殴った敵へ。第370期）。</summary>
-    Strike
+    Strike,
+    /// <summary>溢れて吐く（ヴィオの版 A1 ／ A2・収まらなかった層をターンの終わりに隣の味方へ。第373期）。</summary>
+    Retch
 }
 
 /// <summary>
@@ -7312,14 +7316,18 @@ public sealed class BlightfedTrait : Trait
         }
         if (drawn == 0) return;
 
-        self.AtkBonus += drawn * GainPerStack;
+        // 第373期（溢れて吐く A1 ／ A2）: 札を持てば、吸った層のうち収まる分だけが攻撃力になり、残りはターンの終わりに吐き戻す（`VioRetchTrait`）。札が無ければ kept ＝ drawn で第372期と1命令も違わない。
+        int kept = VioRetchTrait.Keep(self, drawn);
+        if (kept < drawn) VioRetchTrait.Hold(ctx, self, drawn - kept);
+        self.AtkBonus += kept * GainPerStack;
         // 第180期。**腹（在庫）にも同じ層を記帳する。** 攻撃力に変える現行の式は1文字も触っていない
         // ——吐き戻し（<see cref="SpitTrait"/>）がここから引く。**読み手がいなければ在庫は増えるだけ**で、
         // 盤面には1ビットも影響しない（対照 ＝ `Spit` を外した版はこの行を通っても同値）。
         self.SetCounter(SpitTrait.BellyKey, self.RawCounter(SpitTrait.BellyKey) + drawn);
         ctx.NoteSpitStore(self, drawn);
         if (shown is not null) ctx.EmitStatusDrain(self, StatusKeys.Poison, shown);   // 第183期 追補3・表示専用（攻撃力を上げた後に打つ）
-        ctx.Log($"    {self.Name} が味方の澱みを吸い上げた（{drawn}層 / 攻撃 +{drawn * GainPerStack}）", LogKind.Trigger);
+        ctx.Log(kept == drawn ? $"    {self.Name} が味方の澱みを吸い上げた（{drawn}層 / 攻撃 +{drawn * GainPerStack}）"
+                              : $"    {self.Name} が味方の澱みを吸い上げた（{drawn}層・腹に収まったのは {kept}層 / 攻撃 +{kept * GainPerStack}）", LogKind.Trigger);
     }
 }
 
@@ -13408,6 +13416,44 @@ public sealed class VioFlurryTrait : Trait
     public override void OnCarryOver(UnitState self) => self.SetCounter(FirstKey, 0);
 }
 
+/// <summary>
+/// 溢れて吐く（第373期・ヴィオの版 A1 ／ A2・指示書 design/PHASE373_VIO_RETCH_SPEC.md §3-1）。<see cref="BlightfedTrait"/> が吸った層のうち、
+/// <c>Num / Den</c>（切り上げ）だけが腹に収まって攻撃力になり、残り（切り捨て）は私有キー <see cref="PendingKey"/> に控える。
+/// ターンの終わり（全員の手番の後・engine の <c>VioRetchTurnEnd</c>）に、生きていれば隣接する生きている味方へ等分して吐き戻す
+/// （余りは席番号の小さい方から・毒の窓口 <see cref="PoisonRoute.Retch"/>・滲み則は窓口のまま）。隣がいなければ吐かずに消える。
+/// 倒れていたら吐かない。<b>乱数を引かない。</b>
+/// </summary>
+public sealed class VioRetchTrait : Trait
+{
+    readonly TraitId _id;
+    public readonly int Num, Den;
+    public VioRetchTrait(TraitId id, int num, int den) { _id = id; Num = num; Den = den; }
+    public override TraitId Id => _id;
+
+    /// <summary>そのターンに吐く層（ターンの頭に控え、ターンの終わりに吐いて 0 に戻す）。</summary>
+    public const string PendingKey = "vioRetchPending";
+
+    /// <summary>この駒の吐きの札（無ければ null）。</summary>
+    public static VioRetchTrait? Of(UnitState u) => u.Traits.OfType<VioRetchTrait>().FirstOrDefault();
+
+    /// <summary>吸った <paramref name="drawn"/> 層のうち腹に収まる層。札が無ければ <paramref name="drawn"/> のまま。</summary>
+    public static int Keep(UnitState self, int drawn)
+    {
+        VioRetchTrait? r = Of(self);
+        return r is null ? drawn : (drawn * r.Num + r.Den - 1) / r.Den;
+    }
+
+    /// <summary>収まらなかった <paramref name="over"/> 層を、ターンの終わりに吐く分として控える。</summary>
+    public static void Hold(BattleContext ctx, UnitState self, int over)
+    {
+        self.SetCounter(PendingKey, self.RawCounter(PendingKey) + over);
+        ctx.TallyOf(self).Z373RetchHeld += over;   // 計数のみ
+    }
+
+    /// <summary>控えは戦闘ごとに捨てる。</summary>
+    public override void OnCarryOver(UnitState self) => self.SetCounter(PendingKey, 0);
+}
+
 public sealed class StrikePoisonTrait : Trait
 {
     public override TraitId Id => TraitId.StrikePoison;
@@ -18967,6 +19013,8 @@ public static class TraitCatalog
         new VioFlurryTrait(TraitId.VioFlurryA, 50, 150, scatter: true),    // 第372期（連撃・散らす Va）
         new VioFlurryTrait(TraitId.VioFlurryB, 100, 300, scatter: true),   // 第372期（連撃・散らす・高い段 Vb）
         new VioFlurryTrait(TraitId.VioFlurryC, 50, 150, scatter: false),   // 第372期（連撃・集中 Vc）
+        new VioRetchTrait(TraitId.VioRetchHalf, 1, 2),   // 第373期（溢れて吐く・半分 A1）
+        new VioRetchTrait(TraitId.VioRetchThird, 2, 3),  // 第373期（溢れて吐く・3分の1 A2）
         new EruptTrait(),      // 第180期
         new SmearTrait(),      // 第180期
         new SpitTrait(),       // 第180期
