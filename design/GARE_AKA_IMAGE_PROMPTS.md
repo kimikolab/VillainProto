@@ -1,0 +1,26 @@
+# ガレ・アカ 動作差分の生成プロンプト（2026-10-21）
+
+内蔵 image_gen（imagegen スキル）で各1枚を生成。全て transparent_background=true。元の立ち絵は保持し、生成したRGBAをそのまま追加した。
+
+出力: `DemoApp/assets/portraits/battle/<キー>_idle_right.png`
+参照: ガレは `gare_idle_right.png`、アカは `susu_idle_right.png`。
+
+## gare_load
+
+Use case: identity-preserve. Asset type: transparent full-body 2D battle sprite action variant. Input image is the character identity, outfit and rendering style reference. Preserve exact face, hair color, gender, costume layers, ornaments, proportions, boots and painterly anime fantasy rendering. Loading pose: She cradles the blunderbuss in her left arm, muzzle tipped diagonally upward to the right, and uses her right hand to push a small handful of pale blue crystal fragments into its wide muzzle. Open leather hip pouch. Focused confident expression. No firing effects. Composition: single full-body character facing screen right in three-quarter side view, head and boots entirely in frame, close to original scale, centered in 1024x1536 portrait canvas with small consistent margins. Genuine transparent background with clean edges. Remove ALL original dark background haze and glow. No text, no border, no floor, no shadow outside character.
+
+## gare_fire
+
+Use case: identity-preserve. Asset type: transparent full-body 2D battle sprite action variant. Input image is the character identity, outfit and rendering style reference. Preserve exact face, hair color, gender, costume layers, ornaments, proportions, boots and painterly anime fantasy rendering. Firing pose: She braces both boots, leans forward and firmly shoulders her same large blunderbuss, aiming its muzzle horizontally toward screen right. Rear hand on trigger, front hand supporting barrel. Hair and coat recoil subtly backward. Pale blue crystals visible just inside muzzle but NO muzzle flash, projectiles, smoke, or external effects. Composition: single full-body character facing screen right in three-quarter side view, head and boots entirely in frame, close to original scale, centered in 1024x1536 portrait canvas with small consistent margins. Genuine transparent background with clean edges. Remove ALL original dark background haze and glow. No text, no border, no floor, no shadow outside character.
+
+## gare_empty
+
+Use case: identity-preserve. Asset type: transparent full-body 2D battle sprite action variant. Input image is the character identity, outfit and rendering style reference. Preserve exact face, hair color, gender, costume layers, ornaments, proportions, boots and painterly anime fantasy rendering. Empty ammo pose: she supports the same blunderbuss lowered in one arm and holds a small EMPTY brown leather pouch upside down in her free hand, looking at it with a rueful annoyed expression. No crystals anywhere in the pouches or gun. Clearly empty pouch. Full standing silhouette. Composition: single full-body character facing screen right in three-quarter side view, head and boots entirely in frame, close to original scale, centered in 1024x1536 portrait canvas with small consistent margins. Genuine transparent background with clean edges. Remove ALL original dark background haze and glow. No text, no border, no floor, no shadow outside character.
+
+## susu_read
+
+Use case: identity-preserve. Asset type: transparent full-body 2D battle sprite action variant. Input image is the character identity, outfit and rendering style reference. Preserve exact face, hair color, gender, costume layers, ornaments, proportions, boots and painterly anime fantasy rendering. Reading incantation pose: the same male red-haired mage holds an open black and gold grimoire at chest level in his left hand. His right hand hovers above the open pages as if drawing magic inward. Looking at the pages, calm concentration. Thin red luminous marks on pages only, no external particle effects. Composition: single full-body character facing screen right in three-quarter side view, head and boots entirely in frame, close to original scale, centered in 1024x1536 portrait canvas with small consistent margins. Genuine transparent background with clean edges. Remove ALL original dark background haze and glow. No text, no border, no floor, no shadow outside character.
+
+## susu_cast
+
+Use case: identity-preserve. Asset type: transparent full-body 2D battle sprite action variant. Input image is the character identity, outfit and rendering style reference. Preserve exact face, hair color, gender, costume layers, ornaments, proportions, boots and painterly anime fantasy rendering. Release spell pose: the same male red-haired mage holds an open black and gold grimoire at his waist in his left hand and extends his right arm diagonally upwards toward screen right, palm open commanding a descending spear. Confident intent expression, robes flowing slightly. No external magic circles, no particles. Same male identity. Composition: single full-body character facing screen right in three-quarter side view, head and boots entirely in frame, close to original scale, centered in 1024x1536 portrait canvas with small consistent margins. Genuine transparent background with clean edges. Remove ALL original dark background haze and glow. No text, no border, no floor, no shadow outside character.

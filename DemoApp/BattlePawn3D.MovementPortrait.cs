@@ -31,6 +31,7 @@ public partial class BattlePawn3D
 
     private void ClearMovementPortrait()
     {
+        ResetGatherRecoil();
         ClearAllyBumpPose();
         ClearDropkickPose();
         ClearPalmStrikePose();

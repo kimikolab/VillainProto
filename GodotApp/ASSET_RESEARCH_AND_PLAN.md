@@ -362,3 +362,13 @@ DemoAppの力配りにEffectBlocks v4の `assets/smoke/smoke_light.tscn` を採�
 - 購入素材がない環境でも帯・移動する塊・胸の反応・札・音は同じ入口で再生する。
 - 一時停止は移動と音の予約を同じ時計で止める。死亡・中断・非表示・再戦で発動単位のノードを破棄。倍速にも対応。
 - 実行と検証の記録は `design/art/doha/integration.md`。戦闘規則・対象・件数は変更しない。
+
+### ガレとアカの集束（2026-10-21）
+
+EffectBlocks v4の `impacts/impact_3.tscn` を結晶射撃の銃口と着弾、`smoke/smoke_light.tscn` をアカ死亡時の赤い光の霧へ採用。`energy/electric_sparks_1.tscn` も実ファイルを確認したが、雷との混同を避けて不採用。既存AkaMagicの術式・槍と自作の光束へ部分的に重ねる。
+
+`DemoApp/GatherCast3D.cs` が発動ごとに処理材・描画材を複製し、青白／赤の色・粒の本数・寿命を調整する。原本・共有リソースは変更しない。追加した演出の時計で停止・倍速・中断・再戦を制御し、購入素材なしでも光束・術式・粒・着弾光は表示する。詳細は `design/GARE_AKA_PRESENTATION.md`。
+
+ガレの弾幕を改修し、EffectBlocksの `source_files/meshes/crystal_1.mesh` と `source_files/textures/sparkle.png` を採用。`attacks/attack_crystal.tscn` も確認したが地面から生える攻撃と割れ目を伴うためメッシュだけを利用する。`energy/laser.tscn` と `electric_waves.tscn` は、命中前の到着と停止を台本の時計へ揃えるためシーンを採用せず、光束と光輪を `GareCrystalFx.cs` で描く。結晶の面を青・水色・紫に分ける専用マテリアルを描画インスタンスへ設定し、原本のメッシュと素材は保持する。
+
+単体への集束砲の着弾を強める際、`impact_3.tscn` と `impact_6.tscn` を比較した。爆発テクスチャを含む6より結晶の飛散へ合わせやすい3を、青い小さな光片として追加採用。既存の結晶メッシュによる2段階の炸裂、メッシュで描く3重の衝撃波と放射光へ重ねる。発射・命中時刻、停止・倍速・中断の時計は維持し、原本・共有材は変更しない。

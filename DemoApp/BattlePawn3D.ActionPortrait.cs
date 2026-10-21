@@ -88,6 +88,10 @@ public partial class BattlePawn3D
             if (key == "kata_thunder") height *= 1.05f; // 掲げた手より頭身で合わせる。
             // 被弾・受け流しの差分は本体が少し小さいため、待機絵と体格を合わせる。
             if (key is "gald_hit" or "gald_parry") height *= 1.05f;
+            if (key == "gare_load") height *= 1435f / 1501f;
+            if (key == "gare_fire") height *= 1435f / 1330f;
+            if (key == "gare_empty") height *= 1435f / 1497f;
+            if (key == "susu_read") height *= 1480f / 1493f;
         }
         if (_golmRocketPose && _unitId == "golm")
         {

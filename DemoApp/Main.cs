@@ -1299,6 +1299,7 @@ public partial class Main : Control
         string verdict = _result.PlayerWon ? "VICTORY" : "DEFEAT";
         _battleField.ResetBindings();
         _battleField.EndShockMarkPresentation();
+        _battleField.EndGatherPresentation();
         foreach (var pawn in _battleField.Pawns.Values) pawn.SetFrightened(false);
         foreach (var pawn in _battleField.Pawns.Values) pawn.SetStatusIcon(StatusKeys.Cowed, false);
         foreach (var pawn in _battleField.Pawns.Values)
@@ -1429,6 +1430,7 @@ public partial class Main : Control
         if (await PlaySpecial(e, eventIndex, actor, target)) return;
         if (await PlayBeniMio(e, eventIndex, actor, target)) return;
         if (await PlayTickEvent(e, eventIndex, target)) return;
+        if (await PlayGatherCast(e, eventIndex, actor, target)) return;
         switch (e.Kind)
         {
             case BattleEventKind.TurnStart:
@@ -1766,6 +1768,8 @@ public partial class Main : Control
                 break;
 
             case BattleEventKind.Death:
+                ShowAkaFallout(eventIndex, target);
+                if (target is not null) _battleField.ClearGatherPawn(target);
                 target?.SetFrightened(false);
                 _battleField.CutWebFor(target);
                 _battleField.ClearBindingsFor(target);
@@ -2150,6 +2154,7 @@ public partial class Main : Control
                 or BattleEventKind.HushState) break;
             if (candidate.Kind is not (BattleEventKind.Damage or BattleEventKind.Parry)) continue;
             if (candidate.ActorId != highlight.ActorId) continue;
+            if (_burstDamageIndices.Contains(i)) continue;
             bool bloodRelease = _battleField.FindPawn(highlight.ActorId)?.IsAshReleasing == true;
             if (candidate.Pattern is not null && !(bloodRelease && candidate.Pattern == AttackPattern.All)) continue;
             if (candidate.Relayed || candidate.ShareFromId is not null || candidate.DeflectFromId is not null) continue;
@@ -2542,6 +2547,7 @@ public partial class Main : Control
         _battleField.SetWhipClock(_paused, _speed);
         _battleField.SetTouPowderClock(_paused, _speed);
         _battleField.SetGolmClock(_paused, _speed);
+        _battleField.SetGatherClock(_paused, _speed);
         _pause.Text = _paused ? "再開" : "一時停止";
         Notice(_paused ? "一時停止中" : "再生中", _paused ? UiKit.Gold : UiKit.Player);
     }
@@ -2553,6 +2559,7 @@ public partial class Main : Control
         _battleField.SetWhipClock(_paused, _speed);
         _battleField.SetTouPowderClock(_paused, _speed);
         _battleField.SetGolmClock(_paused, _speed);
+        _battleField.SetGatherClock(_paused, _speed);
         _speedPicker.Selected = index;
         Notice($"再生速度 ×{_speed:0.#}", UiKit.Player);
     }
@@ -2599,6 +2606,7 @@ public partial class Main : Control
         _seed.Editable = true;
         _enemyScaleSettings.Visible = true;
         _battleField.Visible = false;
+        _battleField.EndGatherPresentation();
         _battleMusic.Stop();
         _partyBar.Visible = false;
         SetScoreVisible(false);

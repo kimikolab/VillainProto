@@ -418,3 +418,42 @@ Copy-Item -LiteralPath "D:\Assets\SE\Helton Yan's Pixel Combat - Single Files\DS
 SHA-256: `2FADC90398FE925AB258F8BA7CAC2E96C257D3CF5BD7C42B245345E4ECFA5507`。
 `GolmFx3D.Impact` がパンチの接触時に1回再生する。捕獲へ続くパンチも同じ命中音を使う。
 命中専用の再生枠で帰還・捕獲の音との重なりを保ち、一時停止・速度変更・中断に追従する。踏み潰しは既存の合成音を使う。
+
+### ガレの結晶弾幕・集束砲（2026-10-21）
+
+ユーザー指定の2音を無加工でコピーし、`BattlefieldView3D.GareVolley` で重ねる。
+
+| アプリ内ファイル | 原本 | SHA-256 |
+|---|---|---|
+| `gare_crystal_shine.mp3` | `D:/Assets/SE/効果音ラボ/演出/シャキーン3.mp3` | `DA1C9B93D1319E04F30E6FE5A59BC204292FEAD00E12FE7C2F36F68010B37419` |
+| `gare_shotgun.mp3` | `D:/Assets/SE/効果音ラボ/戦闘/ショットガン発射.mp3` | `C3BD4D90A5298D172AB96C8409E50E567CEAD5330E4D41BEF50815716565139C` |
+
+配置手順：
+
+```powershell
+Copy-Item -LiteralPath 'D:/Assets/SE/効果音ラボ/演出/シャキーン3.mp3' -Destination DemoApp/assets/audio/se/gare_crystal_shine.mp3
+Copy-Item -LiteralPath 'D:/Assets/SE/効果音ラボ/戦闘/ショットガン発射.mp3' -Destination DemoApp/assets/audio/se/gare_shotgun.mp3
+```
+
+集団向け弾幕は発射と反動の開始0.32秒にショットガンを-12dBで再生し、0.03秒後にシャキーンを-8dBで重ねる。シャキーンは立ち上がりの弱い冒頭0.10秒を再生時に飛ばす。単体への集束砲は下記の専用音を加えた配分にする。
+初回のシャキーン-6dB／ショットガン-17dBから、ユーザーの「銃から放つ感を強めたい」に合わせてショットガンを5dB上げ、シャキーンを2dB下げた。発射直後の銃声が先に立ち、その後に結晶の響きが広がる。
+汎用の `charge_magic_release` を置き換え、着弾0.70秒の `armor_break` は維持する。
+演出末尾0.22秒を共通時計で滑らかにフェードし、1.40秒の終了で切れ目が目立たないようにする。原音程、一時停止・中断・再戦の後片付けは既存の演出所有プレイヤーに従う。原本は変更しない。
+
+### ガレの集束砲専用の溜め・発射（2026-10-21）
+
+単体への集束砲だけ、ユーザー指定の以下2音を追加。無加工コピーでSHA-256一致を確認した。
+
+| アプリ内ファイル | 原本 | SHA-256 |
+|---|---|---|
+| `gare_focus_charge.wav` | `D:/Assets/SE/Helton Yan's Pixel Combat - Single Files/DSGNSynth_CAST-Mecha Energy Gathering_HY_PC-001.wav` | `4783F909550F00E9611F5D3D4F5C06A6E1148AE9AAFD1EF7E88C96AC72509F1F` |
+| `gare_focus_beam.mp3` | `D:/Assets/SE/効果音ラボ/戦闘/ビーム砲1.mp3` | `BE624697D0E421F9366640621EFF9AF12E1365F62496ED00671321875F50BEA3` |
+
+```powershell
+Copy-Item -LiteralPath "D:/Assets/SE/Helton Yan's Pixel Combat - Single Files/DSGNSynth_CAST-Mecha Energy Gathering_HY_PC-001.wav" -Destination DemoApp/assets/audio/se/gare_focus_charge.wav
+Copy-Item -LiteralPath 'D:/Assets/SE/効果音ラボ/戦闘/ビーム砲1.mp3' -Destination DemoApp/assets/audio/se/gare_focus_beam.mp3
+```
+
+溜めは0.04〜1.02秒、-2dB、原音程。素材先頭0.08秒を飛ばし、0.82秒かけて立ち上げ、発射前の0.04秒で落として発射時に停止する。以前の0.28秒の抜粋から0.70秒延ばし、光と音の高まりを作った。元の3.75秒を全尺再生しない。
+1.02秒にビーム砲-6dBとショットガン-11dBを重ねる。ユーザー指定により単体への集束砲ではシャキーンを再生しない。ビーム砲を中心に銃の衝撃を添える。命中1.40秒、演出終了2.10秒、末尾0.22秒をフェードする。集団向け弾幕の配分・発射と命中の時刻は維持する。
+購入素材の `gare_focus_charge.wav` と `.import` はGitの対象外。再配置は上記コマンドを使う。原本・共有音源は変更しない。

@@ -15135,6 +15135,8 @@ public sealed class BattleContext
             actor.SetCounter(StatusKeys.IdleTurn, Turn);
             if (vetoed!.Id == TraitId.Immobile) TallyOf(actor).StallImmobile++;   // 第105期
             else TallyOf(actor).StallCanAct++;
+            if (vetoed.Id == TraitId.PebbleGather)
+                EmitShard(ShardLabels.Empty, actor, null, 0, 0);
             if (DeepWatch) NoteDeepStalled(actor);   // 第93期（計数のみ）
             return TurnOutcome.Stalled;
         }
@@ -17971,7 +17973,7 @@ public sealed class BattleContext
     /// <summary>第358期（<b>表示専用</b>）: 返しの破片 ／ 礫の出来事（<see cref="BattleEventKind.Shard"/>）。verbose のときだけ積む。</summary>
     internal void EmitShard(string label, UnitState actor, UnitState? target, int amount, int remainingOrSlot)
     {
-        if (!_verbose || amount <= 0) return;
+        if (!_verbose || (amount <= 0 && label != ShardLabels.Empty)) return;
         bool thr = label == ShardLabels.Throw;
         Emit(new BattleEvent
         {

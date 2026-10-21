@@ -681,6 +681,7 @@ void fragment() {
         ProcessAllyBounce();
         ProcessSomDaunt(animationDelta);
         ShowGolmDiscardedPose();
+        ApplyGatherRecoilPose();
         _shadow.Scale = new Vector3(1.0f - breath * 0.10f + shadowSpread, 1, 1.0f - breath * 0.10f - shadowSpread * 0.35f);
         _ring.Rotation = new Vector3(0, _phase * 0.15f, 0);
     }

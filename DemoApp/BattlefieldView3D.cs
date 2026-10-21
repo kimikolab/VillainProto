@@ -289,6 +289,7 @@ public partial class BattlefieldView3D : Control
 
     public void BeginBattle(IReadOnlyList<DemoOpening> openings, string stageName, int stageIndex)
     {
+        ResetGatherPresentation();
         ResetGolmPresentation();
         ResetFire();
         ResetMovement();

@@ -4616,7 +4616,9 @@ public enum BattleEventKind
     /// 返し: <c>ActorId</c> ＝ 欠片を持っていた味方 ／ <c>TargetId</c> ＝ 一撃の主 ／ <c>PartnerId</c> ＝ ヒビ ／ <c>Amount</c> ＝ 返した量 ／
     /// <c>Slot</c> ＝ 攻撃の通し番号（同じ敵の1回の攻撃で返った返しは同じ番号・攻撃の外なら 0）。直後に一撃の主への <c>Damage</c> が並ぶ。
     /// 拾う: <c>ActorId</c> ＝ ガレ ／ <c>TargetId</c> ＝ 破片が割れた味方 ／ <c>Amount</c> ＝ 拾った量 ／ <c>StatusRemaining</c> ＝ 礫の合計。
-    /// 投げる: <c>ActorId</c> ＝ ガレ ／ <c>Amount</c> ＝ 1体あたりの威力 ／ <c>Slot</c> ＝ 使った礫。直後に敵全体への <c>Damage</c> が並ぶ。<b>どの規則も読まない。</b>規定のヒビ ／ ガレには出ない。
+    /// 投げる: <c>ActorId</c> ＝ ガレ ／ <c>Amount</c> ＝ 集束前の威力 ／ <c>Slot</c> ＝ 使った礫。直後に敵全体への <c>Damage</c> が並ぶ。
+    /// 礫がない: <c>ActorId</c> ＝ ガレ ／ <c>Amount</c> ＝ 0。<c>PebbleGather</c> が手番を止めた場合だけの表示通知。
+    /// <b>どの規則も読まない。</b>規定のガレの回収・射撃・弾切れもこの口を通る。
     /// </summary>
     Shard,
 
@@ -4630,6 +4632,8 @@ public enum BattleEventKind
 /// <summary>`Shard`（第358期）の <c>Text</c>。</summary>
 public static class ShardLabels
 {
+    /// <summary>礫不足で手番を使えなかった。量は0。表示専用。</summary>
+    public const string Empty = "礫がない";
     public const string Gift = "欠片を配る";
     public const string Return = "返し";
     public const string Pick = "礫を拾う";

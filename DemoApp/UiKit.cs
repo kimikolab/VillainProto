@@ -240,6 +240,11 @@ public static class UiKit
     /// </summary>
     public static float BattlePortraitBottomPaddingRatio(string key) => key switch
     {
+        "gare_load" => 20f / 1536f,
+        "gare_fire" => 66f / 1536f,
+        "gare_empty" => 15f / 1536f,
+        "susu_read" => 18f / 1536f,
+        "susu_cast" => 24f / 1536f,
         "rica" => 0.0600f,
         "sid" => 0.0040f,
         "borg" => 0.0384f,
