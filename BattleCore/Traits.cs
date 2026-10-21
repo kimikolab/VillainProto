@@ -941,6 +941,12 @@ public enum TraitId
     CatalystSip,          // 啜って注ぐ（Z・ヴィオ）: 手番で（攻撃しない）、味方に残った毒を啜り（自分と毒の衣の持ち主は除く・啜った味方は 0 に）、最も毒の深い敵の毒を倍にし、啜った分もその敵へ注ぐ。ターンの頭には吸わない（`CatalystSipTrait`）
     PoisonShoulder,       // 毒を引き受ける（Z・スィド）: 手番で（攻撃しない）、隣接する味方の毒をすべて自分へ移す（`PoisonShoulderTrait`）
     CloakRetort,          // 衣の返し（Z・スィド）: 殴られると（毒の衣の +2 の後に）殴ってきた敵へ自分の層と同じだけ毒を浴びせ（衣は減らない）、痺れ毒の印を付け、隣の味方に毒 +1 が漏れる（`CloakRetortTrait`・毒撃の +8 と置き換える）
+    // --- 第370期で足した札（指示書 design/PHASE370_POISON_SPLASH_SPEC.md §2）。毒軸のループ②（返り毒の向きを戻す ／ ヴィオの攻撃力ぶんの毒）。保持者 0 枚 ---
+    MiasmaSplash,         // 返り毒の向きを戻す（W・グザ・`MiasmaVent` と一緒に持つ）: 段の閾を 50 ／ 150 ／ 400 に。毒を持つ敵が味方を殴ると、その敵の毒の 1 割（切り捨て）・1回 5 層までが殴られた味方に跳ねる（敵の層は減らない）。第369期の「味方の毒の半分が敵へ」は起きない（**札そのものは挙動を持たない**・`MiasmaVentTrait`）
+    SplashUncapped,       // 跳ねる毒の上限なし（W3・グザ）: 返り毒の1回 5 層の上限を外す（1 割はそのまま）（**札そのものは挙動を持たない**・`MiasmaVentTrait`）
+    StrikePoison,         // 攻撃力ぶんの毒（W・ヴィオ）: 手番の攻撃が当たった敵に、その攻撃力（素の値 ＋ 上昇分・増減の前）と同じだけ毒を乗せる（毒は窓口を通す・軛に切られない）（`StrikePoisonTrait`）
+    VentOff370,           // 噴き出しを止める（第370期 §4-1 の切り分け・器具の中だけ）（**札そのものは挙動を持たない**・`MiasmaVentTrait`）
+    BacklashOff370,       // 返り毒を止める（第370期 §4-1 の切り分け・器具の中だけ）（**札そのものは挙動を持たない**・`MiasmaVentTrait`）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -3005,7 +3011,9 @@ public enum PoisonRoute
     /// <summary>返り毒（グザの版 Z・殴られた味方の毒の半分を殴った敵へ。第369期）。</summary>
     Backlash,
     /// <summary>毒を引き受ける（スィドの版 Z・隣の味方の毒を自分へ。第369期）。</summary>
-    Shoulder
+    Shoulder,
+    /// <summary>攻撃力ぶんの毒（ヴィオの版 W・殴った敵へ。第370期）。</summary>
+    Strike
 }
 
 /// <summary>
@@ -13256,6 +13264,12 @@ public sealed class PoisonCloakTrait : Trait
 public sealed class MiasmaVentTrait : Trait
 {
     public static readonly int[] Steps = { 30, 80, 200 };
+    /// <summary>第370期（W・`MiasmaSplash`）の段の閾。</summary>
+    public static readonly int[] StepsW = { 50, 150, 400 };
+    /// <summary>第370期（W）: 跳ねる毒の割合（敵の層 ÷ この値・切り捨て）と1回の上限（`SplashUncapped` で外す）。</summary>
+    public const int SplashDiv = 10, SplashCap = 5;
+    /// <summary>この保持者の段の閾（W なら <see cref="StepsW"/>）。</summary>
+    public static int[] StepsOf(UnitState g) => g.HasTrait(TraitId.MiasmaSplash) ? StepsW : Steps;
     /// <summary>段ごとの（k ／ 敵へ ／ 味方へ）。k ＝ 0 は全員。</summary>
     public static readonly (int K, int Foe, int Ally)[] Table = { (2, 2, 1), (3, 3, 1), (4, 4, 2), (0, 6, 3) };
 
@@ -13265,13 +13279,14 @@ public sealed class MiasmaVentTrait : Trait
     public static int StageOf(BattleContext ctx, UnitState self)
     {
         int sum = ctx.PoisonWrittenTo(ctx.Opponent(self.TeamId)), st = 0;
-        foreach (int s in Steps) if (sum >= s) st++;
+        foreach (int s in StepsOf(self)) if (sum >= s) st++;
         return st;
     }
 
     public override void OnTurnStart(BattleContext ctx, UnitState self)
     {
         if (!self.IsAlive) return;
+        if (self.HasTrait(TraitId.VentOff370)) return;   // 第370期の切り分け（器具の中だけ）
         int st = StageOf(ctx, self);
         var (k, foe, ally) = Table[st];
         UnitTally t = ctx.TallyOf(self);
@@ -13299,6 +13314,8 @@ public sealed class MiasmaVentTrait : Trait
     static void Backlash(BattleContext ctx, UnitState guza, UnitState hit, UnitState? source)
     {
         if (!guza.IsAlive || source is null || source.TeamId == hit.TeamId || !source.IsAlive || !hit.IsAlive) return;
+        if (guza.HasTrait(TraitId.BacklashOff370)) return;   // 第370期の切り分け（器具の中だけ）
+        if (guza.HasTrait(TraitId.MiasmaSplash)) { Splash(ctx, guza, hit, source); return; }   // 第370期（W）: 向きを戻す
         if (hit.HasTrait(TraitId.PoisonCloak)) return;
         int layers = hit.RawCounter(StatusKeys.Poison), move = layers / 2;
         if (move <= 0) return;
@@ -13308,6 +13325,45 @@ public sealed class MiasmaVentTrait : Trait
         t.Z369Backlash += move;
         (t.Z369BacklashByTurn ??= new long[UnitTally.Z369Len])[Math.Clamp(ctx.Turn, 0, UnitTally.Z369Len - 1)] += move;
         ctx.Log($"    {hit.Name} の毒が殴った {source.Name} へ跳ね返った（毒 {move}）", LogKind.Trigger);
+    }
+
+    /// <summary>
+    /// 第370期（W・`MiasmaSplash`）: 毒を持つ敵が味方を殴ると、その敵の毒の 1 割（切り捨て）・1回 <see cref="SplashCap"/> 層まで（`SplashUncapped` なら上限なし）が
+    /// 殴られた味方に跳ねる（敵の層は減らない・毒の衣の持ち主にも跳ねる）。窓口（<see cref="PoisonRoute.Backlash"/>）を通す。<b>乱数を引かない。</b>
+    /// </summary>
+    static void Splash(BattleContext ctx, UnitState guza, UnitState hit, UnitState source)
+    {
+        int amt = source.RawCounter(StatusKeys.Poison) / SplashDiv;
+        if (!guza.HasTrait(TraitId.SplashUncapped)) amt = Math.Min(SplashCap, amt);
+        if (amt <= 0) return;
+        ctx.Poison(hit, amt, guza, PoisonRoute.Backlash);
+        UnitTally t = ctx.TallyOf(guza);
+        t.Z370Splash += amt;
+        (t.Z370SplashByTurn ??= new long[UnitTally.Z369Len])[Math.Clamp(ctx.Turn, 0, UnitTally.Z369Len - 1)] += amt;
+        ctx.TallyOf(hit).Z370SplashGot += amt;
+        ctx.Log($"    {source.Name} の毒の飛沫が {hit.Name} に跳ねた（毒 +{amt}）", LogKind.FriendlyFire);
+    }
+}
+
+/// <summary>
+/// 攻撃力ぶんの毒（第370期・ヴィオの版 W・指示書 design/PHASE370_POISON_SPLASH_SPEC.md §2-2）。攻撃が当たった敵（主目標・生きている）に、
+/// その攻撃力（素の値 ＋ 上昇分 ＝ <c>Def.Attack + AtkBonus</c>・萎縮や軛などの増減の前）と同じだけ毒を乗せる。毒は窓口（<see cref="PoisonRoute.Strike"/>）を通す——
+/// 一撃のダメージは軛に切られても、乗せる毒は切られない。号令などの攻撃力の上昇もそのまま毒の量になる。<b>乱数を引かない。</b>
+/// </summary>
+public sealed class StrikePoisonTrait : Trait
+{
+    public override TraitId Id => TraitId.StrikePoison;
+
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+    {
+        if (!target.IsAlive || target.TeamId == self.TeamId) return;
+        int amt = Math.Max(0, self.Def.Attack + self.AtkBonus);
+        if (amt <= 0) return;
+        ctx.Poison(target, amt, self, PoisonRoute.Strike);
+        UnitTally t = ctx.TallyOf(self);
+        t.Z370Strike += amt;
+        (t.Z370StrikeByTurn ??= new long[UnitTally.Z369Len])[Math.Clamp(ctx.Turn, 0, UnitTally.Z369Len - 1)] += amt;
+        ctx.Log($"    {self.Name} の牙から {target.Name} に毒が滴る（毒 +{amt}）", LogKind.Trigger);
     }
 }
 
@@ -13416,7 +13472,9 @@ public sealed class CloakRetortTrait : Trait
         if (layers > 0)
         {
             ctx.Poison(source, layers, self, PoisonRoute.Venom);
-            ctx.TallyOf(self).Z369Retort += layers;
+            UnitTally rt = ctx.TallyOf(self);
+            rt.Z369Retort += layers;
+            (rt.Z370RetortByTurn ??= new long[UnitTally.Z369Len])[Math.Clamp(ctx.Turn, 0, UnitTally.Z369Len - 1)] += layers;   // 第370期（計数のみ）
         }
         if (self.HasTrait(TraitId.Numb) && ctx.MarkNumbed(self, source, SpewTrait.OriginVenom)) ctx.TallyOf(self).VenomMarks++;
         foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
@@ -18843,6 +18901,11 @@ public static class TraitCatalog
         new CatalystSipTrait(),                           // 第369期（啜って注ぐ Z・ヴィオ）
         new PoisonShoulderTrait(),                        // 第369期（毒を引き受ける Z・スィド）
         new CloakRetortTrait(),                           // 第369期（衣の返し Z・スィド）
+        new MarkOnlyTrait(TraitId.MiasmaSplash),          // 第370期（返り毒の向きを戻す W・印だけ）
+        new MarkOnlyTrait(TraitId.SplashUncapped),        // 第370期（跳ねる毒の上限なし W3・印だけ）
+        new StrikePoisonTrait(),                          // 第370期（攻撃力ぶんの毒 W・ヴィオ）
+        new MarkOnlyTrait(TraitId.VentOff370),            // 第370期（切り分け・噴き出しを止める・印だけ）
+        new MarkOnlyTrait(TraitId.BacklashOff370),        // 第370期（切り分け・返り毒を止める・印だけ）
         new EruptTrait(),      // 第180期
         new SmearTrait(),      // 第180期
         new SpitTrait(),       // 第180期

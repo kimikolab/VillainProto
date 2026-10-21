@@ -4204,10 +4204,11 @@ public sealed class BattleContext
         foreach (UnitState g in _ventHolders)
         {
             if (Opponent(g.TeamId) != team) continue;
-            for (int i = 0; i < MiasmaVentTrait.Steps.Length; i++)
-                if (before < MiasmaVentTrait.Steps[i] && before + add >= MiasmaVentTrait.Steps[i])
+            int[] steps = MiasmaVentTrait.StepsOf(g);   // 第370期: W は 50 ／ 150 ／ 400
+            for (int i = 0; i < steps.Length; i++)
+                if (before < steps[i] && before + add >= steps[i])
                 {
-                    long[] st = TallyOf(g).Z369StageTurn ??= new long[MiasmaVentTrait.Steps.Length + 1];
+                    long[] st = TallyOf(g).Z369StageTurn ??= new long[steps.Length + 1];
                     if (st[i + 1] == 0) st[i + 1] = Math.Max(1, _turn);
                 }
         }
@@ -4216,12 +4217,13 @@ public sealed class BattleContext
     /// <summary><see cref="UnitTally.SoakSeenByRoute"/> の長さ（毒 9 経路 ＋ 燃焼 1。第180期に吐き戻しで1本、
     /// 第183期に触れてうつす・その漏れで2本、第190期に澱み分けで1本、第195期にスィドの吐きで1本、第197期に紅蓮の奔流で1本、第216期に開戦の撒きで1本、第223期に状態の矢で1本増えた。
     /// 第367期の触媒（添字 12）は燃焼の添字 13 の手前に収まったので、長さも燃焼の添字も変えていない。
-    /// 第369期に噴き出し ／ 返り毒 ／ 引き受けで3本（添字 13〜15）足したので、長さを 14 → 17・燃焼の添字を 13 → 16 にずらした）。**毒の経路を足したら燃焼の添字も後ろへずらすこと**
+    /// 第369期に噴き出し ／ 返り毒 ／ 引き受けで3本（添字 13〜15）足したので、長さを 14 → 17・燃焼の添字を 13 → 16 にずらした。
+    /// 第370期に攻撃力ぶんの毒（添字 16）を足したので、長さを 17 → 18・燃焼の添字を 16 → 17 にずらした）。**毒の経路を足したら燃焼の添字も後ろへずらすこと**
     /// ——ずらさないと新しい経路の添字が燃焼と重なる。</summary>
-    public const int SoakRouteCount = 17;
+    public const int SoakRouteCount = 18;
 
     /// <summary>燃焼の経路の添字（<see cref="UnitTally.SoakSeenByRoute"/> の末尾）。</summary>
-    public const int SoakBurnRouteIx = 16;
+    public const int SoakBurnRouteIx = 17;
 
     /// <summary>
     /// 巻き込み則（第85期）で最後にこの駒へ傷を書いた駒の <c>InstanceId + 1</c>（第90期の計数専用の札）。
@@ -9710,7 +9712,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.RallyFeatherQuiet)) _featherQuietLive = true;   // 第367期（H1・羽の一撃では叫ばない）
         if (u.HasTrait(TraitId.PoisonProof)) _poisonProofLive = true;   // 第368期（R・毒に強い）
         if (u.HasTrait(TraitId.PoisonCloak)) _cloakLive = true;         // 第368期（RC・毒の衣）
-        if (u.HasTrait(TraitId.MiasmaVent)) { _ventLive = true; _ventHolders.Add(u); }   // 第369期（Z・噴き出しの段は敵に書かれた毒の累計を読む）
+        if (u.HasTrait(TraitId.MiasmaVent)) { _ventLive = true; _ventHolders.Add(u); }   // 第369期（Z・噴き出しの段は敵に書かれた毒の累計を読む・第370期の W も同じ札を持つ）
         if (CommandTrait.BurstUnit(u) > 0) { _burstLive = true; _burstHolders.Add(u); }   // 第321期（HQ-a ／ HQ-b・溜まったら吐く）
         if (u.HasTrait(TraitId.HisaCover)) _coverHolders.Add(u);       // 第301期（HC・庇い）
         if (CommandTrait.IsRouse(u)) _rouseLive = true;                // 第302期（HB・鼓舞の受け手の計数）

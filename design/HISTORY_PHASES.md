@@ -8,6 +8,8 @@ description: 第259期に `CLAUDE.md` の「現状値」節を**逐語で**移�
 
 ## 現状値
 
+**第370期は軽い期で、規定は変えず、毒軸のループ②の版（グザ W ＝ 返り毒の向きを戻す ／ ヴィオ W ＝ 攻撃力ぶんの毒）を W1 ／ W2 ／ W3 として並べ、第369期のベニの台の 0% を切り分けた**（指示書は design/PHASE370_POISON_SPLASH_SPEC.md・報告は design/PHASE370_POISON_SPLASH.md）。版の駒は `UnitCatalog.GuzaW` ／ `GuzaW3` ／ `VioW`（`All` に入れない）。`compare` は3版とも 0 セルで、全64行 100 / 94.8 / 91.2 / 87.8 / 86.8・主判定19行 100 / 92.7 / 91.5 / 84.8 / 87.3（歯止めの余裕 +54.1pt）・情報セル 60 / 19 のまま。`docs/` は再生成していない。試遊の台は `Presets.Versions` の末尾に「版・RCS 吸い分け」（残した）と「版・W1 返り毒＋ヴィオ」「版・W2 三人」「版・W3 上限なし」（第369期の「版・Z」の3台は外した）。器具は `sh370`（boards / beni / compare / check）。
+
 **第369期は軽い期で、規定は変えず、毒軸のループの版（グザの転生 Z ＝ 噴き出し ／ 段 ／ 返り毒・ヴィオ Z ＝ 啜って注ぐ・スィド Z ＝ 引き受け ／ 衣の返し）を Z1 ／ Z2 ／ Z3 として並べた（対照は第368期の RCS）**（指示書は design/PHASE369_POISON_LOOP_SPEC.md・報告は design/PHASE369_POISON_LOOP.md）。版の駒は `UnitCatalog.GuzaZ` ／ `VioZ` ／ `SidZ`（`All` に入れない）。`compare` は4版とも 0 セルで、全64行 100 / 94.8 / 91.2 / 87.8 / 86.8・主判定19行 100 / 92.7 / 91.5 / 84.8 / 87.3（歯止めの余裕 +54.1pt）・情報セル 60 / 19 のまま。`docs/` は再生成していない。試遊の台は `Presets.Versions` の末尾に「版・RCS 吸い分け」（残した）と「版・Z1 グザ」「版・Z2 グザ＋ヴィオ」「版・Z3 三人」（第368期の「版・R ／ RC」は外した）。器具は `sh369`（boards / compare / check）。
 
 **第368期は軽い期で、段0 でグザ ＝ 第367期の G・ヴィオ ＝ V・ヒサ ＝ H1 を規定にし、本体で毒特化の耐久の版（R 毒に強い ／ RC ＋ スィドの毒の衣 ／ RCS ＋ ヴィオの吸い分け）を並べた**（指示書は design/PHASE368_POISON_WARD_SPEC.md・報告は design/PHASE368_POISON_WARD.md）。旧は `GuzaH367` ／ `VioH367` ／ `HisaH367`（`Common.PinGVH367` ／ `Pin367`・古い口の終端 `PinAG364` の後ろ）。`compare` は段0 でも版でも 0 セルで、全64行 100 / 94.8 / 91.2 / 87.8 / 86.8・主判定19行 100 / 92.7 / 91.5 / 84.8 / 87.3（歯止めの余裕 +54.1pt）・情報セル 60 / 19 のまま。`docs/` は再生成した。版の駒は `UnitCatalog.SidR` ／ `SidRC` ／ `GuzaR` ／ `VioR` ／ `VioRCS`（`All` に入れない）。試遊の台は `Presets.Versions` の末尾に「版・R 毒に強い」「版・RC 毒の衣」「版・RCS 吸い分け」（並びは試遊・毒）。器具は `sh368`（boards / compare / check）。

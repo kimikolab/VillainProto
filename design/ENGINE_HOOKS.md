@@ -1517,3 +1517,9 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - 噴き出し ／ 返り毒 ／ 啜り ／ 引き受け ／ 衣の返しは札（`MiasmaVentTrait` ／ `CatalystSipTrait` ／ `PoisonShoulderTrait` ／ `CloakRetortTrait`）の中。瘴気（`MiasmaTrait.Spread`）は `MiasmaVent` の持ち主なら味方全体への漏れを撒かない。
 - 毒の経路を3本（`Vent` ／ `Backlash` ／ `Shoulder`・添字 13〜15）足したので `SoakRouteCount` 14 → 17・`SoakBurnRouteIx` 13 → 16。
 - 噴き出しの相手は `ctx.Roll`（Traits.cs の `Roll(` が 1 増えた・`Common.RollsAdded369`）。保持者 0 枚なので規定の戦では引かれない。
+
+## 第370期 —— 毒軸のループ②（グザ W の返り毒の向き ／ ヴィオ W の攻撃力ぶんの毒）（版）
+
+- engine の口は第369期のまま（`_ventLive` の毒の累計・`NoteVentWrite`）。段の閾は保持者ごとに `MiasmaVentTrait.StepsOf(g)`（印 `MiasmaSplash` を持てば 50 ／ 150 ／ 400）で引くように直した。
+- 返り毒の向きを戻す ／ 上限なし ／ 切り分けの印（`MiasmaSplash` ／ `SplashUncapped` ／ `VentOff370` ／ `BacklashOff370`）は `MiasmaVentTrait` の中だけで読む。攻撃力ぶんの毒は `StrikePoisonTrait.OnAfterAttack`（`Def.Attack + AtkBonus`）。
+- 毒の経路 `Strike`（添字 16）を足したので `SoakRouteCount` 17 → 18・`SoakBurnRouteIx` 16 → 17。乱数は足していない。

@@ -6899,6 +6899,30 @@ public static class UnitCatalog
         Flavor = Sid.Flavor,
     };
 
+    // 第370期【軽い期】（指示書 design/PHASE370_POISON_SPLASH_SPEC.md §2）。毒軸のループ②——返り毒の向きを戻す（敵の毒が味方に跳ねる）／ ヴィオは吸って攻撃力 → 攻撃力ぶんの毒。
+    // どれも `All` に入れない・採否はポン。文面は叩き台。スィドは第369期の `SidZ` のまま。
+    /// <summary>グザ・W: 第369期の Z（噴き出し ＋ 段）＋ 返り毒の向きを戻す（`MiasmaSplash`・段の閾 50 ／ 150 ／ 400・敵の毒の 1 割・1回 5 層まで）＋ 毒に強い。</summary>
+    public static readonly UnitDef GuzaW = GuzaW370(new[] { TraitId.MiasmaSplash });
+    /// <summary>グザ・W3: W ＋ 跳ねる毒の上限なし（`SplashUncapped`）。</summary>
+    public static readonly UnitDef GuzaW3 = GuzaW370(new[] { TraitId.MiasmaSplash, TraitId.SplashUncapped });
+    static UnitDef GuzaW370(TraitId[] cards) => new()
+    {
+        Id = Guza.Id, Name = Guza.Name, MaxHp = Guza.MaxHp, Attack = Guza.Attack, Speed = Guza.Speed, Advances = Guza.Advances, Pattern = Guza.Pattern, Actions = Guza.Actions,
+        Traits = Guza.Traits.Append(TraitId.MiasmaVent).Concat(cards).Append(TraitId.PoisonProof).ToArray(),
+        PlusText = "手番で、敵全体へ瘴気を撒く（敵が少ないほど濃い）。毒に侵された敵が仲間を殴ると、その毒が仲間に跳ねる。毒に蝕まれない",
+        MinusText = "袋の口がゆるく、毎ターンのはじめに瘴気が噴き出して、敵味方の誰かに毒が付く。敵が毒に染まるほど瘴気は濃くなり、噴き出す相手も増える",
+        Flavor = Guza.Flavor,
+    };
+    /// <summary>ヴィオ・W: 澱み喰い（ターンの頭に吸って攻撃力 +4／層）＋ 吸い分け（毒の衣の持ち主からは吸わない）＋ 攻撃力ぶんの毒（`StrikePoison`）＋ 毒に強い。ふつうに殴る（触媒 ／ 吐き戻しは持たない）。</summary>
+    public static readonly UnitDef VioW = new()
+    {
+        Id = Vio.Id, Name = Vio.Name, MaxHp = Vio.MaxHp, Attack = Vio.Attack, Speed = Vio.Speed, Advances = Vio.Advances, Pattern = Vio.Pattern,
+        Traits = new[] { TraitId.Blightfed, TraitId.BlightfedSkipCloak, TraitId.StrikePoison, TraitId.PoisonProof },
+        PlusText = "仲間が負った毒を吸い取り、その層の分だけ攻撃力が上がる。攻撃した敵に、攻撃力と同じだけ毒を乗せる。毒に蝕まれない",
+        MinusText = "仲間が汚れていなければ、ただの穀潰し",
+        Flavor = Vio.Flavor,
+    };
+
     // 第361期: 規定のササが SS-w になったので、SS-k ／ SS-w は旧（`SasaH360`）から作る（`SasaSSw` は規定と同じ札・文面・残置）。
     const string SasaPlus360 = "手番で身を固め、次に動くまで、受ける一撃を7までに抑える。殴られると錯乱して隣の味方1体を別の席へ突き飛ばし（1ターン1回）、";
     /// <summary>第360期 SS-k 構えを解かない: ササ ＋ <see cref="TraitId.BraceHold"/>（身構えが次の自分の手番まで続く）。</summary>

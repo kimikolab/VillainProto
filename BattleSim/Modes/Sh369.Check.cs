@@ -154,18 +154,17 @@ static partial class Sh369Diag
         // ---- 試遊の台 ----
         {
             var vr = Presets.Versions.Select(r => r.Name).ToArray();
-            bool rows = vr.SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒", "版・RCS 吸い分け", "版・Z1 グザ", "版・Z2 グザ＋ヴィオ", "版・Z3 三人" });
-            Expect("`Presets.Versions` ＝ 試遊の8台 ＋ 「版・RCS 吸い分け」＋ 「版・Z1 ／ Z2 ／ Z3」（「版・R ／ RC」は外した）", rows, string.Join("、", vr));
+            // 第370期: 「版・Z1 ／ Z2 ／ Z3」は外した（並びはこの器具の中で `Apply(試遊・毒, 版)` として組む）。検査は「頭の9台」と「Z の3台が無い」に。
+            bool rows = vr.Take(9).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒", "版・RCS 吸い分け" })
+                && !vr.Any(n => n is "版・Z1 グザ" or "版・Z2 グザ＋ヴィオ" or "版・Z3 三人");
+            Expect("`Presets.Versions` の頭 ＝ 試遊の8台 ＋ 「版・RCS 吸い分け」・第369期の「版・Z1 ／ Z2 ／ Z3」は無い（第370期に外した）", rows, string.Join("、", vr));
             if (rows)
             {
                 Formation V(string n) => Presets.Versions.First(r => r.Name == n).F;
                 var play = V("試遊・毒");
-                bool ok = new[] { ("版・RCS 吸い分け", Vers[1]), ("版・Z1 グザ", Vers[2]), ("版・Z2 グザ＋ヴィオ", Vers[3]), ("版・Z3 三人", Vers[4]) }.All(x =>
-                {
-                    var f = V(x.Item1); var want = Apply(play, x.Item2);
-                    return Enumerable.Range(0, 5).All(i => f[i] == want[i]);
-                }) && play.Occupied().All(o => UnitCatalog.All.Contains(o.Def));
-                Expect("「版・」の4台 ＝ 試遊・毒の並びで版の駒だけ替えた台", ok, S307.Seats(play));
+                var f = V("版・RCS 吸い分け"); var want = Apply(play, Vers[1]);
+                bool ok = Enumerable.Range(0, 5).All(i => f[i] == want[i]) && play.Occupied().All(o => UnitCatalog.All.Contains(o.Def));
+                Expect("「版・RCS 吸い分け」＝ 試遊・毒の並びで版の駒だけ替えた台", ok, S307.Seats(play));
             }
         }
 

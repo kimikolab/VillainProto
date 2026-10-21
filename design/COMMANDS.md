@@ -1345,6 +1345,10 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sh369 boards              # 第369期 §4: 5 台（試遊・毒 ／ 毒特化・集団 ／ 澱み喰い ／ 毒+ベニ+ラウ ／ 毒 (グザ×ミオ×ラウ)）× 版（規定 ／ RCS ／ Z1 ／ Z2 ／ Z3）× 6 波・seed 0..99・誰が何Tに倒れたか・ループ（段 ／ 返り毒 ／ 勇者の層と書き手）・味方の毒の行き先・壊れの兆し（3 秒）
     dotnet run --project BattleSim -c Release 0 sh369 compare <RCS|Z1|Z2|Z3>  # 第369期: `compare` 64 行 × 版（スィド ／ グザ ／ ヴィオのいる行だけを版で回す・(G2)）（7 秒）
     dotnet run --project BattleSim -c Release 0 sh369 check               # 第369期 自己検査（規定は今どおり・噴き出しの段 ／ 返り毒 ／ ヴィオ Z ／ スィド Z を直に・verbose と再現性・試遊の台・`Roll(` +1）
+    dotnet run --project BattleSim -c Release 0 sh370 boards              # 第370期 §4: 6 台（試遊・毒 ／ 攻撃力の台（ガン）／ 毒特化・集団 ／ 澱み喰い ／ 毒+ベニ+ラウ ／ 毒 (グザ×ミオ×ラウ)）× 版（規定 ／ RCS ／ W1 ／ W2 ／ W3）× 6 波・seed 0..99・誰が何Tに倒れたか・ループのターンごと（跳ねた ／ ヴィオの攻撃力 ／ 毒 ／ スィドの衣と返し ／ 勇者の層）・勇者へ書いた層・跳ねた毒の行き先・壊れの兆し（3 秒）
+    dotnet run --project BattleSim -c Release 0 sh370 beni                # 第370期 §4-1: 毒+ベニ+ラウ × 第369期の Z1 から1つずつ戻す切り分け（(a)〜(e) ＋ 対照 (f)・勇者 ／ 蝕みなし・seed 0..99）（1 秒）
+    dotnet run --project BattleSim -c Release 0 sh370 compare <W1|W2|W3>  # 第370期: `compare` 64 行 × 版（スィド ／ グザ ／ ヴィオのいる行だけを版で回す・(G2)）（7 秒）
+    dotnet run --project BattleSim -c Release 0 sh370 check               # 第370期 自己検査（規定は今どおり・返り毒 ／ 段 ／ ヴィオ W を直に・軛の波・verbose と再現性・器具の中だけ・`checkup` の札の表を読んで確かめる・試遊の台・PickOne ／ Roll）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）
