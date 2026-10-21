@@ -49,7 +49,7 @@ static class Tome281Diag
     };
     static Ver VerOf(string n) => Vers.First(v => v.Name == n);
 
-    static Formation Row(string prefix) => FvSwap(FvSwap(FvSwap(FvSwap(CompareBuildsH344().First(r => r.Name.StartsWith(prefix)).F, UnitCatalog.Sora, UnitCatalog.SoraSR0), UnitCatalog.Hisa, UnitCatalog.HisaHK0), UnitCatalog.Tome, UnitCatalog.TomeMb), UnitCatalog.Zan, UnitCatalog.ZanZN0);   // 第295期: ソラを旧の規定（SR0）に固定・第296期: ヒサも（HK0）・第299期: ミサ ／ ザンも（`TomeMb` ／ `ZanZN0`）
+    static Formation Row(string prefix) => FvSwap(FvSwap(FvSwap(FvSwap(CompareBuildsH344().First(r => r.Name.StartsWith(prefix)).F, UnitCatalog.Sora, UnitCatalog.SoraSR0), UnitCatalog.HisaH367, UnitCatalog.HisaHK0), UnitCatalog.Tome, UnitCatalog.TomeMb), UnitCatalog.Zan, UnitCatalog.ZanZN0);   // 第295期: ソラを旧の規定（SR0）に固定・第296期: ヒサも（HK0）・第299期: ミサ ／ ザンも（`TomeMb` ／ `ZanZN0`）・第368期: `CompareBuildsH344` の終端がヒサを `HisaH367` に替えるので、それを `HisaHK0` へ
 
     /// <summary>新行（`compare` 64 行目）。席は `seat` で選んだもの（`Presets` の定義をそのまま引く）。</summary>
     static Formation MarkEconomyRow => Row("標経済 (ヒサ×ザン×ミサ)");

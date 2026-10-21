@@ -47,7 +47,7 @@ static partial class Sh365Diag
     static string Short(UnitDef d) => S307.Short(d);
 
     /// <summary>台 B（前1 ボルグ ／ 前3 ミサ ／ 中央 ヒサ ／ 後1 カド ／ 後3 アカ・段0 入りの規定）と、後3 を何もしない素体に替えた台。</summary>
-    internal static Formation BoardB() => Formation.Build(front1: UnitCatalog.Borg, front3: UnitCatalog.Tome, center: UnitCatalog.Hisa, back1: UnitCatalog.Kado, back3: UnitCatalog.Susu);
+    internal static Formation BoardB() => Formation.Build(front1: UnitCatalog.Borg, front3: UnitCatalog.Tome, center: UnitCatalog.HisaH367, back1: UnitCatalog.Kado, back3: UnitCatalog.Susu);   // 第368期: ヒサは第367期までの規定に固定（規定は H1 になった）
     internal static Formation BoardIdle() { var f = BoardB(); f[4] = X.R4; return f; }
 
     /// <summary>計測のスイッチを立てて1戦（終われば必ず戻す）。</summary>

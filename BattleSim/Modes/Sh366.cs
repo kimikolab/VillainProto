@@ -58,20 +58,21 @@ static partial class Sh366Diag
     internal sealed record Ver(string Name, UnitDef Def);
     internal static readonly Ver[] Vers =
     {
-        new("規定", UnitCatalog.Hisa),
+        new("規定", UnitCatalog.HisaH367),   // 第368期: 規定のヒサが H1 になったので第367期までの規定に固定
         new("P-t ターンで捨てる", UnitCatalog.HisaPt),
         new("P-60 溜まり 60 まで", UnitCatalog.HisaP60),
         new("P-180 溜まり 180 まで", UnitCatalog.HisaP180),
     };
     internal static Formation Apply(Formation f, Ver v) => S316.SwapId(f, "hisa", v.Def);
 
-    static Formation Row(string n) => CompareBuilds().First(r => r.Name == n).F;
-    static Formation Play(string n) => Presets.Playtest.Concat(Presets.Versions).First(r => r.Name == n).F;
+    // 第368期: 台は第367期までの規定（`Common.Pin367`・グザ ／ ヴィオ ／ ヒサ）に固定する（この期の数字を保つ）。
+    static Formation Row(string n) => Pin367(CompareBuilds().First(r => r.Name == n).F);
+    static Formation Play(string n) => Pin367(Presets.Playtest.Concat(Presets.Versions).First(r => r.Name == n).F);
 
     /// <summary>§2-2 の代表台（駒はいまの規定）。決めたこと: 叫びの癒しで味方を保つ台として「試遊・標 三人組」と `compare` の「反撃 (ヒサ×カド)」を足した。</summary>
     internal static (string Name, Formation F)[] BoardList() => new (string, Formation)[]
     {
-        ("台 B", Presets.HisaBoard366()),
+        ("台 B", Presets.HisaBoard366(UnitCatalog.HisaH367)),
         ("標の守り型", Play("試遊・標 守り型")),
         ("標経済 (ヒサ×ザン×ミサ)", Row("標経済 (ヒサ×ザン×ミサ)")),
         ("試遊・標 三人組", Play("試遊・標 三人組")),
@@ -238,7 +239,7 @@ static partial class Sh366Diag
     static void CompareAll()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = CompareBuilds().ToArray();
+        var rows = CompareBuilds().Select(r => (r.Name, F: Pin367(r.F))).ToArray();   // 第368期: 第367期までの規定に固定
         int nw = EnemyCatalog.Stages.Count, last = nw - 1;
         var b = CGrid(rows, f => f, _ => true);
         var pr = Enumerable.Range(0, rows.Length).Where(ri => Baseline.PrimaryRows.Contains(rows[ri].Name)).ToList();

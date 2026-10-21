@@ -326,7 +326,7 @@ static class Tou323Diag
         foreach (var (bn, bf) in boards) foreach (var w in Waves)
             if (vers.Any(v => res[(bn, v.Name, w.Name)].Wins * 2 >= Seeds))
             {
-                guza[(bn, w.Name)] = WinsLite(S316.SwapId(bf, "tou", UnitCatalog.Guza), w);
+                guza[(bn, w.Name)] = WinsLite(S316.SwapId(bf, "tou", UnitCatalog.GuzaH367)   /* 第368期: 第367期までのグザに固定 */, w);
                 dolga[(bn, w.Name)] = WinsLite(S316.SwapId(bf, "tou", UnitCatalog.Dolga), w);
             }
         Console.WriteLine($"# {tag} §3-2 代表台 {boards.Length} × {Waves.Length} 波 × 版（{string.Join(" ／ ", vers.Select(v => v.Name))}）・seed 0..{Seeds - 1}");
@@ -554,7 +554,7 @@ static class Tou323Diag
             var fv = Apply(f0, v);
             if (Wins(f0, cut).W < 5 && Wins(fv, cut).W < 5) return;
             var (wb, tb) = Wins(f0, Seeds); var (wv, tv) = Wins(fv, Seeds);
-            int gb = wb * 2 >= Seeds || wv * 2 >= Seeds ? Wins(S316.SwapId(f0, "tou", UnitCatalog.Guza), Seeds).W : -1;
+            int gb = wb * 2 >= Seeds || wv * 2 >= Seeds ? Wins(S316.SwapId(f0, "tou", UnitCatalog.GuzaH367)   /* 第368期: 第367期までのグザに固定 */, Seeds).W : -1;
             res[i] = (wb, wv, gb, gb, tb, tv);
         });
         var all = res.Where(r => r is not null).Select(r => r!.Value).ToList();

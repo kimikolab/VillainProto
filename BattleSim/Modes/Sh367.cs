@@ -52,7 +52,9 @@ static partial class Sh367Diag
     static string Pct(long a, long n) => n == 0 ? "—" : F1(100.0 * a / n);
     static string Short(UnitDef d) => S307.Short(d);
     static string Sg(double x) => x.ToString("+0.0;-0.0;±0.0");
-    static Formation Row(string n) => CompareBuilds().First(r => r.Name == n).F;
+    // 第368期: 台は第367期までの規定（`Common.Pin367`・グザ ／ ヴィオ ／ ヒサ）に固定する（この期の数字を保つ）。
+    static Formation Row(string n) => Pin367(CompareBuilds().First(r => r.Name == n).F);
+    static Formation Hero367() => Presets.PoisonHero367(UnitCatalog.GuzaH367, UnitCatalog.VioH367);
     static bool Has(Formation f, string id) => f.Occupied().Any(o => o.Def.Id == id);
 
     // ---------------------------------------------------------------------------------
@@ -85,7 +87,7 @@ static partial class Sh367Diag
     internal static (string Name, Formation F)[] PBoards() => new (string, Formation)[]
     {
         ("毒特化・集団", Row(BombRow)),
-        ("毒特化・勇者", Presets.PoisonHero367()),
+        ("毒特化・勇者", Hero367()),
         ("澱み喰い (グザ×ヴィオ)", Row("澱み喰い (グザ×ヴィオ)")),
         ("毒 (グザ×ミオ×ラウ)", Row("毒 (グザ×ミオ×ラウ)")),
     };
@@ -376,12 +378,12 @@ static partial class Sh367Diag
     {
         ("毒特化・集団", Row(BombRow)),
         ("毒特化・集団 GV", ApplyP(Row(BombRow), PVers[3])),
-        ("毒特化・勇者", Presets.PoisonHero367()),
-        ("毒特化・勇者 GV", ApplyP(Presets.PoisonHero367(), PVers[3])),
+        ("毒特化・勇者", Hero367()),
+        ("毒特化・勇者 GV", ApplyP(Hero367(), PVers[3])),
         ("混合 毒+耐久 (ベニ×トウ)", Row("毒+耐久 (ベニ×トウ)")),
         ("燃焼 試遊・燃焼 ポンの台", Presets.Versions.First(r => r.Name == "試遊・燃焼 ポンの台").F),
         ("対照 試遊・破片", Presets.Versions.First(r => r.Name == "試遊・破片").F),
-        ("対照 台 B", Presets.HisaBoard366()),
+        ("対照 台 B", Presets.HisaBoard366(UnitCatalog.HisaH367)),
     };
     internal static readonly I.W[] YWaves = { I.M4, I.StrongWaves[2] };
 
@@ -496,7 +498,7 @@ static partial class Sh367Diag
     static void CompareVer(string ver)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = CompareBuilds().ToArray();
+        var rows = CompareBuilds().Select(r => (r.Name, F: Pin367(r.F))).ToArray();   // 第368期: 第367期までの規定に固定
         int nw = EnemyCatalog.Stages.Count, last = nw - 1;
         (string Name, Func<Formation, Formation> Map, Func<int, bool> Only, YokeRule? Yoke) v = ver switch
         {

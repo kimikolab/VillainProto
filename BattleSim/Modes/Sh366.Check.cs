@@ -40,11 +40,11 @@ static partial class Sh366Diag
         Console.WriteLine();
         Console.WriteLine("| 項目 | 判定 | 備考 |");
         Console.WriteLine("|---|---|---|");
-        var hisa = UnitCatalog.Hisa;
+        var hisa = UnitCatalog.HisaH367;   // 第368期: この期の「規定」＝ 第338〜367期の規定
 
         // ---- 版の定義 ----
         {
-            bool def = hisa.Traits.SequenceEqual(UnitCatalog.HisaH337.Traits.Append(TraitId.MarkInheritSpread)) && UnitCatalog.All.Contains(hisa)
+            bool def = hisa.Traits.SequenceEqual(UnitCatalog.HisaH337.Traits.Append(TraitId.MarkInheritSpread)) && !UnitCatalog.All.Contains(hisa)   /* 第368期: `HisaH367` は `All` の外 */
                 && new[] { (UnitCatalog.HisaPt, TraitId.CommandPoolTurnDrop), (UnitCatalog.HisaP60, TraitId.CommandPoolCap60), (UnitCatalog.HisaP180, TraitId.CommandPoolCap180) }
                     .All(x => x.Item1.Traits.SequenceEqual(hisa.Traits.Append(x.Item2)) && x.Item1.Id == hisa.Id && x.Item1.MaxHp == hisa.MaxHp && x.Item1.Attack == hisa.Attack
                         && !UnitCatalog.All.Contains(x.Item1) && x.Item1.PlusText.Contains(UnitCatalog.HisaBallClause322 + "（", StringComparison.Ordinal) && x.Item1.MinusText == hisa.MinusText)
@@ -68,7 +68,7 @@ static partial class Sh366Diag
 
         // ---- 戦の中で ----
         {
-            var fB = Presets.HisaBoard366();
+            var fB = Presets.HisaBoard366(UnitCatalog.HisaH367);
             int sameT1 = 0, n = 0; long carryPt = 0, dropPt = 0, maxPool60 = 0, maxPool180 = 0, maxPool0 = 0, vdiff = 0, cdiff = 0;
             for (int seed = 0; seed < 10; seed++)
             {

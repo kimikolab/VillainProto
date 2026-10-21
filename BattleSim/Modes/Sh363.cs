@@ -72,7 +72,7 @@ static partial class Sh363Diag
 
     /// <summary>§5 の固定2枚（カド ／ アカ）と残り3枚の母集団（8枚・第362期 §5 と同じ）。</summary>
     internal static readonly UnitDef[] Fixed = { UnitCatalog.Kado, UnitCatalog.SusuH364 };
-    internal static readonly UnitDef[] Pool = { UnitCatalog.Rica, UnitCatalog.Tome, UnitCatalog.Guza, UnitCatalog.Borg, UnitCatalog.Hisa, UnitCatalog.Doha, UnitCatalog.Mudo, UnitCatalog.Lili };
+    internal static readonly UnitDef[] Pool = { UnitCatalog.Rica, UnitCatalog.Tome, UnitCatalog.GuzaH367, UnitCatalog.Borg, UnitCatalog.HisaH367,   /* 第368期: グザ ／ ヒサは第367期までの規定に固定 */ UnitCatalog.Doha, UnitCatalog.Mudo, UnitCatalog.Lili };
     internal static Formation ByKey(string key)
     {
         var defs = key.Split('・').Select(n => Fixed.Concat(Pool).First(d => Short(d) == n)).ToArray();

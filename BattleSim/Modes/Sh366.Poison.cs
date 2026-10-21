@@ -14,7 +14,7 @@ static partial class Sh366Diag
     static UnitDef Cur(string id) => UnitCatalog.All.First(d => d.Id == id);
 
     /// <summary>§3-2 ／ 3-3 の台: `compare` の行のうち名前に「毒」か「澱」がある行（第348期の毒の台2つ ＝ 頭の2行を含む）。毒の試遊の台は無い（決めたこと）。</summary>
-    internal static (string Name, Formation F)[] PoisonBoards() => CompareBuilds().Where(r => r.Name.Contains('毒') || r.Name.Contains('澱')).ToArray();
+    internal static (string Name, Formation F)[] PoisonBoards() => CompareBuilds().Where(r => r.Name.Contains('毒') || r.Name.Contains('澱')).Select(r => (r.Name, Pin367(r.F))).ToArray();   // 第368期: 第367期までの規定に固定
 
     static readonly I.W[] FlowWaves = { I.M5, I.Guard, I.Bat, I.Boss };
 

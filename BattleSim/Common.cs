@@ -484,10 +484,10 @@ public static UnitDef PinD335(UnitDef d) => ReferenceEquals(d, UnitCatalog.Doha)
 /// 古い口の終端（`PinM333` → `PinZ334` → `PinD335` → ここ）なので、`PinM333` を最後に通す口すべて（`Pin333` ／ `Pin334` ／ `Pin335` ／ `PinS332` ／ `PinTK331` ／ `PinT328` ／ `PinTK327` ／ `PinT326` ／ `PinTKK324`）もここを通る。
 /// ヒサをもっと古い規定へ替える口（`Pin299`〜`Pin304` ／ `PinS317` ／ `PinSS318` ／ `PinSH321` ／ `guard294` ／ `kugu292` ／ `markheal295` ／ `misa285` ほか）は `IsHisaNow` で `HisaH337` も受ける。
 /// </summary>
-public static UnitDef PinH337(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaH337 : PinM339(d);   // 第340期: 規定のミサも（古い口の終端）
+public static UnitDef PinH337(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hisa) || ReferenceEquals(d, UnitCatalog.HisaH367) ? UnitCatalog.HisaH337 : PinM339(d);   // 第368期: 第338〜367期の規定（`HisaH367`）も・第340期: 規定のミサも（古い口の終端）
 
 /// <summary>第338期: 規定のヒサか、第322〜337期の規定（`HisaH337`・`PinH337` を通った後）か。</summary>
-public static bool IsHisaNow(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hisa) || ReferenceEquals(d, UnitCatalog.HisaH337);
+public static bool IsHisaNow(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hisa) || ReferenceEquals(d, UnitCatalog.HisaH337) || ReferenceEquals(d, UnitCatalog.HisaH367);   // 第368期: 第338〜367期の規定（`HisaH367`）も
 
 /// <summary>第338期: ヒサの MI-b を規定にした。第322〜337期の規定のヒサで測った器具（`mark337` の「規定」）はこれを通す。陣形とレリックは保つ。</summary>
 public static Formation Pin337(Formation f)
@@ -664,7 +664,19 @@ public static UnitDef PinSa361(UnitDef d) => ReferenceEquals(d, UnitCatalog.Sasa
 public static UnitDef PinKd362(UnitDef d) => ReferenceEquals(d, UnitCatalog.Kado) ? UnitCatalog.KadoH362 : PinAG364(d);   // 第365期: 古い口の終端に `PinAG364`
 
 /// <summary>第365期: 規定のアカ（AKn-A）／ ガレ（GR-A）を第364期までの規定（`SusuH364` ／ `GareH364`）に替える。ほかの駒はそのまま返す。古い口の終端（`PinKd362`）の後ろに置いた。</summary>
-public static UnitDef PinAG364(UnitDef d) => ReferenceEquals(d, UnitCatalog.Susu) ? UnitCatalog.SusuH364 : ReferenceEquals(d, UnitCatalog.Gare) ? UnitCatalog.GareH364 : d;
+public static UnitDef PinAG364(UnitDef d) => ReferenceEquals(d, UnitCatalog.Susu) ? UnitCatalog.SusuH364 : ReferenceEquals(d, UnitCatalog.Gare) ? UnitCatalog.GareH364 : PinGVH367(d);   // 第368期: 古い口の終端に `PinGVH367`
+
+/// <summary>第368期: 規定のグザ（G）／ ヴィオ（V）／ ヒサ（H1）を第367期までの規定（`GuzaH367` ／ `VioH367` ／ `HisaH367`）に替える。ほかの駒はそのまま返す。古い口の終端（`PinAG364`）の後ろに置いた。
+/// ヒサをもっと古い規定へ替える口は `IsHisaNow` で `HisaH367` も受ける（先に替わっていても同じ行き先になる）。</summary>
+public static UnitDef PinGVH367(UnitDef d) => ReferenceEquals(d, UnitCatalog.Guza) ? UnitCatalog.GuzaH367 : ReferenceEquals(d, UnitCatalog.Vio) ? UnitCatalog.VioH367 : ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaH367 : d;
+
+/// <summary>第368期: グザの G ／ ヴィオの V ／ ヒサの H1 を規定にした。第367期までの規定で測った器具はこれを通す。陣形とレリックは保つ。</summary>
+public static Formation Pin367(Formation f)
+{
+    var g = f.Clone();
+    foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinGVH367(d);
+    return g;
+}
 
 /// <summary>第365期: アカの AKn-A ／ ガレの GR-A を規定にした。第364期までの規定で測った器具はこれを通す。陣形とレリックは保つ。</summary>
 public static Formation Pin364(Formation f)

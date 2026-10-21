@@ -1503,3 +1503,10 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **Y（`YokeRule.SparesTicks`・既定 偽）**: 1回の呼び出しにだけ効く札 `_tickNext` を `PoisonTickOnce` ／ `BurnTickOnce` が `ApplyDamage` の直前に立てる（**軛の保持者がいる戦だけ**）。`ApplyDamageBody` の最初の行で読んで消し、軛の段で「刻みかつ上限超え」なら版に依らず数え（`UnitTally.Yoke367Tick*`）、`SparesTicks` のときだけ切らない。`NoteTickLayer` の「切られた刻み」も `SparesTicks` では立たない。既定の文字列を変えないため `YokeRule` の `PrintMembers` を手で書いた（`docs/rules.md` の既定値の列が動かない）。起爆（`Detonate`）は刻みではない（今どおり切る）・肩代わりで分かれた段は別の呼び出しなので切られる。
 - **H1（`RallyFeatherQuiet`・印だけ）**: `_featherQuietLive`（保持者がいる戦）のときも `BundlePush` が羽のまとまりを見分け、`BundlePop` の第365期の切り 1 の直後で、保持者のヒサなら叫ばない（`UnitTally.Rally367FeatherQuiet`・`Ch365.RallyCut` にも数える）。
 - 計数だけ: `UnitTally.Mia367ToFoe` ／ `Mia367ToAlly` ／ `Cat367*` ／ `Rally367FeatherQuiet` ／ `Yoke367Tick*`。
+
+## 第368期 —— 段0: G ／ V ／ H1 を規定に ／ 毒に強い（R）・毒の衣（RC）・吸い分け（RCS）（版）
+
+- 段0: engine は変えていない（第367期の `ScatterGather` を読む瘴気 ／ `BlightCatalystTrait` ／ `_featherQuietLive` が規定のグザ ／ ヴィオ ／ ヒサで働くようになった）。
+- **毒に強い（`PoisonProof`・印だけ）**: `PoisonTickOnce` の**反転（`InvertsTick`）の枝の後**に1段。`_poisonProofLive`（保持者がいる戦）かつ受け手が札を持てば、刻みを**起こさずに**返す（`ApplyDamage` を呼ばない・Status の出来事も出さない・層 ／ 印は残る）。消えた量は `UnitTally.Pw368ProofErased` ／ `Pw368ProofTicks`。起爆（`Detonate`）は通らないので今どおり受ける。
+- **毒の衣（`PoisonCloakTrait`）**: 軽減は `ApplyDamageBody` の**軽減の族・据えの層の直後**（火の鎧の前）に1段——`_cloakLive` かつ受け手が札を持てば `amount × min(60, 層 × 3) / 100`（切り捨て）を引く（種類を問わない）。札の本体は `OnDamaged`（出どころが敵なら自分に毒 +2・経路は `VenomLeak`）。計数 `Pw368CloakSaved` ／ `Pw368CloakSelf`。
+- **吸い分け（`BlightfedSkipCloak`・印だけ）**: `BlightfedTrait.OnTurnStart` が毒の衣の持ち主を飛ばす。計数 `Pw368DrawnCloak` ／ `Pw368DrawnOther`（規定でも数える）。

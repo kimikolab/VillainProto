@@ -78,7 +78,7 @@ static partial class Sh364Diag
                 && new[] { UnitCatalog.SusuAKnA, UnitCatalog.SusuAKnB }.All(d => d.Id == "susu" && d.MaxHp == UnitCatalog.SusuH364.MaxHp && d.Speed == UnitCatalog.SusuH364.Speed)
                 && new[] { UnitCatalog.GareGRA, UnitCatalog.GareGRB }.All(d => d.Id == "gare" && d.MaxHp == UnitCatalog.GareH364.MaxHp && d.Speed == UnitCatalog.GareH364.Speed && d.Attack == UnitCatalog.GareH364.Attack)
                 && UnitCatalog.SusuAKnA.PlusText.Contains("一体に集まる") && UnitCatalog.SusuAKnB.PlusText.Contains("5発に分けて") && UnitCatalog.GareGRA.PlusText.Contains("一体に集まる") && UnitCatalog.GareGRB.PlusText.Contains("5発に分けて");
-            var held = UnitCatalog.All.Concat(UnitCatalog.Retired).Where(d => d != UnitCatalog.Susu && d != UnitCatalog.Gare && d.Traits.Any(x => x is TraitId.ScatterGather or TraitId.ScatterShot)).Select(d => d.Id).ToArray();
+            var held = UnitCatalog.All.Concat(UnitCatalog.Retired).Where(d => d != UnitCatalog.Susu && d != UnitCatalog.Gare && d != UnitCatalog.Guza /* 第368期: グザ G が集まる全体を持つ */ && d.Traits.Any(x => x is TraitId.ScatterGather or TraitId.ScatterShot)).Select(d => d.Id).ToArray();
             Expect("版の定義: AKn-A ／ AKn-B ＝ AK-n ＋ `ScatterGather` ／ `ScatterShot`・GR-A ／ GR-B ＝ 規定のガレ ＋ 同じ札（体 ／ Id は今のまま・文面は叩き台）・新しい札の保持者は 0 枚・規定のアカ ／ ガレの札は今のまま",
                 ok && held.Length == 0 && UnitCatalog.SusuH364.Traits.SequenceEqual(new[] { TraitId.Ash }) && UnitCatalog.GareH364.Traits.SequenceEqual(new[] { TraitId.PebbleGather }), held.Length == 0 ? "" : string.Join(",", held));
         }

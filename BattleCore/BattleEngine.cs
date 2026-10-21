@@ -871,6 +871,15 @@ public sealed class BattleContext
                 if (_openingLive) NoteOpeningTick(u, poison, true, u.Hp - hb);   // 第216期・**計数のみ**
                 return;
             }
+            // 第368期（R・毒に強い）: 反転の枝の**後**——反転される刻みは上で回復になっている。反転されなかった刻みだけを、
+            // **刻みそのものを起こさずに**消す（`ApplyDamage` を呼ばない・燃焼の「焼かれない」と同じ理由）。層 ／ 印は残る。保持者がいなければ比較1つで抜ける。
+            if (_poisonProofLive && u.HasTrait(TraitId.PoisonProof))
+            {
+                UnitTally pt = TallyOf(u);
+                pt.Pw368ProofErased += poison; pt.Pw368ProofTicks++;
+                Log($"    {u.Name} は毒をまとっているが蝕まれない（{poison}）", LogKind.Status);
+                return;
+            }
             if (_openingLive) NoteOpeningTick(u, poison, false, 0);   // 第216期・**計数のみ**
             NoteTaintPostBite(u, poison);   // 第190期・**計数のみ**
             NoteGurenPoisonTick(u, poison, second);   // 第197期・**計数のみ**
@@ -9678,6 +9687,8 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.MarkInheritSpread) || u.HasTrait(TraitId.MarkInheritOne)) _miLive = true;   // 第337期（MI・標の引き継ぎ）
         if (u.HasTrait(TraitId.CommandNow)) _commandNowLive = true;    // 第301期（HL-i・まとまりで叩かれた標の敵を控える）
         if (u.HasTrait(TraitId.RallyFeatherQuiet)) _featherQuietLive = true;   // 第367期（H1・羽の一撃では叫ばない）
+        if (u.HasTrait(TraitId.PoisonProof)) _poisonProofLive = true;   // 第368期（R・毒に強い）
+        if (u.HasTrait(TraitId.PoisonCloak)) _cloakLive = true;         // 第368期（RC・毒の衣）
         if (CommandTrait.BurstUnit(u) > 0) { _burstLive = true; _burstHolders.Add(u); }   // 第321期（HQ-a ／ HQ-b・溜まったら吐く）
         if (u.HasTrait(TraitId.HisaCover)) _coverHolders.Add(u);       // 第301期（HC・庇い）
         if (CommandTrait.IsRouse(u)) _rouseLive = true;                // 第302期（HB・鼓舞の受け手の計数）
@@ -13891,6 +13902,18 @@ public sealed class BattleContext
             }
         }
 
+        // 毒の衣（第368期・RC・`PoisonCloakTrait`）: 自分の毒の層 1 につき −3%（最大 60%・切り捨て）。**軽減の族・据えの層の直後**（火の鎧・肩代わり・破片・軛より前）。
+        // 据えの層と同じく種類を問わない（毒の刻みは毒に強いで手前に来ない）。**保持者がいなければ比較1つで抜ける。乱数を引かない。**
+        if (_cloakLive && amount > 0 && target.HasTrait(TraitId.PoisonCloak))
+        {
+            int saved = amount * PoisonCloakTrait.PercentOf(target.RawCounter(StatusKeys.Poison)) / 100;
+            if (saved > 0)
+            {
+                amount -= saved;
+                TallyOf(target).Pw368CloakSaved += saved;
+            }
+        }
+
         // 火の鎧（第234期・`FireArmorTrait`）。**軽減の族の最後**（層の直後、巨躯・分かち・破片・身構え・軛より前）。
         // ① 敵の攻撃（いまの攻撃の枠の主が出どころ・刻み／徴収／中継／共有ではない）を受けたら控える——火は攻撃が終わってから点く。
         // ② 燃えている間は半分（切り上げ）。種類を問わない（燃焼の刻みは手前で焼かれないので来ない）。
@@ -15426,6 +15449,8 @@ public sealed class BattleContext
     void BundlePush(UnitState? owner, bool outOfTurn) => _bundles.Add(new Bundle { Owner = owner, OutOfTurn = outOfTurn, Feather = ChainCut365 != 0 || ChainCount365 || _featherQuietLive ? _mfFiring || (owner is not null && owner.HasTrait(TraitId.Feathers)) : false });
     /// <summary>第367期（H1）: 「羽の一撃では叫ばない」の保持者が盤上にいるか（いなければ <c>BundlePush</c> は羽を見分けない・比較1つで抜ける）。</summary>
     bool _featherQuietLive;
+    /// <summary>第368期: 毒に強い（R）／ 毒の衣（RC）の保持者が盤上にいるか（いなければ刻み ／ 軽減の口は比較1つで抜ける）。</summary>
+    bool _poisonProofLive, _cloakLive;
 
     void BundleHit(UnitState target, UnitState? source)
     {

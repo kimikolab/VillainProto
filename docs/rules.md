@@ -12,7 +12,7 @@
 | # | 引数名 | 型 | 既定値（実装） | `= default(T)` | 測った診断 | 初出（design/） | CLAUDE.md / LESSONS |
 |--:|---|---|---|:-:|---|---|:-:|
 | 1 | `colossus` | `ColossusRule` | `ColossusRule { Percent = 90, DamagePerGain = 4, Regurgitate = True, Slumber = False, SlumberThreshold = 60, Refund = True, RefundPercent = 25 }` |  | `gullet` / `whet` / `miasma` / `ledger` | 第35期 | ○ |
-| 2 | `yoke` | `YokeRule` | `YokeRule { Cap = 25, Active = True }` |  | `curse` / `yoke` / `goad` / `wave2` / `ledger` / `parry` / `brace` | 第35期 | ○ |
+| 2 | `yoke` | `YokeRule` | `YokeRule { Cap = 25, Active = True }` |  | `curse` / `yoke` / `goad` / `wave2` / `ledger` / `parry` / `brace` / `sh367` | 第35期 | ○ |
 | 3 | `hush` | `HushRule` | `HushRule { Active = True }` |  | `curse` / `hush` / `goad` / `wave2` / `ledger` | 第35期 | ○ |
 | 4 | `martyr` | `MartyrRule` | `MartyrRule { RedirectPercent = 75 }` |  | `curse` / `guard` / `gather` / `ledger` / `wall` | 第35期 | ○ |
 | 5 | `expose` | `ExposeRule` | `ExposeRule { MaxPerBattle = 3 }` |  | `expose` / `creak3` / `ledger` | 第40期 | ○ |
@@ -50,12 +50,12 @@
 | 37 | `loose` | `LooseRule` | `LooseRule { Shove = True }` |  | `hold` / `hold2` / `ledger` / `lit` | 第106期 | ○ |
 | 38 | `taillight` | `TaillightRule` | `TaillightRule { Mode = OwnTurnWindow, Filter = ActingNow }` |  | `tomo` / `ledger` / `lit` | 第110期 | ○ |
 | 39 | `reader` | `ReaderRule` | `ReaderRule { Threshold = 5 }` |  | `reader` / `boss` / `tank` / `grade` / `grade2` | 第115期 | ○ |
-| 40 | `boss` | `BossRule` | `BossRule { Census = False, Scale = EnemyScaleRule { HpPercent = 115, AtkPercent = 115, Active = True } }` | ○ | `boss` / `tank` / `time` / `grade` / `escale` / `whip` / `mire` / `scorch` / `burst` / `shock290` / `som307` / `doha315` / `inv348` / `burn349` / `db351` / `db356` / `sh359` / `sh360` / `sh362` / `sh363` / `sh364` / `shock` / `lili` / `demo` | 第117期 | ○ |
+| 40 | `boss` | `BossRule` | `BossRule { Census = False, Scale = EnemyScaleRule { HpPercent = 115, AtkPercent = 115, Active = True } }` | ○ | `boss` / `tank` / `time` / `grade` / `escale` / `whip` / `mire` / `scorch` / `burst` / `shock290` / `som307` / `doha315` / `inv348` / `burn349` / `db351` / `db356` / `sh359` / `sh360` / `sh362` / `sh363` / `sh364` / `sh367` / `shock` / `lili` / `demo` | 第117期 | ○ |
 | 41 | `nourish` | `NourishRule` | `NourishRule { Gain = 2 }` |  | `tank` / `time` | 第117期 | ○ |
 | 42 | `wound` | `WoundRule` | `WoundRule { Enabled = True, Census = False }` |  | `wound2` | 第85期 | ○ |
 | 43 | `ember` | `EmberRule` | `EmberRule { Enabled = False, Fireproof = True, TickHeal = 0, Brittle = 25, BrittleAllies = False, BurnHit = True }` |  | `survive` / `ember` / `wildfire` / `scorch` / `burst` / `burnaudit` / `borgguard` / `borgfront` / `fireward` / `firescale` / `firelevel` / `fireburst` / `enemyfire` / `firecycle` / `firetri` / `firewrap` / `firefinish` / `fireatk` / `firekindle` / `giftorder` / `blazesurge` / `burnhit` / `burnadopt` / `foesurge` / `inv348` / `shockdigest` / `rebirth` / `dump` | 第130期 | ○ |
 | 44 | `wildfire` | `WildfireRule` | `WildfireRule { Mode = None, Amount = 0, Active = False }` | ○ | `wildfire` | 第133期 | ○ |
-| 45 | `harm` | `HarmRule` | `HarmRule { Census = False }` | ○ | `parry` / `wall` / `sora186` / `burnadopt` / `inv348` / `mio` / `sid` | 第135期 | ○ |
+| 45 | `harm` | `HarmRule` | `HarmRule { Census = False }` | ○ | `parry` / `wall` / `sora186` / `burnadopt` / `inv348` / `sh367` / `mio` / `sid` | 第135期 | ○ |
 | 46 | `parry` | `ParryRule` | `ParryRule { Uses = 2, Scope = Any, Relay = True, Swing = WhenStocked }` |  | `parry` / `wall` / `stall` | 第135期 | ○ |
 | 47 | `shatter` | `ShatterRule` | `ShatterRule { Mode = Passive, SelfCostPerTurn = 0 }` | ○ | `shard` | 第137期 | ○ |
 | 48 | `shrapnel` | `ShrapnelRule` | `ShrapnelRule { Multiplier = 3, SelfDamagePercent = 100, ArmorCensus = False }` |  | `shard` | 第138期 | ○ |
@@ -82,7 +82,7 @@
 | `BearRule` | `BearRule { ArmorPerDull = 2 }` | ○ | `curse` / `dull` / `ledger` | 第42期 |
 | `BetrayRule` | `BetrayRule { Enabled = True, Respawn = True }` | ○ | `betray` / `tempo` / `ledger` | 第103期 |
 | `BlazeRule` | `BlazeRule { Targets = Both, Allies = True, Foes = True }` | ○ | `blaze` / `ledger` / `ember` | 第59期 |
-| `BossRule` | `BossRule { Census = False, Scale = EnemyScaleRule { HpPercent = 115, AtkPercent = 115, Active = True } }` | ○ | `boss` / `tank` / `time` / `grade` / `escale` / `whip` / `mire` / `scorch` / `burst` / `shock290` / `som307` / `doha315` / `inv348` / `burn349` / `db351` / `db356` / `sh359` / `sh360` / `sh362` / `sh363` / `sh364` / `shock` / `lili` / `demo` | 第117期 |
+| `BossRule` | `BossRule { Census = False, Scale = EnemyScaleRule { HpPercent = 115, AtkPercent = 115, Active = True } }` | ○ | `boss` / `tank` / `time` / `grade` / `escale` / `whip` / `mire` / `scorch` / `burst` / `shock290` / `som307` / `doha315` / `inv348` / `burn349` / `db351` / `db356` / `sh359` / `sh360` / `sh362` / `sh363` / `sh364` / `sh367` / `shock` / `lili` / `demo` | 第117期 |
 | `BoundaryRule` | `BoundaryRule { Choice = None, Plan = , Active = False }` |  | `stage` / `choice` | 第102期 |
 | `BraceRule` | `BraceRule { Cap = 7, Refuse = True, Stagger = False }` | ○ | `brace` / `gale` / `tsugi` | 第143期 |
 | `ColossusRule` | `ColossusRule { Percent = 90, DamagePerGain = 4, Regurgitate = True, Slumber = False, SlumberThreshold = 60, Refund = True, RefundPercent = 25 }` | ○ | `gullet` / `whet` / `miasma` / `ledger` | 第35期 |
@@ -93,7 +93,7 @@
 | `DivertRule` | `DivertRule { TargetCount = 1, SelfMark = True, Audit = False }` | ○ | `divert` / `survive` / `wildfire` / `mark` | 第50期 |
 | `EmberRule` | `EmberRule { Enabled = False, Fireproof = True, TickHeal = 0, Brittle = 25, BrittleAllies = False, BurnHit = True }` | ○ | `survive` / `ember` / `wildfire` / `scorch` / `burst` / `burnaudit` / `borgguard` / `borgfront` / `fireward` / `firescale` / `firelevel` / `fireburst` / `enemyfire` / `firecycle` / `firetri` / `firewrap` / `firefinish` / `fireatk` / `firekindle` / `giftorder` / `blazesurge` / `burnhit` / `burnadopt` / `foesurge` / `inv348` / `shockdigest` / `rebirth` / `dump` | 第130期 |
 | `EncoreRule` | `EncoreRule { Enabled = True }` | ○ | `encore` / `tempo` / `tomo` / `hold2` / `ledger` / `lit` / `rebirth` | 第104期 |
-| `EnemyScaleRule` | `EnemyScaleRule { HpPercent = 115, AtkPercent = 115, Active = True }` |  | `escale` / `whip` / `mire` / `scorch` / `burst` / `nine` / `drift` / `sero` / `seroshio` / `retreat` / `decoy` / `lastdodge` / `spring` / `gale` / `cycle` / `tune` / `spring2` / `hanereach` / `burnaudit` / `borgguard` / `borgfront` / `fireward` / `firescale` / `firelevel` / `fireburst` / `enemyfire` / `firecycle` / `firetri` / `firewrap` / `firefinish` / `fireatk` / `firekindle` / `giftorder` / `blazesurge` / `burnhit` / `foesurge` / `checkwave` / `bosswave` / `relic` / `som276` / `nomi277` / `tou279` / `tome281` / `tome282` / `boss283` / `elite` / `misa285` / `shock287` / `playtest291` / `doha297` / `feather298` / `zan299` / `round300` / `hisa301` / `hisa302` / `hush303` / `hush304` / `som310` / `som311` / `som312` / `doha313` / `doha315` / `shiga321` / `hisa321` / `shiga322` / `tou323` / `inv348` / `db351` / `db353` / `db354` / `db355` / `sh358` / `sh359` / `sh360` / `sh361` / `sh362` / `sh363` / `sh364` / `sh365` / `shiga316` / `shock` / `sid` / `ep3` / `dump` | 第187期 |
+| `EnemyScaleRule` | `EnemyScaleRule { HpPercent = 115, AtkPercent = 115, Active = True }` |  | `escale` / `whip` / `mire` / `scorch` / `burst` / `nine` / `drift` / `sero` / `seroshio` / `retreat` / `decoy` / `lastdodge` / `spring` / `gale` / `cycle` / `tune` / `spring2` / `hanereach` / `burnaudit` / `borgguard` / `borgfront` / `fireward` / `firescale` / `firelevel` / `fireburst` / `enemyfire` / `firecycle` / `firetri` / `firewrap` / `firefinish` / `fireatk` / `firekindle` / `giftorder` / `blazesurge` / `burnhit` / `foesurge` / `checkwave` / `bosswave` / `relic` / `som276` / `nomi277` / `tou279` / `tome281` / `tome282` / `boss283` / `elite` / `misa285` / `shock287` / `playtest291` / `doha297` / `feather298` / `zan299` / `round300` / `hisa301` / `hisa302` / `hush303` / `hush304` / `som310` / `som311` / `som312` / `doha313` / `doha315` / `shiga321` / `hisa321` / `shiga322` / `tou323` / `inv348` / `db351` / `db353` / `db354` / `db355` / `sh358` / `sh359` / `sh360` / `sh361` / `sh362` / `sh363` / `sh364` / `sh365` / `sh366` / `sh367` / `sh368` / `shiga316` / `shock` / `sid` / `ep3` / `dump` | 第187期 |
 | `EruptRule` | `EruptRule { Floor = True, Smear = PerErupt, Heavy = True }` | ○ | `mudohex` / `mudo` | 第180期 |
 | `ExposeRule` | `ExposeRule { MaxPerBattle = 3 }` | ○ | `expose` / `creak3` / `ledger` | 第40期 |
 | `FavorRule` | `FavorRule { Gain = 4, Loss = 2 }` | ○ | `curse` / `favor` / `turn` / `ledger` / `burnaudit` | 第58期 |
@@ -102,7 +102,7 @@
 | `FunnelRule` | `FunnelRule { Slowest = True, Both = False }` | ○ | `funnel` / `cross` | 第62期 |
 | `GatherRule` | `GatherRule { Enabled = False }` | ○ | `derive` / `curse` / `hex` / `encore` / `gather` / `deep` / `soak` / `ledger` / `wound2` / `parry` / `wall` / `cross` / `demo` | 第89期 |
 | `GoadRule` | `GoadRule { Boost = 4, Mark = True }` | ○ | `derive` / `whet` / `goad` / `ledger` / `mark` | 第52期 |
-| `HarmRule` | `HarmRule { Census = False }` | ○ | `parry` / `wall` / `sora186` / `burnadopt` / `inv348` / `mio` / `sid` | 第135期 |
+| `HarmRule` | `HarmRule { Census = False }` | ○ | `parry` / `wall` / `sora186` / `burnadopt` / `inv348` / `sh367` / `mio` / `sid` | 第135期 |
 | `HasteRule` | `HasteRule { Pick = None }` | ○ | `mark` / `haste` | 第149期 |
 | `HushRule` | `HushRule { Active = True }` | ○ | `curse` / `hush` / `goad` / `wave2` / `ledger` | 第35期 |
 | `IgniteRule` | `IgniteRule { Enabled = True }` | ○ | `derive` / `curse` / `blaze2` / `gauge` / `gather` / `deep` / `soak` / `ledger` / `wound2` / `cross` / `demo` | 第87期 |
@@ -138,7 +138,7 @@
 | `WhetMask` | `WhetMask { Bits = 0 }` | ○ | `spend` | 第65期 |
 | `WildfireRule` | `WildfireRule { Mode = None, Amount = 0, Active = False }` | ○ | `wildfire` | 第133期 |
 | `WoundRule` | `WoundRule { Enabled = True, Census = False }` | ○ | `wound2` | 第85期 |
-| `YokeRule` | `YokeRule { Cap = 25, Active = True }` | ○ | `curse` / `yoke` / `goad` / `wave2` / `ledger` / `parry` / `brace` | 第35期 |
+| `YokeRule` | `YokeRule { Cap = 25, Active = True }` | ○ | `curse` / `yoke` / `goad` / `wave2` / `ledger` / `parry` / `brace` / `sh367` | 第35期 |
 
 61 型。
 

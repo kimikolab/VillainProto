@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 using M337 = Mark337Diag;
 using S287 = Shock287Diag;
@@ -114,13 +114,13 @@ static partial class Settle338Diag
         Console.WriteLine();
         Console.WriteLine("| 項目 | 結果 | 備考 |");
         Console.WriteLine("|---|---|---|");
-        UnitDef H = UnitCatalog.Hisa, O = UnitCatalog.HisaH337;
+        UnitDef H = UnitCatalog.HisaH367, O = UnitCatalog.HisaH337;   // 第368期: 第338〜367期の規定（MI-b）は `HisaH367`（規定は H1 になった）
         {
             bool def = H.Traits.SequenceEqual(O.Traits.Append(TraitId.MarkInheritSpread)) && H.Traits.SequenceEqual(UnitCatalog.HisaMIb.Traits) && H.PlusText == UnitCatalog.HisaMIb.PlusText
                 && H.PlusText.EndsWith("。標を付けられた敵が倒れると、その恨みが周りの敵に散る", StringComparison.Ordinal) && H.MinusText == O.MinusText
                 && UnitCatalog.HisaMIa.Traits.SequenceEqual(O.Traits.Append(TraitId.MarkInheritOne)) && UnitCatalog.MisaMIf.Traits.SequenceEqual(UnitCatalog.TomeH339.Traits.Append(TraitId.MarkInheritFeathers))
-                && UnitCatalog.All.Contains(H) && !UnitCatalog.Everyone.Contains(O) && UnitCatalog.All.Count == 52
-                && UnitCatalog.Everyone.Where(d => d.Traits.Contains(TraitId.MarkInheritSpread)).SequenceEqual(new[] { H });
+                && UnitCatalog.All.Contains(UnitCatalog.Hisa) && UnitCatalog.Hisa.Traits.Contains(TraitId.MarkInheritSpread) && !UnitCatalog.Everyone.Contains(O) && UnitCatalog.All.Count == 52
+                && UnitCatalog.Everyone.Where(d => d.Traits.Contains(TraitId.MarkInheritSpread)).SequenceEqual(new[] { UnitCatalog.Hisa });
             Expect("定義: 規定のヒサ ＝ 第322〜337期の規定（`HisaH337`）＋ `MarkInheritSpread`（札と文面は第337期の `HisaMIb` と同じ）・MI-a は旧から作り直した・旧は `Everyone` の外・札の保持者は規定のヒサ1枚", def);
             var guard = Presets.Playtest.First(r => r.Name == "試遊・標 守り型").F;
             bool pin = ReferenceEquals(PinH337(H), O) && ReferenceEquals(Pin337(guard)[4], O)
@@ -136,7 +136,7 @@ static partial class Settle338Diag
             var v = Presets.Versions;
             Expect("試遊の台: `Presets.Versions` ＝ 「試遊・感電 ポンの台」1台（第337期の「版・MI」の3台は外した）・`Playtest` は 17 台のまま",
                 v.Length >= 1 && v[0].Name == "試遊・感電 ポンの台" && v.Skip(1).All(r => r.Name.StartsWith("版・", StringComparison.Ordinal) || r.Name.StartsWith("試遊・", StringComparison.Ordinal))   /* 第340期: 「試遊・ミサ 書き手なし」も */
-                && v.Where(r => !r.Name.StartsWith("版・", StringComparison.Ordinal)).SelectMany(r => r.F.Occupied()).All(o => o.Def.Id != "hisa" || ReferenceEquals(o.Def, H)) && Presets.Playtest.Length == 17);   // 第366期: 「版・」の台のヒサは版（P-t ／ P-60 ／ P-180）
+                && v.Where(r => !r.Name.StartsWith("版・", StringComparison.Ordinal)).SelectMany(r => r.F.Occupied()).All(o => o.Def.Id != "hisa" || ReferenceEquals(o.Def, UnitCatalog.Hisa)) && Presets.Playtest.Length == 17);   // 第366期: 「版・」の台のヒサは版（P-t ／ P-60 ／ P-180）
         }
         {
             long nNew = 0, nOld = 0; int diff = 0, n = 0;

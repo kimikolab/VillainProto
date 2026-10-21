@@ -25,7 +25,7 @@ static partial class Rp345Diag
     {
         UnitDef? D(int i) => maxHp[i] > 0 ? Dummy(maxHp[i]) : null;
         var foes = Formation.Build(front1: D(0), front3: D(1), center: D(2), back1: D(3), back3: D(4));
-        var pl = mates ? Formation.Build(front1: golm, front3: UnitCatalog.Zan, back1: UnitCatalog.Tome, back3: UnitCatalog.Hisa) : Formation.Build(front1: golm);
+        var pl = mates ? Formation.Build(front1: golm, front3: UnitCatalog.Zan, back1: UnitCatalog.Tome, back3: UnitCatalog.HisaH367 /* 第368期 */) : Formation.Build(front1: golm);
         var ctx = T323.Ctx(pl, foes, out var p, out var e);
         var g = T323.Seat(p, 0);
         g.SetCounter(ColossusTrait.BellyKey, belly);
@@ -100,7 +100,7 @@ static partial class Rp345Diag
             foreach (var w in new[] { Waves[0], Waves[2], Waves[3] })
                 for (int sd = 0; sd < 20; sd++)
                 {
-                    var rn = BattleEngine.Run(BattleEngine.Materialize(guard, BattleContext.PlayerTeam), w.Make(), sd, verbose: false);
+                    var rn = BattleEngine.Run(BattleEngine.Materialize(Pin367(guard) /* 第368期: ヒサは第367期までの規定（`Pin345` の終端と同じ） */, BattleContext.PlayerTeam), w.Make(), sd, verbose: false);
                     var ro = BattleEngine.Run(BattleEngine.Materialize(Pin345(guard), BattleContext.PlayerTeam), w.Make(), sd, verbose: false);
                     var rv = BattleEngine.Run(BattleEngine.Materialize(S316.SwapId(Pin345(guard), "golm", UnitCatalog.GolmRPb), BattleContext.PlayerTeam), w.Make(), sd, verbose: false);
                     n++;

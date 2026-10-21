@@ -40,7 +40,8 @@ static partial class Sh367Diag
         Console.WriteLine();
         Console.WriteLine("| 項目 | 判定 | 備考 |");
         Console.WriteLine("|---|---|---|");
-        var guza = UnitCatalog.Guza; var vio = UnitCatalog.Vio; var hisa = UnitCatalog.Hisa;
+        // 第368期: この期の「規定」＝ 第367期までの規定（`GuzaH367` ／ `VioH367` ／ `HisaH367`）。G ／ V ／ H1 は第368期に規定になった。
+        var guza = UnitCatalog.GuzaH367; var vio = UnitCatalog.VioH367; var hisa = UnitCatalog.HisaH367;
         var newCards = new[] { TraitId.BlightCatalyst, TraitId.RallyFeatherQuiet };
 
         // ---- 版の定義 ----
@@ -50,18 +51,20 @@ static partial class Sh367Diag
                 && UnitCatalog.VioV.Actions is { Count: 1 } va && va[0].Kind == ActionKind.Skill;
             bool h = UnitCatalog.HisaY1.Traits.SequenceEqual(hisa.Traits.Append(TraitId.RallyFeatherQuiet)) && UnitCatalog.HisaY1.Id == hisa.Id && UnitCatalog.HisaY1.MaxHp == hisa.MaxHp
                 && UnitCatalog.HisaY1.PlusText.Split("（羽の一撃では叫ばない）").Length == 2 && UnitCatalog.HisaY1.PlusText.Contains(UnitCatalog.HisaShoutClause367 + "（羽の一撃では叫ばない）", StringComparison.Ordinal);
+            // 第368期: 3つとも規定になった——規定の駒（`All`）は版と同じ札 ／ 文面、版の定義そのものは `All` に入れないまま。
             bool notAll = new[] { UnitCatalog.GuzaG, UnitCatalog.VioV, UnitCatalog.HisaY1 }.All(d => !UnitCatalog.All.Contains(d))
-                && !UnitCatalog.All.Any(d => d.Traits.Any(t => newCards.Contains(t)));
-            Expect("版の定義: G ＝ 規定のグザ ＋ `ScatterGather` ／ V ＝ 吸い ＋ 触媒（吐き戻しを外す・手番は `Skill` 1つ）／ H1 ＝ 規定のヒサ ＋ `RallyFeatherQuiet`（文面は叫びの句の後に括弧書き1つ）・体 ／ Id は同じ・`All` に入れない・新しい札の保持者 0 枚", g && v && h && notAll);
+                && new[] { (UnitCatalog.Guza, UnitCatalog.GuzaG), (UnitCatalog.Vio, UnitCatalog.VioV), (UnitCatalog.Hisa, UnitCatalog.HisaY1) }.All(x => UnitCatalog.All.Contains(x.Item1) && x.Item1.Traits.SequenceEqual(x.Item2.Traits) && x.Item1.PlusText == x.Item2.PlusText && x.Item1.MinusText == x.Item2.MinusText)
+                && UnitCatalog.All.Where(d => d.Traits.Any(t => newCards.Contains(t))).Select(d => d.Id).OrderBy(x => x).SequenceEqual(new[] { "hisa", "vio" });
+            Expect("版の定義: G ＝ 第367期までのグザ ＋ `ScatterGather` ／ V ＝ 吸い ＋ 触媒（吐き戻しを外す・手番は `Skill` 1つ）／ H1 ＝ 第367期までのヒサ ＋ `RallyFeatherQuiet`（文面は叫びの句の後に括弧書き1つ）・体 ／ Id は同じ・版の定義は `All` に入れない（第368期: 規定の駒が版と同じ札 ／ 文面・新しい札の保持者はヴィオ ／ ヒサ）", g && v && h && notAll);
         }
 
         // ---- 規定は今どおり ----
         {
             bool d = guza.Traits.SequenceEqual(new[] { TraitId.Miasma }) && vio.Traits.SequenceEqual(new[] { TraitId.Blightfed, TraitId.Spit }) && vio.Actions is null
-                && hisa.Traits.SequenceEqual(UnitCatalog.HisaH337.Traits.Append(TraitId.MarkInheritSpread)) && UnitCatalog.All.Contains(guza) && UnitCatalog.All.Contains(vio) && UnitCatalog.All.Contains(hisa);
+                && hisa.Traits.SequenceEqual(UnitCatalog.HisaH337.Traits.Append(TraitId.MarkInheritSpread)) && !UnitCatalog.All.Contains(guza) && !UnitCatalog.All.Contains(vio) && !UnitCatalog.All.Contains(hisa);
             bool y = !YokeRule.Default.SparesTicks && YokeRule.Default.Cap == YokeTrait.Cap && YokeRule.Default.Active && YokeRule.Default.ToString() == "YokeRule { Cap = 25, Active = True }"
                 && YokeY.ToString() == "YokeRule { Cap = 25, Active = True, SparesTicks = True }";
-            Expect("規定のグザ ／ ヴィオ ／ ヒサ ／ 軛は今どおり（札・既定の軛は刻みも切る・既定の文字列は `docs/rules.md` の既定値の列と同じ）", d && y, YokeRule.Default.ToString() + " ／ Y: " + YokeY.ToString());
+            Expect("第367期までのグザ ／ ヴィオ ／ ヒサ（`*H367`・第368期から `All` の外）／ 軛は今どおり（札・既定の軛は刻みも切る・既定の文字列は `docs/rules.md` の既定値の列と同じ）", d && y, YokeRule.Default.ToString() + " ／ Y: " + YokeY.ToString());
         }
 
         // ---- G（直に） ----
@@ -119,7 +122,7 @@ static partial class Sh367Diag
 
         // ---- H1（戦の中で） ----
         {
-            var fB = Presets.HisaBoard366();
+            var fB = Presets.HisaBoard366(hisa);
             int same = 0, n = 0; long quiet = 0, defQuiet = 0, featherRally = 0, otherRally = 0;
             for (int seed = 0; seed < 20; seed++)
             {
@@ -147,7 +150,7 @@ static partial class Sh367Diag
             long vdiff = 0, cells = 0;
             var fs = new List<Formation>();
             foreach (var b in PBoards()) foreach (var v in PVers.Skip(1)) fs.Add(ApplyP(b.F, v));
-            fs.Add(H1(Presets.HisaBoard366()));
+            fs.Add(H1(Presets.HisaBoard366(hisa)));
             foreach (var f in fs)
                 foreach (var w in new[] { I.Boss, I.Guard, I.M4, S366.BossNoTax })
                     for (int seed = 0; seed < 5; seed++)
@@ -175,22 +178,15 @@ static partial class Sh367Diag
 
         // ---- 試遊の台 ----
         {
+            // 第368期: 第367期の「版・」の4台は外した（G ／ V ／ H1 を規定にした）。「試遊・毒」は規定の駒のまま（中身は GV）。
             var vr = Presets.Versions.Select(r => r.Name).ToArray();
-            bool rows = vr.SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒", "版・G グザ", "版・V ヴィオ", "版・GV", "版・H1 ヒサ" });
-            Expect("`Presets.Versions` ＝ 試遊の7台 ＋ 「試遊・毒」＋ 「版・G グザ ／ V ヴィオ ／ GV ／ H1 ヒサ」（第366期の「版・」の3台は外した）", rows, string.Join("、", vr));
-            if (rows)
-            {
-                Formation V(string n) => Presets.Versions.First(r => r.Name == n).F;
-                string seats = S307.Seats(Presets.PoisonHero367());
-                bool ok = S307.Seats(V("試遊・毒")) == seats && V("試遊・毒").Occupied().All(o => UnitCatalog.All.Contains(o.Def))
-                    && V("版・G グザ")[2] == UnitCatalog.GuzaG && V("版・G グザ")[3] == vio
-                    && V("版・V ヴィオ")[2] == guza && V("版・V ヴィオ")[3] == UnitCatalog.VioV
-                    && V("版・GV")[2] == UnitCatalog.GuzaG && V("版・GV")[3] == UnitCatalog.VioV
-                    && new[] { "版・G グザ", "版・V ヴィオ", "版・GV" }.All(n => S307.Seats(V(n)) == seats)
-                    && S307.Seats(V("版・H1 ヒサ")) == "ボルグ・ミサ・ヒサ・カド・アカ" && V("版・H1 ヒサ")[2] == UnitCatalog.HisaY1
-                    && V("版・H1 ヒサ").Occupied().Where(o => o.Def.Id != "hisa").All(o => UnitCatalog.All.Contains(o.Def));
-                Expect("「試遊・毒」＝ 毒特化・勇者（規定の駒）・「版・G ／ V ／ GV」＝ 同じ並びでグザ ／ ヴィオだけ版・「版・H1 ヒサ」＝ 台 B でヒサだけ版", ok, seats);
-            }
+            bool rows = vr.Take(8).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒" })
+                && !vr.Any(n => n is "版・G グザ" or "版・V ヴィオ" or "版・GV" or "版・H1 ヒサ");
+            Expect("`Presets.Versions` の頭 ＝ 試遊の7台 ＋ 「試遊・毒」・第367期の「版・G ／ V ／ GV ／ H1」は無い（第368期に外した）", rows, string.Join("、", vr));
+            var play = Presets.Versions.First(r => r.Name == "試遊・毒").F;
+            bool ok = S307.Seats(play) == S307.Seats(Presets.PoisonHero367()) && play.Occupied().All(o => UnitCatalog.All.Contains(o.Def))
+                && S307.Seats(Hero367()) == S307.Seats(play) && Hero367()[2] == guza && Hero367()[3] == vio;
+            Expect("「試遊・毒」＝ 毒特化・勇者（規定の駒）・この器具の毒特化・勇者は第367期までのグザ ／ ヴィオ", ok, S307.Seats(play));
         }
 
         // ---- PickOne ----

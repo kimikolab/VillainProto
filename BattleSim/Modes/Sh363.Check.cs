@@ -11,7 +11,7 @@ static partial class Sh363Diag
     {
         ("版・AK-n 自傷", Presets.SelfHarmAka(UnitCatalog.SusuAKn)),
         ("版・AK-s 自傷", Presets.SelfHarmAka(UnitCatalog.SusuAKs)),
-        ("版・AK-s 自傷 リリ", Formation.Build(front1: UnitCatalog.Doha, front3: UnitCatalog.Kado, center: UnitCatalog.Lili, back1: UnitCatalog.SusuAKs, back3: UnitCatalog.Hisa)),
+        ("版・AK-s 自傷 リリ", Formation.Build(front1: UnitCatalog.Doha, front3: UnitCatalog.Kado, center: UnitCatalog.Lili, back1: UnitCatalog.SusuAKs, back3: UnitCatalog.HisaH367)),   // 第368期: ヒサは第367期までの規定に固定
     };
 
     static readonly MethodInfo AddUnit = typeof(BattleContext).GetMethod("Add", BindingFlags.Instance | BindingFlags.NonPublic, new[] { typeof(UnitState) })!;

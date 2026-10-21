@@ -677,11 +677,12 @@ public static class UnitCatalog
     };
 
     /// <summary>
-    /// 囃し立てのヒサ（規定）。<b>第338期に MI-b（標の引き継ぎ）を規定にした</b>（ポンの判断・design/PHASE338_MARK_INHERIT_SETTLE_SPEC.md §2）——
+    /// 旧ヒサ（第338〜367期の規定・MI-b）。<b>第368期に H1（羽の一撃では叫ばない）を規定にしたので、名前を付けて残した</b>（<see cref="All"/> に入れない）。
+    /// 第338期に MI-b（標の引き継ぎ）を規定にした（ポンの判断・design/PHASE338_MARK_INHERIT_SETTLE_SPEC.md §2）——
     /// 第322〜337期の規定（<see cref="HisaH337"/>）の末尾に <see cref="TraitId.MarkInheritSpread"/>（標の付いた敵が倒れると、層の半分（切り上げ）を隣の生きている敵それぞれへ・移った層では羽は増えず合図にもならない）。
-    /// 札と文面は第337期の版 MI-b（<c>HisaMIb</c>）と同じ。
+    /// 札と文面は第337期の版 MI-b（<c>HisaMIb</c>）と同じ。第367期までの規定のヒサで測った器具はこれに固定する（`Common.Pin367`）。
     /// </summary>
-    public static readonly UnitDef Hisa = new()
+    public static readonly UnitDef HisaH367 = new()
     {
         Id = HisaH337.Id,
         Name = HisaH337.Name,
@@ -696,6 +697,17 @@ public static class UnitCatalog
         PlusText = HisaH337.PlusText + HisaInheritClause338,
         MinusText = HisaH337.MinusText,
         Flavor = HisaH337.Flavor
+    };
+
+    /// <summary>
+    /// 囃し立てのヒサ（規定）。<b>第368期に H1（羽の一撃では叫ばない）を規定にした</b>（ポンの判断・design/PHASE368_POISON_WARD_SPEC.md §2）——
+    /// 第338〜367期の規定（<see cref="HisaH367"/>）の末尾に <see cref="TraitId.RallyFeatherQuiet"/>。札と文面は第367期の版 H1（<see cref="HisaY1"/>）と同じ。
+    /// </summary>
+    public static readonly UnitDef Hisa = new()
+    {
+        Id = HisaH367.Id, Name = HisaH367.Name, MaxHp = HisaH367.MaxHp, Attack = HisaH367.Attack, Speed = HisaH367.Speed, Advances = HisaH367.Advances, Pattern = HisaH367.Pattern, Actions = HisaH367.Actions,
+        Traits = HisaH367.Traits.Append(TraitId.RallyFeatherQuiet).ToArray(),
+        PlusText = HisaH367.PlusText.Replace(HisaShoutClause367, HisaShoutClause367 + "（羽の一撃では叫ばない）", StringComparison.Ordinal), MinusText = HisaH367.MinusText, Flavor = HisaH367.Flavor,
     };
 
     /// <summary>第338期の規定（MI-b）の引き継ぎの句（第337期の叩き台・指示書 §2-3）。</summary>
@@ -1309,7 +1321,8 @@ public static class UnitCatalog
         Flavor = "死体を運ばせると必ず疫病が出るので、隊列から外された。"
     };
 
-    public static readonly UnitDef Guza = new()
+    /// <summary>旧グザ（第1〜367期の規定・瘴気だけ）。<b>第368期に G（集まる瘴気）を規定にしたので、名前を付けて残した</b>（<see cref="All"/> に入れない・第367期までの器具は `Common.Pin367` でこれに固定する）。</summary>
+    public static readonly UnitDef GuzaH367 = new()
     {
         Id = "guza",
         Name = "瘴気袋のグザ",
@@ -1321,6 +1334,14 @@ public static class UnitCatalog
         PlusText = "毎ターン、敵全体へ薄く毒を撒く",
         MinusText = "瘴気は味方にも及ぶ（味方全体に毒+1）。傷を負った味方には深く入る。攻撃力もほぼ無い",
         Flavor = "近くにいるだけで具合が悪くなるので、天幕にすら入れてもらえない。"
+    };
+
+    /// <summary>瘴気袋のグザ（規定）。<b>第368期に G（集まる瘴気）を規定にした</b>（ポンの判断）——第1〜367期の規定（<see cref="GuzaH367"/>）＋ 集まる全体（<see cref="TraitId.ScatterGather"/>・瘴気の敵1体あたりの層 ＝ 2 × max(1, 5 ÷ 生きている敵の数)）。札と文面は第367期の版 G（<see cref="GuzaG"/>）と同じ。</summary>
+    public static readonly UnitDef Guza = new()
+    {
+        Id = GuzaH367.Id, Name = GuzaH367.Name, MaxHp = GuzaH367.MaxHp, Attack = GuzaH367.Attack, Speed = GuzaH367.Speed, Advances = GuzaH367.Advances, Pattern = GuzaH367.Pattern, Actions = GuzaH367.Actions,
+        Traits = GuzaH367.Traits.Append(TraitId.ScatterGather).ToArray(),
+        PlusText = "毎ターン、敵全体へ薄く毒を撒く。敵が少ないほど、一体に濃く集まる", MinusText = GuzaH367.MinusText, Flavor = GuzaH367.Flavor,
     };
 
     /// <summary>
@@ -1625,7 +1646,8 @@ public static class UnitCatalog
         Flavor = "号令だけは達者だが、自分では槍一本まともに振れない。"
     };
 
-    public static readonly UnitDef Vio = new()
+    /// <summary>旧ヴィオ（第180〜367期の規定・澱み喰い ＋ 吐き戻し）。<b>第368期に V（触媒）を規定にしたので、名前を付けて残した</b>（<see cref="All"/> に入れない・第367期までの器具は `Common.Pin367` でこれに固定する）。</summary>
+    public static readonly UnitDef VioH367 = new()
     {
         Id = "vio",
         Name = "澱み喰いのヴィオ",
@@ -1636,6 +1658,17 @@ public static class UnitCatalog
         PlusText = "味方が負った毒を吸い取り、その層の分だけ攻撃力が上がる。吸った毒は腹に溜まり、攻撃が当たるたび最大3層まで相手へ吐き戻す",
         MinusText = "味方が汚れていなければただの穀潰し",
         Flavor = "仲間の膿を舐めて回る。治るのは事実だが、誰も礼を言わない。"
+    };
+
+    /// <summary>澱み喰いのヴィオ（規定）。<b>第368期に V（触媒）を規定にした</b>（ポンの判断）——吐き戻し（`Spit`）を触媒（<see cref="TraitId.BlightCatalyst"/>）に置き換え、手番は触媒（攻撃しない）。札と文面は第367期の版 V（<see cref="VioV"/>）と同じ。</summary>
+    public static readonly UnitDef Vio = new()
+    {
+        Id = VioH367.Id, Name = VioH367.Name, MaxHp = VioH367.MaxHp, Attack = VioH367.Attack, Speed = VioH367.Speed, Advances = VioH367.Advances, Pattern = VioH367.Pattern,
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "触媒") },
+        Traits = new[] { TraitId.Blightfed, TraitId.BlightCatalyst },
+        PlusText = "味方が負った毒を吸い取って腹に溜める。手番で、最も毒の深い敵の毒を倍にし、溜めた毒もすべて注ぎ込む",
+        MinusText = "自分では攻撃しない。味方が汚れていなければ注ぐ毒が足りない",
+        Flavor = VioH367.Flavor,
     };
 
     public static readonly UnitDef Yomi = new()
@@ -6773,11 +6806,12 @@ public static class UnitCatalog
 
     // 第366期【軽い期】本体1（指示書 design/PHASE366_HISA_POOL_POISON_P0_SPEC.md §2-1）。ヒサの玉を持ち越さない版（規定のヒサの上に札1枚）。採否はポン。
     // 文面は号令の句（`HisaBallClause322`）の直後に括弧書きを足す（叩き台）。
+    // 第368期: 規定のヒサが H1 になったので、第366期の版は第367期までの規定（`HisaH367`）から作る（第366期の数字を保つ）。
     static UnitDef HisaPool366(TraitId card, string clause) => new()
     {
-        Id = Hisa.Id, Name = Hisa.Name, MaxHp = Hisa.MaxHp, Attack = Hisa.Attack, Speed = Hisa.Speed, Advances = Hisa.Advances, Pattern = Hisa.Pattern, Actions = Hisa.Actions,
-        Traits = Hisa.Traits.Append(card).ToArray(),
-        PlusText = Hisa.PlusText.Replace(HisaBallClause322, HisaBallClause322 + clause, StringComparison.Ordinal), MinusText = Hisa.MinusText, Flavor = Hisa.Flavor,
+        Id = HisaH367.Id, Name = HisaH367.Name, MaxHp = HisaH367.MaxHp, Attack = HisaH367.Attack, Speed = HisaH367.Speed, Advances = HisaH367.Advances, Pattern = HisaH367.Pattern, Actions = HisaH367.Actions,
+        Traits = HisaH367.Traits.Append(card).ToArray(),
+        PlusText = HisaH367.PlusText.Replace(HisaBallClause322, HisaBallClause322 + clause, StringComparison.Ordinal), MinusText = HisaH367.MinusText, Flavor = HisaH367.Flavor,
     };
     /// <summary>ヒサ・P-t: 規定 ＋ 玉はターンで散る（`CommandPoolTurnDrop`・溜まりをターンの終わりに捨てる）。</summary>
     public static readonly UnitDef HisaPt = HisaPool366(TraitId.CommandPoolTurnDrop, "（声援はそのターンのうちに使わなければ散る）");
@@ -6786,33 +6820,52 @@ public static class UnitCatalog
     /// <summary>ヒサ・P-180: 規定 ＋ 溜まり 180 まで（`CommandPoolCap180`・玉 9 つ）。</summary>
     public static readonly UnitDef HisaP180 = HisaPool366(TraitId.CommandPoolCap180, "（玉は 9 つまでしか溜まらない）");
 
-    // 第367期【軽い期】（指示書 design/PHASE367_POISON_LEVERS_SPEC.md §3-1 ／ §5-1）。毒軸の版（グザ ／ ヴィオ）とヒサの版。どれも `All` に入れない・採否はポン。文面は叩き台。
+    // 第367期【軽い期】（指示書 design/PHASE367_POISON_LEVERS_SPEC.md §3-1 ／ §5-1）。毒軸の版（グザ ／ ヴィオ）とヒサの版。どれも `All` に入れない。
+    // 第368期: 3つとも規定にした（`Guza` ／ `Vio` ／ `Hisa` と同じ札・文面）。版の定義は第367期までの規定（`GuzaH367` ／ `VioH367` ／ `HisaH367`）から作るまま残す（`sh367` が使う）。
     /// <summary>グザ・G 集まる瘴気: 規定のグザ ＋ 集まる全体（`ScatterGather`・瘴気の敵1体あたりの層 ＝ 2 × max(1, 5 ÷ 生きている敵の数)・味方への漏れは今のまま）。</summary>
     public static readonly UnitDef GuzaG = new()
     {
-        Id = Guza.Id, Name = Guza.Name, MaxHp = Guza.MaxHp, Attack = Guza.Attack, Speed = Guza.Speed, Advances = Guza.Advances, Pattern = Guza.Pattern, Actions = Guza.Actions,
-        Traits = Guza.Traits.Append(TraitId.ScatterGather).ToArray(),
-        PlusText = "毎ターン、敵全体へ薄く毒を撒く。敵が少ないほど、一体に濃く集まる", MinusText = Guza.MinusText, Flavor = Guza.Flavor,
+        Id = GuzaH367.Id, Name = GuzaH367.Name, MaxHp = GuzaH367.MaxHp, Attack = GuzaH367.Attack, Speed = GuzaH367.Speed, Advances = GuzaH367.Advances, Pattern = GuzaH367.Pattern, Actions = GuzaH367.Actions,
+        Traits = GuzaH367.Traits.Append(TraitId.ScatterGather).ToArray(),
+        PlusText = "毎ターン、敵全体へ薄く毒を撒く。敵が少ないほど、一体に濃く集まる", MinusText = GuzaH367.MinusText, Flavor = GuzaH367.Flavor,
     };
     /// <summary>ヴィオ・V 触媒: 吐き戻し（`Spit`）を触媒（`BlightCatalyst`・手番で最も深い敵の毒を倍にし、腹の層を注ぐ）に置き換える。吸い（`Blightfed`）はそのまま。攻撃しない。</summary>
     public static readonly UnitDef VioV = new()
     {
-        Id = Vio.Id, Name = Vio.Name, MaxHp = Vio.MaxHp, Attack = Vio.Attack, Speed = Vio.Speed, Advances = Vio.Advances, Pattern = Vio.Pattern,
+        Id = VioH367.Id, Name = VioH367.Name, MaxHp = VioH367.MaxHp, Attack = VioH367.Attack, Speed = VioH367.Speed, Advances = VioH367.Advances, Pattern = VioH367.Pattern,
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "触媒") },
         Traits = new[] { TraitId.Blightfed, TraitId.BlightCatalyst },
         PlusText = "味方が負った毒を吸い取って腹に溜める。手番で、最も毒の深い敵の毒を倍にし、溜めた毒もすべて注ぎ込む",
         MinusText = "自分では攻撃しない。味方が汚れていなければ注ぐ毒が足りない",
-        Flavor = Vio.Flavor,
+        Flavor = VioH367.Flavor,
     };
     /// <summary>ヒサ・H1: 規定 ＋ 羽の一撃では叫ばない（`RallyFeatherQuiet`・第365期の切り 1 を札にした）。</summary>
     public static readonly UnitDef HisaY1 = new()
     {
-        Id = Hisa.Id, Name = Hisa.Name, MaxHp = Hisa.MaxHp, Attack = Hisa.Attack, Speed = Hisa.Speed, Advances = Hisa.Advances, Pattern = Hisa.Pattern, Actions = Hisa.Actions,
-        Traits = Hisa.Traits.Append(TraitId.RallyFeatherQuiet).ToArray(),
-        PlusText = Hisa.PlusText.Replace(HisaShoutClause367, HisaShoutClause367 + "（羽の一撃では叫ばない）", StringComparison.Ordinal), MinusText = Hisa.MinusText, Flavor = Hisa.Flavor,
+        Id = HisaH367.Id, Name = HisaH367.Name, MaxHp = HisaH367.MaxHp, Attack = HisaH367.Attack, Speed = HisaH367.Speed, Advances = HisaH367.Advances, Pattern = HisaH367.Pattern, Actions = HisaH367.Actions,
+        Traits = HisaH367.Traits.Append(TraitId.RallyFeatherQuiet).ToArray(),
+        PlusText = HisaH367.PlusText.Replace(HisaShoutClause367, HisaShoutClause367 + "（羽の一撃では叫ばない）", StringComparison.Ordinal), MinusText = HisaH367.MinusText, Flavor = HisaH367.Flavor,
     };
     /// <summary>ヒサの叫びの句（H1 の括弧書きはこの直後に足す）。</summary>
     public const string HisaShoutClause367 = "攻撃した味方と最も傷ついた味方を癒す";
+
+    // 第368期【軽い期】本体（指示書 design/PHASE368_POISON_WARD_SPEC.md §3-2）。毒特化の耐久の版（規定のスィド ／ グザ ／ ヴィオの上に札）。どれも `All` に入れない・採否はポン。文面は叩き台。
+    const string ProofClause368 = "。毒に蝕まれない";
+    static UnitDef Ward368(UnitDef d, TraitId[] cards, string plusTail) => new()
+    {
+        Id = d.Id, Name = d.Name, MaxHp = d.MaxHp, Attack = d.Attack, Speed = d.Speed, Advances = d.Advances, Pattern = d.Pattern, Actions = d.Actions,
+        Traits = d.Traits.Concat(cards).ToArray(), PlusText = d.PlusText + plusTail, MinusText = d.MinusText, Flavor = d.Flavor,
+    };
+    /// <summary>スィド・R: 規定 ＋ 毒に強い（`PoisonProof`）。</summary>
+    public static readonly UnitDef SidR = Ward368(Sid, new[] { TraitId.PoisonProof }, ProofClause368);
+    /// <summary>スィド・RC: 規定 ＋ 毒に強い ＋ 毒の衣（`PoisonCloak`）。</summary>
+    public static readonly UnitDef SidRC = Ward368(Sid, new[] { TraitId.PoisonProof, TraitId.PoisonCloak }, ProofClause368 + "。殴られると自分も毒をまとい、まとった毒が深いほど受ける傷が減る（最大6割）");
+    /// <summary>グザ・R: 規定（G）＋ 毒に強い。</summary>
+    public static readonly UnitDef GuzaR = Ward368(Guza, new[] { TraitId.PoisonProof }, ProofClause368);
+    /// <summary>ヴィオ・R: 規定（V）＋ 毒に強い。</summary>
+    public static readonly UnitDef VioR = Ward368(Vio, new[] { TraitId.PoisonProof }, ProofClause368);
+    /// <summary>ヴィオ・RCS: 規定（V）＋ 毒に強い ＋ 吸い分け（`BlightfedSkipCloak`・毒の衣を持つ味方からは吸わない）。</summary>
+    public static readonly UnitDef VioRCS = Ward368(Vio, new[] { TraitId.PoisonProof, TraitId.BlightfedSkipCloak }, ProofClause368 + "。毒をまとう味方からは吸わない");
 
     // 第361期: 規定のササが SS-w になったので、SS-k ／ SS-w は旧（`SasaH360`）から作る（`SasaSSw` は規定と同じ札・文面・残置）。
     const string SasaPlus360 = "手番で身を固め、次に動くまで、受ける一撃を7までに抑える。殴られると錯乱して隣の味方1体を別の席へ突き飛ばし（1ターン1回）、";

@@ -932,6 +932,10 @@ public enum TraitId
     // （グザの集まる瘴気 G は札を足さない——第364期の `ScatterGather` を瘴気も読む・`MiasmaTrait.Spread`）
     BlightCatalyst,       // 触媒（V・ヴィオ）: 手番で（攻撃しない）、最も毒の層が深い敵（同じ層なら席番号の小さい方）の毒を倍にし、腹に溜めた層（澱み喰いが吸った分）を全部その敵へ足す（腹は空になる）。毒のある敵がいなければ腹の分だけを席番号の最も小さい敵へ。倍に上限なし・乱数を引かない（`BlightCatalystTrait`・経路 `PoisonRoute.Catalyst`）
     RallyFeatherQuiet,    // 羽の一撃では叫ばない（H1・ヒサ）: ミサの羽のまとまり（標撃ち ／ 手番の羽）が標の敵に当たっても叫ばない。羽以外の一撃は今どおり（**札そのものは挙動を持たない**・engine の `BundlePop`・第365期の切り 1 と同じ所）
+    // --- 第368期で足した札（指示書 design/PHASE368_POISON_WARD_SPEC.md §3）。毒特化の耐久（スィド ／ グザ ／ ヴィオの版）。保持者 0 枚 ---
+    PoisonProof,          // 毒に強い（R・スィド ／ グザ ／ ヴィオ）: 毒の刻みが HP を削らない（刻みそのものを起こさない・層 ／ 印は今どおり持つ）。ベニの反転が先——反転される刻みは今どおり回復になる。起爆は刻みではないので今どおり受ける（**札そのものは挙動を持たない**・engine の `PoisonTickOnce`）
+    PoisonCloak,          // 毒の衣（RC・スィド）: 自分の毒の層 1 につき受ける傷が 3% 減る（最大 60%・切り捨て・軽減の族の据えの層の直後）。殴られると自分にも毒 +2（`PoisonCloakTrait`・軽減は engine の `ApplyDamageBody`）
+    BlightfedSkipCloak,   // 吸い分け（RCS・ヴィオ）: 毒の衣を持つ味方からは吸わない（ほかの味方からは今どおり全部吸う）（**札そのものは挙動を持たない**・`BlightfedTrait`）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -7268,11 +7272,15 @@ public sealed class BlightfedTrait : Trait
         int drawn = 0;
         // 第183期 追補3・**表示専用**。台本を積むときだけ、味方ごとの吸い上げを控える（盤面は読まない）。
         List<(UnitState, int)>? shown = ctx.Verbose ? new() : null;
+        bool skipCloak = self.HasTrait(TraitId.BlightfedSkipCloak);   // 第368期（RCS・吸い分け）
         foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
         {
             if (ally == self) continue;
+            if (skipCloak && ally.HasTrait(TraitId.PoisonCloak)) continue;   // 第368期: 毒の衣を持つ味方からは吸わない
             int poison = ally.Counter(StatusKeys.Poison);
             if (poison <= 0) continue;
+            UnitTally dt = ctx.TallyOf(self);   // 第368期（計数のみ）: 吸った層を衣の持ち主から ／ ほかの味方からに分ける
+            if (ally.HasTrait(TraitId.PoisonCloak)) dt.Pw368DrawnCloak += poison; else dt.Pw368DrawnOther += poison;
             ctx.NoteLeakDrawn(self, ally, poison);   // 第183期・**計数のみ**（漏れ由来の上限）
             ally.SetCounter(StatusKeys.Poison, 0);
             drawn += poison;
@@ -13202,6 +13210,28 @@ public sealed class BlightCatalystTrait : Trait
 }
 
 /// <summary>
+/// 毒の衣（第368期・スィドの版 RC・指示書 design/PHASE368_POISON_WARD_SPEC.md §3-2）。自分の毒の層 1 につき受ける傷が <see cref="PercentPerLayer"/>% 減る
+/// （最大 <see cref="MaxPercent"/>%・切り捨て）——**軽減は engine**（`ApplyDamageBody` の軽減の族・据えの層の直後・種類を問わない）。
+/// この札の本体は「殴られると自分にも毒 +<see cref="SelfStack"/>」だけ（毒撃と同じ「殴られた」の条件 ＝ 出どころが敵・毒の窓口を通す・経路は毒撃の漏れ）。
+/// 刻みで削られないのは毒に強い（<see cref="TraitId.PoisonProof"/>）の側。<b>乱数を引かない。</b>
+/// </summary>
+public sealed class PoisonCloakTrait : Trait
+{
+    public const int PercentPerLayer = 3, MaxPercent = 60, SelfStack = 2;
+    public override TraitId Id => TraitId.PoisonCloak;
+
+    /// <summary>層 <paramref name="layers"/> のときの軽減の割合（%）。</summary>
+    public static int PercentOf(int layers) => Math.Min(MaxPercent, Math.Max(0, layers) * PercentPerLayer);
+
+    public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source)
+    {
+        if (source is null || source.TeamId == self.TeamId || !self.IsAlive) return;
+        ctx.Poison(self, SelfStack, self, PoisonRoute.VenomLeak);
+        ctx.TallyOf(self).Pw368CloakSelf += SelfStack;
+    }
+}
+
+/// <summary>
 /// 叩き起こし（第180期・鬨の号令ガン）。<b>自分の手番の攻撃が終わった直後、
 /// 前のターンに手番を差し出した味方1体が、その場で割り込んで1回攻撃する。</b>
 ///
@@ -18610,6 +18640,9 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.CommandPoolCap180),     // 第366期（溜まり 180 まで P-180・印だけ）
         new BlightCatalystTrait(),                        // 第367期（触媒 V・ヴィオ）
         new MarkOnlyTrait(TraitId.RallyFeatherQuiet),     // 第367期（羽の一撃では叫ばない H1・印だけ）
+        new MarkOnlyTrait(TraitId.PoisonProof),           // 第368期（毒に強い R・印だけ）
+        new PoisonCloakTrait(),                           // 第368期（毒の衣 RC・スィド）
+        new MarkOnlyTrait(TraitId.BlightfedSkipCloak),    // 第368期（吸い分け RCS・印だけ）
         new EruptTrait(),      // 第180期
         new SmearTrait(),      // 第180期
         new SpitTrait(),       // 第180期

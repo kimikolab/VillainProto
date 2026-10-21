@@ -1339,6 +1339,9 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sh367 hisa              # 第367期 §5-2: ヒサ H1（羽の一撃では叫ばない）—— 標軸の5台 × 9 波 × 規定 ／ H1・叫びと癒し
     dotnet run --project BattleSim -c Release 0 sh367 compare <G|V|GV|Y|H1>  # 第367期: `compare` 64 行 × 版（版の駒のいる行だけを版で回す・Y は全行・(G2)）
     dotnet run --project BattleSim -c Release 0 sh367 check             # 第367期 自己検査（版の定義・規定は今どおり・G ／ V ／ Y を直に・H1 は第365期の切り 1 と全戦同じ・verbose・器具の中だけ・試遊の台・PickOne ／ Roll）
+    dotnet run --project BattleSim -c Release 0 sh368 boards            # 第368期 §3-3: 6 台（試遊・毒 ／ 毒特化・集団 ／ 澱み喰い ／ 毒 (グザ×ミオ×ラウ) ／ 反転の2台）× 版（規定 ／ R ／ RC ／ RCS）× 6 波・seed 0..99・誰が何Tに倒れたか・漏れの行き先・スィドの層と衣・消えた刻みと反転・勇者の層・壊れの兆し（5 秒）
+    dotnet run --project BattleSim -c Release 0 sh368 compare <R|RC|RCS>  # 第368期: `compare` 64 行 × 版（スィド ／ グザ ／ ヴィオのいる行だけを版で回す・(G2)）（10 秒）
+    dotnet run --project BattleSim -c Release 0 sh368 check             # 第368期 自己検査（段0 の規定 ／ 旧の定義 ／ 固定の口 ／ 第367期の版と勝敗が同じ・毒に強い ／ 毒の衣 ／ 吸い分けを直に・verbose・試遊の台・PickOne ／ Roll）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）
