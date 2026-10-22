@@ -1382,6 +1382,10 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sh378 compare <土台|E|L|EL|ELU>   # 第378期: `compare` 64 行 × 版（リィカ ／ ムグのいる行だけを回す・seed 0..199）
     dotnet run --project BattleSim -c Release 0 sh378 row <行名>          # 第378期: `compare` の1行 × 版 × 本編 第2 ／ 4 ／ 5波（seed 0..199）
     dotnet run --project BattleSim -c Release 0 sh378 check              # 第378期 自己検査（版の定義・E: 3 層未満では起きない ／ 起きる ／ 空き ／ 代償 ／ 亡者の死で層 +1・L: 層 5/6/9 の発数 ／ 的の巡り ／ ボスで連撃・U: 4 体目が湧く ／ 儚い駒からは湧かない・土台 ＝ 第377期の R-積M・規定のリィカ ／ ムグの行が `docs/balance.md` と一致・寄せ集め ／ 素体は器具の中だけ・verbose と再現性・`checkup` の札・試遊の台・PickOne ／ Roll）
+    dotnet run --project BattleSim -c Release 0 sh379 stage0             # 第379期 §2-3 段0: `compare` 64 行 旧（`Pin378`）→ 新（目覚めたリィカ）・死の4台 × 5 波 旧 → 新（seed 0..99）・寄せ集め 50 台 × 8 物差し（seed 0..19）
+    dotnet run --project BattleSim -c Release 0 sh379 vers               # 第379期 §3-3: 4 台（死の連鎖 ／ 継ぎ当て ／ 死・ソム ／ 死・ゾト抜き）× ムグ（規定 ／ 撒き1 ／ 撒き全 ／ 育つ）× 8 物差し（seed 0..99・verbose）——ボスの層 ／ 9 層 ／ 1人 ／ 与ダメ ／ 勇者の HP・湧いた体・層の出どころ・隊の1ターンの最大・壊れの兆し
+    dotnet run --project BattleSim -c Release 0 sh379 compare <撒き1|撒き全|育つ>   # 第379期: `compare` 64 行 × ムグの版（ムグのいる行だけ版で変わる・seed 0..199）
+    dotnet run --project BattleSim -c Release 0 sh379 check              # 第379期 自己検査（段0 の規定 ／ 旧 ／ 固定の口・撒き1 ／ 撒き全 ／ 育つ（育つことは死ではない・若いムグ）・胞子 ／ 若いムグの死で層 +1・分裂は今どおり・verbose と再現性・`checkup` の札・試遊の台・PickOne ／ Roll）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

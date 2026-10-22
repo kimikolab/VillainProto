@@ -17565,6 +17565,22 @@ public sealed class BattleContext
         HandleDeath(u, null);
     }
 
+    /// <summary>
+    /// 第379期（ムグの版「育つ」）: 駒をその場で別の駒に育てる。<b>死ではない</b>——`HandleDeath` を通らない（死の出来事 ／ 層 ／ 回復 ／ 死の読み手のどれも動かない）。
+    /// 古い駒は HP 0 で盤から消え（倒れた儚い駒と同じく枠は空き）、同じ枠に新しい駒が湧く（`Summon` の出来事）。表示専用の出来事 `SporeGrow` を出す。湧けなければ何もしない。乱数を引かない。
+    /// </summary>
+    public UnitState? GrowInto(UnitState from, UnitDef to)
+    {
+        if (!from.IsAlive) return null;
+        int slot = from.Slot, team = from.TeamId, hp = from.Hp;
+        from.Hp = 0;
+        UnitState? u = Summon(to, team, at: slot, overCorpse: true, by: from);
+        if (u is null) { from.Hp = hp; return null; }
+        Log($"    {from.Name} が {to.Name} に育った", LogKind.Summon);
+        if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.SporeGrow, Turn = _turn, ActorId = from.InstanceId, TargetId = u.InstanceId, Slot = slot, Team = team, Text = to.Name });
+        return u;
+    }
+
     /// <summary>倒れた駒を戦線に戻す。無制限にすると壊れるので回数制限は特性側で持つこと。</summary>
     public void Revive(UnitState target, int hp, UnitState? by = null)
     {

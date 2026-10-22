@@ -418,7 +418,9 @@ public static class UnitCatalog
         Flavor = "誓約が壊れていて、もう誰の助けも届かない。"
     };
 
-    public static readonly UnitDef Rica = new()
+    /// <summary>墓守リィカ（第1〜378期の規定）。<b>第379期に第378期の ELU のリィカ（亡者起こし・積む ／ 目覚めの墓守 ／ 層の連撃 ／ 起こしの上限なし）を規定にしたので、それまでの規定はこの <see cref="RicaH378"/> として明示的に持つ。</b>
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。第378期までの規定のリィカで測った過去の器具はこちらに固定する（`Common.PinR378` ／ `Pin378`）。第377 ／ 378期の版の駒はこちらから作る。</summary>
+    public static readonly UnitDef RicaH378 = new()
     {
         Id = "rica",
         Name = "墓守リィカ",
@@ -441,17 +443,17 @@ public static class UnitCatalog
     /// </summary>
     public static readonly UnitDef RicaLink = new()
     {
-        Id = Rica.Id, Name = Rica.Name, MaxHp = Rica.MaxHp, Attack = Rica.Attack, Speed = Rica.Speed,
-        Traits = Rica.Traits.Append(TraitId.RicaRaiseDead).ToArray(),
-        PlusText = Rica.PlusText + "／" + RicaRaiseClause377 + RicaLinkTail377, MinusText = Rica.MinusText, Flavor = Rica.Flavor,
+        Id = RicaH378.Id, Name = RicaH378.Name, MaxHp = RicaH378.MaxHp, Attack = RicaH378.Attack, Speed = RicaH378.Speed,
+        Traits = RicaH378.Traits.Append(TraitId.RicaRaiseDead).ToArray(),
+        PlusText = RicaH378.PlusText + "／" + RicaRaiseClause377 + RicaLinkTail377, MinusText = RicaH378.MinusText, Flavor = RicaH378.Flavor,
     };
 
     /// <summary>墓守リィカの版 R-積（第377期・亡者起こし・亡者の死も層を積む）。規定のリィカ ＋ <see cref="TraitId.RicaRaiseDeadStack"/>。</summary>
     public static readonly UnitDef RicaStack = new()
     {
-        Id = Rica.Id, Name = Rica.Name, MaxHp = Rica.MaxHp, Attack = Rica.Attack, Speed = Rica.Speed,
-        Traits = Rica.Traits.Append(TraitId.RicaRaiseDeadStack).ToArray(),
-        PlusText = Rica.PlusText + "／" + RicaRaiseClause377 + RicaStackTail377, MinusText = Rica.MinusText, Flavor = Rica.Flavor,
+        Id = RicaH378.Id, Name = RicaH378.Name, MaxHp = RicaH378.MaxHp, Attack = RicaH378.Attack, Speed = RicaH378.Speed,
+        Traits = RicaH378.Traits.Append(TraitId.RicaRaiseDeadStack).ToArray(),
+        PlusText = RicaH378.PlusText + "／" + RicaRaiseClause377 + RicaStackTail377, MinusText = RicaH378.MinusText, Flavor = RicaH378.Flavor,
     };
 
     /// <summary>第377期: 亡者起こし（リィカの版）が召喚枠に起こす駒。編成には選べない。朽ちて毎ターン HP 10 を失い、蘇生されない（儚い）。</summary>
@@ -558,8 +560,8 @@ public static class UnitCatalog
 
     static UnitDef RicaOn378(TraitId[] add, string plus) => new()
     {
-        Id = Rica.Id, Name = Rica.Name, MaxHp = Rica.MaxHp, Attack = Rica.Attack, Speed = Rica.Speed,
-        Traits = RicaStack.Traits.Concat(add).ToArray(), PlusText = plus, MinusText = Rica.MinusText, Flavor = Rica.Flavor,
+        Id = RicaH378.Id, Name = RicaH378.Name, MaxHp = RicaH378.MaxHp, Attack = RicaH378.Attack, Speed = RicaH378.Speed,
+        Traits = RicaStack.Traits.Concat(add).ToArray(), PlusText = plus, MinusText = RicaH378.MinusText, Flavor = RicaH378.Flavor,
     };
 
     /// <summary>リィカの版 E（第378期）＝ R-積 ＋ 目覚めの墓守。<see cref="All"/> の外（版・採否はポン）。</summary>
@@ -570,7 +572,51 @@ public static class UnitCatalog
     public static readonly UnitDef RicaEL = RicaOn378(new[] { TraitId.RicaAwakenRaise, TraitId.RicaLayerFlurry }, RicaStack.PlusText + "／" + RicaAwakenClause378 + "／" + RicaFlurryClause378);
     /// <summary>リィカの版 ELU（第378期）＝ EL ＋ 起こしの上限を外す（文面は起こしの句を上限なしに差し替える）。</summary>
     public static readonly UnitDef RicaELU = RicaOn378(new[] { TraitId.RicaAwakenRaise, TraitId.RicaLayerFlurry, TraitId.UncapRaise },
-        Rica.PlusText + "／" + RicaRaiseUncapClause378 + RicaStackTail377 + "／" + RicaAwakenClause378 + "／" + RicaFlurryClause378);
+        RicaH378.PlusText + "／" + RicaRaiseUncapClause378 + RicaStackTail377 + "／" + RicaAwakenClause378 + "／" + RicaFlurryClause378);
+
+    /// <summary>
+    /// 墓守リィカ（第379期の規定）。<b>第379期に第378期の ELU のリィカ側を規定にした</b>（ポンの判断・design/PHASE379_MUG_SOW_SPEC.md §2）——
+    /// 第1〜378期の規定（<see cref="RicaH378"/>）＋ 亡者起こし・積む（<see cref="TraitId.RicaRaiseDeadStack"/>）＋ 目覚めの墓守（<see cref="TraitId.RicaAwakenRaise"/>）＋ 層の連撃（<see cref="TraitId.RicaLayerFlurry"/>）＋ 起こしの上限なし（<see cref="TraitId.UncapRaise"/>）。
+    /// 札と文面は第378期の <see cref="RicaELU"/> と同じ。ムグは規定のまま（芽吹きは規定にしない）。
+    /// </summary>
+    public static readonly UnitDef Rica = new()
+    {
+        Id = RicaH378.Id, Name = RicaH378.Name, MaxHp = RicaH378.MaxHp, Attack = RicaH378.Attack, Speed = RicaH378.Speed,
+        Traits = RicaELU.Traits.ToArray(), PlusText = RicaELU.PlusText, MinusText = RicaH378.MinusText, Flavor = RicaH378.Flavor,
+    };
+
+    /// <summary>第379期 ムグが撒く版の手番（`[Skill]`・ラベルは表示だけ）。版の駒より前に置く（静的初期化の順）。</summary>
+    static readonly UnitAction[] MugSowActions = { new(ActionKind.Skill, Label: "胞子を撒く") };
+    /// <summary>第379期 ムグが撒く版の句（指示書 §3-1 の叩き台）。</summary>
+    public const string MugSow1Clause379 = "手番に胞子を撒く（空いた場所に1体）";
+    public const string MugSowAllClause379 = "手番に胞子を撒き散らす（空いた場所をすべて埋める）";
+    public const string MugGrowClause379 = "撒かれた胞子は、生き延びると次のターンに若いムグに育ち、自分も胞子を撒く";
+
+    static UnitDef MugOn379(TraitId add, string plus) => new()
+    {
+        Id = Mug.Id, Name = Mug.Name, MaxHp = Mug.MaxHp, Attack = Mug.Attack, Speed = Mug.Speed,
+        Traits = Mug.Traits.Append(add).ToArray(), Actions = MugSowActions, PlusText = Mug.PlusText + "／" + plus, MinusText = Mug.MinusText, Flavor = Mug.Flavor,
+    };
+    /// <summary>胞子体ムグの版 撒き1（第379期）＝ 規定のムグ ＋ 撒く（手番 `[Skill]`）。<see cref="All"/> の外（版・採否はポン）。</summary>
+    public static readonly UnitDef MugSow1 = MugOn379(TraitId.MugSow1, MugSow1Clause379);
+    /// <summary>胞子体ムグの版 撒き全（第379期）＝ 規定のムグ ＋ 撒き散らす。</summary>
+    public static readonly UnitDef MugSowAll = MugOn379(TraitId.MugSowAll, MugSowAllClause379);
+    /// <summary>胞子体ムグの版 育つ（第379期）＝ 規定のムグ ＋ 撒く ＋ 撒いた胞子が育つ。</summary>
+    public static readonly UnitDef MugSowGrow = MugOn379(TraitId.MugSowGrow, MugSow1Clause379 + "。" + MugGrowClause379);
+
+    /// <summary>第379期: 育つの版のムグが撒く胞子（今の胞子 ＋ 育つ）。編成には選べない。`Id` ／ 名前は胞子のまま。</summary>
+    public static readonly UnitDef SporeSeed = new()
+    {
+        Id = "spore", Name = "胞子", MaxHp = 14, Attack = 4, Speed = 10,
+        Traits = new[] { TraitId.Ephemeral, TraitId.SporeGrow }, PlusText = "", MinusText = "",
+    };
+
+    /// <summary>第379期: 育った胞子（若いムグ）。HP 20 ／ 攻 3 ／ 速 6・儚い。手番で胞子を1体撒く（撒き1・撒いた胞子は育たない）。倒れても分裂しない。それ以上は育たない。編成には選べない。</summary>
+    public static readonly UnitDef YoungMug = new()
+    {
+        Id = "youngmug", Name = "若いムグ", MaxHp = 20, Attack = 3, Speed = 6,
+        Traits = new[] { TraitId.Ephemeral, TraitId.MugSow1 }, Actions = MugSowActions, PlusText = MugSow1Clause379, MinusText = "",
+    };
 
     /// <summary>第377期 亡骸の芽吹きの句（版 M のプラスの文面に足す・指示書 §3-2 B の叩き台）。</summary>
     public const string MugSproutClause377 = "生きている間、倒れた仲間の亡骸に胞子が芽吹く（1戦に3回）";

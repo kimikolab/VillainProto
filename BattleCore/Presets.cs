@@ -977,12 +977,17 @@ public static class Presets
         // 第377期: 死軸の試遊の台（`compare` の「死の連鎖 (リィカ軸)」と同じ並び・規定の駒）と、同じ並びでリィカ ／ ムグだけ版の台。採否はポン。
         // 第378期: 「版・R-繋 死の連鎖」は外した（ポンの判断で R-積M を土台に続ける）。「版・R-積M 死の連鎖」は第378期の土台として残す。
         ("試遊・死の連鎖", DeathChain377()),
-        ("版・R-積M 死の連鎖", DeathChain377(UnitCatalog.RicaStack, UnitCatalog.MugSproutM)),
-        // 第378期: 目覚めたリィカの版（並びは試遊・死の連鎖・リィカ ／ ムグだけ版・土台は R-積M）。採否はポン。
-        ("版・E 死の連鎖", DeathChain377(UnitCatalog.RicaE, UnitCatalog.MugSproutM)),
-        ("版・EL 死の連鎖", DeathChain377(UnitCatalog.RicaEL, UnitCatalog.MugSproutM)),
-        ("版・ELU 死の連鎖", DeathChain377(UnitCatalog.RicaELU, UnitCatalog.MugSproutMU)),
+        // 第379期: 目覚めたリィカ（ELU のリィカ側）を規定にした。「試遊・死の連鎖」は規定の駒のまま（リィカは目覚めたリィカになった）。
+        // 第377 ／ 378期の「版・」の死の台（R-積M ／ E ／ EL ／ ELU）は外した（並びは `sh377` ／ `sh378` の中で `DeathChain377` から組む）。
+        // 第379期: ムグが胞子を撒く版の台（並びは試遊・死の連鎖・ムグだけ版）と、ゾトをソムに替えた死の台（規定の駒）。採否はポン。
+        ("版・撒き全 死の連鎖", DeathChain377(mug: UnitCatalog.MugSowAll)),
+        ("版・育つ 死の連鎖", DeathChain377(mug: UnitCatalog.MugSowGrow)),
+        ("試遊・死 ソム", DeathSom379()),
     };
+
+    /// <summary>第379期: 「試遊・死 ソム」の並び（死の連鎖のゾトをソムに替えた: 前1 ソム ／ 前3 ゴルム ／ 中央 ムグ ／ 後1 ヴェル ／ 後3 リィカ）。ムグを差し替えて版の台を作る。</summary>
+    public static Formation DeathSom379(UnitDef? mug = null) =>
+        Formation.Build(front1: UnitCatalog.Som, front3: UnitCatalog.Golm, center: mug ?? UnitCatalog.Mug, back1: UnitCatalog.Vel, back3: UnitCatalog.Rica);
 
     /// <summary>第377期: 「死の連鎖 (リィカ軸)」の並び（前1 ゾト ／ 前3 ゴルム ／ 中央 ムグ ／ 後1 ヴェル ／ 後3 リィカ）。リィカ ／ ムグを差し替えて版の台を作る。</summary>
     public static Formation DeathChain377(UnitDef? rica = null, UnitDef? mug = null) =>

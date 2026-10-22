@@ -52,9 +52,9 @@ static partial class Sh377Diag
             bool wight = w.MaxHp == 24 && w.Attack == 3 && w.Speed == 4 && w.Name == "亡者" && w.Traits.SequenceEqual(new[] { TraitId.Ephemeral, TraitId.Rot })
                 && !UnitCatalog.All.Contains(w) && !UnitCatalog.Retired.Contains(w) && !UnitCatalog.Everyone.Any(d => d.Id == w.Id);
             var vers = new[] { UnitCatalog.RicaLink, UnitCatalog.RicaStack, UnitCatalog.MugSproutM };
-            bool defs = UnitCatalog.Rica.Traits.SequenceEqual(new[] { TraitId.Necro, TraitId.Sacrifice }) && UnitCatalog.Mug.Traits.SequenceEqual(new[] { TraitId.Splitter })
+            bool defs = UnitCatalog.RicaH378.Traits.SequenceEqual(new[] { TraitId.Necro, TraitId.Sacrifice }) && UnitCatalog.Mug.Traits.SequenceEqual(new[] { TraitId.Splitter })
                 && UnitCatalog.All.Contains(UnitCatalog.Rica) && UnitCatalog.All.Contains(UnitCatalog.Mug) && UnitCatalog.All.Count == 52
-                && UnitCatalog.RicaLink.Traits.SequenceEqual(UnitCatalog.Rica.Traits.Append(TraitId.RicaRaiseDead)) && UnitCatalog.RicaStack.Traits.SequenceEqual(UnitCatalog.Rica.Traits.Append(TraitId.RicaRaiseDeadStack))
+                && UnitCatalog.RicaLink.Traits.SequenceEqual(UnitCatalog.RicaH378.Traits.Append(TraitId.RicaRaiseDead)) && UnitCatalog.RicaStack.Traits.SequenceEqual(UnitCatalog.RicaH378.Traits.Append(TraitId.RicaRaiseDeadStack))
                 && UnitCatalog.MugSproutM.Traits.SequenceEqual(UnitCatalog.Mug.Traits.Append(TraitId.MugSprout))
                 && vers.All(d => !UnitCatalog.All.Contains(d) && !UnitCatalog.Retired.Contains(d))
                 && UnitCatalog.RicaLink.PlusText.EndsWith(UnitCatalog.RicaRaiseClause377 + UnitCatalog.RicaLinkTail377) && UnitCatalog.RicaStack.PlusText.EndsWith(UnitCatalog.RicaRaiseClause377 + UnitCatalog.RicaStackTail377)
@@ -210,15 +210,15 @@ static partial class Sh377Diag
         // ---- 規定は今どおり ----
         {
             long d = 0, cells = 0;
-            var play = Presets.Versions.First(r => r.Name == "試遊・死の連鎖").F;
+            var play = Pin378(Presets.Versions.First(r => r.Name == "試遊・死の連鎖").F);   // 第379期: 試遊の台は規定の駒（目覚めたリィカ）になったので、第378期までの規定に固定して比べる
             bool same = play.Occupied().Select(o => o.Def).SequenceEqual(Row("死の連鎖 (リィカ軸)").Occupied().Select(o => o.Def));
             foreach (var w in new[] { I.Boss, I.Guard, I.Bat, I.M2, I.M5 })
                 for (int sd = 0; sd < 20; sd++) { cells++; if (!Same(I.Raw(play, w, sd).R, I.Raw(Row("死の連鎖 (リィカ軸)"), w, sd).R)) d++; }
             Expect("試遊・死の連鎖 ＝ `compare` の「死の連鎖 (リィカ軸)」と同じ並び ／ 駒（規定）・5 波 × seed 0..19 で勝敗 ／ T ／ 生存数が同じ", same && d == 0, $"{S307.Seats(play)}・{cells} 戦・差 {d}");
             // `docs/balance.md` のリィカ ／ ムグのいる行（seed 0..199）を規定のまま測り直して一致を見る（全 64 行の一致は `checkup check` の 320 セル）。
-            var bal = File.ReadAllLines("docs/balance.md").Where(l => l.StartsWith("| ")).Select(l => l.Split('|').Select(c => c.Trim()).ToArray()).Where(c => c.Length > 7).ToDictionary(c => c[1], c => c[2..7]);
+            var bal = BalanceH378();   // 第379期: 第378期の `docs/balance.md`（規定のリィカが変わる前）
             int rows = 0, bad = 0;
-            foreach (var (name, f) in CompareBuilds().Where(r => HasRica(r.F) || HasMug(r.F)))
+            foreach (var (name, f) in CompareBuilds().Select(r => (r.Name, F: Pin378(r.F))).Where(r => HasRica(r.F) || HasMug(r.F)))
             {
                 rows++;
                 for (int wi = 0; wi < EnemyCatalog.Stages.Count; wi++)
@@ -235,7 +235,7 @@ static partial class Sh377Diag
         {
             bool ok = !UnitCatalog.Everyone.Any(d => d.Id.EndsWith("_plain", StringComparison.Ordinal))
                 && !CompareBuilds().Concat(Presets.Versions).Concat(Presets.Playtest).Any(r => r.F.Occupied().Any(o => o.Def.Id.EndsWith("_plain", StringComparison.Ordinal)));
-            var mix = MixBoardsOf(UnitCatalog.Rica); var mix2 = MixBoardsOf(UnitCatalog.Rica);
+            var mix = MixBoardsOf(UnitCatalog.RicaH378); var mix2 = MixBoardsOf(UnitCatalog.RicaH378);
             bool mixOk = mix.Length == MixBoards && mix.All(f => f.Occupied().Count() == 5 && f.Occupied().Count(o => o.Def.Id == "rica") == 1 && f.Occupied().Count(o => DeathIds.Contains(o.Def.Id)) == 1 && f.Occupied().Select(o => o.Def.Id).Distinct().Count() == 5)
                 && mix.Select(S307.Seats).SequenceEqual(mix2.Select(S307.Seats));
             Expect("§2-3 の素体 ／ 寄せ集めの台は器具の中だけ（カタログ ／ `compare` ／ 試遊の台に素体が無い）・寄せ集めは 50 台ともリィカ ＋ 死の札を持たない4枚（重複なし）・台の乱数は固定（2回作って同じ）", ok && mixOk);
@@ -245,7 +245,7 @@ static partial class Sh377Diag
         {
             long diff = 0, det = 0, cells = 0;
             // 第378期: 「版・R-繋 死の連鎖」は `Presets.Versions` から外したので、3台は並びの関数から組む（中身は同じ）。
-            foreach (var f in new[] { Presets.DeathChain377(), Presets.DeathChain377(UnitCatalog.RicaLink), Presets.DeathChain377(UnitCatalog.RicaStack, UnitCatalog.MugSproutM) })
+            foreach (var f in new[] { Presets.DeathChain377(UnitCatalog.RicaH378), Presets.DeathChain377(UnitCatalog.RicaLink), Presets.DeathChain377(UnitCatalog.RicaStack, UnitCatalog.MugSproutM) })   // 第379期: 規定の台は第378期までの規定のリィカで
             {
                 foreach (var w in new[] { I.Boss, I.Guard, I.Bat, I.M5, I.T9 })
                     for (int sd = 0; sd < 5; sd++)
@@ -269,12 +269,12 @@ static partial class Sh377Diag
         // ---- 試遊の台 ----
         {
             var vr = Presets.Versions.Select(r => r.Name).ToArray();
-            // 第378期: 「版・R-繋 死の連鎖」を外し、後ろに第378期の「版・」の台が足された——頭の 12 台と「版・R-積M 死の連鎖」があることを見る。
-            bool rows = vr.Take(12).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒", "試遊・毒 席替え", "試遊・毒 紅", "試遊・ヴィオ 台B", "試遊・死の連鎖" }) && vr.Contains("版・R-積M 死の連鎖");
+            // 第378期: 「版・R-繋 死の連鎖」を外した。第379期: 第377 ／ 378期の「版・」の台をすべて外した——頭の 12 台を見て、版の並びは関数から組む。
+            bool rows = vr.Take(12).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒", "試遊・毒 席替え", "試遊・毒 紅", "試遊・ヴィオ 台B", "試遊・死の連鎖" });
             var basis = Row("死の連鎖 (リィカ軸)");
             bool vers = Presets.DeathChain377(UnitCatalog.RicaLink).Occupied().Select(o => o.Def).SequenceEqual(Apply(basis, 1).Occupied().Select(o => o.Def))
-                && Presets.Versions.First(r => r.Name == "版・R-積M 死の連鎖").F.Occupied().Select(o => o.Def).SequenceEqual(Apply(basis, 4).Occupied().Select(o => o.Def));
-            Expect("`Presets.Versions` の頭 ＝ 第376期の11台 ＋「試遊・死の連鎖」・「版・R-積M 死の連鎖」が残る（第378期に「版・R-繋 死の連鎖」を外した・R-繋 の並びは `DeathChain377(RicaLink)`）", rows && vers, string.Join("、", vr));
+                && Presets.DeathChain377(UnitCatalog.RicaStack, UnitCatalog.MugSproutM).Occupied().Select(o => o.Def).SequenceEqual(Apply(basis, 4).Occupied().Select(o => o.Def));
+            Expect("`Presets.Versions` の頭 ＝ 第376期の11台 ＋「試遊・死の連鎖」（第378 ／ 379期に「版・」の死の台を外した・R-繋 ／ R-積M の並びは `DeathChain377`）", rows && vers, string.Join("、", vr));
         }
 
         // ---- PickOne ／ Roll ----

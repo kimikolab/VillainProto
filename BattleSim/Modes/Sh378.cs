@@ -54,7 +54,7 @@ static partial class Sh378Diag
     // 版
     // ---------------------------------------------------------------------------------
     internal static readonly string[] VerNames = { "規定", "土台", "E", "L", "EL", "ELU" };
-    internal static readonly UnitDef[] RicaOf = { UnitCatalog.Rica, UnitCatalog.RicaStack, UnitCatalog.RicaE, UnitCatalog.RicaL, UnitCatalog.RicaEL, UnitCatalog.RicaELU };
+    internal static readonly UnitDef[] RicaOf = { UnitCatalog.RicaH378, UnitCatalog.RicaStack, UnitCatalog.RicaE, UnitCatalog.RicaL, UnitCatalog.RicaEL, UnitCatalog.RicaELU };
     internal static readonly UnitDef[] MugOf = { UnitCatalog.Mug, UnitCatalog.MugSproutM, UnitCatalog.MugSproutM, UnitCatalog.MugSproutM, UnitCatalog.MugSproutM, UnitCatalog.MugSproutMU };
     /// <summary>版を当てる（リィカ ／ ムグを版の駒に替える・ムグのいない台はリィカだけ）。土台 ＝ 第377期の R-積M（ムグなしは R-積）。</summary>
     internal static Formation Apply(Formation f, int vi) => vi == 0 ? f : I.Swap(I.Swap(f, "rica", RicaOf[vi]), "mug", MugOf[vi]);
@@ -205,7 +205,7 @@ static partial class Sh378Diag
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
         const int seeds = 20;
-        var vers = new (string Name, UnitDef D)[] { ("素体", I.Plain(UnitCatalog.Rica)) }.Concat(VerNames.Select((n, i) => (Name: n == "土台" ? "土台（R-積）" : n, D: RicaOf[i]))).ToArray();
+        var vers = new (string Name, UnitDef D)[] { ("素体", I.Plain(UnitCatalog.RicaH378)) }.Concat(VerNames.Select((n, i) => (Name: n == "土台" ? "土台（R-積）" : n, D: RicaOf[i]))).ToArray();
         var boards = vers.Select(v => S377.MixBoardsOf(v.D)).ToArray();
         var waves = S377.VerWaves;
         int nw = waves.Length, nb = S377.MixBoards;
@@ -274,7 +274,7 @@ static partial class Sh378Diag
     // ---------------------------------------------------------------------------------
     static void RowDetail(string name)
     {
-        var f = CompareBuilds().First(r => r.Name == name).F;
+        var f = Pin378(CompareBuilds().First(r => r.Name == name).F);   // 第379期: 第378期までの規定のリィカに固定
         var ws = new[] { I.M2, I.M4, I.M5 };
         var g = new S377.B[VerNames.Length, ws.Length];
         Parallel.For(0, g.Length, k => g[k / ws.Length, k % ws.Length] = M(Apply(f, k / ws.Length), new[] { ws[k % ws.Length] }, CompareSeeds));
@@ -315,7 +315,7 @@ static partial class Sh378Diag
         var sw = System.Diagnostics.Stopwatch.StartNew();
         int vi = Array.IndexOf(VerNames, ver);
         if (vi < 1) throw new ArgumentException("sh378 compare の版は 土台 / E / L / EL / ELU");
-        var rows = CompareBuilds().ToArray();
+        var rows = CompareBuilds().Select(r => (r.Name, F: Pin378(r.F))).ToArray();   // 第379期: 第378期までの規定のリィカに固定
         int nw = EnemyCatalog.Stages.Count, last = nw - 1;
         Func<int, bool> only = ri => S377.HasRica(rows[ri].F) || S377.HasMug(rows[ri].F);
         var b = CGrid(rows, f => f, _ => true);

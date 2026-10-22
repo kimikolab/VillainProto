@@ -1564,3 +1564,10 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **E（目覚めの墓守）は `OnAnyDeath`**（敵の死・墓守が 3 層以上）で `SummonOverFallen`（第377期の口）を呼ぶ。代償は `LoseHp`。新しい engine の窓口は無い。
 - **U（起こしの上限を外す）は印の札**（`UncapRaiseTrait`・挙動なし）。`RaiseDeadTrait` ／ `MugSproutTrait` が持ち主のこの札を読んで1戦に3回を数えない。
 - `NecroTrait.SetStack` に計数（6 ／ 9 層に届いたターン・`UnitTally.R378Layer6Turn` ／ `R378Layer9Turn`・計数のみ）。
+
+## 第379期 —— 段0: 目覚めたリィカを規定に ／ ムグが胞子を撒く（版）
+
+- 段0: engine の口は変えていない（第377 ／ 378期の札を規定のリィカが持つようになった）。旧は `UnitCatalog.RicaH378`。
+- **`BattleContext.GrowInto(from, to)`**（育つの版）: 駒をその場で別の駒に育てる。**死ではない**——`HandleDeath` を通らない（死の出来事 ／ 層 ／ 回復 ／ 死の読み手は動かない）。古い駒は HP 0 で盤から消え（倒れた儚い駒と同じく枠は空き）、同じ枠に `Summon(at:, overCorpse: true)` で新しい駒が湧く。湧けなければ元に戻す。
+- **出来事 `BattleEventKind.SporeGrow`（表示専用）**: `ActorId` ＝ 育った胞子 ／ `TargetId` ＝ 若いムグ ／ `Slot`。直前に若いムグの `Summon` が出る。`Death` は出ない。
+- ムグの撒く（`MugSowTrait`）は手番（`[Skill]`）。空きが無ければ `ctx.PerformAttack` を直に呼ぶ。湧き方は第377期の `SummonOverFallen`。

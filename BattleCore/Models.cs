@@ -2472,6 +2472,8 @@ public sealed class UnitTally
     public long[]? R377LayerByTurn, R377BonusByTurn, R377AliveByTurn;
     /// <summary>第378期（<b>計数のみ</b>）: 目覚めの墓守——敵の亡骸から起こした数 ／ ターンの和 ／ 空きが無くて起こせなかった数・墓守が 6 ／ 9 層に届いたターン（0 ＝ 未到達）。</summary>
     public long R378FoeRaises, R378FoeRaiseTurnSum, R378FoeNoSeat;
+    /// <summary>第379期（<b>計数のみ</b>）: ムグの撒く——撒いた胞子 ／ 撒いたターンの和 ／ 空きが無くて殴った手番（撒き手の側）・育った胞子（胞子の側）。</summary>
+    public long R379Sown, R379SowTurnSum, R379SowNoSeat, R379Grown;
     public int R378Layer6Turn, R378Layer9Turn;
     public long R377ChainSaved;
     public int R377PeakTurn, R377AwakeTurn;
@@ -3782,6 +3784,7 @@ public sealed class UnitTally
         if (R377PeakTurn == 0) R377PeakTurn = o.R377PeakTurn;
         if (R377AwakeTurn == 0) R377AwakeTurn = o.R377AwakeTurn;
         R378FoeRaises += o.R378FoeRaises; R378FoeRaiseTurnSum += o.R378FoeRaiseTurnSum; R378FoeNoSeat += o.R378FoeNoSeat;   // 第378期
+        R379Sown += o.R379Sown; R379SowTurnSum += o.R379SowTurnSum; R379SowNoSeat += o.R379SowNoSeat; R379Grown += o.R379Grown;   // 第379期
         if (R378Layer6Turn == 0) R378Layer6Turn = o.R378Layer6Turn;
         if (R378Layer9Turn == 0) R378Layer9Turn = o.R378Layer9Turn;
         R377Raises += o.R377Raises; R377RaiseTurnSum += o.R377RaiseTurnSum; R377NoSeat += o.R377NoSeat; R377CostSelf += o.R377CostSelf; R377RotLost += o.R377RotLost; R377RotDeaths += o.R377RotDeaths; R377Sprouts += o.R377Sprouts; R377SproutTurnSum += o.R377SproutTurnSum; R377SproutNoSeat += o.R377SproutNoSeat;   // 第377期
@@ -4658,6 +4661,13 @@ public enum BattleEventKind
     /// ダメージではない（<c>Damage</c> は出ない・被弾で起きる札は起きない）。<b>どの規則も読まない。</b>
     /// </summary>
     BloodSip,
+
+    /// <summary>
+    /// 胞子が育った（第379期・ムグの版「育つ」・<b>表示専用</b>）。撒かれた胞子が次のターンの頭に生きていて、その場で若いムグに替わった瞬間に1つ。
+    /// <c>ActorId</c> ＝ 育った胞子（以後は盤から消える・死ではない）／ <c>TargetId</c> ＝ 新しい若いムグ ／ <c>Slot</c> ＝ 席。直前に若いムグの <c>Summon</c> が出る。
+    /// <c>Death</c> は出ない（死の読み手は動かない）。<b>どの規則も読まない。</b>
+    /// </summary>
+    SporeGrow,
 }
 /// <summary>`Shard`（第358期）の <c>Text</c>。</summary>
 public static class ShardLabels

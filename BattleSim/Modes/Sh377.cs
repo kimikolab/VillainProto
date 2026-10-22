@@ -62,7 +62,17 @@ static partial class Sh377Diag
     // ---------------------------------------------------------------------------------
     internal static readonly string[] DeathRows = { "死の連鎖 (リィカ軸)", "惨禍×死の連鎖", "追撃×死 (ハギ×リィカ)", "死の連鎖+後備え" };
     internal const string TsugiRow = "継ぎ当て×死の連鎖";
-    internal static Formation Row(string n) => CompareBuilds().First(r => r.Name == n).F;
+    /// <summary>第379期: 規定のリィカが目覚めたリィカになったので、この器具の台は第378期までの規定（`RicaH378`）に固定する（`Pin378`）。</summary>
+    internal static Formation Row(string n) => Pin378(CompareBuilds().First(r => r.Name == n).F);
+    /// <summary>第379期: 目覚めたリィカを規定にしたので、この器具の「規定（第378期まで）」の行の検算は第378期の `docs/balance.md`（コミット 97ef8579）と比べる。</summary>
+    internal static Dictionary<string, string[]> BalanceH378()
+    {
+        var psi = new System.Diagnostics.ProcessStartInfo("git", "show 97ef8579:docs/balance.md") { RedirectStandardOutput = true, UseShellExecute = false, StandardOutputEncoding = System.Text.Encoding.UTF8 };
+        using var pr = System.Diagnostics.Process.Start(psi)!;
+        string x = pr.StandardOutput.ReadToEnd(); pr.WaitForExit();
+        return x.Split('\n').Select(l => l.TrimEnd('\r')).Where(l => l.StartsWith("| ")).Select(l => l.Split('|').Select(c => c.Trim()).ToArray()).Where(c => c.Length > 7).ToDictionary(c => c[1], c => c[2..7]);
+    }
+
     internal static (string Name, Formation F)[] Boards(bool tsugi) =>
         (tsugi ? DeathRows.Append(TsugiRow) : DeathRows).Select(n => (n, Row(n))).ToArray();
 
@@ -537,7 +547,7 @@ static partial class Sh377Diag
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
         const int seeds = 20;
-        var vers = new (string Name, UnitDef D)[] { ("素体", I.Plain(UnitCatalog.Rica)), ("規定", UnitCatalog.Rica), ("R-繋", UnitCatalog.RicaLink), ("R-積", UnitCatalog.RicaStack) };
+        var vers = new (string Name, UnitDef D)[] { ("素体", I.Plain(UnitCatalog.RicaH378)), ("規定", UnitCatalog.RicaH378), ("R-繋", UnitCatalog.RicaLink), ("R-積", UnitCatalog.RicaStack) };
         var boards = vers.Select(v => MixBoardsOf(v.D)).ToArray();
         int nw = VerWaves.Length;
         var g = new double[vers.Length, MixBoards, nw];
@@ -576,7 +586,7 @@ static partial class Sh377Diag
     // ---------------------------------------------------------------------------------
     static void RowDetail(string name)
     {
-        var f = CompareBuilds().First(r => r.Name == name).F;
+        var f = Pin378(CompareBuilds().First(r => r.Name == name).F);   // 第379期: 第378期までの規定のリィカに固定
         var ws = new[] { I.M2, M3, I.M4, I.M5 };
         var vs = Enumerable.Range(0, VerNames.Length).Where(vi => Applies(f, vi)).ToArray();
         var g = new B[vs.Length, ws.Length];
@@ -618,7 +628,7 @@ static partial class Sh377Diag
         var sw = System.Diagnostics.Stopwatch.StartNew();
         int vi = Array.IndexOf(VerNames, ver);
         if (vi < 1) throw new ArgumentException("sh377 compare の版は R-繋 / R-積 / M / R-積M");
-        var rows = CompareBuilds().ToArray();
+        var rows = CompareBuilds().Select(r => (r.Name, F: Pin378(r.F))).ToArray();   // 第379期: 第378期までの規定のリィカに固定
         int nw = EnemyCatalog.Stages.Count, last = nw - 1;
         Func<int, bool> only = ri => vi switch { 1 or 2 => HasRica(rows[ri].F), 3 => HasMug(rows[ri].F), _ => HasRica(rows[ri].F) || HasMug(rows[ri].F) };
         var b = CGrid(rows, f => f, _ => true);

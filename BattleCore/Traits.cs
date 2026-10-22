@@ -964,6 +964,11 @@ public enum TraitId
     // --- 第378期で足した札（指示書 design/PHASE378_DEATH_AWAKEN_SPEC.md §2）。目覚めたリィカ（R-積M の上に版）。保持者 0 枚 ---
     RicaAwakenRaise,      // 目覚めの墓守（E・リィカ）: 3 層以上の間、敵が倒れるたびその亡骸から亡者を1体起こす（回数の上限なし・召喚枠の空きだけが上限）。起こすたび HP 8 を直接払う（倒れない）（`RicaAwakenTrait`）
     RicaLayerFlurry,      // 層の連撃（L・リィカ）: 層 6 で2連撃 ／ 9 で3連撃。2発目からは別の敵（いなければ1発目の的）（`VioFlurryTrait` の層の段）
+    // --- 第379期で足した札（指示書 design/PHASE379_MUG_SOW_SPEC.md §3）。ムグが胞子を撒く（規定のムグ ＋ 札1枚・手番は `[Skill]`）。保持者 0 枚 ---
+    MugSow1,              // 撒く（撒き1・ムグ ／ 若いムグ）: 手番で、空いている召喚枠に胞子を1体撒く。空きが無ければふつうに殴る（`MugSowTrait`）
+    MugSowAll,            // 撒き散らす（撒き全・ムグ）: 手番で、空いている召喚枠をすべて胞子で埋める。空きが無ければふつうに殴る（`MugSowTrait`）
+    MugSowGrow,           // 撒く ＋ 育つ（育つ・ムグ）: 撒き1 と同じ。撒いた胞子は次のターンの頭に生きていれば若いムグに育つ（`MugSowTrait` ／ `SporeGrowTrait`）
+    SporeGrow,            // 育つ胞子（撒かれた胞子）: 撒かれた次のターンの頭に生きていれば、その場で若いムグに替わる（死ではない）（`SporeGrowTrait`）
     UncapRaise,           // 起こしの上限を外す（U・リィカ ／ ムグ）: 亡者起こし（味方の亡骸から）／ 亡骸の芽吹きの1戦に3回の上限を外す（召喚枠の空きだけが上限）（**札そのものは挙動を持たない**・`RaiseDeadTrait` ／ `MugSproutTrait` が読む）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -13613,6 +13618,59 @@ public sealed class RicaAwakenTrait : Trait
     }
 }
 
+/// <summary>
+/// 撒く（第379期・ムグの版 撒き1 ／ 撒き全 ／ 育つ・指示書 design/PHASE379_MUG_SOW_SPEC.md §3）。手番（`[Skill]`）で、召喚枠のうち生きた駒のいない枠（<see cref="BattleContext.SummonOverFallen"/>）に胞子を撒く——
+/// 撒き1 ／ 育つは1体、撒き全は空いた枠をすべて埋める。<b>空きが無ければふつうに殴る</b>（`ctx.PerformAttack` を直に呼ぶ）。育つの撒いた胞子は <see cref="UnitCatalog.SporeSeed"/>（今の胞子 ＋ 育つ）。
+/// 胞子の死は今の胞子と同じ（味方の死・墓守の層を積む・儚いので亡者は起きない）。<b>乱数を引かない。</b>
+/// </summary>
+public sealed class MugSowTrait : Trait
+{
+    readonly TraitId _id;
+    public readonly bool All, Grow;
+    public MugSowTrait(TraitId id, bool all, bool grow) { _id = id; All = all; Grow = grow; }
+    public override TraitId Id => _id;
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+    {
+        if (!self.IsAlive) return;
+        UnitTally t = ctx.TallyOf(self);
+        UnitDef seed = Grow ? UnitCatalog.SporeSeed : UnitCatalog.Spore;
+        int n = 0;
+        while (ctx.SummonOverFallen(seed, self.TeamId, self) is { } s)
+        {
+            if (Grow) s.SetCounter(SporeGrowTrait.SownKey, ctx.Turn);
+            n++;
+            if (!All) break;
+        }
+        if (n == 0)
+        {
+            t.R379SowNoSeat++;   // 計数のみ
+            if (ctx.TeamAlive(ctx.Opponent(self.TeamId))) ctx.PerformAttack(self);
+            return;
+        }
+        t.R379Sown += n; t.R379SowTurnSum += (long)n * ctx.Turn;   // 計数のみ
+        ctx.Log($"    {self.Name} が胞子を撒いた（{n} 体）", LogKind.Trigger);
+    }
+}
+
+/// <summary>
+/// 育つ胞子（第379期・ムグの版「育つ」が撒いた胞子）。撒かれた次のターンの頭に生きていれば、その場で若いムグ（<see cref="UnitCatalog.YoungMug"/>）に替わる（<see cref="BattleContext.GrowInto"/>）。
+/// <b>育つことは死ではない</b>（死の出来事を出さず、層 ／ 回復 ／ 死の読み手は動かない）。<b>乱数を引かない。</b>
+/// </summary>
+public sealed class SporeGrowTrait : Trait
+{
+    /// <summary>撒かれたターン（私有キー・0 は撒かれていない）。</summary>
+    public const string SownKey = "sporeSown379";
+    public override TraitId Id => TraitId.SporeGrow;
+
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        int sown = self.RawCounter(SownKey);
+        if (!self.IsAlive || sown <= 0 || ctx.Turn <= sown) return;
+        if (ctx.GrowInto(self, UnitCatalog.YoungMug) is not null) ctx.TallyOf(self).R379Grown++;   // 計数のみ
+    }
+}
+
 /// <summary>起こしの上限を外す（第378期・版 U）。<b>札そのものは挙動を持たない</b>——<see cref="RaiseDeadTrait"/> ／ <see cref="MugSproutTrait"/> が持ち主のこの札を読んで、1戦に3回の上限を数えない。</summary>
 public sealed class UncapRaiseTrait : Trait
 {
@@ -19221,6 +19279,10 @@ public static class TraitCatalog
         new RicaAwakenTrait(),                            // 第378期（目覚めの墓守 E）
         new VioFlurryTrait(TraitId.RicaLayerFlurry, 6, 9, scatter: true, byLayer: true),   // 第378期（層の連撃 L・層で段を決める）
         new UncapRaiseTrait(),                            // 第378期（起こしの上限を外す U・印だけ）
+        new MugSowTrait(TraitId.MugSow1, all: false, grow: false),   // 第379期（撒き1）
+        new MugSowTrait(TraitId.MugSowAll, all: true, grow: false),  // 第379期（撒き全）
+        new MugSowTrait(TraitId.MugSowGrow, all: false, grow: true), // 第379期（育つ）
+        new SporeGrowTrait(),                                        // 第379期（育つ胞子）
         new EruptTrait(),      // 第180期
         new SmearTrait(),      // 第180期
         new SpitTrait(),       // 第180期
