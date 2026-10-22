@@ -189,7 +189,7 @@ static class ParryDiag
         for (int i = 0; i < dst.Length && i < src.Length; i++) dst[i] += src[i];
     }
 
-    internal static string NameOf(string id) => UnitCatalog.All.First(d => d.Id == id).Name;
+    internal static string NameOf(string id) => UnitCatalog.Everyone.First(d => d.Id == id).Name;   // 第385期: ウケを退役させたので `Everyone` で引く（(G17)）
 
     /// <summary>量（または回数）の経路別の行。合計が 0 なら「—」で埋める。</summary>
     static string RouteCells(long[] v, bool asPercent)

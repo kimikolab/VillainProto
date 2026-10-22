@@ -56,7 +56,7 @@ static partial class Sh380Diag
     internal static UnitDef[] Healers => _heal ??= Boss283Diag.HealPool;
     internal static bool IsHealer(UnitDef d) => Healers.Any(h => h.Id == d.Id);
     /// <summary>2枠の候補: ロスターからリィカ ／ ヴェル ／ ムグとツギ ／ リリを除いた駒。</summary>
-    internal static UnitDef[] Cands => UnitCatalog.All.Where(d => !Fixed.Any(x => x.Id == d.Id) && d.Id is not "tsugi" and not "lili").ToArray();
+    internal static UnitDef[] Cands => AllH384().Where(   /* 第385期: ウケのいる第384期までの `All` に固定 */d => !Fixed.Any(x => x.Id == d.Id) && d.Id is not "tsugi" and not "lili").ToArray();
     /// <summary>本体の組（2枠ともヒーラーでない ＝ 台のヒーラーはヴェルの1枚）と、参考の組（2枠のどちらか1枚がヒーラー ＝ 台にヒーラー2枚）。</summary>
     internal static (UnitDef A, UnitDef B)[] Pairs(bool reference)
     {

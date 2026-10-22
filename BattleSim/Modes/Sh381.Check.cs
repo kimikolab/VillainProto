@@ -148,7 +148,7 @@ static partial class Sh381Diag
                 for (int w = 0; w < nw; w++) if (!double.TryParse(cells[w + 1].TrimEnd('%'), out v[w])) { ok = false; break; }
                 if (ok) doc[cells[0]] = v;
             }
-            var rows = CompareBuilds().Select(r => (r.Name, F: Pin381(r.F))).ToArray();
+            var rows = CompareBuildsH384().Select(r => (r.Name, F: Pin381(r.F))).ToArray();   // 第385期: エレの2行は第381期の `docs/balance.md` に無い
             var g = CGrid(rows);
             int mism = 0, miss = 0;
             for (int r = 0; r < rows.Length; r++)

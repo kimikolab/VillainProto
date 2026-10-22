@@ -59,7 +59,7 @@ static partial class Sh380Diag
             bool heal = Healers.Any(d => d.Id == "vel") && new[] { "shio", "sasa", "hibi", "beni", "hisa", "som" }.All(id => Healers.Any(d => d.Id == id));
             var main = Pairs(reference: false); var refr = Pairs(reference: true);
             bool noTL = main.Concat(refr).All(p => p.A.Id is not ("tsugi" or "lili") && p.B.Id is not ("tsugi" or "lili"))
-                && Cands.All(d => UnitCatalog.All.Contains(d) && d.Id is not ("rica" or "vel" or "mug"));
+                && Cands.All(d => AllH384().Contains(d) && d.Id is not ("rica" or "vel" or "mug"));   // 第385期: 第384期までの `All`
             bool mainH = main.All(p => !IsHealer(p.A) && !IsHealer(p.B));
             bool refH = refr.All(p => (IsHealer(p.A) ? 1 : 0) + (IsHealer(p.B) ? 1 : 0) == 1);
             bool perms = Perms.Length == 120 && Perms.Select(p => string.Join(",", p)).Distinct().Count() == 120;

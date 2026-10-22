@@ -7,7 +7,7 @@ static partial class Inv348Diag
 {
     /// <summary>ポンの一覧（指示書 §0・立ち絵の無い 16 枚）。</summary>
     internal static readonly string[] NoArt = { "ムグ", "ラウ", "グザ", "ヴィオ", "バン", "クビ", "ハギ", "セッキ", "ヒビ", "ガレ", "ノミ", "トモ", "ウケ", "ワタ", "ウロ", "カリ" };
-    internal static UnitDef ByShort(string n) => UnitCatalog.All.First(d => Short(d) == n);
+    internal static UnitDef ByShort(string n) => UnitCatalog.All.Concat(new[] { UnitCatalog.Uke }).First(d => Short(d) == n);   // 第385期: 退役したウケも引ける（過去の器具の台）
     const int CompareSeeds = 200, MapSeeds = 20;
 
     static (string Name, Formation F)[] AllRows() => CompareBuilds().Concat(CrossBuilds()).Select(r => (Name: r.Name, F: Pin349(r.F))).ToArray();   // 第350期: 燃焼の3枚は第349期までの規定に固定
@@ -266,7 +266,7 @@ static partial class Inv348Diag
         Console.WriteLine();
         foreach (var (res, _) in HookRes)
         {
-            var holders = UnitCatalog.All.Where(d => HookReads(d).Contains(res)).Select(d => noArtIds.Contains(d.Id) ? $"**{Short(d)}**" : Short(d));
+            var holders = AllH384().Where(d => HookReads(d).Contains(res)).Select(d => noArtIds.Contains(d.Id) ? $"**{Short(d)}**" : Short(d));
             Console.WriteLine($"- **{res}**: {string.Join("・", holders)}");
         }
         Console.WriteLine();

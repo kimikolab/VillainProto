@@ -326,7 +326,7 @@ static class Som320Diag
             var old12 = S309.Playtest308.Concat(new[] { S309.Shield, S309.ShieldHeavy, S312.Whip, S312.WhipHeavy }).ToArray();
             bool shape = pl.Length == 15 && pl.Take(12).Select(r => r.Name).SequenceEqual(old12) && pl.Skip(12).Select(r => r.Name).SequenceEqual(Added)
                 && pl.Skip(12).All(r => r.F.Shape == FormationShape.X && !r.F.HasRelics && r.F.Occupied().Count() == 5 && r.F.Occupied().All(o => o.Slot < 5 && UnitCatalog.All.Contains(o.Def)) && r.F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Som)))
-                && Presets.Compare.Length == 64 && Presets.Cross.Length == 12 && pl.Select(r => r.Name).Distinct().Count() == pl.Length && pl.All(r => !Presets.Compare.Any(c => c.Name == r.Name));
+                && CompareBuildsH384().Length == 64 && Presets.Cross.Length == 12 && pl.Select(r => r.Name).Distinct().Count() == pl.Length && pl.All(r => !Presets.Compare.Any(c => c.Name == r.Name));
             var demoRows = Presets.Compare.Concat(Presets.Cross).Concat(Presets.Playtest).ToArray();
             bool demo = Added.All(n => demoRows.First(r => r.Name.Contains(n, StringComparison.Ordinal)).Name == n);
             Expect("(c) 試遊の台: `Presets.Playtest` の既存12行は名前も並びもそのまま・末尾に3行（打ち返し ／ 追い打ち ／ 瓦礫）・規定の駒だけ・`compare` 64 行 ／ 交差帯 12 行のまま・DemoApp の `--demo-preset=` の部分一致で自分に当たる",

@@ -544,7 +544,7 @@ static class Som309Diag
         {
             var pl = PlaytestH316.Take(10).ToArray();   // 第312期: 試遊の末尾に2行（光の盾 鞭）を足した——第311期までの10行で見る
             bool shape = pl.Length == 10 && pl.Take(8).Select(r => r.Name).SequenceEqual(Playtest308) && pl.Skip(8).Select(r => r.Name).SequenceEqual(new[] { Shield, ShieldHeavy })
-                && Presets.Compare.Length == 64 && CompareBuildsH311().Count() == 64 && Presets.Cross.Length == 12
+                && CompareBuildsH384().Length == 64 && CompareBuildsH311().Count() == 64   /* 第385期: エレの2行の無い 64 行 */ && Presets.Cross.Length == 12
                 && pl.All(r => !Presets.Compare.Any(c => c.Name == r.Name) && r.F.Occupied().Count() == 5 && r.F.Occupied().All(o => UnitCatalog.All.Select(PinDS316).Contains(o.Def)))
                 && pl.Skip(8).All(r => r.F.Shape == FormationShape.X && !r.F.HasRelics && r.F.Occupied().Any(o => IsSomNow(o.Def)) && r.F.Occupied().All(o => o.Slot < 5));
             var picks = PickPairs.Select(pp => (pp.Name, Top: S307.OrderName(Rank(pp.Pair)[0].Order))).ToList();

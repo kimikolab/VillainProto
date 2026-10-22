@@ -122,7 +122,7 @@ static partial class Inv348Diag
             var borgNo = Without(UnitCatalog.BorgH349, TraitId.FireArmor);
             Expect("札を外す: 規定の札の配列から1枚だけ抜く（並びと数値は同じ）", borgNo.Traits.Count == UnitCatalog.BorgH349.Traits.Count - 1 && borgNo.MaxHp == UnitCatalog.BorgH349.MaxHp
                 && borgNo.Traits.SequenceEqual(UnitCatalog.BorgH349.Traits.Where(t => t != TraitId.FireArmor)), $"{UnitCatalog.BorgH349.Traits.Count} → {borgNo.Traits.Count}");
-            Expect("16 枚がすべて `UnitCatalog.All` にいる", NoArt.All(nm => UnitCatalog.All.Any(d => Short(d) == nm)), string.Join("・", NoArt));
+            Expect("16 枚がすべて `UnitCatalog.All` にいる", NoArt.All(nm => AllH384().Any(d => Short(d) == nm))   /* 第385期: ウケのいる第384期までの `All` */, string.Join("・", NoArt));
         }
         // ---- PickOne ----
         {

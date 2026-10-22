@@ -96,10 +96,11 @@ static partial class Sh383Diag
             Expect("D1n は第382期と同じ動き（`sh382 cmp` の D1n の列 4 台 × ボス ／ 近衛 ／ 大隊 ／ 本編 第5波 ／ 強い条件の勝率が一致）", bad == 0, bad == 0 ? "20 セル・ずれ 0" : string.Join("・", notes));
         }
         {
-            var vr = Presets.Versions.Select(r => r.Name).ToArray();
-            var bard = Presets.Versions.FirstOrDefault(r => r.Name == "版・楽士 死").F;
+            // 第385期: 「版・楽士」の台は「試遊・… エレ」に改名した——第384期の名前と版の楽士に戻して見る（`VersionsH384`）
+            var vr = VersionsH384().Select(r => r.Name).ToArray();
+            var bard = VersionsH384().FirstOrDefault(r => r.Name == "版・楽士 死").F;
             bool ok = bard is not null && bard.Occupied().Select(o => o.Def.Id).SequenceEqual(Presets.DeathBard382(d2).Occupied().Select(o => o.Def.Id))   /* 第384期: 楽士は G1 に替わった——並び（Id）だけを見る */
-                && vr.Count(n => n.StartsWith("版・")) >= 1 && !Presets.Versions.Any(r => r.F.Occupied().Any(o => o.Def.Id == S382.Plain.Id || ReferenceEquals(o.Def, UnitCatalog.Bard382n)));
+                && vr.Count(n => n.StartsWith("版・")) >= 1 && !VersionsH384().Any(r => r.F.Occupied().Any(o => o.Def.Id == S382.Plain.Id || ReferenceEquals(o.Def, UnitCatalog.Bard382n)));
             Expect("試遊の台: 「版・楽士 死」は D2（並びは第382期のまま）・D1n の台は足さない・素体の替え ／ 並びの探索 ／ 死の外の替えた台は器具の中だけ", ok, string.Join("、", vr.Skip(11)));
         }
         {

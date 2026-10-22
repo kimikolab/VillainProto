@@ -156,7 +156,9 @@ $Cmds = @(
     # 第383期に足した（この期の器具）
     "sh383 check",
     # 第384期に足した（この期の器具）
-    "sh384 check"
+    "sh384 check",
+    # 第385期に足した（この期の器具）
+    "sh385 check"
 )
 # ソースの行番号などを出す（差は「ずれ」と数えない）
 $Volatile = @("derive check")
@@ -171,7 +173,7 @@ foreach ($f in $srcFiles) { $srcText[$f.FullName] = [System.IO.File]::ReadAllTex
 function FilesOfClass([string]$cls) {
     $srcText.Keys | Where-Object { $srcText[$_] -match "class\s+$cls\b" }
 }
-$unitNames = @{ tou = "Tou"; kata = "Kata"; kugu = "Kugu"; som = "Som"; shiga = "Shiga"; hisa = "Hisa"; doha = "Doha"; beni = "Beni"; tome = "Tome"; zan = "Zan"; golm = "Golm"; borg = "Borg"; hota = "Hota"; hiyo = "Hiyo"; wata = "Wata"; uke = "Uke"; utsu = "Utsu"; nel = "Nel"; hibi = "Hibi"; gare = "Gare"; tsugi = "Tsugi"; sasa = "Sasa"; kado = "Kado"; susu = "Susu"; guza = "Guza"; vio = "Vio"; sid = "Sid"; rica = "Rica"; zoto = "Zoto"; mug = "Mug"; vel = "Vel" }   # 第377期: 死の4枚（rica ／ zoto ／ mug ／ vel）を足した・第368期: sid を足した・第367期: guza ／ vio を足した・第363期: susu（アカ）を足した・第362期: kado を足した・第335期: golm を足した・第349期: 燃焼の3枚を足した・第351期: デバフの4枚を足した・第358期: 破片の3枚を足した
+$unitNames = @{ tou = "Tou"; kata = "Kata"; kugu = "Kugu"; som = "Som"; shiga = "Shiga"; hisa = "Hisa"; doha = "Doha"; beni = "Beni"; tome = "Tome"; zan = "Zan"; golm = "Golm"; borg = "Borg"; hota = "Hota"; hiyo = "Hiyo"; wata = "Wata"; uke = "Uke"; utsu = "Utsu"; nel = "Nel"; hibi = "Hibi"; gare = "Gare"; tsugi = "Tsugi"; sasa = "Sasa"; kado = "Kado"; susu = "Susu"; guza = "Guza"; vio = "Vio"; sid = "Sid"; rica = "Rica"; zoto = "Zoto"; mug = "Mug"; vel = "Vel"; ere = "Ere" }   # 第385期: ere（哀歌のエレ）を足した・第377期: 死の4枚（rica ／ zoto ／ mug ／ vel）を足した・第368期: sid を足した・第367期: guza ／ vio を足した・第363期: susu（アカ）を足した・第362期: kado を足した・第335期: golm を足した・第349期: 燃焼の3枚を足した・第351期: デバフの4枚を足した・第358期: 破片の3枚を足した
 function UnitsOfMode([string]$mode) {
     $m = [regex]::Match($prog, 'focusId == "' + [regex]::Escape($mode) + '"\)[^;]*?(\w+Diag)\.Run', 'Singleline')
     if (-not $m.Success) { return @("?") }

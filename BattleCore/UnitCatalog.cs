@@ -742,6 +742,17 @@ public static class UnitCatalog
         Id = Bard382.Id, Name = Bard382.Name, MaxHp = Bard382.MaxHp, Attack = Bard382.Attack, Speed = Bard382.Speed, Advances = false,
         Traits = new[] { TraitId.DirgeSoundG2, TraitId.DirgeEchoAlways }, Actions = BardActions, PlusText = BardSoundPlus384, MinusText = Bard383.MinusText, Flavor = Bard382.Flavor,
     };
+    /// <summary>
+    /// 哀歌のエレ（第385期にロスターへ・ウケの籍）。第384期の楽士 G1（<see cref="Bard384G1"/>）をそのまま駒にした: 哀歌の音（傷 1 ＝ 1・倒れるたび +20・閾値 50・上限 100）＋ 哀歌は敵の耳にも届く。
+    /// 版の楽士（`bard382` の各版）とは別の `Id`（`ere`）。キャラ像は西洋中世の吟遊詩人。
+    /// </summary>
+    public static readonly UnitDef Ere = new()
+    {
+        Id = "ere", Name = "哀歌のエレ", MaxHp = Bard384G1.MaxHp, Attack = Bard384G1.Attack, Speed = Bard384G1.Speed, Advances = false,
+        Traits = Bard384G1.Traits.ToArray(), Actions = new UnitAction[] { new(ActionKind.Skill, Label: "哀歌を奏でた") },
+        PlusText = Bard384G1.PlusText, MinusText = Bard384G1.MinusText,
+        Flavor = "葬列の後ろでしか歌わせてもらえない。祝いの席には、二度と呼ばれなかった。",
+    };
     /// <summary>弔いの楽士 D1n（第382期・マイナスの重さを測る対照）: 哀歌だけ。</summary>
     public static readonly UnitDef Bard382n = new()
     {
@@ -6801,7 +6812,7 @@ public static class UnitCatalog
     /// </summary>
     public static IReadOnlyList<UnitDef> All { get; } = new[]
     {
-        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Lili, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Tsugi, Shiga, Zan, Susu, Gare, Nomi, Kata, Tomo, Hane, Uke, Wata, Uro, Sora, Kari, Tome, Hiyo, Som
+        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Lili, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Tsugi, Shiga, Zan, Susu, Gare, Nomi, Kata, Tomo, Hane, Ere, Wata, Uro, Sora, Kari, Tome, Hiyo, Som
     };
 
     /// <summary>
@@ -6830,7 +6841,7 @@ public static class UnitCatalog
     /// <para><b>棄却して定義だけ残した素材（オゴ・ゴウ・ヌキ・オノ）はここに入れない</b>——
     /// あれらは一度も `All` に居なかった。ここは「居たが外した」駒の記録である。</para>
     /// </summary>
-    public static IReadOnlyList<UnitDef> Retired { get; } = new[] { Hari, Egu, Kiri, Nata };
+    public static IReadOnlyList<UnitDef> Retired { get; } = new[] { Hari, Egu, Kiri, Nata, Uke };   // 第385期: ウケを退役（籍は哀歌のエレへ）
 
     /// <summary>
     /// <b><c>All ∪ Retired</c>（第141期）。辞書のキーや <c>Id</c> の引きに使う集合。</b>

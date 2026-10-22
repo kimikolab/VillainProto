@@ -758,7 +758,11 @@ public static class Presets
         // 1〜3位（73.6 ／ 73.5 ／ 73.2）は狙で落ちた（ヒサがガルドの隣にいない）。**規定のトメ（T0）のまま入れてある**——席は T1 で選んだ。経緯は design/PHASE281_TOME_REBIRTH.md。
         ("標経済 (ヒサ×ザン×ミサ)", Formation.Build(front1: UnitCatalog.Tome, front3: UnitCatalog.Gald,
                                               center: UnitCatalog.Zan, back1: UnitCatalog.Gan,
-                                              back3: UnitCatalog.Hisa))
+                                              back3: UnitCatalog.Hisa)),
+
+        // 第385期: 哀歌のエレ（ウケの籍）の2行。主判定19行には入れない。並びは第384期の「版・楽士 外 ／ 死」（`sh384 outside` ／ 第382期の `sh382 cmp` で選んだ席）。
+        ("燃焼×哀歌 (ボルグ×ホタ×エレ)", BurnBard384(UnitCatalog.Ere)),
+        ("死軸×哀歌 (リィカ×スィド×エレ)", DeathBard382(UnitCatalog.Ere)),
     };
 
     // 第92期の交差帯。**`CompareBuilds()` とは完全に別の入口**で、生成物も `docs/crossing.md` と分けてある
@@ -983,8 +987,9 @@ public static class Presets
         ("試遊・死 ソム", DeathSom379()),
         ("試遊・死 探索1位", DeathSeek380()),
         // 第382期: 魂を分けるヴェル（S2）を規定にした。「版・S2 死 探索1位」（規定と同じ）と「版・S10 死 探索1位」（S10 は見送り）は外した（並びは `DeathSeek380(vel)`）。
-        ("版・楽士 死", DeathBard382(UnitCatalog.Bard384G1)),   // 第384期: 楽士を G1（哀歌の音・傷寄り）に替えた（並びは第382期のまま・死の台では G1 と G2 が同じ結果）
-        ("版・楽士 外", BurnBard384()),   // 第384期: 死の外で楽士が元の台にいちばん近い ／ 上がった台（試遊・燃焼 ポンの台のガルドの席に G1）   // 第382期: 弔いの楽士 D1 を試遊で触る台（`sh382 cmp` で D1 がいちばん良かった台）
+        // 第385期: 楽士 G1 を「哀歌のエレ」としてロスターに入れたので「版・」を外した（並びは第382 ／ 384期のまま）。
+        ("試遊・死 エレ", DeathBard382(UnitCatalog.Ere)),
+        ("試遊・燃焼 エレ", BurnBard384(UnitCatalog.Ere)),   // 第382期: 弔いの楽士 D1 を試遊で触る台（`sh382 cmp` で D1 がいちばん良かった台）
         // 第380期: 撒き全をムグの規定にした。「版・撒き全 死の連鎖」（規定と同じになる）と「版・育つ 死の連鎖」（育つは見送り）は外した（並びは `sh379` の中で組む）。
     };
 

@@ -118,14 +118,15 @@ static partial class Sh384Diag
             Expect("D2 は第383期と同じ動き（`sh383 dead` の D2 の列 4 台 × ボス ／ 近衛 ／ 大隊 ／ 本編 第5波 ／ 強い条件の勝率が一致）", bad == 0, bad == 0 ? "20 セル・ずれ 0" : string.Join("・", notes));
         }
         {
-            var vr = Presets.Versions.Select(r => r.Name).ToArray();
-            var dead = Presets.Versions.FirstOrDefault(r => r.Name == "版・楽士 死").F;
-            var outs = Presets.Versions.FirstOrDefault(r => r.Name == "版・楽士 外").F;
+            // 第385期: 「版・楽士」の台は「試遊・… エレ」に改名した——第384期の名前と版の楽士に戻して見る（`VersionsH384`）
+            var vr = VersionsH384().Select(r => r.Name).ToArray();
+            var dead = VersionsH384().FirstOrDefault(r => r.Name == "版・楽士 死").F;
+            var outs = VersionsH384().FirstOrDefault(r => r.Name == "版・楽士 外").F;
             bool deadOk = dead is not null && dead.Occupied().Select(o => o.Def.Id).SequenceEqual(Presets.DeathBard382().Occupied().Select(o => o.Def.Id))
                 && dead.Occupied().Any(o => ReferenceEquals(o.Def, g1) || ReferenceEquals(o.Def, g2));
             bool outOk = outs is not null && outs.Occupied().Count(o => o.Def.Id == g1.Id) == 1 && outs.Occupied().Where(o => o.Def.Id != g1.Id).All(o => UnitCatalog.All.Contains(o.Def))
                 && outs.Occupied().Any(o => ReferenceEquals(o.Def, g1) || ReferenceEquals(o.Def, g2) || ReferenceEquals(o.Def, UnitCatalog.Bard383));
-            bool only = vr.Count(n => n.StartsWith("版・")) == 2 && !Presets.Versions.Any(r => r.F.Occupied().Any(o => o.Def.Id == S382.Plain.Id));
+            bool only = vr.Count(n => n.StartsWith("版・")) == 2 && !VersionsH384().Any(r => r.F.Occupied().Any(o => o.Def.Id == S382.Plain.Id));
             Expect("試遊の台: 「版・楽士 死」は G1 ／ G2 のよかった方（並びは第382期のまま）・「版・楽士 外」（規定の駒 ＋ 楽士）を足した・素体の替え ／ 並びの探索 ／ 死の外の替えた台はほかに出ない", deadOk && outOk && only, string.Join("、", vr.Skip(11)));
         }
         {

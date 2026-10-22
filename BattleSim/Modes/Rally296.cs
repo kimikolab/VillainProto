@@ -201,7 +201,7 @@ static class Rally296Diag
         var compareNames = Presets.Compare.Select(r => r.Name).ToHashSet();
         Expect("(e) 試遊の行は8行（第291期の5行 ＋ 3行・既存の5行は名前も並びもそのまま）・`Compare` ／ `Cross` に入っていない・駒はすべて規定（`All`）・5枠",
             pl.Length == 8 && pl.Take(5).Select(r => r.Name).SequenceEqual(new[] { "試遊・感電 火の型", "試遊・感電 雷の型", "試遊・感電 糸", "試遊・標 ボス台", "試遊・標 道中" })
-            && pl.Skip(5).Select(r => r.Name).SequenceEqual(NewRows) && Presets.Compare.Length == 64 && Presets.Cross.Length == 12
+            && pl.Skip(5).Select(r => r.Name).SequenceEqual(NewRows) && CompareBuildsH384().Length == 64 && Presets.Cross.Length == 12
             && pl.All(r => !compareNames.Contains(r.Name) && !Presets.Cross.Any(c => c.Name == r.Name))
             && pl.All(r => r.F.Occupied().Count() == 5 && r.F.Occupied().All(o => UnitCatalog.All.Contains(o.Def))));
         Formation RowRaw(string n) => FvSwap(pl.First(r => r.Name == n).F, UnitCatalog.Doha, UnitCatalog.DohaD0);   // 第298期: ドハは旧に固定

@@ -295,7 +295,7 @@ static class Som312Diag
                 && pl.Skip(10).Select(r => r.Name).SequenceEqual(new[] { Whip, WhipHeavy })
                 && SameBut(shield, Playtest(Whip)) && SameBut(heavy, Playtest(WhipHeavy)) && Playtest(Whip).Occupied().Count() == 5 && Playtest(WhipHeavy).Occupied().Count() == 5
                 && pl.Skip(10).All(r => r.F.Shape == FormationShape.X && !r.F.HasRelics && r.F.Occupied().All(o => o.Slot < 5 && UnitCatalog.All.Select(PinDS316).Contains(o.Def)) && !r.F.Occupied().Any(o => o.Def.Id == "kubi"))
-                && Presets.Compare.Length == 64 && CompareBuildsH316().Count() == 64 && Presets.Cross.Length == 12 && pl.All(r => !Presets.Compare.Any(c => c.Name == r.Name));
+                && CompareBuildsH384().Length == 64 && CompareBuildsH316().Count() == 64 && Presets.Cross.Length == 12 && pl.All(r => !Presets.Compare.Any(c => c.Name == r.Name));
             Expect("(d) 試遊の2台（光の盾 ／ 重 の クビ → シガ・同じ席）が `Presets.Playtest` の末尾・`compare` は 64 行のまま", ok, $"試遊 {pl.Length} 行・末尾 {string.Join(" ／ ", pl.Skip(10).Select(r => Seats(r.F)))}");
         }
         // (e) 決定的・verbose の有無で勝敗と決着T が同じ

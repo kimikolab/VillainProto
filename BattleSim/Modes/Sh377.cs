@@ -528,7 +528,7 @@ static partial class Sh377Diag
     /// <summary>寄せ集めの台 50（リィカ ＋ 死の札を持たない4枚・席もランダム）。台を作る乱数は器具の中で固定（`new Random(377)`・盤面の乱数とは別）。</summary>
     internal static Formation[] MixBoardsOf(UnitDef rica)
     {
-        var pool = UnitCatalog.All.Where(d => !DeathIds.Contains(d.Id)).ToArray();
+        var pool = AllH384().Where(d => !DeathIds.Contains(d.Id)).ToArray();   // 第385期: ウケのいる第384期までの `All` に固定（エレの籍の入れ替えで台が変わらないように）
         var rng = new Random(MixSeed);
         var res = new Formation[MixBoards];
         for (int i = 0; i < MixBoards; i++)

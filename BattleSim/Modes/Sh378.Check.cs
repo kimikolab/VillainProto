@@ -171,7 +171,7 @@ static partial class Sh378Diag
         {
             var bal = S377.BalanceH378();   // 第379期: 第378期の `docs/balance.md`（規定のリィカが変わる前）と、第378期までの規定のリィカで比べる
             int rows = 0, bad = 0;
-            foreach (var (name, f) in CompareBuilds().Select(r => (r.Name, F: Pin378(r.F))).Where(r => S377.HasRica(r.F) || S377.HasMug(r.F)))
+            foreach (var (name, f) in CompareBuildsH384().Select(r => (r.Name, F: Pin378(r.F)))   /* 第385期: エレの2行の無い 64 行 */.Where(r => S377.HasRica(r.F) || S377.HasMug(r.F)))
             {
                 rows++;
                 for (int wi = 0; wi < EnemyCatalog.Stages.Count; wi++)

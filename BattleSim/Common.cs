@@ -392,7 +392,7 @@ public static Formation Pin327(Formation f)
 }
 
 /// <summary>第328期: `CompareBuilds()` のトウ ／ クグを第327期の規定に替えた写し。</summary>
-public static (string Name, Formation F)[] CompareBuildsH327() => CompareBuilds().Select(r => (r.Name, Pin327(r.F))).ToArray();
+public static (string Name, Formation F)[] CompareBuildsH327() => CompareBuildsH384().Select(r => (r.Name, Pin327(r.F))).ToArray();
 
 /// <summary>第328期: `Presets.Playtest` のトウ ／ クグを第327期の規定に替えた写し（行の数と並びはそのまま）。</summary>
 public static (string Name, Formation F)[] PlaytestH327 => Presets.Playtest.Select(r => (r.Name, Pin327(r.F))).ToArray();
@@ -413,7 +413,7 @@ public static Formation Pin328(Formation f)
 }
 
 /// <summary>第330期: `CompareBuilds()` のトウを第328〜329期の規定に替えた写し。</summary>
-public static (string Name, Formation F)[] CompareBuildsH328() => CompareBuilds().Select(r => (r.Name, Pin328(r.F))).ToArray();
+public static (string Name, Formation F)[] CompareBuildsH328() => CompareBuildsH384().Select(r => (r.Name, Pin328(r.F))).ToArray();
 
 /// <summary>第330期: `Presets.Playtest` のトウを第328〜329期の規定に替えた写し（行の数と並びはそのまま）。</summary>
 public static (string Name, Formation F)[] PlaytestH328 => Presets.Playtest.Select(r => (r.Name, Pin328(r.F))).ToArray();
@@ -433,7 +433,7 @@ public static Formation Pin331(Formation f)
 }
 
 /// <summary>第332期: `CompareBuilds()` のトウ ／ カタを第330〜331期の規定に替えた写し。</summary>
-public static (string Name, Formation F)[] CompareBuildsH331() => CompareBuilds().Select(r => (r.Name, Pin331(r.F))).ToArray();
+public static (string Name, Formation F)[] CompareBuildsH331() => CompareBuildsH384().Select(r => (r.Name, Pin331(r.F))).ToArray();
 
 /// <summary>第332期: `Presets.Playtest` のトウ ／ カタを第330〜331期の規定に替えた写し（行の数と並びはそのまま）。</summary>
 public static (string Name, Formation F)[] PlaytestH331 => Presets.Playtest.Select(r => (r.Name, Pin331(r.F))).ToArray();
@@ -453,7 +453,7 @@ public static Formation Pin332(Formation f)
 }
 
 /// <summary>第333期: `CompareBuilds()` のソムを第320〜332期の規定に替えた写し。</summary>
-public static (string Name, Formation F)[] CompareBuildsH332() => CompareBuilds().Select(r => (r.Name, Pin332(r.F))).ToArray();
+public static (string Name, Formation F)[] CompareBuildsH332() => CompareBuildsH384().Select(r => (r.Name, Pin332(r.F))).ToArray();
 
 /// <summary>第333期: `Presets.Playtest` のソムを第320〜332期の規定に替えた写し（行の数と並びはそのまま）。</summary>
 public static (string Name, Formation F)[] PlaytestH332 => Presets.Playtest.Select(r => (r.Name, Pin332(r.F))).ToArray();
@@ -498,7 +498,7 @@ public static Formation Pin337(Formation f)
 }
 
 /// <summary>第338期: `CompareBuilds()` のヒサを第322〜337期の規定に替えた写し。</summary>
-public static (string Name, Formation F)[] CompareBuildsH337() => CompareBuilds().Select(r => (r.Name, Pin337(r.F))).ToArray();
+public static (string Name, Formation F)[] CompareBuildsH337() => CompareBuildsH384().Select(r => (r.Name, Pin337(r.F))).ToArray();
 
 /// <summary>第338期: `Presets.Playtest` のヒサを第322〜337期の規定に替えた写し（行の数と並びはそのまま）。</summary>
 public static (string Name, Formation F)[] PlaytestH337 => Presets.Playtest.Select(r => (r.Name, Pin337(r.F))).ToArray();
@@ -519,7 +519,7 @@ public static Formation Pin339(Formation f)
 }
 
 /// <summary>第340期: `CompareBuilds()` のミサを第334〜339期の規定に替えた写し。</summary>
-public static (string Name, Formation F)[] CompareBuildsH339() => CompareBuilds().Select(r => (r.Name, Pin339(r.F))).ToArray();
+public static (string Name, Formation F)[] CompareBuildsH339() => CompareBuildsH384().Select(r => (r.Name, Pin339(r.F))).ToArray();
 
 /// <summary>第340期: `Presets.Playtest` のミサを第334〜339期の規定に替えた写し（行の数と並びはそのまま）。</summary>
 public static (string Name, Formation F)[] PlaytestH339 => Presets.Playtest.Select(r => (r.Name, Pin339(r.F))).ToArray();
@@ -542,7 +542,7 @@ public static Formation Pin342(Formation f)
 }
 
 /// <summary>第343期: `CompareBuilds()` のカタを第332〜342期の規定に替えた写し。</summary>
-public static (string Name, Formation F)[] CompareBuildsH342() => CompareBuilds().Select(r => (r.Name, Pin342(r.F))).ToArray();
+public static (string Name, Formation F)[] CompareBuildsH342() => CompareBuildsH384().Select(r => (r.Name, Pin342(r.F))).ToArray();
 
 /// <summary>第343期: `Presets.Playtest` のカタを第332〜342期の規定に替えた写し（行の数と並びはそのまま）。</summary>
 public static (string Name, Formation F)[] PlaytestH342 => Presets.Playtest.Select(r => (r.Name, Pin342(r.F))).ToArray();
@@ -571,7 +571,7 @@ public static Formation Pin345(Formation f)
 }
 
 /// <summary>第346期: `CompareBuilds()` のゴルムを第345期の規定に替えた写し。</summary>
-public static (string Name, Formation F)[] CompareBuildsH345() => CompareBuilds().Select(r => (r.Name, Pin345(r.F))).ToArray();
+public static (string Name, Formation F)[] CompareBuildsH345() => CompareBuildsH384().Select(r => (r.Name, Pin345(r.F))).ToArray();
 
 /// <summary>第346期: `Presets.Playtest` のゴルムを第345期の規定に替えた写し（行の数と並びはそのまま）。</summary>
 public static (string Name, Formation F)[] PlaytestH345 => Presets.Playtest.Select(r => (r.Name, Pin345(r.F))).ToArray();
@@ -585,7 +585,7 @@ public static Formation Pin344(Formation f)
 }
 
 /// <summary>第345期: `CompareBuilds()` のゴルムを第1〜344期の規定に替えた写し。</summary>
-public static (string Name, Formation F)[] CompareBuildsH344() => CompareBuilds().Select(r => (r.Name, Pin344(r.F))).ToArray();
+public static (string Name, Formation F)[] CompareBuildsH344() => CompareBuildsH384().Select(r => (r.Name, Pin344(r.F))).ToArray();
 
 /// <summary>第345期: `Presets.Playtest` のゴルムを第1〜344期の規定に替えた写し（行の数と並びはそのまま）。</summary>
 public static (string Name, Formation F)[] PlaytestH344 => Presets.Playtest.Select(r => (r.Name, Pin344(r.F))).ToArray();
@@ -698,6 +698,14 @@ public static UnitDef PinR378(UnitDef d) => ReferenceEquals(d, UnitCatalog.Rica)
 /// <summary>第380期: 規定のムグ（撒き全）を第1〜379期の規定（`MugH379`）に替える。ほかの駒はそのまま返す。古い口の終端（`PinR378`）の後ろに置いた。</summary>
 public static UnitDef PinM379(UnitDef d) => ReferenceEquals(d, UnitCatalog.Mug) ? UnitCatalog.MugH379 : PinV381(d);
 /// <summary>第382期: 魂を分けるヴェル（第381期の S2）を規定にしたので、第381期までの器具はヴェルを旧（`VelH381`）に固定する。`PinM379` の後ろ（古い口の終端からも通る）。</summary>
+/// <summary>第385期: 楽士 G1 を哀歌のエレ（`ere`・ウケの籍）にした。過去の器具はエレを第384期の版の楽士（`Bard384G1`）に、`All` はウケのいる第384期の並びに、`compare` は 64 行に固定する。</summary>
+public static UnitDef PinE385(UnitDef d) => ReferenceEquals(d, UnitCatalog.Ere) ? UnitCatalog.Bard384G1 : d;
+public static Formation Pin385(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinE385(d); return g; }
+public static UnitDef[] AllH384() => UnitCatalog.All.Select(d => ReferenceEquals(d, UnitCatalog.Ere) ? UnitCatalog.Uke : d).ToArray();
+public static readonly string[] CompareRows385 = { "燃焼×哀歌 (ボルグ×ホタ×エレ)", "死軸×哀歌 (リィカ×スィド×エレ)" };
+public static (string Name, Formation F)[] CompareBuildsH384() => CompareBuilds().Where(r => !CompareRows385.Contains(r.Name)).ToArray();
+/// <summary>第385期: 「試遊・死 エレ ／ 試遊・燃焼 エレ」を第384期の名前（「版・楽士 死 ／ 外」）と版の楽士（`Bard384G1`）に戻した写し（第382〜384期の器具の試遊の台の項目）。</summary>
+public static (string Name, Formation F)[] VersionsH384() => Presets.Versions.Select(r => (r.Name switch { "試遊・死 エレ" => "版・楽士 死", "試遊・燃焼 エレ" => "版・楽士 外", _ => r.Name }, Pin385(r.F))).ToArray();
 public static UnitDef PinV381(UnitDef d) => ReferenceEquals(d, UnitCatalog.Vel) ? UnitCatalog.VelH381 : d;
 public static Formation Pin381(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinV381(d); return g; }
 
@@ -846,7 +854,7 @@ public static Formation Pin335(Formation f)
 }
 
 /// <summary>第336期: `CompareBuilds()` のドハを第317〜335期の規定に替えた写し。</summary>
-public static (string Name, Formation F)[] CompareBuildsH335() => CompareBuilds().Select(r => (r.Name, Pin335(r.F))).ToArray();
+public static (string Name, Formation F)[] CompareBuildsH335() => CompareBuildsH384().Select(r => (r.Name, Pin335(r.F))).ToArray();
 
 /// <summary>第336期: `Presets.Playtest` のドハを第317〜335期の規定に替えた写し（行の数と並びはそのまま）。</summary>
 public static (string Name, Formation F)[] PlaytestH335 => Presets.Playtest.Select(r => (r.Name, Pin335(r.F))).ToArray();
@@ -863,7 +871,7 @@ public static Formation Pin334(Formation f)
 }
 
 /// <summary>第335期: `CompareBuilds()` のザンを第301〜334期の規定に替えた写し。</summary>
-public static (string Name, Formation F)[] CompareBuildsH334() => CompareBuilds().Select(r => (r.Name, Pin334(r.F))).ToArray();
+public static (string Name, Formation F)[] CompareBuildsH334() => CompareBuildsH384().Select(r => (r.Name, Pin334(r.F))).ToArray();
 
 /// <summary>第335期: `Presets.Playtest` のザンを第301〜334期の規定に替えた写し（行の数と並びはそのまま）。</summary>
 public static (string Name, Formation F)[] PlaytestH334 => Presets.Playtest.Select(r => (r.Name, Pin334(r.F))).ToArray();
@@ -880,7 +888,7 @@ public static Formation Pin333(Formation f)
 }
 
 /// <summary>第334期: `CompareBuilds()` のミサを第299〜333期の規定に替えた写し。</summary>
-public static (string Name, Formation F)[] CompareBuildsH333() => CompareBuilds().Select(r => (r.Name, Pin333(r.F))).ToArray();
+public static (string Name, Formation F)[] CompareBuildsH333() => CompareBuildsH384().Select(r => (r.Name, Pin333(r.F))).ToArray();
 
 /// <summary>第334期: `Presets.Playtest` のミサを第299〜333期の規定に替えた写し（行の数と並びはそのまま）。</summary>
 public static (string Name, Formation F)[] PlaytestH333 => Presets.Playtest.Select(r => (r.Name, Pin333(r.F))).ToArray();
@@ -894,19 +902,19 @@ public static Formation Pin326(Formation f)
 }
 
 /// <summary>第327期: `CompareBuilds()` のトウを第326期の規定に替えた写し。</summary>
-public static (string Name, Formation F)[] CompareBuildsH326() => CompareBuilds().Select(r => (r.Name, Pin326(r.F))).ToArray();
+public static (string Name, Formation F)[] CompareBuildsH326() => CompareBuildsH384().Select(r => (r.Name, Pin326(r.F))).ToArray();
 
 /// <summary>第327期: `Presets.Playtest` のトウを第326期の規定に替えた写し（行の数と並びはそのまま）。</summary>
 public static (string Name, Formation F)[] PlaytestH326 => Presets.Playtest.Select(r => (r.Name, Pin326(r.F))).ToArray();
 
 /// <summary>第326期: `CompareBuilds()` のシガを第325期の規定に替えた写し。</summary>
-public static (string Name, Formation F)[] CompareBuildsH325() => CompareBuilds().Select(r => (r.Name, Pin325(r.F))).ToArray();
+public static (string Name, Formation F)[] CompareBuildsH325() => CompareBuildsH384().Select(r => (r.Name, Pin325(r.F))).ToArray();
 
 /// <summary>第326期: `Presets.Playtest` のシガを第325期の規定に替えた写し（行の数と並びはそのまま）。</summary>
 public static (string Name, Formation F)[] PlaytestH325 => Presets.Playtest.Select(r => (r.Name, Pin325(r.F))).ToArray();
 
 /// <summary>第325期: `CompareBuilds()` のトウ ／ カタ ／ クグを第324期の規定に替えた写し。</summary>
-public static (string Name, Formation F)[] CompareBuildsH324() => CompareBuilds().Select(r => (r.Name, Pin324(r.F))).ToArray();
+public static (string Name, Formation F)[] CompareBuildsH324() => CompareBuildsH384().Select(r => (r.Name, Pin324(r.F))).ToArray();
 
 /// <summary>第325期: `Presets.Playtest` のトウ ／ カタ ／ クグを第324期の規定に替えた写し（行の数と並びはそのまま）。</summary>
 public static (string Name, Formation F)[] PlaytestH324 => Presets.Playtest.Select(r => (r.Name, Pin324(r.F))).ToArray();
@@ -920,7 +928,7 @@ public static Formation Pin321(Formation f)
 }
 
 /// <summary>第322期: `CompareBuilds()` のシガ ／ ヒサを第321期の規定に替えた写し。</summary>
-public static (string Name, Formation F)[] CompareBuildsH321() => CompareBuilds().Select(r => (r.Name, Pin321(r.F))).ToArray();
+public static (string Name, Formation F)[] CompareBuildsH321() => CompareBuildsH384().Select(r => (r.Name, Pin321(r.F))).ToArray();
 
 /// <summary>第322期: `Presets.Playtest` のシガ ／ ヒサを第321期の規定に替えた写し（行の数と並びはそのまま）。</summary>
 public static (string Name, Formation F)[] PlaytestH321 => Presets.Playtest.Select(r => (r.Name, Pin321(r.F))).ToArray();
@@ -938,7 +946,7 @@ public static Formation Pin319(Formation f)
 }
 
 /// <summary>第320期: `CompareBuilds()` のソムを第319期の規定に替えた写し（`som319` が使う）。</summary>
-public static (string Name, Formation F)[] CompareBuildsH319() => CompareBuilds().Select(r => (r.Name, Pin319(r.F))).ToArray();
+public static (string Name, Formation F)[] CompareBuildsH319() => CompareBuildsH384().Select(r => (r.Name, Pin319(r.F))).ToArray();
 
 /// <summary>第319期: ソム ＝ CR-b・シガ ＝ SG を規定にした。第318期の規定の駒で測った器具（`som318`）はこれを通す。陣形とレリックは保つ。</summary>
 public static Formation Pin318(Formation f)
@@ -949,7 +957,7 @@ public static Formation Pin318(Formation f)
 }
 
 /// <summary>第319期: `CompareBuilds()` のソム ／ シガを第318期の規定に替えた写し（`som318` が使う）。</summary>
-public static (string Name, Formation F)[] CompareBuildsH318() => CompareBuilds().Select(r => (r.Name, Pin318(r.F))).ToArray();
+public static (string Name, Formation F)[] CompareBuildsH318() => CompareBuildsH384().Select(r => (r.Name, Pin318(r.F))).ToArray();
 
 /// <summary>第319期: `Presets.Playtest` のソム ／ シガを第318期の規定に替えた写し（行の数と並びはそのまま）。</summary>
 public static (string Name, Formation F)[] PlaytestH318 => Presets.Playtest.Select(r => (r.Name, Pin318(r.F))).ToArray();
@@ -966,7 +974,7 @@ public static Formation Pin317(Formation f)
 }
 
 /// <summary>第318期: `CompareBuilds()` のソムを第317期までの規定に替えた写し（`som317` が使う）。</summary>
-public static (string Name, Formation F)[] CompareBuildsH317() => CompareBuilds().Select(r => (r.Name, Pin317(r.F))).ToArray();
+public static (string Name, Formation F)[] CompareBuildsH317() => CompareBuildsH384().Select(r => (r.Name, Pin317(r.F))).ToArray();
 
 /// <summary>第318期: `Presets.Playtest` のソムを第317期までの規定に替えた写し（行の数と並びはそのまま）。</summary>
 public static (string Name, Formation F)[] PlaytestH317 => Presets.Playtest.Select(r => (r.Name, Pin317(r.F))).ToArray();
@@ -983,7 +991,7 @@ public static Formation Pin316(Formation f)
 }
 
 /// <summary>第317期: `CompareBuilds()` のドハ ／ シガを第316期までの規定に替えた写し（第312〜316期の器具が使う）。</summary>
-public static (string Name, Formation F)[] CompareBuildsH316() => CompareBuilds().Select(r => (r.Name, Pin316(r.F))).ToArray();
+public static (string Name, Formation F)[] CompareBuildsH316() => CompareBuildsH384().Select(r => (r.Name, Pin316(r.F))).ToArray();
 
 /// <summary>第317期: `Presets.Playtest` のドハ ／ シガを第316期までの規定に替えた写し（行の数と並びはそのまま）。</summary>
 public static (string Name, Formation F)[] PlaytestH316 => Presets.Playtest.Select(r => (r.Name, Pin316(r.F))).ToArray();
@@ -997,7 +1005,7 @@ public static Formation PinKT311(Formation f)
 }
 
 /// <summary>第312期: `CompareBuilds()` のカタ ／ トウを第311期までの規定に替えた写し（第311期までの器具が使う）。</summary>
-public static (string Name, Formation F)[] CompareBuildsH311() => CompareBuilds().Select(r => (r.Name, PinKT311(r.F))).ToArray();
+public static (string Name, Formation F)[] CompareBuildsH311() => CompareBuildsH384().Select(r => (r.Name, PinKT311(r.F))).ToArray();
 
 /// <summary>第312期: `Presets.Playtest` のカタ ／ トウを第311期までの規定に替えた写し（行の数と並びはそのまま・第311期までの器具が使う）。</summary>
 public static (string Name, Formation F)[] PlaytestH311 => Presets.Playtest.Select(r => (r.Name, PinKT311(r.F))).ToArray();

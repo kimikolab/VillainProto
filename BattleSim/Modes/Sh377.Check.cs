@@ -218,7 +218,7 @@ static partial class Sh377Diag
             // `docs/balance.md` のリィカ ／ ムグのいる行（seed 0..199）を規定のまま測り直して一致を見る（全 64 行の一致は `checkup check` の 320 セル）。
             var bal = BalanceH378();   // 第379期: 第378期の `docs/balance.md`（規定のリィカが変わる前）
             int rows = 0, bad = 0;
-            foreach (var (name, f) in CompareBuilds().Select(r => (r.Name, F: Pin378(r.F))).Where(r => HasRica(r.F) || HasMug(r.F)))
+            foreach (var (name, f) in CompareBuildsH384().Select(r => (r.Name, F: Pin378(r.F)))   /* 第385期: エレの2行の無い 64 行 */.Where(r => HasRica(r.F) || HasMug(r.F)))
             {
                 rows++;
                 for (int wi = 0; wi < EnemyCatalog.Stages.Count; wi++)

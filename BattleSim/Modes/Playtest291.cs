@@ -191,7 +191,7 @@ static class Playtest291Diag
         var pl = Rows291;
         var compareNames = Presets.Compare.Select(r => r.Name).ToHashSet();
         Expect("(c) 試遊の行は5行・`Compare`（64 行）／ `Cross`（12 行）に入っていない・駒はすべて規定（`All`）・5枠が埋まっている・`試遊・標 道中` は `見境改 (ミサ×薙ぎ)` と同じ台",
-            pl.Length == 5 && Presets.Compare.Length == 64 && Presets.Cross.Length == 12 && pl.All(r => !compareNames.Contains(r.Name) && !Presets.Cross.Any(c => c.Name == r.Name))
+            pl.Length == 5 && CompareBuildsH384().Length == 64 && Presets.Cross.Length == 12 && pl.All(r => !compareNames.Contains(r.Name) && !Presets.Cross.Any(c => c.Name == r.Name))
             && Presets.Playtest.Take(5).All(r => r.F.Occupied().Count() == 5 && r.F.Occupied().All(o => UnitCatalog.All.Contains(o.Def)))   // 第298期: 固定（`DohaD0`）の前の行で見る
             && pl[4].F.Occupied().SequenceEqual(Presets.Compare.First(c => c.Name == "見境改 (ミサ×薙ぎ)").F.Occupied()));
 
