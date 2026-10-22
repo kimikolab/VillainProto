@@ -2474,6 +2474,8 @@ public sealed class UnitTally
     public long R378FoeRaises, R378FoeRaiseTurnSum, R378FoeNoSeat;
     /// <summary>第379期（<b>計数のみ</b>）: ムグの撒く——撒いた胞子 ／ 撒いたターンの和 ／ 空きが無くて殴った手番（撒き手の側）・育った胞子（胞子の側）。</summary>
     public long R379Sown, R379SowTurnSum, R379SowNoSeat, R379Grown;
+    /// <summary>第381期（魂を分ける・**計数のみ**）: 分けた数（ヴェル）／ 縫い付けた手番 ／ 縫えずに殴った手番（ヴェル）／ 起き上がった回数 ／ 起き上がった T の和（起き上がった本人）。</summary>
+    public long R381Split, R381Sewn, R381SewSwing, R381Rise, R381RiseTSum;
     public int R378Layer6Turn, R378Layer9Turn;
     public long R377ChainSaved;
     public int R377PeakTurn, R377AwakeTurn;
@@ -3785,6 +3787,7 @@ public sealed class UnitTally
         if (R377AwakeTurn == 0) R377AwakeTurn = o.R377AwakeTurn;
         R378FoeRaises += o.R378FoeRaises; R378FoeRaiseTurnSum += o.R378FoeRaiseTurnSum; R378FoeNoSeat += o.R378FoeNoSeat;   // 第378期
         R379Sown += o.R379Sown; R379SowTurnSum += o.R379SowTurnSum; R379SowNoSeat += o.R379SowNoSeat; R379Grown += o.R379Grown;   // 第379期
+        R381Split += o.R381Split; R381Sewn += o.R381Sewn; R381SewSwing += o.R381SewSwing; R381Rise += o.R381Rise; R381RiseTSum += o.R381RiseTSum;   // 第381期
         if (R378Layer6Turn == 0) R378Layer6Turn = o.R378Layer6Turn;
         if (R378Layer9Turn == 0) R378Layer9Turn = o.R378Layer9Turn;
         R377Raises += o.R377Raises; R377RaiseTurnSum += o.R377RaiseTurnSum; R377NoSeat += o.R377NoSeat; R377CostSelf += o.R377CostSelf; R377RotLost += o.R377RotLost; R377RotDeaths += o.R377RotDeaths; R377Sprouts += o.R377Sprouts; R377SproutTurnSum += o.R377SproutTurnSum; R377SproutNoSeat += o.R377SproutNoSeat;   // 第377期

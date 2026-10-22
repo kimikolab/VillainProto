@@ -49,6 +49,10 @@ static class Boss283Diag
     /// <summary>ヒーラー（Phase 0 §1 の機械的定義 ＝ 味方に回復または破片を2回以上書ける駒）。台に最大1枚。</summary>
     internal static UnitDef[] HealPool => Healers().Select(h => h.Def).ToArray();
 
+    /// <summary>第381期: 1枚の駒（`All` の外の版でも）がヒーラーの機械的な定義（味方に回復か破片を2回以上書ける札を持つ）に入るか。engine 側の書き手（ベニ ／ ヒサ）は見ない。</summary>
+    internal static bool HealerDef(UnitDef d) => HealWriters().Concat(ArmorWriters())
+        .Any(x => WriterKind.TryGetValue(x.Cls, out var k) && k.To == "味方" && k.Repeat && x.Ids.Any(d.Traits.Contains));
+
     /// <summary>
     /// 第296期より前の一覧（規定のヒサを数えない）。<b>過去の器具（第283〜295期）はこちらを読む</b>——規定のヒサを HK-b にして
     /// <see cref="HealPool"/> にヒサを足したので、過去の器具の出力が動かないよう固定する。

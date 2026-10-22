@@ -1571,3 +1571,9 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **`BattleContext.GrowInto(from, to)`**（育つの版）: 駒をその場で別の駒に育てる。**死ではない**——`HandleDeath` を通らない（死の出来事 ／ 層 ／ 回復 ／ 死の読み手は動かない）。古い駒は HP 0 で盤から消え（倒れた儚い駒と同じく枠は空き）、同じ枠に `Summon(at:, overCorpse: true)` で新しい駒が湧く。湧けなければ元に戻す。
 - **出来事 `BattleEventKind.SporeGrow`（表示専用）**: `ActorId` ＝ 育った胞子 ／ `TargetId` ＝ 若いムグ ／ `Slot`。直前に若いムグの `Summon` が出る。`Death` は出ない。
 - ムグの撒く（`MugSowTrait`）は手番（`[Skill]`）。空きが無ければ `ctx.PerformAttack` を直に呼ぶ。湧き方は第377期の `SummonOverFallen`。
+
+## 第381期 —— ヴェルの「魂を分ける」（版 S2 ／ S2n ／ S10）
+
+- **起き上がり（`HandleDeath` の中・`BattleContext.SoulRise`）**: 私有キー `VelSoulTrait.LivesKey` が正の駒の死は「起き上がる死」。死の出来事・倒れた計数・killer の `OnKill`・全員の `OnAnyDeath`・味方の `OnAllyDeath` は今どおり走り、**本人の `OnDeath` だけを飛ばす**（分裂 ／ 破裂 ／ 倒れ時の回復を蘇生で掛け算しない）。通知の後に同じ席で `MaxHp` の満タンに戻し、回数を 1 減らす。札の数 ／ `AtkBonus` ／ 状態異常は保つ（`Revive` と違って上乗せを戻さない）。通知の間に別の蘇生で戻っていれば何もしない。
+- 保持者（`SoulSplitHalf` ／ `SoulSplitTen`）がいない戦は `_soulLive` の比較1つで抜ける（規定の `compare` 320 セル ずれ 0）。
+- 台本: 起き上がりは既存の `Revive`（`Text` ＝ `BattleContext.SoulRiseText`「起き上がり」・`ActorId` なし）。新しい出来事の種類は足していない。

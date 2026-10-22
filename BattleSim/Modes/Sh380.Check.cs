@@ -73,7 +73,7 @@ static partial class Sh380Diag
         // ---- 試遊の台 ----
         {
             var vr = Presets.Versions.Select(r => r.Name).ToArray();
-            var found = vr.Where(n => n.Contains("探索")).ToArray();
+            var found = vr.Where(n => n.Contains("探索") && !n.StartsWith("版・")).ToArray();   // 第381期: 「版・S2 ／ S10 死 探索1位」（ヴェルの版の台）は数えない
             var top = Presets.Versions.FirstOrDefault(r => r.Name == "試遊・死 探索1位").F;
             bool topOk = top is not null && Fixed.All(x => top.Occupied().Any(o => ReferenceEquals(o.Def, x))) && top.Occupied().Count() == 5
                 && top.Occupied().Count(o => IsHealer(o.Def)) == 1 && top.Occupied().All(o => UnitCatalog.All.Contains(o.Def))

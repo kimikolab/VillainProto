@@ -9717,6 +9717,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.PoisonCloak)) _cloakLive = true;         // 第368期（RC・毒の衣）
         if (u.HasTrait(TraitId.MiasmaVent)) { _ventLive = true; _ventHolders.Add(u); }   // 第369期（Z・噴き出しの段は敵に書かれた毒の累計を読む・第370期の W も同じ札を持つ）
         if (u.HasTrait(TraitId.VioFlurryA) || u.HasTrait(TraitId.VioFlurryB) || u.HasTrait(TraitId.VioFlurryC) || u.HasTrait(TraitId.RicaLayerFlurry)) _vioFlurryLive = true;   // 第372期（ヴィオの連撃）・第378期（リィカの層の連撃 L も同じ口）
+        if (u.HasTrait(TraitId.SoulSplitHalf) || u.HasTrait(TraitId.SoulSplitTen)) _soulLive = true;   // 第381期（魂を分ける・起き上がり）
         if (u.HasTrait(TraitId.VioRetchHalf) || u.HasTrait(TraitId.VioRetchThird)) { _retchLive = true; _retchHolders.Add(u); }   // 第373期（ヴィオの吐き戻し A1 ／ A2）
         if (CommandTrait.BurstUnit(u) > 0) { _burstLive = true; _burstHolders.Add(u); }   // 第321期（HQ-a ／ HQ-b・溜まったら吐く）
         if (u.HasTrait(TraitId.HisaCover)) _coverHolders.Add(u);       // 第301期（HC・庇い）
@@ -15497,6 +15498,8 @@ public sealed class BattleContext
     bool _ventLive;
     /// <summary>第372期: ヴィオの連撃の札の保持者がいる戦か（いなければ `SwingTurnHits` は比較1つで抜ける）。</summary>
     bool _vioFlurryLive;
+    /// <summary>第381期: 魂を分ける札（`SoulSplitHalf` ／ `SoulSplitTen`）の保持者がいる戦だけ真。偽なら `HandleDeath` の起き上がりは比較1つで抜ける。</summary>
+    bool _soulLive;
     /// <summary>第373期: ヴィオの吐き戻しの札の保持者がいる戦か（いなければ `VioRetchTurnEnd` は比較1つで抜ける）と、その保持者。</summary>
     bool _retchLive;
     readonly List<UnitState> _retchHolders = new();
@@ -17369,7 +17372,12 @@ public sealed class BattleContext
                 this.EndTrait(m);
             }
 
+        // 第381期（魂を分ける）: 起き上がりの回数を持つ者の死は「起き上がる死」——死の出来事も味方の死の通知も今どおり出し、
+        // **本人の「自分の死」の札だけを起こさない**（分裂 ／ 破裂 ／ 倒れ時の回復などを蘇生で掛け算しない）。起き上がりは通知の後（`SoulRise`）。
+        bool soulRise = _soulLive && dead.RawCounter(VelSoulTrait.LivesKey) > 0;
+
         // 本人の死亡時効果（分裂など）
+        if (!soulRise)
         foreach (Trait t in dead.Traits.ToList())
         {
             TraitMark m = this.BeginTrait(t.Id, dead);   // 第94期 (T2) の印
@@ -17416,11 +17424,39 @@ public sealed class BattleContext
                 && killer.RawCounter(StatusKeys.Stun) > bfS) BetrayFireOverreach++;
         }
 
+        if (soulRise) SoulRise(dead);
+
         // 再行動（第104期・EncoreRule）。**死亡通知の固定順が全部終わってから**走らせる。
         // 既定では計数だけを取って即座に返る（`compare` 305 セル 0 件が検算）。
         NoteEncore(dead);
         if (dead.TeamId == PlayerTeam) NoteAlone();   // 第198期 Phase 0（計数のみ）
     }
+
+    /// <summary>
+    /// 第381期（魂を分ける）: 起き上がる死の後、<b>同じ席で、分けられた後の最大HPの満タンで</b>起き上がる。回数を 1 減らす。
+    /// 札の数（層など）・攻撃力の上乗せ・状態異常はそのまま保つ（体は同じ・`Revive` と違って上乗せを戻さない）。召喚枠は使わない。
+    /// 通知の間に別の蘇生で戻っていれば何もしない（回数を減らさない）。台本には `Revive`（`Text` ＝「起き上がり」）を出す。<b>乱数を引かない。</b>
+    /// </summary>
+    void SoulRise(UnitState dead)
+    {
+        if (dead.IsAlive) return;
+        dead.SetCounter(VelSoulTrait.LivesKey, dead.RawCounter(VelSoulTrait.LivesKey) - 1);
+        dead.Hp = Math.Max(1, dead.MaxHp);
+        UnitTally t = TallyOf(dead);
+        t.R381Rise++; t.R381RiseTSum += _turn;   // 計数のみ
+        Log($"    {dead.Name} がその場で起き上がった（HP {dead.Hp}・残り {dead.RawCounter(VelSoulTrait.LivesKey)} 度）", LogKind.Summon);
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Revive,
+            Turn = _turn,
+            TargetId = dead.InstanceId,
+            Slot = dead.Slot,
+            HpAfter = dead.Hp,
+            Text = SoulRiseText
+        });
+    }
+    /// <summary>第381期: 起き上がりの `Revive` の出来事に付ける文字（器具が読む・画面は素通り）。</summary>
+    public const string SoulRiseText = "起き上がり";
 
     /// <summary>
     /// 第198期 Phase 0（<b>計数専用・盤面には一切影響しない</b>）。味方陣営の死が<b>固定順の通知を全部通った後</b>

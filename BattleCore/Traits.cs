@@ -969,6 +969,10 @@ public enum TraitId
     MugSowAll,            // 撒き散らす（撒き全・ムグ）: 手番で、空いている召喚枠をすべて胞子で埋める。空きが無ければふつうに殴る（`MugSowTrait`）
     MugSowGrow,           // 撒く ＋ 育つ（育つ・ムグ）: 撒き1 と同じ。撒いた胞子は次のターンの頭に生きていれば若いムグに育つ（`MugSowTrait` ／ `SporeGrowTrait`）
     SporeGrow,            // 育つ胞子（撒かれた胞子）: 撒かれた次のターンの頭に生きていれば、その場で若いムグに替わる（死ではない）（`SporeGrowTrait`）
+    // --- 第381期で足した札（指示書 design/PHASE381_VEL_SOUL_SPEC.md §2）。ヴェルの「魂を分ける」（版 S2 ／ S2n ／ S10・縫い合わせと蘇生を外す）。保持者 0 枚 ---
+    SoulSplitHalf,        // 魂を分ける・半分（S2 ／ S2n・ヴェル）: 開戦時、隣の味方（儚くない）の最大HPを半分にし、起き上がりの回数 2 を持たせる。回数を持つ者は倒れても（死の出来事を出し・味方の死として数え）同じ席で満タンに起き上がる（`VelSoulTrait`・起き上がりは engine の `HandleDeath`）
+    SoulSplitTen,         // 魂を分ける・十（S10・ヴェル）: 同じ形で、最大HPを 10 に、起き上がりの回数を 3 にする（`VelSoulTrait`）
+    SoulSew,              // 魂を縫い付ける（S2 ／ S10・ヴェル）: 手番で、隣の分けられた味方1体の起き上がりの回数を +1（上限 3・回数の少ない者 → 最大HPの大きい者 → 席番号）。全員が上限か隣にいなければふつうに殴る（`VelSoulTrait`）
     UncapRaise,           // 起こしの上限を外す（U・リィカ ／ ムグ）: 亡者起こし（味方の亡骸から）／ 亡骸の芽吹きの1戦に3回の上限を外す（召喚枠の空きだけが上限）（**札そのものは挙動を持たない**・`RaiseDeadTrait` ／ `MugSproutTrait` が読む）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -13671,6 +13675,77 @@ public sealed class SporeGrowTrait : Trait
     }
 }
 
+/// <summary>
+/// 魂を分ける（第381期・ヴェルの版 S2 ／ S2n ／ S10・指示書 design/PHASE381_VEL_SOUL_SPEC.md §2）。札は3枚で、1つのクラスが持つ:
+/// <list type="bullet">
+///   <item><see cref="TraitId.SoulSplitHalf"/> ／ <see cref="TraitId.SoulSplitTen"/>（開戦時）: 隣の味方（儚くない・自分は含まない）の最大HPを半分（切り捨て・最低 1）／ 10 にし、HP を満タンに、
+///   起き上がりの回数（<see cref="LivesKey"/>）を 2 ／ 3 にする。<b>起き上がりそのものは engine</b>（<see cref="BattleContext"/> の `HandleDeath` が回数を読む）。</item>
+///   <item><see cref="TraitId.SoulSew"/>（手番 `[Skill]`）: 隣の分けられた味方1体の回数を +1（上限 <see cref="MaxLives"/>）。回数の少ない者 → 最大HPの大きい者 → 席番号で選ぶ。
+///   全員が上限か隣に分けられた味方がいなければ `ctx.PerformAttack` を直に呼ぶ（ふつうに殴る）。</item>
+/// </list>
+/// <b>回復でも蘇生でもない</b>（`ctx.Heal` ／ `ctx.Revive` を呼ばない）。<b>乱数を引かない。</b>
+/// </summary>
+public sealed class VelSoulTrait : Trait
+{
+    /// <summary>起き上がりの回数（私有キー）。</summary>
+    public const string LivesKey = "soulLives381";
+    /// <summary>魂を分けられた印（私有キー・1 ＝ 分けられた）。会戦で2度分けないため ／ 縫い付けの対象。</summary>
+    public const string SplitKey = "soulSplit381";
+    public const int HalfLives = 2, TenLives = 3, TenHp = 10, MaxLives = 3;
+
+    readonly TraitId _id;
+    public VelSoulTrait(TraitId id) { _id = id; }
+    public override TraitId Id => _id;
+
+    public override void OnBattleStart(BattleContext ctx, UnitState self)
+    {
+        if (_id == TraitId.SoulSew) return;
+        bool ten = _id == TraitId.SoulSplitTen;
+        foreach (UnitState a in ctx.LivingMembers(self.TeamId))
+        {
+            if (a == self || a.HasTrait(TraitId.Ephemeral) || !FormationRules.AreAdjacent(self, a)) continue;
+            if (a.RawCounter(SplitKey) > 0) continue;   // 会戦の2戦目以降は分け直さない
+            a.SetCounter(SplitKey, 1);
+            a.MaxHp = ten ? TenHp : Math.Max(1, a.MaxHp / 2);
+            a.Hp = a.MaxHp;
+            a.SetCounter(LivesKey, ten ? TenLives : HalfLives);
+            ctx.TallyOf(self).R381Split++;   // 計数のみ
+            ctx.Log($"    {self.Name} が {a.Name} の魂を分けた（最大HP {a.MaxHp}・起き上がり {a.RawCounter(LivesKey)} 度）", LogKind.Trigger);
+        }
+    }
+
+    /// <summary>縫い付ける相手（隣・分けられた・回数が上限未満・回数の少ない者 → 最大HPの大きい者 → 席番号）。</summary>
+    public static UnitState? SewTarget(BattleContext ctx, UnitState self)
+    {
+        UnitState? pick = null;
+        foreach (UnitState a in ctx.LivingMembers(self.TeamId))
+        {
+            if (a == self || a.RawCounter(SplitKey) <= 0 || !FormationRules.AreAdjacent(self, a)) continue;
+            int lives = a.RawCounter(LivesKey);
+            if (lives >= MaxLives) continue;
+            if (pick is null) { pick = a; continue; }
+            int pl = pick.RawCounter(LivesKey);
+            if (lives < pl || (lives == pl && (a.MaxHp > pick.MaxHp || (a.MaxHp == pick.MaxHp && a.Slot < pick.Slot)))) pick = a;
+        }
+        return pick;
+    }
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+    {
+        if (_id != TraitId.SoulSew || !self.IsAlive) return;
+        UnitState? p = SewTarget(ctx, self);
+        if (p is null)
+        {
+            ctx.TallyOf(self).R381SewSwing++;   // 計数のみ
+            if (ctx.TeamAlive(ctx.Opponent(self.TeamId))) ctx.PerformAttack(self);
+            return;
+        }
+        p.SetCounter(LivesKey, p.RawCounter(LivesKey) + 1);
+        ctx.TallyOf(self).R381Sewn++;   // 計数のみ
+        ctx.Log($"    {self.Name} が {p.Name} に魂をもう一片縫い付けた（起き上がり {p.RawCounter(LivesKey)} 度）", LogKind.Trigger);
+    }
+}
+
 /// <summary>起こしの上限を外す（第378期・版 U）。<b>札そのものは挙動を持たない</b>——<see cref="RaiseDeadTrait"/> ／ <see cref="MugSproutTrait"/> が持ち主のこの札を読んで、1戦に3回の上限を数えない。</summary>
 public sealed class UncapRaiseTrait : Trait
 {
@@ -19283,6 +19358,9 @@ public static class TraitCatalog
         new MugSowTrait(TraitId.MugSowAll, all: true, grow: false),  // 第379期（撒き全）
         new MugSowTrait(TraitId.MugSowGrow, all: false, grow: true), // 第379期（育つ）
         new SporeGrowTrait(),                                        // 第379期（育つ胞子）
+        new VelSoulTrait(TraitId.SoulSplitHalf),                     // 第381期（魂を分ける・半分）
+        new VelSoulTrait(TraitId.SoulSplitTen),                      // 第381期（魂を分ける・十）
+        new VelSoulTrait(TraitId.SoulSew),                           // 第381期（魂を縫い付ける）
         new EruptTrait(),      // 第180期
         new SmearTrait(),      // 第180期
         new SpitTrait(),       // 第180期

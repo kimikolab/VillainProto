@@ -683,6 +683,26 @@ public static class UnitCatalog
         Flavor = "縫い直された者はもう元の者ではない、と嫌われた。"
     };
 
+    // ---- 第381期: ヴェルの版「魂を分ける」（指示書 design/PHASE381_VEL_SOUL_SPEC.md §2・`All` に入れない）。縫い合わせ（`Stitch`）と蘇生（`Reviver`）を外す ----
+    static readonly UnitAction[] VelSewActions = { new(ActionKind.Skill, Label: "魂を縫い付ける") };
+    const string VelSoulClause381 = "戦の始まりに、隣の仲間の魂を分ける。分けられた者は倒れても、その場で{0}度まで起き上がる";
+    const string VelSewClause381 = "。手番で、隣の仲間の魂をもう一片縫い付ける（3度まで）";
+    static UnitDef VelOn381(TraitId split, bool sew, int lives, string hpWord) => new()
+    {
+        Id = Vel.Id, Name = Vel.Name, MaxHp = Vel.MaxHp, Attack = Vel.Attack, Speed = Vel.Speed,
+        Traits = sew ? new[] { split, TraitId.SoulSew } : new[] { split },
+        Actions = sew ? VelSewActions : null,
+        PlusText = string.Format(VelSoulClause381, lives) + (sew ? VelSewClause381 : ""),
+        MinusText = $"魂を分けられた者は、最大HPが{hpWord}になる",
+        Flavor = Vel.Flavor,
+    };
+    /// <summary>ヴェルの版 S2（第381期）: 隣の最大HPを半分・起き上がり 2 度・手番で +1（上限 3）。</summary>
+    public static readonly UnitDef VelS2 = VelOn381(TraitId.SoulSplitHalf, sew: true, lives: 2, hpWord: "半分");
+    /// <summary>ヴェルの版 S2n（第381期・手番の価値を測る対照）: S2 から縫い付けを外した（手番はふつうに殴る）。</summary>
+    public static readonly UnitDef VelS2n = VelOn381(TraitId.SoulSplitHalf, sew: false, lives: 2, hpWord: "半分");
+    /// <summary>ヴェルの版 S10（第381期）: 隣の最大HPを 10・起き上がり 3 度・手番で +1（上限 3）。</summary>
+    public static readonly UnitDef VelS10 = VelOn381(TraitId.SoulSplitTen, sew: true, lives: 3, hpWord: " 10 ");
+
     /// <summary>S+HP の版（第196期・<b>診断だけ</b>）のスィドの最大HP。規定の版は 84 のまま。</summary>
     public const int SidHardyHp = 100;
 
