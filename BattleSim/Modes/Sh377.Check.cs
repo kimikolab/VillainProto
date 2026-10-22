@@ -244,9 +244,9 @@ static partial class Sh377Diag
         // ---- verbose ／ 再現性 ----
         {
             long diff = 0, det = 0, cells = 0;
-            foreach (var n in new[] { "試遊・死の連鎖", "版・R-繋 死の連鎖", "版・R-積M 死の連鎖" })
+            // 第378期: 「版・R-繋 死の連鎖」は `Presets.Versions` から外したので、3台は並びの関数から組む（中身は同じ）。
+            foreach (var f in new[] { Presets.DeathChain377(), Presets.DeathChain377(UnitCatalog.RicaLink), Presets.DeathChain377(UnitCatalog.RicaStack, UnitCatalog.MugSproutM) })
             {
-                var f = Presets.Versions.First(r => r.Name == n).F;
                 foreach (var w in new[] { I.Boss, I.Guard, I.Bat, I.M5, I.T9 })
                     for (int sd = 0; sd < 5; sd++)
                     {
@@ -269,11 +269,12 @@ static partial class Sh377Diag
         // ---- 試遊の台 ----
         {
             var vr = Presets.Versions.Select(r => r.Name).ToArray();
-            bool rows = vr.SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒", "試遊・毒 席替え", "試遊・毒 紅", "試遊・ヴィオ 台B", "試遊・死の連鎖", "版・R-繋 死の連鎖", "版・R-積M 死の連鎖" });
+            // 第378期: 「版・R-繋 死の連鎖」を外し、後ろに第378期の「版・」の台が足された——頭の 12 台と「版・R-積M 死の連鎖」があることを見る。
+            bool rows = vr.Take(12).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒", "試遊・毒 席替え", "試遊・毒 紅", "試遊・ヴィオ 台B", "試遊・死の連鎖" }) && vr.Contains("版・R-積M 死の連鎖");
             var basis = Row("死の連鎖 (リィカ軸)");
-            bool vers = Presets.Versions.First(r => r.Name == "版・R-繋 死の連鎖").F.Occupied().Select(o => o.Def).SequenceEqual(Apply(basis, 1).Occupied().Select(o => o.Def))
+            bool vers = Presets.DeathChain377(UnitCatalog.RicaLink).Occupied().Select(o => o.Def).SequenceEqual(Apply(basis, 1).Occupied().Select(o => o.Def))
                 && Presets.Versions.First(r => r.Name == "版・R-積M 死の連鎖").F.Occupied().Select(o => o.Def).SequenceEqual(Apply(basis, 4).Occupied().Select(o => o.Def));
-            Expect("`Presets.Versions` ＝ 第376期の11台 ＋「試遊・死の連鎖」＋「版・R-繋 死の連鎖」＋「版・R-積M 死の連鎖」（同じ並びでリィカ ／ ムグだけ版）", rows && vers, string.Join("、", vr));
+            Expect("`Presets.Versions` の頭 ＝ 第376期の11台 ＋「試遊・死の連鎖」・「版・R-積M 死の連鎖」が残る（第378期に「版・R-繋 死の連鎖」を外した・R-繋 の並びは `DeathChain377(RicaLink)`）", rows && vers, string.Join("、", vr));
         }
 
         // ---- PickOne ／ Roll ----

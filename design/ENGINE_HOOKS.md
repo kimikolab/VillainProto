@@ -1557,3 +1557,10 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **`BattleContext.SummonOverFallen(def, team, by)`**: 召喚枠を既定の順で走り、生きた駒のいない枠（倒れた儚い駒の枠は空き・倒れた儚くない駒の枠は塞ぐ）に `Summon(at:, overCorpse: true)` で湧かせる。**新しい札（亡者起こし ／ 亡骸の芽吹き）だけが通る**——既定の `Summon`（生死を問わず塞ぐ）は変えていないので、倒された亡者の枠に胞子は湧かない。乱数を引かない。
 - **`BattleContext.LoseHp(u, amount, src)`**: ダメージでない HP の減り（`ApplyDamage` を通らない ＝ 肩代わり ／ 軛 ／ 惨禍 ／ 反転 ／ 被弾の札は起きない）。0 で倒れる（撃破者なし）。台本には `Damage`（味方から・`ActorId` ＝ 本人・`SourceTrait` ＝ 呼び手の札）として出す（表示専用・verbose のときだけ）。呼び手は朽ち（`RotTrait`）と亡者起こしの代償だけ。
 - `NecroTrait.OnAnyDeath`: 死んだ駒が朽ち（`TraitId.Rot`）を持ち、墓守が R-積（`RicaRaiseDeadStack`）でなければ、層を積まず回復もせず `lastDeathTurn` だけ進める（亡者は版の札からしか湧かないので規定では走らない）。`OnTurnStart` ／ `SetStack` に計数（`UnitTally.NoteNecro377` ほか・`RawCounter` で読む）。
+
+## 第378期 —— 目覚めたリィカ（版 E ／ L ／ U・土台は第377期の R-積M）
+
+- **L（層の連撃）は第372期のヴィオの連撃の口をそのまま使う**: `VioFlurryTrait` に `byLayer`（段を攻撃力ではなく墓守の層 `necro` で決める）を足し、`TraitId.RicaLayerFlurry` の保持者でも `_vioFlurryLive` を立てる（`SwingTurnHits` の2発目からの的は札の `NextTarget`・散らす ＝ 1発目の的を除いた生きている敵を席番号の小さい順・足りなければ1発目の的）。乱数を引かない。
+- **E（目覚めの墓守）は `OnAnyDeath`**（敵の死・墓守が 3 層以上）で `SummonOverFallen`（第377期の口）を呼ぶ。代償は `LoseHp`。新しい engine の窓口は無い。
+- **U（起こしの上限を外す）は印の札**（`UncapRaiseTrait`・挙動なし）。`RaiseDeadTrait` ／ `MugSproutTrait` が持ち主のこの札を読んで1戦に3回を数えない。
+- `NecroTrait.SetStack` に計数（6 ／ 9 層に届いたターン・`UnitTally.R378Layer6Turn` ／ `R378Layer9Turn`・計数のみ）。

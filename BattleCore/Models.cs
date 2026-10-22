@@ -2470,6 +2470,9 @@ public sealed class UnitTally
     public long R377Raises, R377RaiseTurnSum, R377NoSeat, R377CostSelf, R377RotLost, R377RotDeaths, R377Sprouts, R377SproutTurnSum, R377SproutNoSeat;
     /// <summary>第377期（<b>計数のみ</b>）: 墓守の層——ターンの頭（減衰の後）の層 ／ 層の上乗せ（攻撃力）／ 生きてターンの頭を迎えた回数（ターンごと）・亡者の死だけで連鎖が繋がったターンの数（版のリィカだけ）・最大層に届いたターン ／ 3 層に届いたターン（0 ＝ 未到達）。</summary>
     public long[]? R377LayerByTurn, R377BonusByTurn, R377AliveByTurn;
+    /// <summary>第378期（<b>計数のみ</b>）: 目覚めの墓守——敵の亡骸から起こした数 ／ ターンの和 ／ 空きが無くて起こせなかった数・墓守が 6 ／ 9 層に届いたターン（0 ＝ 未到達）。</summary>
+    public long R378FoeRaises, R378FoeRaiseTurnSum, R378FoeNoSeat;
+    public int R378Layer6Turn, R378Layer9Turn;
     public long R377ChainSaved;
     public int R377PeakTurn, R377AwakeTurn;
     /// <summary>第377期（計数のみ）: ターン <paramref name="turn"/> の頭の墓守の層を写す。</summary>
@@ -3778,6 +3781,9 @@ public sealed class UnitTally
         R377LayerByTurn = AddArr(R377LayerByTurn, o.R377LayerByTurn); R377BonusByTurn = AddArr(R377BonusByTurn, o.R377BonusByTurn); R377AliveByTurn = AddArr(R377AliveByTurn, o.R377AliveByTurn); R377ChainSaved += o.R377ChainSaved;   // 第377期
         if (R377PeakTurn == 0) R377PeakTurn = o.R377PeakTurn;
         if (R377AwakeTurn == 0) R377AwakeTurn = o.R377AwakeTurn;
+        R378FoeRaises += o.R378FoeRaises; R378FoeRaiseTurnSum += o.R378FoeRaiseTurnSum; R378FoeNoSeat += o.R378FoeNoSeat;   // 第378期
+        if (R378Layer6Turn == 0) R378Layer6Turn = o.R378Layer6Turn;
+        if (R378Layer9Turn == 0) R378Layer9Turn = o.R378Layer9Turn;
         R377Raises += o.R377Raises; R377RaiseTurnSum += o.R377RaiseTurnSum; R377NoSeat += o.R377NoSeat; R377CostSelf += o.R377CostSelf; R377RotLost += o.R377RotLost; R377RotDeaths += o.R377RotDeaths; R377Sprouts += o.R377Sprouts; R377SproutTurnSum += o.R377SproutTurnSum; R377SproutNoSeat += o.R377SproutNoSeat;   // 第377期
         if (Z372Stage2Turn == 0) Z372Stage2Turn = o.Z372Stage2Turn;
         if (Z372Stage3Turn == 0) Z372Stage3Turn = o.Z372Stage3Turn;

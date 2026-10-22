@@ -113,9 +113,12 @@ static partial class Sh377Diag
         public readonly Dictionary<string, (long Hits, long Dmg, long N)> FoeTo = new();
         public readonly Dictionary<string, long[]> HpAt = new();
         public long FoeAttacks, FoeAoE;
+        /// <summary>第378期: 後の期の器具が足す計数（`One` の `extra` が書く・この器具は使わない）。</summary>
+        public readonly Dictionary<string, long> X = new();
 
         public void Add(B o)
         {
+            foreach (var (k, v) in o.X) X[k] = X.GetValueOrDefault(k) + v;
             N += o.N; Wins += o.Wins; WinT += o.WinT; Win1T += o.Win1T; Cap += o.Cap; BossFast += o.BossFast; Turns += o.Turns;
             FormDeaths += o.FormDeaths; SporeDeaths += o.SporeDeaths; WightDeaths += o.WightDeaths; SecondDeaths += o.SecondDeaths;
             for (int i = 0; i < DeathByT.Length; i++) DeathByT[i] += o.DeathByT[i];
@@ -144,7 +147,7 @@ static partial class Sh377Diag
     static int Bucket(int t) => Math.Clamp(t, 1, 6);
     static bool IsBurn(string? s) => s is StatusKeys.Burn or "燃" or "燃焼";
 
-    internal static B One(Formation f, I.W w, int seed)
+    internal static B One(Formation f, I.W w, int seed, Action<BattleResult, List<UnitState>, List<UnitState>, B>? extra = null)
     {
         var b = new B { N = 1 };
         var (r, p, e) = I.Raw(f, w, seed, verbose: true);
@@ -276,13 +279,14 @@ static partial class Sh377Diag
         if (r.TallyByUnit.TryGetValue(UnitCatalog.Wight.Id, out var wt)) { b.WightRot = wt.R377RotDeaths; b.WightRotLost = wt.R377RotLost; }
         int alone = r.TallyByUnit.Values.Where(t => t.AloneTurn > 0).Select(t => t.AloneTurn).DefaultIfEmpty(0).Min();
         if (alone > 0) { b.AloneN = 1; b.AloneTSum = alone; }
+        extra?.Invoke(r, p, e, b);   // 第378期
         return b;
     }
 
-    internal static B Measure(Formation f, I.W[] ws, int seeds)
+    internal static B Measure(Formation f, I.W[] ws, int seeds, Action<BattleResult, List<UnitState>, List<UnitState>, B>? extra = null)
     {
         var parts = new B[ws.Length * seeds];
-        Parallel.For(0, parts.Length, k => parts[k] = One(f, ws[k / seeds], k % seeds));
+        Parallel.For(0, parts.Length, k => parts[k] = One(f, ws[k / seeds], k % seeds, extra));
         var a = new B();
         foreach (var x in parts) a.Add(x);
         return a;

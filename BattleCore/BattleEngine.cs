@@ -9716,7 +9716,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.PoisonProof)) _poisonProofLive = true;   // 第368期（R・毒に強い）
         if (u.HasTrait(TraitId.PoisonCloak)) _cloakLive = true;         // 第368期（RC・毒の衣）
         if (u.HasTrait(TraitId.MiasmaVent)) { _ventLive = true; _ventHolders.Add(u); }   // 第369期（Z・噴き出しの段は敵に書かれた毒の累計を読む・第370期の W も同じ札を持つ）
-        if (u.HasTrait(TraitId.VioFlurryA) || u.HasTrait(TraitId.VioFlurryB) || u.HasTrait(TraitId.VioFlurryC)) _vioFlurryLive = true;   // 第372期（ヴィオの連撃）
+        if (u.HasTrait(TraitId.VioFlurryA) || u.HasTrait(TraitId.VioFlurryB) || u.HasTrait(TraitId.VioFlurryC) || u.HasTrait(TraitId.RicaLayerFlurry)) _vioFlurryLive = true;   // 第372期（ヴィオの連撃）・第378期（リィカの層の連撃 L も同じ口）
         if (u.HasTrait(TraitId.VioRetchHalf) || u.HasTrait(TraitId.VioRetchThird)) { _retchLive = true; _retchHolders.Add(u); }   // 第373期（ヴィオの吐き戻し A1 ／ A2）
         if (CommandTrait.BurstUnit(u) > 0) { _burstLive = true; _burstHolders.Add(u); }   // 第321期（HQ-a ／ HQ-b・溜まったら吐く）
         if (u.HasTrait(TraitId.HisaCover)) _coverHolders.Add(u);       // 第301期（HC・庇い）

@@ -961,6 +961,10 @@ public enum TraitId
     RicaRaiseDeadStack,   // 亡者起こし・積む（R-積・リィカ）: 形は R-繋 と同じ。亡者の死も層を積む（胞子と同じ・回復も）（`RaiseDeadTrait`・`NecroTrait`）
     Rot,                  // 朽ち（亡者）: 毎ターンの頭に自分の HP が 10 崩れ、0 で倒れる（ダメージではない）。この札を持つ駒の死は、R-繋 の墓守には層を積まず連鎖だけ繋ぐ（`RotTrait`・`NecroTrait`）
     MugSprout,            // 亡骸の芽吹き（M・ムグ）: ムグが生きている間、ムグ以外の編成の駒（儚くない味方）が倒れるたび召喚枠に胞子を1体芽吹かせる（1戦に3回・空きが無ければ芽吹かない）（`MugSproutTrait`）
+    // --- 第378期で足した札（指示書 design/PHASE378_DEATH_AWAKEN_SPEC.md §2）。目覚めたリィカ（R-積M の上に版）。保持者 0 枚 ---
+    RicaAwakenRaise,      // 目覚めの墓守（E・リィカ）: 3 層以上の間、敵が倒れるたびその亡骸から亡者を1体起こす（回数の上限なし・召喚枠の空きだけが上限）。起こすたび HP 8 を直接払う（倒れない）（`RicaAwakenTrait`）
+    RicaLayerFlurry,      // 層の連撃（L・リィカ）: 層 6 で2連撃 ／ 9 で3連撃。2発目からは別の敵（いなければ1発目の的）（`VioFlurryTrait` の層の段）
+    UncapRaise,           // 起こしの上限を外す（U・リィカ ／ ムグ）: 亡者起こし（味方の亡骸から）／ 亡骸の芽吹きの1戦に3回の上限を外す（召喚枠の空きだけが上限）（**札そのものは挙動を持たない**・`RaiseDeadTrait` ／ `MugSproutTrait` が読む）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -1824,6 +1828,8 @@ public sealed class NecroTrait : Trait
         UnitTally nt = ctx.TallyOf(self);   // 第188期・**計数のみ**（層の最大値）
         if (stack > nt.NecroPeak) { nt.NecroPeak = stack; nt.R377PeakTurn = ctx.Turn; }   // 第377期・計数のみ（最大層に届いたターン）
         if (stack >= AwakenAt && nt.R377AwakeTurn == 0) nt.R377AwakeTurn = ctx.Turn;
+        if (stack >= 6 && nt.R378Layer6Turn == 0) nt.R378Layer6Turn = ctx.Turn;   // 第378期・計数のみ（6 ／ 9 層に届いたターン）
+        if (stack >= 9 && nt.R378Layer9Turn == 0) nt.R378Layer9Turn = ctx.Turn;
         if (decayed) ctx.Log($"    {self.Name} の層が薄れた（{stack}層）", LogKind.Status);
     }
 
@@ -13400,7 +13406,9 @@ public sealed class VioFlurryTrait : Trait
     readonly TraitId _id;
     public readonly int T2, T3;
     public readonly bool Scatter;
-    public VioFlurryTrait(TraitId id, int t2, int t3, bool scatter) { _id = id; T2 = t2; T3 = t3; Scatter = scatter; }
+    /// <summary>第378期（層の連撃 L・リィカ）: 段を攻撃力ではなく墓守の層（`necro`）で決める。</summary>
+    public readonly bool ByLayer;
+    public VioFlurryTrait(TraitId id, int t2, int t3, bool scatter, bool byLayer = false) { _id = id; T2 = t2; T3 = t3; Scatter = scatter; ByLayer = byLayer; }
     public override TraitId Id => _id;
 
     /// <summary>その手番の1発目の主目標の <c>InstanceId + 1</c>（0 は未設定・`SwingTurnHits` が手番の頭で 0 に戻す）。</summary>
@@ -13412,7 +13420,7 @@ public sealed class VioFlurryTrait : Trait
     /// <summary>攻撃力 <paramref name="atk"/> のときの撃つ数（1〜3）。</summary>
     public int HitsAt(int atk) => atk >= T3 ? 3 : atk >= T2 ? 2 : 1;
 
-    public override int ModifyHitCount(UnitState self, int hits) => Math.Max(hits, HitsAt(self.Def.Attack + self.AtkBonus));
+    public override int ModifyHitCount(UnitState self, int hits) => Math.Max(hits, HitsAt(ByLayer ? self.RawCounter("necro") : self.Def.Attack + self.AtkBonus));
 
     public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
     {
@@ -13523,7 +13531,7 @@ public sealed class RaiseDeadTrait : Trait
     public override void OnAllyDeath(BattleContext ctx, UnitState self, UnitState dead)
     {
         if (dead.HasTrait(TraitId.Ephemeral)) return;
-        if (self.RawCounter(CountKey) >= PerBattle) return;
+        if (self.RawCounter(CountKey) >= PerBattle && !self.HasTrait(TraitId.UncapRaise)) return;   // 第378期（U）: 上限を外す札があれば数えない
         UnitTally t = ctx.TallyOf(self);
         UnitState? w = ctx.SummonOverFallen(UnitCatalog.Wight, self.TeamId, self);
         if (w is null) { t.R377NoSeat++; return; }   // 計数のみ
@@ -13570,7 +13578,7 @@ public sealed class MugSproutTrait : Trait
     public override void OnAllyDeath(BattleContext ctx, UnitState self, UnitState dead)
     {
         if (dead.HasTrait(TraitId.Ephemeral)) return;
-        if (self.RawCounter(CountKey) >= PerBattle) return;
+        if (self.RawCounter(CountKey) >= PerBattle && !self.HasTrait(TraitId.UncapRaise)) return;   // 第378期（U）: 上限を外す札があれば数えない
         UnitTally t = ctx.TallyOf(self);
         if (ctx.SummonOverFallen(UnitCatalog.Spore, self.TeamId, self) is null) { t.R377SproutNoSeat++; return; }   // 計数のみ
         int n = self.RawCounter(CountKey) + 1;
@@ -13580,6 +13588,35 @@ public sealed class MugSproutTrait : Trait
     }
 
     public override void OnCarryOver(UnitState self) => self.SetCounter(CountKey, 0);
+}
+
+/// <summary>
+/// 目覚めの墓守（第378期・リィカの版 E・指示書 design/PHASE378_DEATH_AWAKEN_SPEC.md §2-2 E）。リィカが 3 層以上（<see cref="NecroTrait.AwakenAt"/>・薙ぎの間）のとき、
+/// <b>敵が倒れるたび</b>その亡骸から亡者（<see cref="UnitCatalog.Wight"/>）をこちらの召喚枠に1体起こす（<see cref="BattleContext.SummonOverFallen"/>）。回数の上限なし（枠の空きだけが上限・空きが無ければ起こさない）。
+/// 起こすたび HP <see cref="RaiseDeadTrait.Cost"/> を直接払う（倒れない）。3 層未満のときに倒れた敵からは起こさない（遡らない）。起きた亡者の死を層に積むかは墓守の版の札で決まる（R-積なら積む）。<b>乱数を引かない。</b>
+/// </summary>
+public sealed class RicaAwakenTrait : Trait
+{
+    public override TraitId Id => TraitId.RicaAwakenRaise;
+
+    public override void OnAnyDeath(BattleContext ctx, UnitState self, UnitState dead)
+    {
+        if (dead.TeamId == self.TeamId || !self.IsAlive) return;
+        if (self.RawCounter("necro") < NecroTrait.AwakenAt) return;
+        UnitTally t = ctx.TallyOf(self);
+        if (ctx.SummonOverFallen(UnitCatalog.Wight, self.TeamId, self) is null) { t.R378FoeNoSeat++; return; }   // 計数のみ
+        t.R378FoeRaises++; t.R378FoeRaiseTurnSum += ctx.Turn;   // 計数のみ
+        ctx.Log($"    {self.Name} が敵の {dead.Name} の亡骸から亡者を起こした", LogKind.Trigger);
+        int take = Math.Min(RaiseDeadTrait.Cost, self.Hp - 1);
+        if (take > 0) ctx.LoseHp(self, take, TraitId.RicaAwakenRaise);
+        t.R377CostSelf += Math.Max(0, take);   // 計数のみ
+    }
+}
+
+/// <summary>起こしの上限を外す（第378期・版 U）。<b>札そのものは挙動を持たない</b>——<see cref="RaiseDeadTrait"/> ／ <see cref="MugSproutTrait"/> が持ち主のこの札を読んで、1戦に3回の上限を数えない。</summary>
+public sealed class UncapRaiseTrait : Trait
+{
+    public override TraitId Id => TraitId.UncapRaise;
 }
 
 public sealed class VioRetchTrait : Trait
@@ -19181,6 +19218,9 @@ public static class TraitCatalog
         new RaiseDeadTrait(TraitId.RicaRaiseDeadStack),   // 第377期（亡者起こし・積む R-積）
         new RotTrait(),                                   // 第377期（朽ち・亡者）
         new MugSproutTrait(),                             // 第377期（亡骸の芽吹き M）
+        new RicaAwakenTrait(),                            // 第378期（目覚めの墓守 E）
+        new VioFlurryTrait(TraitId.RicaLayerFlurry, 6, 9, scatter: true, byLayer: true),   // 第378期（層の連撃 L・層で段を決める）
+        new UncapRaiseTrait(),                            // 第378期（起こしの上限を外す U・印だけ）
         new EruptTrait(),      // 第180期
         new SmearTrait(),      // 第180期
         new SpitTrait(),       // 第180期

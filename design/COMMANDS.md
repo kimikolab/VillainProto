@@ -1376,6 +1376,12 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sh377 compare <R-繋|R-積|M|R-積M>   # 第377期: `compare` 64 行 × 版（その版が替える駒のいる行だけを回す・seed 0..199）
     dotnet run --project BattleSim -c Release 0 sh377 row <行名>          # 第377期: `compare` の1行 × 版 × 本編 第2〜5波（動いた理由を見る・seed 0..199・verbose）
     dotnet run --project BattleSim -c Release 0 sh377 check              # 第377期 自己検査（亡者 ／ 版の定義・朽ち・亡者起こし ／ 芽吹きの回数 ／ 儚い駒 ／ 空き ／ 湧く枠（既定の召喚は今どおり）・ムグが倒れた後は芽吹かない・R-繋 は層が増えず繋ぐ ／ R-積 は 1 増える・代償・台の上の湧いた数 ／ 蘇生・規定のリィカ ／ ムグの行が `docs/balance.md` と一致・素体 ／ 寄せ集めは器具の中だけ・verbose と再現性・`checkup` の札・試遊の台・PickOne ／ Roll）
+    dotnet run --project BattleSim -c Release 0 sh378 vers               # 第378期 §3-2: 死の台 5 × 版（規定 ／ 土台 R-積M ／ E ／ L ／ EL ／ ELU）× 8 物差し（seed 0..99・verbose）——誰が何Tに倒れたか・リィカ（1人になったT ／ 6 ／ 9 層 ／ 1ターンの最大）・湧いた体（味方 ／ 敵の亡骸 ／ 芽吹き）・勇者の HP の推移 ／ 1,200 超のターン・壊れの兆し
+    dotnet run --project BattleSim -c Release 0 sh378 mix                # 第378期: 寄せ集めの台 50（第377期と同じ）× 素体 ／ 規定 ／ 土台 ／ E ／ L ／ EL ／ ELU × 8 物差し（seed 0..19）
+    dotnet run --project BattleSim -c Release 0 sh378 axes               # 第378期 §3-3: 近衛 ／ 大隊 ／ ボスの1ターンの最大の与ダメ（隊の合計）とボスの倒しT——死の台 × 規定 ／ 土台 ／ ELU と他の軸の試遊の台（seed 0..99）
+    dotnet run --project BattleSim -c Release 0 sh378 compare <土台|E|L|EL|ELU>   # 第378期: `compare` 64 行 × 版（リィカ ／ ムグのいる行だけを回す・seed 0..199）
+    dotnet run --project BattleSim -c Release 0 sh378 row <行名>          # 第378期: `compare` の1行 × 版 × 本編 第2 ／ 4 ／ 5波（seed 0..199）
+    dotnet run --project BattleSim -c Release 0 sh378 check              # 第378期 自己検査（版の定義・E: 3 層未満では起きない ／ 起きる ／ 空き ／ 代償 ／ 亡者の死で層 +1・L: 層 5/6/9 の発数 ／ 的の巡り ／ ボスで連撃・U: 4 体目が湧く ／ 儚い駒からは湧かない・土台 ＝ 第377期の R-積M・規定のリィカ ／ ムグの行が `docs/balance.md` と一致・寄せ集め ／ 素体は器具の中だけ・verbose と再現性・`checkup` の札・試遊の台・PickOne ／ Roll）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

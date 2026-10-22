@@ -550,6 +550,28 @@ public static class UnitCatalog
         Flavor = "掃除の手間が増えるという理由で焼却処分が決まっていた。"
     };
 
+    /// <summary>第378期 目覚めたリィカの句（版 E ／ L ／ U の文面・指示書 design/PHASE378_DEATH_AWAKEN_SPEC.md §2-2 の叩き台）。</summary>
+    public const string RicaAwakenClause378 = "目の色が変わった後は、倒した敵の亡骸からも亡者を起こす";
+    public const string RicaFlurryClause378 = "層が深まるほど振るう回数が増える（6 層で2連撃・9 層で3連撃）";
+    public const string RicaRaiseUncapClause378 = "倒れた仲間の亡骸から亡者を起こす（枠が空いている限り・起こすたび自分が削れる）。亡者は朽ちていく";
+    public const string MugSproutUncapClause378 = "生きている間、倒れた仲間の亡骸に胞子が芽吹く（枠が空いている限り）";
+
+    static UnitDef RicaOn378(TraitId[] add, string plus) => new()
+    {
+        Id = Rica.Id, Name = Rica.Name, MaxHp = Rica.MaxHp, Attack = Rica.Attack, Speed = Rica.Speed,
+        Traits = RicaStack.Traits.Concat(add).ToArray(), PlusText = plus, MinusText = Rica.MinusText, Flavor = Rica.Flavor,
+    };
+
+    /// <summary>リィカの版 E（第378期）＝ R-積 ＋ 目覚めの墓守。<see cref="All"/> の外（版・採否はポン）。</summary>
+    public static readonly UnitDef RicaE = RicaOn378(new[] { TraitId.RicaAwakenRaise }, RicaStack.PlusText + "／" + RicaAwakenClause378);
+    /// <summary>リィカの版 L（第378期）＝ R-積 ＋ 層の連撃。</summary>
+    public static readonly UnitDef RicaL = RicaOn378(new[] { TraitId.RicaLayerFlurry }, RicaStack.PlusText + "／" + RicaFlurryClause378);
+    /// <summary>リィカの版 EL（第378期）＝ R-積 ＋ 目覚めの墓守 ＋ 層の連撃。</summary>
+    public static readonly UnitDef RicaEL = RicaOn378(new[] { TraitId.RicaAwakenRaise, TraitId.RicaLayerFlurry }, RicaStack.PlusText + "／" + RicaAwakenClause378 + "／" + RicaFlurryClause378);
+    /// <summary>リィカの版 ELU（第378期）＝ EL ＋ 起こしの上限を外す（文面は起こしの句を上限なしに差し替える）。</summary>
+    public static readonly UnitDef RicaELU = RicaOn378(new[] { TraitId.RicaAwakenRaise, TraitId.RicaLayerFlurry, TraitId.UncapRaise },
+        Rica.PlusText + "／" + RicaRaiseUncapClause378 + RicaStackTail377 + "／" + RicaAwakenClause378 + "／" + RicaFlurryClause378);
+
     /// <summary>第377期 亡骸の芽吹きの句（版 M のプラスの文面に足す・指示書 §3-2 B の叩き台）。</summary>
     public const string MugSproutClause377 = "生きている間、倒れた仲間の亡骸に胞子が芽吹く（1戦に3回）";
 
@@ -559,6 +581,14 @@ public static class UnitCatalog
         Id = Mug.Id, Name = Mug.Name, MaxHp = Mug.MaxHp, Attack = Mug.Attack, Speed = Mug.Speed,
         Traits = Mug.Traits.Append(TraitId.MugSprout).ToArray(),
         PlusText = Mug.PlusText + "／" + MugSproutClause377, MinusText = Mug.MinusText, Flavor = Mug.Flavor,
+    };
+
+    /// <summary>胞子体ムグの版 MU（第378期・ELU の台で使う）＝ M ＋ 起こしの上限を外す（芽吹きの上限なし）。<see cref="All"/> の外。</summary>
+    public static readonly UnitDef MugSproutMU = new()
+    {
+        Id = Mug.Id, Name = Mug.Name, MaxHp = Mug.MaxHp, Attack = Mug.Attack, Speed = Mug.Speed,
+        Traits = MugSproutM.Traits.Append(TraitId.UncapRaise).ToArray(),
+        PlusText = Mug.PlusText + "／" + MugSproutUncapClause378, MinusText = Mug.MinusText, Flavor = Mug.Flavor,
     };
 
     public static readonly UnitDef Zoto = new()

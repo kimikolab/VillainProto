@@ -974,10 +974,14 @@ public static class Presets
         // 第375期: S10 を規定にした（「試遊・毒」「試遊・毒 席替え」「試遊・毒 紅」は規定の駒のまま ＝ スィドは S10）。第374期の「版・」の4台は外した（並びは `sh374` の中に固定）。
         // 第376期: 血を啜る（C）を規定にした。第375期の「版・C 自傷にヴィオ」「版・C 台Bにヴィオ」は外し、毒の外のヴィオの使い道として「試遊・ヴィオ 台B」を足した（前1 ヴィオ ／ 前3 ミサ ／ 中央 ヒサ ／ 後1 カド ／ 後3 アカ・規定の駒）。
         ("試遊・ヴィオ 台B", BoardBVio375()),
-        // 第377期: 死軸の試遊の台（`compare` の「死の連鎖 (リィカ軸)」と同じ並び・規定の駒）と、同じ並びでリィカ ／ ムグだけ版の2台（R-繋 ／ R-積M）。採否はポン。
+        // 第377期: 死軸の試遊の台（`compare` の「死の連鎖 (リィカ軸)」と同じ並び・規定の駒）と、同じ並びでリィカ ／ ムグだけ版の台。採否はポン。
+        // 第378期: 「版・R-繋 死の連鎖」は外した（ポンの判断で R-積M を土台に続ける）。「版・R-積M 死の連鎖」は第378期の土台として残す。
         ("試遊・死の連鎖", DeathChain377()),
-        ("版・R-繋 死の連鎖", DeathChain377(UnitCatalog.RicaLink)),
         ("版・R-積M 死の連鎖", DeathChain377(UnitCatalog.RicaStack, UnitCatalog.MugSproutM)),
+        // 第378期: 目覚めたリィカの版（並びは試遊・死の連鎖・リィカ ／ ムグだけ版・土台は R-積M）。採否はポン。
+        ("版・E 死の連鎖", DeathChain377(UnitCatalog.RicaE, UnitCatalog.MugSproutM)),
+        ("版・EL 死の連鎖", DeathChain377(UnitCatalog.RicaEL, UnitCatalog.MugSproutM)),
+        ("版・ELU 死の連鎖", DeathChain377(UnitCatalog.RicaELU, UnitCatalog.MugSproutMU)),
     };
 
     /// <summary>第377期: 「死の連鎖 (リィカ軸)」の並び（前1 ゾト ／ 前3 ゴルム ／ 中央 ムグ ／ 後1 ヴェル ／ 後3 リィカ）。リィカ ／ ムグを差し替えて版の台を作る。</summary>
