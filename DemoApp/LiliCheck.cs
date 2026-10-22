@@ -63,8 +63,9 @@ public partial class LiliCheck : Control
             Require((int)Read("_liliGifts")! == result.Events.Count(e => e.Kind == BattleEventKind.Kiss
                 && e.Text is KissLabels.Give or KissLabels.RiteGive or KissLabels.Return), "施しが台本と同数");
             foreach (var group in result.Events.Where(e => e.TargetId is not null
-                && e.Kind is BattleEventKind.Damage or BattleEventKind.Heal).GroupBy(e => e.TargetId))
-                Require(field.FindPawn(group.Key)!.Hp == Math.Max(0, group.Last().HpAfter), "最終HPが台本と一致");
+                && e.Kind is BattleEventKind.Damage or BattleEventKind.Heal or BattleEventKind.Death).GroupBy(e => e.TargetId))
+                // 呑み込みはDamageを出さずに倒す。死後のHPは最後の被弾時点へ戻さない。
+                Require(field.FindPawn(group.Key)!.Hp == (group.Last().Kind == BattleEventKind.Death ? 0 : Math.Max(0, group.Last().HpAfter)), "最終HPが台本と一致");
             GD.Print($"LILI_REPLAY_OK pass={pass} transfers={transfers} drains={Read("_liliDrains")} gifts={Read("_liliGifts")}");
             GD.Print($"LILI_CASES rite={result.Events.Count(e => e.Kind == BattleEventKind.Kiss && e.Text == KissLabels.Rite)} "
                 + $"return={result.Events.Count(e => e.Kind == BattleEventKind.Kiss && e.Text == KissLabels.Return)} "

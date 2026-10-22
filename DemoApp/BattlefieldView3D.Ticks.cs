@@ -6,9 +6,10 @@ public partial class BattlefieldView3D
 {
     private readonly Dictionary<int, List<PopupLabel2D>> _tickNumbers = new();
 
-    public void ShowTick(BattlePawn3D? pawn, bool burn, bool inverse, bool last, double seconds, bool electric = false)
+    public void ShowTick(BattlePawn3D? pawn, bool burn, bool inverse, bool last, double seconds, bool electric = false, int poisonWaves = 1)
     {
         if (pawn is null) return;
+        if (!burn && !electric) { pawn.BurstPoison(seconds, poisonWaves); PoisonTickWaves += poisonWaves; }
         var material = new ShaderMaterial { Shader = new Shader { Code = @"
 shader_type spatial;
 render_mode unshaded, cull_disabled, blend_add, depth_draw_never;

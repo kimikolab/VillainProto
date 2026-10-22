@@ -21,12 +21,14 @@ public partial class BattlefieldView3D
                 new Color("f1394c").Lerp(FireFx.ColorOf(source.FireLevel), source.FireLevel / 5f), 0.24 / speed, false, pull: true);
     }
 
-    public void ShowGurenRelease(BattlePawn3D? beni, IReadOnlyList<BattlePawn3D> targets, double speed)
+    public void ShowGurenRelease(BattlePawn3D? beni, IReadOnlyList<BattlePawn3D> targets, double speed, int amount = 0)
     {
         if (beni is null) return;
         GurenReleases++;
         beni.SetGuren(0);
         beni.SetGurenRelease(true);
+        foreach (var target in targets)
+            PoisonFlow(beni.FlowerPoint, target.FxPoint, PoisonFlowFx.Kind.Guren, amount);
         // 一本の奔流を列の幅へ開く。各敵に撃った細線にはしない。
         foreach (var target in targets.OrderBy(p => p.GlobalPosition.Z))
         for (int k = 0; k < 12; k++)
@@ -38,10 +40,11 @@ public partial class BattlefieldView3D
         }
     }
 
-    public void ShowVenom(BattlePawn3D? source, BattlePawn3D? target, bool returned, double speed)
+    public void ShowVenom(BattlePawn3D? source, BattlePawn3D? target, bool returned, double speed, int amount = 1)
     {
         if (source is null || target is null) return;
         if (returned) VenomReturns++; else Spews++;
+        if (returned) { ShowPoisonRetort(source, target, amount, false); return; }
         // 反射は袋の高さから短く弾ける。能動の吐息は口元から高い弧。
         Vector3 from = source.FxPoint + Vector3.Up * (returned ? -0.3f : 0.65f);
         for (int k = 0; k < 7; k++)

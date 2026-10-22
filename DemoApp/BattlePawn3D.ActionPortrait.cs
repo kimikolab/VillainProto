@@ -34,6 +34,11 @@ public partial class BattlePawn3D
         float height = _portraitHeight;
         float padding = UiKit.BattlePortraitBottomPaddingRatio(key);
         _portraitOffsetX = 0;
+        if (key == "vio" && _alive && VioGrowthStage > 0)
+        {
+            key = VioGrowthStage == 2 ? "vio_gorged" : "vio_fed";
+            padding = UiKit.BattlePortraitBottomPaddingRatio(key);
+        }
         if (key == "sero" && _bowDrawn && _alive)
         {
             key = "sero_attack";

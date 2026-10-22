@@ -1234,6 +1234,7 @@ public partial class Main : Control
         _hexMarksShown = _hexSharePlays = _hexShareHits = 0;
         _poisonSpreadPlays = _poisonLeakPlays = 0;
         _poisonDrainIndices.Clear();
+        _poisonAxisShown.Clear();
         _poisonDrainPlays = _poisonDrainHits = 0;
         _tickPlays = _inverseTickPlays = 0;
         _tickDelayBudget = null;
@@ -1340,6 +1341,8 @@ public partial class Main : Control
                      + $" hexMarks={_hexMarksShown} hexBatches={_hexSharePlays} hexHits={_hexShareHits}"
                      + $" poisonSpreads={_poisonSpreadPlays} poisonLeaks={_poisonLeakPlays}"
                      + $" poisonDrains={_poisonDrainPlays} poisonDrainHits={_poisonDrainHits}"
+                     + $" poisonVents={_battleField.PoisonVents} poisonBacklashes={_battleField.PoisonBacklashes} poisonRetorts={_battleField.PoisonRetorts}"
+                     + $" poisonBites={_battleField.PoisonBites} bloodSips={_battleField.BloodSips} poisonWaves={_battleField.PoisonTickWaves}"
                      + $" shieldShares={_shieldShown.Count} cowedGains={_cowedShown.Count} cowedLost={_cowedLostPlays} cowedAbsorbed={_cowedAbsorbed}"
                      + $" whetLogs={_whetLogs} whetRelayed={_whetRelayedLogs} healBlocked={_healBlockedLogs} reveille={_reveilleLogs}");
             await QuitAfterPresentation();
@@ -1427,6 +1430,7 @@ public partial class Main : Control
         if (await PlayMire(e, eventIndex, actor, target)) return;
         if (await PlayPlank(e, eventIndex, actor, target)) return;
         if (await PlayLili(e, eventIndex, actor, target)) return;
+        if (await PlayPoisonAxis(e, eventIndex, actor, target) || hushToken != _playToken || !_battleMode) return;
         if (await PlaySpecial(e, eventIndex, actor, target)) return;
         if (await PlayBeniMio(e, eventIndex, actor, target)) return;
         if (await PlayTickEvent(e, eventIndex, target)) return;
@@ -2548,6 +2552,7 @@ public partial class Main : Control
         _battleField.SetTouPowderClock(_paused, _speed);
         _battleField.SetGolmClock(_paused, _speed);
         _battleField.SetGatherClock(_paused, _speed);
+        _battleField.SetPoisonClock(_paused, _speed);
         _pause.Text = _paused ? "再開" : "一時停止";
         Notice(_paused ? "一時停止中" : "再生中", _paused ? UiKit.Gold : UiKit.Player);
     }
@@ -2560,6 +2565,7 @@ public partial class Main : Control
         _battleField.SetTouPowderClock(_paused, _speed);
         _battleField.SetGolmClock(_paused, _speed);
         _battleField.SetGatherClock(_paused, _speed);
+        _battleField.SetPoisonClock(_paused, _speed);
         _speedPicker.Selected = index;
         Notice($"再生速度 ×{_speed:0.#}", UiKit.Player);
     }

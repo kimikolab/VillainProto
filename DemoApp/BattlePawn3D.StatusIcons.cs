@@ -37,6 +37,7 @@ public partial class BattlePawn3D
         SetStigma(_statusSnapshot.ContainsKey(StatusKeys.Stigma));
         SetShocked(_statusSnapshot.ContainsKey(StatusKeys.Shock));
         SetPlank(_statusSnapshot.ContainsKey(StatusKeys.Plank) ? _statusSnapshot.GetValueOrDefault(StatusKeys.Armor) : 0);
+        SyncPoisonVisual();
     }
 
     // 付与は差分、ターン頭の写しは残量。写しを加算すると二重計上になる。
@@ -44,6 +45,7 @@ public partial class BattlePawn3D
     {
         if (_alive && amount > 0)
             _statusIcons.SetAmount(StatusKeys.Poison, PoisonIconAmount + amount, true);
+        SyncPoisonVisual();
     }
 
     public void SetPoisonRemaining(int amount)
@@ -53,6 +55,7 @@ public partial class BattlePawn3D
         if (amount > 0) _statusSnapshot[StatusKeys.Poison] = amount;
         else _statusSnapshot.Remove(StatusKeys.Poison);
         SetPoisoned(amount > 0);
+        SyncPoisonVisual();
     }
     public void SetConcentrated(int amount, bool animate = true)
     {

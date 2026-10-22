@@ -10,6 +10,7 @@ internal sealed class TurnTickBeat
     internal readonly List<(bool Burn, bool Heal, int Amount, bool Brittle)> Numbers = new();
     internal bool Poison, InversePoison, Burn, FireHeal, FireDamage;
     internal int FirePulses;
+    internal int PoisonPulses;
     internal double Seconds => System.Math.Min(TickPresentation.MaxSeconds, 0.58 + 0.04 * System.Math.Max(0, FirePulses - 1));
 
     internal void AddNumber(bool burn, BattleEvent e)
@@ -72,7 +73,7 @@ internal sealed class TurnTickPresentation
                         // 満タン・支援拒否でHealが無くても、台本の変換通知はオーラ。
                         beat.FireHeal |= e.Kind == BattleEventKind.FireArmor || e.SourceTrait == TraitId.Inverse;
                     }
-                    else { beat.Poison = true; beat.InversePoison |= e.SourceTrait == TraitId.Inverse; }
+                    else { beat.Poison = true; beat.PoisonPulses++; beat.InversePoison |= e.SourceTrait == TraitId.Inverse; }
                     primary[i] = beat;
                     continue;
                 }

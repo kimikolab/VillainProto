@@ -90,7 +90,7 @@ public partial class BattlefieldView3D : Control
         BuildOverlay();
         _attackAudio = new BattleAttackAudio();
         AddChild(_attackAudio);
-        VisibilityChanged += () => { if (!IsVisibleInTree()) { _attackAudio.StopAll(); ResetLiliRite(); ResetFire(); EndShockMarkPresentation(); EndGolmPresentation(); ResetGaldSwordPresentation(); } };
+        VisibilityChanged += () => { if (!IsVisibleInTree()) { _attackAudio.StopAll(); ResetLiliRite(); ResetFire(); EndShockMarkPresentation(); EndGolmPresentation(); ResetGaldSwordPresentation(); ResetPoisonPresentation(); } };
     }
 
     private void BuildWorld()
@@ -289,6 +289,7 @@ public partial class BattlefieldView3D : Control
 
     public void BeginBattle(IReadOnlyList<DemoOpening> openings, string stageName, int stageIndex)
     {
+        ResetPoisonPresentation();
         ResetGatherPresentation();
         ResetGolmPresentation();
         ResetFire();
@@ -633,7 +634,8 @@ public partial class BattlefieldView3D : Control
 
         // Advances は表示専用。踏み込む駒だけが標的の手前まで移動し、
         // 到着後に攻撃エフェクトを出してから元の席へ戻る。
-        if (advance && from.UnitId is not ("sero" or "shiga")) await from.AdvanceToAttack(to.RestPosition);
+        if (from.UnitId == "vio") { if (!await from.PoisonPounce(to.RestPosition)) return; }
+        else if (advance && from.UnitId is not ("sero" or "shiga")) await from.AdvanceToAttack(to.RestPosition);
         if (attackGeneration != _specialGeneration || !IsInstanceValid(from) || !IsInstanceValid(to)) return;
         if (holdPosition) from.HoldComboPosition();
         if (from.UnitId == "tou") BeginPowderAttack(from);
@@ -738,6 +740,7 @@ public partial class BattlefieldView3D : Control
             default:
                 if (from.UnitId == "shiga") await ShowWhipAttack(from, to);
                 else if (from.UnitId == "mudo") MakePunchImpact(to, from.AnimationSpeed);
+                else if (from.UnitId == "vio") ShowPoisonBite(from, to);
                 else MakeSingleSlash(from, to, color);
                 break;
         }

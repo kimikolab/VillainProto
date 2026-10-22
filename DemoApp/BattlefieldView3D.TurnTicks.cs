@@ -13,7 +13,7 @@ public partial class BattlefieldView3D
         speed = Math.Max(0.1, speed);
         TurnTickBeatPlays++;
         double seconds = beat.Seconds / speed;
-        if (beat.Poison) ShowTick(pawn, false, beat.InversePoison, false, seconds);
+        if (beat.Poison) ShowTick(pawn, false, beat.InversePoison, false, seconds, poisonWaves: beat.PoisonPulses);
         if (beat.Burn)
         {
             ShowFireTick(pawn, beat.FireHeal, beat.FireDamage, seconds);

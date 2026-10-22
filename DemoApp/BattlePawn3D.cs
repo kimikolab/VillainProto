@@ -149,6 +149,8 @@ public partial class BattlePawn3D : Node3D
         MaxHp = Math.Max(1, opening.MaxHp);
         AttackValue = opening.Attack;
         _baseAttack = opening.Attack;
+        _poisonCloak = opening.Traits?.Contains(TraitId.PoisonCloak) == true;
+        _poisonProof = opening.Traits?.Contains(TraitId.PoisonProof) == true;
         Pattern = opening.Pattern;
         Advances = opening.Advances;
         UnitName = opening.Name;
@@ -326,6 +328,7 @@ void fragment() {
     {
         Hp = Math.Clamp(hp, 0, MaxHp);
         Hud.SetHp(Hp, MaxHp);
+        SyncPoisonVisual();
     }
 
     public void SetAttack(int attack, AttackPattern? pattern = null, bool animate = true)
@@ -335,6 +338,7 @@ void fragment() {
         if (pattern is { } value) Pattern = value;
         Hud.SetAttack(AttackValue, PatternGlyph(Pattern));
         ShowAttackChange(animate ? change : 0);
+        UpdateVioGrowth();
     }
 
     /// <summary>
@@ -489,7 +493,7 @@ void fragment() {
         SetScrapStock(0);
         ResetStaggerPose();
         SetStatusEffects(0,0,0);
-        _poison.Clear();
+        ClearPoisonAxis();
         _confusion.SetActive(false);
         SetBurning(false);
         _guardPosition = null;
@@ -587,7 +591,7 @@ void fragment() {
         SetCurseStain(false);
         ResetStaggerPose();
         SetStatusEffects(0,0,0);
-        _poison.Clear();
+        ClearPoisonAxis();
         _motion?.Kill();
         _guardPosition = null;
         SetBurning(false);
@@ -628,6 +632,7 @@ void fragment() {
 
     public override void _Notification(int what)
     {
+        if (what == NotificationExitTree) _poisonJumpCompletion?.TrySetResult(false);
         // 頭上の札は 3D の木の外（画面の平面）にいるので、駒と一緒には消えない。
         if (what == NotificationPredelete && Hud is not null && IsInstanceValid(Hud)) Hud.QueueFree();
     }
@@ -682,6 +687,8 @@ void fragment() {
         ProcessSomDaunt(animationDelta);
         ShowGolmDiscardedPose();
         ApplyGatherRecoilPose();
+        ProcessPoisonMotion((float)delta);
+        SyncPoisonVisual();
         _shadow.Scale = new Vector3(1.0f - breath * 0.10f + shadowSpread, 1, 1.0f - breath * 0.10f - shadowSpread * 0.35f);
         _ring.Rotation = new Vector3(0, _phase * 0.15f, 0);
     }

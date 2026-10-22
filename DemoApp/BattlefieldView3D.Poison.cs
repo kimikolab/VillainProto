@@ -7,7 +7,10 @@ using System.Linq;
 public partial class BattlefieldView3D
 {
     public Task ShowPoisonDrain(IReadOnlyList<BattlePawn3D> sources, BattlePawn3D receiver, double speed)
-        => Task.WhenAll(sources.Select(source => ShowPoisonTransfer(source, receiver, false, speed, drain: true)));
+    {
+        SetPoisonClock(_poisonPaused, speed);
+        return Task.WhenAll(sources.Select(source => ShowPoisonDrainFlow(source, receiver).Arrival));
+    }
 
     // 経路と始点は台本で確定済み。陣営や隣接から戦闘の判定を再現しない。
     public async Task ShowPoisonTransfer(BattlePawn3D? source, BattlePawn3D target,

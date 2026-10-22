@@ -53,7 +53,7 @@ public partial class Main
                 else if (next.Kind != BattleEventKind.GurenRelease) break;
             }
             var targets = gains.Select(j => _battleField.FindPawn(events[j].TargetId)).OfType<BattlePawn3D>().Distinct().ToArray();
-            _battleField.ShowGurenRelease(actor, targets, _speed);
+            _battleField.ShowGurenRelease(actor, targets, _speed, e.Amount);
             if (actor is not null) SetDisplayedStatus(actor, DisplayStatusKey(StatusKeys.Guren), 0);
             await Delay(0.38);
             if (token != _playToken || !_battleMode) return true;
@@ -116,7 +116,7 @@ public partial class Main
         if (e.Kind == BattleEventKind.StatusGain && e.Text == StatusKeys.Poison
             && e.PoisonRoute is PoisonRoute.Spew or PoisonRoute.Venom)
         {
-            _battleField.ShowVenom(actor, target, e.PoisonRoute == PoisonRoute.Venom, _speed);
+            _battleField.ShowVenom(actor, target, e.PoisonRoute == PoisonRoute.Venom, _speed, e.Amount);
             await Delay(e.PoisonRoute == PoisonRoute.Venom ? 0.22 : 0.36);
             if (token != _playToken || !_battleMode) return true;
             // 残量更新は既存の StatusGain に一度だけ任せる。

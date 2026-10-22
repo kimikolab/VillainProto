@@ -11,6 +11,14 @@ using System.Linq;
 public partial class StatusIconRow2D : Control
 {
     public const float IconSize = 22f;
+    internal static string FormatAmount(int amount)
+    {
+        // 4文字以内に収め、int上限でも隣の状態へはみ出させない。
+        if (amount >= 100_000_000) return (amount / 100_000_000d).ToString(amount < 1_000_000_000 ? "0.#" : "0", System.Globalization.CultureInfo.InvariantCulture) + "億";
+        if (amount >= 10_000_000) return (amount / 100_000_000d).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + "億";
+        if (amount >= 10_000) return (amount < 100_000 ? (amount / 10_000d).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) : (amount / 10_000).ToString()) + "万";
+        return amount.ToString();
+    }
     private const float Pitch = 24f;
     private const int PerRow = 6;
 
@@ -60,8 +68,9 @@ public partial class StatusIconRow2D : Control
             {
                 HorizontalAlignment = HorizontalAlignment.Right,
                 VerticalAlignment = VerticalAlignment.Bottom,
-                Position = new Vector2(-7, 5),
-                Size = new Vector2(IconSize + 10, IconSize),
+                Position = new Vector2(-2, 5),
+                Size = new Vector2(IconSize + 2, IconSize),
+                ClipText = true,
                 MouseFilter = MouseFilterEnum.Ignore,
             };
             icon.Count.AddThemeColorOverride("font_color", new Color("f1e5ff"));
@@ -71,7 +80,7 @@ public partial class StatusIconRow2D : Control
         }
         if (icon.Count is not null)
         {
-            icon.Count.Text = icon.Amount.ToString();
+            icon.Count.Text = FormatAmount(icon.Amount);
             // 桁が増えても隣の状態アイコンへはみ出さない。
             icon.Count.AddThemeFontSizeOverride("font_size", amount >= 1000 ? 9 : amount >= 100 ? 10 : 12);
             icon.Count.Visible = amount > 0;
