@@ -976,6 +976,8 @@ public enum TraitId
     // --- 第382期で足した札（指示書 design/PHASE382_DIRGE_SPEC.md §3）。弔いの楽士（版 D1 ／ D1n・`All` の外）。保持者 0 枚 ---
     Dirge,                // 哀歌（楽士）: 手番で、前の自分の手番から今までに味方が倒れていれば（起き上がる死 ／ 儚い駒の死も数える）、いちばん攻撃力の高い味方（自分を除く・同じなら席番号）にもう一度手番を渡す（1手番に1回）。倒れていなければふつうに殴る（`DirgeTrait`・手番の口は `_giftQueue`）
     DirgeEcho,            // 哀歌は敵にも届く（楽士・マイナス）: 楽士の手番で、前の手番から今までに敵が倒れていれば、味方の再行動の後に、いちばん攻撃力の高い敵がもう一度動く（`DirgeTrait` が控える・札そのものは印）
+    // --- 第383期で足した札（指示書 design/PHASE383_DIRGE_ECHO_SPEC.md §2）。弔いの楽士の版 D2 のマイナス。保持者 0 枚 ---
+    DirgeEchoAlways,      // 哀歌は敵の耳にも届く（楽士 D2・マイナス）: 楽士が奏でた手番（味方を動かした手番）では必ず、味方の再行動の後に、いちばん攻撃力の高い敵がもう一度動く（敵が倒れたかは見ない・奏でずに殴った手番では動かない）（`DirgeTrait` が控える・札そのものは印）
     UncapRaise,           // 起こしの上限を外す（U・リィカ ／ ムグ）: 亡者起こし（味方の亡骸から）／ 亡骸の芽吹きの1戦に3回の上限を外す（召喚枠の空きだけが上限）（**札そのものは挙動を持たない**・`RaiseDeadTrait` ／ `MugSproutTrait` が読む）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -19401,6 +19403,7 @@ public static class TraitCatalog
         new VelSoulTrait(TraitId.SoulSew),                           // 第381期（魂を縫い付ける）
         new DirgeTrait(TraitId.Dirge),                               // 第382期（哀歌・楽士）
         new DirgeTrait(TraitId.DirgeEcho),                           // 第382期（哀歌は敵にも届く・楽士のマイナス）
+        new DirgeTrait(TraitId.DirgeEchoAlways),                     // 第383期（哀歌は敵の耳にも届く・楽士 D2 のマイナス）
         new EruptTrait(),      // 第180期
         new SmearTrait(),      // 第180期
         new SpitTrait(),       // 第180期

@@ -722,6 +722,13 @@ public static class UnitCatalog
         PlusText = BardPlus382, MinusText = "哀歌は敵にも届く。敵が倒れると、いちばん強い敵ももう一度動く",
         Flavor = "葬列の後ろで弦を弾く者。歌が誰のためのものかは、聴いた者が決める。",
     };
+    /// <summary>弔いの楽士 D2（第383期）: 哀歌 ＋ 哀歌は敵の耳にも届く（奏でるたびに、いちばん強い敵も1回動く）。体と文面のプラスは D1 と同じ。</summary>
+    public static readonly UnitDef Bard383 = new()
+    {
+        Id = Bard382.Id, Name = Bard382.Name, MaxHp = Bard382.MaxHp, Attack = Bard382.Attack, Speed = Bard382.Speed, Advances = false,
+        Traits = new[] { TraitId.Dirge, TraitId.DirgeEchoAlways }, Actions = BardActions, PlusText = BardPlus382,
+        MinusText = "哀歌は敵の耳にも届く。奏でるたびに、いちばん強い敵も奮い立ってもう一度動く", Flavor = Bard382.Flavor,
+    };
     /// <summary>弔いの楽士 D1n（第382期・マイナスの重さを測る対照）: 哀歌だけ。</summary>
     public static readonly UnitDef Bard382n = new()
     {

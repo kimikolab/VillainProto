@@ -11975,7 +11975,17 @@ public sealed class BattleContext
                     Log(foe ? $"  {to.Name} も哀歌に応えてもう一度動く" : $"  {to.Name} は {giver.Name} の哀歌に立ち上がってもう一度戦う", LogKind.Highlight, to);
                     UnitTally tt = TallyOf(to);
                     long d0 = tt.DamageToEnemy;
-                    TakeTurn(to);
+                    // 第383期（計数のみ）: 敵の再行動の手番の中で倒れた味方と、積もった墓守の層を楽士の帳簿に。
+                    long necro0 = 0;
+                    if (foe) { _echoBard = gb; foreach (UnitState u in _units) if (u.TeamId == giver.TeamId && u.IsAlive) necro0 += u.RawCounter("necro"); }
+                    try { TakeTurn(to); }
+                    finally { _echoBard = null; }
+                    if (foe)
+                    {
+                        long necro1 = 0;
+                        foreach (UnitState u in _units) if (u.TeamId == giver.TeamId && u.IsAlive) necro1 += u.RawCounter("necro");
+                        if (necro1 > necro0) gb.R383EchoLayer += necro1 - necro0;
+                    }
                     if (foe) { tt.R382EchoTurns++; tt.R382EchoDealt += tt.DamageToEnemy - d0; }
                     else { tt.R382EncoreTurns++; tt.R382EncoreDealt += tt.DamageToEnemy - d0; }
                     continue;
@@ -16842,8 +16852,18 @@ public sealed class BattleContext
             Log($"    哀歌は敵にも届く（倒れた敵 {foes}）——{e.Name} がもう一度動く", LogKind.Trigger, bard);
             _giftQueue.Enqueue((bard, e, 2));
         }
+        // 第383期（D2）: 奏でた手番では必ず、味方の後に、いちばん攻撃力の高い敵も動く（敵が倒れたかは見ない）。
+        if (sang && bard.HasTrait(TraitId.DirgeEchoAlways) && TopAttacker(Opponent(bard.TeamId), null) is { } e2)
+        {
+            bt.R382Echoes++;
+            Log($"    哀歌は敵の耳にも届く——{e2.Name} が奮い立ってもう一度動く", LogKind.Trigger, bard);
+            _giftQueue.Enqueue((bard, e2, 2));
+        }
         return sang;
     }
+
+    /// <summary>第383期（計数のみ）: 哀歌の敵の再行動の手番の間だけ、楽士の帳簿（ほかでは null）。</summary>
+    UnitTally? _echoBard;
 
     /// <summary>その陣営の生きている駒のうち、攻撃力（`CurrentAttack`）がいちばん高い駒（<paramref name="except"/> を除く・同じなら席番号の小さい方）。</summary>
     UnitState? TopAttacker(int teamId, UnitState? except)
@@ -17432,6 +17452,12 @@ public sealed class BattleContext
         // 第381期（魂を分ける）: 起き上がりの回数を持つ者の死は「起き上がる死」——死の出来事も味方の死の通知も今どおり出し、
         // **本人の「自分の死」の札だけを起こさない**（分裂 ／ 破裂 ／ 倒れ時の回復などを蘇生で掛け算しない）。起き上がりは通知の後（`SoulRise`）。
         bool soulRise = _soulLive && dead.RawCounter(VelSoulTrait.LivesKey) > 0;
+        if (_echoBard is not null && dead.TeamId == PlayerTeam)   // 第383期（計数のみ・哀歌の敵の再行動の中で倒れた味方）
+        {
+            _echoBard.R383EchoKills++;
+            if (dead.HasTrait(TraitId.Ephemeral)) _echoBard.R383EchoKillsEph++;
+            if (soulRise) _echoBard.R383EchoKillsRise++;
+        }
 
         // 本人の死亡時効果（分裂など）
         if (!soulRise)
