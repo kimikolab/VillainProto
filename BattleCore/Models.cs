@@ -2476,6 +2476,11 @@ public sealed class UnitTally
     public long R379Sown, R379SowTurnSum, R379SowNoSeat, R379Grown;
     /// <summary>第381期（魂を分ける・**計数のみ**）: 分けた数（ヴェル）／ 縫い付けた手番 ／ 縫えずに殴った手番（ヴェル）／ 起き上がった回数 ／ 起き上がった T の和（起き上がった本人）。</summary>
     public long R381Split, R381Sewn, R381SewSwing, R381Rise, R381RiseTSum;
+    /// <summary>
+    /// 第382期（哀歌・**計数のみ**）。楽士の側: 奏でた手番（味方を動かした）／ 味方が倒れていなくて殴った手番 ／ 動かす相手がいなかった手番 ／ ギフトの手番の中で奏でなかった ／ 敵を動かした数 ／ 控えた手番が潰れた（相手が倒れた・敵が全滅）。
+    /// 受け手の側: 動かされた手番（味方 ／ 敵）とその手番で相手の陣営へ通した量。
+    /// </summary>
+    public long R382Songs, R382NoDeath, R382NoOne, R382InGift, R382Echoes, R382Skipped, R382EncoreTurns, R382EncoreDealt, R382EchoTurns, R382EchoDealt;
     public int R378Layer6Turn, R378Layer9Turn;
     public long R377ChainSaved;
     public int R377PeakTurn, R377AwakeTurn;
@@ -3788,6 +3793,8 @@ public sealed class UnitTally
         R378FoeRaises += o.R378FoeRaises; R378FoeRaiseTurnSum += o.R378FoeRaiseTurnSum; R378FoeNoSeat += o.R378FoeNoSeat;   // 第378期
         R379Sown += o.R379Sown; R379SowTurnSum += o.R379SowTurnSum; R379SowNoSeat += o.R379SowNoSeat; R379Grown += o.R379Grown;   // 第379期
         R381Split += o.R381Split; R381Sewn += o.R381Sewn; R381SewSwing += o.R381SewSwing; R381Rise += o.R381Rise; R381RiseTSum += o.R381RiseTSum;   // 第381期
+        R382Songs += o.R382Songs; R382NoDeath += o.R382NoDeath; R382NoOne += o.R382NoOne; R382InGift += o.R382InGift; R382Echoes += o.R382Echoes; R382Skipped += o.R382Skipped;
+        R382EncoreTurns += o.R382EncoreTurns; R382EncoreDealt += o.R382EncoreDealt; R382EchoTurns += o.R382EchoTurns; R382EchoDealt += o.R382EchoDealt;   // 第382期
         if (R378Layer6Turn == 0) R378Layer6Turn = o.R378Layer6Turn;
         if (R378Layer9Turn == 0) R378Layer9Turn = o.R378Layer9Turn;
         R377Raises += o.R377Raises; R377RaiseTurnSum += o.R377RaiseTurnSum; R377NoSeat += o.R377NoSeat; R377CostSelf += o.R377CostSelf; R377RotLost += o.R377RotLost; R377RotDeaths += o.R377RotDeaths; R377Sprouts += o.R377Sprouts; R377SproutTurnSum += o.R377SproutTurnSum; R377SproutNoSeat += o.R377SproutNoSeat;   // 第377期

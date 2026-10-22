@@ -223,7 +223,7 @@ static partial class Sh378Diag
             // 第379期: 第378期の「版・」の死の台は外した——頭の 12 台を見て、版の並びは関数から組む。
             bool rows = vr.Take(12).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒", "試遊・毒 席替え", "試遊・毒 紅", "試遊・ヴィオ 台B", "試遊・死の連鎖" });
             var basis = Row("死の連鎖 (リィカ軸)");
-            bool vers = new[] { (Presets.DeathChain377(UnitCatalog.RicaE, UnitCatalog.MugSproutM), 2), (Presets.DeathChain377(UnitCatalog.RicaEL, UnitCatalog.MugSproutM), 4), (Presets.DeathChain377(UnitCatalog.RicaELU, UnitCatalog.MugSproutMU), 5) }.All(q => q.Item1.Occupied().Select(o => o.Def).SequenceEqual(Apply(basis, q.Item2).Occupied().Select(o => o.Def)));
+            bool vers = new[] { (Presets.DeathChain377(UnitCatalog.RicaE, UnitCatalog.MugSproutM), 2), (Presets.DeathChain377(UnitCatalog.RicaEL, UnitCatalog.MugSproutM), 4), (Presets.DeathChain377(UnitCatalog.RicaELU, UnitCatalog.MugSproutMU), 5) }.All(q => Pin381(q.Item1).Occupied().Select(o => o.Def).SequenceEqual(Apply(basis, q.Item2).Occupied().Select(o => o.Def)));   // 第382期: ヴェルは旧に固定
             Expect("`Presets.Versions` の頭 ＝ 第376期の11台 ＋「試遊・死の連鎖」（第379期に第378期の「版・」の死の台を外した・E ／ EL ／ ELU の並びは `DeathChain377`）", rows && vers, string.Join("、", vr));
         }
 

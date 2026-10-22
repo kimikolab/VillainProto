@@ -14,7 +14,7 @@ static partial class Sh380Diag
     }
     static bool Same(BattleResult a, BattleResult b) => a.PlayerWon == b.PlayerWon && a.Turns == b.Turns && a.PlayerSurvivors == b.PlayerSurvivors;
     static Formation Swap(Formation f, UnitDef from, UnitDef to) { var g = f.Clone(); foreach ((int s, UnitDef d) in f.Occupied()) if (ReferenceEquals(d, from)) g[s] = to; return g; }
-    static Formation Row(string n) => CompareBuilds().First(r => r.Name == n).F;
+    static Formation Row(string n) => Pin381(CompareBuilds().First(r => r.Name == n).F);   // 第382期: ヴェルは第381期までの規定に固定
 
     static void Check()
     {
@@ -42,7 +42,7 @@ static partial class Sh380Diag
         }
         {
             long cells = 0, diff = 0;
-            var boards = new[] { Row("死の連鎖 (リィカ軸)"), Row("継ぎ当て×死の連鎖"), Presets.DeathSom379(), Row("鱗 (ウロ×死軸)") };
+            var boards = new[] { Row("死の連鎖 (リィカ軸)"), Row("継ぎ当て×死の連鎖"), Pin381(Presets.DeathSom379()), Row("鱗 (ウロ×死軸)") };
             foreach (var f in boards)
                 foreach (var w in new[] { I.Boss, I.Guard, I.Bat, I.M5 })
                     for (int sd = 0; sd < 10; sd++)
@@ -74,14 +74,14 @@ static partial class Sh380Diag
         {
             var vr = Presets.Versions.Select(r => r.Name).ToArray();
             var found = vr.Where(n => n.Contains("探索") && !n.StartsWith("版・")).ToArray();   // 第381期: 「版・S2 ／ S10 死 探索1位」（ヴェルの版の台）は数えない
-            var top = Presets.Versions.FirstOrDefault(r => r.Name == "試遊・死 探索1位").F;
+            var top = Pin381(Presets.Versions.First(r => r.Name == "試遊・死 探索1位").F);   // 第382期: ヴェルは第381期までの規定に固定
             bool topOk = top is not null && Fixed.All(x => top.Occupied().Any(o => ReferenceEquals(o.Def, x))) && top.Occupied().Count() == 5
-                && top.Occupied().Count(o => IsHealer(o.Def)) == 1 && top.Occupied().All(o => UnitCatalog.All.Contains(o.Def))
+                && top.Occupied().Count(o => IsHealer(o.Def)) == 1 && top.Occupied().All(o => UnitCatalog.All.Contains(o.Def) || ReferenceEquals(o.Def, UnitCatalog.VelH381))   /* 第382期: ヴェルは旧（`All` の外）に固定 */
                 && Som307Diag.Seats(top) == "リィカ・ヒヨ・ボルグ・ヴェル・ムグ";
             // 第380期の探索で本体の上位 10 にソムは入らない（ソムはヒーラーで本体の2枠に入らない・参考の上位 5 にも入らない）——「試遊・死 探索ソム」は足さない
             bool only = found.SequenceEqual(new[] { "試遊・死 探索1位" }) && !vr.Any(n => n.StartsWith("版・撒き") || n.StartsWith("版・育つ"));
             bool keep = vr.Contains("試遊・死の連鎖") && vr.Contains("試遊・死 ソム")
-                && Presets.Versions.First(r => r.Name == "試遊・死の連鎖").F.Occupied().Select(o => o.Def).SequenceEqual(Row("死の連鎖 (リィカ軸)").Occupied().Select(o => o.Def));
+                && Pin381(Presets.Versions.First(r => r.Name == "試遊・死の連鎖").F).Occupied().Select(o => o.Def).SequenceEqual(Row("死の連鎖 (リィカ軸)").Occupied().Select(o => o.Def));
             Expect("試遊の台: 探索の台は「試遊・死 探索1位」だけ（ソムは上位に入らず「探索ソム」は足さない）・規定の駒・リィカ ／ ヴェル ／ ムグ ＋ ヒーラー1枚・「版・撒き全 ／ 育つ」は外した・「試遊・死の連鎖」「試遊・死 ソム」は規定の駒のまま", topOk && only && keep, string.Join("、", vr.Skip(11)));
         }
 

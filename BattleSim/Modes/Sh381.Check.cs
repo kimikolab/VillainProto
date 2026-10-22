@@ -33,6 +33,14 @@ static partial class Sh381Diag
     static void Start(BattleContext ctx, UnitState u) { foreach (var t in u.Traits) t.OnBattleStart(ctx, u); }
     static void Act(BattleContext ctx, UnitState u) { foreach (var t in u.Traits) t.OnAction(ctx, u, u.Def.Actions![0]); }
     static int Lives(UnitState u) => u.RawCounter(VelSoulTrait.LivesKey);
+    /// <summary>第381期の HEAD（2e7fff5d）の `docs/balance.md`。</summary>
+    static string[] BalanceH381()
+    {
+        var psi = new System.Diagnostics.ProcessStartInfo("git", "show 2e7fff5d:docs/balance.md") { RedirectStandardOutput = true, UseShellExecute = false, StandardOutputEncoding = System.Text.Encoding.UTF8 };
+        using var pr = System.Diagnostics.Process.Start(psi)!;
+        string x = pr.StandardOutput.ReadToEnd(); pr.WaitForExit();
+        return x.Split('\n').Select(l => l.TrimEnd('\r')).ToArray();
+    }
     static UnitState At(List<UnitState> p, int slot) => p.First(u => u.Slot == slot);
 
     static void Check()
@@ -45,8 +53,8 @@ static partial class Sh381Diag
 
         // ---- 版の駒 ----
         {
-            var v = UnitCatalog.Vel;
-            bool def = v.Traits.SequenceEqual(new[] { TraitId.Reviver, TraitId.Stitch }) && UnitCatalog.All.Contains(v) && UnitCatalog.All.Count == 52;
+            var v = UnitCatalog.VelH381;   // 第382期: 第381期までの規定のヴェル（規定は S2 になった）
+            bool def = v.Traits.SequenceEqual(new[] { TraitId.Reviver, TraitId.Stitch }) && !UnitCatalog.All.Contains(v) && UnitCatalog.All.Count == 52;
             bool vers = UnitCatalog.VelS2.Traits.SequenceEqual(new[] { TraitId.SoulSplitHalf, TraitId.SoulSew }) && UnitCatalog.VelS2.Actions is { Count: 1 } a2 && a2[0].Kind == ActionKind.Skill
                 && UnitCatalog.VelS2n.Traits.SequenceEqual(new[] { TraitId.SoulSplitHalf }) && UnitCatalog.VelS2n.Actions is null
                 && UnitCatalog.VelS10.Traits.SequenceEqual(new[] { TraitId.SoulSplitTen, TraitId.SoulSew })
@@ -122,7 +130,7 @@ static partial class Sh381Diag
 
         // ---- ヒーラーの定義 ----
         {
-            bool velH = Boss283Diag.HealerDef(UnitCatalog.Vel) && Boss283Diag.HealPool.Contains(UnitCatalog.Vel);
+            bool velH = Boss283Diag.HealerDef(UnitCatalog.VelH381) && Boss283Diag.HealPool.Contains(UnitCatalog.VelH381);   // 第382期: 旧のヴェル ／ 旧の一覧
             bool vers = new[] { UnitCatalog.VelS2, UnitCatalog.VelS2n, UnitCatalog.VelS10 }.All(d => !Boss283Diag.HealerDef(d));
             Expect("版のヴェルはヒーラーの機械的な定義（第283期・味方に回復か破片を2回以上書ける札）に入らない・規定のヴェルは入る", velH && vers);
         }
@@ -131,7 +139,7 @@ static partial class Sh381Diag
         {
             var doc = new Dictionary<string, double[]>();
             int nw = EnemyCatalog.Stages.Count;
-            foreach (string line in File.ReadAllLines("docs/balance.md"))
+            foreach (string line in BalanceH381())   // 第382期: 第381期の HEAD の `docs/balance.md`（規定のヴェルが変わったので、旧に固定した行と比べる）
             {
                 if (!line.StartsWith("| ")) continue;
                 var cells = line.Split('|').Select(cx => cx.Trim()).Where(cx => cx.Length > 0).ToArray();
@@ -140,7 +148,7 @@ static partial class Sh381Diag
                 for (int w = 0; w < nw; w++) if (!double.TryParse(cells[w + 1].TrimEnd('%'), out v[w])) { ok = false; break; }
                 if (ok) doc[cells[0]] = v;
             }
-            var rows = CompareBuilds().ToArray();
+            var rows = CompareBuilds().Select(r => (r.Name, F: Pin381(r.F))).ToArray();
             var g = CGrid(rows);
             int mism = 0, miss = 0;
             for (int r = 0; r < rows.Length; r++)
@@ -155,15 +163,14 @@ static partial class Sh381Diag
         // ---- 試遊の台 ----
         {
             var vr = Presets.Versions.Select(r => r.Name).ToArray();
-            var s2 = Presets.Versions.FirstOrDefault(r => r.Name == "版・S2 死 探索1位").F;
-            var s10 = Presets.Versions.FirstOrDefault(r => r.Name == "版・S10 死 探索1位").F;
-            bool rows = s2 is not null && s10 is not null
-                && s2.Occupied().Select(o => o.Def).SequenceEqual(Apply(Presets.DeathSeek380(), 1).Occupied().Select(o => o.Def))
+            // 第382期: S2 を規定にしたので「版・S2 ／ S10 死 探索1位」は外した（並びは `Presets.DeathSeek380(vel)` で組める）。
+            var s2 = Presets.DeathSeek380(UnitCatalog.VelS2); var s10 = Presets.DeathSeek380(UnitCatalog.VelS10);
+            bool rows = s2.Occupied().Select(o => o.Def).SequenceEqual(Apply(Presets.DeathSeek380(), 1).Occupied().Select(o => o.Def))
                 && s10.Occupied().Select(o => o.Def).SequenceEqual(Apply(Presets.DeathSeek380(), 3).Occupied().Select(o => o.Def))
-                && vr.Count(n => n.StartsWith("版・")) == 2 && vr.Contains("試遊・死 探索1位") && vr.Contains("試遊・死の連鎖") && vr.Contains("試遊・死 ソム");
+                && !vr.Contains("版・S2 死 探索1位") && !vr.Contains("版・S10 死 探索1位") && vr.Contains("試遊・死 探索1位") && vr.Contains("試遊・死の連鎖") && vr.Contains("試遊・死 ソム");
             var inner = HealBoards().Select(b => b.Name).Concat(new[] { "→" });
             bool only = !vr.Any(n => inner.Any(x => n.Contains(x)));
-            Expect("試遊の台: 「版・S2 ／ S10 死 探索1位」（「試遊・死 探索1位」の並びでヴェルだけ版）を足した・今の台は残る・ヒーラー同席 ／ 死の外の替えた台は器具の中だけ", rows && only, string.Join("、", vr.Skip(11)));
+            Expect("試遊の台: 「版・S2 ／ S10 死 探索1位」（「試遊・死 探索1位」の並びでヴェルだけ版）は第382期に外した（`DeathSeek380(vel)` で組める）・今の台は残る・ヒーラー同席 ／ 死の外の替えた台は器具の中だけ", rows && only, string.Join("、", vr.Skip(11)));
         }
 
         // ---- verbose ／ 再現性 ----

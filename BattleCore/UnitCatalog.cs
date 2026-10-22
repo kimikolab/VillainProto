@@ -666,7 +666,8 @@ public static class UnitCatalog
         Flavor = "一度しか使えない駒を編成に入れる指揮官はいない。"
     };
 
-    public static readonly UnitDef Vel = new()
+    /// <summary>旧ヴェル（第381期までの規定・蘇生 ＋ 縫い合わせ）。<b>第382期に魂を分ける（第381期の S2）を規定にしたので、名前を付けて残した</b>（`All` に入れない・第381期までの器具は `Common.PinV381` ／ `Pin381` ／ 古い口の終端でこれに固定する）。</summary>
+    public static readonly UnitDef VelH381 = new()
     {
         Id = "vel",
         Name = "継ぎ接ぎのヴェル",
@@ -689,12 +690,12 @@ public static class UnitCatalog
     const string VelSewClause381 = "。手番で、隣の仲間の魂をもう一片縫い付ける（3度まで）";
     static UnitDef VelOn381(TraitId split, bool sew, int lives, string hpWord) => new()
     {
-        Id = Vel.Id, Name = Vel.Name, MaxHp = Vel.MaxHp, Attack = Vel.Attack, Speed = Vel.Speed,
+        Id = VelH381.Id, Name = VelH381.Name, MaxHp = VelH381.MaxHp, Attack = VelH381.Attack, Speed = VelH381.Speed,
         Traits = sew ? new[] { split, TraitId.SoulSew } : new[] { split },
         Actions = sew ? VelSewActions : null,
         PlusText = string.Format(VelSoulClause381, lives) + (sew ? VelSewClause381 : ""),
         MinusText = $"魂を分けられた者は、最大HPが{hpWord}になる",
-        Flavor = Vel.Flavor,
+        Flavor = VelH381.Flavor,
     };
     /// <summary>ヴェルの版 S2（第381期）: 隣の最大HPを半分・起き上がり 2 度・手番で +1（上限 3）。</summary>
     public static readonly UnitDef VelS2 = VelOn381(TraitId.SoulSplitHalf, sew: true, lives: 2, hpWord: "半分");
@@ -702,6 +703,31 @@ public static class UnitCatalog
     public static readonly UnitDef VelS2n = VelOn381(TraitId.SoulSplitHalf, sew: false, lives: 2, hpWord: "半分");
     /// <summary>ヴェルの版 S10（第381期）: 隣の最大HPを 10・起き上がり 3 度・手番で +1（上限 3）。</summary>
     public static readonly UnitDef VelS10 = VelOn381(TraitId.SoulSplitTen, sew: true, lives: 3, hpWord: " 10 ");
+
+    /// <summary>継ぎ接ぎのヴェル（第382期から規定 ＝ 第381期の S2・魂を分ける ＋ 縫い付け）。旧は <see cref="VelH381"/>。</summary>
+    public static readonly UnitDef Vel = new()
+    {
+        Id = VelS2.Id, Name = VelS2.Name, MaxHp = VelS2.MaxHp, Attack = VelS2.Attack, Speed = VelS2.Speed,
+        Traits = VelS2.Traits.ToArray(), Actions = VelS2.Actions, PlusText = VelS2.PlusText, MinusText = VelS2.MinusText, Flavor = VelS2.Flavor,
+    };
+
+    // ---- 第382期: 弔いの楽士（版・指示書 design/PHASE382_DIRGE_SPEC.md §3-1・`All` に入れない・名前は仮）----
+    static readonly UnitAction[] BardActions = { new(ActionKind.Skill, Label: "哀歌を奏でる") };
+    const string BardPlus382 = "味方が倒れると、哀歌を奏でる。その歌に、いちばん強い仲間がもう一度立ち上がって戦う";
+    /// <summary>弔いの楽士 D1（第382期）: 哀歌 ＋ 哀歌は敵にも届く（マイナス）。HP 40 ／ 攻 3 ／ 速 9 ／ 据置。</summary>
+    public static readonly UnitDef Bard382 = new()
+    {
+        Id = "bard382", Name = "弔いの楽士", MaxHp = 40, Attack = 3, Speed = 9, Advances = false,
+        Traits = new[] { TraitId.Dirge, TraitId.DirgeEcho }, Actions = BardActions,
+        PlusText = BardPlus382, MinusText = "哀歌は敵にも届く。敵が倒れると、いちばん強い敵ももう一度動く",
+        Flavor = "葬列の後ろで弦を弾く者。歌が誰のためのものかは、聴いた者が決める。",
+    };
+    /// <summary>弔いの楽士 D1n（第382期・マイナスの重さを測る対照）: 哀歌だけ。</summary>
+    public static readonly UnitDef Bard382n = new()
+    {
+        Id = Bard382.Id, Name = Bard382.Name, MaxHp = Bard382.MaxHp, Attack = Bard382.Attack, Speed = Bard382.Speed, Advances = false,
+        Traits = new[] { TraitId.Dirge }, Actions = BardActions, PlusText = BardPlus382, MinusText = "", Flavor = Bard382.Flavor,
+    };
 
     /// <summary>S+HP の版（第196期・<b>診断だけ</b>）のスィドの最大HP。規定の版は 84 のまま。</summary>
     public const int SidHardyHp = 100;

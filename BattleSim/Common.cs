@@ -696,7 +696,10 @@ public static UnitDef PinV375(UnitDef d) => ReferenceEquals(d, UnitCatalog.Vio) 
 public static UnitDef PinR378(UnitDef d) => ReferenceEquals(d, UnitCatalog.Rica) ? UnitCatalog.RicaH378 : PinM379(d);   // 第380期: 規定のムグも第379期までの規定（`MugH379`）へ（古い口の終端）
 
 /// <summary>第380期: 規定のムグ（撒き全）を第1〜379期の規定（`MugH379`）に替える。ほかの駒はそのまま返す。古い口の終端（`PinR378`）の後ろに置いた。</summary>
-public static UnitDef PinM379(UnitDef d) => ReferenceEquals(d, UnitCatalog.Mug) ? UnitCatalog.MugH379 : d;
+public static UnitDef PinM379(UnitDef d) => ReferenceEquals(d, UnitCatalog.Mug) ? UnitCatalog.MugH379 : PinV381(d);
+/// <summary>第382期: 魂を分けるヴェル（第381期の S2）を規定にしたので、第381期までの器具はヴェルを旧（`VelH381`）に固定する。`PinM379` の後ろ（古い口の終端からも通る）。</summary>
+public static UnitDef PinV381(UnitDef d) => ReferenceEquals(d, UnitCatalog.Vel) ? UnitCatalog.VelH381 : d;
+public static Formation Pin381(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinV381(d); return g; }
 
 /// <summary>第380期: 撒き全をムグの規定にした。第379期の規定（リィカは目覚めたリィカ・ムグは旧）で測った器具はこれを通す。陣形とレリックは保つ。</summary>
 public static Formation Pin379(Formation f)

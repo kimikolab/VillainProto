@@ -50,13 +50,13 @@ static partial class Sh380Diag
     // 母集団
     // ---------------------------------------------------------------------------------
     /// <summary>固定の3枚（規定の駒・段0 の後）。</summary>
-    internal static readonly UnitDef[] Fixed = { UnitCatalog.Rica, UnitCatalog.Vel, UnitCatalog.Mug };
+    internal static readonly UnitDef[] Fixed = { UnitCatalog.Rica, UnitCatalog.VelH381, UnitCatalog.Mug };   // 第382期: ヴェルは第381期までの規定（`VelH381`）に固定
     static UnitDef[]? _heal;
     /// <summary>ヒーラー（第283期の機械的な定義 ＝ 味方に回復か破片を2回以上書ける駒・`Boss283Diag.HealPool`・1回だけ数えて控える）。</summary>
     internal static UnitDef[] Healers => _heal ??= Boss283Diag.HealPool;
     internal static bool IsHealer(UnitDef d) => Healers.Any(h => h.Id == d.Id);
     /// <summary>2枠の候補: ロスターからリィカ ／ ヴェル ／ ムグとツギ ／ リリを除いた駒。</summary>
-    internal static UnitDef[] Cands => UnitCatalog.All.Where(d => !Fixed.Contains(d) && d.Id is not "tsugi" and not "lili").ToArray();
+    internal static UnitDef[] Cands => UnitCatalog.All.Where(d => !Fixed.Any(x => x.Id == d.Id) && d.Id is not "tsugi" and not "lili").ToArray();
     /// <summary>本体の組（2枠ともヒーラーでない ＝ 台のヒーラーはヴェルの1枚）と、参考の組（2枠のどちらか1枚がヒーラー ＝ 台にヒーラー2枚）。</summary>
     internal static (UnitDef A, UnitDef B)[] Pairs(bool reference)
     {
@@ -139,7 +139,7 @@ static partial class Sh380Diag
     static void Stage0()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = CompareBuilds().ToArray();
+        var rows = CompareBuilds().Select(r => (r.Name, F: Pin381(r.F))).ToArray();   // 第382期: ヴェルは第381期までの規定に固定
         int nw = EnemyCatalog.Stages.Count, last = nw - 1;
         double[,] G((string Name, Formation F)[] rs)
         {
@@ -177,11 +177,11 @@ static partial class Sh380Diag
 
         var boards = new (string Name, Formation F)[]
         {
-            ("死の連鎖 (リィカ軸)", CompareBuilds().First(r => r.Name == "死の連鎖 (リィカ軸)").F),
-            ("継ぎ当て×死の連鎖", CompareBuilds().First(r => r.Name == "継ぎ当て×死の連鎖").F),
-            ("死・ソム", Presets.DeathSom379()),
-            ("鱗 (ウロ×死軸)", CompareBuilds().First(r => r.Name == "鱗 (ウロ×死軸)").F),
-            ("駆り立て改 (カリ×死軸)", CompareBuilds().First(r => r.Name == "駆り立て改 (カリ×死軸)").F),
+            ("死の連鎖 (リィカ軸)", Pin381(CompareBuilds().First(r => r.Name == "死の連鎖 (リィカ軸)").F)),
+            ("継ぎ当て×死の連鎖", Pin381(CompareBuilds().First(r => r.Name == "継ぎ当て×死の連鎖").F)),
+            ("死・ソム", Pin381(Presets.DeathSom379())),
+            ("鱗 (ウロ×死軸)", Pin381(CompareBuilds().First(r => r.Name == "鱗 (ウロ×死軸)").F)),
+            ("駆り立て改 (カリ×死軸)", Pin381(CompareBuilds().First(r => r.Name == "駆り立て改 (カリ×死軸)").F)),
         };
         var waves = new (string Name, I.W[] Ws)[] { ("ボス", new[] { I.Boss }), ("近衛", new[] { I.Guard }), ("大隊", new[] { I.Bat }), ("本編 第5波", new[] { I.M5 }), ("強 第2〜5波", I.StrongWaves) };
         var rg = new S377.B[boards.Length, 2, waves.Length];
@@ -286,7 +286,7 @@ static partial class Sh380Diag
             ("ゾトを含む最良（段2 の組の最良の並び）", mPairs.First(x => Has(x.C, "zoto")).C.F, PairRank(mPairs, c => Has(c, "zoto"))),
             ("ゴルムを含む最良", mPairs.First(x => Has(x.C, "golm")).C.F, PairRank(mPairs, c => Has(c, "golm"))),
             ("ゾト ＋ ゴルムの組の最良の並び", mPairs.First(x => Has(x.C, "zoto") && Has(x.C, "golm")).C.F, PairRank(mPairs, c => Has(c, "zoto") && Has(c, "golm"))),
-            ("今の死の連鎖 (リィカ軸)（ゾト ／ ゴルム・今の席）", CompareBuilds().First(r => r.Name == "死の連鎖 (リィカ軸)").F, 0),
+            ("今の死の連鎖 (リィカ軸)（ゾト ／ ゴルム・今の席）", Pin381(CompareBuilds().First(r => r.Name == "死の連鎖 (リィカ軸)").F), 0),
         };
         foreach (var (name, f, r2i) in extra)
         {
@@ -304,7 +304,7 @@ static partial class Sh380Diag
         ref5 = rorder.Select(i => ref5[i]).ToList(); rs3 = rorder.Select(i => rs3[i]).ToArray();
         PrintTop("## 5. 参考: ヒーラー2枚の台（2枠のどちらかがヒーラー）の上位 5 台（段3・seed 0..99）", ref5, rs3);
         {
-            var som = Presets.DeathSom379();
+            var som = Pin381(Presets.DeathSom379());
             var sc = Quick(som, W2, 20);
             int rank2 = rPairs.Count(x => x.S.Mean > sc.Mean || (x.S.Mean == sc.Mean && x.S.Deaths < sc.Deaths)) + 1;
             int r2i = PairRank(rPairs, c => Has(c, "golm") && Has(c, "som"));

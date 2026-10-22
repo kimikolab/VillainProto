@@ -51,9 +51,9 @@ static partial class Sh381Diag
     // ---------------------------------------------------------------------------------
     // 版と台
     // ---------------------------------------------------------------------------------
-    internal static readonly UnitDef[] VelOf = { UnitCatalog.Vel, UnitCatalog.VelS2, UnitCatalog.VelS2n, UnitCatalog.VelS10 };
+    internal static readonly UnitDef[] VelOf = { UnitCatalog.VelH381, UnitCatalog.VelS2, UnitCatalog.VelS2n, UnitCatalog.VelS10 };   // 第382期: 「規定」の列は第381期までの規定（`VelH381`）に固定
     internal static readonly string[] VerNames = { "規定", "S2", "S2n", "S10" };
-    internal static Formation Apply(Formation f, int vi) => vi == 0 ? f : I.Swap(f, "vel", VelOf[vi]);
+    internal static Formation Apply(Formation f, int vi) => vi == 0 ? Pin381(f) : I.Swap(f, "vel", VelOf[vi]);
 
     /// <summary>並び（前1・前3・中央・後1・後3 の短い名前を「・」で区切る）から台を組む（規定の駒）。</summary>
     internal static Formation Seat(string s)
@@ -411,7 +411,7 @@ static partial class Sh381Diag
     static void CompareVer()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = CompareBuilds().ToArray();
+        var rows = CompareBuilds().Select(r => (r.Name, F: Pin381(r.F))).ToArray();   // 第382期: 基準は第381期までの規定
         int nw = EnemyCatalog.Stages.Count, last = nw - 1;
         var b = CGrid(rows);
         var pr = Enumerable.Range(0, rows.Length).Where(ri => Baseline.PrimaryRows.Contains(rows[ri].Name)).ToList();

@@ -48,6 +48,11 @@ static class Boss283Diag
 
     /// <summary>ヒーラー（Phase 0 §1 の機械的定義 ＝ 味方に回復または破片を2回以上書ける駒）。台に最大1枚。</summary>
     internal static UnitDef[] HealPool => Healers().Select(h => h.Def).ToArray();
+    /// <summary>
+    /// 第382期: <b>今の一覧</b>（規定のヴェル ＝ 魂を分けるヴェルはヒーラーに入らない）。<b>この期以降の器具だけが読む。</b>
+    /// <see cref="HealPool"/> ／ <see cref="HealPool295"/> ／ <see cref="HealPool306"/> は過去の器具のための旧の一覧で、ヴェルを第381期までの規定（`VelH381`）として数える（`PinV381`）。
+    /// </summary>
+    internal static UnitDef[] HealPoolNow => Healers(velNow: true).Select(h => h.Def).ToArray();
 
     /// <summary>第381期: 1枚の駒（`All` の外の版でも）がヒーラーの機械的な定義（味方に回復か破片を2回以上書ける札を持つ）に入るか。engine 側の書き手（ベニ ／ ヒサ）は見ない。</summary>
     internal static bool HealerDef(UnitDef d) => HealWriters().Concat(ArmorWriters())
@@ -146,13 +151,14 @@ static class Boss283Diag
     static List<Writer> AllyMarkWriters() => Scan("標", s => s.Contains("SetCounter(StatusKeys.Marked, 1)"));
 
     /// <summary>ヒーラーの機械的定義（Phase 0 §1）: 「味方へ」かつ「繰り返し」の回復・破片の書き手を持つ `All` の駒。</summary>
-    static List<HealerRow> Healers(bool hisa = true, bool som = true)
+    static List<HealerRow> Healers(bool hisa = true, bool som = true, bool velNow = false)
     {
         var w = HealWriters().Concat(ArmorWriters())
             .Where(x => WriterKind.TryGetValue(x.Cls, out var k) && k.To == "味方" && k.Repeat).ToList();
         var rows = new List<HealerRow>();
-        foreach (var d in UnitCatalog.All)
+        foreach (var d0 in UnitCatalog.All)
         {
+            var d = velNow ? d0 : Common.PinV381(d0);   // 第382期: 旧の一覧はヴェルを旧に固定
             if (!som && ReferenceEquals(d, UnitCatalog.Som)) continue;   // 第308期: 規定のソム（SH-a）は第307期までの一覧に入れない
             var cls = w.Where(x => x.Ids.Any(d.Traits.Contains)).Select(x => x.Cls).Distinct().ToList();
             if (cls.Count > 0) rows.Add(new HealerRow(d, string.Join(" ／ ", cls)));

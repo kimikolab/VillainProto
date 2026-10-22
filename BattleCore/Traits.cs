@@ -973,6 +973,9 @@ public enum TraitId
     SoulSplitHalf,        // 魂を分ける・半分（S2 ／ S2n・ヴェル）: 開戦時、隣の味方（儚くない）の最大HPを半分にし、起き上がりの回数 2 を持たせる。回数を持つ者は倒れても（死の出来事を出し・味方の死として数え）同じ席で満タンに起き上がる（`VelSoulTrait`・起き上がりは engine の `HandleDeath`）
     SoulSplitTen,         // 魂を分ける・十（S10・ヴェル）: 同じ形で、最大HPを 10 に、起き上がりの回数を 3 にする（`VelSoulTrait`）
     SoulSew,              // 魂を縫い付ける（S2 ／ S10・ヴェル）: 手番で、隣の分けられた味方1体の起き上がりの回数を +1（上限 3・回数の少ない者 → 最大HPの大きい者 → 席番号）。全員が上限か隣にいなければふつうに殴る（`VelSoulTrait`）
+    // --- 第382期で足した札（指示書 design/PHASE382_DIRGE_SPEC.md §3）。弔いの楽士（版 D1 ／ D1n・`All` の外）。保持者 0 枚 ---
+    Dirge,                // 哀歌（楽士）: 手番で、前の自分の手番から今までに味方が倒れていれば（起き上がる死 ／ 儚い駒の死も数える）、いちばん攻撃力の高い味方（自分を除く・同じなら席番号）にもう一度手番を渡す（1手番に1回）。倒れていなければふつうに殴る（`DirgeTrait`・手番の口は `_giftQueue`）
+    DirgeEcho,            // 哀歌は敵にも届く（楽士・マイナス）: 楽士の手番で、前の手番から今までに敵が倒れていれば、味方の再行動の後に、いちばん攻撃力の高い敵がもう一度動く（`DirgeTrait` が控える・札そのものは印）
     UncapRaise,           // 起こしの上限を外す（U・リィカ ／ ムグ）: 亡者起こし（味方の亡骸から）／ 亡骸の芽吹きの1戦に3回の上限を外す（召喚枠の空きだけが上限）（**札そのものは挙動を持たない**・`RaiseDeadTrait` ／ `MugSproutTrait` が読む）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -13746,6 +13749,41 @@ public sealed class VelSoulTrait : Trait
     }
 }
 
+/// <summary>
+/// 哀歌（第382期・弔いの楽士の版 D1 ／ D1n・指示書 design/PHASE382_DIRGE_SPEC.md §3-1）。<see cref="TraitId.Dirge"/> の持ち主は、
+/// 生きている間に倒れた味方 ／ 敵の数を私有キーに数え（`OnAnyDeath`・起き上がる死 ／ 儚い駒の死も通る）、手番でそれを読む（<see cref="BattleContext.DirgeTurn"/>）。
+/// 味方が倒れていれば、いちばん攻撃力の高い味方にもう一度手番を渡す（`_giftQueue`・ドハの背を押すと同じ口）。倒れていなければ `ctx.PerformAttack` を直に呼ぶ。
+/// <see cref="TraitId.DirgeEcho"/> は印だけ（マイナス: 敵が倒れていれば、味方の後に、いちばん攻撃力の高い敵がもう一度動く）。<b>乱数を引かない。</b>
+/// </summary>
+public sealed class DirgeTrait : Trait
+{
+    /// <summary>前の自分の手番から倒れた味方 ／ 敵の数（私有キー・手番で 0 に戻す）。</summary>
+    public const string AllyKey = "dirgeAlly382", FoeKey = "dirgeFoe382";
+
+    readonly TraitId _id;
+    public DirgeTrait(TraitId id) { _id = id; }
+    public override TraitId Id => _id;
+
+    public override void OnAnyDeath(BattleContext ctx, UnitState self, UnitState dead)
+    {
+        if (_id != TraitId.Dirge || !self.IsAlive || dead == self) return;
+        string k = dead.TeamId == self.TeamId ? AllyKey : FoeKey;
+        self.SetCounter(k, self.RawCounter(k) + 1);
+    }
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+    {
+        if (_id != TraitId.Dirge || !self.IsAlive) return;
+        if (!ctx.DirgeTurn(self) && ctx.TeamAlive(ctx.Opponent(self.TeamId))) ctx.PerformAttack(self);
+    }
+
+    public override void OnCarryOver(UnitState self)
+    {
+        if (_id != TraitId.Dirge) return;
+        self.SetCounter(AllyKey, 0); self.SetCounter(FoeKey, 0);
+    }
+}
+
 /// <summary>起こしの上限を外す（第378期・版 U）。<b>札そのものは挙動を持たない</b>——<see cref="RaiseDeadTrait"/> ／ <see cref="MugSproutTrait"/> が持ち主のこの札を読んで、1戦に3回の上限を数えない。</summary>
 public sealed class UncapRaiseTrait : Trait
 {
@@ -19361,6 +19399,8 @@ public static class TraitCatalog
         new VelSoulTrait(TraitId.SoulSplitHalf),                     // 第381期（魂を分ける・半分）
         new VelSoulTrait(TraitId.SoulSplitTen),                      // 第381期（魂を分ける・十）
         new VelSoulTrait(TraitId.SoulSew),                           // 第381期（魂を縫い付ける）
+        new DirgeTrait(TraitId.Dirge),                               // 第382期（哀歌・楽士）
+        new DirgeTrait(TraitId.DirgeEcho),                           // 第382期（哀歌は敵にも届く・楽士のマイナス）
         new EruptTrait(),      // 第180期
         new SmearTrait(),      // 第180期
         new SpitTrait(),       // 第180期

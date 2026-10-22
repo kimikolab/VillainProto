@@ -11965,6 +11965,21 @@ public sealed class BattleContext
             while (_giftQueue.Count > 0)
             {
                 var (giver, to, ord) = _giftQueue.Dequeue();
+                // 第382期（哀歌）: 楽士が控えた手番（味方 ／ マイナスの敵）。口だけを共有し、火の帳簿には数えない。
+                if (giver.HasTrait(TraitId.Dirge))
+                {
+                    UnitTally gb = TallyOf(giver);
+                    if (!to.IsAlive) { gb.R382Skipped++; continue; }
+                    if (!TeamAlive(Opponent(to.TeamId))) { gb.R382Skipped += 1 + _giftQueue.Count; _giftQueue.Clear(); break; }
+                    bool foe = to.TeamId != giver.TeamId;
+                    Log(foe ? $"  {to.Name} も哀歌に応えてもう一度動く" : $"  {to.Name} は {giver.Name} の哀歌に立ち上がってもう一度戦う", LogKind.Highlight, to);
+                    UnitTally tt = TallyOf(to);
+                    long d0 = tt.DamageToEnemy;
+                    TakeTurn(to);
+                    if (foe) { tt.R382EchoTurns++; tt.R382EchoDealt += tt.DamageToEnemy - d0; }
+                    else { tt.R382EncoreTurns++; tt.R382EncoreDealt += tt.DamageToEnemy - d0; }
+                    continue;
+                }
                 // 第297期（DH-t）: ドハが控えた手番。口（キュー・再入の止め）だけを共有し、火の帳簿・火のギフトの手番（大技の条件）には数えない。
                 // 第313期（DP-a ／ DP-b）: 背を押した手番も同じ枝（帳簿は DH-t と共有・送り出された手番の与ダメを足した）。
                 if (giver.HasTrait(TraitId.ShareGift) || giver.HasTrait(TraitId.SharePush))
@@ -16798,6 +16813,48 @@ public sealed class BattleContext
         if (doha.HasTrait(TraitId.SharePushPower)) PassPower(doha, to);
         _giftQueue.Enqueue((doha, to, 1));
         return true;
+    }
+
+    /// <summary>
+    /// 哀歌（第382期・<see cref="DirgeTrait"/> の手番から）。前の楽士の手番から味方が倒れていれば、いちばん攻撃力の高い味方（楽士を除く・生きている・同じなら席番号）に手番を1回控え、
+    /// マイナス（<see cref="TraitId.DirgeEcho"/>）を持っていて敵が倒れていれば、その後にいちばん攻撃力の高い敵の手番を1回控える（`_giftQueue`・手番は楽士の `TakeTurn` が返った後）。
+    /// 窓（倒れた数）は手番ごとに 0 に戻す。**ギフトの手番の中では奏でない**（連鎖させない・窓は持ち越す）。偽を返したら呼び出し側が殴る（味方を動かさなかった）。<b>乱数を引かない。</b>
+    /// </summary>
+    public bool DirgeTurn(UnitState bard)
+    {
+        UnitTally bt = TallyOf(bard);
+        if (_inGift) { bt.R382InGift++; return false; }
+        int allies = bard.RawCounter(DirgeTrait.AllyKey), foes = bard.RawCounter(DirgeTrait.FoeKey);
+        bard.SetCounter(DirgeTrait.AllyKey, 0); bard.SetCounter(DirgeTrait.FoeKey, 0);
+        bool sang = false;
+        if (allies <= 0) bt.R382NoDeath++;
+        else if (TopAttacker(bard.TeamId, bard) is { } to)
+        {
+            bt.R382Songs++;
+            Log($"    {bard.Name} が哀歌を奏でる（倒れた味方 {allies}）——{to.Name} がもう一度立ち上がる", LogKind.Highlight, bard);
+            _giftQueue.Enqueue((bard, to, 1));
+            sang = true;
+        }
+        else bt.R382NoOne++;
+        if (foes > 0 && bard.HasTrait(TraitId.DirgeEcho) && TopAttacker(Opponent(bard.TeamId), null) is { } e)
+        {
+            bt.R382Echoes++;
+            Log($"    哀歌は敵にも届く（倒れた敵 {foes}）——{e.Name} がもう一度動く", LogKind.Trigger, bard);
+            _giftQueue.Enqueue((bard, e, 2));
+        }
+        return sang;
+    }
+
+    /// <summary>その陣営の生きている駒のうち、攻撃力（`CurrentAttack`）がいちばん高い駒（<paramref name="except"/> を除く・同じなら席番号の小さい方）。</summary>
+    UnitState? TopAttacker(int teamId, UnitState? except)
+    {
+        UnitState? best = null;
+        foreach (UnitState u in _units)
+        {
+            if (u.TeamId != teamId || !u.IsAlive || u == except) continue;
+            if (best is null || u.CurrentAttack > best.CurrentAttack || (u.CurrentAttack == best.CurrentAttack && u.Slot < best.Slot)) best = u;
+        }
+        return best;
     }
 
     /// <summary>DP-b: ドハの攻撃力の上乗せ（<c>AtkBonus</c> の正の分）をすべて <paramref name="to"/> に移す（<see cref="Whet"/>・経路 <see cref="WhetRoute.Share"/>）。ドハは素の攻撃力に戻る（持ち替え＝直叩き）。</summary>

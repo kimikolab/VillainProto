@@ -43,6 +43,9 @@ static partial class ShockDiag
 
     static List<Table>? _tables;
 
+    /// <summary>台の駒の固定（第239期: ボルグの規定化で台3 の席が動かないよう、旧ボルグに固定・第372期: グザ ／ ヴィオ ／ スィドも第367期までの規定へ（W5 の規定化で台3 の席が動いた）・第382期: 鎖の先でヴェルも旧へ）。</summary>
+    static UnitDef PinMember(UnitDef d) => ReferenceEquals(d, UnitCatalog.Borg) ? UnitCatalog.BorgF0 : Common.PinGVH367(d);
+
     /// <summary>台（Phase 0 の規則で枠を替え、席を K1 で総当たりして固定）。</summary>
     internal static List<Table> Tables()
     {
@@ -53,17 +56,17 @@ static partial class ShockDiag
             var (tag, row, _, _) = BaseRows[i];
             var rep = ReplacedOf(i, print: false);
             var members = RowOf(row).Occupied().Select(o => o.Def)
-                .Select(d => ReferenceEquals(d, UnitCatalog.Borg) ? UnitCatalog.BorgF0 : Common.PinGVH367(d)).ToList();   // 第239期: ボルグの規定化で台3 の席が動かないよう、旧ボルグに固定・第372期: グザ ／ ヴィオ ／ スィドも第367期までの規定へ（W5 の規定化で台3 の席が動いた）
+                .Select(PinMember).ToList();   // 第239期: ボルグの規定化で台3 の席が動かないよう、旧ボルグに固定・第372期: グザ ／ ヴィオ ／ スィドも第367期までの規定へ（W5 の規定化で台3 の席が動いた）
             UnitDef? original = null;
             if (i == 3)
             {
-                members[members.IndexOf(rep[0].Def)] = UnitCatalog.Susu;   // 血詠みのアカ
-                members[members.IndexOf(rep[1].Def)] = UnitCatalog.KataS3;
+                members[members.IndexOf(PinMember(rep[0].Def))] = UnitCatalog.Susu;   // 血詠みのアカ（第382期: 置き換える駒も台と同じ固定を通して引く——ヴェルの規定化で旧に固定した台から引けなくなったため）
+                members[members.IndexOf(PinMember(rep[1].Def))] = UnitCatalog.KataS3;
             }
             else
             {
                 original = rep[0].Def;
-                members[members.IndexOf(rep[0].Def)] = UnitCatalog.KataS3;
+                members[members.IndexOf(PinMember(rep[0].Def))] = UnitCatalog.KataS3;
             }
             var seats = new Dictionary<FormationShape, Formation>();
             foreach (FormationShape sh in Shapes) seats[sh] = PickSeats(members, sh);

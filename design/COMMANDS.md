@@ -1394,6 +1394,9 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sh381 outside            # 第381期 §3-1 の 3: 死の外の4台で1枚をヴェルに替えた最良（seed 0..19 で選び最良だけ seed 0..99）
     dotnet run --project BattleSim -c Release 0 sh381 compare            # 第381期: `compare` 64 行 × ヴェルの版 S2 ／ S2n ／ S10（ヴェルのいない行が動いたら「止める」）
     dotnet run --project BattleSim -c Release 0 sh381 check              # 第381期 自己検査（版の駒・開戦時の分け方・起き上がり（死の出来事 ／ 層 ／ 同じ席 ／ 自分の死の札を起こさない）・手番の選び方・ヒーラーの定義・規定の `compare` ・試遊の台・verbose・`checkup`・PickOne ／ Roll）
+    dotnet run --project BattleSim -c Release 0 sh382 stage0             # 第382期 §2-3 段0: `compare` 64 行 旧（`Pin381`）→ 新（魂を分けるヴェル）・第381期の S2 の列と同じか・死の台の代表 5 × 5 波 旧 → 新（seed 0..99）
+    dotnet run --project BattleSim -c Release 0 sh382 cmp                # 第382期 §3: 4 台（スィド ／ ゴルム ／ ボルグ ＋ 候補・死の連鎖のゾトの席）× 候補 6（楽士 D1 ／ D1n ／ トモ ／ ドハ ／ ガン ／ 素体）× 8 物差し（1〜3 は 120 並びを探す）——補助の回数と受けた駒・誰が何Tに
+    dotnet run --project BattleSim -c Release 0 sh382 check              # 第382期 自己検査（段0 の規定 ／ 旧 `VelH381` ／ 固定の口・規定のヴェル ＝ S2 の動き・ヒーラーの一覧（旧 ／ 今）・楽士（倒れていれば最も強い味方が1回 ／ 倒れていなければ殴る ／ 自分は選ばれない ／ 起き上がる死も数える ／ D1 の敵の再行動 ／ D1n は無し）・試遊の台・verbose・`checkup`・PickOne ／ Roll）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

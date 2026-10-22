@@ -1577,3 +1577,8 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **起き上がり（`HandleDeath` の中・`BattleContext.SoulRise`）**: 私有キー `VelSoulTrait.LivesKey` が正の駒の死は「起き上がる死」。死の出来事・倒れた計数・killer の `OnKill`・全員の `OnAnyDeath`・味方の `OnAllyDeath` は今どおり走り、**本人の `OnDeath` だけを飛ばす**（分裂 ／ 破裂 ／ 倒れ時の回復を蘇生で掛け算しない）。通知の後に同じ席で `MaxHp` の満タンに戻し、回数を 1 減らす。札の数 ／ `AtkBonus` ／ 状態異常は保つ（`Revive` と違って上乗せを戻さない）。通知の間に別の蘇生で戻っていれば何もしない。
 - 保持者（`SoulSplitHalf` ／ `SoulSplitTen`）がいない戦は `_soulLive` の比較1つで抜ける（規定の `compare` 320 セル ずれ 0）。
 - 台本: 起き上がりは既存の `Revive`（`Text` ＝ `BattleContext.SoulRiseText`「起き上がり」・`ActorId` なし）。新しい出来事の種類は足していない。
+
+## 第382期 —— 段0: 魂を分けるヴェルを規定に ／ 弔いの楽士（版 D1 ／ D1n）
+
+- 段0: engine の口は変えていない（第381期の起き上がり `SoulRise` を規定のヴェルが使うようになった）。旧は `UnitCatalog.VelH381`。
+- **`BattleContext.DirgeTurn(bard)`**（哀歌・楽士の手番から）: 前の手番から味方が倒れていれば、いちばん攻撃力の高い味方（楽士を除く・同じなら席番号）の手番を1回控え、マイナス（`DirgeEcho`）があって敵が倒れていれば、その後にいちばん攻撃力の高い敵の手番を1回控える。口はヒヨ ／ ドハと同じ `_giftQueue`（`DrainGifts` に楽士の枝・手番の中では奏でない）。倒れた数は楽士の私有キー（`DirgeTrait.AllyKey` ／ `FoeKey`・`OnAnyDeath`）。乱数を引かない。
