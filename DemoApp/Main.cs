@@ -1882,19 +1882,12 @@ public partial class Main : Control
                 if (target is not null && e.Text is { } statusKey)
                 {
                     bool poisonTransfer = statusKey == StatusKeys.Poison
-                        && e.PoisonRoute is PoisonRoute.Touch or PoisonRoute.TouchLeak;
+                        && RauPresentation.IsTransfer(e);
                     if (poisonTransfer && e.Amount > 0)
                     {
                         int token = _playToken;
-                        bool leak = e.PoisonRoute == PoisonRoute.TouchLeak;
-                        var source = leak ? actor : e.SpreadFromId is int fromId ? _battleField.FindPawn(fromId) : null;
-                        await _battleField.ShowPoisonTransfer(source, target, leak, _speed);
+                        await PlayRauTransfers(e, eventIndex, actor);
                         if (token != _playToken || !_battleMode) return;
-                        if (source is not null)
-                        {
-                            if (leak) _poisonLeakPlays++;
-                            else _poisonSpreadPlays++;
-                        }
                     }
                     if (e.Amount > 0) _battleField.PlayStatusGainSound(statusKey);
                     // 層で鳴った初回付与は重ねず、味方・自分への標はこの音の対象外。

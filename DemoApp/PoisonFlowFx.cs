@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 public partial class PoisonFlowFx : Node3D
 {
     internal const string SmokePath = "res://PolyBlocks/EffectBlocks/assets/smoke/smoke_toxic.tscn";
-    internal enum Kind { Vent, Retort, Drain, Blood, Bite, Guren }
+    internal enum Kind { Vent, Retort, Drain, Blood, Bite, Guren, Touch, Leak, Contagion, Contact }
     private static Shader? _shader;
     private MeshInstance3D[] _drops = Array.Empty<MeshInstance3D>();
     private ShaderMaterial[] _materials = Array.Empty<ShaderMaterial>();
@@ -18,6 +18,9 @@ public partial class PoisonFlowFx : Node3D
     private Func<(bool Paused, double Speed)> _clock = () => (false, 1);
     internal bool UsesPurchasedSmoke => _smoke is not null;
     internal double Age => _age;
+    internal Kind FlowKind => _kind;
+    internal Vector3 From => _from;
+    internal Vector3 To => _to;
     private readonly TaskCompletionSource<bool> _arrival = new(TaskCreationOptions.RunContinuationsAsynchronously);
     internal Task<bool> Arrival => _arrival.Task;
 
@@ -28,9 +31,12 @@ public partial class PoisonFlowFx : Node3D
         _side = (to - from).Cross(Vector3.Up).Normalized();
         _weight = Math.Clamp((float)Math.Log(1.0 + Math.Max(0, amount)) / 10f, 0.12f, 1f);
         if (kind == Kind.Vent) _weight = Math.Clamp(amount / 6f, 0.15f, 1f);
-        _seconds = kind switch { Kind.Drain => 0.65, Kind.Blood => 0.55, Kind.Bite => 0.32, Kind.Vent => 0.60, _ => 0.42 };
+        _seconds = kind switch { Kind.Drain => 0.65, Kind.Blood => 0.55, Kind.Bite => 0.32,
+            Kind.Vent => 0.60, Kind.Touch => 0.52, Kind.Leak => 0.64, Kind.Contagion => 0.48,
+            Kind.Contact => 0.20, _ => 0.42 };
         int count = kind == Kind.Bite ? 6 : 6 + (int)(_weight * 10);
         if (kind == Kind.Guren) count = 6;
+        if (kind == Kind.Leak) count = 11;
         _drops = new MeshInstance3D[count]; _materials = new ShaderMaterial[count];
         _shader ??= new Shader { Code = @"
 shader_type spatial;
@@ -40,8 +46,9 @@ uniform float progress=0.0;
 uniform bool light=false;
 uniform bool tooth=false;
 uniform bool veil=false;
+uniform bool ground=false;
 uniform float tooth_direction=1.0;
-void vertex(){MODELVIEW_MATRIX=VIEW_MATRIX*mat4(INV_VIEW_MATRIX[0]*length(MODEL_MATRIX[0].xyz),INV_VIEW_MATRIX[1]*length(MODEL_MATRIX[1].xyz),INV_VIEW_MATRIX[2],MODEL_MATRIX[3]);}
+void vertex(){if(!ground){MODELVIEW_MATRIX=VIEW_MATRIX*mat4(INV_VIEW_MATRIX[0]*length(MODEL_MATRIX[0].xyz),INV_VIEW_MATRIX[1]*length(MODEL_MATRIX[1].xyz),INV_VIEW_MATRIX[2],MODEL_MATRIX[3]);}}
 void fragment(){
  vec2 p=(UV-0.5)*2.0;
  float radius=length(p),angle=atan(p.y,p.x);
@@ -54,7 +61,8 @@ void fragment(){
  EMISSION=tint.rgb*(light?1.8:0.30);
  ALPHA=(blob*0.85+edge*0.25)*sin(progress*3.14159);
 }" };
-        Color tint = kind switch { Kind.Blood => new Color("ff395f"), Kind.Drain => new Color("7534a3"), Kind.Guren => new Color("e83d50"), _ => new Color("ba56f4") };
+        Color tint = kind switch { Kind.Blood => new Color("ff395f"), Kind.Drain => new Color("7534a3"),
+            Kind.Guren => new Color("e83d50"), Kind.Contact => new Color("d4c5ae"), _ => new Color("ba56f4") };
         for (int k = 0; k < count; k++)
         {
             var material = new ShaderMaterial { Shader = _shader, RenderPriority = 7 };
@@ -62,15 +70,20 @@ void fragment(){
             material.SetShaderParameter("light", kind == Kind.Blood);
             material.SetShaderParameter("tooth", kind == Kind.Bite);
             material.SetShaderParameter("veil", kind == Kind.Guren);
+            material.SetShaderParameter("ground", kind == Kind.Leak);
             material.SetShaderParameter("tooth_direction", k < 3 ? 1f : -1f);
             _materials[k] = material;
             float size = kind == Kind.Blood ? 0.13f : kind == Kind.Bite ? 0.20f : 0.18f + _weight * 0.36f;
             if (kind == Kind.Guren) size = 0.65f + _weight * 0.90f;
+            if (kind is Kind.Touch or Kind.Contact) size = 0.12f + _weight * 0.12f;
+            if (kind == Kind.Leak) size = 0.30f;
+            if (kind == Kind.Contagion) size = 0.22f + _weight * 0.18f;
             var drop = new MeshInstance3D { Mesh = new QuadMesh { Size = Vector2.One * size }, MaterialOverride = material,
                 CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Visible = false };
             _drops[k] = drop; AddChild(drop);
+            if (kind == Kind.Leak) drop.Rotation = new Vector3(-Mathf.Pi * 0.5f, 0, 0);
         }
-        if (purchased && kind is Kind.Vent or Kind.Retort or Kind.Guren && ResourceLoader.Exists(SmokePath))
+        if (purchased && kind is Kind.Vent or Kind.Retort or Kind.Guren or Kind.Contagion && ResourceLoader.Exists(SmokePath))
         {
             _smoke = GD.Load<PackedScene>(SmokePath).Instantiate<GpuParticles3D>();
             _smoke.SetScript(default);
@@ -116,7 +129,24 @@ void fragment(){
             bool pull = _kind is Kind.Drain or Kind.Blood;
             float travel = pull ? t * t : t;
             Vector3 at = _from.Lerp(_to, travel);
-            if (_kind == Kind.Bite)
+            if (_kind == Kind.Leak)
+            {
+                // 小さい滴が足元から順に滲む。空中の伝染と形・高さを分ける。
+                t = Mathf.Clamp((p - k * 0.055f) / 0.38f, 0, 1);
+                at = _from.Lerp(_to, k / (float)(_drops.Length - 1))
+                    + _side * Mathf.Sin(k * 2.4f) * 0.07f;
+                _drops[k].Scale = Vector3.One * (0.35f + t * 0.75f);
+            }
+            else if (_kind is Kind.Contagion or Kind.Contact)
+            {
+                // 死骸のIDは台本にない。発生元を補わず、実際の受け手だけに局所的な飛沫を描く。
+                float angle = k * 2.4f;
+                float radius = (_kind == Kind.Contact ? 0.18f : 0.42f) * arc;
+                at = _to + new Vector3(Mathf.Cos(angle) * radius,
+                    (t - 0.5f) * (_kind == Kind.Contact ? 0.30f : 0.80f), Mathf.Sin(angle) * radius);
+                _drops[k].Scale = Vector3.One * (0.60f + arc * 0.55f);
+            }
+            else if (_kind == Kind.Bite)
             {
                 // 対になる牙が上下から閉じる。血や肉片は描かない。
                 float side = k < 3 ? 1 : -1;
@@ -126,13 +156,14 @@ void fragment(){
             }
             else
             {
-                float curl = _kind == Kind.Guren ? 0.60f : _kind == Kind.Vent ? 0.45f : pull ? 0.25f : 0.14f;
+                float curl = _kind == Kind.Guren ? 0.60f : _kind == Kind.Vent ? 0.45f : _kind == Kind.Touch ? 0.28f : pull ? 0.25f : 0.14f;
                 at += _side * arc * Mathf.Sin(t * Mathf.Tau + k) * curl * (pull ? 1 - t : 1)
-                    + Vector3.Up * arc * (_kind == Kind.Vent ? 0.40f : 0.18f + k % 3 * 0.09f);
+                    + Vector3.Up * arc * (_kind == Kind.Touch ? 0.55f + k % 3 * 0.16f
+                        : _kind == Kind.Vent ? 0.40f : 0.18f + k % 3 * 0.09f);
                 _drops[k].Scale = Vector3.One * (pull ? 1 - travel * 0.65f : 0.7f + t * 0.6f);
             }
             _drops[k].GlobalPosition = at;
-            _drops[k].Visible = p > k * 0.012f && p < 1;
+            _drops[k].Visible = p > k * (_kind == Kind.Leak ? 0.055f : 0.012f) && p < 1;
             _materials[k].SetShaderParameter("progress", _kind == Kind.Bite ? p : t);
         }
         if (_smoke is not null) _smoke.GlobalPosition = _from.Lerp(_to, p);

@@ -222,6 +222,7 @@ public partial class BattleAttackAudio : Node
         if (unitId == "hane") { PlayMovementSound(MovementSound.Collision); return; }
         if (unitId == "utsu") { PlayVariation(UtsuAttack); return; }
         if (unitId == "mudo") { PlayVariation(MudoAttack, 3); return; }
+        if (unitId == "rau") { PlayVariation(EnemyCommon, -5); return; } // 接触は軽い衣擦れと打撃。剣の斬撃音にしない。
         if (unitId == "shiga") { PlayVariation(ShigaAttack); return; }
         if (reaction && unitId == "kado") { PlayVariation(KadoCounter); return; }
         string[] paths = _overrides.GetValueOrDefault((unitId, pattern))

@@ -29,7 +29,7 @@ public partial class BattlePawn3D
     {
         _poisonPaused = paused; _poisonSpeed = Math.Max(0.1, speed);
         _poison.Paused = paused; _poison.Speed = _poisonSpeed;
-        if (_unitId is "guza" or "vio" && _movementPortraitTween?.IsValid() == true)
+        if (_unitId is "guza" or "vio" or "rau" && _movementPortraitTween?.IsValid() == true)
         {
             _movementPortraitTween.SetSpeedScale((float)(_poisonSpeed / Math.Max(0.1, _poisonPoseSpeed)));
             if (paused) _movementPortraitTween.Pause(); else _movementPortraitTween.Play();
@@ -41,6 +41,13 @@ public partial class BattlePawn3D
     {
         AnimationSpeed = _poisonPoseSpeed = speed;
         ShowMovementPortrait("guza_vent", 0.60);
+    }
+    internal void RauPose(bool spreading, double speed)
+    {
+        if (_unitId != "rau") return;
+        AnimationSpeed = _poisonPoseSpeed = speed;
+        ShowMovementPortrait(spreading ? "rau_spread" : "rau_touch", spreading ? 0.90 : 0.65);
+        SetPoisonClock(_poisonPaused, speed);
     }
     internal void SwayPoisonSip() => _poisonSipAge = 0;
     private void UpdateVioGrowth()
@@ -88,7 +95,7 @@ public partial class BattlePawn3D
         _poisonJumpAge = _poisonJumpSeconds;
         _poisonSipAge = 1;
         _poison.Clear();
-        if (_unitId is "guza" or "vio") ClearMovementPortrait();
+        if (_unitId is "guza" or "vio" or "rau") ClearMovementPortrait();
     }
     internal void StopPoisonPresentation() { _poisonStopped = true; ClearPoisonAxis(); }
 }

@@ -203,6 +203,7 @@ public static class UiKit
         "kado" => 2.40f,
         "sid" => 2.55f,
         "guza" => 2.00f, // 大袋を抱えた低頭身の運び手。
+        "rau" => 2.45f, // つば広帽とペストマスクの疫病運び。
         "vio" => 2.25f, // 四足の毒竜。横に広がる尾を含む。
         "borg" => 2.65f,
         "gald" => 2.85f,
@@ -250,6 +251,9 @@ public static class UiKit
         "rica" => 0.0600f,
         "sid" => 0.0040f,
         "guza" => 78f / 1536f,
+        "rau" => 54f / 1536f,
+        "rau_touch" => 158f / 1536f,
+        "rau_spread" => 76f / 1536f,
         "vio" => 17f / 1024f,
         "vio_fed" => 16f / 1024f,
         "vio_gorged" => 12f / 1024f,

@@ -474,3 +474,9 @@ Godot_console.exe --path DemoApp res://ShockMarkCheck.tscn -- --dust-reaction --
 集束砲は約1秒かけて結晶・銃口の光・溜め音を高め、ビーム砲と銃声で一気に発射する。集束砲のシャキーンは外し、集団向け弾幕に残す。太い光束・5本の螺旋と、着弾時の結晶の炸裂・3重の衝撃波を追加した。着弾に合わせて画面が小さく揺れ、0.26秒で収まる。最新の効果音付き比較動画は `design/art/gare-aka/gare-selected-impact-sfx.mp4`（弾幕2秒→集束砲3秒）。`--gare-clip` の出力は現在150フレーム／30fps。
 
 命中音はユーザー指定のMecha Laser Pistol 003（発散）／006（集束）に分け、0.07秒後にGlassy Sprites 005の結晶の飛散音を重ねる。購入素材の配置手順は `assets/audio/se/SOURCES.md`。
+
+## ラウの接触と伝染
+
+接触攻撃と伝染反応の差分を追加。殴られた敵から次の敵へ飛ぶ紫の滴、ラウの足元から味方へ滲む滴、死亡時の実際の受け手で咲く飛沫を描く。同じ経路で連続する対象へ同時に飛ばし、到着後に台本の量を表示する。
+
+`Godot_console.exe --headless --path DemoApp res://RauCheck.tscn` で接続・停止・倍速・中断・再戦を確認。画面保存は頭なし指定を外し、末尾に `-- --capture` を付ける。詳細・台本上の制限・画像生成プロンプトは [制作記録](../design/art/rau/rau-effects-v1-notes.md)。

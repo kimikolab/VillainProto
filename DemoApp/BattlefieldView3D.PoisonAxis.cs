@@ -10,6 +10,7 @@ public partial class BattlefieldView3D
     private double _poisonSpeed = 1;
     internal int PoisonVents, PoisonBacklashes, PoisonRetorts, PoisonBites, BloodSips, PoisonTickWaves;
     internal int PurchasedPoisonSmokes;
+    internal int RauContacts, RauContagionHits;
     internal PoisonFlowFx[] ActivePoisonFlows => _fxRoot.GetChildren().OfType<PoisonFlowFx>().Where(f => !f.IsQueuedForDeletion()).ToArray();
     internal void SetPoisonClock(bool paused, double speed)
     {
@@ -22,6 +23,7 @@ public partial class BattlefieldView3D
         if (_fxRoot is not null)
             foreach (var child in _fxRoot.GetChildren()) if (child is PoisonFlowFx) { ((Node3D)child).Hide(); child.QueueFree(); }
         PoisonVents = PoisonBacklashes = PoisonRetorts = PoisonBites = BloodSips = PoisonTickWaves = PurchasedPoisonSmokes = 0;
+        RauContacts = RauContagionHits = 0;
         _poisonPaused = false;
         _poisonSpeed = 1;
     }
@@ -59,4 +61,18 @@ public partial class BattlefieldView3D
     }
     internal PoisonFlowFx ShowPoisonDrainFlow(BattlePawn3D source, BattlePawn3D receiver)
         => PoisonFlow(source.FxPoint, PoisonMouth(receiver), PoisonFlowFx.Kind.Drain, source.PoisonIconAmount);
+
+    internal void ShowRauContact(BattlePawn3D rau, IReadOnlyList<BattlePawn3D> targets)
+    {
+        RauContacts++;
+        rau.RauPose(false, _poisonSpeed);
+        // 毒の無い相手への通常攻撃でも同じ接触。毒付与の飛沫は後続の経路でだけ描く。
+        foreach (var target in targets) PoisonFlow(target.FxPoint, target.FxPoint, PoisonFlowFx.Kind.Contact, 1);
+    }
+
+    internal PoisonFlowFx ShowRauContagion(BattlePawn3D target, int amount)
+    {
+        RauContagionHits++;
+        return PoisonFlow(target.FxPoint, target.FxPoint, PoisonFlowFx.Kind.Contagion, amount);
+    }
 }

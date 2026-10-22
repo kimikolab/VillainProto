@@ -688,6 +688,7 @@ public partial class BattlefieldView3D : Control
             from.SetThrustCharge(0);
         if (shieldImpact is not null) await shieldImpact();
         else if (hushSlap) await ShowHushSlap(from, hits);
+        else if (from.UnitId == "rau") ShowRauContact(from, hits);
         else if (from.UnitId == "yomi") { } // 居合の剣閃は上で1回だけ出す。
         else if (thrustCharge is int stacks && pattern == AttackPattern.Pierce)
             await ShowThrust(from, hits, stacks, thrustImpact);
