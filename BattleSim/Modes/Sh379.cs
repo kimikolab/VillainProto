@@ -52,16 +52,17 @@ static partial class Sh379Diag
     // 版 ／ 台
     // ---------------------------------------------------------------------------------
     internal static readonly string[] VerNames = { "ムグ規定", "撒き1", "撒き全", "育つ" };
-    internal static readonly UnitDef[] MugOf = { UnitCatalog.Mug, UnitCatalog.MugSow1, UnitCatalog.MugSowAll, UnitCatalog.MugSowGrow };
+    internal static readonly UnitDef[] MugOf = { UnitCatalog.MugH379, UnitCatalog.MugSow1, UnitCatalog.MugSowAll, UnitCatalog.MugSowGrow };
     internal static Formation Apply(Formation f, int vi) => vi == 0 ? f : I.Swap(f, "mug", MugOf[vi]);
-    internal static Formation Row(string n) => CompareBuilds().First(r => r.Name == n).F;
+    /// <summary>第380期: 撒き全をムグの規定にしたので、この器具の台は第379期の規定（ムグは `MugH379`）に固定する（`Pin379`）。</summary>
+    internal static Formation Row(string n) => Pin379(CompareBuilds().First(r => r.Name == n).F);
 
     /// <summary>§3-2 の台（規定のリィカ ＝ 目覚めたリィカ）。死・ゾト抜きはゾトを素体に替えた並び（器具の中だけ）。</summary>
     internal static (string Name, Formation F)[] Boards() => new (string, Formation)[]
     {
         ("死の連鎖 (リィカ軸)", Row("死の連鎖 (リィカ軸)")),
         ("継ぎ当て×死の連鎖（参考）", Row("継ぎ当て×死の連鎖")),
-        ("死・ソム", Presets.DeathSom379()),
+        ("死・ソム", Pin379(Presets.DeathSom379())),
         ("死・ゾト抜き（比べ用）", I.Swap(Row("死の連鎖 (リィカ軸)"), "zoto", I.Plain(UnitCatalog.Zoto))),
     };
 
@@ -149,7 +150,7 @@ static partial class Sh379Diag
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var rows = CompareBuilds().ToArray();
         CompareTable($"# {Tag} §2-3 段0 —— `compare` 64 行: 旧（第378期までの規定のリィカ・`Pin378`）→ 新（目覚めたリィカ）（seed 0..199）",
-            rows.Select(r => (r.Name, Pin378(r.F))).ToArray(), rows);
+            rows.Select(r => (r.Name, Pin378(r.F))).ToArray(), rows.Select(r => (r.Name, Pin379(r.F))).ToArray());   // 第380期: 新の側も第379期の規定（ムグは旧）に固定
 
         // 代表台
         var names = new[] { "死の連鎖 (リィカ軸)", "追撃×死 (ハギ×リィカ)", "死の連鎖+後備え", "惨禍×死の連鎖" };
@@ -283,7 +284,7 @@ static partial class Sh379Diag
         var sw = System.Diagnostics.Stopwatch.StartNew();
         int vi = Array.IndexOf(VerNames, ver);
         if (vi < 1) throw new ArgumentException("sh379 compare の版は 撒き1 / 撒き全 / 育つ");
-        var rows = CompareBuilds().ToArray();
+        var rows = CompareBuilds().Select(r => (r.Name, F: Pin379(r.F))).ToArray();   // 第380期: 第379期の規定（ムグは旧）に固定
         var vr = rows.Select(r => (r.Name, F: Apply(r.F, vi))).ToArray();
         Console.WriteLine($"版で回した行: ムグのいる行（{string.Join("、", rows.Where(r => S377.HasMug(r.F)).Select(r => r.Name))}）。ムグのいない行は版の写像で変わらない。");
         Console.WriteLine();

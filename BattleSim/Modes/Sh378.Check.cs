@@ -58,8 +58,8 @@ static partial class Sh378Diag
                 && new[] { UnitCatalog.RicaE, UnitCatalog.RicaL, UnitCatalog.RicaEL, UnitCatalog.RicaELU, UnitCatalog.MugSproutMU }.All(d => !UnitCatalog.All.Contains(d) && !UnitCatalog.Retired.Contains(d))
                 && UnitCatalog.RicaE.PlusText.EndsWith(UnitCatalog.RicaAwakenClause378) && UnitCatalog.RicaL.PlusText.EndsWith(UnitCatalog.RicaFlurryClause378)
                 && UnitCatalog.RicaELU.PlusText.Contains(UnitCatalog.RicaRaiseUncapClause378) && UnitCatalog.MugSproutMU.PlusText.EndsWith(UnitCatalog.MugSproutUncapClause378)
-                && UnitCatalog.RicaH378.Traits.SequenceEqual(new[] { TraitId.Necro, TraitId.Sacrifice }) && UnitCatalog.Mug.Traits.SequenceEqual(new[] { TraitId.Splitter }) && UnitCatalog.All.Count == 52
-                && UnitCatalog.RicaStack.Traits.SequenceEqual(UnitCatalog.RicaH378.Traits.Append(TraitId.RicaRaiseDeadStack)) && UnitCatalog.MugSproutM.Traits.SequenceEqual(UnitCatalog.Mug.Traits.Append(TraitId.MugSprout));
+                && UnitCatalog.RicaH378.Traits.SequenceEqual(new[] { TraitId.Necro, TraitId.Sacrifice }) && UnitCatalog.MugH379.Traits.SequenceEqual(new[] { TraitId.Splitter }) && UnitCatalog.All.Count == 52
+                && UnitCatalog.RicaStack.Traits.SequenceEqual(UnitCatalog.RicaH378.Traits.Append(TraitId.RicaRaiseDeadStack)) && UnitCatalog.MugSproutM.Traits.SequenceEqual(UnitCatalog.MugH379.Traits.Append(TraitId.MugSprout));
             Expect("定義: 版の駒 E ／ L ／ EL ／ ELU（リィカ）＝ 土台の R-積 ＋ 札・MU（ムグ）＝ M ＋ U（`All` の外）・文面は版ごとに叩き台をつなぐ・規定のリィカ ／ ムグと第377期の土台の駒は今どおり", defs);
         }
 

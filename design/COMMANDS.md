@@ -1386,6 +1386,9 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sh379 vers               # 第379期 §3-3: 4 台（死の連鎖 ／ 継ぎ当て ／ 死・ソム ／ 死・ゾト抜き）× ムグ（規定 ／ 撒き1 ／ 撒き全 ／ 育つ）× 8 物差し（seed 0..99・verbose）——ボスの層 ／ 9 層 ／ 1人 ／ 与ダメ ／ 勇者の HP・湧いた体・層の出どころ・隊の1ターンの最大・壊れの兆し
     dotnet run --project BattleSim -c Release 0 sh379 compare <撒き1|撒き全|育つ>   # 第379期: `compare` 64 行 × ムグの版（ムグのいる行だけ版で変わる・seed 0..199）
     dotnet run --project BattleSim -c Release 0 sh379 check              # 第379期 自己検査（段0 の規定 ／ 旧 ／ 固定の口・撒き1 ／ 撒き全 ／ 育つ（育つことは死ではない・若いムグ）・胞子 ／ 若いムグの死で層 +1・分裂は今どおり・verbose と再現性・`checkup` の札・試遊の台・PickOne ／ Roll）
+    dotnet run --project BattleSim -c Release 0 sh380 stage0             # 第380期 §2-3 段0: `compare` 64 行 旧（`Pin379`）→ 新（ムグ 撒き全）・ムグのいる代表台 5 × ボス ／ 近衛 ／ 大隊 ／ 第5波 ／ 強い条件 旧 → 新（seed 0..99）
+    dotnet run --project BattleSim -c Release 0 sh380 seats              # 第380期 §3: 死の台の席の探索（リィカ ／ ヴェル ／ ムグ ＋ 2枠・全 120 並び）段1 → 段2 → 段3・本体（2枠にヒーラー無し）と参考（ヒーラー2枚）・約1時間
+    dotnet run --project BattleSim -c Release 0 sh380 check              # 第380期 自己検査（段0 の規定 ／ 旧 `MugH379` ／ 固定の口・規定のムグ ＝ 撒き全の動き・探索の母集団（ツギ ／ リリ無し・ヒーラー）・試遊の台・verbose と再現性・`checkup` の札・PickOne ／ Roll）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

@@ -693,9 +693,20 @@ public static UnitDef PinS374(UnitDef d) => ReferenceEquals(d, UnitCatalog.Sid) 
 public static UnitDef PinV375(UnitDef d) => ReferenceEquals(d, UnitCatalog.Vio) ? UnitCatalog.VioH375 : PinR378(d);   // 第379期: 規定のリィカも第378期までの規定（`RicaH378`）へ（古い口の終端）
 
 /// <summary>第379期: 規定のリィカ（目覚めたリィカ ＝ 第378期の ELU のリィカ側）を第1〜378期の規定（`RicaH378`）に替える。ほかの駒はそのまま返す。古い口の終端（`PinV375` ／ `PinS371` ／ `PinGVS371`）の後ろに置いた。</summary>
-public static UnitDef PinR378(UnitDef d) => ReferenceEquals(d, UnitCatalog.Rica) ? UnitCatalog.RicaH378 : d;
+public static UnitDef PinR378(UnitDef d) => ReferenceEquals(d, UnitCatalog.Rica) ? UnitCatalog.RicaH378 : PinM379(d);   // 第380期: 規定のムグも第379期までの規定（`MugH379`）へ（古い口の終端）
 
-/// <summary>第379期: 目覚めたリィカを規定にした。第378期までの規定で測った器具はこれを通す。陣形とレリックは保つ。</summary>
+/// <summary>第380期: 規定のムグ（撒き全）を第1〜379期の規定（`MugH379`）に替える。ほかの駒はそのまま返す。古い口の終端（`PinR378`）の後ろに置いた。</summary>
+public static UnitDef PinM379(UnitDef d) => ReferenceEquals(d, UnitCatalog.Mug) ? UnitCatalog.MugH379 : d;
+
+/// <summary>第380期: 撒き全をムグの規定にした。第379期の規定（リィカは目覚めたリィカ・ムグは旧）で測った器具はこれを通す。陣形とレリックは保つ。</summary>
+public static Formation Pin379(Formation f)
+{
+    var g = f.Clone();
+    foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinM379(d);
+    return g;
+}
+
+/// <summary>第379期: 目覚めたリィカを規定にした。第378期までの規定で測った器具はこれを通す（第380期からムグも旧へ）。陣形とレリックは保つ。</summary>
 public static Formation Pin378(Formation f)
 {
     var g = f.Clone();

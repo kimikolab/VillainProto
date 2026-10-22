@@ -980,14 +980,18 @@ public static class Presets
         // 第379期: 目覚めたリィカ（ELU のリィカ側）を規定にした。「試遊・死の連鎖」は規定の駒のまま（リィカは目覚めたリィカになった）。
         // 第377 ／ 378期の「版・」の死の台（R-積M ／ E ／ EL ／ ELU）は外した（並びは `sh377` ／ `sh378` の中で `DeathChain377` から組む）。
         // 第379期: ムグが胞子を撒く版の台（並びは試遊・死の連鎖・ムグだけ版）と、ゾトをソムに替えた死の台（規定の駒）。採否はポン。
-        ("版・撒き全 死の連鎖", DeathChain377(mug: UnitCatalog.MugSowAll)),
-        ("版・育つ 死の連鎖", DeathChain377(mug: UnitCatalog.MugSowGrow)),
         ("試遊・死 ソム", DeathSom379()),
+        ("試遊・死 探索1位", DeathSeek380()),
+        // 第380期: 撒き全をムグの規定にした。「版・撒き全 死の連鎖」（規定と同じになる）と「版・育つ 死の連鎖」（育つは見送り）は外した（並びは `sh379` の中で組む）。
     };
 
     /// <summary>第379期: 「試遊・死 ソム」の並び（死の連鎖のゾトをソムに替えた: 前1 ソム ／ 前3 ゴルム ／ 中央 ムグ ／ 後1 ヴェル ／ 後3 リィカ）。ムグを差し替えて版の台を作る。</summary>
     public static Formation DeathSom379(UnitDef? mug = null) =>
         Formation.Build(front1: UnitCatalog.Som, front3: UnitCatalog.Golm, center: mug ?? UnitCatalog.Mug, back1: UnitCatalog.Vel, back3: UnitCatalog.Rica);
+
+    /// <summary>第380期: 死の台の席の探索（`sh380 seats`）の段3 の1位（前1 リィカ ／ 前3 ヒヨ ／ 中央 ボルグ ／ 後1 ヴェル ／ 後3 ムグ）。規定の駒。</summary>
+    public static Formation DeathSeek380() =>
+        Formation.Build(front1: UnitCatalog.Rica, front3: UnitCatalog.Hiyo, center: UnitCatalog.Borg, back1: UnitCatalog.Vel, back3: UnitCatalog.Mug);
 
     /// <summary>第377期: 「死の連鎖 (リィカ軸)」の並び（前1 ゾト ／ 前3 ゴルム ／ 中央 ムグ ／ 後1 ヴェル ／ 後3 リィカ）。リィカ ／ ムグを差し替えて版の台を作る。</summary>
     public static Formation DeathChain377(UnitDef? rica = null, UnitDef? mug = null) =>

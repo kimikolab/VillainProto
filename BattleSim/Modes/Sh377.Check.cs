@@ -52,10 +52,10 @@ static partial class Sh377Diag
             bool wight = w.MaxHp == 24 && w.Attack == 3 && w.Speed == 4 && w.Name == "亡者" && w.Traits.SequenceEqual(new[] { TraitId.Ephemeral, TraitId.Rot })
                 && !UnitCatalog.All.Contains(w) && !UnitCatalog.Retired.Contains(w) && !UnitCatalog.Everyone.Any(d => d.Id == w.Id);
             var vers = new[] { UnitCatalog.RicaLink, UnitCatalog.RicaStack, UnitCatalog.MugSproutM };
-            bool defs = UnitCatalog.RicaH378.Traits.SequenceEqual(new[] { TraitId.Necro, TraitId.Sacrifice }) && UnitCatalog.Mug.Traits.SequenceEqual(new[] { TraitId.Splitter })
+            bool defs = UnitCatalog.RicaH378.Traits.SequenceEqual(new[] { TraitId.Necro, TraitId.Sacrifice }) && UnitCatalog.MugH379.Traits.SequenceEqual(new[] { TraitId.Splitter })
                 && UnitCatalog.All.Contains(UnitCatalog.Rica) && UnitCatalog.All.Contains(UnitCatalog.Mug) && UnitCatalog.All.Count == 52
                 && UnitCatalog.RicaLink.Traits.SequenceEqual(UnitCatalog.RicaH378.Traits.Append(TraitId.RicaRaiseDead)) && UnitCatalog.RicaStack.Traits.SequenceEqual(UnitCatalog.RicaH378.Traits.Append(TraitId.RicaRaiseDeadStack))
-                && UnitCatalog.MugSproutM.Traits.SequenceEqual(UnitCatalog.Mug.Traits.Append(TraitId.MugSprout))
+                && UnitCatalog.MugSproutM.Traits.SequenceEqual(UnitCatalog.MugH379.Traits.Append(TraitId.MugSprout))
                 && vers.All(d => !UnitCatalog.All.Contains(d) && !UnitCatalog.Retired.Contains(d))
                 && UnitCatalog.RicaLink.PlusText.EndsWith(UnitCatalog.RicaRaiseClause377 + UnitCatalog.RicaLinkTail377) && UnitCatalog.RicaStack.PlusText.EndsWith(UnitCatalog.RicaRaiseClause377 + UnitCatalog.RicaStackTail377)
                 && UnitCatalog.MugSproutM.PlusText.EndsWith(UnitCatalog.MugSproutClause377);
@@ -117,7 +117,7 @@ static partial class Sh377Diag
         }
         {
             // 既定の召喚（胞子 ／ 餌）の走査は今どおり「生死を問わず塞ぐ」。倒れた亡者の枠にも、ムグの分裂の胞子は湧かない。
-            var (ctx, p, foe) = Board((0, Mate), (2, UnitCatalog.Mug), (4, Mate));
+            var (ctx, p, foe) = Board((0, Mate), (2, UnitCatalog.MugH379), (4, Mate));   // 第380期: 第379期までの規定のムグ
             var w0 = ctx.Summon(UnitCatalog.Wight, BattleContext.PlayerTeam)!;   // ○中1
             ctx.LoseHp(w0, 999, TraitId.Rot);
             Kill(ctx, p.First(u => u.Def.Id == "mug"), foe);   // 規定のムグの分裂（胞子2体・既定の走査）
@@ -245,7 +245,7 @@ static partial class Sh377Diag
         {
             long diff = 0, det = 0, cells = 0;
             // 第378期: 「版・R-繋 死の連鎖」は `Presets.Versions` から外したので、3台は並びの関数から組む（中身は同じ）。
-            foreach (var f in new[] { Presets.DeathChain377(UnitCatalog.RicaH378), Presets.DeathChain377(UnitCatalog.RicaLink), Presets.DeathChain377(UnitCatalog.RicaStack, UnitCatalog.MugSproutM) })   // 第379期: 規定の台は第378期までの規定のリィカで
+            foreach (var f in new[] { Presets.DeathChain377(UnitCatalog.RicaH378, UnitCatalog.MugH379), Presets.DeathChain377(UnitCatalog.RicaLink, UnitCatalog.MugH379), Presets.DeathChain377(UnitCatalog.RicaStack, UnitCatalog.MugSproutM) })   // 第379期: 規定の台は第378期までの規定のリィカで
             {
                 foreach (var w in new[] { I.Boss, I.Guard, I.Bat, I.M5, I.T9 })
                     for (int sd = 0; sd < 5; sd++)
@@ -272,7 +272,7 @@ static partial class Sh377Diag
             // 第378期: 「版・R-繋 死の連鎖」を外した。第379期: 第377 ／ 378期の「版・」の台をすべて外した——頭の 12 台を見て、版の並びは関数から組む。
             bool rows = vr.Take(12).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒", "試遊・毒 席替え", "試遊・毒 紅", "試遊・ヴィオ 台B", "試遊・死の連鎖" });
             var basis = Row("死の連鎖 (リィカ軸)");
-            bool vers = Presets.DeathChain377(UnitCatalog.RicaLink).Occupied().Select(o => o.Def).SequenceEqual(Apply(basis, 1).Occupied().Select(o => o.Def))
+            bool vers = Presets.DeathChain377(UnitCatalog.RicaLink, UnitCatalog.MugH379).Occupied().Select(o => o.Def).SequenceEqual(Apply(basis, 1).Occupied().Select(o => o.Def))
                 && Presets.DeathChain377(UnitCatalog.RicaStack, UnitCatalog.MugSproutM).Occupied().Select(o => o.Def).SequenceEqual(Apply(basis, 4).Occupied().Select(o => o.Def));
             Expect("`Presets.Versions` の頭 ＝ 第376期の11台 ＋「試遊・死の連鎖」（第378 ／ 379期に「版・」の死の台を外した・R-繋 ／ R-積M の並びは `DeathChain377`）", rows && vers, string.Join("、", vr));
         }

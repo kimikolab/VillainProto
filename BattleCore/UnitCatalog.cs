@@ -539,7 +539,9 @@ public static class UnitCatalog
         Flavor = GolmH345.Flavor
     };
 
-    public static readonly UnitDef Mug = new()
+    /// <summary>胞子体ムグ（第1〜379期の規定）。<b>第380期に第379期の撒き全（`MugSowAll`）を規定にしたので、それまでの規定はこの <see cref="MugH379"/> として明示的に持つ。</b>
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。第379期までの規定のムグで測った過去の器具はこちらに固定する（`Common.PinM379` ／ `Pin379`）。第377〜379期の版の駒はこちらから作る。</summary>
+    public static readonly UnitDef MugH379 = new()
     {
         Id = "mug",
         Name = "胞子体ムグ",
@@ -594,8 +596,8 @@ public static class UnitCatalog
 
     static UnitDef MugOn379(TraitId add, string plus) => new()
     {
-        Id = Mug.Id, Name = Mug.Name, MaxHp = Mug.MaxHp, Attack = Mug.Attack, Speed = Mug.Speed,
-        Traits = Mug.Traits.Append(add).ToArray(), Actions = MugSowActions, PlusText = Mug.PlusText + "／" + plus, MinusText = Mug.MinusText, Flavor = Mug.Flavor,
+        Id = MugH379.Id, Name = MugH379.Name, MaxHp = MugH379.MaxHp, Attack = MugH379.Attack, Speed = MugH379.Speed,
+        Traits = MugH379.Traits.Append(add).ToArray(), Actions = MugSowActions, PlusText = MugH379.PlusText + "／" + plus, MinusText = MugH379.MinusText, Flavor = MugH379.Flavor,
     };
     /// <summary>胞子体ムグの版 撒き1（第379期）＝ 規定のムグ ＋ 撒く（手番 `[Skill]`）。<see cref="All"/> の外（版・採否はポン）。</summary>
     public static readonly UnitDef MugSow1 = MugOn379(TraitId.MugSow1, MugSow1Clause379);
@@ -624,17 +626,31 @@ public static class UnitCatalog
     /// <summary>胞子体ムグの版 M（第377期・亡骸の芽吹き）。規定のムグ ＋ <see cref="TraitId.MugSprout"/>。<see cref="All"/> にも <see cref="Retired"/> にも入れない（版・採否はポン）。</summary>
     public static readonly UnitDef MugSproutM = new()
     {
-        Id = Mug.Id, Name = Mug.Name, MaxHp = Mug.MaxHp, Attack = Mug.Attack, Speed = Mug.Speed,
-        Traits = Mug.Traits.Append(TraitId.MugSprout).ToArray(),
-        PlusText = Mug.PlusText + "／" + MugSproutClause377, MinusText = Mug.MinusText, Flavor = Mug.Flavor,
+        Id = MugH379.Id, Name = MugH379.Name, MaxHp = MugH379.MaxHp, Attack = MugH379.Attack, Speed = MugH379.Speed,
+        Traits = MugH379.Traits.Append(TraitId.MugSprout).ToArray(),
+        PlusText = MugH379.PlusText + "／" + MugSproutClause377, MinusText = MugH379.MinusText, Flavor = MugH379.Flavor,
     };
 
     /// <summary>胞子体ムグの版 MU（第378期・ELU の台で使う）＝ M ＋ 起こしの上限を外す（芽吹きの上限なし）。<see cref="All"/> の外。</summary>
     public static readonly UnitDef MugSproutMU = new()
     {
-        Id = Mug.Id, Name = Mug.Name, MaxHp = Mug.MaxHp, Attack = Mug.Attack, Speed = Mug.Speed,
+        Id = MugH379.Id, Name = MugH379.Name, MaxHp = MugH379.MaxHp, Attack = MugH379.Attack, Speed = MugH379.Speed,
         Traits = MugSproutM.Traits.Append(TraitId.UncapRaise).ToArray(),
-        PlusText = Mug.PlusText + "／" + MugSproutUncapClause378, MinusText = Mug.MinusText, Flavor = Mug.Flavor,
+        PlusText = MugH379.PlusText + "／" + MugSproutUncapClause378, MinusText = MugH379.MinusText, Flavor = MugH379.Flavor,
+    };
+
+    /// <summary>第380期 規定のムグ（撒き全）のマイナスの尾（指示書 §2-1 の叩き台）。</summary>
+    public const string MugSowMinusTail380 = "。撒いた胞子が空いた場所を埋めるので、ほかの者が呼ぶ仲間の居場所が無くなる";
+
+    /// <summary>
+    /// 胞子体ムグ（第380期の規定）。<b>第380期に第379期の撒き全を規定にした</b>（ポンの判断・design/PHASE380_DEATH_SEATS_SPEC.md §2）——
+    /// 第1〜379期の規定（<see cref="MugH379"/>）＋ 撒き散らす（<see cref="TraitId.MugSowAll"/>・手番 `[Skill]`）。プラスの文面は第379期の <see cref="MugSowAll"/> と同じ・マイナスの尾に <see cref="MugSowMinusTail380"/>。
+    /// </summary>
+    public static readonly UnitDef Mug = new()
+    {
+        Id = MugH379.Id, Name = MugH379.Name, MaxHp = MugH379.MaxHp, Attack = MugH379.Attack, Speed = MugH379.Speed,
+        Traits = MugSowAll.Traits.ToArray(), Actions = MugSowActions, PlusText = MugSowAll.PlusText,
+        MinusText = MugH379.MinusText + MugSowMinusTail380, Flavor = MugH379.Flavor,
     };
 
     public static readonly UnitDef Zoto = new()

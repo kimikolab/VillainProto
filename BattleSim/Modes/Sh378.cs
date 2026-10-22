@@ -55,7 +55,7 @@ static partial class Sh378Diag
     // ---------------------------------------------------------------------------------
     internal static readonly string[] VerNames = { "規定", "土台", "E", "L", "EL", "ELU" };
     internal static readonly UnitDef[] RicaOf = { UnitCatalog.RicaH378, UnitCatalog.RicaStack, UnitCatalog.RicaE, UnitCatalog.RicaL, UnitCatalog.RicaEL, UnitCatalog.RicaELU };
-    internal static readonly UnitDef[] MugOf = { UnitCatalog.Mug, UnitCatalog.MugSproutM, UnitCatalog.MugSproutM, UnitCatalog.MugSproutM, UnitCatalog.MugSproutM, UnitCatalog.MugSproutMU };
+    internal static readonly UnitDef[] MugOf = { UnitCatalog.MugH379, UnitCatalog.MugSproutM, UnitCatalog.MugSproutM, UnitCatalog.MugSproutM, UnitCatalog.MugSproutM, UnitCatalog.MugSproutMU };
     /// <summary>版を当てる（リィカ ／ ムグを版の駒に替える・ムグのいない台はリィカだけ）。土台 ＝ 第377期の R-積M（ムグなしは R-積）。</summary>
     internal static Formation Apply(Formation f, int vi) => vi == 0 ? f : I.Swap(I.Swap(f, "rica", RicaOf[vi]), "mug", MugOf[vi]);
 

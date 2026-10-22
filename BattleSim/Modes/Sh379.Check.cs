@@ -52,9 +52,9 @@ static partial class Sh379Diag
             bool cards = r.Traits.SequenceEqual(h.Traits.Concat(new[] { TraitId.RicaRaiseDeadStack, TraitId.RicaAwakenRaise, TraitId.RicaLayerFlurry, TraitId.UncapRaise }))
                 && r.Traits.SequenceEqual(UnitCatalog.RicaELU.Traits) && r.PlusText == UnitCatalog.RicaELU.PlusText && r.MinusText == h.MinusText
                 && h.Traits.SequenceEqual(new[] { TraitId.Necro, TraitId.Sacrifice }) && UnitCatalog.All.Contains(r) && !UnitCatalog.All.Contains(h) && !UnitCatalog.Retired.Contains(h) && UnitCatalog.All.Count == 52
-                && UnitCatalog.Mug.Traits.SequenceEqual(new[] { TraitId.Splitter }) && UnitCatalog.Mug.Actions is null;
-            bool pins = PinR378(r) == h && PinR378(UnitCatalog.Mug) == UnitCatalog.Mug && PinV375(r) == h && PinS371(r) == h && PinGVS371(r) == h
-                && Pin378(Row("死の連鎖 (リィカ軸)")).Occupied().Select(o => o.Def).SequenceEqual(Presets.DeathChain377(h).Occupied().Select(o => o.Def));
+                && UnitCatalog.MugH379.Traits.SequenceEqual(new[] { TraitId.Splitter }) && UnitCatalog.MugH379.Actions is null;   // 第380期: 第379期までの規定のムグ
+            bool pins = PinR378(r) == h && PinR378(UnitCatalog.Zoto) == UnitCatalog.Zoto && PinV375(r) == h && PinS371(r) == h && PinGVS371(r) == h
+                && Pin378(Row("死の連鎖 (リィカ軸)")).Occupied().Select(o => o.Def).SequenceEqual(Presets.DeathChain377(h, UnitCatalog.MugH379).Occupied().Select(o => o.Def));
             bool olds = UnitCatalog.RicaStack.Traits.SequenceEqual(h.Traits.Append(TraitId.RicaRaiseDeadStack)) && UnitCatalog.RicaLink.Traits.SequenceEqual(h.Traits.Append(TraitId.RicaRaiseDead))
                 && UnitCatalog.RicaELU.Traits.SequenceEqual(h.Traits.Concat(new[] { TraitId.RicaRaiseDeadStack, TraitId.RicaAwakenRaise, TraitId.RicaLayerFlurry, TraitId.UncapRaise }));
             Expect("段0: 規定のリィカ ＝ 第378期の ELU のリィカ（札と文面）・旧 `RicaH378`（`All` の外）・固定の口（`PinR378` ／ `Pin378` ／ 古い口の終端 `PinV375` ／ `PinS371` ／ `PinGVS371`）・第377 ／ 378期の版の駒は旧から作ったまま・ムグは規定のまま", cards && pins && olds);
@@ -155,9 +155,9 @@ static partial class Sh379Diag
         // ---- verbose ／ 再現性 ----
         {
             long diff = 0, det = 0, cells = 0;
-            foreach (var n in new[] { "版・撒き全 死の連鎖", "版・育つ 死の連鎖", "試遊・死 ソム", "試遊・死の連鎖" })
+            // 第380期: 「版・撒き全 ／ 育つ 死の連鎖」は `Presets.Versions` から外した・規定のムグが撒き全になったので、4台は第379期の規定（ムグは旧）で組む。
+            foreach (var f in new[] { Presets.DeathChain377(mug: UnitCatalog.MugSowAll), Presets.DeathChain377(mug: UnitCatalog.MugSowGrow), Pin379(Presets.DeathSom379()), Pin379(Presets.DeathChain377()) })
             {
-                var f = Presets.Versions.First(r => r.Name == n).F;
                 foreach (var w in new[] { I.Boss, I.Guard, I.Bat, I.M5 })
                     for (int sd = 0; sd < 5; sd++)
                     {
@@ -182,13 +182,14 @@ static partial class Sh379Diag
         // ---- 試遊の台 ----
         {
             var vr = Presets.Versions.Select(r => r.Name).ToArray();
-            bool rows = vr.SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒", "試遊・毒 席替え", "試遊・毒 紅", "試遊・ヴィオ 台B", "試遊・死の連鎖", "版・撒き全 死の連鎖", "版・育つ 死の連鎖", "試遊・死 ソム" });
+            // 第380期: 「版・撒き全 ／ 育つ 死の連鎖」を外し、後ろに第380期の台が足された——頭の 12 台と「試遊・死 ソム」を見て、版の並びは関数から組む。
+            bool rows = vr.Take(12).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒", "試遊・毒 席替え", "試遊・毒 紅", "試遊・ヴィオ 台B", "試遊・死の連鎖" }) && vr.Contains("試遊・死 ソム");
             var basis = Row("死の連鎖 (リィカ軸)");
-            bool vers = Presets.Versions.First(r => r.Name == "版・撒き全 死の連鎖").F.Occupied().Select(o => o.Def).SequenceEqual(Apply(basis, 2).Occupied().Select(o => o.Def))
-                && Presets.Versions.First(r => r.Name == "版・育つ 死の連鎖").F.Occupied().Select(o => o.Def).SequenceEqual(Apply(basis, 3).Occupied().Select(o => o.Def))
+            bool vers = Presets.DeathChain377(mug: UnitCatalog.MugSowAll).Occupied().Select(o => o.Def).SequenceEqual(Apply(basis, 2).Occupied().Select(o => o.Def))
+                && Presets.DeathChain377(mug: UnitCatalog.MugSowGrow).Occupied().Select(o => o.Def).SequenceEqual(Apply(basis, 3).Occupied().Select(o => o.Def))
                 && S307.Seats(Presets.Versions.First(r => r.Name == "試遊・死 ソム").F) == "ソム・ゴルム・ムグ・ヴェル・リィカ"
-                && Presets.Versions.First(r => r.Name == "試遊・死の連鎖").F.Occupied().Select(o => o.Def).SequenceEqual(basis.Occupied().Select(o => o.Def));
-            Expect("`Presets.Versions` ＝ 第376期の11台 ＋「試遊・死の連鎖」（規定の駒）＋「版・撒き全 ／ 育つ 死の連鎖」（ムグだけ版）＋「試遊・死 ソム」（第377 ／ 378期の「版・」の死の台は外した）", rows && vers, string.Join("、", vr));
+                && Pin379(Presets.Versions.First(r => r.Name == "試遊・死の連鎖").F).Occupied().Select(o => o.Def).SequenceEqual(basis.Occupied().Select(o => o.Def));
+            Expect("`Presets.Versions` の頭 ＝ 第376期の11台 ＋「試遊・死の連鎖」・「試遊・死 ソム」が残る（第380期に「版・撒き全 ／ 育つ 死の連鎖」を外した・並びは `DeathChain377`）", rows && vers, string.Join("、", vr));
         }
 
         // ---- PickOne ／ Roll ----
