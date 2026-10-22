@@ -2483,6 +2483,8 @@ public sealed class UnitTally
     public long R382Songs, R382NoDeath, R382NoOne, R382InGift, R382Echoes, R382Skipped, R382EncoreTurns, R382EncoreDealt, R382EchoTurns, R382EchoDealt;
     /// <summary>第383期（哀歌のマイナスの燃料・**計数のみ**・楽士の側）: 敵の再行動の手番の中で倒れた味方（全部 ／ 儚い駒 ／ 起き上がる死）・その手番で積もった墓守の層（味方の `necro` の増えた分）。</summary>
     public long R383EchoKills, R383EchoKillsEph, R383EchoKillsRise, R383EchoLayer;
+    /// <summary>第384期（哀歌の音・**計数のみ**・楽士の側）: 傷から溜まった音 ／ 倒れた味方から溜まった音（上限の前）／ 上限で捨てた音 ／ 閾値に届かず殴った手番。</summary>
+    public long R384SndDmg, R384SndDeath, R384SndWaste, R384Short;
     public int R378Layer6Turn, R378Layer9Turn;
     public long R377ChainSaved;
     public int R377PeakTurn, R377AwakeTurn;
@@ -3798,6 +3800,7 @@ public sealed class UnitTally
         R382Songs += o.R382Songs; R382NoDeath += o.R382NoDeath; R382NoOne += o.R382NoOne; R382InGift += o.R382InGift; R382Echoes += o.R382Echoes; R382Skipped += o.R382Skipped;
         R382EncoreTurns += o.R382EncoreTurns; R382EncoreDealt += o.R382EncoreDealt; R382EchoTurns += o.R382EchoTurns; R382EchoDealt += o.R382EchoDealt;   // 第382期
         R383EchoKills += o.R383EchoKills; R383EchoKillsEph += o.R383EchoKillsEph; R383EchoKillsRise += o.R383EchoKillsRise; R383EchoLayer += o.R383EchoLayer;   // 第383期
+        R384SndDmg += o.R384SndDmg; R384SndDeath += o.R384SndDeath; R384SndWaste += o.R384SndWaste; R384Short += o.R384Short;   // 第384期
         if (R378Layer6Turn == 0) R378Layer6Turn = o.R378Layer6Turn;
         if (R378Layer9Turn == 0) R378Layer9Turn = o.R378Layer9Turn;
         R377Raises += o.R377Raises; R377RaiseTurnSum += o.R377RaiseTurnSum; R377NoSeat += o.R377NoSeat; R377CostSelf += o.R377CostSelf; R377RotLost += o.R377RotLost; R377RotDeaths += o.R377RotDeaths; R377Sprouts += o.R377Sprouts; R377SproutTurnSum += o.R377SproutTurnSum; R377SproutNoSeat += o.R377SproutNoSeat;   // 第377期

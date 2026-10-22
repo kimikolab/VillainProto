@@ -729,6 +729,19 @@ public static class UnitCatalog
         Traits = new[] { TraitId.Dirge, TraitId.DirgeEchoAlways }, Actions = BardActions, PlusText = BardPlus382,
         MinusText = "哀歌は敵の耳にも届く。奏でるたびに、いちばん強い敵も奮い立ってもう一度動く", Flavor = Bard382.Flavor,
     };
+    const string BardSoundPlus384 = "仲間が傷つくたび、哀歌の音が溜まる（倒れればなお深く）。音が満ちると奏で、いちばん強い仲間がもう一度立ち上がって戦う";
+    /// <summary>弔いの楽士 G1 傷寄り（第384期）: 哀歌の音（傷 1 ＝ 1・倒れるたび +20・閾値 50）＋ 哀歌は敵の耳にも届く。</summary>
+    public static readonly UnitDef Bard384G1 = new()
+    {
+        Id = Bard382.Id, Name = Bard382.Name, MaxHp = Bard382.MaxHp, Attack = Bard382.Attack, Speed = Bard382.Speed, Advances = false,
+        Traits = new[] { TraitId.DirgeSoundG1, TraitId.DirgeEchoAlways }, Actions = BardActions, PlusText = BardSoundPlus384, MinusText = Bard383.MinusText, Flavor = Bard382.Flavor,
+    };
+    /// <summary>弔いの楽士 G2 死寄り（第384期）: 哀歌の音（傷 1 ＝ 1・倒れるたび +50・閾値 50）＋ 哀歌は敵の耳にも届く。</summary>
+    public static readonly UnitDef Bard384G2 = new()
+    {
+        Id = Bard382.Id, Name = Bard382.Name, MaxHp = Bard382.MaxHp, Attack = Bard382.Attack, Speed = Bard382.Speed, Advances = false,
+        Traits = new[] { TraitId.DirgeSoundG2, TraitId.DirgeEchoAlways }, Actions = BardActions, PlusText = BardSoundPlus384, MinusText = Bard383.MinusText, Flavor = Bard382.Flavor,
+    };
     /// <summary>弔いの楽士 D1n（第382期・マイナスの重さを測る対照）: 哀歌だけ。</summary>
     public static readonly UnitDef Bard382n = new()
     {

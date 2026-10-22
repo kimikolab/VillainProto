@@ -1400,6 +1400,9 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sh383 dead               # 第383期 §3-1: 第382期の4台 × 候補（楽士 D2 ／ D1n ／ 素体 ／ 参考 D1）× 8 物差し（1〜3 は並びを探し直す）——敵の再行動の中で倒れた味方 ／ 積もった層・誰が何Tに
     dotnet run --project BattleSim -c Release 0 sh383 outside            # 第383期 §3-2: 死の外の6台で1枚を楽士（D2 ／ D1n）に替えた最良（seed 0..19 で選び最良だけ seed 0..99）——奏でた回数
     dotnet run --project BattleSim -c Release 0 sh383 check              # 第383期 自己検査（D2: 奏でた手番では必ず味方の後に最も強い敵が1回 ／ 殴った手番は動かない ／ 控えた敵が倒れていれば動かない・D1n は第382期の列と一致・試遊の台・verbose・`checkup`・PickOne ／ Roll）
+    dotnet run --project BattleSim -c Release 0 sh384 dead               # 第384期 §3-1 の 1: 第383期の4台 × 候補（楽士 G1 ／ G2 ／ D2 ／ 素体）× 8 物差し（1〜3 は並びを探し直す）——奏でた回数と音の出どころ（傷 ／ 倒れた ／ 捨てた）
+    dotnet run --project BattleSim -c Release 0 sh384 outside            # 第384期 §3-1 の 2: 死の外の6台で1枚を楽士（G1 ／ G2 ／ D2）に替えた最良——波ごとの奏でた回数・「版・楽士 外」の選び
+    dotnet run --project BattleSim -c Release 0 sh384 check              # 第384期 自己検査（音: 傷の量 ／ はみ出しを数えない ／ 倒れるたび ／ 起き上がる死 ／ 儚い駒 ／ 上限・奏でる: 閾値ぶん ／ 届かなければ殴る ／ 余り・マイナス・D2 は第383期の列と一致・試遊の台・verbose・`checkup`・PickOne ／ Roll）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

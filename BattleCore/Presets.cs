@@ -983,13 +983,17 @@ public static class Presets
         ("試遊・死 ソム", DeathSom379()),
         ("試遊・死 探索1位", DeathSeek380()),
         // 第382期: 魂を分けるヴェル（S2）を規定にした。「版・S2 死 探索1位」（規定と同じ）と「版・S10 死 探索1位」（S10 は見送り）は外した（並びは `DeathSeek380(vel)`）。
-        ("版・楽士 死", DeathBard382(UnitCatalog.Bard383)),   // 第383期: 楽士を D2 に替えた（並びは第382期のまま）   // 第382期: 弔いの楽士 D1 を試遊で触る台（`sh382 cmp` で D1 がいちばん良かった台）
+        ("版・楽士 死", DeathBard382(UnitCatalog.Bard384G1)),   // 第384期: 楽士を G1（哀歌の音・傷寄り）に替えた（並びは第382期のまま・死の台では G1 と G2 が同じ結果）
+        ("版・楽士 外", BurnBard384()),   // 第384期: 死の外で楽士が元の台にいちばん近い ／ 上がった台（試遊・燃焼 ポンの台のガルドの席に G1）   // 第382期: 弔いの楽士 D1 を試遊で触る台（`sh382 cmp` で D1 がいちばん良かった台）
         // 第380期: 撒き全をムグの規定にした。「版・撒き全 死の連鎖」（規定と同じになる）と「版・育つ 死の連鎖」（育つは見送り）は外した（並びは `sh379` の中で組む）。
     };
 
     /// <summary>第379期: 「試遊・死 ソム」の並び（死の連鎖のゾトをソムに替えた: 前1 ソム ／ 前3 ゴルム ／ 中央 ムグ ／ 後1 ヴェル ／ 後3 リィカ）。ムグを差し替えて版の台を作る。</summary>
     public static Formation DeathSom379(UnitDef? mug = null) =>
         Formation.Build(front1: UnitCatalog.Som, front3: UnitCatalog.Golm, center: mug ?? UnitCatalog.Mug, back1: UnitCatalog.Vel, back3: UnitCatalog.Rica);
+
+    /// <summary>第384期: 「版・楽士 外」の並び（試遊・燃焼 ポンの台のガルドの席（後1）に楽士・`sh384 outside` の最良）。規定の駒 ＋ 楽士。</summary>
+    public static Formation BurnBard384(UnitDef? bard = null) { var f = BurnPon(UnitCatalog.Borg, UnitCatalog.Hota, UnitCatalog.Hiyo).Clone(); f[3] = bard ?? UnitCatalog.Bard384G1; return f; }
 
     /// <summary>第382期: 「版・楽士 死」の並び（`sh382 cmp` の スィド ＋ 楽士 D1 の最良の並び: 前1 ムグ ／ 前3 スィド ／ 中央 ヴェル ／ 後1 リィカ ／ 後3 弔いの楽士）。規定の駒 ＋ 楽士。</summary>
     public static Formation DeathBard382(UnitDef? bard = null) =>

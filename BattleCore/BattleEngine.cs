@@ -11966,7 +11966,7 @@ public sealed class BattleContext
             {
                 var (giver, to, ord) = _giftQueue.Dequeue();
                 // 第382期（哀歌）: 楽士が控えた手番（味方 ／ マイナスの敵）。口だけを共有し、火の帳簿には数えない。
-                if (giver.HasTrait(TraitId.Dirge))
+                if (DirgeSoundTrait.IsBard(giver))   // 第384期: 哀歌の音（G1 ／ G2）の楽士も同じ枝
                 {
                     UnitTally gb = TallyOf(giver);
                     if (!to.IsAlive) { gb.R382Skipped++; continue; }
@@ -16860,6 +16860,28 @@ public sealed class BattleContext
             _giftQueue.Enqueue((bard, e2, 2));
         }
         return sang;
+    }
+
+    /// <summary>
+    /// 哀歌の音（第384期・<see cref="DirgeSoundTrait"/> の手番から・音が閾値に届いたとき）。いちばん攻撃力の高い味方（楽士を除く）の手番を1回控え、
+    /// <see cref="TraitId.DirgeEchoAlways"/> を持てばその後にいちばん攻撃力の高い敵の手番を1回控える（`_giftQueue`・第382 ／ 383期と同じ口）。
+    /// 偽を返したら奏でていない（ギフトの手番の中 ／ 動かす味方がいない）——呼び出し側は音を使わずに殴る。<b>乱数を引かない。</b>
+    /// </summary>
+    public bool DirgeSing(UnitState bard)
+    {
+        UnitTally bt = TallyOf(bard);
+        if (_inGift) { bt.R382InGift++; return false; }
+        if (TopAttacker(bard.TeamId, bard) is not { } to) { bt.R382NoOne++; return false; }
+        bt.R382Songs++;
+        Log($"    {bard.Name} の哀歌の音が満ちた——{to.Name} がもう一度立ち上がる", LogKind.Highlight, bard);
+        _giftQueue.Enqueue((bard, to, 1));
+        if (bard.HasTrait(TraitId.DirgeEchoAlways) && TopAttacker(Opponent(bard.TeamId), null) is { } e)
+        {
+            bt.R382Echoes++;
+            Log($"    哀歌は敵の耳にも届く——{e.Name} が奮い立ってもう一度動く", LogKind.Trigger, bard);
+            _giftQueue.Enqueue((bard, e, 2));
+        }
+        return true;
     }
 
     /// <summary>第383期（計数のみ）: 哀歌の敵の再行動の手番の間だけ、楽士の帳簿（ほかでは null）。</summary>

@@ -978,6 +978,9 @@ public enum TraitId
     DirgeEcho,            // 哀歌は敵にも届く（楽士・マイナス）: 楽士の手番で、前の手番から今までに敵が倒れていれば、味方の再行動の後に、いちばん攻撃力の高い敵がもう一度動く（`DirgeTrait` が控える・札そのものは印）
     // --- 第383期で足した札（指示書 design/PHASE383_DIRGE_ECHO_SPEC.md §2）。弔いの楽士の版 D2 のマイナス。保持者 0 枚 ---
     DirgeEchoAlways,      // 哀歌は敵の耳にも届く（楽士 D2・マイナス）: 楽士が奏でた手番（味方を動かした手番）では必ず、味方の再行動の後に、いちばん攻撃力の高い敵がもう一度動く（敵が倒れたかは見ない・奏でずに殴った手番では動かない）（`DirgeTrait` が控える・札そのものは印）
+    // --- 第384期で足した札（指示書 design/PHASE384_DIRGE_SOUND_SPEC.md §2）。弔いの楽士の版 G1 ／ G2 の引き金。保持者 0 枚 ---
+    DirgeSoundG1,         // 哀歌の音・傷寄り（楽士 G1）: 味方（自分 ／ 儚い駒を含む）が実際に HP を減らした量だけ音が溜まり、味方が倒れるたび +20（起き上がる死 ／ 儚い駒も）。手番に音が 50 以上なら 50 を使って奏でる——いちばん攻撃力の高い味方をもう一度動かす。届かなければ殴る。上限 100（`DirgeSoundTrait`）
+    DirgeSoundG2,         // 哀歌の音・死寄り（楽士 G2）: 同じ形で、倒れるたび +50（閾値 50 ／ 上限 100）（`DirgeSoundTrait`）
     UncapRaise,           // 起こしの上限を外す（U・リィカ ／ ムグ）: 亡者起こし（味方の亡骸から）／ 亡骸の芽吹きの1戦に3回の上限を外す（召喚枠の空きだけが上限）（**札そのものは挙動を持たない**・`RaiseDeadTrait` ／ `MugSproutTrait` が読む）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -13786,6 +13789,62 @@ public sealed class DirgeTrait : Trait
     }
 }
 
+/// <summary>
+/// 哀歌の音（第384期・弔いの楽士の版 G1 ／ G2・指示書 design/PHASE384_DIRGE_SOUND_SPEC.md §2-1）。楽士が生きている間、
+/// 味方（楽士自身 ／ 儚い駒を含む）が<b>実際に HP を減らした量</b>だけ音が溜まり（守り ／ 軽減の後・とどめの一撃のはみ出しは数えない・敵からでも味方からでも）、
+/// 味方が倒れるたび（起き上がる死 ／ 儚い駒の死も）<see cref="PerDeath"/> だけ溜まる。上限は閾値の2倍（超えた分は捨てる）。
+/// 手番に音が閾値以上なら閾値ぶんを使って奏でる（<see cref="BattleContext.DirgeSing"/>・いちばん攻撃力の高い味方をもう一度動かす）。届かなければ殴る。余りは持ち越す。
+/// マイナス（奏でるたびに強い敵も動く）は第383期の <see cref="TraitId.DirgeEchoAlways"/> をそのまま持たせる。<b>乱数を引かない。</b>
+/// </summary>
+public sealed class DirgeSoundTrait : Trait
+{
+    /// <summary>溜まった音（私有キー・`OnCarryOver` で 0）。</summary>
+    public const string SoundKey = "dirgeSound384";
+    readonly TraitId _id;
+    public readonly int PerDeath, Threshold;
+    public DirgeSoundTrait(TraitId id, int perDeath, int threshold) { _id = id; PerDeath = perDeath; Threshold = threshold; }
+    public override TraitId Id => _id;
+
+    void Accrue(BattleContext ctx, UnitState self, int amount, bool death)
+    {
+        if (amount <= 0) return;
+        UnitTally t = ctx.TallyOf(self);
+        if (death) t.R384SndDeath += amount; else t.R384SndDmg += amount;   // 計数のみ（上限の前）
+        int cap = Threshold * 2, now = self.RawCounter(SoundKey), next = Math.Min(cap, now + amount);
+        t.R384SndWaste += now + amount - next;
+        self.SetCounter(SoundKey, next);
+    }
+
+    /// <summary>この一撃で実際に減った HP（通知の時点の HP は「前 − 量」なので、負の分がとどめのはみ出し）。</summary>
+    static int Removed(UnitState u, int dmg) => dmg + Math.Min(0, u.Hp);
+
+    public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source) => Accrue(ctx, self, Removed(self, dmg), false);
+
+    public override void OnAllyDamaged(BattleContext ctx, UnitState self, UnitState ally, int dmg, UnitState? source)
+    {
+        if (self.IsAlive) Accrue(ctx, self, Removed(ally, dmg), false);
+    }
+
+    public override void OnAnyDeath(BattleContext ctx, UnitState self, UnitState dead)
+    {
+        if (self.IsAlive && dead != self && dead.TeamId == self.TeamId) Accrue(ctx, self, PerDeath, true);
+    }
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+    {
+        if (!self.IsAlive) return;
+        int s = self.RawCounter(SoundKey);
+        if (s >= Threshold && ctx.DirgeSing(self)) { self.SetCounter(SoundKey, s - Threshold); return; }
+        if (s < Threshold) ctx.TallyOf(self).R384Short++;   // 計数のみ（閾値に届かず殴った手番）
+        if (ctx.TeamAlive(ctx.Opponent(self.TeamId))) ctx.PerformAttack(self);
+    }
+
+    public override void OnCarryOver(UnitState self) => self.SetCounter(SoundKey, 0);
+
+    /// <summary>楽士の札（哀歌 ／ 哀歌の音）を持つか（手番の口 `DrainGifts` が楽士の枝を引くのに使う）。</summary>
+    public static bool IsBard(UnitState u) => u.HasTrait(TraitId.Dirge) || u.HasTrait(TraitId.DirgeSoundG1) || u.HasTrait(TraitId.DirgeSoundG2);
+}
+
 /// <summary>起こしの上限を外す（第378期・版 U）。<b>札そのものは挙動を持たない</b>——<see cref="RaiseDeadTrait"/> ／ <see cref="MugSproutTrait"/> が持ち主のこの札を読んで、1戦に3回の上限を数えない。</summary>
 public sealed class UncapRaiseTrait : Trait
 {
@@ -19404,6 +19463,8 @@ public static class TraitCatalog
         new DirgeTrait(TraitId.Dirge),                               // 第382期（哀歌・楽士）
         new DirgeTrait(TraitId.DirgeEcho),                           // 第382期（哀歌は敵にも届く・楽士のマイナス）
         new DirgeTrait(TraitId.DirgeEchoAlways),                     // 第383期（哀歌は敵の耳にも届く・楽士 D2 のマイナス）
+        new DirgeSoundTrait(TraitId.DirgeSoundG1, perDeath: 20, threshold: 50),   // 第384期（哀歌の音・傷寄り G1）
+        new DirgeSoundTrait(TraitId.DirgeSoundG2, perDeath: 50, threshold: 50),   // 第384期（哀歌の音・死寄り G2）
         new EruptTrait(),      // 第180期
         new SmearTrait(),      // 第180期
         new SpitTrait(),       // 第180期

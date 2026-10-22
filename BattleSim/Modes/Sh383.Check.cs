@@ -98,8 +98,8 @@ static partial class Sh383Diag
         {
             var vr = Presets.Versions.Select(r => r.Name).ToArray();
             var bard = Presets.Versions.FirstOrDefault(r => r.Name == "版・楽士 死").F;
-            bool ok = bard is not null && bard.Occupied().Select(o => o.Def).SequenceEqual(Presets.DeathBard382(d2).Occupied().Select(o => o.Def))
-                && vr.Count(n => n.StartsWith("版・")) == 1 && !Presets.Versions.Any(r => r.F.Occupied().Any(o => o.Def.Id == S382.Plain.Id || ReferenceEquals(o.Def, UnitCatalog.Bard382n)));
+            bool ok = bard is not null && bard.Occupied().Select(o => o.Def.Id).SequenceEqual(Presets.DeathBard382(d2).Occupied().Select(o => o.Def.Id))   /* 第384期: 楽士は G1 に替わった——並び（Id）だけを見る */
+                && vr.Count(n => n.StartsWith("版・")) >= 1 && !Presets.Versions.Any(r => r.F.Occupied().Any(o => o.Def.Id == S382.Plain.Id || ReferenceEquals(o.Def, UnitCatalog.Bard382n)));
             Expect("試遊の台: 「版・楽士 死」は D2（並びは第382期のまま）・D1n の台は足さない・素体の替え ／ 並びの探索 ／ 死の外の替えた台は器具の中だけ", ok, string.Join("、", vr.Skip(11)));
         }
         {

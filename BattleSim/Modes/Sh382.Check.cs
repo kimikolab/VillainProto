@@ -133,8 +133,8 @@ static partial class Sh382Diag
         {
             var vr = Presets.Versions.Select(r => r.Name).ToArray();
             var bard = Presets.Versions.FirstOrDefault(r => r.Name == "版・楽士 死").F;
-            bool ok = bard is not null && bard.Occupied().Any(o => o.Def.Traits.Contains(TraitId.Dirge))   /* 第383期: 楽士を D2 に替えた */ && Core.All(c => bard.Occupied().Any(o => ReferenceEquals(o.Def, c)))
-                && vr.Count(n => n.StartsWith("版・")) == 1 && !vr.Any(n => n.Contains("素体")) && !Presets.Versions.Any(r => r.F.Occupied().Any(o => o.Def.Id == Plain.Id))
+            bool ok = bard is not null && bard.Occupied().Any(o => o.Def.Id == d1.Id)   /* 第383期: 楽士を D2 に・第384期: G1 に替えた（楽士の Id で見る） */ && Core.All(c => bard.Occupied().Any(o => ReferenceEquals(o.Def, c)))
+                && vr.Count(n => n.StartsWith("版・")) >= 1 && !vr.Any(n => n.Contains("素体"))   /* 第384期: 「版・楽士 外」も足した */ && !Presets.Versions.Any(r => r.F.Occupied().Any(o => o.Def.Id == Plain.Id))
                 && !vr.Contains("版・S2 死 探索1位") && !vr.Contains("版・S10 死 探索1位") && vr.Contains("試遊・死 探索1位");
             Expect("試遊の台: 「版・楽士 死」（芯 ＋ 楽士 D1・規定の駒）だけを足した・「版・S2 ／ S10 死 探索1位」は外した・素体の替え ／ 並びの探索の台は器具の中だけ", ok, string.Join("、", vr.Skip(11)));
         }
