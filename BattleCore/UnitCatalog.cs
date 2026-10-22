@@ -431,6 +431,42 @@ public static class UnitCatalog
         Flavor = "味方の死を待っている顔をする、と report に書かれた。"
     };
 
+    /// <summary>第377期 亡者起こしの句（版 R-繋 ／ R-積 のプラスの文面に足す・指示書 §3-2 A の叩き台）。版ごとの尾は <see cref="RicaLinkTail377"/> ／ <see cref="RicaStackTail377"/>。</summary>
+    public const string RicaRaiseClause377 = "倒れた仲間の亡骸から亡者を起こす（1戦に3回・起こすたび自分が削れる）。亡者は朽ちていく";
+    public const string RicaLinkTail377 = "。亡者の死は層を積まないが連鎖を繋ぐ";
+    public const string RicaStackTail377 = "。亡者の死も層を積む";
+
+    /// <summary>
+    /// 墓守リィカの版 R-繋（第377期・亡者起こし・亡者の死は層を積まず連鎖を繋ぐ）。規定のリィカ ＋ <see cref="TraitId.RicaRaiseDead"/>。<see cref="All"/> にも <see cref="Retired"/> にも入れない（版・採否はポン）。
+    /// </summary>
+    public static readonly UnitDef RicaLink = new()
+    {
+        Id = Rica.Id, Name = Rica.Name, MaxHp = Rica.MaxHp, Attack = Rica.Attack, Speed = Rica.Speed,
+        Traits = Rica.Traits.Append(TraitId.RicaRaiseDead).ToArray(),
+        PlusText = Rica.PlusText + "／" + RicaRaiseClause377 + RicaLinkTail377, MinusText = Rica.MinusText, Flavor = Rica.Flavor,
+    };
+
+    /// <summary>墓守リィカの版 R-積（第377期・亡者起こし・亡者の死も層を積む）。規定のリィカ ＋ <see cref="TraitId.RicaRaiseDeadStack"/>。</summary>
+    public static readonly UnitDef RicaStack = new()
+    {
+        Id = Rica.Id, Name = Rica.Name, MaxHp = Rica.MaxHp, Attack = Rica.Attack, Speed = Rica.Speed,
+        Traits = Rica.Traits.Append(TraitId.RicaRaiseDeadStack).ToArray(),
+        PlusText = Rica.PlusText + "／" + RicaRaiseClause377 + RicaStackTail377, MinusText = Rica.MinusText, Flavor = Rica.Flavor,
+    };
+
+    /// <summary>第377期: 亡者起こし（リィカの版）が召喚枠に起こす駒。編成には選べない。朽ちて毎ターン HP 10 を失い、蘇生されない（儚い）。</summary>
+    public static readonly UnitDef Wight = new()
+    {
+        Id = "wight",
+        Name = "亡者",
+        MaxHp = 24,
+        Attack = 3,
+        Speed = 4,
+        Traits = new[] { TraitId.Ephemeral, TraitId.Rot },
+        PlusText = "",
+        MinusText = "毎ターン朽ちて HP 10 を失う"
+    };
+
     /// <summary>
     /// 大喰らいゴルム（第1〜344期の規定）。<b>第345期に第344期の S3（SW-a ＋ b ＋ 吐き捨てる）を規定にしたので、それまでの規定はこの <see cref="GolmH344"/> として明示的に持つ。</b>
     /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。第344期までの規定のゴルムで測った過去の器具はこちらに固定する（`Common.PinG344` ほか）。第335期 ／ 第343期の版（飲み干す ／ GL ／ GT）はこちらから作る。
@@ -512,6 +548,17 @@ public static class UnitCatalog
         PlusText = "倒れると胞子が2体湧く",
         MinusText = "本体は脆く、火力もほぼ無い",
         Flavor = "掃除の手間が増えるという理由で焼却処分が決まっていた。"
+    };
+
+    /// <summary>第377期 亡骸の芽吹きの句（版 M のプラスの文面に足す・指示書 §3-2 B の叩き台）。</summary>
+    public const string MugSproutClause377 = "生きている間、倒れた仲間の亡骸に胞子が芽吹く（1戦に3回）";
+
+    /// <summary>胞子体ムグの版 M（第377期・亡骸の芽吹き）。規定のムグ ＋ <see cref="TraitId.MugSprout"/>。<see cref="All"/> にも <see cref="Retired"/> にも入れない（版・採否はポン）。</summary>
+    public static readonly UnitDef MugSproutM = new()
+    {
+        Id = Mug.Id, Name = Mug.Name, MaxHp = Mug.MaxHp, Attack = Mug.Attack, Speed = Mug.Speed,
+        Traits = Mug.Traits.Append(TraitId.MugSprout).ToArray(),
+        PlusText = Mug.PlusText + "／" + MugSproutClause377, MinusText = Mug.MinusText, Flavor = Mug.Flavor,
     };
 
     public static readonly UnitDef Zoto = new()

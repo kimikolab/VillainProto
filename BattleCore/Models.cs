@@ -2466,6 +2466,19 @@ public sealed class UnitTally
     public long Z373RetchHeld, Z373RetchOut, Z373RetchLost, Z373RetchDead;
     /// <summary>第374期（<b>計数のみ</b>）: 開戦の衣で付けた層（スィドの側）／ 血を啜ったターンの数と啜った HP（ヴィオの側）／ 啜られた HP（啜られた味方の側）。</summary>
     public long Z374OpeningCloak, Z374SipTurns, Z374SipHp, Z374SippedFrom;
+    /// <summary>第377期（<b>計数のみ</b>）: 亡者起こし——起こした数 ／ 起こしたターンの和 ／ 空きが無くて起こせなかった数 ／ 代償で自分が減らした HP（リィカの側）・朽ちで崩れた HP ／ 朽ちて倒れた数（亡者の側）・亡骸の芽吹き——芽吹かせた数 ／ ターンの和 ／ 空きが無くて芽吹かなかった数（ムグの側）。</summary>
+    public long R377Raises, R377RaiseTurnSum, R377NoSeat, R377CostSelf, R377RotLost, R377RotDeaths, R377Sprouts, R377SproutTurnSum, R377SproutNoSeat;
+    /// <summary>第377期（<b>計数のみ</b>）: 墓守の層——ターンの頭（減衰の後）の層 ／ 層の上乗せ（攻撃力）／ 生きてターンの頭を迎えた回数（ターンごと）・亡者の死だけで連鎖が繋がったターンの数（版のリィカだけ）・最大層に届いたターン ／ 3 層に届いたターン（0 ＝ 未到達）。</summary>
+    public long[]? R377LayerByTurn, R377BonusByTurn, R377AliveByTurn;
+    public long R377ChainSaved;
+    public int R377PeakTurn, R377AwakeTurn;
+    /// <summary>第377期（計数のみ）: ターン <paramref name="turn"/> の頭の墓守の層を写す。</summary>
+    public void NoteNecro377(int turn, int layer, int bonus)
+    {
+        if (turn < 0 || turn > BattleEngine.MaxTurns) return;
+        R377LayerByTurn ??= new long[BattleEngine.MaxTurns + 2]; R377BonusByTurn ??= new long[BattleEngine.MaxTurns + 2]; R377AliveByTurn ??= new long[BattleEngine.MaxTurns + 2];
+        R377LayerByTurn[turn] += layer; R377BonusByTurn[turn] += bonus; R377AliveByTurn[turn]++;
+    }
     /// <summary>第365期（<b>計数のみ・計測専用</b>）: ヒサ×ミサの連鎖の矢印をターンごとに（<c>欄 × 32 ＋ ターン</c>・欄は <c>BattleContext.Ch365</c>）。<c>BattleContext.ChainCount365</c> が真の戦だけ書く。</summary>
     public long[]? Ch365;
     public long Rp345NormalDealt, Rp345Punches, Rp345PunchBack, Rp345PunchKills, Rp345PunchDealt, Rp345PunchAmount, Rp345AimEdible, Rp345GrabNoPunch, Rp345GrabAfter, Ga345Stomps, Ga345SplashHits, Ga345SplashDealt;
@@ -3762,6 +3775,10 @@ public sealed class UnitTally
         Z372HitsByTurn = AddArr(Z372HitsByTurn, o.Z372HitsByTurn);   // 第372期
         Z373RetchHeld += o.Z373RetchHeld; Z373RetchOut += o.Z373RetchOut; Z373RetchLost += o.Z373RetchLost; Z373RetchDead += o.Z373RetchDead;   // 第373期
         Z374OpeningCloak += o.Z374OpeningCloak; Z374SipTurns += o.Z374SipTurns; Z374SipHp += o.Z374SipHp; Z374SippedFrom += o.Z374SippedFrom;   // 第374期
+        R377LayerByTurn = AddArr(R377LayerByTurn, o.R377LayerByTurn); R377BonusByTurn = AddArr(R377BonusByTurn, o.R377BonusByTurn); R377AliveByTurn = AddArr(R377AliveByTurn, o.R377AliveByTurn); R377ChainSaved += o.R377ChainSaved;   // 第377期
+        if (R377PeakTurn == 0) R377PeakTurn = o.R377PeakTurn;
+        if (R377AwakeTurn == 0) R377AwakeTurn = o.R377AwakeTurn;
+        R377Raises += o.R377Raises; R377RaiseTurnSum += o.R377RaiseTurnSum; R377NoSeat += o.R377NoSeat; R377CostSelf += o.R377CostSelf; R377RotLost += o.R377RotLost; R377RotDeaths += o.R377RotDeaths; R377Sprouts += o.R377Sprouts; R377SproutTurnSum += o.R377SproutTurnSum; R377SproutNoSeat += o.R377SproutNoSeat;   // 第377期
         if (Z372Stage2Turn == 0) Z372Stage2Turn = o.Z372Stage2Turn;
         if (Z372Stage3Turn == 0) Z372Stage3Turn = o.Z372Stage3Turn;
         Z370SplashByTurn = AddArr(Z370SplashByTurn, o.Z370SplashByTurn); Z370StrikeByTurn = AddArr(Z370StrikeByTurn, o.Z370StrikeByTurn); Z370RetortByTurn = AddArr(Z370RetortByTurn, o.Z370RetortByTurn);

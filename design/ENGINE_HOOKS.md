@@ -1551,3 +1551,9 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 
 - 段0: engine の口は変えていない（第374期の `BloodSipTrait.Sip` が規定のヴィオで働くようになった）。
 - **出来事 `BattleEventKind.BloodSip`（表示専用）**: `BattleContext.EmitBloodSip`（verbose のときだけ）を `BloodSipTrait.Sip` が HP を引いた直後に呼ぶ。`ActorId` ＝ ヴィオ ／ `TargetId` ＝ 啜られた味方 ／ `Amount` ＝ 啜った HP ／ `HpAfter` ＝ 啜られた後の HP。どの規則も読まない。
+
+## 第377期 —— リィカの亡者起こし ／ ムグの亡骸の芽吹き（版 R-繋 ／ R-積 ／ M）
+
+- **`BattleContext.SummonOverFallen(def, team, by)`**: 召喚枠を既定の順で走り、生きた駒のいない枠（倒れた儚い駒の枠は空き・倒れた儚くない駒の枠は塞ぐ）に `Summon(at:, overCorpse: true)` で湧かせる。**新しい札（亡者起こし ／ 亡骸の芽吹き）だけが通る**——既定の `Summon`（生死を問わず塞ぐ）は変えていないので、倒された亡者の枠に胞子は湧かない。乱数を引かない。
+- **`BattleContext.LoseHp(u, amount, src)`**: ダメージでない HP の減り（`ApplyDamage` を通らない ＝ 肩代わり ／ 軛 ／ 惨禍 ／ 反転 ／ 被弾の札は起きない）。0 で倒れる（撃破者なし）。台本には `Damage`（味方から・`ActorId` ＝ 本人・`SourceTrait` ＝ 呼び手の札）として出す（表示専用・verbose のときだけ）。呼び手は朽ち（`RotTrait`）と亡者起こしの代償だけ。
+- `NecroTrait.OnAnyDeath`: 死んだ駒が朽ち（`TraitId.Rot`）を持ち、墓守が R-積（`RicaRaiseDeadStack`）でなければ、層を積まず回復もせず `lastDeathTurn` だけ進める（亡者は版の札からしか湧かないので規定では走らない）。`OnTurnStart` ／ `SetStack` に計数（`UnitTally.NoteNecro377` ほか・`RawCounter` で読む）。

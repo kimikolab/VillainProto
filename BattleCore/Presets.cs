@@ -974,7 +974,15 @@ public static class Presets
         // 第375期: S10 を規定にした（「試遊・毒」「試遊・毒 席替え」「試遊・毒 紅」は規定の駒のまま ＝ スィドは S10）。第374期の「版・」の4台は外した（並びは `sh374` の中に固定）。
         // 第376期: 血を啜る（C）を規定にした。第375期の「版・C 自傷にヴィオ」「版・C 台Bにヴィオ」は外し、毒の外のヴィオの使い道として「試遊・ヴィオ 台B」を足した（前1 ヴィオ ／ 前3 ミサ ／ 中央 ヒサ ／ 後1 カド ／ 後3 アカ・規定の駒）。
         ("試遊・ヴィオ 台B", BoardBVio375()),
+        // 第377期: 死軸の試遊の台（`compare` の「死の連鎖 (リィカ軸)」と同じ並び・規定の駒）と、同じ並びでリィカ ／ ムグだけ版の2台（R-繋 ／ R-積M）。採否はポン。
+        ("試遊・死の連鎖", DeathChain377()),
+        ("版・R-繋 死の連鎖", DeathChain377(UnitCatalog.RicaLink)),
+        ("版・R-積M 死の連鎖", DeathChain377(UnitCatalog.RicaStack, UnitCatalog.MugSproutM)),
     };
+
+    /// <summary>第377期: 「死の連鎖 (リィカ軸)」の並び（前1 ゾト ／ 前3 ゴルム ／ 中央 ムグ ／ 後1 ヴェル ／ 後3 リィカ）。リィカ ／ ムグを差し替えて版の台を作る。</summary>
+    public static Formation DeathChain377(UnitDef? rica = null, UnitDef? mug = null) =>
+        Formation.Build(front1: UnitCatalog.Zoto, front3: UnitCatalog.Golm, center: mug ?? UnitCatalog.Mug, back1: UnitCatalog.Vel, back3: rica ?? UnitCatalog.Rica);
 
     /// <summary>第367期: 毒特化・勇者（`compare` の「毒爆弾 (ラウ×ヴィオ)」のラウの席 ＝ 後3 を守りに替えた台・前1 ガルド ／ 前3 スィド ／ 中央 グザ ／ 後1 ヴィオ ／ 後3 守り）。
     /// 守りは `sh367 pick`（GV の勇者・seed 0..19 で最も勝つ）で選んだ。グザ ／ ヴィオを差し替えて版の台を作る。</summary>

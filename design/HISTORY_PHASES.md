@@ -8,6 +8,8 @@ description: 第259期に `CLAUDE.md` の「現状値」節を**逐語で**移�
 
 ## 現状値
 
+**第377期は軽い期で、規定は変えず、死軸を数え（本体1）、亡者と増殖の版（リィカの亡者起こし R-繋 繋ぐ ／ R-積 積む・ムグの亡骸の芽吹き M・両方 R-積M）を並べた**（指示書は design/PHASE377_DEATH_INVENTORY_SPEC.md・期の途中で第2版に差し替え・報告は design/PHASE377_DEATH_INVENTORY.md）。版の駒は `UnitCatalog.RicaLink` ／ `RicaStack` ／ `MugSproutM`・起こす駒は `UnitCatalog.Wight`（亡者・どれも `All` に入れない）。`compare` は規定で 0 セル（版は R-積 ／ R-積M で主判定19行の第五波 87.3 → 92.4・R-繋 87.2・M 87.3）で、全64行 100 / 94.8 / 91.2 / 87.8 / 86.8・主判定19行 100 / 92.7 / 91.5 / 84.8 / 87.3（歯止めの余裕 +54.1pt）・情報セル 60 / 19 のまま。`docs/` は再生成していない。試遊の台は `Presets.Versions` ＝ 第376期の11台 ＋「試遊・死の連鎖」＋「版・R-繋 死の連鎖」「版・R-積M 死の連鎖」。器具は `sh377`（inv / attrib / vers / mix / compare / row / check）。
+
 **第376期は軽い期で、段0 でヴィオの「飢えると血を啜る」（第374期の版 C）を規定にし、啜りを台本に出す表示専用の出来事 `BloodSip` を足した**（指示書は design/PHASE376_VIO_HUNGER_SPEC.md・報告は design/PHASE376_VIO_HUNGER.md）。旧のヴィオは `UnitCatalog.VioH375`（`Common.PinV375` ／ `Pin375`）。`compare` は段0 で 0 セルで、全64行 100 / 94.8 / 91.2 / 87.8 / 86.8・主判定19行 100 / 92.7 / 91.5 / 84.8 / 87.3（歯止めの余裕 +54.1pt）・情報セル 60 / 19 のまま。`docs/` を再生成した。試遊の台は `Presets.Versions` ＝ 試遊の8台 ＋「試遊・毒 席替え」＋「試遊・毒 紅」＋「試遊・ヴィオ 台B」（第375期の「版・」の2台は外した）。器具は `sh376`（check / summary）。
 
 **第375期は軽い期で、段0 でスィドの開戦の衣 S10 を規定にし、毒軸のまとめ（design/POISON_AXIS_SUMMARY.md）を書き、本体で飢えたヴィオ（C）を毒の外の台で数えた**（指示書は design/PHASE375_POISON_CLOSE_SPEC.md・報告は design/PHASE375_POISON_CLOSE.md）。旧のスィドは `UnitCatalog.SidH374`（`Common.PinS374` ／ `Pin374`）。`compare` は段0 で 0 セルで、全64行 100 / 94.8 / 91.2 / 87.8 / 86.8・主判定19行 100 / 92.7 / 91.5 / 84.8 / 87.3（歯止めの余裕 +54.1pt）・情報セル 60 / 19 のまま。`docs/` を再生成した。試遊の台は `Presets.Versions` ＝ 試遊の8台 ＋「試遊・毒 席替え」＋「試遊・毒 紅」＋「版・C 自傷にヴィオ」「版・C 台Bにヴィオ」（第374期の「版・」の4台は外した）。器具は `sh375`（boards / summary / check）。

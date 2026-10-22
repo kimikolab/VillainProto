@@ -956,6 +956,11 @@ public enum TraitId
     VioBloodSip,          // 飢えると血を啜る（C・ヴィオ）: 吸えた毒が 0 のターンの頭に、隣の味方それぞれから HP 4 を啜り 1 につき攻撃力 +2（`BloodSipTrait`・第374期）
     VioRetchThird,        // 溢れて吐く・3分の1（A2・ヴィオ）: 収まるのは 3分の2（切り上げ）・吐くのは残り（`VioRetchTrait`・第373期）
     VioFlurryC,           // 連撃・集中（Vc・ヴィオ）: 50 以上で2連撃 ／ 150 以上で3連撃・2発目からも1発目と同じ敵（倒れていたら席番号の最も小さい生きている敵）（`VioFlurryTrait`）
+    // --- 第377期で足した札（指示書 design/PHASE377_DEATH_INVENTORY_SPEC.md §3）。リィカの亡者起こし ／ ムグの亡骸の芽吹き（規定の駒 ＋ 札1枚）と亡者の朽ち。保持者 0 枚 ---
+    RicaRaiseDead,        // 亡者起こし・繋ぐ（R-繋・リィカ）: 編成の駒（儚くない味方）が倒れるたび召喚枠に亡者を1体起こす（1戦に3回・空きが無ければ起こさない）。起こすたびリィカの HP から直接 8 を引く（何も通さない・1 未満にしない）。亡者の死は層を積まないが連鎖を繋ぐ（`RaiseDeadTrait`・`NecroTrait`）
+    RicaRaiseDeadStack,   // 亡者起こし・積む（R-積・リィカ）: 形は R-繋 と同じ。亡者の死も層を積む（胞子と同じ・回復も）（`RaiseDeadTrait`・`NecroTrait`）
+    Rot,                  // 朽ち（亡者）: 毎ターンの頭に自分の HP が 10 崩れ、0 で倒れる（ダメージではない）。この札を持つ駒の死は、R-繋 の墓守には層を積まず連鎖だけ繋ぐ（`RotTrait`・`NecroTrait`）
+    MugSprout,            // 亡骸の芽吹き（M・ムグ）: ムグが生きている間、ムグ以外の編成の駒（儚くない味方）が倒れるたび召喚枠に胞子を1体芽吹かせる（1戦に3回・空きが無ければ芽吹かない）（`MugSproutTrait`）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -1768,12 +1773,14 @@ public sealed class NecroTrait : Trait
     public override void OnTurnStart(BattleContext ctx, UnitState self)
     {
         int stack = self.Counter("necro");
-        if (stack <= 0) return;
-
-        bool chained = self.Counter("lastDeathTurn") >= ctx.Turn - 1;
-        if (chained) return;
-
-        SetStack(ctx, self, stack - 1, decayed: true);
+        if (stack > 0)
+        {
+            bool chained = self.Counter("lastDeathTurn") >= ctx.Turn - 1;
+            if (!chained) SetStack(ctx, self, stack - 1, decayed: true);
+            // 第377期・**計数のみ**: 亡者の死だけで連鎖が繋がったターン（版のリィカだけが真の死のターンを控える）。
+            else if (RaiseDeadTrait.Holds(self) && self.RawCounter(RaiseDeadTrait.RealDeathKey) < ctx.Turn - 1) ctx.TallyOf(self).R377ChainSaved++;
+        }
+        ctx.TallyOf(self).NoteNecro377(ctx.Turn, self.RawCounter("necro"), self.RawCounter("necroBonus"));   // 第377期・**計数のみ**（ターンの頭の層）
     }
 
     public override void OnAnyDeath(BattleContext ctx, UnitState self, UnitState dead)
@@ -1786,8 +1793,17 @@ public sealed class NecroTrait : Trait
             return;
         }
 
+        // 第377期（亡者起こし・版 R-繋）: 朽ちる駒（亡者）の死は層を積まない（回復もしない）が、連鎖は繋ぐ（「前のターンに味方が倒れた」として減衰を止める）。
+        // R-積（`RicaRaiseDeadStack`）の墓守は亡者の死もふつうに積む。亡者は版の札（`RaiseDeadTrait`）からしか湧かないので、規定の盤面ではこの枝は走らない。
+        if (dead.HasTrait(TraitId.Rot) && !self.HasTrait(TraitId.RicaRaiseDeadStack))
+        {
+            self.SetCounter("lastDeathTurn", ctx.Turn);
+            return;
+        }
+
         int stack = self.Counter("necro") + 1;
         self.SetCounter("lastDeathTurn", ctx.Turn);
+        if (RaiseDeadTrait.Holds(self)) self.SetCounter(RaiseDeadTrait.RealDeathKey, ctx.Turn);   // 第377期・**計数のみ**（版のリィカだけ・亡者でない死のターン）
         SetStack(ctx, self, stack, decayed: false);
         ctx.Heal(self, HealOnDeath, self);
         ctx.Log($"    {self.Name} が {dead.Name} を取り込んだ（{stack}層 / 攻撃 {self.CurrentAttack}）", LogKind.Trigger);
@@ -1806,7 +1822,8 @@ public sealed class NecroTrait : Trait
     {
         stack = ApplyStack(self, stack);
         UnitTally nt = ctx.TallyOf(self);   // 第188期・**計数のみ**（層の最大値）
-        if (stack > nt.NecroPeak) nt.NecroPeak = stack;
+        if (stack > nt.NecroPeak) { nt.NecroPeak = stack; nt.R377PeakTurn = ctx.Turn; }   // 第377期・計数のみ（最大層に届いたターン）
+        if (stack >= AwakenAt && nt.R377AwakeTurn == 0) nt.R377AwakeTurn = ctx.Turn;
         if (decayed) ctx.Log($"    {self.Name} の層が薄れた（{stack}層）", LogKind.Status);
     }
 
@@ -13485,6 +13502,86 @@ public sealed class BloodSipTrait : Trait
     }
 }
 
+/// <summary>
+/// 亡者起こし（第377期・リィカの版 R-繋 ／ R-積・指示書 design/PHASE377_DEATH_INVENTORY_SPEC.md §3）。
+/// 編成の駒（儚くない味方）が倒れるたび、召喚枠のうち<b>生きた駒のいない枠</b>（倒れた儚い駒の枠は空き・<see cref="BattleContext.SummonOverFallen"/>）に亡者（<see cref="UnitCatalog.Wight"/>）を1体起こす。
+/// 1戦に <see cref="PerBattle"/> 回まで（回数は戦ごとに 0 から・<see cref="OnCarryOver"/> で捨てる）。空きが無ければ起こさない（回数も使わない）。胞子 ／ 亡者など儚い駒の死からは起こさない。
+/// 起こすたびリィカが HP <see cref="Cost"/> を HP から直接払う（肩代わり ／ 軛 ／ 惨禍 ／ 反転を通さない・1 未満にしない・<see cref="BattleContext.LoseHp"/>）。
+/// <b>乱数を引かない</b>（枠は召喚枠の走査順の最初の空き）。亡者の死を層に積むか（R-積）繋ぐだけか（R-繋）は <see cref="NecroTrait"/> の側が札で見る。
+/// </summary>
+public sealed class RaiseDeadTrait : Trait
+{
+    public const int PerBattle = 3, Cost = 8;
+    public const string CountKey = "raiseDead377";
+    /// <summary>計数のみ: 版のリィカが控える「亡者でない味方の死」のターン（墓守の側が書く・<see cref="NecroTrait"/>）。</summary>
+    public const string RealDeathKey = "raiseDeadReal377";
+    public static bool Holds(UnitState u) => u.HasTrait(TraitId.RicaRaiseDead) || u.HasTrait(TraitId.RicaRaiseDeadStack);
+    readonly TraitId _id;
+    public RaiseDeadTrait(TraitId id) { _id = id; }
+    public override TraitId Id => _id;
+
+    public override void OnAllyDeath(BattleContext ctx, UnitState self, UnitState dead)
+    {
+        if (dead.HasTrait(TraitId.Ephemeral)) return;
+        if (self.RawCounter(CountKey) >= PerBattle) return;
+        UnitTally t = ctx.TallyOf(self);
+        UnitState? w = ctx.SummonOverFallen(UnitCatalog.Wight, self.TeamId, self);
+        if (w is null) { t.R377NoSeat++; return; }   // 計数のみ
+        int n = self.RawCounter(CountKey) + 1;
+        self.SetCounter(CountKey, n);
+        t.R377Raises++; t.R377RaiseTurnSum += ctx.Turn;   // 計数のみ
+        ctx.Log($"    {self.Name} が {dead.Name} の亡骸から亡者を起こした（{n}/{PerBattle}）", LogKind.Trigger);
+        int take = Math.Min(Cost, self.Hp - 1);
+        if (take > 0) ctx.LoseHp(self, take, _id);
+        t.R377CostSelf += Math.Max(0, take);   // 計数のみ
+    }
+
+    public override void OnCarryOver(UnitState self) { self.SetCounter(CountKey, 0); self.SetCounter(RealDeathKey, 0); }
+}
+
+/// <summary>
+/// 朽ち（第377期・亡者）。毎ターンの頭に自分の HP が <see cref="PerTurn"/> 崩れ、0 で倒れる（撃破者なし）。
+/// <b>ダメージではない</b>（`ApplyDamage` を通らない ＝ 被弾で起きる札は起きない・<see cref="BattleContext.LoseHp"/>）。
+/// この札を持つ駒の死は墓守の層を積まないが連鎖を繋ぐ（<see cref="NecroTrait"/>）。
+/// </summary>
+public sealed class RotTrait : Trait
+{
+    public const int PerTurn = 10;
+    public override TraitId Id => TraitId.Rot;
+
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+        ctx.LoseHp(self, PerTurn, TraitId.Rot);
+    }
+}
+
+/// <summary>
+/// 亡骸の芽吹き（第377期・ムグの版 M・指示書 design/PHASE377_DEATH_INVENTORY_SPEC.md §3-2 B）。ムグが生きている間、ムグ以外の編成の駒（儚くない味方）が倒れるたび、
+/// 召喚枠のうち生きた駒のいない枠（<see cref="BattleContext.SummonOverFallen"/>）に胞子（<see cref="UnitCatalog.Spore"/>）を1体芽吹かせる。1戦に <see cref="PerBattle"/> 回まで（戦ごとに 0 から）。
+/// 空きが無ければ芽吹かない（回数も使わない）。儚い駒の死からは芽吹かない。ムグ自身が倒れたときの胞子2体（<see cref="SplitterTrait"/>）は今どおり。<b>乱数を引かない。</b>
+/// </summary>
+public sealed class MugSproutTrait : Trait
+{
+    public const int PerBattle = 3;
+    public const string CountKey = "mugSprout377";
+    public override TraitId Id => TraitId.MugSprout;
+
+    public override void OnAllyDeath(BattleContext ctx, UnitState self, UnitState dead)
+    {
+        if (dead.HasTrait(TraitId.Ephemeral)) return;
+        if (self.RawCounter(CountKey) >= PerBattle) return;
+        UnitTally t = ctx.TallyOf(self);
+        if (ctx.SummonOverFallen(UnitCatalog.Spore, self.TeamId, self) is null) { t.R377SproutNoSeat++; return; }   // 計数のみ
+        int n = self.RawCounter(CountKey) + 1;
+        self.SetCounter(CountKey, n);
+        t.R377Sprouts++; t.R377SproutTurnSum += ctx.Turn;   // 計数のみ
+        ctx.Log($"    {dead.Name} の亡骸に胞子が芽吹いた（{n}/{PerBattle}）", LogKind.Trigger);
+    }
+
+    public override void OnCarryOver(UnitState self) => self.SetCounter(CountKey, 0);
+}
+
 public sealed class VioRetchTrait : Trait
 {
     readonly TraitId _id;
@@ -19080,6 +19177,10 @@ public static class TraitCatalog
         new OpeningCloakTrait(TraitId.SidOpeningCloak10, 10),   // 第374期（開戦の衣 S10）
         new OpeningCloakTrait(TraitId.SidOpeningCloak20, 20),   // 第374期（開戦の衣 S20）
         new BloodSipTrait(),                                    // 第374期（飢えると血を啜る C）
+        new RaiseDeadTrait(TraitId.RicaRaiseDead),        // 第377期（亡者起こし・繋ぐ R-繋）
+        new RaiseDeadTrait(TraitId.RicaRaiseDeadStack),   // 第377期（亡者起こし・積む R-積）
+        new RotTrait(),                                   // 第377期（朽ち・亡者）
+        new MugSproutTrait(),                             // 第377期（亡骸の芽吹き M）
         new EruptTrait(),      // 第180期
         new SmearTrait(),      // 第180期
         new SpitTrait(),       // 第180期

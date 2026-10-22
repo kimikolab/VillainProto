@@ -17530,6 +17530,41 @@ public sealed class BattleContext
         return unit;
     }
 
+    /// <summary>
+    /// 第377期（亡者起こし ／ 亡骸の芽吹き・版）: 召喚枠のうち<b>生きた駒のいない枠</b>に湧かせる経路。走査順は隊の陣形の召喚枠の順（既定の <see cref="Summon"/> と同じ）で、
+    /// <b>倒れた儚い駒の枠は空き</b>として扱い、<b>倒れた儚くない駒の枠は塞ぐ</b>（蘇生で1枠に2体が立つのを避ける・既定の走査の理由と同じ）。空きが無ければ null。
+    /// <b>既定の <see cref="Summon"/>（生死を問わず塞ぐ）は変えない</b>——版の札（亡者起こし ／ 亡骸の芽吹き）だけがこの経路を通る。乱数を引かない。
+    /// </summary>
+    public UnitState? SummonOverFallen(UnitDef def, int teamId, UnitState? by = null)
+    {
+        foreach (int i in ShapeOfTeam(teamId).SummonSlots)
+        {
+            bool blocked = false;
+            foreach (UnitState u in _units)
+                if (u.TeamId == teamId && u.Slot == i && (u.IsAlive || !u.HasTrait(TraitId.Ephemeral))) { blocked = true; break; }
+            if (!blocked) return Summon(def, teamId, at: i, overCorpse: true, by: by);
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// 第377期（朽ち ／ 亡者起こしの代償・版）: <b>ダメージではなく HP を減らす</b>（`ApplyDamage` を通らない ＝ 肩代わり ／ 軛 ／ 惨禍 ／ 反転 ／ 被弾で起きる札は起きない）。
+    /// 0 になれば倒れる（撃破者なし）。HP 1 未満にしたくない呼び手は量を自分で切る。
+    /// 台本には <c>Damage</c>（味方から・`ActorId` ＝ 本人）として出す——再生側が HP を合わせるのは <c>Damage</c> だけ（表示専用・verbose のときだけ）。
+    /// </summary>
+    public void LoseHp(UnitState u, int amount, TraitId src)
+    {
+        if (!u.IsAlive || amount <= 0) return;
+        int lost = Math.Min(amount, u.Hp);
+        u.Hp -= lost;
+        if (src == TraitId.Rot) TallyOf(u).R377RotLost += lost;   // 計数のみ
+        Log($"    {u.Name} の HP が {lost} 崩れた (残り {Math.Max(0, u.Hp)})", LogKind.FriendlyFire);
+        if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.Damage, Turn = _turn, ActorId = u.InstanceId, TargetId = u.InstanceId, Amount = lost, HpAfter = Math.Max(0, u.Hp), FriendlyFire = true, SourceTrait = src });
+        if (u.Hp > 0) return;
+        if (src == TraitId.Rot) TallyOf(u).R377RotDeaths++;   // 計数のみ
+        HandleDeath(u, null);
+    }
+
     /// <summary>倒れた駒を戦線に戻す。無制限にすると壊れるので回数制限は特性側で持つこと。</summary>
     public void Revive(UnitState target, int hp, UnitState? by = null)
     {

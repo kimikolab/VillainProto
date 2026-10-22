@@ -1369,6 +1369,13 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sh375 check               # 第375期 自己検査（段0 の規定 ＝ S10・旧 ／ 固定の口・規定の台と第374期の S10 の台が一致・C の台に毒の供給役がいない・並び・verbose と再現性・`checkup` の札・試遊の台・PickOne ／ Roll）
     dotnet run --project BattleSim -c Release 0 sh376 check               # 第376期 自己検査（段0 の規定 ＝ C・旧 ／ 固定の口・規定の台と第375期の台の差は啜りが起きた戦だけ・試遊・ヴィオ 台B ＝ 第375期の版の台・出来事 `BloodSip` の数 ／ 量 ／ HP・verbose と再現性・`checkup` の札・試遊の台・PickOne ／ Roll）
     dotnet run --project BattleSim -c Release 0 sh376 summary             # 第376期: 毒の代表の台 ＋ 試遊・ヴィオ 台B × 4 波の段0 の動き（第375期の規定 → 規定）と1戦の啜り（seed 0..99・1 秒）
+    dotnet run --project BattleSim -c Release 0 sh377 inv                # 第377期 §2-2: 死の台 5（ツギ入りは参考）× 本編 第5波 ／ 近衛 ／ 大隊 ／ ボス（seed 0..19・verbose）——誰が何Tに倒れたか（分布・倒した敵）・死の数・リィカの層 ／ 最大層 ／ 3 層 ／ 倒れたT・出た量・ボスで受けた一撃と HP の推移・勝ち方の質・リィカの火力の頭打ち（ボス ／ 的・一 ／ 的・九のターンごとの与ダメ）
+    dotnet run --project BattleSim -c Release 0 sh377 attrib             # 第377期 §2-3: ツギなしの死の台 4 × 各駒を素体（器具の中だけ）に替えた差 × 4 波（seed 0..99）＋ `docs/roster_audit.md` の理想台の帰属
+    dotnet run --project BattleSim -c Release 0 sh377 vers               # 第377期 §3-4: 死の台 5 × 版（規定 ／ R-繋 ／ R-積 ／ M ／ R-積M）× 8 物差し（seed 0..99）＋ 火力（的・一 ／ 的・九 8T・他の軸と並べる）——湧いた体 ／ 層 ／ 勝ち方の質 ／ 壊れの兆し（層 10 超・あふれ）
+    dotnet run --project BattleSim -c Release 0 sh377 mix                # 第377期 §3-4: 寄せ集めの台 50（リィカ ＋ 死の札を持たない4枚・席もランダム・`new Random(377)`）× 素体 ／ 規定 ／ R-繋 ／ R-積 × 8 物差し（seed 0..19）
+    dotnet run --project BattleSim -c Release 0 sh377 compare <R-繋|R-積|M|R-積M>   # 第377期: `compare` 64 行 × 版（その版が替える駒のいる行だけを回す・seed 0..199）
+    dotnet run --project BattleSim -c Release 0 sh377 row <行名>          # 第377期: `compare` の1行 × 版 × 本編 第2〜5波（動いた理由を見る・seed 0..199・verbose）
+    dotnet run --project BattleSim -c Release 0 sh377 check              # 第377期 自己検査（亡者 ／ 版の定義・朽ち・亡者起こし ／ 芽吹きの回数 ／ 儚い駒 ／ 空き ／ 湧く枠（既定の召喚は今どおり）・ムグが倒れた後は芽吹かない・R-繋 は層が増えず繋ぐ ／ R-積 は 1 増える・代償・台の上の湧いた数 ／ 蘇生・規定のリィカ ／ ムグの行が `docs/balance.md` と一致・素体 ／ 寄せ集めは器具の中だけ・verbose と再現性・`checkup` の札・試遊の台・PickOne ／ Roll）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）
