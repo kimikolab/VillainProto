@@ -188,8 +188,9 @@
 
 ### 6-3. 照合 ／ `sweep fast`
 
-（コミットの後に追記する。）
-
+- **過去の器具の照合（軽い・`-Units hagi,rica,mug,vel,ere`・駒の名前の表に `hagi` を足した）**: HEAD（69788e58）の保存は無いが、BattleCore ／ BattleSim が同じ第387期の保存（e9ff72fa）と比べた。コミット（36389969 ＋ 7a5957f2）の後に、基準をその保存に固定した写しの器具（scratchpad）で回し直して **照合 61 本: 一致 59 ／ 差 1 ／ 保存に無い 1（`sh388 check`）**。差の1本 `som317 p0` は `OnAnyDeath` を持つ札のクラスをソースから並べる表に `HagiReaperTrait`（`HagiSoul` ／ `HagiHaste`）の行が1行増えただけ（挙動の差ではない）。`som317`〜`som320` の check の exit 1 は第387期と同じ（前からの状態）。期の最後に `promote`（7a5957f2 ＝ e9ff72fa ＋ 61 本）。
+- **`sweep fast`**: 22 本・4.4 分・異常終了 0 本・上限 0 本（最長 `relic rejudge smoke` 42.8 秒）——**合格**（`.tmp/p388/sweep_fast.txt`）。`Presets`（試遊の台 2 台）と駒（版のハギ）が増えたので、`sweep nightly` でも拾われる。
+- コミットは自分の変更パスだけ（DemoApp ／ `tools/comfy_idle_loop` ／ `design/CODEX_BRIEF_*.md` などの作業中のファイルは含めていない）。push の前に、ローカルの master に自分以外の未 push のコミットは無かった（origin/master と同じ 69788e58 から始めた）。
 ### 6-4. CLAUDE.md の門
 
 - `audit`: ずれているファイル 0 件・`CLAUDE.md` 278 行 ／ 45,790 バイト（上限 500 行 ／ 51,200 バイト）・「本目」の行 2（警告 5）——**門の内側**。`CLAUDE.md` は「最後に動かした期」の1行だけを差し替えた。
