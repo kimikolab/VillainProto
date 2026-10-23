@@ -13,7 +13,7 @@ public partial class PoisonAxisCheck : Control
     {
         try
         {
-            _capture = OS.GetCmdlineUserArgs().Contains("--capture");
+            _capture = OS.GetCmdlineUserArgs().Contains("--capture") || OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--capture-dir="));
             CheckRoutes();
             _field = new BattlefieldView3D(); _field.SetAnchorsPreset(LayoutPreset.FullRect); AddChild(_field);
             Open();
@@ -51,7 +51,8 @@ public partial class PoisonAxisCheck : Control
 
             enemy.SetPoisonRemaining(1200); sid.SetPoisonRemaining(4000); guza.SetPoisonRemaining(100);
             vio.SetAttack(180, animate: false); await Wait(0.15); await Capture("stock-mantle-growth");
-            _field.ShowGuzaVent(guza, new[] { enemy, sid, vio }, 150, 1);
+            var vent = FxCatalog.Find("guza.vent").Events!();
+            _field.ShowGuzaVent(guza, vent.Select(e => _field.FindPawn(e.TargetId)!).ToArray(), vent[0].Amount, 1);
             await Wait(0.23); await Capture("guza-vent"); await Wait(0.6);
             var drain = _field.ShowPoisonDrain(new[] { guza }, vio, 1);
             await Wait(0.30); await Capture("vio-drain"); await drain;
@@ -96,14 +97,7 @@ public partial class PoisonAxisCheck : Control
         }
         catch (Exception e) { GD.PushError(e.ToString()); GetTree().Quit(1); }
     }
-    private void Open() => _field.BeginBattle(new DemoOpening[] {
-        new(1,0,"vio","澱み喰いのヴィオ",3,1000,1000,6,AttackPattern.Single,true,UnitCatalog.Vio.Traits),
-        new(2,0,"guza","瘴気袋のグザ",2,1000,1000,2,AttackPattern.Single,false,UnitCatalog.Guza.Traits),
-        new(3,0,"sid","毒吐きのスィド",0,1000,1000,4,AttackPattern.Single,true,UnitCatalog.Sid.Traits),
-        new(4,1,"knight","巡礼騎士",0,1000,1000,10,AttackPattern.Single,true),
-        new(5,1,"axeman","戦斧兵",1,1000,1000,10,AttackPattern.Sweep,true),
-        new(6,0,"beni","毒喰らいのベニ",4,1000,1000,4,AttackPattern.Single,false,UnitCatalog.Beni.Traits),
-    }, "毒の見せ場", 0);
+    private void Open() => _field.BeginBattle(FxCatalog.GetOpenings("guza.vent"), "毒の見せ場", 0);
     private static void CheckRoutes()
     {
         BattleEvent[] script = {
@@ -121,7 +115,8 @@ public partial class PoisonAxisCheck : Control
     {
         if (!_capture) return;
         await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
-        string dir = ProjectSettings.GlobalizePath("res://../design/art/poison-axis-v1/captures");
+        string? arg = OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--capture-dir="));
+        string dir = arg is null ? ProjectSettings.GlobalizePath("res://../design/art/poison-axis-v1/captures") : arg[14..];
         System.IO.Directory.CreateDirectory(dir);
         Require(GetViewport().GetTexture().GetImage().SavePng(System.IO.Path.Combine(dir,name+".png")) == Error.Ok, "画面保存");
     }

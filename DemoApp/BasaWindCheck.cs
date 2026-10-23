@@ -27,13 +27,7 @@ public partial class BasaWindCheck : Control
             var fx = (Node3D)typeof(BattlefieldView3D).GetField("_fxRoot", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(field)!;
             void Reset(int team, double speed)
             {
-                field.BeginBattle(new DemoOpening[] {
-                    new(1, team, "basa", "バサ", 2, 100, 100, 10, AttackPattern.Sweep, true),
-                    new(2, team, "yomi", "ヨミ", 0, 100, 100, 10, AttackPattern.Single, true),
-                    new(3, team, "sero", "セロ", 3, 100, 100, 10, AttackPattern.Single, false),
-                    new(4, 1-team, "knight", "標的A", 0, 100, 100, 10, AttackPattern.Single, true),
-                    new(5, 1-team, "axeman", "標的B", 3, 100, 100, 10, AttackPattern.Single, true),
-                }, "バサの嵐・追い風", 0);
+                field.BeginBattle(FxCatalog.GetOpenings("basa.storm", team == 1), "バサの嵐・追い風", 0);
                 foreach (var p in field.Pawns.Values) p.AnimationSpeed = speed;
             }
             void Stage(int stage, double speed) => field.ShowMovementCue(new BattleEvent {
@@ -47,7 +41,7 @@ public partial class BasaWindCheck : Control
                 Stage(stage, speed);
                 var basa = field.FindPawn(1)!;
                 var home = basa.Home;
-                var moves = new[] { Move(2, 3), Move(3, 0), Move(4, 3), Move(5, 0) };
+                var moves = FxCatalog.Find("basa.storm").Events!().Where(e => e.Kind == BattleEventKind.Move).ToArray();
                 await field.ShowBasaShuffle(basa, moves, speed);
                 foreach (var move in moves) field.MoveWithCue(field.FindPawn(move.TargetId)!, move.Slot, null, basa, storm: true);
                 Require(moves.All(e => field.FindPawn(e.TargetId)!.WindCarried) && !basa.WindCarried, "移動対象だけを回転させる");

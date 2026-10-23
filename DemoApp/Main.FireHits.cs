@@ -20,6 +20,7 @@ public partial class Main
         if (!_fireHits.Contacts.TryGetValue(index, out var cues)) return;
         foreach (var cue in cues.Where(c => c.Target == pawn.InstanceId))
         {
+            if (cue.Damage >= 0 && !CanPreviewViewerEvent(cue.Damage)) continue;
             if (!_shownFireHits.Add(cue)) continue;
             // 本体の数字も同じ接触へ寄せる。燃焼HP・死亡・反応は元の出来事の位置で処理する。
             if (cue.Damage >= 0 && _batchedDamageIndices.Add(cue.Damage))

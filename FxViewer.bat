@@ -1,0 +1,1 @@
+Godot_console.exe --path DemoApp res://FxViewer.tscn

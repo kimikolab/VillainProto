@@ -299,3 +299,54 @@ description: 第259期に `CLAUDE.md` の「構成と絶対のルール」節を
 - **BattleCore に UI の参照を足さない**。`INotifyPropertyChanged` も `ObservableCollection` も不可。本番を Godot / Unity にする場合にそのまま持っていくため。
 - **PrototypeApp に戦闘ルールを書かない**。ViewModel やコードビハインドにダメージ計算が漏れた瞬間に移植できなくなる。
 - **`Def.Pattern` を直接読まない**。必ず `UnitState.CurrentPattern` を経由する（特性が状況でパターンを書き換えるため）。
+
+
+## 演出ビューア FxViewer（2026-10-23）
+
+`DemoApp/FxViewer.tscn` を追加。軸・駒・文字列で絞り込み、一覧から選ぶと即再生する。
+再生／一時停止、次の見せ場、繰り返し、0.5／1／2／4倍速、手組みの左右反転、PNG撮影を備える。
+編成画面を通らず `Main` を埋め込み、本編と同じ索引・`ApplyEvent`・`BattlefieldView3D` を使う。
+ビューアでの完了は作戦マップの精算や勝利絵への切り替えを行わず、最後の演出を眺められる。
+購入素材の一覧と `DemoApp/PolyBlocks/` の導入済みファイルを確認し、既存の背景・演出を再利用した。
+素材の追加・変更、BattleCore／BattleSim／docs の変更はない。
+
+```powershell
+dotnet build DemoApp/DemoApp.csproj
+Godot_console.exe --path DemoApp res://FxViewer.tscn
+Godot_console.exe --path DemoApp res://FxViewer.tscn --headless -- --fx-smoke
+Godot_console.exe --path DemoApp res://FxViewer.tscn -- --fx-capture
+```
+
+### Cue の登録
+
+- `FxCue`／`FxCueKind` と登録一覧は `FxCatalog.cs`。演出の材料は `FxCatalog.<軸>.cs` の部分クラスに置き、`_all` に登録する。
+- 手組みは `Openings`／`Events` のファクトリで固定盤面と台本を返す。今回の5本はカタの雷・バサの嵐・グザの噴き出し・ゴルムの呑み吐き・ハネの蹴り。
+- **新しい演出には Cue を登録し、Check は同じ Cue の盤面・イベントを参照する。** 表示入口の独立した検査・`Require` は Check に残す。移した材料を Check 内にも複製しない。
+- 実戦は `Presets.Playtest` または `Presets.Versions` の現役の行名、通常波の0始まりの番号、seed、任意の `Highlight` を登録する。今回の2本は「試遊・感電 雷の型」第5波と「試遊・標 守り型」第2波、seed 0。行名が消えたら起動時に警告して省略する。
+- `Highlight` のない実戦は `Units` に合う書き手のイベントへ飛ぶ。手組みは攻撃・雷・放電・移動・死亡・召喚などへ飛ぶ。左右反転は手組みだけで、陣営を入れ替え、席と個体IDを保つ。
+- PNG は `design/art/_viewer/<cueId>.png`。`--fx-capture` は手組み5本と反転5本を一括撮影する。比較元 Check の画像は同ディレクトリ内の `check/` に保存できる（`--capture-dir=<絶対パス>`）。
+
+### 再生の公開窓口
+
+`Main.EnterScripted` は engine を呼ばず、外部台本を通常と同じ `PreparePlayback` に渡す。
+`BattleResult` は測定用の必須項目も多いため、表示用の空欄は `Main.FxScriptResult.cs` に集めた。
+必須項目が増えた時はコンパイルで検出できる。
+`SetPlaybackSpeed`／`IsPlaying`／`EventIndex`／`SeekTo` を公開した。
+`SeekTo(N)` は先頭から速度1000で同じ再生経路を通し、N件目の直前で停止して元の速度に戻る。
+呼び手が `ResumePlayback` で続ける。ターン頭の一括再生や範囲攻撃の先読みはシーク位置を越えない。
+Cue の切り替えは旧台本の待ち手を解除・完了させ、次フレームから盤面を作る。
+子ノードの退場通知の途中で盤面を作ると Godot の `add_child` が失敗するため。
+
+### 検証と画像
+
+`--fx-smoke` は全7本の完走、手組み5本の反転、実戦の中盤シーク、速度の復帰、一時停止、
+HP・感電アイコン・移動後の席、シーク後の終端HP、Cue 切り替えを照合し、
+`FX_VIEWER_SMOKE_OK cues=7 mirrors=5` を出す。
+既存の `THUNDER_CHECK_OK`／`BASA_WIND_CHECK_OK`／`POISON_AXIS_CHECK_OK`／
+`GOLM_CHECK_OK`（`--verify`）／`DROPKICK_CHECK_OK` も確認した。
+通常向き・反転の撮影を確認し、比較元の放電・嵐・毒煙・吐き出し・蹴りと演出の形・対象・向きを目視で照合した。
+画面枠の縦横比、再生中の強調表示、撮影時刻は異なるので画像のピクセル一致は比較していない。
+既存の `BorgAttackClipCheck` の nullable 警告も既存の非null検査に合わせて抑え、DemoApp のビルドは警告0・エラー0。
+
+終了時には既存の Thunder／Golm Check と同様、Godot の Texture／Font／CanvasItem の解放警告が出る。
+再生中の例外・子ノード追加エラーは解消し、合否は規約どおり各 `_OK` 行で確認した。

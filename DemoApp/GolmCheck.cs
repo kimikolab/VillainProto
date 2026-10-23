@@ -57,12 +57,7 @@ public partial class GolmCheck : Control
         _phase = UiKit.Text("",18,GolmFx3D.Soul); panel.AddChild(_phase);
     }
 
-    private DemoOpening[] Openings(int team) => new DemoOpening[] {
-        new(1,team,"golm","大喰らいゴルム",0,300,300,45,AttackPattern.Single,false),
-        new(2,1-team,EnemyCatalog.Knight.Id,"弱った敵",3,25,100,10,AttackPattern.Single,false),
-        new(3,1-team,EnemyCatalog.Knight.Id,"状態異常を浴びる大物",1,500,500,10,AttackPattern.Single,false),
-        new(4,1-team,EnemyCatalog.Knight.Id,"前列の敵",0,100,100,10,AttackPattern.Single,false),
-    };
+    private DemoOpening[] Openings(int team) => FxCatalog.GetOpenings("golm.swallow", team == 1);
 
     private async Task ShowScenario(int scenario, int team)
     {
@@ -70,7 +65,7 @@ public partial class GolmCheck : Control
         _field.BeginBattle(Openings(team),"ゴルムの演出確認",0); _field.SetGolmClock(_paused,_speed);
         var actor=_field.FindPawn(1)!; var target=_field.FindPawn(2)!; var top=_field.FindPawn(3)!;
         _field.SetTurnOwner(actor,Scenarios[scenario],GolmFx3D.Soul);
-        var voice = _field.ShowGolmCue(actor,target,new BattleEvent { Turn=1,Kind=BattleEventKind.GolmArm,Text=GolmArmLabels.Stomp });
+        var voice = _field.ShowGolmCue(actor,target,FxCatalog.Find("golm.swallow").Events!()[0]);
         await voice;
         var fx=_field.GolmEffects.Single(); fx.PhaseChanged = text => _phase.Text=Scenarios[scenario]+"　／　"+text;
         await Wait(.4);
@@ -100,7 +95,7 @@ public partial class GolmCheck : Control
             await Capture($"{team}-{scenario}-"+(scenario==0?"shell":"toss"));
             if(!await swallow || token!=_generation) return;
             _field.PlayDeath(target);
-            var spit=fx.Spit(top,GolmPresentation.ParseSpit("吐く:毒9,火3,雷1,濃2,標4"));
+            var spit=fx.Spit(top,GolmPresentation.ParseSpit(FxCatalog.Find("golm.swallow").Events!()[3].Text));
             await Wait(.25/_speed); await Capture($"{team}-{scenario}-spit"); if(!await spit || token!=_generation) return;
         }
         else if(scenario is 3 or 4)
@@ -124,7 +119,7 @@ public partial class GolmCheck : Control
         _field.BeginBattle(Openings(0),"時計の検証",0);
         var actor=_field.FindPawn(1)!; var target=_field.FindPawn(2)!;
         // ストップの見出しで所有者の演出ノードだけを用意する。
-        await _field.ShowGolmCue(actor,target,new BattleEvent { Turn=1,Kind=BattleEventKind.GolmArm,Text=GolmArmLabels.Stomp });
+        await _field.ShowGolmCue(actor,target,FxCatalog.Find("golm.swallow").Events!()[0]);
         var fx=_field.GolmEffects.Single(); var launch=fx.Launch(target);
         Require(actor.GolmRocketPose,"発射前から右向きの攻撃差分を表示");
         await Wait(.06); _field.SetGolmClock(true,1); double elapsed=fx.Elapsed;
@@ -134,7 +129,7 @@ public partial class GolmCheck : Control
         Require(!await capture,"中断時は待ち手へキャンセルを返す");
         Require(!target.GolmUsesProxy && target.Hp==25,"中断で捕獲の代理絵を片付け、HPを保つ");
         Require(!actor.GolmRocketPose,"中断で待機差分へ戻る");
-        await _field.ShowGolmCue(actor,target,new BattleEvent { Turn=1,Kind=BattleEventKind.GolmArm,Text=GolmArmLabels.Stomp });
+        await _field.ShowGolmCue(actor,target,FxCatalog.Find("golm.swallow").Events!()[0]);
         fx=_field.GolmEffects.Single(); var interrupted=fx.Grab(target,false);
         await Wait(.03); _field.PlayDeath(actor);
         Require(!await interrupted && !_field.GolmEffects.Any() && !target.GolmUsesProxy,"腕の所有者の死亡でも中断を完了");
@@ -238,7 +233,7 @@ public partial class GolmCheck : Control
             var actor=_field.FindPawn(1)!; var target=_field.FindPawn(2)!;
             var actorSprite=(Sprite3D)typeof(BattlePawn3D).GetField("_sprite",Flags)!.GetValue(actor)!;
             var idleTexture=actorSprite.Texture;
-            await _field.ShowGolmCue(actor,target,new BattleEvent { Turn=1,Kind=BattleEventKind.GolmArm,Text=GolmArmLabels.Stomp });
+            await _field.ShowGolmCue(actor,target,FxCatalog.Find("golm.swallow").Events!()[0]);
             var fx=_field.GolmEffects.Single();
             if(afterHit) { Require(await fx.Launch(target),"捕獲前の飛行"); Require(await fx.Impact(50,captureFollows:true),"捕獲前の一撃"); }
             Require(await fx.Grab(target,afterHit),"敵を持ち帰る");
@@ -262,7 +257,7 @@ public partial class GolmCheck : Control
         }
         _field.BeginBattle(Openings(0),"着弾の検証",0); _field.SetGolmClock(false,1);
         var owner=_field.FindPawn(1)!; var enemy=_field.FindPawn(2)!;
-        await _field.ShowGolmCue(owner,enemy,new BattleEvent { Turn=1,Kind=BattleEventKind.GolmArm,Text=GolmArmLabels.Stomp });
+        await _field.ShowGolmCue(owner,enemy,FxCatalog.Find("golm.swallow").Events!()[0]);
         var punch=_field.GolmEffects.Single(); await punch.Launch(enemy);
         var strike=punch.Impact(50); await Wait(.015);
         var burst=punch.PunchImpacts.Single(); Require(burst.Heavy,"攻撃だけのパンチに強い着弾を使う");

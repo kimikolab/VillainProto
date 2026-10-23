@@ -22,6 +22,7 @@ public partial class Main
     {
         foreach (int i in ThrustDamageIndices(index, attack))
         {
+            if (!CanPreviewViewerEvent(i)) continue;
             var damage = _result!.Events[i];
             if (damage.TargetId != pawn.InstanceId || !_batchedDamageIndices.Add(i)) continue;
             if (damage.Kind == BattleEventKind.Parry) ShowParry(damage);

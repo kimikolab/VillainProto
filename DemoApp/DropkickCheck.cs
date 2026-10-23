@@ -17,13 +17,10 @@ public partial class DropkickCheck : Control
             field.SetAnchorsPreset(LayoutPreset.FullRect);
             AddChild(field);
             var audio = (BattleAttackAudio)typeof(BattlefieldView3D).GetField("_attackAudio", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(field)!;
-            var cue = new BattleEvent { Kind = BattleEventKind.Blast, ActorId = 1, TargetId = 2, Slot = 3, Turn = 1 };
+            var cue = FxCatalog.Find("hane.dropkick").Events!()[0];
             void Reset(int team, double speed)
             {
-                field.BeginBattle(new DemoOpening[] {
-                    new(1, team, "hane", "ハネ", 0, 100, 100, 11, AttackPattern.Single, true),
-                    new(2, 1-team, "knight", "押し返す相手", 0, 100, 100, 10, AttackPattern.Single, true),
-                }, "ハネ・ドロップキックと飛び蹴り", 0);
+                field.BeginBattle(FxCatalog.GetOpenings("hane.dropkick", team == 1), "ハネ・ドロップキックと飛び蹴り", 0);
                 foreach (var p in field.Pawns.Values) p.AnimationSpeed = speed;
             }
             foreach (int team in new[] { 0, 1 })

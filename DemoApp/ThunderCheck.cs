@@ -60,12 +60,9 @@ public partial class ThunderCheck : Control
         field.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         AddChild(field);
         field.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        DemoOpening[] openings = [
-            new(1,0,"kata","禍導のカタ",2,48,48,6,AttackPattern.Single,false),
-            new(2,0,"beni","毒喰らいのベニ",0,64,64,4,AttackPattern.Single,false,UnitCatalog.Beni.Traits),
-            new(3,1,"knight","巡礼騎士",0,100,100,10,AttackPattern.Single,false),
-            new(4,1,"knight","巡礼騎士",2,100,100,10,AttackPattern.Single,false),
-            new(5,1,"knight","巡礼騎士",4,100,100,10,AttackPattern.Single,false) ];
+        var cue = FxCatalog.Find("kata.thunder.chain");
+        var bolts = cue.Events!().Where(e => e.Kind == BattleEventKind.Thunder).ToArray();
+        DemoOpening[] openings = cue.Openings!();
         field.BeginBattle(openings,"",0);
         await Wait(0.5);
         var kata=field.FindPawn(1)!; var a=field.FindPawn(3)!; var b=field.FindPawn(4)!; var c=field.FindPawn(5)!;
@@ -82,10 +79,10 @@ public partial class ThunderCheck : Control
         foreach (double speed in new[] {1.0,2.0})
         {
             field.LaunchThunderStake(kata,a,speed); await Wait(0.18/speed);
-            field.StrikeThunder(null,a,1,3,speed); await Capture($"thunder-{speed}");
+            field.StrikeThunder(null,a,bolts[0].Slot,bolts[0].StatusRemaining ?? 0,speed); await Capture($"thunder-{speed}");
             await Wait(0.3/speed);
             field.LaunchThunderStake(kata,b,speed); await Wait(0.18/speed);
-            field.StrikeThunder(a,b,2,1,speed); await Capture($"hop-{speed}");
+            field.StrikeThunder(a,b,bolts[1].Slot,bolts[1].StatusRemaining ?? 0,speed); await Capture($"hop-{speed}");
             foreach (var p in new[]{a,b,c}) p.SetStatusIcon(StatusKeys.Shock,true);
             await Wait(0.3/speed);
             field.ShockStage(0); field.ShowDischarge(a,b,speed); field.ShowDischarge(a,c,speed);
@@ -114,7 +111,10 @@ public partial class ThunderCheck : Control
     {
         if (DisplayServer.GetName() == "headless") return;
         await ToSignal(RenderingServer.Singleton,RenderingServer.SignalName.FramePostDraw);
-        GetViewport().GetTexture().GetImage().SavePng(ProjectSettings.GlobalizePath($"res://../design/art/kata/{name}-fx-check.png"));
+        string? arg = OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--capture-dir="));
+        string directory = arg is null ? ProjectSettings.GlobalizePath("res://../design/art/kata") : arg[14..];
+        System.IO.Directory.CreateDirectory(directory);
+        GetViewport().GetTexture().GetImage().SavePng(System.IO.Path.Combine(directory, $"{name}-fx-check.png"));
     }
     private async Task Wait(double seconds) => await ToSignal(GetTree().CreateTimer(seconds),SceneTreeTimer.SignalName.Timeout);
     private static void Require(bool condition,string label) { if(!condition) throw new Exception(label); }

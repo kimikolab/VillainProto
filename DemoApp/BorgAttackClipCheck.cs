@@ -44,7 +44,7 @@ public partial class BorgAttackClipCheck : Control
             Require(borg.AttackClipPlaying && clip!.Frames.Contains(sprite.Texture) && !borg.IdleLoopPlaying, "攻撃で連番を流し、待機ループを止める");
             // 足底（連番の anchor の y）が地面の高さに来る。待機絵の足底と同じ高さ。
             await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
-            float feet = sprite.Position.Y - (clip.Anchor.Y - sprite.Texture.GetHeight() * 0.5f) * sprite.PixelSize;
+            float feet = sprite.Position.Y - (clip!.Anchor.Y - sprite.Texture.GetHeight() * 0.5f) * sprite.PixelSize;
             Require(Math.Abs(feet - BattlePawn3D.PortraitGroundYForCheck) < 0.05f, $"足底が地面に乗る（{feet:0.000}）");
             var shooting = Wait(clip.Frames.Length / clip.Fps + 0.9); // ゲーム内の時間で待つ（--write-movie でも同じ）
             await attack;

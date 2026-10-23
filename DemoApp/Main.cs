@@ -336,6 +336,7 @@ public partial class Main : Control
 
         _atlas = UiKit.LoadTexture("res://assets/outcast_atlas.png");
         BuildUi();
+        if (ViewerMode) return;
         BuildRoster();
 
         _field.SetupSlotClicked = OnSetupSlotClicked;
@@ -507,6 +508,13 @@ public partial class Main : Control
         body.AddChild(_battlePanel);
 
         root.AddChild(BuildFooter());
+        if (ViewerMode)
+        {
+            root.GetChild<Control>(0).Hide();
+            root.GetChild<Control>(root.GetChildCount() - 1).Hide();
+            _rosterPanel.Hide();
+            _detailPanel.Hide();
+        }
     }
 
     private Control BuildHeader()
@@ -1147,19 +1155,6 @@ public partial class Main : Control
             .ToList();
 
         _result = BattleEngine.Run(players, enemies, seed, verbose: true);
-        IndexStatusDamageEvents(_result.Events);
-        _ticks = TickPresentation.Build(_result.Events);
-        _turnTicks = TurnTickPresentation.Build(_result.Events);
-        IndexBeniMio(_result.Events);
-        IndexThunder(_result.Events);
-        _misa = MisaPresentation.Build(_result.Events);
-        _golm = GolmPresentation.Build(_result.Events);
-        _markRally = MarkRallyPresentation.Build(_result.Events);
-        _markLoop = MarkLoopPresentation.Build(_result.Events);
-        _dohaShares = DohaSharePresentation.Build(_result.Events);
-        _hisaCommand = HisaCommandPresentation.Build(_result.Events);
-        _mireBurstsShown.Clear();
-        IndexTimeline(_result.Events);
         _battleOpening = pending.Select(x => new DemoOpening(
             x.Unit.InstanceId,
             x.Unit.TeamId,
@@ -1177,6 +1172,30 @@ public partial class Main : Control
             x.Unit.Shape)).ToList();
         _playerShape = players.FirstOrDefault()?.Shape ?? FormationShape.X;
 
+        PreparePlayback(title, stageIndex, seed);
+    }
+
+    // 実戦と手組みは、索引・盤面・ApplyEvent をすべて共用する。
+    private void PreparePlayback(string title, int stageIndex, int seed)
+    {
+        ++_playToken;
+        _seekCompletion?.TrySetCanceled();
+        _seekCompletion = null;
+        _seekTarget = null;
+        if (_result is null) return;
+        IndexStatusDamageEvents(_result.Events);
+        _ticks = TickPresentation.Build(_result.Events);
+        _turnTicks = TurnTickPresentation.Build(_result.Events);
+        IndexBeniMio(_result.Events);
+        IndexThunder(_result.Events);
+        _misa = MisaPresentation.Build(_result.Events);
+        _golm = GolmPresentation.Build(_result.Events);
+        _markRally = MarkRallyPresentation.Build(_result.Events);
+        _markLoop = MarkLoopPresentation.Build(_result.Events);
+        _dohaShares = DohaSharePresentation.Build(_result.Events);
+        _hisaCommand = HisaCommandPresentation.Build(_result.Events);
+        _mireBurstsShown.Clear();
+        IndexTimeline(_result.Events);
         _openingById.Clear();
         foreach (DemoOpening opening in _battleOpening) _openingById[opening.InstanceId] = opening;
         _zan = ZanPresentation.Build(_result.Events, _battleOpening, _markRally);
@@ -1197,6 +1216,7 @@ public partial class Main : Control
         _field.Visible = false;
         _battleField.Visible = true;
         _battleField.BeginBattle(_battleOpening, title, stageIndex);
+        if (ViewerMode) _battleField.SetSubline("Space：一時停止／再開   1–4：再生速度   Alt／カーソル：詳細   一覧から選択して再生");
         _battleField.SetHushLimits(_result.Events);
         if (_quitAfterPlayback) PrintSeats("start");
         _battleMusic.PlayWave(stageIndex);
@@ -1217,7 +1237,9 @@ public partial class Main : Control
 
     private int _finishSoundIndex = -1;
 
-    private async void BeginPlayback()
+    private void BeginPlayback() => _playbackTask = PlayEvents();
+
+    private async Task PlayEvents()
     {
         if (_result is null) return;
         _finishSoundIndex = FinishSoundCue.Find(_result.PlayerWon, _battleOpening, _result.Events);
@@ -1249,9 +1271,14 @@ public partial class Main : Control
         _playing = true;
         _paused = false;
         _pause.Text = "一時停止";
-        _battleField.PlayBattleStartSound();
-        _battleField.ShowBanner("BATTLE START", UiKit.Gold, 0.8);
-        await Delay(0.62);
+        if (ViewerMode && _result.Events.Count == 0)
+            await HoldViewerIdle(token);
+        else
+        {
+            _battleField.PlayBattleStartSound();
+            _battleField.ShowBanner("BATTLE START", UiKit.Gold, 0.8);
+            await Delay(0.62);
+        }
 
         // T0の封印通知より先に、誰が沈黙を広げたのかを見せる。
         if (token != _playToken || !_battleMode) return;
@@ -1259,11 +1286,13 @@ public partial class Main : Control
 
         while (token == _playToken && _battleMode && _eventIndex < _result.Events.Count)
         {
+            CompleteViewerSeek();
             while (_paused && token == _playToken && _battleMode) await Delay(0.06, raw: true);
             if (token != _playToken || !_battleMode) return;
             int eventIndex = _eventIndex++;
             BattleEvent e = _result.Events[eventIndex];
-            if (_turnTicks.Starts.TryGetValue(eventIndex, out var ticks))
+            if (_turnTicks.Starts.TryGetValue(eventIndex, out var ticks)
+                && (_seekTarget is null || ticks.End <= _seekTarget))
                 await PlayTurnTicks(ticks, token);
             else await ApplyEvent(e, eventIndex);
             await FinishDustBurst(eventIndex);
@@ -1295,7 +1324,9 @@ public partial class Main : Control
         }
 
         if (token != _playToken || !_battleMode) return;
+        CompleteViewerSeek();
         _playing = false;
+        if (ViewerMode) return;
         _battleField.EndGolmPresentation();
         string verdict = _result.PlayerWon ? "VICTORY" : "DEFEAT";
         _battleField.ResetBindings();
@@ -2104,6 +2135,7 @@ public partial class Main : Control
         int landed = 0;
         for (int i = attackIndex + 1; i < _result.Events.Count; i++)
         {
+            if (!CanPreviewViewerEvent(i)) break;
             BattleEvent candidate = _result.Events[i];
             if (candidate.Kind is BattleEventKind.TurnStart or BattleEventKind.HushState) break;
             if (candidate.Kind == BattleEventKind.Attack && candidate.ActorId == attack.ActorId) break;
@@ -2146,6 +2178,7 @@ public partial class Main : Control
         var hits = new List<int>();
         for (int i = highlightIndex + 1; i < _result.Events.Count; i++)
         {
+            if (!CanPreviewViewerEvent(i)) break;
             BattleEvent candidate = _result.Events[i];
             if (candidate.Kind is BattleEventKind.TurnStart or BattleEventKind.Attack or BattleEventKind.Highlight
                 or BattleEventKind.HushState) break;
@@ -2534,6 +2567,8 @@ public partial class Main : Control
         }
         double duration = raw ? seconds : seconds / Math.Max(0.1, _speed);
         await ToSignal(GetTree().CreateTimer(Math.Max(0.01, duration)), SceneTreeTimer.SignalName.Timeout);
+        while (ViewerMode && _paused)
+            await ToSignal(GetTree().CreateTimer(0.03), SceneTreeTimer.SignalName.Timeout);
     }
 
     private void TogglePause()
@@ -2577,6 +2612,7 @@ public partial class Main : Control
         _battleLog.Clear();
         SetBattleLogVisible(false);
         _battleField.BeginBattle(_battleOpening, _battleTitle, _battleStageIndex);
+        if (ViewerMode) _battleField.SetSubline("Space：一時停止／再開   1–4：再生速度   Alt／カーソル：詳細   一覧から選択して再生");
         _battleField.SetHushLimits(_result.Events);
         _battleMusic.PlayWave(_battleStageIndex);
         _partyBar.Begin(_battleOpening);
@@ -2665,6 +2701,7 @@ public partial class Main : Control
 
     public override void _UnhandledInput(InputEvent @event)
     {
+        if (ViewerMode) return;
         if (@event is not InputEventKey { Pressed: true, Echo: false } key) return;
         if (!_battleMode) return;
         switch (key.Keycode)
