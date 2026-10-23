@@ -174,7 +174,9 @@ R5n は薙ぎ 0・列ごと 0（動きの変化なし）。列をまとめて刈
 
 ### 6-3. 照合 ／ `sweep fast`
 
-（コミットの後に追記する。）
+- **過去の器具の照合（軽い・`-Units hagi,rica,mug,vel,ere`）**: HEAD（024184c3）の保存は無いが、BattleCore ／ BattleSim が同じ第388期の保存（7a5957f2）と比べた。コミット（05cc3557）の後に、基準をその保存に固定した写しの器具で回し直して **照合 62 本: 一致 60 ／ 差 1 ／ 保存に無い 1（`sh389 check`）**。差の1本 `som317 p0` は `OnAnyDeath` を持つ札のクラスをソースから並べる表に `HagiDepthTrait` の行が1行増えただけ（第388期と同じ形の差・挙動の差ではない）。`som317`〜`som320` の check の exit 1 は前からの状態。期の最後に `promote`（05cc3557 ＝ 7a5957f2 ＋ 62 本）。
+- **`sweep fast`**: 22 本・4.3 分・異常終了 0 本・上限 0 本（最長 `relic rejudge smoke` 42.6 秒）——**合格**（`.tmp/p389/sweep_fast.txt`）。`Presets`（試遊の台の入れ替え）と駒（版のハギ）が増えたので、`sweep nightly` でも拾われる。
+- コミットは自分の変更パスだけ（DemoApp ／ `tools/comfy_idle_loop` ／ `design/CODEX_BRIEF_*.md` などの作業中のファイルは含めていない）。push の前に、ローカルの master に自分以外の未 push のコミットは無かった。
 
 ### 6-4. CLAUDE.md の門
 
