@@ -61,13 +61,13 @@ static partial class Sh390Diag
     // 版 ／ 列 ／ 波
     // ---------------------------------------------------------------------------------
     internal static readonly (string Name, UnitDef D)[] Vers =
-        { ("規定", UnitCatalog.Hagi), ("V1", UnitCatalog.HagiV1), ("V2", UnitCatalog.HagiV2), ("V3", UnitCatalog.HagiV3), ("VA", UnitCatalog.HagiVA) };
+        { ("規定", UnitCatalog.HagiH391), ("V1", UnitCatalog.HagiV1), ("V2", UnitCatalog.HagiV2), ("V3", UnitCatalog.HagiV3), ("VA", UnitCatalog.HagiVA) };
     /// <summary>§5-1 の列: 元の台 ／ 規定 ／ V1 ／ V2 ／ V3 ／ VA（`null` ＝ 元の台のまま）。</summary>
     internal static readonly (string Name, UnitDef? D)[] BoardCols =
-        { ("元", null), ("規定", UnitCatalog.Hagi), ("V1", UnitCatalog.HagiV1), ("V2", UnitCatalog.HagiV2), ("V3", UnitCatalog.HagiV3), ("VA", UnitCatalog.HagiVA) };
+        { ("元", null), ("規定", UnitCatalog.HagiH391), ("V1", UnitCatalog.HagiV1), ("V2", UnitCatalog.HagiV2), ("V3", UnitCatalog.HagiV3), ("VA", UnitCatalog.HagiVA) };
     /// <summary>§4-1 の列: 元の台 ／ 素体 ／ 旧のハギ ／ 規定 ／ VA。素体は第388期と同じ（器具の中だけ）。</summary>
     internal static readonly (string Name, UnitDef? D)[] MoveCols =
-        { ("元", null), ("素体", S388.PlainHagi), ("旧", UnitCatalog.HagiH389), ("規定", UnitCatalog.Hagi), ("VA", UnitCatalog.HagiVA) };
+        { ("元", null), ("素体", S388.PlainHagi), ("旧", UnitCatalog.HagiH389), ("規定", UnitCatalog.HagiH391), ("VA", UnitCatalog.HagiVA) };
 
     static readonly (string Name, I.W[] Ws)[] W8 = S377.VerWaves;   // ボス ／ 近衛 ／ 大隊 ／ 本編 第2 ／ 4 ／ 5波 ／ 九体 ／ 強 第2〜5波
     static readonly int[] W4 = { 0, 1, 2, 5 };
@@ -282,7 +282,7 @@ static partial class Sh390Diag
         Console.WriteLine("| 台 | 列 | " + string.Join(" | ", W5.Select(w => W8[w].Name)) + " | 4 波の平均 |");
         Console.WriteLine("|---|---|" + string.Concat(W5.Select(_ => "---|")) + "--:|");
         foreach (var bd in MainBoards().Take(2))
-            foreach (var (cn, d) in new (string, UnitDef?)[] { ("規定", UnitCatalog.Hagi), ("旧", UnitCatalog.HagiH389), ("元", null) })
+            foreach (var (cn, d) in new (string, UnitDef?)[] { ("規定", UnitCatalog.HagiH391), ("旧", UnitCatalog.HagiH389), ("元", null) })
             {
                 var m8 = M8(ColBoard(bd, d));
                 Console.WriteLine($"| {(cn == "規定" ? bd.Name : "")} | {cn} | {string.Join(" | ", W5.Select(w => m8[w].Cell))} | {F1(A4(m8))} |");
@@ -462,7 +462,7 @@ static partial class Sh390Diag
             var res = new double[seats.Length + 1][];
             Parallel.For(0, seats.Length + 1, k =>
             {
-                var f = k == 0 ? f0 : Put(f0, seats[k - 1], UnitCatalog.Hagi);
+                var f = k == 0 ? f0 : Put(f0, seats[k - 1], UnitCatalog.HagiH391);
                 var r = new double[5];
                 for (int w = 0; w < 4; w++) r[w] = WinRate(f, new[] { s1W[w] }, MoveS1Seeds);
                 r[4] = WinRate(f, I.StrongWaves, MoveS1Seeds);

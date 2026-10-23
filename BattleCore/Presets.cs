@@ -1006,9 +1006,13 @@ public static class Presets
         //   版・移動 ハギ: `sh390 move` の最良（`compare` の「移動改 (バサ×ヨミ×シオ)」のガルドの席（前3）に規定のハギ・ボス 8 → 17%・倒しT 14.2 → 7.0T）。
         // 第391期: 「版・VA ハギ」は外した（並びは `HagiDeath389(UnitCatalog.HagiVA)`・過去の器具は `Common.VersionsH390`）。
         ("版・移動 ハギ", HagiMove390()),
-        // 第391期: 追撃でも刈り取る版を試遊で触る台。`sh391 boards` ／ `move` ／ `swap` で P1h が 4 台中 3 台でいちばん良く、版で結果が動く台のうち元との差がいちばん大きい「試遊・ハギ 台B」（4 波 75.0 → 79.8）に P1h。採否はポン。
-        ("版・P1 ハギ", HagiPlay389(UnitCatalog.HagiP1h)),
+        // 第391期の「版・P1 ハギ」（試遊・ハギ 台B に P1h）は第392期に外した（P1h を規定にしたので「試遊・ハギ 台B」と同じになる・過去の器具は `Common.VersionsH391`）。
+        // 第392期: 手番の軸の席の探索（`sh392 search`）の1位——芯の組 トモ ＋ ドルガ ＋ 残りの枠 ボルグ ／ トウ ／ ベニ（規定の駒）。
+        ("試遊・手番 探索1位", TempoSeek392()),
     };
+
+    /// <summary>第392期: 「試遊・手番 探索1位」の並び（前1 ボルグ ／ 前3 ドルガ ／ 中央 ベニ ／ 後1 トモ ／ 後3 トウ・`sh392 search` の1位）。</summary>
+    public static Formation TempoSeek392() => Formation.Build(front1: UnitCatalog.Borg, front3: UnitCatalog.Dolga, center: UnitCatalog.Beni, back1: UnitCatalog.Tomo, back3: UnitCatalog.Tou);
 
     /// <summary>第390期: 「版・移動 ハギ」の並び（`compare` の「移動改 (バサ×ヨミ×シオ)」のガルドの席（前3）にハギ: 前1 セロ ／ 前3 ハギ ／ 中央 シオ ／ 後1 ヨミ ／ 後3 バサ）。既定は規定のハギ。</summary>
     public static Formation HagiMove390(UnitDef? hagi = null) => Formation.Build(front1: UnitCatalog.Sero, front3: hagi ?? UnitCatalog.Hagi, center: UnitCatalog.Shio, back1: UnitCatalog.Yomi, back3: UnitCatalog.Basa);

@@ -60,10 +60,10 @@ static partial class Sh391Diag
     // 版 ／ 列 ／ 波
     // ---------------------------------------------------------------------------------
     internal static readonly (string Name, UnitDef D)[] Vers =
-        { ("規定", UnitCatalog.Hagi), ("P1", UnitCatalog.HagiP1), ("P1w", UnitCatalog.HagiP1w), ("P1h", UnitCatalog.HagiP1h) };
+        { ("規定", UnitCatalog.HagiH391), ("P1", UnitCatalog.HagiP1), ("P1w", UnitCatalog.HagiP1w), ("P1h", UnitCatalog.HagiP1h) };
     /// <summary>列: 元の台（ハギを入れる前）／ 素体 ／ 規定 ／ P1 ／ P1w ／ P1h。素体は第388期と同じ（器具の中だけ）。</summary>
     internal static readonly (string Name, UnitDef? D)[] BoardCols =
-        { ("元", null), ("素体", S388.PlainHagi), ("規定", UnitCatalog.Hagi), ("P1", UnitCatalog.HagiP1), ("P1w", UnitCatalog.HagiP1w), ("P1h", UnitCatalog.HagiP1h) };
+        { ("元", null), ("素体", S388.PlainHagi), ("規定", UnitCatalog.HagiH391), ("P1", UnitCatalog.HagiP1), ("P1w", UnitCatalog.HagiP1w), ("P1h", UnitCatalog.HagiP1h) };
 
     static readonly (string Name, I.W[] Ws)[] W8 = S377.VerWaves;   // ボス ／ 近衛 ／ 大隊 ／ 本編 第2 ／ 4 ／ 5波 ／ 九体 ／ 強 第2〜5波
     static readonly int[] W4 = { 0, 1, 2, 5 };

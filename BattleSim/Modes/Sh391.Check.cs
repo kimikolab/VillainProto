@@ -45,7 +45,7 @@ static partial class Sh391Diag
         Console.WriteLine();
         Console.WriteLine("| 項目 | 判定 | 備考 |");
         Console.WriteLine("|---|---|---|");
-        UnitDef hagi = UnitCatalog.Hagi, p1 = UnitCatalog.HagiP1, p1w = UnitCatalog.HagiP1w, p1h = UnitCatalog.HagiP1h;
+        UnitDef hagi = UnitCatalog.HagiH391, p1 = UnitCatalog.HagiP1, p1w = UnitCatalog.HagiP1w, p1h = UnitCatalog.HagiP1h;   // 第392期: 第390〜391期の規定（`HagiH391`）に固定
         UnitDef fa = FoeDef("foe391a"), fb = FoeDef("foe391b"), fc = FoeDef("foe391c"), fd = FoeDef("foe391d");
 
         // ---- 版の札と文面 ----
@@ -55,7 +55,7 @@ static partial class Sh391Diag
                     && d.PlusText.Contains("（失った命が深いほど重く・線を切った敵なら、その一振りで刈り取る）", StringComparison.Ordinal) && d.MinusText == hagi.MinusText && !UnitCatalog.Everyone.Contains(d))
                 && p1.Traits.Count == 7 && p1w.Traits.Contains(TraitId.HagiPursuitColumn) && !p1w.Traits.Contains(TraitId.HagiPursuitHeavy) && p1h.Traits.Contains(TraitId.HagiPursuitHeavy) && !p1h.Traits.Contains(TraitId.HagiPursuitColumn)
                 && p1w.PlusText.StartsWith(p1.PlusText, StringComparison.Ordinal) && p1h.PlusText.StartsWith(p1.PlusText, StringComparison.Ordinal) && p1h.PlusText.EndsWith("2 割を乗せる", StringComparison.Ordinal)
-                && !UnitCatalog.Everyone.Any(d => d.Traits.Contains(TraitId.HagiPursuitReap) || d.Traits.Contains(TraitId.HagiPursuitColumn) || d.Traits.Contains(TraitId.HagiPursuitHeavy));
+                && !UnitCatalog.Everyone.Where(d => d != UnitCatalog.Hagi).Any(d => d.Traits.Contains(TraitId.HagiPursuitReap) || d.Traits.Contains(TraitId.HagiPursuitColumn) || d.Traits.Contains(TraitId.HagiPursuitHeavy));   // 第392期: 規定のハギ（P1h）は除いて数える
             Expect("版の札と文面: P1 ＝ 規定 ＋ 追撃の刈り取り ／ P1w ＋ 追撃の列ごと ／ P1h ＋ 追撃 2 割・文面は追撃の句の括弧に「線を切った敵なら、その一振りで刈り取る」・`All` ／ `Retired` の外・札の保持者 0 枚", ok,
                 string.Join(" ／ ", new[] { ("P1", p1), ("P1w", p1w), ("P1h", p1h) }.Select(x => $"{x.Item1} {string.Join("・", x.Item2.Traits.Skip(5).SkipLast(1))}")));
         }
@@ -121,25 +121,25 @@ static partial class Sh391Diag
                 for (int w = 0; w < 5; w++) if (c[w].TrimEnd('%') != F1(g[ri, w])) diff++;
             }
             string Row(string doc) => doc.Split('\n').FirstOrDefault(l => l.StartsWith($"| **{hagi.Name}** |", StringComparison.Ordinal))?.TrimEnd('\r') ?? "";
-            string head = S390.GitShow($"{HeadSha}:docs/units.md"), now = File.Exists("docs/units.md") ? File.ReadAllText("docs/units.md") : "";
-            bool def = hagi.Traits.SequenceEqual(UnitCatalog.HagiR5m.Traits) && UnitCatalog.All.Contains(hagi);
+            string head = S390.GitShow($"{HeadSha}:docs/units.md"), now = S390.GitShow("1cabf2f9:docs/units.md");   // 第392期: 規定のハギを替えたので、第391期の HEAD の表と比べる
+            bool def = hagi.Traits.SequenceEqual(UnitCatalog.HagiR5m.Traits) && hagi.Id == "hagi";   // 第392期: 旧の規定（`All` の外）
             Expect($"規定のハギは今どおり（札 ＝ R5m・`docs/units.md` の行が第390期の HEAD（{HeadSha}）と同じ）・規定の `compare` 全行 × 5 波 × seed 0..199 が `docs/balance.md` と一致（ハギのいない行も）",
                 def && Row(head) != "" && Row(head) == Row(now) && diff == 0 && miss == 0, $"{rows.Length} 行・ずれ {diff}・表に無い行 {miss}");
         }
 
         // ---- 試遊の台 ／ 替えた台は器具の中だけ ----
         {
-            var names = Presets.Versions.Select(r => r.Name).ToList();
+            var names = VersionsH391().Select(r => r.Name).ToList();
             var vers = new[] { p1, p1w, p1h, UnitCatalog.HagiV1, UnitCatalog.HagiV2, UnitCatalog.HagiV3, UnitCatalog.HagiVA };
-            var verRows = Presets.Versions.Where(r => r.F.Occupied().Any(o => vers.Contains(o.Def))).Select(r => r.Name).ToList();
+            var verRows = VersionsH391().Where(r => r.F.Occupied().Any(o => vers.Contains(o.Def))).Select(r => r.Name).ToList();
             bool rows = !names.Contains("版・VA ハギ") && names.Contains("版・移動 ハギ") && names[^1] == "版・P1 ハギ" && verRows.SequenceEqual(new[] { "版・P1 ハギ" })
-                && Presets.Versions[^1].F.Occupied().Count(o => o.Def == p1 || o.Def == p1w || o.Def == p1h) == 1;
+                && VersionsH391()[^1].F.Occupied().Count(o => o.Def == p1 || o.Def == p1w || o.Def == p1h) == 1;
             var h390 = VersionsH390();
             bool past = !h390.Any(r => r.Name == "版・P1 ハギ") && h390.Select(r => r.Name).TakeLast(2).SequenceEqual(VersionRows390)
                 && Som307Diag.Seats(h390.First(r => r.Name == "版・VA ハギ").F) == Som307Diag.Seats(Presets.HagiDeath389(UnitCatalog.HagiVA))
                 && h390.First(r => r.Name == "版・VA ハギ").F[0] == UnitCatalog.HagiVA
                 && !VersionsH389().Any(r => VersionRows390.Contains(r.Name) || r.Name == "版・P1 ハギ");
-            bool inside = !CompareBuilds().Concat(CrossBuilds()).Concat(Presets.Playtest).Concat(Presets.Versions.SkipLast(1)).SelectMany(r => r.F.Occupied()).Any(o => vers.Contains(o.Def) || o.Def.Id.EndsWith("_plain388", StringComparison.Ordinal));
+            bool inside = !CompareBuilds().Concat(CrossBuilds()).Concat(Presets.Playtest).Concat(VersionsH391().SkipLast(1)).SelectMany(r => r.F.Occupied()).Any(o => vers.Contains(o.Def) || o.Def.Id.EndsWith("_plain388", StringComparison.Ordinal));
             Expect("試遊の台: 「版・VA ハギ」を外し（第390期の一覧は `VersionsH390` が足し戻す）、末尾に「版・P1 ハギ」・「版・移動 ハギ」は残す・替えた台 ／ 素体 ／ 版は器具の中だけ", rows && past && inside, string.Join("、", names.TakeLast(3)));
         }
 
@@ -147,7 +147,7 @@ static partial class Sh391Diag
         {
             string src = File.ReadAllText("BattleSim/Modes/Checkup.cs");
             var cards = new[] { TraitId.HagiPursuitReap, TraitId.HagiPursuitColumn, TraitId.HagiPursuitHeavy };
-            var miss = cards.Where(t => !System.Text.RegularExpressions.Regex.IsMatch(src, $@"\[TraitId\.{t}\]\s*=\s*\(HcPlusL,\s*""[^""]*第391期[^""]*保持者 0 枚""")).ToList();
+            var miss = cards.Where(t => !System.Text.RegularExpressions.Regex.IsMatch(src, $@"\[TraitId\.{t}\]\s*=\s*\(HcPlusL,\s*""[^""]*第391期[^""]*(保持者 0 枚|第392期から規定（ハギ）)"""   /* 第392期: 2 枚は規定に */)).ToList();
             Expect("`checkup` の札の分類表に第391期の札 3 枚（追撃の刈り取り ／ 追撃の列ごと ／ 追撃 2 割）がある（ソースを読んで確かめる）", miss.Count == 0, miss.Count == 0 ? "" : "無い: " + string.Join("・", miss));
         }
 

@@ -2912,8 +2912,9 @@ public static class UnitCatalog
     static readonly TraitId[] HagiTraits390 = { TraitId.HagiReap, TraitId.HagiHalfPursuit, TraitId.HagiDepthSoul, TraitId.HagiSoulMoves, TraitId.HagiReapMark, TraitId.HagiSpillFixed };
     const string HagiPlusText390 = HagiDepthReapText + HagiPursuitText + "。敵が倒れ、弱っていくほど魂が溜まり、鎌の届く線が深くなる（2 割 → 最大 5 割）" + HagiMovesText
         + "。斬るたび、その敵の命に印を刻み、鎌の届く線を深くする（印1つ +5%・合わせて最大 6 割）";
-    /// <summary>追い打ちのハギ（第390期の規定 ＝ 第389期の R5m）: 刈り取り ／ 追撃 ／ 魂の深さ ／ 段の動き ／ 刈りの印 ／ 固定の巻き込み。旧は <see cref="HagiH389"/>。</summary>
-    public static readonly UnitDef Hagi = HagiOn388(HagiTraits390, HagiPlusText390, HagiDepthMinusText);
+    /// <summary>追い打ちのハギ（第390〜391期の規定 ＝ 第389期の R5m）: 刈り取り ／ 追撃 ／ 魂の深さ ／ 段の動き ／ 刈りの印 ／ 固定の巻き込み。
+    /// <b>第392期に規定を第391期の P1h（<see cref="Hagi"/>）へ替えた</b>ので明示の定義として残す。過去の器具は `Common.PinH391` ／ `Pin391` で固定する。旧は <see cref="HagiH389"/>。</summary>
+    public static readonly UnitDef HagiH391 = HagiOn388(HagiTraits390, HagiPlusText390, HagiDepthMinusText);
     /// <summary>規定のハギの札に版の札を足す（刈りの印の後ろ・固定の巻き込みの前）。</summary>
     static UnitDef HagiOn390(TraitId[] plus, string text)
         => HagiOn388(HagiTraits390.Take(5).Concat(plus).Append(TraitId.HagiSpillFixed).ToArray(), HagiPlusText390 + text, HagiDepthMinusText);
@@ -2937,6 +2938,11 @@ public static class UnitCatalog
     public static readonly UnitDef HagiP1w = HagiOn391(new[] { TraitId.HagiPursuitReap, TraitId.HagiPursuitColumn }, "。魂が満ちれば、斬りかかりの刈り取りも列ごと");
     /// <summary>ハギの版 P1h（第391期）: P1 ＋ 追撃の上乗せを失った HP の 2 割に。</summary>
     public static readonly UnitDef HagiP1h = HagiOn391(new[] { TraitId.HagiPursuitReap, TraitId.HagiPursuitHeavy }, "。斬りかかりは、失った命の 2 割を乗せる");
+    /// <summary>
+    /// 追い打ちのハギ（第392期の規定 ＝ 第391期の P1h）: 第390〜391期の規定（<see cref="HagiH391"/>・R5m）＋ 追撃の刈り取り ＋ 追撃 2 割。札と文面は <see cref="HagiP1h"/> と同じ（別の定義）。
+    /// 名前と二つ名は据え置き。第388〜391期の版の駒は旧の札の並び（`HagiTraits390`）から作ったまま。
+    /// </summary>
+    public static readonly UnitDef Hagi = HagiOn391(new[] { TraitId.HagiPursuitReap, TraitId.HagiPursuitHeavy }, "。斬りかかりは、失った命の 2 割を乗せる");
     /// <summary>ハギの版 VA（第390期）: V1 ＋ V2 ＋ V3。</summary>
     public static readonly UnitDef HagiVA = HagiOn390(new[] { TraitId.HagiAimLine, TraitId.HagiColumnEarly, TraitId.HagiLineEvery }, HagiV1Text + HagiV2Text + HagiV3Text);
 

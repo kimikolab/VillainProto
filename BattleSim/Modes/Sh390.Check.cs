@@ -46,14 +46,14 @@ static partial class Sh390Diag
         Console.WriteLine();
         Console.WriteLine("| 項目 | 判定 | 備考 |");
         Console.WriteLine("|---|---|---|");
-        UnitDef hagi = UnitCatalog.Hagi, old = UnitCatalog.HagiH389, r5m = UnitCatalog.HagiR5m;
+        UnitDef hagi = UnitCatalog.HagiH391, old = UnitCatalog.HagiH389, r5m = UnitCatalog.HagiR5m;   // 第392期: 第390〜391期の規定（`HagiH391`）に固定
         UnitDef v1 = UnitCatalog.HagiV1, v2 = UnitCatalog.HagiV2, v3 = UnitCatalog.HagiV3, va = UnitCatalog.HagiVA;
         UnitDef fa = FoeDef("foe390a"), fb = FoeDef("foe390b"), fc = FoeDef("foe390c"), fd = FoeDef("foe390d"), small = FoeDef("foe390s", 400);
 
         // ---- 段0: 規定のハギの札と文面 ／ 旧 ／ 固定の口 ----
         {
             bool def = hagi.Id == "hagi" && hagi.Name == "追い打ちのハギ" && hagi.MaxHp == 62 && hagi.Attack == 16 && hagi.Speed == 7 && hagi.Pattern == AttackPattern.Single && hagi.Actions is null
-                && hagi.Traits.SequenceEqual(r5m.Traits) && UnitCatalog.All.Contains(hagi) && !UnitCatalog.Retired.Contains(hagi) && UnitCatalog.All.Count == 52
+                && hagi.Traits.SequenceEqual(r5m.Traits) && UnitCatalog.All.Contains(UnitCatalog.Hagi) && !UnitCatalog.Retired.Contains(hagi) && UnitCatalog.All.Count == 52
                 && hagi.PlusText.StartsWith("大鎌で、弱った敵を刈り取る（HP が線を切った敵は一振りで倒す）。倒せば、もう一度振る。敵が半分まで弱ると", StringComparison.Ordinal)
                 && hagi.PlusText.Contains("ついには一振りで列ごと刈る。斬るたび、その敵の命に印を刻み、鎌の届く線を深くする（印1つ +5%・合わせて最大 6 割）", StringComparison.Ordinal)
                 && hagi.MinusText == "大鎌の振りは、隣にいる仲間も巻き込む。刈る相手がいなければ、魂は薄れていく" && hagi.Flavor == r5m.Flavor;
