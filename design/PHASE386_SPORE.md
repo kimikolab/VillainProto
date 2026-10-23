@@ -21,7 +21,7 @@
 13. `docs/` は再生成していない（指示書 §6）。`dump` には保持者 0 枚の新しい札が 9 行増える（第383 ／ 384期と同じ扱い）。`audit` はずれ 0。
 14. 過去の器具の固定: `Common.VersionsH385`（版の2台を足す前の `Presets.Versions`）を足し、`VersionsH384` をその上に作り直した。`sh385 check` の試遊の台の項目は `VersionsH385` で見る。
 15. **作戦マップの関係の表（`Map11Relations`）は直していない**——表の対象は `UnitCatalog.All` の札だけで、版の札は対象外。
-16. この環境には PowerShell が無いので、`tools/digest_cache.ps1` の list ／ light ／ 照合を Python で写して回した（照合する器具の選び方は同じ・PowerShell の `-match` に合わせて大小を区別しない）。HEAD（4774c8e）は作業を始める前のビルドで保存した。
+16. この環境には PowerShell が無いので、`tools/digest_cache.ps1` の list ／ light ／ 照合を Python で写して回した（照合する器具の選び方は同じ・PowerShell の `-match` に合わせて大小を区別しない）。HEAD（4774c8e）は作業を始める前のビルドで保存した。期の最後の `promote` も同じ写しで `.tmp/digest_cache/` に作ったが、これはこのコンテナの中だけの保存——**Windows の機械の保存は HEAD が進んだので、次の期の `light` は HEAD の建て直し（`save -Commit`）から**になる。
 
 ## 2. 要約（ポン向け）
 
@@ -179,9 +179,9 @@ S0 ／ P は規定とほぼ同じ（9 層の T の差 0〜0.1）。**Q で層が
 
 - **自己検査**: `sh386 check` すべて ○（14 項目）。`sh385` ／ `sh384` ／ `sh380` ／ `elite` ／ `boss283` ／ `checkup` の check も ○（`sh385 check` の試遊の台の項目は `VersionsH385` で見るように直した後）。`checkup check` は 330 セル・ずれ 0。
 - **`audit`**: `docs/` のずれ 0 件・`CLAUDE.md` は門の内側。
-- **`sweep fast`**: SWEEP_RESULT
+- **`sweep fast`**: 22 本・14.3 分・異常終了 0 本・**上限 1 本**（`relic rejudge smoke` 150.1 秒）。この1本は**この機械（4 コア）では HEAD のビルドでも 177 秒**かかり（新しいビルド 170 秒）、出力は HEAD と1行も違わない——この期の変更ではなく機械の遅さ。Windows の機械では上限の内側のはず（`.tmp/p386/sweep_fast.txt` ／ `rejudge_build_head.txt` ／ `rejudge_build_new.txt`）。
 - **過去の器具の照合（軽い・`-Units rica,zoto,mug,vel,ere`）**: HEAD（4774c8e）の保存と比べて **照合 53 本: 一致 43 ／ 差 9 ／ HEAD の保存に無い 1（`sh386 check`）**。差の 9 本（`sh362` ／ `sh363` ／ `sh364` ／ `sh365` ／ `sh377` ／ `sh378` ／ `sh379` ／ `sh380` ／ `sh381` の check）はすべて想定どおり: 試遊の台の一覧（`Presets.Versions`）の備考の行に足した2台の名前が出る・`sh380 check` の verbose の項目は死の試遊の台が増えた分の戦闘数（80 → 120）。判定はどれも ○ のまま・勝率 ／ 指紋の行は 1 本も動いていない。
-- **DemoApp**: DEMO_RESULT
+- **DemoApp**（この環境に Godot 4.7.2 mono を落として回した）: ビルド 0 エラー（警告 4）・作戦マップの門 `--map11-phase0` ／ `171` ／ `172` ／ `173` すべて `ok=True`・`NineWaveCheck` ／ `DischargeCheck` ／ `ScorePanelCheck` `ok=True`・単発の再生（seed 0）: 版・弾け 死の連鎖 ボス 6T 勝ち ／ 近衛 5T 勝ち・版・寄生 死の連鎖 ボス 6T 勝ち ／ 近衛 6T 勝ち（`DEMO_SMOKE_COMPLETE`）。寄生の出来事 `Parasite` は再生側が素通りする（指示書どおり）。**`--map11-verify` は `ok=False`** だが、HEAD（4774c8e）の作業木で回しても出力が1行も違わない（踏破率 逆 32.0 → 100% など第168期の帯から外れている・前からの状態で、第385期の報告も門は4本だけを見ている）。Godot が作った未追跡の `.import` ／ `.uid`（295 本）は消した。
 - `sweep fast` は `Presets` に触る期なので、`sweep nightly` でも拾われる（第280期の作法）。
 
 ### 6-3. 足したもの ／ 直した器具
