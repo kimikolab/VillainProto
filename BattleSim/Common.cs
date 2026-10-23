@@ -724,8 +724,18 @@ public static Formation Pin389(Formation f) { var g = f.Clone(); foreach ((int s
 /// <summary>第390期: 「版・R5 ハギ」「版・R5 死神と墓守」を規定のハギの台「試遊・ハギ 台B」「試遊・死神と墓守」に改め、末尾に版の2台（「版・VA ハギ」「版・移動 ハギ」）を足した。
 /// 第389期の一覧は、足した2台を外し、改めた2台を第389期の名前と版の R5m に戻し、ほかの台のハギを旧に固定した写し。</summary>
 public static readonly string[] VersionRows390 = { "版・VA ハギ", "版・移動 ハギ" };
+/// <summary>第391期: `Presets.Versions` から「版・VA ハギ」を外し（並びは `Presets.HagiDeath389(HagiVA)`）、末尾に「版・P1 ハギ」を足した。
+/// 第390期の一覧は、足した台を外し、外した台を「版・移動 ハギ」の手前に足し戻した写し。</summary>
+public static readonly string[] VersionRows391 = { "版・P1 ハギ" };
+public static (string Name, Formation F)[] VersionsH390()
+{
+    var l = Presets.Versions.Where(r => !VersionRows391.Contains(r.Name)).ToList();
+    int i = l.FindIndex(r => r.Name == "版・移動 ハギ");
+    l.Insert(i < 0 ? l.Count : i, ("版・VA ハギ", Presets.HagiDeath389(UnitCatalog.HagiVA)));
+    return l.ToArray();
+}
 public static (string Name, Formation F)[] VersionsH389() =>
-    Presets.Versions.Where(r => !VersionRows390.Contains(r.Name)).Select(r => r.Name switch
+    VersionsH390().Where(r => !VersionRows390.Contains(r.Name)).Select(r => r.Name switch   /* 第391期: 第390期の一覧から */
     {
         "試遊・ハギ 台B" => ("版・R5 ハギ", Presets.HagiPlay389(UnitCatalog.HagiR5m)),
         "試遊・死神と墓守" => ("版・R5 死神と墓守", Presets.HagiDeath389(UnitCatalog.HagiR5m)),

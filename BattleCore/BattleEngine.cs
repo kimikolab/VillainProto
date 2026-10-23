@@ -9731,6 +9731,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.HagiReapMark)) _markLive389 = true;     // 第389期の補足（刈りの印 R5m）
         if (u.HasTrait(TraitId.HagiAimLine)) _aimLive390 = true;       // 第390期（V1 狙いを刈れる敵に）
         if (u.HasTrait(TraitId.HagiLineEvery)) _everyLive390 = true;   // 第390期（V3 線を割るたび数える）
+        if (u.HasTrait(TraitId.HagiPursuitReap) || u.HasTrait(TraitId.HagiPursuitHeavy)) _chaseLive391 = true;   // 第391期（P1 〜 追撃の刈り取り ／ 2 割）
         if (u.HasTrait(TraitId.VioRetchHalf) || u.HasTrait(TraitId.VioRetchThird)) { _retchLive = true; _retchHolders.Add(u); }   // 第373期（ヴィオの吐き戻し A1 ／ A2）
         if (CommandTrait.BurstUnit(u) > 0) { _burstLive = true; _burstHolders.Add(u); }   // 第321期（HQ-a ／ HQ-b・溜まったら吐く）
         if (u.HasTrait(TraitId.HisaCover)) _coverHolders.Add(u);       // 第301期（HC・庇い）
@@ -18154,6 +18155,8 @@ public sealed class BattleContext
     bool _markLive389;
     /// <summary>第390期: 狙いを刈れる敵に（V1・`HagiAimLine`）／ 線を割るたび数える（V3・`HagiLineEvery`）の保持者がいる戦。V2（`HagiColumnEarly`）は `HagiDepthTrait.Column` と手番の中の札の比較で読む。</summary>
     bool _aimLive390, _everyLive390;
+    /// <summary>第391期: 追撃の刈り取り（`HagiPursuitReap`）／ 追撃 2 割（`HagiPursuitHeavy`）の保持者がいる戦。いなければ追撃は第388期のまま。</summary>
+    bool _chaseLive391;
 
     /// <summary>刈りの印（R5m）: ハギの一撃が HP に届いた敵に印 +1（上限 5・刈り取りの一撃は `ReapBody388` を通るのでここへは来ない）。</summary>
     void ReapMark389(UnitState target, UnitState h)
@@ -18410,25 +18413,60 @@ public sealed class BattleContext
             if (source == h) { TallyOf(h).R388PursuitSelf++; continue; }
             if (!CanActOutOfTurn(h, OutOfTurnRoute.Pursue)) continue;
             int n = HagiReaperTrait.PursuitHits(h);
-            void Body() { for (int k = 0; k < n && target.IsAlive && h.IsAlive; k++) PursuitStrike388(h, target); }
+            void Body() { for (int k = 0; k < n && target.IsAlive && h.IsAlive; k++) PursuitStrike388(h, target, k); }
             if (InInterrupt) Body(); else Interrupt(Body);
         }
     }
 
-    /// <summary>追撃の一撃（攻撃力 ＋ その敵が失った HP の 1 割・単体・的は固定）。</summary>
-    void PursuitStrike388(UnitState h, UnitState target)
+    /// <summary>
+    /// 追撃の一撃（攻撃力 ＋ その敵が失った HP の 1 割・単体・的は固定）。<paramref name="k"/> は 2 連の何発目か（0 から）。
+    /// 第391期（P1〜・`HagiPursuitReap`）: その一撃の前に的の HP が線（魂の段 ＋ 刈りの印）以下なら、ふつうの一撃の代わりに刈り取る（手番の刈り取りと同じ一撃）。
+    /// P1w（`HagiPursuitColumn`）は列をまとめて刈る魂なら的と同じ列 ＋ 中列の線以下の敵も同じ一振りで刈る。P1h（`HagiPursuitHeavy`）は上乗せが 2 割。再行動はしない。乱数を引かない。
+    /// </summary>
+    void PursuitStrike388(UnitState h, UnitState target, int k = 0)
     {
+        bool reap = false; int line = 0; List<UnitState>? col = null;
+        if (_chaseLive391 && h.HasTrait(TraitId.HagiPursuitReap) && target.TeamId != h.TeamId)
+        {
+            int baseLine = HagiReaperTrait.ReapLinePermil(h);
+            line = ReapLineFor389(h, target, baseLine);
+            reap = (long)target.Hp * 1000 <= (long)target.MaxHp * line;
+            if (reap && h.HasTrait(TraitId.HagiPursuitColumn) && _depthLive389 && HagiDepthTrait.Column(h))
+                col = LivingMembers(target.TeamId).Where(e => e != target && target.Shape.SweepTargets(target.Slot).Contains(e.Slot) && (long)e.Hp * 1000 <= (long)e.MaxHp * ReapLineFor389(h, e, baseLine)).ToList();
+        }
         int lost = Math.Max(0, target.MaxHp - target.Hp);
-        int bonus = lost * HagiReaperTrait.PursuitLostPercent / 100;
+        int pct = _chaseLive391 && h.HasTrait(TraitId.HagiPursuitHeavy) ? HagiDepthTrait.PursuitHeavyPercent : HagiReaperTrait.PursuitLostPercent;
+        int bonus = lost * pct / 100;
         int spill = SpillAmount388(h);
         UnitTally t = TallyOf(h);
         t.R388Pursuits++;
-        long d0 = t.DamageToEnemy, k0 = t.Kills, pd0 = t.R388PursuitDmg, pk0 = t.R388PursuitKills;
-        Log($"    {h.Name} が半分を割った {target.Name} に斬りかかる（失った命 {lost} の 1 割 +{bonus}）", LogKind.Trigger);
-        _hagiHitActor388 = h; _hagiHitBonus388 = bonus; _hagiHitReap388 = false;
+        long d0 = t.DamageToEnemy, k0 = t.Kills, pd0 = t.R388PursuitDmg, pk0 = t.R388PursuitKills, rk0 = t.R390ReapKills;
+        if (reap)
+        {
+            t.R391ChaseReaps++; t.R391ChaseReapHp += target.Hp; if (k > 0) t.R391ChaseReapSecond++;   // 第391期・計数のみ
+            t.R389LastReapLine = line; t.R389LastReapHp = target.Hp;
+            Log($"    {h.Name} が線を切った {target.Name} に斬りかかり、そのまま刈り取りにかかる（線 {line / 10.0:0.#}%）", LogKind.Trigger);
+        }
+        else Log($"    {h.Name} が半分を割った {target.Name} に斬りかかる（失った命 {lost} の {pct / 10} 割 +{bonus}）", LogKind.Trigger);
+        _hagiHitActor388 = h; _hagiHitBonus388 = reap ? 0 : bonus; _hagiHitReap388 = reap;
         _forcedTarget = target;
         try { PerformAttack(h, "    ", patternOverride: AttackPattern.Single); }
-        finally { _forcedTarget = null; _forcedLane = -1; _hagiHitActor388 = null; }
+        finally { _forcedTarget = null; _forcedLane = -1; _hagiHitActor388 = null; _hagiHitReap388 = false; }
+        if (col is { Count: > 0 } && h.IsAlive)
+        {
+            int nc = 0;
+            foreach (UnitState x in col)
+            {
+                if (!x.IsAlive) continue;
+                int xh = x.Hp;
+                _reapNext388 = true;
+                try { ApplyDamage(x, xh, h, pattern: AttackPattern.Sweep); }
+                finally { _reapNext388 = false; }
+                if (!x.IsAlive) { nc++; t.R391ChaseColumnHp += xh; }
+            }
+            if (nc > 0) { t.R391ChaseColumn++; t.R391ChaseColumnUnits += nc; }   // 第391期・計数のみ
+        }
+        if (reap) t.R391ChaseReapKills += t.R390ReapKills - rk0;   // 第391期・計数のみ（追撃の刈り取りで倒した数・列ごとを含む）
         long dealt = t.DamageToEnemy - d0;   // この一撃の中で入れ子に起きた追撃の分も含む（入れ子の分は上書きで二重に数えない）
         t.R388PursuitDmg = pd0 + dealt;
         if (dealt > t.R388PursuitMax) t.R388PursuitMax = dealt;

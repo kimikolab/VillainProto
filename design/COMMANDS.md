@@ -1435,6 +1435,12 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sh390 move               # 第390期 §4: 移動軸の `compare` の 3 行 × 1枚を規定のハギに × 5 席（段1 seed 0..19）→ 行ごとの最良 2 台 × 列（元 ／ 素体 ／ 旧 ／ 規定 ／ VA）× 8 物差し・シオ ／ 線を割った主 ／ 巻き込み → 緊急退避
     dotnet run --project BattleSim -c Release 0 sh390 log <台> <列> <物差し 0..7> <seed>   # 第390期: 1戦のログ（台 ＝ 名前の頭・列 ＝ 元 ／ 規定 ／ V1 ／ V2 ／ V3 ／ VA ／ 素体 ／ 旧）
     dotnet run --project BattleSim -c Release 0 sh390 check              # 第390期 自己検査（段0 の規定のハギ ／ 旧 ／ 固定の口 ／ 試遊の台 ／ `VersionsH389`・規定 ＝ R5m の動き・第388 ／ 389期の版が変わらない・V1 ／ V2 ／ V3 の動き・刈り取りの撃破の数え・版の札と文面・`docs/`・`checkup`・verbose・PickOne ／ Roll）
+    dotnet run --project BattleSim -c Release 0 sh391 cmp                # 第391期 §3-3 の 8: ハギのいる `compare` の行 × 列（規定 ／ P1 ／ P1w ／ P1h・第1〜5波・seed 0..199）
+    dotnet run --project BattleSim -c Release 0 sh391 swap               # 第391期 §3-1 の 3: 試遊の台 × 1枚をハギ（版）に替えた台（段1 seed 0..9 → 台ごとのアタッカー以外の席の最良 ／ 版ごとの上位 3 台 × 8 物差し seed 0..99・同じ席に素体）
+    dotnet run --project BattleSim -c Release 0 sh391 boards             # 第391期 §3-1 の 1: 試遊・ハギ 台B ／ 試遊・死神と墓守 ／ 試遊・死 エレ（スィドの席）× 列（元 ／ 素体 ／ 規定 ／ P1 ／ P1w ／ P1h）× 8 物差し——手番 ／ 追撃の刈り取り・止めの内訳・壊れの兆し
+    dotnet run --project BattleSim -c Release 0 sh391 move               # 第391期 §3-1 の 2: 版・移動 ハギの台 × 列 ／ 移動軸の 3 行 × 版ごとに席を選び直した最良（段1 seed 0..19）× 8 物差し・シオ ／ 追撃 ／ 追撃の刈り取り
+    dotnet run --project BattleSim -c Release 0 sh391 log <台> <列> <物差し 0..7> <seed>   # 第391期: 1戦のログ（台 ＝ 試遊・ハギ 台B ／ 試遊・死神と墓守 ／ 試遊・死 エレ ／ 版・移動 ハギ・列 ＝ 元 ／ 素体 ／ 規定 ／ P1 ／ P1w ／ P1h）
+    dotnet run --project BattleSim -c Release 0 sh391 check              # 第391期 自己検査（版の札と文面・P1 ／ P1w ／ P1h の動き・規定のハギと `compare` 全行・試遊の台 ／ `VersionsH390`・`checkup`・verbose・PickOne ／ Roll）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

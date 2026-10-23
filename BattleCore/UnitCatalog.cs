@@ -2926,6 +2926,17 @@ public static class UnitCatalog
     public static readonly UnitDef HagiV2 = HagiOn390(new[] { TraitId.HagiColumnEarly }, HagiV2Text);
     /// <summary>ハギの版 V3（第390期）: 規定 ＋ 線を割るたび数える（1つの敵の1つの線につき1ターン1回の門を外す）。</summary>
     public static readonly UnitDef HagiV3 = HagiOn390(new[] { TraitId.HagiLineEvery }, HagiV3Text);
+    // ---- 第391期: 追撃でも刈り取る（ハギの版 P1 ／ P1w ／ P1h・指示書 design/PHASE391_HAGI_CHASE_REAP_SPEC.md §2・`All` に入れない）----
+    // 文面: 追撃の句の括弧に「線を切った敵なら、その一振りで刈り取る」を足す（P1w ／ P1h はそれぞれの句を末尾に）。
+    static UnitDef HagiOn391(TraitId[] plus, string text)
+        => HagiOn388(HagiTraits390.Take(5).Concat(plus).Append(TraitId.HagiSpillFixed).ToArray(),
+                     HagiPlusText390.Replace("（失った命が深いほど重く）", "（失った命が深いほど重く・線を切った敵なら、その一振りで刈り取る）") + text, HagiDepthMinusText);
+    /// <summary>ハギの版 P1（第391期）: 規定 ＋ 追撃の刈り取り（追撃の一撃の前に線以下なら刈る・2 連は2発目の前にもう一度判定・再行動はしない）。</summary>
+    public static readonly UnitDef HagiP1 = HagiOn391(new[] { TraitId.HagiPursuitReap }, "");
+    /// <summary>ハギの版 P1w（第391期）: P1 ＋ 魂 9 では追撃の刈り取りも列をまとめて刈る。</summary>
+    public static readonly UnitDef HagiP1w = HagiOn391(new[] { TraitId.HagiPursuitReap, TraitId.HagiPursuitColumn }, "。魂が満ちれば、斬りかかりの刈り取りも列ごと");
+    /// <summary>ハギの版 P1h（第391期）: P1 ＋ 追撃の上乗せを失った HP の 2 割に。</summary>
+    public static readonly UnitDef HagiP1h = HagiOn391(new[] { TraitId.HagiPursuitReap, TraitId.HagiPursuitHeavy }, "。斬りかかりは、失った命の 2 割を乗せる");
     /// <summary>ハギの版 VA（第390期）: V1 ＋ V2 ＋ V3。</summary>
     public static readonly UnitDef HagiVA = HagiOn390(new[] { TraitId.HagiAimLine, TraitId.HagiColumnEarly, TraitId.HagiLineEvery }, HagiV1Text + HagiV2Text + HagiV3Text);
 

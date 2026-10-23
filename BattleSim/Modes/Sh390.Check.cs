@@ -68,24 +68,24 @@ static partial class Sh390Diag
                 def && o && holders && pins, $"規定 {string.Join("・", hagi.Traits)}");
         }
 
-        // ---- 段0: 試遊の台の一覧と過去の一覧 ----
+        // ---- 段0: 試遊の台の一覧と過去の一覧（第391期: 第390期の一覧 `VersionsH390` で読む）----
         {
-            var names = Presets.Versions.Select(r => r.Name).ToList();
+            var names = VersionsH390().Select(r => r.Name).ToList();
             var h389 = VersionsH389();
             var want389 = names.Where(n => !VersionRows390.Contains(n)).Select(n => n switch { "試遊・ハギ 台B" => "版・R5 ハギ", "試遊・死神と墓守" => "版・R5 死神と墓守", _ => n }).ToList();
             bool rename = names.Contains("試遊・ハギ 台B") && names.Contains("試遊・死神と墓守") && !names.Contains("版・R5 ハギ") && !names.Contains("版・R5 死神と墓守")
-                && Presets.Versions.First(r => r.Name == "試遊・ハギ 台B").F[3] == hagi && Presets.Versions.First(r => r.Name == "試遊・死神と墓守").F[0] == hagi;
+                && VersionsH390().First(r => r.Name == "試遊・ハギ 台B").F[3] == hagi && VersionsH390().First(r => r.Name == "試遊・死神と墓守").F[0] == hagi;
             bool past = h389.Select(r => r.Name).SequenceEqual(want389) && h389.First(r => r.Name == "版・R5 ハギ").F[3] == r5m && h389.First(r => r.Name == "版・R5 死神と墓守").F[0] == r5m
                 && !h389.SelectMany(r => r.F.Occupied()).Any(o => o.Def == hagi)
                 && VersionsH388().Count(r => r.Name is "版・H3 ハギ" or "版・H3 死神と墓守") == 2 && !VersionsH388().Any(r => r.Name.StartsWith("版・R5", StringComparison.Ordinal))
                 && Sh387Diag.Play().Select(r => r.Name).SequenceEqual(h389.Where(r => r.Name.StartsWith("試遊・", StringComparison.Ordinal)).Select(r => r.Name));
-            var added = Presets.Versions.Where(r => VersionRows390.Contains(r.Name)).ToList();
+            var added = VersionsH390().Where(r => VersionRows390.Contains(r.Name)).ToList();
             bool tail = added.Count == 2 && names.TakeLast(2).SequenceEqual(VersionRows390)
                 && added.First(r => r.Name == "版・VA ハギ").F.Occupied().Count(o => o.Def == va) == 1 && added.First(r => r.Name == "版・移動 ハギ").F.Occupied().Count(o => o.Def == hagi) == 1
                 && Som307Diag.Seats(added.First(r => r.Name == "版・VA ハギ").F) == Som307Diag.Seats(Presets.HagiDeath389(va))
                 && Som307Diag.Seats(added.First(r => r.Name == "版・移動 ハギ").F) == Som307Diag.Seats(Put(CompareBuilds().First(r => r.Name == MoveRows[0]).F, 1, hagi));
             var vers = new[] { v1, v2, v3, va };
-            bool inside = !CompareBuilds().Concat(CrossBuilds()).Concat(Presets.Playtest).Concat(Presets.Versions.Where(r => r.Name != "版・VA ハギ")).SelectMany(r => r.F.Occupied()).Any(o => vers.Contains(o.Def) || o.Def.Id.EndsWith("_plain388", StringComparison.Ordinal));
+            bool inside = !CompareBuilds().Concat(CrossBuilds()).Concat(Presets.Playtest).Concat(VersionsH390().Where(r => r.Name != "版・VA ハギ")).SelectMany(r => r.F.Occupied()).Any(o => vers.Contains(o.Def) || o.Def.Id.EndsWith("_plain388", StringComparison.Ordinal));
             Expect("試遊の台: 「版・R5 ハギ」「版・R5 死神と墓守」→「試遊・ハギ 台B」「試遊・死神と墓守」（規定のハギ）・末尾に「版・VA ハギ」「版・移動 ハギ」・第389期の一覧 `VersionsH389`（名前と R5m を戻し、ハギは旧）／ `VersionsH388` ／ `sh387` の試遊の台は第389期の並び・替えた台 ／ 素体 ／ V1〜V3 は器具の中だけ",
                 rename && past && tail && inside, string.Join("、", names.TakeLast(4)));
         }

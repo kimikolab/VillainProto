@@ -2513,6 +2513,8 @@ public sealed class UnitTally
     /// 刈り取りで倒した数。割った一撃の主の側: 魂の線を割った回数 ／ そのうち1ターン1回の門を外して数えた分（V3）。
     /// </summary>
     public long R390AimSwitch, R390AimMark, R390ColumnEarly, R390ColumnEarlyUnits, R390ColumnStops, R390ReapKills, R390LinesCrossed, R390LinesRepeat;
+    /// <summary>第391期（ハギの追撃の刈り取り P1 ／ P1w ／ P1h・**計数のみ**）: 追撃の刈り取り（回 ／ HP ／ 2 連の2発目で ／ 倒した数）・追撃の列ごと（振り ／ 体 ／ HP）。</summary>
+    public long R391ChaseReaps, R391ChaseReapHp, R391ChaseReapSecond, R391ChaseReapKills, R391ChaseColumn, R391ChaseColumnUnits, R391ChaseColumnHp;
     public int R378Layer6Turn, R378Layer9Turn;
     public long R377ChainSaved;
     public int R377PeakTurn, R377AwakeTurn;
@@ -3848,6 +3850,8 @@ public sealed class UnitTally
         R389MarksPlaced += o.R389MarksPlaced; R389MarkReaps += o.R389MarkReaps; R389MarkByTurn = AddArr(R389MarkByTurn, o.R389MarkByTurn);   // 第389期の補足
         R390AimSwitch += o.R390AimSwitch; R390AimMark += o.R390AimMark; R390ColumnEarly += o.R390ColumnEarly; R390ColumnEarlyUnits += o.R390ColumnEarlyUnits; R390ColumnStops += o.R390ColumnStops;
         R390ReapKills += o.R390ReapKills; R390LinesCrossed += o.R390LinesCrossed; R390LinesRepeat += o.R390LinesRepeat;   // 第390期
+        R391ChaseReaps += o.R391ChaseReaps; R391ChaseReapHp += o.R391ChaseReapHp; R391ChaseReapSecond += o.R391ChaseReapSecond; R391ChaseReapKills += o.R391ChaseReapKills;
+        R391ChaseColumn += o.R391ChaseColumn; R391ChaseColumnUnits += o.R391ChaseColumnUnits; R391ChaseColumnHp += o.R391ChaseColumnHp;   // 第391期
         if (R378Layer6Turn == 0) R378Layer6Turn = o.R378Layer6Turn;
         if (R378Layer9Turn == 0) R378Layer9Turn = o.R378Layer9Turn;
         R377Raises += o.R377Raises; R377RaiseTurnSum += o.R377RaiseTurnSum; R377NoSeat += o.R377NoSeat; R377CostSelf += o.R377CostSelf; R377RotLost += o.R377RotLost; R377RotDeaths += o.R377RotDeaths; R377Sprouts += o.R377Sprouts; R377SproutTurnSum += o.R377SproutTurnSum; R377SproutNoSeat += o.R377SproutNoSeat;   // 第377期

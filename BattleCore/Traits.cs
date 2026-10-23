@@ -1008,6 +1008,10 @@ public enum TraitId
     // --- 第390期で足した札（指示書 design/PHASE390_HAGI_MOVE_SPEC.md §3）。段の動きに意味を持たせる（ハギの版 V1 ／ V2 ／ V3 ／ VA・`All` の外）。保持者 0 枚 ---
     HagiAimLine,          // 狙いを刈れる敵に（V1）: 刈り取りの狙いを、線（魂の段 ＋ 刈りの印）を切っている敵のうち HP がいちばん低い敵にする（同じなら席番号）。いなければ今どおり HP の割合がいちばん低い敵（**判定は engine の `ReapAim388`**・札そのものは印）
     HagiColumnEarly,      // 列ごと刈るを早く（V2）: 列をまとめて刈るのを魂 9 → 6 に。魂 6〜8 で列ごと刈った振りの後は再行動しない・魂 9 では今どおり再行動（2 回まで）（**判定は engine の `ReapTurn388`**・札そのものは印）
+    // --- 第391期で足した札（指示書 design/PHASE391_HAGI_CHASE_REAP_SPEC.md §2）。追撃でも刈り取る（ハギの版 P1 ／ P1w ／ P1h・`All` の外）。保持者 0 枚 ---
+    HagiPursuitReap,      // 追撃の刈り取り（P1〜）: 追撃の一撃ごとに、その一撃の前に的の HP がその的の線（魂の段 ＋ 刈りの印）以下なら、ふつうの一撃の代わりに刈り取る（手番の刈り取りと同じ一撃）。2 連の2発目の前にもう一度判定・手番の外なので再行動しない（**判定は engine の `PursuitStrike388`**・札そのものは印）
+    HagiPursuitColumn,    // 追撃の列ごと（P1w）: 列をまとめて刈る魂（9）なら、追撃の刈り取りも的と同じ列 ＋ 中列の線以下の敵をまとめて刈る（**判定は engine の `PursuitStrike388`**・札そのものは印）
+    HagiPursuitHeavy,     // 追撃 2 割（P1h）: 追撃の上乗せを、その敵が失った HP の 1 割 → 2 割に（**判定は engine の `PursuitStrike388`**・札そのものは印）
     HagiLineEvery,        // 線を割るたび数える（V3）: 魂の「線を割る +1」の1つの敵の1つの線につき1ターン1回の門を外す（回復で戻されてまた割れば、また +1）（**判定は engine の `DepthCross389`**・札そのものは印）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -10456,6 +10460,8 @@ public sealed class HagiReaperTrait : Trait
 public sealed class HagiDepthTrait : Trait
 {
     public const int Cap = 9, PerDeath = 2, PerLine = 1, SweepAt = 3, TwinAt = 6, ColumnAt = 9, Spill = 2;
+    /// <summary>第391期（P1h・<see cref="TraitId.HagiPursuitHeavy"/>）: 追撃の上乗せ（その敵が失った HP の %）。札が無ければ <see cref="HagiReaperTrait.PursuitLostPercent"/>（1 割）。</summary>
+    public const int PursuitHeavyPercent = 20;
     /// <summary>刈りの印（R5m）: 1つの敵の印の上限 ／ 印1つで深くなる線（‰）／ 印を足した線の上限（‰）。印は敵の側の私有キー <see cref="MarkKey"/>。</summary>
     public const int MarkCap = 5, MarkStepPermil = 50, MarkLineMaxPermil = 600;
     public const string MarkKey = "hagiReapMark389";
@@ -19808,6 +19814,9 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.HagiAimLine),                      // 第390期（狙いを刈れる敵に V1・印・判定は engine）
         new MarkOnlyTrait(TraitId.HagiColumnEarly),                  // 第390期（列ごと刈るを早く V2・印・判定は engine）
         new MarkOnlyTrait(TraitId.HagiLineEvery),                    // 第390期（線を割るたび数える V3・印・判定は engine）
+        new MarkOnlyTrait(TraitId.HagiPursuitReap),                  // 第391期（追撃の刈り取り P1〜・印・判定は engine）
+        new MarkOnlyTrait(TraitId.HagiPursuitColumn),                // 第391期（追撃の列ごと P1w・印・判定は engine）
+        new MarkOnlyTrait(TraitId.HagiPursuitHeavy),                 // 第391期（追撃 2 割 P1h・印・判定は engine）
         new EruptTrait(),      // 第180期
         new SmearTrait(),      // 第180期
         new SpitTrait(),       // 第180期

@@ -1611,3 +1611,10 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **線を割るたび数える（V3・`HagiLineEvery`・`DepthCross389`）**: 1つの敵の1つの線につき1ターン1回の門を、札の保持者にだけ掛けない。札の無い保持者には門のまま（保持者がいない戦は `_everyLive390` の比較1つで今どおり）。
 - **計数のみ**: `DepthCross389` に割った一撃の主（`source`）を渡し、その主の帳簿に `R390LinesCrossed` ／ `R390LinesRepeat`。`ReapBody388` の後に `R390ReapKills`。
 - 新しい出来事の種類は足していない。
+
+## 第391期 —— 追撃でも刈り取る（ハギの版 P1 ／ P1w ／ P1h）
+
+- **追撃の刈り取り（`PursuitStrike388` の頭・`HagiPursuitReap`）**: 追撃の一撃ごとに、`PerformAttack` の前に的の HP が線（`ReapLineFor389` ＝ 魂の段 ＋ 刈りの印）以下なら、`_hagiHitReap388` を立てて手番の刈り取りと同じ一撃（`ReapBody388`）にする。`HalfCross388` の 2 連は1発ずつ `PursuitStrike388(h, target, k)` を呼ぶので、2発目の前にもう一度判定する。再行動はしない（手番の外）。
+- **追撃の列ごと（P1w・`HagiPursuitColumn`）**: 刈るとき `HagiDepthTrait.Column`（魂 9）なら、的と同じ列 ＋ 中列（`SweepTargets`）の線以下の敵を振る前に控え、`_reapNext388` で同じ一撃を当てる（`ReapTurn388` の列ごとと同じ作り）。
+- **追撃 2 割（P1h・`HagiPursuitHeavy`）**: 上乗せの割合を `HagiDepthTrait.PursuitHeavyPercent`（20）に。
+- 保持者がいない戦は `_chaseLive391` の比較1つで抜ける（追撃のログの文は「1 割」のまま同じ）。計数のみ: `R391ChaseReaps` ／ `R391ChaseReapHp` ／ `R391ChaseReapSecond` ／ `R391ChaseReapKills` ／ `R391ChaseColumn*`。新しい出来事の種類は足していない。
