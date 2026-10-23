@@ -149,11 +149,11 @@
 - **自己検査**: `sh392 check` すべて ○（段0 の規定 ／ 旧 ／ 固定の口 ／ 試遊の台・規定 ＝ P1h の動き（3 台 × 4 波 × seed 0..4 の 60 戦の出来事の並びと `compare` のハギの 5 行 × seed 0..19 で差 0）・第388〜391期の版の駒の値・`docs/` と手番の軸の駒の行（第391期の HEAD と同じ）・`checkup`・素体 ／ 探索の台は器具の中だけ・verbose ／ 再現・PickOne ／ Roll）。`sh391` ／ `sh390` ／ `sh389` ／ `sh388` ／ `sh387` ／ `elite` ／ `boss283` ／ `checkup` の check も ○。
 - **直した器具**: `sh390` ／ `sh391`（「規定」の列 → `HagiH391`）・`sh390 check` ／ `sh391 check`（規定のハギの札の検査を `HagiH391` に・`docs/units.md` のハギの行を第391期の HEAD（1cabf2f9）の表と比べる・試遊の台の項目を `VersionsH391()` で読む・第391期の札の「保持者 0 枚」は規定のハギを除いて数える）。`Common.PinH391` ／ `Pin391` ／ `VersionsH391` を足し、`VersionsH390` はそこから作る・`PinH389` は `HagiH391` も旧へ。`checkup` の札の分類表: 追撃の刈り取り ／ 追撃 2 割を「第392期から規定（ハギ）」に。照合の台帳に `sh392 check`。
 - **作戦マップ**: DemoApp ビルド 0 エラー・`--map11-phase0` ／ `171` ／ `172` ／ `173` すべて `ok=True`・`NineWaveCheck` ／ `DischargeCheck` ／ `ScorePanelCheck` `ok=True`。
-- **過去の器具の照合（軽い・`-Units hagi,tomo,dolga,gan,rica`・駒の名前は台帳の自動の表で引けた）**: HEAD（ade2f335）の保存は無いが、BattleCore ／ BattleSim が同じ第391期の保存（b613e712）と比べた。**照合 65 本: 一致 64 ／ 差 0 ／ 保存に無い 1（`sh392 check`）**（§7-3 でコミットの後に回し直す）。
+- **過去の器具の照合（軽い・`-Units hagi,tomo,dolga,gan,rica`・駒の名前は台帳の自動の表で引けた）**: HEAD（ade2f335）の保存は無いが、BattleCore ／ BattleSim が同じ第391期の保存（b613e712）と比べた。**照合 65 本: 一致 64 ／ 差 0 ／ 保存に無い 1（`sh392 check`）**（コミットの後は §7-3）。
 - **`sweep fast`**: 22 本・4.4 分・異常終了 0 本・上限 0 本——**合格**（`.tmp/p392/sweep_fast.txt`）。`Presets`（試遊の台の入れ替え）と駒（規定のハギ）が動いたので、`sweep nightly` でも拾われる。
 - コミットは自分の変更パスだけ（`DemoApp/` ／ `design/DEMOAPP_HISTORY.md` ／ `tools/comfy_idle_loop` ／ `design/CODEX_BRIEF_*.md` ／ `design/art` などの作業中のファイルは含めていない）。**push の前に、ローカルの master に Codex のコミット 2 本（35b7c7ab「哀歌のエレの立ち絵と歌唱差分を追加」・ade2f335「リィカの立ち絵をリメイクしリィカとヒヨの表示サイズを調整」・どちらも DemoApp ／ design のみ）が未 push で乗っていた**——この期の push で一緒に origin へ出た。
 
 ### 7-3. コミットの後の照合
 
-（コミットの後に追記する）
+コミット（c1111906）の後に、基準を第391期の保存（b613e712）に固定した写しの器具で回し直した——**照合 65 本: 一致 64 ／ 差 0 ／ 保存に無い 1（`sh392 check`）**。期の最後に `promote`（c1111906 ＝ b613e712 ＋ 65 本）。
 
