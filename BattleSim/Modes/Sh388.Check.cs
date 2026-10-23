@@ -217,10 +217,11 @@ static partial class Sh388Diag
             var everywhere = CompareBuilds().Concat(CrossBuilds()).Concat(Presets.Playtest).Concat(Presets.Versions).SelectMany(r => r.F.Occupied()).Select(o => o.Def).ToList();
             bool inside = !everywhere.Any(d => d.Id.EndsWith("_plain388", StringComparison.Ordinal)) && !UnitCatalog.Everyone.Any(d => d.Id.EndsWith("_plain388", StringComparison.Ordinal))
                 && PlainHagi.Traits.Count == 0 && PlainHagi.MaxHp == 62 && PlainHagi.Attack == 16 && PlainHagi.Speed == 7;
-            var verRows = Presets.Versions.Where(r => r.F.Occupied().Any(o => Vers.Any(v => v.D == o.Def))).Select(r => r.Name).ToList();
+            var v388 = VersionsH388();   // 第389期: 第388期の一覧（版の H3 の2台がいる・R5 の2台を外した）
+            var verRows = v388.Where(r => r.F.Occupied().Any(o => Vers.Any(v => v.D == o.Def))).Select(r => r.Name).ToList();
             bool rows2 = verRows.SequenceEqual(new[] { "版・H3 ハギ", "版・H3 死神と墓守" })
-                && Presets.Versions.Where(r => verRows.Contains(r.Name)).All(r => r.F.Occupied().Count(o => o.Def == UnitCatalog.HagiH3) == 1)
-                && VersionsH387().Length == Presets.Versions.Length - 2 && !VersionsH387().Any(r => verRows.Contains(r.Name))
+                && v388.Where(r => verRows.Contains(r.Name)).All(r => r.F.Occupied().Count(o => o.Def == UnitCatalog.HagiH3) == 1)
+                && VersionsH387().Length == v388.Length - 2 && !VersionsH387().Any(r => verRows.Contains(r.Name))
                 && CompareBuilds().Concat(CrossBuilds()).Concat(Presets.Playtest).All(r => !r.F.Occupied().Any(o => Vers.Any(v => v.D == o.Def)));
             var b0 = AtkBoards().Concat(RicaBoards()).Select(b => S307Seats(b.F)).ToArray();
             foreach (var b in AtkBoards()) _ = ColBoard(b, UnitCatalog.HagiH3);

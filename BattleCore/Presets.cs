@@ -994,12 +994,19 @@ public static class Presets
         // 第386期: 胞子らしい胞子の版の台（並びは試遊・死の連鎖・ムグだけ版 ＝ 弾けて毒 P ／ 寄生 Q）。採否はポン。S0 ／ PQ と他の台の版は `sh386` の中で組む。
         // 第387期: 弾けて毒（P）を規定にしたので「版・弾け 死の連鎖」は外した（規定と同じ・`Common.VersionsH386` が過去の器具のために足し戻す）。寄生（Q）は保留の版として残す。
         ("版・寄生 死の連鎖", DeathChain377(mug: UnitCatalog.MugQ)),
-        // 第388期: 大鎌で刈る死神（ハギの版 H3）を試遊で触る2台。採否はポン（H1 ／ H2 ／ H3s と他の台は `sh388` の中で組む）。
-        //   版・H3 ハギ: 「試遊・燃焼 ポンの台」のホタの席（中央）に H3——`sh388 atk`（アタッカーの1枚を替えた5台）で H3 の 4 波の平均がいちばん良かった台。
-        //   版・H3 死神と墓守: 「試遊・死の連鎖」のゾトの席（前1）に H3——`sh388 rica` の2台のうち良かった方（墓守のリィカと死神のハギが同じ台に立つ）。
-        ("版・H3 ハギ", HagiBurn388()),
-        ("版・H3 死神と墓守", HagiDeath388()),
+        // 第388期: 「版・H3 ハギ」「版・H3 死神と墓守」は第389期に外した（並びは `HagiBurn388` ／ `HagiDeath388`・過去の器具は `Common.VersionsH388`）。
+        // 第389期: 魂は「鎌が届く深さ」の版を試遊で触る2台。R5 と R5m のうち良かった方（両方の台で R5m）を置いた。採否はポン（R4 ／ R5n と他の台は `sh389` の中で組む）。
+        //   版・R5 ハギ: 「試遊・ヴィオ 台B」のカドの席（後1）に R5m——`sh389 swap` のアタッカー以外の席の最良（1位の「試遊・死の連鎖 前1」は下の台と同じになるので2位）。
+        //   版・R5 死神と墓守: 「試遊・死の連鎖」のゾトの席（前1）に R5m。
+        ("版・R5 ハギ", HagiPlay389()),
+        ("版・R5 死神と墓守", HagiDeath389()),
     };
+
+    /// <summary>第389期: 「版・R5 ハギ」の並び（試遊・ヴィオ 台B のカドの席（後1）にハギの版: 前1 ヴィオ ／ 前3 ミサ ／ 中央 ヒサ ／ 後1 ハギ ／ 後3 アカ）。既定は R5m。</summary>
+    public static Formation HagiPlay389(UnitDef? hagi = null) { var f = BoardBVio375().Clone(); f[3] = hagi ?? UnitCatalog.HagiR5m; return f; }
+
+    /// <summary>第389期: 「版・R5 死神と墓守」の並び（試遊・死の連鎖のゾトの席（前1）にハギの版）。既定は R5m。</summary>
+    public static Formation HagiDeath389(UnitDef? hagi = null) { var f = DeathChain377().Clone(); f[0] = hagi ?? UnitCatalog.HagiR5m; return f; }
 
     /// <summary>第388期: 「版・H3 ハギ」の並び（試遊・燃焼 ポンの台のホタの席（中央）にハギの版）。既定は H3。</summary>
     public static Formation HagiBurn388(UnitDef? hagi = null) { var f = BurnPon(UnitCatalog.Borg, UnitCatalog.Hota, UnitCatalog.Hiyo).Clone(); f[2] = hagi ?? UnitCatalog.HagiH3; return f; }

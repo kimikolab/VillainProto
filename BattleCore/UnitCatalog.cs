@@ -2885,6 +2885,25 @@ public static class UnitCatalog
     public static readonly UnitDef HagiH3s = HagiOn388(new[] { TraitId.HagiReap, TraitId.HagiHalfPursuit, TraitId.HagiSoul, TraitId.HagiHaste, TraitId.HagiScytheSpill },
         HagiReapText + HagiPursuitText + HagiSoulText + "。刈るたび、速くなる", HagiSpillText + "。刈る相手がいなければ、魂は薄れていく");
 
+    // ---- 第389期: 魂は「鎌が届く深さ」（ハギの版 R5 ／ R4 ／ R5n・指示書 design/PHASE389_HAGI_DEPTH_SPEC.md §2・`All` に入れない）----
+    // 土台は第388期の H2（刈り取り ／ 再行動 ／ 追撃）。巻き込みは固定の 2・魂は攻撃力を上げず刈り取りの線を深くする。
+    const string HagiDepthReapText = "大鎌で、弱った敵を刈り取る（HP が線を切った敵は一振りで倒す）。倒せば、もう一度振る";
+    static string HagiDepthText(int maxTenths) => $"。敵が倒れ、弱っていくほど魂が溜まり、鎌の届く線が深くなる（2 割 → 最大 {maxTenths} 割）";
+    const string HagiMovesText = "。魂が溜まると鎌は薙ぎ、斬りかかりは二度になり、ついには一振りで列ごと刈る";
+    const string HagiDepthMinusText = "大鎌の振りは、隣にいる仲間も巻き込む。刈る相手がいなければ、魂は薄れていく";
+    /// <summary>ハギの版 R5（第389期）: H2 ＋ 魂の深さ（線 2 → 最大 5 割）＋ 段の動き（薙ぎ ／ 追撃 2 連 ／ 列ごと刈る）・巻き込みは固定の 2。</summary>
+    public static readonly UnitDef HagiR5 = HagiOn388(new[] { TraitId.HagiReap, TraitId.HagiHalfPursuit, TraitId.HagiDepthSoul, TraitId.HagiSoulMoves, TraitId.HagiSpillFixed },
+        HagiDepthReapText + HagiPursuitText + HagiDepthText(5) + HagiMovesText, HagiDepthMinusText);
+    /// <summary>ハギの版 R4（第389期）: R5 の線を 2 ／ 2.5 ／ 3 ／ 4 割にした（動きの変化は同じ）。</summary>
+    public static readonly UnitDef HagiR4 = HagiOn388(new[] { TraitId.HagiReap, TraitId.HagiHalfPursuit, TraitId.HagiDepthSoul, TraitId.HagiDepthShallow, TraitId.HagiSoulMoves, TraitId.HagiSpillFixed },
+        HagiDepthReapText + HagiPursuitText + HagiDepthText(4) + HagiMovesText, HagiDepthMinusText);
+    /// <summary>ハギの版 R5n（第389期・対照）: R5 の線だけ（動きの変化なし——ずっと単体・追撃は1回・刈り取りは1体ずつ）。</summary>
+    /// <summary>ハギの版 R5m（第389期の補足）: R5 ＋ 刈りの印（斬撃 ／ 薙ぎ ／ 追撃が当たった敵に印・印1つで線 +5%・合わせて最大 6 割）。</summary>
+    public static readonly UnitDef HagiR5m = HagiOn388(new[] { TraitId.HagiReap, TraitId.HagiHalfPursuit, TraitId.HagiDepthSoul, TraitId.HagiSoulMoves, TraitId.HagiReapMark, TraitId.HagiSpillFixed },
+        HagiDepthReapText + HagiPursuitText + HagiDepthText(5) + HagiMovesText + "。斬りつけた敵には刈りの印が刻まれ、印の数だけ鎌が深く届く（1つ +5%・合わせて最大 6 割）", HagiDepthMinusText);
+    public static readonly UnitDef HagiR5n =HagiOn388(new[] { TraitId.HagiReap, TraitId.HagiHalfPursuit, TraitId.HagiDepthSoul, TraitId.HagiSpillFixed },
+        HagiDepthReapText + HagiPursuitText + HagiDepthText(5), HagiDepthMinusText);
+
     public static readonly UnitDef Sekki = new()
     {
         Id = "sekki",

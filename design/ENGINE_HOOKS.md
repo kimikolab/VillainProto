@@ -1585,9 +1585,20 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 
 ## 第388期 —— 大鎌で刈る死神（ハギの版 H1 ／ H2 ／ H3 ／ H3s）
 
-- **刈り取りの手番（SwingTurnBody → ReapTurn388）**: 札 HagiReap の保持者の通常の手番。ふつうの攻撃が届く敵（TargetPool）のうち HP の割合がいちばん低い駒（同じなら席番号）を的に固定（_forcedTarget）し、最大HPの 2 割以下（魂 6 から 3 割）なら刈り取り、そうでなければ PerformAttack でふつうに斬る。自分の撃破（Kills の差・追撃での撃破は除く）があれば同じ手番でもう一度（2 回まで）。乱数を引かない。
-- **刈り取りの一撃**: PerformAttackBody の一発の札（_hagiHitActor388・ゴルムの _golmHitActor と同じ作法）で打点を残りの HP にし、ApplyDamageBody の入口の札（_reapNext388）で ReapBody388 へ回る——回避 ／ 逸らし ／ 軽減 ／ 肩代わり ／ 破片 ／ 身構え ／ 軛 ／ 焼け残り ／ 逃げ足 ／ 庇いを通らずに残りの HP をそのまま引く。台本（Damage）・帳簿・OnDamaged ／ OnAllyDamaged ／ HandleDeath はふつうの一撃と同じ（巻き込み則 ／ 呪いの共有 ／ 感電の起爆は起きない）。
-- **5 割を割った（ApplyDamageBody の HP を引いた後・HandleDeath の枝の else）→ HalfCross388**: 引く前の HP が引く前の最大HPの 5 割より上で、引いた後に生きていて 5 割以下。1つの駒に1ターンに1回（敵の側の私有キー HagiReaperTrait.CrossTurnKey）。相手の陣営のハギの魂 +1（誰が割っても）→ 追撃の札（HagiHalfPursuit）の保持者が割り込んで一撃（攻撃力 ＋ 失った HP の 1 割を一発の札で足す・単体・的は固定・Interrupt の中・経路は追い打ちと同じ OutOfTurnRoute.Pursue・ハギ自身の一撃で割ったときは起きない）。
-- **大鎌の巻き込み（ScytheSpill388）**: 斬撃 ／ 刈り取り ／ 追撃のたび、隣の味方それぞれに振る前の攻撃力の 1 割（最低 1）の味方からの傷（ApplyDamage(isFriendlyFire: true)）。
-- **行動順の速さ（TurnSpeed）**: 加速（HagiHaste）の保持者がいる戦だけ私有キー HagiReaperTrait.HasteKey を足す。
-- 保持者がいない戦は _reapLive ／ _hasteLive388 の比較1つで全部抜ける（規定の compare 66 行 330 セル ずれ 0）。新しい出来事の種類は足していない（見せ場は Highlight）。
+- **刈り取りの手番（`SwingTurnBody` → `ReapTurn388`）**: 札 `HagiReap` の保持者の通常の手番。ふつうの攻撃が届く敵（`TargetPool`）のうち HP の割合がいちばん低い駒（同じなら席番号）を的に固定（`_forcedTarget`）し、最大HPの 2 割以下（魂 6 から 3 割）なら刈り取り、そうでなければ `PerformAttack` でふつうに斬る。自分の撃破（`Kills` の差・追撃での撃破は除く）があれば同じ手番でもう一度（2 回まで）。乱数を引かない。
+- **刈り取りの一撃**: `PerformAttackBody` の一発の札（`_hagiHitActor388`・ゴルムの `_golmHitActor` と同じ作法）で打点を残りの HP にし、`ApplyDamageBody` の入口の札（`_reapNext388`）で `ReapBody388` へ回る——回避 ／ 逸らし ／ 軽減 ／ 肩代わり ／ 破片 ／ 身構え ／ 軛 ／ 焼け残り ／ 逃げ足 ／ 庇いを通らずに残りの HP をそのまま引く。台本（`Damage`）・帳簿・`OnDamaged` ／ `OnAllyDamaged` ／ `HandleDeath` はふつうの一撃と同じ（巻き込み則 ／ 呪いの共有 ／ 感電の起爆は起きない）。
+- **5 割を割った（`ApplyDamageBody` の HP を引いた後・`HandleDeath` の枝の `else`）→ `HalfCross388`**: 引く前の HP が引く前の最大HPの 5 割より上で、引いた後に生きていて 5 割以下。1つの駒に1ターンに1回（敵の側の私有キー `HagiReaperTrait.CrossTurnKey`）。相手の陣営のハギの魂 +1（誰が割っても）→ 追撃の札（`HagiHalfPursuit`）の保持者が割り込んで一撃（攻撃力 ＋ 失った HP の 1 割を一発の札で足す・単体・的は固定・`Interrupt` の中・経路は追い打ちと同じ `OutOfTurnRoute.Pursue`・ハギ自身の一撃で割ったときは起きない）。
+- **大鎌の巻き込み（`ScytheSpill388`）**: 斬撃 ／ 刈り取り ／ 追撃のたび、隣の味方それぞれに振る前の攻撃力の 1 割（最低 1）の味方からの傷（`ApplyDamage(isFriendlyFire: true)`）。
+- **行動順の速さ（`TurnSpeed`）**: 加速（`HagiHaste`）の保持者がいる戦だけ私有キー `HagiReaperTrait.HasteKey` を足す。
+- 保持者がいない戦は `_reapLive` ／ `_hasteLive388` の比較1つで全部抜ける（規定の `compare` 66 行 330 セル ずれ 0）。新しい出来事の種類は足していない（見せ場は `Highlight`）。
+- （第389期に直した: 第388期にこの節を足したとき、PowerShell の here-string で `` ` `` が落ちていた。文は同じ。）
+
+## 第389期 —— 魂は「鎌が届く深さ」（ハギの版 R5 ／ R4 ／ R5n ／ R5m）
+
+- 土台は第388期の口（`ReapTurn388` ／ `ReapBody388` ／ `HalfCross388` ／ `ScytheSpill388`）。**第388期の版は1ビットも変えていない**（刈り取りの線を ‰ で読むようにしたが H1〜H3s は `ReapLine × 10` ＝ 同じ判定・`sh388` の `cmp` ／ `swap` ／ `atk` ／ `rica` の出力が第388期と一致）。
+- **線を割る（`ApplyDamageBody` の HP を引いた後・`HandleDeath` の枝の `else` → `DepthCross389`）**: 魂の深さ（`HagiDepthSoul`）の保持者がいる戦だけ、8割 ／ 5割 ／ 2割を上から下へ割ったかを見る（生きている駒だけ・線ごとに1つの駒に1ターンに1回・敵の側の私有キー `HagiDepthTrait.LineKey`）。魂を足してから第388期の 5 割の判定（追撃）へ進む。
+- **刈り取りの線**: `HagiReaperTrait.ReapLinePermil`（魂の深さの表 2 ／ 3 ／ 4 ／ 5 割・浅い線 2 ／ 2.5 ／ 3 ／ 4 割）。刈りの印（`HagiReapMark`・R5m）の保持者は `ReapLineFor389` が的ごとに印1つ +5%（合わせて最大 6 割）を足す。
+- **列をまとめて刈る（`ReapTurn388` の中・段の動きの札 ＋ 魂 9）**: 刈り取る前に、的と同じ列 ＋ 中列（薙ぎの巻き込みと同じ表 `SweepTargets`）の敵のうち線以下の敵を控え、的を刈った後に `_reapNext388` で同じ刈り取りの一撃を当てる（巻き込みは1振りで1回）。
+- **刈りの印（`ApplyDamageBody` の HP を引いた直後 → `ReapMark389`）**: 札の保持者が出どころの一撃が HP に届き、相手が生きていれば印 +1（上限 5・刻み ／ 徴収 ／ 中継 ／ 共有は除く・刈り取りの一撃は `ReapBody388` を通るので付かない）。
+- **固定の巻き込み**: `SpillAmount388` が `HagiSpillFixed` なら 2。
+- 保持者がいない戦は `_depthLive389` ／ `_markLive389` の比較1つで抜ける（規定の `compare` 66 行 330 セル ずれ 0）。新しい出来事の種類は足していない。

@@ -9727,6 +9727,8 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.SoulSplitHalf) || u.HasTrait(TraitId.SoulSplitTen)) _soulLive = true;   // 第381期（魂を分ける・起き上がり）
         if ((u.HasTrait(TraitId.HagiReap) || u.HasTrait(TraitId.HagiHalfPursuit) || u.HasTrait(TraitId.HagiSoul)) && !_reapHolders.Contains(u)) { _reapLive = true; _reapHolders.Add(u); }   // 第388期（ハギの版・刈り取り ／ 半分割り）
         if (u.HasTrait(TraitId.HagiHaste)) _hasteLive388 = true;   // 第388期（加速・行動順の速さ）
+        if (u.HasTrait(TraitId.HagiDepthSoul)) _depthLive389 = true;   // 第389期（魂の深さ・線を割る）
+        if (u.HasTrait(TraitId.HagiReapMark)) _markLive389 = true;     // 第389期の補足（刈りの印 R5m）
         if (u.HasTrait(TraitId.VioRetchHalf) || u.HasTrait(TraitId.VioRetchThird)) { _retchLive = true; _retchHolders.Add(u); }   // 第373期（ヴィオの吐き戻し A1 ／ A2）
         if (CommandTrait.BurstUnit(u) > 0) { _burstLive = true; _burstHolders.Add(u); }   // 第321期（HQ-a ／ HQ-b・溜まったら吐く）
         if (u.HasTrait(TraitId.HisaCover)) _coverHolders.Add(u);       // 第301期（HC・庇い）
@@ -14611,6 +14613,9 @@ public sealed class BattleContext
         target.Hp -= amount;
         // 第355期（N ／ U・版）: 呪われた傷 ／ ウツの爪痕。**実際に減った HP** を最大HPから削る。保持者がいなければ比較1つで抜ける。
         if (_scar355Live && target.Hp > 0 && hpBefore120 > target.Hp) Scar355(target, source, hpBefore120 - target.Hp, hexShare || relayed);
+        // 第389期の補足（R5m）: ハギの斬撃 ／ 薙ぎ ／ 追撃が HP に届いた敵に刈りの印（倒れた一撃 ／ 刻み ／ 徴収 ／ 中継 ／ 共有は除く）。**保持者がいなければ比較1つで抜ける。**
+        if (_markLive389 && target.Hp > 0 && source is not null && source.TeamId != target.TeamId && !burnTick && !levy && !relayed && !hexShare && source.HasTrait(TraitId.HagiReapMark))
+            ReapMark389(target, source);
         // 第304期（HB）: 粛の保持者が傷を受けたら、その保持者の次の手番の始まりまで沈黙が破れる。**版の保持者がいなければ比較1つで抜ける。**
         if (_hushBreakLive && amount > 0) HushWound(target);
         // 第120期。**盤面から実際に減った HP**（過剰分を除く）。誰も読んで分岐しない。
@@ -14795,9 +14800,12 @@ public sealed class BattleContext
             HandleDeath(target, shockKillerSet ? shockKiller : source);   // 第214期: 放電で倒れた駒の撃破者は連鎖を起こした一撃の主
         }
         // 第388期（ハギの版）: 5 割を上から下へ割った（生きている駒だけ・倒れた一撃は死として数える）。**保持者がいなければ比較1つで抜ける。**
-        else if (_reapLive && (long)hpBefore120 * 100 > (long)maxBefore388 * HagiReaperTrait.HalfPercent
-                 && (long)target.Hp * 100 <= (long)target.MaxHp * HagiReaperTrait.HalfPercent)
-            HalfCross388(target, source);
+        else if (_reapLive)
+        {
+            if (_depthLive389) DepthCross389(target, hpBefore120, maxBefore388);   // 第389期（魂の深さ: 8割 ／ 5割 ／ 2割・追撃より先に魂を足す）
+            if ((long)hpBefore120 * 100 > (long)maxBefore388 * HagiReaperTrait.HalfPercent && (long)target.Hp * 100 <= (long)target.MaxHp * HagiReaperTrait.HalfPercent)
+                HalfCross388(target, source);
+        }
 
         // 第214期: 感電の起爆。**HP に届いた一撃**（この一撃で倒れた駒も）だけがここまで来る——破片が受け切った一撃・受け流し・
         // `lethal: false` で 0 になった一撃は上で返っている。**雷（1）は起爆しない。刻み（2 と `burnTick`）は K2 のときだけ。**
@@ -18138,6 +18146,48 @@ public sealed class BattleContext
     // **保持者がいなければ `_reapLive` ／ `_hasteLive388` の比較1つで全部抜ける。**
     // =================================================================================
     bool _reapLive, _hasteLive388;
+    /// <summary>第389期: 魂の深さ（`HagiDepthSoul`）の保持者がいる戦（8割 ／ 5割 ／ 2割の線を割ったかを見る・列をまとめて刈る）。</summary>
+    bool _depthLive389;
+    /// <summary>第389期の補足: 刈りの印（`HagiReapMark`）の保持者がいる戦。</summary>
+    bool _markLive389;
+
+    /// <summary>刈りの印（R5m）: ハギの一撃が HP に届いた敵に印 +1（上限 5・刈り取りの一撃は `ReapBody388` を通るのでここへは来ない）。</summary>
+    void ReapMark389(UnitState target, UnitState h)
+    {
+        int m = target.RawCounter(HagiDepthTrait.MarkKey);
+        UnitTally tt = TallyOf(target);
+        if (_turn >= 0 && _turn <= BattleEngine.MaxTurns) (tt.R389MarkByTurn ??= new long[BattleEngine.MaxTurns + 2])[_turn] = Math.Min(HagiDepthTrait.MarkCap, m + 1);   // 計数のみ（そのターンの終わりの印の数）
+        if (m >= HagiDepthTrait.MarkCap) return;
+        target.SetCounter(HagiDepthTrait.MarkKey, m + 1);
+        TallyOf(h).R389MarksPlaced++;   // 計数のみ
+        Log($"    {target.Name} に刈りの印が刻まれた（{m + 1}）", LogKind.Status);
+    }
+
+    /// <summary>その敵に対する刈り取りの線（‰）。刈りの印の札があれば、印1つにつき +5%（合わせて最大 6 割）。</summary>
+    int ReapLineFor389(UnitState h, UnitState e, int line)
+        => _markLive389 && h.HasTrait(TraitId.HagiReapMark)
+            ? Math.Min(HagiDepthTrait.MarkLineMaxPermil, line + HagiDepthTrait.MarkStepPermil * e.RawCounter(HagiDepthTrait.MarkKey))
+            : line;
+
+    /// <summary>
+    /// 第389期（魂の深さ）: 敵の HP が 8割 ／ 5割 ／ 2割を上から下へ割った（`ApplyDamageBody` の HP を引いた後・生きている駒だけ）。線ごとに1つの駒に1ターンに1回
+    /// （敵の側の私有キー `HagiDepthTrait.LineKey`）。1つの一撃で2本の線を割れば2つ。相手の陣営の魂の深さの保持者に魂 +1（誰が割っても）。
+    /// </summary>
+    void DepthCross389(UnitState target, int hpBefore, int maxBefore)
+    {
+        foreach (int line in HagiDepthTrait.Lines)
+        {
+            if (!((long)hpBefore * 100 > (long)maxBefore * line && (long)target.Hp * 100 <= (long)target.MaxHp * line)) continue;
+            string key = HagiDepthTrait.LineKey(line);
+            if (target.RawCounter(key) == _turn + 1) continue;
+            bool any = false;
+            foreach (UnitState h in _reapHolders) if (h.IsAlive && h.TeamId != target.TeamId && h.HasTrait(TraitId.HagiDepthSoul)) { any = true; break; }
+            if (!any) return;
+            target.SetCounter(key, _turn + 1);
+            foreach (UnitState h in _reapHolders.ToList())
+                if (h.IsAlive && h.TeamId != target.TeamId && h.HasTrait(TraitId.HagiDepthSoul)) HagiDepthTrait.Gain(this, h, HagiDepthTrait.PerLine, line);
+        }
+    }
     readonly List<UnitState> _reapHolders = new();
     /// <summary>次の `PerformAttack` の本体1回にだけ効く、ハギの一撃の札（打ち手・追撃の上乗せ・刈り取りか）。本体の最初の行で読んで消す。</summary>
     UnitState? _hagiHitActor388;
@@ -18157,7 +18207,8 @@ public sealed class BattleContext
 
     /// <summary>大鎌の巻き込みの量（攻撃力の 1 割・最低 1）。札が無ければ 0。振る前の攻撃力で決める。</summary>
     static int SpillAmount388(UnitState h)
-        => h.HasTrait(TraitId.HagiScytheSpill) ? Math.Max(1, h.CurrentAttack * HagiReaperTrait.SpillPercent / 100) : 0;
+        => h.HasTrait(TraitId.HagiSpillFixed) ? HagiDepthTrait.Spill   // 第389期（固定の巻き込み: 素の攻撃力 16 の 1 割 ＝ 2）
+         : h.HasTrait(TraitId.HagiScytheSpill) ? Math.Max(1, h.CurrentAttack * HagiReaperTrait.SpillPercent / 100) : 0;
 
     /// <summary>大鎌の巻き込み: 隣の味方それぞれに味方からの傷（`ApplyDamage`・庇い ／ 破片 ／ 惨禍などは今の味方の傷と同じ）。</summary>
     void ScytheSpill388(UnitState h, int amount)
@@ -18186,7 +18237,10 @@ public sealed class BattleContext
             if (!h.IsAlive || !TeamAlive(Opponent(h.TeamId))) return;
             UnitState? aim = ReapAim388(h);
             if (aim is null) return;
-            bool reap = aim.TeamId != h.TeamId && (long)aim.Hp * 100 <= (long)aim.MaxHp * HagiReaperTrait.ReapLine(h);
+            int baseLine = HagiReaperTrait.ReapLinePermil(h);   // 第389期: ‰（第388期の版は ReapLine × 10 ＝ 同じ判定）
+            int line = ReapLineFor389(h, aim, baseLine);        // 第389期の補足: 刈りの印で深くなる（札が無ければ同じ値）
+            bool reap = aim.TeamId != h.TeamId && (long)aim.Hp * 1000 <= (long)aim.MaxHp * line;
+            if (reap && line > baseLine && (long)aim.Hp * 1000 > (long)aim.MaxHp * baseLine) t.R389MarkReaps++;   // 計数のみ（印で深くなった線で刈った）
             int spill = SpillAmount388(h);
             long kills0 = t.Kills - t.R388PursuitKills;   // 追撃での撃破は手番の撃破に数えない
             if (swing > 0) { t.R388Encores++; Log($"  {h.Name} は倒した勢いのまま、もう一度大鎌を振る", LogKind.Trigger); }
@@ -18194,10 +18248,29 @@ public sealed class BattleContext
             {
                 t.R388Reaps++;
                 int hp = aim.Hp;
+                t.R389LastReapLine = line; t.R389LastReapHp = hp;   // 第389期・計数のみ（最後の刈り取りの線と HP）
+                // 第389期（段の動き・魂 9）: 的と同じ列 ＋ 中列の敵のうち、振る前に線以下だった敵を同じ一振りでまとめて刈る（薙ぎの巻き込みと同じ表・乱数を引かない）。
+                List<UnitState>? col = _depthLive389 && HagiDepthTrait.Column(h)
+                    ? LivingMembers(aim.TeamId).Where(e => e != aim && aim.Shape.SweepTargets(aim.Slot).Contains(e.Slot) && (long)e.Hp * 1000 <= (long)e.MaxHp * ReapLineFor389(h, e, baseLine)).ToList()
+                    : null;
                 _hagiHitActor388 = h; _hagiHitBonus388 = 0; _hagiHitReap388 = true;
                 _forcedTarget = aim;
                 try { PerformAttack(h, patternOverride: AttackPattern.Single); }
                 finally { _forcedTarget = null; _forcedLane = -1; _hagiHitActor388 = null; _hagiHitReap388 = false; }
+                if (col is { Count: > 0 } && h.IsAlive)
+                {
+                    int n = 0;
+                    foreach (UnitState x in col)
+                    {
+                        if (!x.IsAlive) continue;
+                        int xh = x.Hp;
+                        _reapNext388 = true;
+                        try { ApplyDamage(x, xh, h, pattern: AttackPattern.Sweep); }
+                        finally { _reapNext388 = false; }
+                        if (!x.IsAlive) { n++; t.R389ColumnHp += xh; }
+                    }
+                    if (n > 0) { t.R389ColumnReaps++; t.R389ColumnUnits += n; }
+                }
                 if (!aim.IsAlive)
                 {
                     t.R388ReapHp += hp;
@@ -18212,6 +18285,7 @@ public sealed class BattleContext
             else
             {
                 t.R388Strikes++;
+                if (_depthLive389 && h.CurrentPattern == AttackPattern.Sweep) t.R389Sweeps++;   // 第389期・計数のみ
                 _forcedTarget = aim;
                 try { PerformAttack(h); }
                 finally { _forcedTarget = null; _forcedLane = -1; }

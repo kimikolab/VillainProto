@@ -712,7 +712,11 @@ public static UnitDef PinMug386(UnitDef d) => ReferenceEquals(d, UnitCatalog.Mug
 public static Formation Pin386(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinMug386(d); return g; }
 /// <summary>第387期: `Presets.Versions` から「版・弾け 死の連鎖」を外し、規定のムグを P にした。第386期の一覧は、各台のムグを旧に固定し、外した台を「版・寄生 死の連鎖」の手前に足し戻した写し。</summary>
 /// <summary>第388期: `Presets.Versions` の末尾に版のハギの2台（「版・H3 ハギ」「版・H3 死神と墓守」）を足した。第387期の一覧（足す前）は、その2台を除いた写し。</summary>
-public static (string Name, Formation F)[] VersionsH387() => Presets.Versions.Where(r => r.Name is not ("版・H3 ハギ" or "版・H3 死神と墓守")).ToArray();
+public static (string Name, Formation F)[] VersionsH387() => VersionsH388().Where(r => r.Name is not ("版・H3 ハギ" or "版・H3 死神と墓守")).ToArray();   // 第389期: 第388期の一覧から
+/// <summary>第389期: `Presets.Versions` から版のハギ H3 の2台を外し、版の R5 の2台（「版・R5 ハギ」「版・R5 死神と墓守」）を末尾に足した。第388期の一覧は、R5 の2台を外して H3 の2台を末尾に足し戻した写し。</summary>
+public static (string Name, Formation F)[] VersionsH388() =>
+    Presets.Versions.Where(r => r.Name is not ("版・R5 ハギ" or "版・R5 死神と墓守"))
+        .Append(("版・H3 ハギ", Presets.HagiBurn388())).Append(("版・H3 死神と墓守", Presets.HagiDeath388())).ToArray();
 public static (string Name, Formation F)[] VersionsH386()
 {
     var l = VersionsH387().Select(r => (r.Name, F: Pin386(r.F))).ToList();   // 第388期: 版のハギの2台を足す前の一覧から

@@ -998,6 +998,12 @@ public enum TraitId
     HagiSoul,             // 魂の段（H3〜）: 敵が倒れるたび魂 +2、5 割を割るたび +1。攻撃力 +5 × n(n+1)/2。魂 3 で斬撃が薙ぎ ／ 6 で刈り取りの線が 3 割 ／ 9 で追撃が 2 連。前のターンに敵が倒れず 5 割を割った敵もいなければ 1 つ薄れる（`HagiReaperTrait`）
     HagiHaste,            // 加速（H3s）: 刈り取りで敵を倒すたび速さ +2（その戦の間・重なる・行動順の速さ `TurnSpeed` が読む）（`HagiReaperTrait`）
     HagiScytheSpill,      // 大鎌の巻き込み（全版・マイナス）: ハギが攻撃するたび（斬撃 ／ 刈り取り ／ 追撃）、隣の味方それぞれに攻撃力の 1 割（最低 1）の味方からの傷（**判定は engine の `ScytheSpill388`**・札そのものは印）
+    // --- 第389期で足した札（指示書 design/PHASE389_HAGI_DEPTH_SPEC.md §2）。魂は「鎌が届く深さ」（ハギの版 R5 ／ R4 ／ R5n・`All` の外）。保持者 0 枚 ---
+    HagiDepthSoul,        // 魂の深さ（R5 ／ R4 ／ R5n）: 敵が倒れるたび魂 +2、敵の HP が 8割 ／ 5割 ／ 2割を上から割るたび +1（1つの敵の1つの線につき1ターンに1回・**判定は engine の `DepthCross389`**）・上限 9・攻撃力は上げない。魂 0 ／ 3 ／ 6 ／ 9 で刈り取りの線が 2 ／ 3 ／ 4 ／ 5 割。前のターンに敵が倒れず線も割られなければ 1 つ薄れる（`HagiDepthTrait`）
+    HagiDepthShallow,     // 浅い線（R4）: 魂の深さの線を 2 ／ 2.5 ／ 3 ／ 4 割にする（**札そのものは挙動を持たない**・`HagiDepthTrait.LinePermil` が読む）
+    HagiSoulMoves,        // 段の動き（R5 ／ R4）: 魂 3 で斬撃が薙ぎ（刈り取りは単体）／ 6 で追撃が 2 連 ／ 9 で刈り取りが的と同じ列 ＋ 中列の線以下の敵をまとめて刈る（`HagiDepthTrait.ModifyPattern` ／ engine の `ReapTurn388`）
+    HagiReapMark,         // 刈りの印（R5m・第389期の補足）: ハギの斬撃 ／ 薙ぎ ／ 追撃が HP に届いた敵に印 +1（重なる・上限 5・倒れるまで残る・刈り取りの一撃では付けない）。印1つにつきその敵の刈り取りの線 +5%（魂の段の線に足す・合わせて最大 6 割）（**判定は engine の `ReapMark389` ／ `ReapLineFor389`**・札そのものは印）
+    HagiSpillFixed,       // 固定の巻き込み（R5 ／ R4 ／ R5n・マイナス）: ハギが攻撃するたび、隣の味方それぞれに 2（素の攻撃力 16 の 1 割・固定）の味方からの傷（**判定は engine の `ScytheSpill388`**・札そのものは印）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -10359,8 +10365,12 @@ public sealed class HagiReaperTrait : Trait
     public static int Soul(UnitState u) => u.RawCounter(SoulKey);
     /// <summary>刈り取りの線（最大HPの %）。魂の段を持ち、魂 6 以上なら 3 割。</summary>
     public static int ReapLine(UnitState h) => h.HasTrait(TraitId.HagiSoul) && Soul(h) >= SoulDeepAt ? ReapPercentDeep : ReapPercent;
-    /// <summary>追撃の回数（魂 9 から 2 連）。</summary>
-    public static int PursuitHits(UnitState h) => h.HasTrait(TraitId.HagiSoul) && Soul(h) >= SoulTwinAt ? 2 : 1;
+    /// <summary>第389期: 刈り取りの線（最大HPの ‰）。魂の深さ（<see cref="HagiDepthTrait"/>）の保持者はその表、ほかは <see cref="ReapLine"/> × 10（第388期の版は1ビットも変わらない）。</summary>
+    public static int ReapLinePermil(UnitState h) => h.HasTrait(TraitId.HagiDepthSoul) ? HagiDepthTrait.LinePermil(h) : ReapLine(h) * 10;
+    /// <summary>追撃の回数（魂 9 から 2 連・第389期の段の動きは魂の深さ 6 から 2 連）。</summary>
+    public static int PursuitHits(UnitState h)
+        => h.HasTrait(TraitId.HagiSoulMoves) && HagiDepthTrait.Soul(h) >= HagiDepthTrait.TwinAt ? 2
+         : h.HasTrait(TraitId.HagiSoul) && Soul(h) >= SoulTwinAt ? 2 : 1;
 
     // 薄れるのは「前のターンに敵が1体も倒れず、5 割を割った敵もいなかった」ときだけ（墓守の層と同じ「連鎖が途切れたら罰する」）。
     public override void OnTurnStart(BattleContext ctx, UnitState self)
@@ -10424,6 +10434,93 @@ public sealed class HagiReaperTrait : Trait
     {
         if (_id == TraitId.HagiSoul) { self.SetCounter(SoulKey, 0); self.SetCounter(SoulBonusKey, 0); self.SetCounter(SoulTurnKey, 0); }
         if (_id == TraitId.HagiHaste) self.SetCounter(HasteKey, 0);
+    }
+}
+
+/// <summary>
+/// 第389期（ハギの版 R5 ／ R4 ／ R5n・指示書 design/PHASE389_HAGI_DEPTH_SPEC.md §2）——魂は「鎌が届く深さ」。第388期の H2（刈り取り ／ 再行動 ／ 追撃）が土台。
+/// <list type="bullet">
+///   <item>魂の深さ（<see cref="TraitId.HagiDepthSoul"/>・この札）: 敵が倒れるたび +<see cref="PerDeath"/>（誰が倒しても・敵の召喚も）、敵の HP が 8割 ／ 5割 ／ 2割を上から下へ割るたび +<see cref="PerLine"/>
+///         （誰が割っても・1つの敵の1つの線につき1ターンに1回・倒れた一撃は死として数える・判定は engine の <c>DepthCross389</c>）。上限 <see cref="Cap"/>・**攻撃力は上げない**。
+///         魂 0 ／ 3 ／ 6 ／ 9 で刈り取りの線が 2 ／ 3 ／ 4 ／ 5 割（<see cref="TraitId.HagiDepthShallow"/> なら 2 ／ 2.5 ／ 3 ／ 4 割）。前のターンに敵が倒れず線も割られなければ 1 つ薄れる。会戦をまたがない。</item>
+///   <item>段の動き（<see cref="TraitId.HagiSoulMoves"/>・この札）: 魂 3 で斬撃が薙ぎ（刈り取りの一撃は単体）／ 6 で追撃が 2 連（<see cref="HagiReaperTrait.PursuitHits"/>）／
+///         9 で刈り取りが的と同じ列 ＋ 中列の線以下の敵をまとめて刈る（engine の <c>ReapTurn388</c>）。</item>
+/// </list>
+/// 乱数を引かない。
+/// </summary>
+public sealed class HagiDepthTrait : Trait
+{
+    public const int Cap = 9, PerDeath = 2, PerLine = 1, SweepAt = 3, TwinAt = 6, ColumnAt = 9, Spill = 2;
+    /// <summary>刈りの印（R5m）: 1つの敵の印の上限 ／ 印1つで深くなる線（‰）／ 印を足した線の上限（‰）。印は敵の側の私有キー <see cref="MarkKey"/>。</summary>
+    public const int MarkCap = 5, MarkStepPermil = 50, MarkLineMaxPermil = 600;
+    public const string MarkKey = "hagiReapMark389";
+    /// <summary>魂を溜める線（最大HPの %・上から順）。</summary>
+    public static readonly int[] Lines = { 80, 50, 20 };
+    static readonly int[] DeepPermil = { 200, 300, 400, 500 }, ShallowPermil = { 200, 250, 300, 400 };
+    /// <summary>魂 ／ 最後に魂が動いた（敵の死 ／ 線を割った）ターン（ハギの私有キー）。</summary>
+    public const string SoulKey = "hagiDepth389", TurnKey = "hagiDepthTurn389";
+    /// <summary>敵の側の私有キー: その線を最後に割ったターン ＋ 1（1つの敵の1つの線につき1ターンに1回）。</summary>
+    public static string LineKey(int line) => line switch { 80 => "hagiLine389_80", 50 => "hagiLine389_50", _ => "hagiLine389_20" };
+
+    readonly TraitId _id;
+    public HagiDepthTrait(TraitId id) { _id = id; }
+    public override TraitId Id => _id;
+
+    public static int Soul(UnitState u) => u.RawCounter(SoulKey);
+    /// <summary>段（0 ＝ 魂 0〜2 ／ 1 ＝ 3〜5 ／ 2 ＝ 6〜8 ／ 3 ＝ 9）。</summary>
+    public static int Stage(int soul) => soul >= ColumnAt ? 3 : soul >= TwinAt ? 2 : soul >= SweepAt ? 1 : 0;
+    /// <summary>刈り取りの線（‰）。</summary>
+    public static int LinePermil(UnitState h) => (h.HasTrait(TraitId.HagiDepthShallow) ? ShallowPermil : DeepPermil)[Stage(Soul(h))];
+    /// <summary>魂 9 の「列をまとめて刈る」が立っているか（段の動きの札を持つときだけ）。</summary>
+    public static bool Column(UnitState h) => h.HasTrait(TraitId.HagiSoulMoves) && Soul(h) >= ColumnAt;
+
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (_id != TraitId.HagiDepthSoul) return;
+        int s = Soul(self);
+        if (s > 0 && self.RawCounter(TurnKey) < ctx.Turn - 1)
+        {
+            self.SetCounter(SoulKey, s - 1);
+            ctx.Log($"    {self.Name} の魂が薄れた（魂 {s - 1}・刈り取りの線 {LinePermil(self) / 10.0:0.#}%）", LogKind.Status);
+        }
+        UnitTally t = ctx.TallyOf(self);   // 計数のみ（ターンの頭の魂）
+        if (ctx.Turn >= 0 && ctx.Turn <= BattleEngine.MaxTurns) (t.R389SoulByTurn ??= new long[BattleEngine.MaxTurns + 2])[ctx.Turn] += Soul(self);
+    }
+
+    public override void OnAnyDeath(BattleContext ctx, UnitState self, UnitState dead)
+    {
+        if (_id != TraitId.HagiDepthSoul || dead.TeamId == self.TeamId || !self.IsAlive) return;
+        Gain(ctx, self, PerDeath, 0);
+    }
+
+    public override AttackPattern ModifyPattern(UnitState self, AttackPattern p)
+        => _id == TraitId.HagiSoulMoves && Soul(self) >= SweepAt ? AttackPattern.Sweep : p;
+
+    /// <summary>魂を足す（<paramref name="src"/>: 0 ＝ 敵の死 ／ 80 ／ 50 ／ 20 ＝ その線を割った）。上限 9 で止めても「魂が動いたターン」は進める（連鎖は繋がっている）。</summary>
+    public static void Gain(BattleContext ctx, UnitState self, int n, int src)
+    {
+        self.SetCounter(TurnKey, ctx.Turn);
+        int before = Soul(self), s = Math.Min(Cap, before + n);
+        self.SetCounter(SoulKey, s);
+        UnitTally t = ctx.TallyOf(self);   // 計数のみ（出どころは上限の前の量）
+        switch (src) { case 0: t.R389SoulDeath += n; break; case 80: t.R389Cross80 += n; break; case 50: t.R389Cross50 += n; break; default: t.R389Cross20 += n; break; }
+        if (s > t.R389SoulPeak) t.R389SoulPeak = s;
+        if (s >= SweepAt && t.R389Soul3Turn == 0) t.R389Soul3Turn = Math.Max(1, ctx.Turn);
+        if (s >= TwinAt && t.R389Soul6Turn == 0) t.R389Soul6Turn = Math.Max(1, ctx.Turn);
+        if (s >= ColumnAt && t.R389Soul9Turn == 0) t.R389Soul9Turn = Math.Max(1, ctx.Turn);
+        if (s == before) return;
+        ctx.Log($"    {self.Name} の大鎌に魂が宿る（{(src == 0 ? "敵の死" : $"{src}% を割った敵")}・魂 {s}・刈り取りの線 {LinePermil(self) / 10.0:0.#}%）", LogKind.Trigger);
+        if (Stage(before) < Stage(s))
+            ctx.Log($"    ★ {self.Name} の鎌が深く届くようになった（魂 {s}・刈り取りの線 {LinePermil(self) / 10.0:0.#}%{StageText(self, Stage(s))}）", LogKind.Highlight, self);
+    }
+
+    static string StageText(UnitState h, int st) => !h.HasTrait(TraitId.HagiSoulMoves) ? "" : st switch { 1 => "・薙ぐ", 2 => "・薙ぐ ＋ 二度斬る", _ => "・列ごと刈る" };
+
+    /// <summary>会戦の境界。魂を持ち越さない（攻撃力に何も足していないので帳簿は無い）。</summary>
+    public override void OnCarryOver(UnitState self)
+    {
+        if (_id != TraitId.HagiDepthSoul) return;
+        self.SetCounter(SoulKey, 0); self.SetCounter(TurnKey, 0);
     }
 }
 
@@ -19696,6 +19793,11 @@ public static class TraitCatalog
         new HagiReaperTrait(TraitId.HagiSoul),                       // 第388期（魂の段）
         new HagiReaperTrait(TraitId.HagiHaste),                      // 第388期（加速）
         new MarkOnlyTrait(TraitId.HagiScytheSpill),                  // 第388期（大鎌の巻き込み・印・判定は engine）
+        new HagiDepthTrait(TraitId.HagiDepthSoul),                   // 第389期（魂の深さ）
+        new MarkOnlyTrait(TraitId.HagiDepthShallow),                 // 第389期（浅い線 R4・印）
+        new HagiDepthTrait(TraitId.HagiSoulMoves),                   // 第389期（段の動き）
+        new MarkOnlyTrait(TraitId.HagiSpillFixed),                   // 第389期（固定の巻き込み・印・判定は engine）
+        new MarkOnlyTrait(TraitId.HagiReapMark),                     // 第389期の補足（刈りの印 R5m・印・判定は engine）
         new EruptTrait(),      // 第180期
         new SmearTrait(),      // 第180期
         new SpitTrait(),       // 第180期

@@ -2497,6 +2497,17 @@ public sealed class UnitTally
     public int R388SoulPeak, R388AtkPeak, R388Soul3Turn, R388Soul6Turn, R388Soul9Turn;
     /// <summary>第388期（計数のみ）: ターンの頭の魂（添字 ＝ ターン）。</summary>
     public long[]? R388SoulByTurn;
+    /// <summary>
+    /// 第389期（ハギの版 R5 ／ R4 ／ R5n・**計数のみ**）。魂の出どころ（敵の死 ／ 8割 ／ 5割 ／ 2割を割った・上限の前の量）・薙いだ斬撃・列をまとめて刈った振り ／ 体数 ／ HP。
+    /// </summary>
+    public long R389SoulDeath, R389Cross80, R389Cross50, R389Cross20, R389Sweeps, R389ColumnReaps, R389ColumnUnits, R389ColumnHp;
+    /// <summary>第389期（計数のみ）: 魂の最大 ／ 3 ／ 6 ／ 9 に届いたターン ／ 最後の刈り取りの線（‰）と刈り取った HP（上書き）。</summary>
+    public int R389SoulPeak, R389Soul3Turn, R389Soul6Turn, R389Soul9Turn, R389LastReapLine, R389LastReapHp;
+    /// <summary>第389期（計数のみ）: ターンの頭の魂（添字 ＝ ターン）。</summary>
+    public long[]? R389SoulByTurn;
+    /// <summary>第389期の補足（R5m・計数のみ）。ハギの側: 付けた刈りの印 ／ 印で深くなった線で刈った回数。敵の側: そのターンの終わりの印の数（印が付いたターンだけ書く・添字 ＝ ターン）。</summary>
+    public long R389MarksPlaced, R389MarkReaps;
+    public long[]? R389MarkByTurn;
     public int R378Layer6Turn, R378Layer9Turn;
     public long R377ChainSaved;
     public int R377PeakTurn, R377AwakeTurn;
@@ -3822,6 +3833,14 @@ public sealed class UnitTally
         if (R388Soul6Turn == 0) R388Soul6Turn = o.R388Soul6Turn;
         if (R388Soul9Turn == 0) R388Soul9Turn = o.R388Soul9Turn;
         R388SoulByTurn = AddArr(R388SoulByTurn, o.R388SoulByTurn);   // 第388期
+        R389SoulDeath += o.R389SoulDeath; R389Cross80 += o.R389Cross80; R389Cross50 += o.R389Cross50; R389Cross20 += o.R389Cross20; R389Sweeps += o.R389Sweeps;
+        R389ColumnReaps += o.R389ColumnReaps; R389ColumnUnits += o.R389ColumnUnits; R389ColumnHp += o.R389ColumnHp; R389SoulPeak = Math.Max(R389SoulPeak, o.R389SoulPeak);
+        if (R389Soul3Turn == 0) R389Soul3Turn = o.R389Soul3Turn;
+        if (R389Soul6Turn == 0) R389Soul6Turn = o.R389Soul6Turn;
+        if (R389Soul9Turn == 0) R389Soul9Turn = o.R389Soul9Turn;
+        if (o.R389LastReapLine != 0) { R389LastReapLine = o.R389LastReapLine; R389LastReapHp = o.R389LastReapHp; }
+        R389SoulByTurn = AddArr(R389SoulByTurn, o.R389SoulByTurn);   // 第389期
+        R389MarksPlaced += o.R389MarksPlaced; R389MarkReaps += o.R389MarkReaps; R389MarkByTurn = AddArr(R389MarkByTurn, o.R389MarkByTurn);   // 第389期の補足
         if (R378Layer6Turn == 0) R378Layer6Turn = o.R378Layer6Turn;
         if (R378Layer9Turn == 0) R378Layer9Turn = o.R378Layer9Turn;
         R377Raises += o.R377Raises; R377RaiseTurnSum += o.R377RaiseTurnSum; R377NoSeat += o.R377NoSeat; R377CostSelf += o.R377CostSelf; R377RotLost += o.R377RotLost; R377RotDeaths += o.R377RotDeaths; R377Sprouts += o.R377Sprouts; R377SproutTurnSum += o.R377SproutTurnSum; R377SproutNoSeat += o.R377SproutNoSeat;   // 第377期
