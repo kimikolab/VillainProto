@@ -194,7 +194,7 @@ public static class UiKit
     /// </summary>
     public static float PortraitWorldHeight(string key) => key switch
     {
-        "rica" => 1.75f,
+        "rica" => 2.10f, // リメイク後の頭身に合わせ、小柄な成人として表示。
         "zoto" => 1.58f,
         "susu" => 2.50f, // 血詠みのアカ（内部IDは旧ススのまま）
         "kata" => 2.50f,
@@ -218,7 +218,7 @@ public static class UiKit
         "nomi" => 2.30f,
         "hagi" => 2.55f,
         "vel" => 2.45f,
-        "hiyo" => 1.89f, // 支援の構え。旧動作絵と本体の身長を揃える。
+        "hiyo" => 2.10f, // リィカと同じ基準高。支援動作も同率で拡大する。
         "gan" => 2.85f,
         "yomi" => 2.35f,
         "basa" => 2.55f,
@@ -249,7 +249,7 @@ public static class UiKit
         "gare_empty" => 15f / 1536f,
         "susu_read" => 18f / 1536f,
         "susu_cast" => 24f / 1536f,
-        "rica" => 0.0600f,
+        "rica" => 40f / 1536f, // リメイク戦闘絵の足元余白。
         "sid" => 0.0040f,
         "guza" => 78f / 1536f,
         "rau" => 54f / 1536f,

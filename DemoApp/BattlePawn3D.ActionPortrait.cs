@@ -91,7 +91,7 @@ public partial class BattlePawn3D
         {
             key = movement;
             padding = UiKit.BattlePortraitBottomPaddingRatio(key);
-            // ヒヨの旧待機を煽りへ移した。既存の動作絵は従来の大きさを保つ。
+            // ヒヨの旧動作絵と新待機絵の本体比率を揃える。基準身長の変更時も同率で拡大する。
             if (key.StartsWith("hiyo_")) height *= 2.10f / 1.89f;
             // 横に踏み込む追加居合は1254角。1536高の待機絵と画素あたりの体格を揃える。
             if (key == "yomi_iai_extra") height *= 1254f / 1536f;
