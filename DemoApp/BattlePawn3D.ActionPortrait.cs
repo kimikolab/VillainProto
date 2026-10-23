@@ -11,6 +11,15 @@ public partial class BattlePawn3D
     public bool IsAshReleasing => _ashReleasing;
     public bool IsBinding { get; private set; }
     public bool IsFrightened { get; private set; }
+    public bool DirgeSinging { get; private set; }
+
+    public void SetDirgeSinging(bool active)
+    {
+        bool next = active && _unitId == "ere" && _alive && !_victory;
+        if (DirgeSinging == next) return;
+        DirgeSinging = next;
+        RefreshBattlePortrait();
+    }
 
     public void SetFrightened(bool active)
     {
@@ -51,6 +60,11 @@ public partial class BattlePawn3D
             if (QuietLastStand) height *= 0.76f;
         }
         if (key == "beni" && GurenReleasing) { key = "beni_release"; padding = 0.024f; }
+        if (key == "ere" && DirgeSinging && _alive)
+        {
+            key = "ere_singing";
+            padding = UiKit.BattlePortraitBottomPaddingRatio(key);
+        }
         if (key == "susu" && _alive)
         {
             if (_ashReleasing)

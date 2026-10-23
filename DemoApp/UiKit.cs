@@ -224,6 +224,7 @@ public static class UiKit
         "basa" => 2.55f,
         "nara" => 2.50f,
         "nel" => 2.50f,
+        "ere" => 2.50f,
         "utsu" => 2.50f,
         "gare" => 2.65f,
         "hibi" => 3.15f,
@@ -338,6 +339,8 @@ public static class UiKit
         "hane" => 0.0403646f, // 後屈立ちの待機構え：1536px の下端に62pxの透過余白。
         "nara" => 0.1400f,
         "nel" => 0.0378f,
+        "ere" => 16f / 1536f,
+        "ere_singing" => 13f / 1536f,
         "utsu" => 0.0436f,
         "gare" => 31f / 1536f,
         "hibi" => 146f / 1536f,

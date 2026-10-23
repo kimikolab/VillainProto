@@ -1995,14 +1995,28 @@ public partial class Main : Control
             }
 
             case BattleEventKind.Skill:
+            {
                 // ススの周期は推測しない。特性が出す溜め・放出の通知に従う。
                 if (!e.Reaction && (actor?.UnitId != "susu" || e.Text == AshActionLabels.Release))
                     _battleField.ReleaseChargedSkill(actor);
                 if (e.Text == AshActionLabels.Release) actor?.BeginAshRelease();
                 _battleField.Float(actor, AkaPresentation.Text(e.Text ?? "SKILL"), actor?.UnitId == "susu" ? AkaPresentation.Blood : UiKit.Heal, true);
                 AppendLog($"[color=#{UiKit.Heal.ToHtml(false)}]{NameOf(e.ActorId)} — {e.Text ?? "術"}[/color]");
-                await Delay(0.22);
+                bool singing = actor?.UnitId == "ere" && _result is not null
+                    && ErePresentation.IsSongSkill(_result.Events, eventIndex);
+                int songToken = _playToken;
+                if (singing) actor!.SetDirgeSinging(true);
+                try
+                {
+                    if (singing) await HoldDirgeSong(songToken);
+                    else await Delay(0.22);
+                }
+                finally
+                {
+                    if (singing && GodotObject.IsInstanceValid(actor)) actor!.SetDirgeSinging(false);
+                }
                 break;
+            }
 
             // 支援拒否の分配と回復拒否を台本から描く。号令単体と叩き起こしはログのみ。
             case BattleEventKind.Whet:

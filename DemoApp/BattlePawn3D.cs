@@ -474,6 +474,7 @@ void fragment() {
 
     public void AnimateDeath()
     {
+        SetDirgeSinging(false);
         ClearTouPowder();
         SetDecoyShown(false);
         ClearMovementPortrait();
@@ -530,6 +531,7 @@ void fragment() {
 
     public void AnimateRevive()
     {
+        SetDirgeSinging(false);
         SetDecoyShown(false);
         ClearMovementPortrait();
         ResetBowPortrait();
@@ -575,6 +577,7 @@ void fragment() {
     public void AnimateVictory()
     {
         if (!_alive || Team != BattleContext.PlayerTeam) return;
+        SetDirgeSinging(false);
         SetDecoyShown(false);
         ClearMovementPortrait();
         ResetBowPortrait();
