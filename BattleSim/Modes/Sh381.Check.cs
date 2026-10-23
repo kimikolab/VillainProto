@@ -68,7 +68,7 @@ static partial class Sh381Diag
         {
             var (ctx, p, _) = Board((0, vd), (1, MateA), (2, MateB), (3, MateA), (4, MateB));
             var vel = At(p, 0);
-            var spore = ctx.Summon(UnitCatalog.Spore, BattleContext.PlayerTeam, at: 7)!;
+            var spore = ctx.Summon(UnitCatalog.SporeH386, BattleContext.PlayerTeam, at: 7)!;
             var max0 = p.ToDictionary(u => u.InstanceId, u => u.MaxHp);
             Start(ctx, vel);
             var team = ctx.LivingMembers(BattleContext.PlayerTeam);
@@ -148,7 +148,7 @@ static partial class Sh381Diag
                 for (int w = 0; w < nw; w++) if (!double.TryParse(cells[w + 1].TrimEnd('%'), out v[w])) { ok = false; break; }
                 if (ok) doc[cells[0]] = v;
             }
-            var rows = CompareBuildsH384().Select(r => (r.Name, F: Pin381(r.F))).ToArray();   // 第385期: エレの2行は第381期の `docs/balance.md` に無い
+            var rows = CompareBuildsH384().Select(r => (r.Name, F: Pin381(Pin386(r.F)))).ToArray();   /* 第387期: ムグも第386期までの規定に */   // 第385期: エレの2行は第381期の `docs/balance.md` に無い
             var g = CGrid(rows);
             int mism = 0, miss = 0;
             for (int r = 0; r < rows.Length; r++)
@@ -162,7 +162,7 @@ static partial class Sh381Diag
 
         // ---- 試遊の台 ----
         {
-            var vr = Presets.Versions.Select(r => r.Name).ToArray();
+            var vr = VersionsH386().Select(r => r.Name).ToArray();
             // 第382期: S2 を規定にしたので「版・S2 ／ S10 死 探索1位」は外した（並びは `Presets.DeathSeek380(vel)` で組める）。
             var s2 = Presets.DeathSeek380(UnitCatalog.VelS2); var s10 = Presets.DeathSeek380(UnitCatalog.VelS10);
             bool rows = s2.Occupied().Select(o => o.Def).SequenceEqual(Apply(Presets.DeathSeek380(), 1).Occupied().Select(o => o.Def))

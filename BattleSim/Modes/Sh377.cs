@@ -447,7 +447,7 @@ static partial class Sh377Diag
             else gf[k.B, k.V, k.W - nw] = Measure(f, new[] { fw[k.W - nw] }, seeds);
         });
         // 毒の火力（第348期の物差しで、いまの規定の「試遊・毒」を測る——指示書 §3-4「毒は第375期の値があれば」の値が無かったので）
-        var poison = Presets.Versions.First(r => r.Name == "試遊・毒").F;
+        var poison = VersionsH386().First(r => r.Name == "試遊・毒").F;
         var pf = fw.Select(w => Measure(poison, new[] { w }, seeds)).ToArray();
 
         Console.WriteLine($"# {Tag} §3-4 亡者と増殖 —— 死の台 {nb} × 版（{string.Join(" ／ ", VerNames)}）× {nw} 物差し ＋ 火力（seed 0..{seeds - 1}）");

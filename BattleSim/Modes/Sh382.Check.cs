@@ -90,7 +90,7 @@ static partial class Sh382Diag
             ctx.TakeTurn(bard);
             bool hit = e[0].Hp < hp0 && Tal(ctx, At(p, 1)).R382EncoreTurns == 0 && Tal(ctx, bard).R382NoDeath == 1;
             // 味方（儚い胞子）が2体倒れた → いちばん攻撃力の高い味方が1回だけ・楽士自身は選ばれない（攻撃力を上げても）
-            var sp1 = ctx.Summon(UnitCatalog.Spore, BattleContext.PlayerTeam)!; var sp2 = ctx.Summon(UnitCatalog.Spore, BattleContext.PlayerTeam)!;
+            var sp1 = ctx.Summon(UnitCatalog.SporeH386, BattleContext.PlayerTeam)!; var sp2 = ctx.Summon(UnitCatalog.SporeH386, BattleContext.PlayerTeam)!;
             ctx.ApplyDamage(sp1, 999, e[0]); ctx.ApplyDamage(sp2, 999, e[0]);
             bard.AtkBonus = 50;
             ctx.TakeTurn(bard);
@@ -117,7 +117,7 @@ static partial class Sh382Diag
         foreach (var (bd, echo) in new[] { (d1, true), (d1n, false) })
         {
             var (ctx, p, e) = Bd(new[] { (0, bd), (1, MateHi) }, new[] { (0, FoeLo), (1, FoeHi), (2, FoeLo) });
-            var bard = At(p, 0); var sp = ctx.Summon(UnitCatalog.Spore, BattleContext.PlayerTeam)!;
+            var bard = At(p, 0); var sp = ctx.Summon(UnitCatalog.SporeH386, BattleContext.PlayerTeam)!;
             ctx.ApplyDamage(sp, 999, e[1]); ctx.ApplyDamage(At(e, 2), 9999, At(p, 1));
             int ev0 = ctx.Events.Count;
             ctx.TakeTurn(bard);

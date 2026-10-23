@@ -643,10 +643,12 @@ public static class UnitCatalog
     public const string MugSowMinusTail380 = "。撒いた胞子が空いた場所を埋めるので、ほかの者が呼ぶ仲間の居場所が無くなる";
 
     /// <summary>
-    /// 胞子体ムグ（第380期の規定）。<b>第380期に第379期の撒き全を規定にした</b>（ポンの判断・design/PHASE380_DEATH_SEATS_SPEC.md §2）——
+    /// 胞子体ムグ（第380〜386期の規定）。<b>第380期に第379期の撒き全を規定にした</b>（ポンの判断・design/PHASE380_DEATH_SEATS_SPEC.md §2）——
     /// 第1〜379期の規定（<see cref="MugH379"/>）＋ 撒き散らす（<see cref="TraitId.MugSowAll"/>・手番 `[Skill]`）。プラスの文面は第379期の <see cref="MugSowAll"/> と同じ・マイナスの尾に <see cref="MugSowMinusTail380"/>。
+    /// <b>第387期に第386期の P（弾けて毒）を規定にしたので、それまでの規定はこの <see cref="MugH386"/> として明示的に持つ</b>（<see cref="All"/> の外・出す胞子は旧の <see cref="SporeH386"/>）。
+    /// 第380〜386期の規定のムグで測った過去の器具はこちらに固定する（`Common.PinMug386` ／ `Pin386`）。第386期の版のムグ（S0 ／ P ／ Q ／ PQ）はこちらから作る。
     /// </summary>
-    public static readonly UnitDef Mug = new()
+    public static readonly UnitDef MugH386 = new()
     {
         Id = MugH379.Id, Name = MugH379.Name, MaxHp = MugH379.MaxHp, Attack = MugH379.Attack, Speed = MugH379.Speed,
         Traits = MugSowAll.Traits.ToArray(), Actions = MugSowActions, PlusText = MugSowAll.PlusText,
@@ -677,9 +679,9 @@ public static class UnitCatalog
     /// <summary>第386期: 版のムグ ＝ 規定のムグ（撒き全・分裂の胞子2体）の写し ＋ 版の胞子を出す印（Q ／ PQ は寄生の食い ／ 亡骸から湧くの印も）。<see cref="All"/> の外（版・採否はポン）。</summary>
     static UnitDef Mug386(TraitId[] add, string? clause) => new()
     {
-        Id = Mug.Id, Name = Mug.Name, MaxHp = Mug.MaxHp, Attack = Mug.Attack, Speed = Mug.Speed,
-        Traits = Mug.Traits.Concat(add).ToArray(), Actions = Mug.Actions, PlusText = clause is null ? Mug.PlusText : Mug.PlusText + "／" + clause,
-        MinusText = Mug.MinusText, Flavor = Mug.Flavor,
+        Id = MugH386.Id, Name = MugH386.Name, MaxHp = MugH386.MaxHp, Attack = MugH386.Attack, Speed = MugH386.Speed,   // 第387期: 旧の規定（`MugH386`）から作る（第386期の版のまま）
+        Traits = MugH386.Traits.Concat(add).ToArray(), Actions = MugH386.Actions, PlusText = clause is null ? MugH386.PlusText : MugH386.PlusText + "／" + clause,
+        MinusText = MugH386.MinusText, Flavor = MugH386.Flavor,
     };
     /// <summary>ムグの版 S0（第386期）: 撒く ／ 分裂で出す胞子が殴らない胞子。文面は規定のまま。</summary>
     public static readonly UnitDef MugS0 = Mug386(new[] { TraitId.MugSporeS0 }, null);
@@ -689,6 +691,24 @@ public static class UnitCatalog
     public static readonly UnitDef MugQ = Mug386(new[] { TraitId.MugSporeQ, TraitId.ParasiteFeed, TraitId.ParasiteBloom }, MugParasiteClause386);
     /// <summary>ムグの版 PQ（第386期）: P ＋ Q。</summary>
     public static readonly UnitDef MugPQ = Mug386(new[] { TraitId.MugSporePQ, TraitId.ParasiteFeed, TraitId.ParasiteBloom }, MugBurstClause386 + "／" + MugParasiteClause386);
+
+    /// <summary>
+    /// 胞子（第387期の規定）。<b>第387期に第386期の P（弾けて毒）を規定にした</b>（ポンの判断・design/PHASE387_ROSTER_LEFTOVERS_SPEC.md §3-1）——
+    /// 攻撃力 0・殴らない（<see cref="TraitId.SporeIdle"/>）・倒した者が敵で生きていればその敵に毒 +6（<see cref="TraitId.SporeBurst"/>）・HP 14 ／ 速 10 ／ 儚い。
+    /// <b>第386期の <see cref="SporeP"/> と同じもの</b>（同じ駒を指す）。第1〜386期の規定（攻撃力 4・殴る）は <see cref="SporeH386"/>。編成には選べない。
+    /// </summary>
+    public static readonly UnitDef Spore = SporeP;
+
+    /// <summary>
+    /// 胞子体ムグ（第387期の規定）。<b>第387期に第386期の P（弾けて毒）を規定にした</b>（ポンの判断・design/PHASE387_ROSTER_LEFTOVERS_SPEC.md §3-1）——
+    /// 第380〜386期の規定（<see cref="MugH386"/>・撒き全 ＋ 分裂2体）＋ 規定の胞子を出す印（<see cref="TraitId.MugSporeP"/>）。札と文面は第386期の <see cref="MugP"/> と同じ。
+    /// <b>印を持つ形のままにした</b>——印の無いムグ（<see cref="MugH379"/> ／ <see cref="MugH386"/> と、それらから作った版の駒）は旧の胞子（<see cref="SporeH386"/>）を出すので、旧の駒を1つも書き換えずに済む。
+    /// </summary>
+    public static readonly UnitDef Mug = new()
+    {
+        Id = MugH386.Id, Name = MugH386.Name, MaxHp = MugH386.MaxHp, Attack = MugH386.Attack, Speed = MugH386.Speed,
+        Traits = MugP.Traits.ToArray(), Actions = MugH386.Actions, PlusText = MugP.PlusText, MinusText = MugH386.MinusText, Flavor = MugH386.Flavor,
+    };
 
     public static readonly UnitDef Zoto = new()
     {
@@ -3662,8 +3682,10 @@ public static class UnitCatalog
         MinusText = ""
     };
 
-    /// <summary>ムグの死骸から湧く駒。編成には選べない。</summary>
-    public static readonly UnitDef Spore = new()
+    /// <summary>ムグの死骸から湧く駒（第1〜386期の規定・攻撃力 4・殴る）。編成には選べない。
+    /// <b>第387期に弾けて毒の胞子（<see cref="Spore"/>）を規定にしたので、それまでの規定はこの <see cref="SporeH386"/> として明示的に持つ。</b>
+    /// 印の無いムグ（<see cref="MugH379"/> ／ <see cref="MugH386"/> と、それらから作った版の駒）が撒く ／ 分裂で出すのはこちら。</summary>
+    public static readonly UnitDef SporeH386 = new()
     {
         Id = "spore",
         Name = "胞子",

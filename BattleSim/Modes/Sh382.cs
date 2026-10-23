@@ -61,9 +61,9 @@ static partial class Sh382Diag
     };
     /// <summary>台 1〜3 の固定の1枚（芯 リィカ ／ ヴェル ／ ムグ ＋ この1枚 ＋ 候補）。</summary>
     internal static readonly (string Name, UnitDef D)[] Partners = { ("スィド ＋ 候補", UnitCatalog.Sid), ("ゴルム ＋ 候補", UnitCatalog.Golm), ("ボルグ ＋ 候補", UnitCatalog.Borg) };
-    internal static readonly UnitDef[] Core = { UnitCatalog.Rica, UnitCatalog.Vel, UnitCatalog.Mug };
+    internal static readonly UnitDef[] Core = { UnitCatalog.Rica, UnitCatalog.Vel, UnitCatalog.MugH386 };   // 第387期: ムグは第380〜386期の規定に固定
     /// <summary>台 4: ゾトの席を候補に替えた死の連鎖（前1 候補 ／ 前3 ゴルム ／ 中央 ムグ ／ 後1 ヴェル ／ 後3 リィカ・並びは固定）。</summary>
-    internal static Formation ChainWith(UnitDef c) => Formation.Build(front1: c, front3: UnitCatalog.Golm, center: UnitCatalog.Mug, back1: UnitCatalog.Vel, back3: UnitCatalog.Rica);
+    internal static Formation ChainWith(UnitDef c) => Formation.Build(front1: c, front3: UnitCatalog.Golm, center: UnitCatalog.MugH386, back1: UnitCatalog.Vel, back3: UnitCatalog.Rica);   // 第387期: ムグは旧に固定
 
     static readonly int[][] Perms = Permutations(5).ToArray();
     static IEnumerable<int[]> Permutations(int n)

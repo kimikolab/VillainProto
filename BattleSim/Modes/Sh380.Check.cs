@@ -26,12 +26,12 @@ static partial class Sh380Diag
 
         // ---- 段0 ----
         {
-            var m = UnitCatalog.Mug; var h = UnitCatalog.MugH379; var a = UnitCatalog.MugSowAll;
+            var m = UnitCatalog.MugH386; var h = UnitCatalog.MugH379; var a = UnitCatalog.MugSowAll;   // 第387期: 規定のムグは第380〜386期の規定（旧）で見る
             bool cards = m.Traits.SequenceEqual(a.Traits) && m.Traits.SequenceEqual(new[] { TraitId.Splitter, TraitId.MugSowAll })
                 && m.Actions is { Count: 1 } && m.Actions[0].Kind == ActionKind.Skill && ReferenceEquals(m.Actions, a.Actions)
                 && m.PlusText == a.PlusText && m.MinusText == h.MinusText + UnitCatalog.MugSowMinusTail380 && m.MinusText.EndsWith("ほかの者が呼ぶ仲間の居場所が無くなる")
                 && m.Id == h.Id && m.Name == h.Name && m.MaxHp == h.MaxHp && m.Attack == h.Attack && m.Speed == h.Speed
-                && UnitCatalog.All.Contains(m) && !UnitCatalog.All.Contains(h) && !UnitCatalog.Retired.Contains(h) && UnitCatalog.All.Count == 52;
+                && UnitCatalog.All.Contains(UnitCatalog.Mug) && !UnitCatalog.All.Contains(h) && !UnitCatalog.Retired.Contains(h) && UnitCatalog.All.Count == 52;
             bool old = h.Traits.SequenceEqual(new[] { TraitId.Splitter }) && h.Actions is null;
             bool pins = PinM379(m) == h && PinM379(UnitCatalog.Rica) == UnitCatalog.Rica && PinR378(m) == h && PinR378(UnitCatalog.Rica) == UnitCatalog.RicaH378
                 && PinV375(m) == h && PinS371(m) == h && PinGVS371(m) == h
@@ -42,13 +42,13 @@ static partial class Sh380Diag
         }
         {
             long cells = 0, diff = 0;
-            var boards = new[] { Row("死の連鎖 (リィカ軸)"), Row("継ぎ当て×死の連鎖"), Pin381(Presets.DeathSom379()), Row("鱗 (ウロ×死軸)") };
+            var boards = new[] { Row("死の連鎖 (リィカ軸)"), Row("継ぎ当て×死の連鎖"), Pin381(Presets.DeathSom379()), Row("鱗 (ウロ×死軸)") }.Select(Pin386).ToArray();   // 第387期: ムグは第380〜386期の規定に固定
             foreach (var f in boards)
                 foreach (var w in new[] { I.Boss, I.Guard, I.Bat, I.M5 })
                     for (int sd = 0; sd < 10; sd++)
                     {
                         cells++;
-                        if (!Same(I.Raw(f, w, sd).R, I.Raw(Swap(f, UnitCatalog.Mug, UnitCatalog.MugSowAll), w, sd).R)) diff++;
+                        if (!Same(I.Raw(f, w, sd).R, I.Raw(Swap(f, UnitCatalog.MugH386, UnitCatalog.MugSowAll), w, sd).R)) diff++;
                     }
             Expect("規定のムグは第379期の `MugSowAll` と同じ動き（ムグのいる4台 × ボス ／ 近衛 ／ 大隊 ／ 第5波 × seed 0..9 で勝敗 ／ T ／ 生存数が同じ）", diff == 0 && cells == 160, $"{cells} 戦・差 {diff}");
         }
@@ -72,23 +72,23 @@ static partial class Sh380Diag
 
         // ---- 試遊の台 ----
         {
-            var vr = Presets.Versions.Select(r => r.Name).ToArray();
+            var vr = VersionsH386().Select(r => r.Name).ToArray();
             var found = vr.Where(n => n.Contains("探索") && !n.StartsWith("版・")).ToArray();   // 第381期: 「版・S2 ／ S10 死 探索1位」（ヴェルの版の台）は数えない
-            var top = Pin381(Presets.Versions.First(r => r.Name == "試遊・死 探索1位").F);   // 第382期: ヴェルは第381期までの規定に固定
+            var top = Pin381(VersionsH386().First(r => r.Name == "試遊・死 探索1位").F);   // 第382期: ヴェルは第381期までの規定に固定
             bool topOk = top is not null && Fixed.All(x => top.Occupied().Any(o => ReferenceEquals(o.Def, x))) && top.Occupied().Count() == 5
-                && top.Occupied().Count(o => IsHealer(o.Def)) == 1 && top.Occupied().All(o => UnitCatalog.All.Contains(o.Def) || ReferenceEquals(o.Def, UnitCatalog.VelH381))   /* 第382期: ヴェルは旧（`All` の外）に固定 */
+                && top.Occupied().Count(o => IsHealer(o.Def)) == 1 && top.Occupied().All(o => UnitCatalog.All.Contains(o.Def) || ReferenceEquals(o.Def, UnitCatalog.VelH381) || ReferenceEquals(o.Def, UnitCatalog.MugH386))   /* 第382期: ヴェルは旧（`All` の外）に固定・第387期: ムグも */
                 && Som307Diag.Seats(top) == "リィカ・ヒヨ・ボルグ・ヴェル・ムグ";
             // 第380期の探索で本体の上位 10 にソムは入らない（ソムはヒーラーで本体の2枠に入らない・参考の上位 5 にも入らない）——「試遊・死 探索ソム」は足さない
             bool only = found.SequenceEqual(new[] { "試遊・死 探索1位" }) && !vr.Any(n => n.StartsWith("版・撒き") || n.StartsWith("版・育つ"));
             bool keep = vr.Contains("試遊・死の連鎖") && vr.Contains("試遊・死 ソム")
-                && Pin381(Presets.Versions.First(r => r.Name == "試遊・死の連鎖").F).Occupied().Select(o => o.Def).SequenceEqual(Row("死の連鎖 (リィカ軸)").Occupied().Select(o => o.Def));
+                && Pin381(VersionsH386().First(r => r.Name == "試遊・死の連鎖").F).Occupied().Select(o => o.Def).SequenceEqual(Pin386(Row("死の連鎖 (リィカ軸)")).Occupied().Select(o => o.Def));   // 第387期: ムグは旧に固定
             Expect("試遊の台: 探索の台は「試遊・死 探索1位」だけ（ソムは上位に入らず「探索ソム」は足さない）・規定の駒・リィカ ／ ヴェル ／ ムグ ＋ ヒーラー1枚・「版・撒き全 ／ 育つ」は外した・「試遊・死の連鎖」「試遊・死 ソム」は規定の駒のまま", topOk && only && keep, string.Join("、", vr.Skip(11)));
         }
 
         // ---- verbose ／ 再現性 ----
         {
             long diff = 0, det = 0, cells = 0;
-            foreach (var f in Presets.Versions.Where(r => r.Name.Contains("死")).Select(r => r.F))
+            foreach (var f in VersionsH386().Where(r => r.Name.Contains("死")).Select(r => r.F))
                 foreach (var w in new[] { I.Boss, I.Guard, I.Bat, I.M5 })
                     for (int sd = 0; sd < 5; sd++)
                     {
@@ -104,7 +104,7 @@ static partial class Sh380Diag
         {
             string src = File.ReadAllText("BattleSim/Modes/Checkup.cs");
             bool sow = System.Text.RegularExpressions.Regex.IsMatch(src, @"\[TraitId\.MugSowAll\]\s*=\s*\(Hc[A-Za-z]+L,\s*""[^""]*第380期から規定（ムグ）");
-            bool all = UnitCatalog.Mug.Traits.All(t => src.Contains($"[TraitId.{t}]", StringComparison.Ordinal));
+            bool all = UnitCatalog.MugH386.Traits.All(t => src.Contains($"[TraitId.{t}]", StringComparison.Ordinal));
             Expect("`checkup` の札の分類表: 規定になったムグの札（撒き散らす）が「第380期から規定（ムグ）」・規定のムグの札が全部表にある（ソースを読んで確かめる）", sow && all);
         }
 

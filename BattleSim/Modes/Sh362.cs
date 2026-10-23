@@ -106,7 +106,7 @@ static partial class Sh362Diag
     internal static readonly I.W[] Waves = new[] { I.Boss, I.Guard, I.Bat, I.M2, I.M4, I.M5, I.Nine }.Concat(I.StrongWaves).ToArray();
     static Formation BoardOf(string n) => n.Contains('・') && !n.Contains(' ')
         ? ByKey(n)
-        : CompareBuilds().Concat(CrossBuilds()).Concat(Presets.Versions).First(r => r.Name.StartsWith(n, StringComparison.Ordinal)).F;
+        : CompareBuilds().Concat(CrossBuilds()).Concat(VersionsH386()).First(r => r.Name.StartsWith(n, StringComparison.Ordinal)).F;
     static void Log(Ver v, string board, string wave, int seed)
     {
         var f = Apply(BoardOf(board), v); var w = D.WaveOf(wave);
@@ -324,7 +324,7 @@ static partial class Sh362Diag
     static void Phase0()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = CompareBuilds().Concat(Presets.Versions.Where(r => r.Name.StartsWith("試遊", StringComparison.Ordinal) && r.Name != "試遊・自傷")).Select(r => (r.Name, F: Pin362(r.F))).ToArray();   // 第363期: 旧のカドに固定・第365期: 第365期に足した試遊の台は除く（`Pin362` はアカ ／ ガレも旧へ）
+        var rows = CompareBuilds().Concat(VersionsH386().Where(r => r.Name.StartsWith("試遊", StringComparison.Ordinal) && r.Name != "試遊・自傷")).Select(r => (r.Name, F: Pin362(r.F))).ToArray();   // 第363期: 旧のカドに固定・第365期: 第365期に足した試遊の台は除く（`Pin362` はアカ ／ ガレも旧へ）
         var waves = new[] { I.M5, I.Guard, I.Boss };
         Console.WriteLine($"# {Tag} §3 Phase 0（規定・段0 入り）");
         Console.WriteLine();

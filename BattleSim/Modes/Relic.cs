@@ -270,7 +270,7 @@ static partial class RelicDiag
             var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
             var u = p[0];
             int want = UnitCatalog.Gan.MaxHp + UnitCatalog.Gan.Attack * RelicHardenTrait.HpPerAtk;
-            Func<List<UnitState>> weak = () => BattleEngine.Materialize(Formation.Build(front1: UnitCatalog.Spore), BattleContext.EnemyTeam, EnemyScaleRule.None);
+            Func<List<UnitState>> weak = () => BattleEngine.Materialize(Formation.Build(front1: UnitCatalog.SporeH386), BattleContext.EnemyTeam, EnemyScaleRule.None);
             BattleEngine.Run(p, weak(), 0, verbose: false);
             int after1 = u.MaxHp, atk1 = u.CurrentAttack;
             if (u.IsAlive) BattleEngine.Run(p, weak(), 1, verbose: false);

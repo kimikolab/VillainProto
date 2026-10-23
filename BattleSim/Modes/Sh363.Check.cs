@@ -178,7 +178,7 @@ static partial class Sh363Diag
         // ---- 試遊の台 ----
         {
             // 第364期: 「版・」の3台は `Presets.Versions` から外した。第363期の3台は `Boards363` に固定して確かめる。
-            var vr = Presets.Versions.Select(r => r.Name).ToArray();
+            var vr = VersionsH386().Select(r => r.Name).ToArray();
             string[] want = { "版・AK-n 自傷", "版・AK-s 自傷", "版・AK-s 自傷 リリ" };
             bool rows = vr.Take(6).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片" }) && !vr.Any(want.Contains)
                 && !vr.Any(x => x.Contains("KD-"));

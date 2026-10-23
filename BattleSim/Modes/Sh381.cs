@@ -91,7 +91,7 @@ static partial class Sh381Diag
         return res.ToArray();
     }
     internal static readonly string[] OutsideNames = { "試遊・標 守り型", "試遊・燃焼 ポンの台", "試遊・呪い", "試遊・破片" };
-    internal static Formation Named(string n) => Presets.Playtest.Concat(Presets.Versions).First(r => r.Name == n).F;
+    internal static Formation Named(string n) => Presets.Playtest.Concat(VersionsH386()).First(r => r.Name == n).F;
     static Formation Put(Formation f, int slot, UnitDef d) { var g = f.Clone(); g[slot] = d; return g; }
 
     static readonly (string Name, I.W[] Ws)[] W8 = S377.VerWaves;

@@ -76,7 +76,7 @@ static partial class Sh377Diag
         }
 
         // ---- A ／ B: 3 回まで ／ 儚い駒からは湧かない ----
-        foreach (var (name, def, id, key, spawn) in new[] { ("A 亡者起こし", UnitCatalog.RicaLink, "rica", RaiseDeadTrait.CountKey, UnitCatalog.Wight), ("B 亡骸の芽吹き", UnitCatalog.MugSproutM, "mug", MugSproutTrait.CountKey, UnitCatalog.Spore) })
+        foreach (var (name, def, id, key, spawn) in new[] { ("A 亡者起こし", UnitCatalog.RicaLink, "rica", RaiseDeadTrait.CountKey, UnitCatalog.Wight), ("B 亡骸の芽吹き", UnitCatalog.MugSproutM, "mug", MugSproutTrait.CountKey, UnitCatalog.SporeH386) })
         {
             var (ctx, p, foe) = Board((0, Mate), (1, Mate), (2, Mate), (3, Mate), (4, def));
             var holder = p.First(u => u.Def.Id == id);
@@ -210,7 +210,7 @@ static partial class Sh377Diag
         // ---- 規定は今どおり ----
         {
             long d = 0, cells = 0;
-            var play = Pin378(Presets.Versions.First(r => r.Name == "試遊・死の連鎖").F);   // 第379期: 試遊の台は規定の駒（目覚めたリィカ）になったので、第378期までの規定に固定して比べる
+            var play = Pin378(VersionsH386().First(r => r.Name == "試遊・死の連鎖").F);   // 第379期: 試遊の台は規定の駒（目覚めたリィカ）になったので、第378期までの規定に固定して比べる
             bool same = play.Occupied().Select(o => o.Def).SequenceEqual(Row("死の連鎖 (リィカ軸)").Occupied().Select(o => o.Def));
             foreach (var w in new[] { I.Boss, I.Guard, I.Bat, I.M2, I.M5 })
                 for (int sd = 0; sd < 20; sd++) { cells++; if (!Same(I.Raw(play, w, sd).R, I.Raw(Row("死の連鎖 (リィカ軸)"), w, sd).R)) d++; }
@@ -234,7 +234,7 @@ static partial class Sh377Diag
         // ---- 素体 ／ 寄せ集めは器具の中だけ ----
         {
             bool ok = !UnitCatalog.Everyone.Any(d => d.Id.EndsWith("_plain", StringComparison.Ordinal))
-                && !CompareBuilds().Concat(Presets.Versions).Concat(Presets.Playtest).Any(r => r.F.Occupied().Any(o => o.Def.Id.EndsWith("_plain", StringComparison.Ordinal)));
+                && !CompareBuilds().Concat(VersionsH386()).Concat(Presets.Playtest).Any(r => r.F.Occupied().Any(o => o.Def.Id.EndsWith("_plain", StringComparison.Ordinal)));
             var mix = MixBoardsOf(UnitCatalog.RicaH378); var mix2 = MixBoardsOf(UnitCatalog.RicaH378);
             bool mixOk = mix.Length == MixBoards && mix.All(f => f.Occupied().Count() == 5 && f.Occupied().Count(o => o.Def.Id == "rica") == 1 && f.Occupied().Count(o => DeathIds.Contains(o.Def.Id)) == 1 && f.Occupied().Select(o => o.Def.Id).Distinct().Count() == 5)
                 && mix.Select(S307.Seats).SequenceEqual(mix2.Select(S307.Seats));
@@ -268,7 +268,7 @@ static partial class Sh377Diag
 
         // ---- 試遊の台 ----
         {
-            var vr = Presets.Versions.Select(r => r.Name).ToArray();
+            var vr = VersionsH386().Select(r => r.Name).ToArray();
             // 第378期: 「版・R-繋 死の連鎖」を外した。第379期: 第377 ／ 378期の「版・」の台をすべて外した——頭の 12 台を見て、版の並びは関数から組む。
             bool rows = vr.Take(12).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒", "試遊・毒 席替え", "試遊・毒 紅", "試遊・ヴィオ 台B", "試遊・死の連鎖" });
             var basis = Row("死の連鎖 (リィカ軸)");

@@ -73,7 +73,7 @@ static partial class Sh365Diag
         // ---- 計測のスイッチ ----
         {
             int diff = 0, n = 0, vdiff = 0;
-            foreach (var f in new[] { BoardB(), BoardIdle(), Presets.Versions.First(r => r.Name == "試遊・自傷").F })
+            foreach (var f in new[] { BoardB(), BoardIdle(), VersionsH386().First(r => r.Name == "試遊・自傷").F })
                 foreach (var w in new[] { I.Boss, I.Guard, I.Bat })
                     for (int seed = 0; seed < 6; seed++)
                     {
@@ -106,12 +106,12 @@ static partial class Sh365Diag
 
         // ---- 試遊の台 ----
         {
-            var vr = Presets.Versions.Select(r => r.Name).ToArray();
+            var vr = VersionsH386().Select(r => r.Name).ToArray();
             bool rows = vr.Take(7).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷" });
             Expect("`Presets.Versions` の頭 ＝ 試遊の7台（「試遊・自傷」を足した・第364期の「版・」の4台は外した・第366期から後ろに「版・」の台）", rows, string.Join("、", vr));
             if (rows)
             {
-                var f = Presets.Versions.First(r => r.Name == "試遊・自傷").F; var sh = Presets.Versions.First(r => r.Name == "試遊・破片").F;
+                var f = VersionsH386().First(r => r.Name == "試遊・自傷").F; var sh = VersionsH386().First(r => r.Name == "試遊・破片").F;
                 bool ok = S307.Seats(f) == "カド・リリ・ムド・ボルグ・アカ" && f.Occupied().All(o => UnitCatalog.All.Contains(o.Def)) && sh.Occupied().Any(o => o.Def == UnitCatalog.Gare);
                 Expect("「試遊・自傷」＝ 前1 カド ／ 前3 リリ ／ 中央 ムド ／ 後1 ボルグ ／ 後3 アカ（規定の駒）・「試遊・破片」のガレは規定（GR-A）", ok, S307.Seats(f));
             }

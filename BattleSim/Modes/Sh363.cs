@@ -105,7 +105,7 @@ static partial class Sh363Diag
     internal static readonly I.W[] Waves = new[] { I.Boss, I.Guard, I.Bat, I.M2, I.M4, I.M5, I.Nine }.Concat(I.StrongWaves).ToArray();
     static Formation BoardOf(string n) => n.Contains('・') && !n.Contains(' ')
         ? ByKey(n)
-        : CompareBuilds().Concat(CrossBuilds()).Concat(Presets.Versions).First(r => r.Name.StartsWith(n, StringComparison.Ordinal)).F;
+        : CompareBuilds().Concat(CrossBuilds()).Concat(VersionsH386()).First(r => r.Name.StartsWith(n, StringComparison.Ordinal)).F;
     static void Log(Ver v, string board, string wave, int seed)
     {
         var f = Apply(BoardOf(board), v); var w = D.WaveOf(wave);

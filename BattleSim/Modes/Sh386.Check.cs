@@ -36,7 +36,7 @@ static partial class Sh386Diag
     static void Kill(BattleContext ctx, UnitState u, UnitState? by) => ctx.ApplyDamage(u, 9999, by);
     static List<UnitState> Living(BattleContext ctx, string id) => ctx.LivingMembers(BattleContext.PlayerTeam).Where(u => u.Def.Id == id).ToList();
     static void Act(BattleContext ctx, UnitState u) { foreach (var t in u.Traits) t.OnAction(ctx, u, u.Def.Actions![0]); }
-    static readonly UnitDef[] SporeOf = { UnitCatalog.Spore, UnitCatalog.SporeS0, UnitCatalog.SporeP, UnitCatalog.SporeQ, UnitCatalog.SporePQ };
+    static readonly UnitDef[] SporeOf = { UnitCatalog.SporeH386, UnitCatalog.SporeS0, UnitCatalog.SporeP, UnitCatalog.SporeQ, UnitCatalog.SporePQ };
 
     static void Check()
     {
@@ -54,16 +54,16 @@ static partial class Sh386Diag
                 && UnitCatalog.SporeQ.Traits.SequenceEqual(new[] { TraitId.Ephemeral, TraitId.SporeParasite }) && UnitCatalog.SporeQ.Actions is { Count: 1 } q && q[0].Kind == ActionKind.Skill
                 && UnitCatalog.SporePQ.Traits.SequenceEqual(new[] { TraitId.Ephemeral, TraitId.SporeParasite, TraitId.SporeBurst }) && UnitCatalog.SporePQ.Actions is { Count: 1 } pq && pq[0].Kind == ActionKind.Skill
                 && TraitCatalog.Get(TraitId.SporeIdle).NeverAttacksOwnTurn && !TraitCatalog.Get(TraitId.SporeIdle).SurrendersTurn;
-            var m = UnitCatalog.Mug;
+            var m = UnitCatalog.MugH386;   // 第387期: 第386期の規定に固定
             bool mugs = MugOf.Skip(1).All(d => d.Id == "mug" && d.Name == m.Name && d.MaxHp == m.MaxHp && d.Attack == m.Attack && d.Speed == m.Speed && d.Traits.Take(m.Traits.Count).SequenceEqual(m.Traits) && d.Actions == m.Actions && d.MinusText == m.MinusText)
                 && UnitCatalog.MugS0.Traits.Skip(m.Traits.Count).SequenceEqual(new[] { TraitId.MugSporeS0 }) && UnitCatalog.MugS0.PlusText == m.PlusText
                 && UnitCatalog.MugP.Traits.Skip(m.Traits.Count).SequenceEqual(new[] { TraitId.MugSporeP }) && UnitCatalog.MugP.PlusText == m.PlusText + "／胞子は殴られて弾けると、殴った敵に毒を撒く"
                 && UnitCatalog.MugQ.Traits.Skip(m.Traits.Count).SequenceEqual(new[] { TraitId.MugSporeQ, TraitId.ParasiteFeed, TraitId.ParasiteBloom }) && UnitCatalog.MugQ.PlusText == m.PlusText + "／胞子は敵に取り付いて中から食い、宿主が倒れると、その亡骸から胞子が湧き出す"
                 && UnitCatalog.MugPQ.Traits.Skip(m.Traits.Count).SequenceEqual(new[] { TraitId.MugSporePQ, TraitId.ParasiteFeed, TraitId.ParasiteBloom }) && UnitCatalog.MugPQ.PlusText == m.PlusText + "／" + UnitCatalog.MugBurstClause386 + "／" + UnitCatalog.MugParasiteClause386;
             bool outside = MugOf.Skip(1).Concat(SporeOf.Skip(1)).All(d => !UnitCatalog.Everyone.Contains(d))
-                && !UnitCatalog.Everyone.Any(d => d.Traits.Any(t => t is >= TraitId.SporeIdle and <= TraitId.MugSporePQ))
+                && !UnitCatalog.Everyone.Any(d => !ReferenceEquals(d, UnitCatalog.Mug) && d.Traits.Any(t => t is >= TraitId.SporeIdle and <= TraitId.MugSporePQ))   /* 第387期: 規定のムグは印 P を持つ */
                 && !CompareBuilds().Concat(CrossBuilds()).Concat(Presets.Playtest).Any(r => r.F.Occupied().Any(o => MugOf.Skip(1).Contains(o.Def)));
-            bool def = m.Traits.SequenceEqual(UnitCatalog.MugSowAll.Traits) && UnitCatalog.Spore.Attack == 4 && UnitCatalog.Spore.Traits.SequenceEqual(new[] { TraitId.Ephemeral }) && UnitCatalog.Spore.Actions is null;
+            bool def = m.Traits.SequenceEqual(UnitCatalog.MugSowAll.Traits) && UnitCatalog.SporeH386.Attack == 4 && UnitCatalog.SporeH386.Traits.SequenceEqual(new[] { TraitId.Ephemeral }) && UnitCatalog.SporeH386.Actions is null;   // 第387期: 第386期の規定（旧）で見る
             Expect("版の定義: 版の胞子 4 体は攻撃力 0（HP 14 ／ 速 10 ／ 儚い・`Id` ／ 名前は胞子）・S0 ／ P は殴らない札（差し出した手番にならない）・Q ／ PQ は手番 `[Skill]` の寄生・P ／ PQ は弾けて毒・版のムグ ＝ 規定のムグの写し ＋ 印（文面は §2-3 の叩き台）・`All` ／ `Retired` ／ `compare` ／ 交差帯 ／ `Playtest` の外・規定のムグ ／ 胞子は今どおり",
                 spores && mugs && outside && def);
         }
@@ -202,7 +202,7 @@ static partial class Sh386Diag
 
         // ---- 試遊の台 ----
         {
-            var vr = Presets.Versions;
+            var vr = VersionsH386();   // 第387期: 第386期の一覧（「版・弾け」を足し戻し・ムグは旧）
             var a = vr.FirstOrDefault(r => r.Name == "版・弾け 死の連鎖"); var b = vr.FirstOrDefault(r => r.Name == "版・寄生 死の連鎖");
             bool two = a.F is not null && b.F is not null && vr[^2].Name == "版・弾け 死の連鎖" && vr[^1].Name == "版・寄生 死の連鎖"
                 && a.F.Occupied().Select(o => o.Def).SequenceEqual(Presets.DeathChain377(mug: UnitCatalog.MugP).Occupied().Select(o => o.Def))

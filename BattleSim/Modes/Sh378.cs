@@ -245,7 +245,7 @@ static partial class Sh378Diag
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
         const int seeds = 100;
-        var all = Presets.Playtest.Concat(Presets.Versions).ToArray();
+        var all = Presets.Playtest.Concat(VersionsH386()).ToArray();
         var rows = new List<(string Name, Formation F)>();
         foreach (var (n, f) in S377.Boards(tsugi: false))
             foreach (int vi in new[] { 0, 1, 5 }) rows.Add(($"{n} × {VerNames[vi]}", Apply(f, vi)));

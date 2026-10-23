@@ -983,13 +983,13 @@ public enum TraitId
     DirgeSoundG2,         // 哀歌の音・死寄り（楽士 G2）: 同じ形で、倒れるたび +50（閾値 50 ／ 上限 100）（`DirgeSoundTrait`）
     UncapRaise,           // 起こしの上限を外す（U・リィカ ／ ムグ）: 亡者起こし（味方の亡骸から）／ 亡骸の芽吹きの1戦に3回の上限を外す（召喚枠の空きだけが上限）（**札そのものは挙動を持たない**・`RaiseDeadTrait` ／ `MugSproutTrait` が読む）
     // --- 第386期で足した札（指示書 design/PHASE386_SPORE_SPEC.md §2）。胞子らしい胞子（版 S0 ／ P ／ Q ／ PQ・版の胞子と版のムグは `All` の外）。保持者 0 枚 ---
-    SporeIdle,            // 殴らない胞子（S0 ／ P の胞子）: 手番に何もしない（不動と同じく、差し出した手番にならない）（`SporeIdleTrait`）
-    SporeBurst,           // 弾けて毒（P ／ PQ の胞子）: 倒れたとき、倒した者が敵ならその敵に毒 +6（撃破者のいない死では撒かない）（`SporeBurstTrait`）
+    SporeIdle,            // 殴らない胞子（S0 ／ P の胞子・第387期から規定の胞子）: 手番に何もしない（不動と同じく、差し出した手番にならない）（`SporeIdleTrait`）
+    SporeBurst,           // 弾けて毒（P ／ PQ の胞子・第387期から規定の胞子）: 倒れたとき、倒した者が敵ならその敵に毒 +6（撃破者のいない死では撒かない）（`SporeBurstTrait`）
     SporeParasite,        // 寄生（Q ／ PQ の胞子）: 手番で、ふつうの攻撃の的と同じ規則で選んだ敵に寄生し、盤から消える（死ではない）（`SporeParasiteTrait`）
     ParasiteFeed,         // 寄生の食い（Q ／ PQ のムグ）: 寄生された敵はターンの頭に寄生の数 × 4 のダメージを受ける（撃ち手はこの札を持つ生きた駒・いなければ無し）（**判定は engine の `TickStatuses`**・`SporeParasiteTrait.Feed`）
     ParasiteBloom,        // 亡骸から湧く（Q ／ PQ のムグ）: 寄生された敵が倒れると、寄生の数だけ版の胞子がこちらの召喚枠に湧く（**判定は engine の `HandleDeath`**・`SporeParasiteTrait.Bloom`・札そのものは印）
     MugSporeS0,           // 版の胞子を出す・S0（ムグ）: 撒く ／ 分裂で出す胞子を殴らない胞子にする（**札そのものは挙動を持たない**・`MugSowTrait` ／ `SplitterTrait` が読む）
-    MugSporeP,            // 版の胞子を出す・P（ムグ）: 同じ形で、弾けて毒の胞子にする
+    MugSporeP,            // 版の胞子を出す・P（ムグ・第387期から規定のムグ）: 同じ形で、弾けて毒の胞子（＝ 規定の胞子）にする
     MugSporeQ,            // 版の胞子を出す・Q（ムグ）: 同じ形で、寄生する胞子にする
     MugSporePQ,           // 版の胞子を出す・PQ（ムグ）: 同じ形で、寄生して弾ける胞子にする
 
@@ -2122,7 +2122,7 @@ public sealed class SplitterTrait : Trait
         if (self.Counter(SplitKey) > 0) return;   // 縫い直された体からは、もう胞子は出ない
         self.SetCounter(SplitKey, 1);
 
-        UnitDef spore = SporeVersion.Of(self) ?? UnitCatalog.Spore;   // 第386期: 版のムグは版の胞子を出す（印が無ければ今の胞子）
+        UnitDef spore = SporeVersion.Of(self) ?? UnitCatalog.SporeH386;   // 第386期: 版のムグは版の胞子を出す・第387期: 印が無ければ旧の胞子（規定のムグは印 P を持つ）
         for (int i = 0; i < 2; i++)
             ctx.Summon(spore, self.TeamId, by: self);
     }
@@ -13610,7 +13610,7 @@ public sealed class MugSproutTrait : Trait
         if (dead.HasTrait(TraitId.Ephemeral)) return;
         if (self.RawCounter(CountKey) >= PerBattle && !self.HasTrait(TraitId.UncapRaise)) return;   // 第378期（U）: 上限を外す札があれば数えない
         UnitTally t = ctx.TallyOf(self);
-        if (ctx.SummonOverFallen(UnitCatalog.Spore, self.TeamId, self) is null) { t.R377SproutNoSeat++; return; }   // 計数のみ
+        if (ctx.SummonOverFallen(UnitCatalog.SporeH386, self.TeamId, self) is null) { t.R377SproutNoSeat++; return; }   // 計数のみ・第387期: 第377期の版なので旧の胞子
         int n = self.RawCounter(CountKey) + 1;
         self.SetCounter(CountKey, n);
         t.R377Sprouts++; t.R377SproutTurnSum += ctx.Turn;   // 計数のみ
@@ -13659,7 +13659,7 @@ public sealed class MugSowTrait : Trait
     {
         if (!self.IsAlive) return;
         UnitTally t = ctx.TallyOf(self);
-        UnitDef seed = Grow ? UnitCatalog.SporeSeed : SporeVersion.Of(self) ?? UnitCatalog.Spore;   // 第386期: 版のムグは版の胞子を撒く（印が無ければ今の胞子）
+        UnitDef seed = Grow ? UnitCatalog.SporeSeed : SporeVersion.Of(self) ?? UnitCatalog.SporeH386;   // 第386期: 版のムグは版の胞子を撒く・第387期: 印が無ければ旧の胞子（規定のムグは印 P を持つ）
         int n = 0;
         while (ctx.SummonOverFallen(seed, self.TeamId, self) is { } s)
         {
@@ -13698,13 +13698,14 @@ public sealed class SporeGrowTrait : Trait
 
 /// <summary>
 /// 版の胞子を出す（第386期・ムグの版 S0 ／ P ／ Q ／ PQ・指示書 design/PHASE386_SPORE_SPEC.md §2-2）。ムグが持つ印（<see cref="TraitId.MugSporeS0"/> など）から、
-/// 撒く（<see cref="MugSowTrait"/>）／ 分裂（<see cref="SplitterTrait"/>）で出す胞子を引く。<b>印が無ければ null</b>（呼び手は今の胞子を出す・規定のムグは1ビットも変わらない）。
+/// 撒く（<see cref="MugSowTrait"/>）／ 分裂（<see cref="SplitterTrait"/>）で出す胞子を引く。<b>印が無ければ null</b>（呼び手は旧の胞子 <see cref="UnitCatalog.SporeH386"/> を出す）。
+/// <b>第387期: 規定のムグが印 P を持つ</b>（P ＝ 規定の胞子 <see cref="UnitCatalog.Spore"/>）。規定のムグから版を作って別の印を足したときにその印が勝つよう、P を最後に引く（第386期の駒はどれも印を1つしか持たないので、順を替えても結果は同じ）。
 /// </summary>
 public static class SporeVersion
 {
     public static UnitDef? Of(UnitState u) =>
-        u.HasTrait(TraitId.MugSporeS0) ? UnitCatalog.SporeS0 : u.HasTrait(TraitId.MugSporeP) ? UnitCatalog.SporeP
-        : u.HasTrait(TraitId.MugSporeQ) ? UnitCatalog.SporeQ : u.HasTrait(TraitId.MugSporePQ) ? UnitCatalog.SporePQ : null;
+        u.HasTrait(TraitId.MugSporeS0) ? UnitCatalog.SporeS0 : u.HasTrait(TraitId.MugSporeQ) ? UnitCatalog.SporeQ
+        : u.HasTrait(TraitId.MugSporePQ) ? UnitCatalog.SporePQ : u.HasTrait(TraitId.MugSporeP) ? UnitCatalog.SporeP : null;
 }
 
 /// <summary>

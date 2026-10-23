@@ -54,7 +54,7 @@ static partial class Sh383Diag
         {
             // 奏でた手番: 味方の後に、攻撃力の最も高い敵が1回動く（敵は1体も倒れていない）
             var (ctx, p, e) = Bd(new[] { (0, d2), (1, MateHi) }, new[] { (0, FoeLo), (1, FoeHi) });
-            var bard = At(p, 0); var sp = ctx.Summon(UnitCatalog.Spore, BattleContext.PlayerTeam)!;
+            var bard = At(p, 0); var sp = ctx.Summon(UnitCatalog.SporeH386, BattleContext.PlayerTeam)!;
             ctx.ApplyDamage(sp, 999, At(e, 1));
             int ev0 = ctx.Events.Count;
             ctx.TakeTurn(bard);
@@ -70,7 +70,7 @@ static partial class Sh383Diag
         {
             // 控えた敵が先に倒れていれば動かない（味方の再行動がその敵を倒す）
             var (ctx, p, e) = Bd(new[] { (0, d2), (1, MateHi) }, new[] { (0, FoeWeak), (3, FoeLo) });
-            var bard = At(p, 0); var sp = ctx.Summon(UnitCatalog.Spore, BattleContext.PlayerTeam)!;
+            var bard = At(p, 0); var sp = ctx.Summon(UnitCatalog.SporeH386, BattleContext.PlayerTeam)!;
             ctx.ApplyDamage(sp, 999, At(e, 0));
             ctx.TakeTurn(bard);
             bool ok = !At(e, 0).IsAlive && Tal(ctx, At(e, 0)).R382EchoTurns == 0 && Tal(ctx, At(e, 3)).R382EchoTurns == 0 && Tal(ctx, bard).R382Echoes == 1 && Tal(ctx, bard).R382Skipped == 1;
@@ -80,9 +80,9 @@ static partial class Sh383Diag
             // D1n は第382期と同じ動き（第382期の報告 §3-1 の D1n の列: ボス ／ 近衛 ／ 大隊 ／ 本編 第5波 ／ 強い条件・seed 0..99）
             var exp = new (string Name, Formation F, double[] Win)[]
             {
-                ("スィド", S382.Board(new[] { UnitCatalog.Mug, UnitCatalog.Sid, UnitCatalog.Vel, UnitCatalog.Rica, UnitCatalog.Bard382n }, new[] { 0, 1, 2, 3, 4 }), new[] { 100.0, 100, 100, 100, 98.2 }),
-                ("ゴルム", S382.Board(new[] { UnitCatalog.Mug, UnitCatalog.Golm, UnitCatalog.Vel, UnitCatalog.Rica, UnitCatalog.Bard382n }, new[] { 0, 1, 2, 3, 4 }), new[] { 100.0, 100, 100, 100, 79.5 }),
-                ("ボルグ", S382.Board(new[] { UnitCatalog.Vel, UnitCatalog.Mug, UnitCatalog.Bard382n, UnitCatalog.Borg, UnitCatalog.Rica }, new[] { 0, 1, 2, 3, 4 }), new[] { 96.0, 100, 100, 100, 65.8 }),
+                ("スィド", S382.Board(new[] { UnitCatalog.MugH386, UnitCatalog.Sid, UnitCatalog.Vel, UnitCatalog.Rica, UnitCatalog.Bard382n }, new[] { 0, 1, 2, 3, 4 }), new[] { 100.0, 100, 100, 100, 98.2 }),
+                ("ゴルム", S382.Board(new[] { UnitCatalog.MugH386, UnitCatalog.Golm, UnitCatalog.Vel, UnitCatalog.Rica, UnitCatalog.Bard382n }, new[] { 0, 1, 2, 3, 4 }), new[] { 100.0, 100, 100, 100, 79.5 }),
+                ("ボルグ", S382.Board(new[] { UnitCatalog.Vel, UnitCatalog.MugH386, UnitCatalog.Bard382n, UnitCatalog.Borg, UnitCatalog.Rica }, new[] { 0, 1, 2, 3, 4 }), new[] { 96.0, 100, 100, 100, 65.8 }),
                 ("死の連鎖", S382.ChainWith(UnitCatalog.Bard382n), new[] { 100.0, 100, 100, 82, 53.2 }),
             };
             var ws = new[] { new[] { I.Boss }, new[] { I.Guard }, new[] { I.Bat }, new[] { I.M5 }, I.StrongWaves };

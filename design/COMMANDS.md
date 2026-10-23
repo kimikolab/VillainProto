@@ -1410,6 +1410,12 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sh386 vers               # 第386期 §3: 死の台 6 ＋ 試遊・毒（ドルガ → ムグ）× 胞子の版（規定 ／ S0 殴らない ／ P 弾けて毒 ／ Q 寄生 ／ PQ）× 8 物差し（seed 0..99）——§3-3 の 1〜8（胞子 ／ 毒 ／ 寄生 ／ 層 ／ 誰が何Tに ／ 壊れの兆し）
     dotnet run --project BattleSim -c Release 0 sh386 compare [S0|P|Q|PQ] # 第386期 §3-1 の 3: `compare` のムグのいる行だけ × 胞子の版（seed 0..199・ムグのいない行は版の写像で変わらないことだけ確かめる）
     dotnet run --project BattleSim -c Release 0 sh386 check              # 第386期 自己検査（版の胞子 ／ ムグの定義・撒く ／ 分裂で版の胞子・殴らない・弾けて毒（撃破者が敵だけ）・寄生（消える ／ 死なない ／ 層 ／ 音 ／ 枠）・寄生の食い（撃ち手）・亡骸から湧く（空いた枠まで）・規定の `compare` 全行・試遊の台・verbose・毒の経路・`checkup`・PickOne ／ Roll）
+    dotnet run --project BattleSim -c Release 0 sh387 zero               # 第387期 §3-2: 段0（胞子の弾けて毒 P を規定に）の `compare` の動き（第386期の規定 ↔ 今・seed 0..199）／ ムグのいる試遊の台 4 × 5 物差し（seed 0..99）
+    dotnet run --project BattleSim -c Release 0 sh387 use                # 第387期 §4-2: 残りの 10 枚（カリ ／ ウロ ／ トモ ／ ノミ ／ セッキ ／ ハギ ／ クビ ／ バン ／ ドルガ ／ ガン）のいる `compare` の行と素体に替えた差（本編 第2〜5波・seed 0..99）
+    dotnet run --project BattleSim -c Release 0 sh387 swap               # 第387期 §4-3: 試遊の台 × 1枚を 10 枚に替えた台（段1 seed 0..9 → 段2 駒ごとの上位 3 台 × 8 物差し seed 0..99・札の働き ／ 誰が何Tに）
+    dotnet run --project BattleSim -c Release 0 sh387 overlap            # 第387期 §4-4: ロスター 52 枚を試遊の台の席に替えた差の並びで近い駒 ／ 替え合いの差
+    dotnet run --project BattleSim -c Release 0 sh387 dolga              # 第387期 §4-5: ドルガ ／ ガンのいる `compare` の行 ／ 試遊の台 × ボス ／ 近衛 ／ 大隊 ／ 強い条件（seed 0..99）
+    dotnet run --project BattleSim -c Release 0 sh387 check              # 第387期 自己検査（規定の胞子 ／ ムグの札と文面・出す胞子（旧のムグは旧の胞子）・規定のムグ ＝ 第386期の MugP・固定の口 `Pin386` ／ `VersionsH386`・過去の器具の胞子の固定・`checkup` の札の表・素体 ／ 替えた台は器具の中だけ・`compare` 全行・verbose・PickOne ／ Roll）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

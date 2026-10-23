@@ -181,14 +181,14 @@ static partial class Sh379Diag
 
         // ---- 試遊の台 ----
         {
-            var vr = Presets.Versions.Select(r => r.Name).ToArray();
+            var vr = VersionsH386().Select(r => r.Name).ToArray();
             // 第380期: 「版・撒き全 ／ 育つ 死の連鎖」を外し、後ろに第380期の台が足された——頭の 12 台と「試遊・死 ソム」を見て、版の並びは関数から組む。
             bool rows = vr.Take(12).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒", "試遊・毒 席替え", "試遊・毒 紅", "試遊・ヴィオ 台B", "試遊・死の連鎖" }) && vr.Contains("試遊・死 ソム");
             var basis = Row("死の連鎖 (リィカ軸)");
             bool vers = Pin381(Presets.DeathChain377(mug: UnitCatalog.MugSowAll)).Occupied()   /* 第382期: ヴェルは旧に固定 */.Select(o => o.Def).SequenceEqual(Apply(basis, 2).Occupied().Select(o => o.Def))
                 && Pin381(Presets.DeathChain377(mug: UnitCatalog.MugSowGrow)).Occupied().Select(o => o.Def).SequenceEqual(Apply(basis, 3).Occupied().Select(o => o.Def))
-                && S307.Seats(Presets.Versions.First(r => r.Name == "試遊・死 ソム").F) == "ソム・ゴルム・ムグ・ヴェル・リィカ"
-                && Pin379(Presets.Versions.First(r => r.Name == "試遊・死の連鎖").F).Occupied().Select(o => o.Def).SequenceEqual(basis.Occupied().Select(o => o.Def));
+                && S307.Seats(VersionsH386().First(r => r.Name == "試遊・死 ソム").F) == "ソム・ゴルム・ムグ・ヴェル・リィカ"
+                && Pin379(VersionsH386().First(r => r.Name == "試遊・死の連鎖").F).Occupied().Select(o => o.Def).SequenceEqual(basis.Occupied().Select(o => o.Def));
             Expect("`Presets.Versions` の頭 ＝ 第376期の11台 ＋「試遊・死の連鎖」・「試遊・死 ソム」が残る（第380期に「版・撒き全 ／ 育つ 死の連鎖」を外した・並びは `DeathChain377`）", rows && vers, string.Join("、", vr));
         }
 

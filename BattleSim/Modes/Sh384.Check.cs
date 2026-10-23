@@ -62,7 +62,7 @@ static partial class Sh384Diag
             int s0 = Snd(bard);
             ctx.ApplyDamage(lo, 10, e[0]); int s1 = Snd(bard);                      // +10
             ctx.ApplyDamage(bard, 4, e[0]); int s2 = Snd(bard);                     // 自分 +4
-            var sp = ctx.Summon(UnitCatalog.Spore, BattleContext.PlayerTeam)!; int spHp = sp.Hp;
+            var sp = ctx.Summon(UnitCatalog.SporeH386, BattleContext.PlayerTeam)!; int spHp = sp.Hp;
             ctx.ApplyDamage(sp, 999, e[0]); int s3 = Snd(bard);                     // 儚い駒: 実際に減った HP（はみ出しは数えない）＋ 20
             bool rising = lo.RawCounter(VelSoulTrait.LivesKey) > 0; int loHp = lo.Hp;
             ctx.ApplyDamage(lo, 999, e[0]); int s4 = Snd(bard);                     // 起き上がる死: 残りの HP ＋ 20（上限 100）
@@ -93,7 +93,7 @@ static partial class Sh384Diag
         {
             // G2: 倒れるたび +50
             var (ctx, p, e) = Bd(new[] { (0, g2), (1, MateHi) }, new[] { (2, FoeHi) });
-            var bard = At(p, 0); var sp = ctx.Summon(UnitCatalog.Spore, BattleContext.PlayerTeam)!; int spHp = sp.Hp;
+            var bard = At(p, 0); var sp = ctx.Summon(UnitCatalog.SporeH386, BattleContext.PlayerTeam)!; int spHp = sp.Hp;
             ctx.ApplyDamage(sp, 999, e[0]);
             Expect("G2: 倒れるたび +50（儚い駒の死も）", Snd(bard) == Math.Min(100, spHp + 50), $"胞子 HP {spHp} → 音 {Snd(bard)}");
         }
@@ -102,9 +102,9 @@ static partial class Sh384Diag
             var d2 = UnitCatalog.Bard383;
             var exp = new (string Name, Formation F, double[] Win)[]
             {
-                ("スィド", S382.Board(new[] { UnitCatalog.Mug, UnitCatalog.Sid, UnitCatalog.Vel, UnitCatalog.Rica, d2 }, new[] { 0, 1, 2, 3, 4 }), new[] { 100.0, 100, 100, 100, 95.8 }),
-                ("ゴルム", S382.Board(new[] { d2, UnitCatalog.Golm, UnitCatalog.Rica, UnitCatalog.Mug, UnitCatalog.Vel }, new[] { 0, 1, 2, 3, 4 }), new[] { 100.0, 100, 100, 100, 61.0 }),
-                ("ボルグ", S382.Board(new[] { d2, UnitCatalog.Mug, UnitCatalog.Vel, UnitCatalog.Borg, UnitCatalog.Rica }, new[] { 0, 1, 2, 3, 4 }), new[] { 100.0, 100, 100, 100, 87.8 }),
+                ("スィド", S382.Board(new[] { UnitCatalog.MugH386, UnitCatalog.Sid, UnitCatalog.Vel, UnitCatalog.Rica, d2 }, new[] { 0, 1, 2, 3, 4 }), new[] { 100.0, 100, 100, 100, 95.8 }),
+                ("ゴルム", S382.Board(new[] { d2, UnitCatalog.Golm, UnitCatalog.Rica, UnitCatalog.MugH386, UnitCatalog.Vel }, new[] { 0, 1, 2, 3, 4 }), new[] { 100.0, 100, 100, 100, 61.0 }),
+                ("ボルグ", S382.Board(new[] { d2, UnitCatalog.MugH386, UnitCatalog.Vel, UnitCatalog.Borg, UnitCatalog.Rica }, new[] { 0, 1, 2, 3, 4 }), new[] { 100.0, 100, 100, 100, 87.8 }),
                 ("死の連鎖", S382.ChainWith(d2), new[] { 100.0, 100, 100, 66, 53.2 }),
             };
             var ws = new[] { new[] { I.Boss }, new[] { I.Guard }, new[] { I.Bat }, new[] { I.M5 }, I.StrongWaves };

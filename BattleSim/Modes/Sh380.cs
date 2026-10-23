@@ -50,7 +50,7 @@ static partial class Sh380Diag
     // 母集団
     // ---------------------------------------------------------------------------------
     /// <summary>固定の3枚（規定の駒・段0 の後）。</summary>
-    internal static readonly UnitDef[] Fixed = { UnitCatalog.Rica, UnitCatalog.VelH381, UnitCatalog.Mug };   // 第382期: ヴェルは第381期までの規定（`VelH381`）に固定
+    internal static readonly UnitDef[] Fixed = { UnitCatalog.Rica, UnitCatalog.VelH381, UnitCatalog.MugH386 };   // 第387期: ムグも第380〜386期の規定（`MugH386`）に固定   // 第382期: ヴェルは第381期までの規定（`VelH381`）に固定
     static UnitDef[]? _heal;
     /// <summary>ヒーラー（第283期の機械的な定義 ＝ 味方に回復か破片を2回以上書ける駒・`Boss283Diag.HealPool`・1回だけ数えて控える）。</summary>
     internal static UnitDef[] Healers => _heal ??= Boss283Diag.HealPool;

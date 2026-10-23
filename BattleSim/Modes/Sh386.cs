@@ -51,11 +51,11 @@ static partial class Sh386Diag
     // 版 ／ 台 ／ 波
     // ---------------------------------------------------------------------------------
     internal static readonly string[] VerNames = { "規定", "S0", "P", "Q", "PQ" };
-    internal static readonly UnitDef[] MugOf = { UnitCatalog.Mug, UnitCatalog.MugS0, UnitCatalog.MugP, UnitCatalog.MugQ, UnitCatalog.MugPQ };
-    internal static Formation Apply(Formation f, int vi) => vi == 0 ? f : I.Swap(f, "mug", MugOf[vi]);
+    internal static readonly UnitDef[] MugOf = { UnitCatalog.MugH386, UnitCatalog.MugS0, UnitCatalog.MugP, UnitCatalog.MugQ, UnitCatalog.MugPQ };
+    internal static Formation Apply(Formation f, int vi) => vi == 0 ? Pin386(f) : I.Swap(f, "mug", MugOf[vi]);   // 第387期: 「規定」は第386期の規定（`MugH386`）に固定
 
     /// <summary>「試遊・毒」のドルガの席（後3）を規定のムグに替えた台（並びは固定・版の列はそのムグを版に替える）。</summary>
-    internal static Formation PoisonMug() { var f = Presets.PoisonHero367().Clone(); f[4] = UnitCatalog.Mug; return f; }
+    internal static Formation PoisonMug() { var f = Presets.PoisonHero367().Clone(); f[4] = UnitCatalog.MugH386; return f; }   // 第387期: 第386期の規定のムグに固定
 
     /// <summary>§3-1 の台（死の台 6 ＋ 毒と組む台 1）。毒と組む台の見どころは第380期 2 ／ 3 位・試遊・死 エレ（スィド入り）と試遊・毒（ムグ）。</summary>
     internal static (string Name, bool Sid, Formation F)[] Boards() => new (string, bool, Formation)[]
@@ -335,7 +335,7 @@ static partial class Sh386Diag
         var rows = all.Where(r => S377.HasMug(r.F)).ToArray();
         int nw = EnemyCatalog.Stages.Count, last = nw - 1;
         bool others = all.Where(r => !S377.HasMug(r.F)).All(r => vis.All(vi => ReferenceEquals(Apply(r.F, vi), r.F) || Apply(r.F, vi).Occupied().Select(o => o.Def).SequenceEqual(r.F.Occupied().Select(o => o.Def))));
-        var b = CGrid(rows);
+        var b = CGrid(rows.Select(r => (r.Name, Pin386(r.F))).ToArray());   // 第387期: 「規定」は第386期の規定のムグ
         Console.WriteLine($"# {Tag} §3-1 の 3 `compare` —— ムグのいる行 {rows.Length} 行（全 {all.Length} 行）× 版（seed 0..{CompareSeeds - 1}）");
         Console.WriteLine();
         Console.WriteLine($"ムグのいる行: {string.Join("、", rows.Select(r => r.Name))}。主判定19行に入っている行: {string.Join("、", rows.Where(r => Baseline.PrimaryRows.Contains(r.Name)).Select(r => r.Name).DefaultIfEmpty("なし"))}。");

@@ -777,7 +777,7 @@ static class Som314Diag
                    && ev2.Any(x => x.Kind == BattleEventKind.ShockSpent && x.ActorId == s2.InstanceId);
             // b3 空いた召喚枠が無ければ弾ける（召喚枠を敵の駒で埋める）
             var (c3, s3, _, e3) = StandBoard(sba);
-            foreach (int sl in FormationShape.X.SummonSlots) c3.Summon(UnitCatalog.Spore, BattleContext.EnemyTeam, sl);
+            foreach (int sl in FormationShape.X.SummonSlots) c3.Summon(UnitCatalog.SporeH386, BattleContext.EnemyTeam, sl);
             ev0 = c3.Events.Count;
             TurnStart(c3, s3);
             var ev3 = c3.Events.Skip(ev0).ToList();

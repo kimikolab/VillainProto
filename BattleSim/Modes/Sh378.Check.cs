@@ -136,7 +136,7 @@ static partial class Sh378Diag
         }
 
         // ---- U ----
-        foreach (var (name, def, id, spawn) in new[] { ("U 亡者起こし", UnitCatalog.RicaELU, "rica", UnitCatalog.Wight), ("U 亡骸の芽吹き", UnitCatalog.MugSproutMU, "mug", UnitCatalog.Spore) })
+        foreach (var (name, def, id, spawn) in new[] { ("U 亡者起こし", UnitCatalog.RicaELU, "rica", UnitCatalog.Wight), ("U 亡骸の芽吹き", UnitCatalog.MugSproutMU, "mug", UnitCatalog.SporeH386) })
         {
             var (ctx, p, e) = Board(1, (0, Mate), (1, Mate), (2, Mate), (3, Mate), (4, def));
             var holder = p.First(u => u.Def.Id == id);
@@ -187,7 +187,7 @@ static partial class Sh378Diag
         // ---- 寄せ集め ／ 素体は器具の中だけ ----
         {
             bool ok = !UnitCatalog.Everyone.Any(d => d.Id.EndsWith("_plain", StringComparison.Ordinal))
-                && !CompareBuilds().Concat(Presets.Versions).Concat(Presets.Playtest).Any(r => r.F.Occupied().Any(o => o.Def.Id.EndsWith("_plain", StringComparison.Ordinal)))
+                && !CompareBuilds().Concat(VersionsH386()).Concat(Presets.Playtest).Any(r => r.F.Occupied().Any(o => o.Def.Id.EndsWith("_plain", StringComparison.Ordinal)))
                 && S377.MixBoardsOf(UnitCatalog.RicaELU).Select(S307.Seats).SequenceEqual(S377.MixBoardsOf(UnitCatalog.RicaH378).Select(S307.Seats));
             Expect("寄せ集めの台 ／ 素体は器具の中だけ（カタログ ／ `compare` ／ 試遊の台に素体が無い）・寄せ集めは第377期と同じ 50 台（リィカの版を替えても並びが同じ）", ok);
         }
@@ -219,7 +219,7 @@ static partial class Sh378Diag
 
         // ---- 試遊の台 ----
         {
-            var vr = Presets.Versions.Select(r => r.Name).ToArray();
+            var vr = VersionsH386().Select(r => r.Name).ToArray();
             // 第379期: 第378期の「版・」の死の台は外した——頭の 12 台を見て、版の並びは関数から組む。
             bool rows = vr.Take(12).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒", "試遊・毒 席替え", "試遊・毒 紅", "試遊・ヴィオ 台B", "試遊・死の連鎖" });
             var basis = Row("死の連鎖 (リィカ軸)");
