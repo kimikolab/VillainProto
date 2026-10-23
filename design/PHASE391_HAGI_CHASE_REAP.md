@@ -159,7 +159,7 @@
 - **直した器具**: `sh390 check`（試遊の台の項目を `VersionsH390()` で読む）。`Common.VersionsH390()` を足し、`VersionsH389()` はそこから作るようにした。`checkup` の札の分類表に第391期の札 3 枚（`HagiPursuitReap` ／ `HagiPursuitColumn` ／ `HagiPursuitHeavy`）。照合の台帳に `sh391 check`。
 - **作戦マップ**: DemoApp ビルド 0 エラー・`--map11-phase0` ／ `171` ／ `172` ／ `173` すべて `ok=True`・`NineWaveCheck` ／ `DischargeCheck` ／ `ScorePanelCheck` `ok=True`。
 - `docs/` は再生成していない（規定を変えていない・`docs/units.md` の札の表に第391期の札はまだ載っていない——規定にする期の再生成で載る）。
-- **過去の器具の照合（軽い・`-Units hagi,rica,mug,vel,ere`）**: HEAD（45401a17）の保存は無いが、BattleCore ／ BattleSim が同じ第390期の保存（ee7c93fa）と比べた。**照合 63 本: 一致 63 ／ 差 0**（`sh391 check` は台帳に足す前に走らせたので、コミットの後の照合で入れる・§6-3）。
+- **過去の器具の照合（軽い・`-Units hagi,rica,mug,vel,ere`）**: HEAD（45401a17）の保存は無いが、BattleCore ／ BattleSim が同じ第390期の保存（ee7c93fa）と比べた。**照合 63 本: 一致 63 ／ 差 0**。コミット（b613e712）の後に、基準を第390期の保存（ee7c93fa）に固定した写しの器具で `sh391 check` を入れて回し直した——**照合 64 本: 一致 63 ／ 差 0 ／ 保存に無い 1（`sh391 check`）**。期の最後に `promote`（b613e712 ＝ ee7c93fa ＋ 64 本）。
 - **`sweep fast`**: 22 本・4.6 分・異常終了 0 本・上限 0 本——**合格**（`.tmp/p391/sweep_fast.txt`）。`Presets`（試遊の台の入れ替え）と版の駒が動いたので、`sweep nightly` でも拾われる。
 - コミットは自分の変更パスだけ（`DemoApp/` ／ `design/DEMOAPP_HISTORY.md` ／ `tools/comfy_idle_loop` ／ `design/CODEX_BRIEF_*.md` ／ `design/art` などの作業中のファイルは含めていない）。**push の前に、ローカルの master に Codex のコミット 45401a17（「演出ビューアと全駒の自動カタログを追加」・DemoApp ／ design のみ）が未 push で乗っていた**——この期の push で一緒に origin へ出た。
 
