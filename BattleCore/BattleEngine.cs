@@ -827,6 +827,11 @@ public sealed class BattleContext
             }
             if (left - 1 <= 0 && u.RawCounter(GurenTrait.BurnKey) > 0) u.SetCounter(GurenTrait.BurnKey, 0);   // 第197期・**計数のみ**
         }
+
+        // 第386期（寄生の食い・版の胞子 Q ／ PQ）: 寄生の数を持つ生きた駒が、毒 ／ 燃焼の後に中から食われる。寄生が1度も起きていない戦は比較1つで抜ける。
+        if (_parasiteLive)
+            foreach (UnitState u in _units.Where(x => x.IsAlive && x.RawCounter(SporeParasiteTrait.CountKey) > 0).ToList())
+                SporeParasiteTrait.Feed(this, u);
     }
 
     /// <summary>第245期: 燃焼の刻み1回ぶんの帳簿（<b>計数のみ</b>）。刻みの前後の HP の差で、削った量と回復した量（火の変換・ベニ・火の癒し）を分ける。</summary>
@@ -4220,13 +4225,14 @@ public sealed class BattleContext
     /// 第369期に噴き出し ／ 返り毒 ／ 引き受けで3本（添字 13〜15）足したので、長さを 14 → 17・燃焼の添字を 13 → 16 にずらした。
     /// 第370期に攻撃力ぶんの毒（添字 16）を足したので、長さを 17 → 18・燃焼の添字を 16 → 17 にずらした。
     /// 第374期に開戦の衣（添字 19）を足したので、長さを 20 → 21・燃焼の添字を 19 → 20 にずらした。
+    /// 第386期に弾けて毒（添字 20）を足したので、長さを 21 → 22・燃焼の添字を 20 → 21 にずらした。
     /// 第373期に溢れて吐く（添字 18）を足したので、長さを 18 → 20・燃焼の添字を 17 → 19 にずらした——**第367期から添字を1つ少なく数えていた**
     /// （`Miasma` が 0 なので触媒は 13・攻撃力ぶんの毒は 17。第367〜372期は触媒 ／ 攻撃力ぶんの毒が燃焼の添字と重なっていた・計数の列だけで盤面には影響しない・第373期に直した））。**毒の経路を足したら燃焼の添字も後ろへずらすこと**
     /// ——ずらさないと新しい経路の添字が燃焼と重なる。</summary>
-    public const int SoakRouteCount = 21;
+    public const int SoakRouteCount = 22;
 
     /// <summary>燃焼の経路の添字（<see cref="UnitTally.SoakSeenByRoute"/> の末尾）。</summary>
-    public const int SoakBurnRouteIx = 20;
+    public const int SoakBurnRouteIx = 21;
 
     /// <summary>
     /// 巻き込み則（第85期）で最後にこの駒へ傷を書いた駒の <c>InstanceId + 1</c>（第90期の計数専用の札）。
@@ -17482,6 +17488,8 @@ public sealed class BattleContext
         }
 
         // 本人の死亡時効果（分裂など）
+        UnitState? prevKiller = DyingKiller;
+        DyingKiller = killer;   // 第386期: 自分の死の札の間だけ撃破者を見せる（弾けて毒）
         if (!soulRise)
         foreach (Trait t in dead.Traits.ToList())
         {
@@ -17489,6 +17497,9 @@ public sealed class BattleContext
             t.OnDeath(this, dead);
             this.EndTrait(m);
         }
+        DyingKiller = prevKiller;
+        // 第386期（亡骸から湧く・版の胞子 Q ／ PQ）: 寄生された駒の自分の死の直後（敵の亡骸の亡者 ／ 墓守の通知より先）。寄生が1度も起きていない戦は比較1つで抜ける。
+        if (_parasiteLive && dead.RawCounter(SporeParasiteTrait.CountKey) > 0) SporeParasiteTrait.Bloom(this, dead);
 
         // 敵味方を問わない死亡通知。墓守はこちらを見る。
         //
@@ -17721,6 +17732,29 @@ public sealed class BattleContext
         if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.SporeGrow, Turn = _turn, ActorId = from.InstanceId, TargetId = u.InstanceId, Slot = slot, Team = team, Text = to.Name });
         return u;
     }
+
+    /// <summary>
+    /// 第386期（寄生・版の胞子 Q ／ PQ）: 胞子 <paramref name="spore"/> が <paramref name="host"/> に寄生し、盤から消える。<b>死ではない</b>——`HandleDeath` を通らない（死の出来事 ／ 層 ／ 音 ／ 死の読み手のどれも動かない）。
+    /// 胞子は HP 0 になり（倒れた儚い駒と同じく枠は空く）、宿主の寄生の数を +1、湧く胞子の種類（<paramref name="kind"/>・1 ＝ Q ／ 2 ＝ PQ）を控える。表示専用の出来事 `Parasite` を出す。乱数を引かない。
+    /// </summary>
+    public void Infest(UnitState spore, UnitState host, int kind)
+    {
+        if (!spore.IsAlive || !host.IsAlive) return;
+        _parasiteLive = true;
+        spore.Hp = 0;
+        int n = host.RawCounter(SporeParasiteTrait.CountKey) + 1;
+        host.SetCounter(SporeParasiteTrait.CountKey, n);
+        host.SetCounter(SporeParasiteTrait.KindKey, kind);
+        TallyOf(spore).R386Parasite++;   // 計数のみ
+        Log($"    {spore.Name} が {host.Name} に寄生した（{n} 体）", LogKind.Trigger);
+        if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.Parasite, Turn = _turn, ActorId = spore.InstanceId, TargetId = host.InstanceId, Amount = n, Slot = spore.Slot, Team = spore.TeamId });
+    }
+
+    /// <summary>第386期: 寄生（<see cref="Infest"/>）が1度でも起きた戦だけ真。偽なら寄生の食い ／ 亡骸から湧くは比較1つで抜ける。</summary>
+    bool _parasiteLive;
+
+    /// <summary>第386期: `HandleDeath` が倒れた本人の「自分の死」の札（<c>OnDeath</c>）を回す間だけ、その死の撃破者（いなければ null）。それ以外のときは null。<b>盤面を変えない読み口。</b></summary>
+    public UnitState? DyingKiller { get; private set; }
 
     /// <summary>倒れた駒を戦線に戻す。無制限にすると壊れるので回数制限は特性側で持つこと。</summary>
     public void Revive(UnitState target, int hp, UnitState? by = null)

@@ -49,7 +49,7 @@ static partial class Sh385Diag
             Expect("`compare` に足した2行（燃焼×哀歌 ／ 死軸×哀歌）がある・主判定19行に入っていない・66 行（過去の器具の `CompareBuildsH384` は 64 行）・ウケの行（交差帯の「弱体×破片 (ウケ×ネル×ウロ)」）は前例どおり残す", added && ukeRow, string.Join("・", CompareRows385));
         }
         {
-            var vr = Presets.Versions.Select(r => r.Name).ToArray();
+            var vr = VersionsH385().Select(r => r.Name).ToArray();   // 第386期: 版の2台を足す前の一覧で見る
             bool ok = vr.Contains("試遊・死 エレ") && vr.Contains("試遊・燃焼 エレ") && !vr.Any(n => n.StartsWith("版・"))
                 && Presets.Versions.First(r => r.Name == "試遊・死 エレ").F.Occupied().Any(o => ReferenceEquals(o.Def, ere))
                 && Presets.Versions.First(r => r.Name == "試遊・燃焼 エレ").F.Occupied().Any(o => ReferenceEquals(o.Def, ere))

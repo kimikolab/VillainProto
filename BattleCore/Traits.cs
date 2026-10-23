@@ -982,6 +982,16 @@ public enum TraitId
     DirgeSoundG1,         // 哀歌の音・傷寄り（楽士 G1）: 味方（自分 ／ 儚い駒を含む）が実際に HP を減らした量だけ音が溜まり、味方が倒れるたび +20（起き上がる死 ／ 儚い駒も）。手番に音が 50 以上なら 50 を使って奏でる——いちばん攻撃力の高い味方をもう一度動かす。届かなければ殴る。上限 100（`DirgeSoundTrait`）
     DirgeSoundG2,         // 哀歌の音・死寄り（楽士 G2）: 同じ形で、倒れるたび +50（閾値 50 ／ 上限 100）（`DirgeSoundTrait`）
     UncapRaise,           // 起こしの上限を外す（U・リィカ ／ ムグ）: 亡者起こし（味方の亡骸から）／ 亡骸の芽吹きの1戦に3回の上限を外す（召喚枠の空きだけが上限）（**札そのものは挙動を持たない**・`RaiseDeadTrait` ／ `MugSproutTrait` が読む）
+    // --- 第386期で足した札（指示書 design/PHASE386_SPORE_SPEC.md §2）。胞子らしい胞子（版 S0 ／ P ／ Q ／ PQ・版の胞子と版のムグは `All` の外）。保持者 0 枚 ---
+    SporeIdle,            // 殴らない胞子（S0 ／ P の胞子）: 手番に何もしない（不動と同じく、差し出した手番にならない）（`SporeIdleTrait`）
+    SporeBurst,           // 弾けて毒（P ／ PQ の胞子）: 倒れたとき、倒した者が敵ならその敵に毒 +6（撃破者のいない死では撒かない）（`SporeBurstTrait`）
+    SporeParasite,        // 寄生（Q ／ PQ の胞子）: 手番で、ふつうの攻撃の的と同じ規則で選んだ敵に寄生し、盤から消える（死ではない）（`SporeParasiteTrait`）
+    ParasiteFeed,         // 寄生の食い（Q ／ PQ のムグ）: 寄生された敵はターンの頭に寄生の数 × 4 のダメージを受ける（撃ち手はこの札を持つ生きた駒・いなければ無し）（**判定は engine の `TickStatuses`**・`SporeParasiteTrait.Feed`）
+    ParasiteBloom,        // 亡骸から湧く（Q ／ PQ のムグ）: 寄生された敵が倒れると、寄生の数だけ版の胞子がこちらの召喚枠に湧く（**判定は engine の `HandleDeath`**・`SporeParasiteTrait.Bloom`・札そのものは印）
+    MugSporeS0,           // 版の胞子を出す・S0（ムグ）: 撒く ／ 分裂で出す胞子を殴らない胞子にする（**札そのものは挙動を持たない**・`MugSowTrait` ／ `SplitterTrait` が読む）
+    MugSporeP,            // 版の胞子を出す・P（ムグ）: 同じ形で、弾けて毒の胞子にする
+    MugSporeQ,            // 版の胞子を出す・Q（ムグ）: 同じ形で、寄生する胞子にする
+    MugSporePQ,           // 版の胞子を出す・PQ（ムグ）: 同じ形で、寄生して弾ける胞子にする
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -2112,8 +2122,9 @@ public sealed class SplitterTrait : Trait
         if (self.Counter(SplitKey) > 0) return;   // 縫い直された体からは、もう胞子は出ない
         self.SetCounter(SplitKey, 1);
 
+        UnitDef spore = SporeVersion.Of(self) ?? UnitCatalog.Spore;   // 第386期: 版のムグは版の胞子を出す（印が無ければ今の胞子）
         for (int i = 0; i < 2; i++)
-            ctx.Summon(UnitCatalog.Spore, self.TeamId, by: self);
+            ctx.Summon(spore, self.TeamId, by: self);
     }
 
     /// <summary>
@@ -3066,7 +3077,9 @@ public enum PoisonRoute
     /// <summary>溢れて吐く（ヴィオの版 A1 ／ A2・収まらなかった層をターンの終わりに隣の味方へ。第373期）。</summary>
     Retch,
     /// <summary>開戦の衣（スィドの版 S10 ／ S20・開戦時に自分へ。第374期）。</summary>
-    CloakOpening
+    CloakOpening,
+    /// <summary>弾けて毒（胞子の版 P ／ PQ・倒した敵へ。第386期）。</summary>
+    SporeBurst
 }
 
 /// <summary>
@@ -13646,7 +13659,7 @@ public sealed class MugSowTrait : Trait
     {
         if (!self.IsAlive) return;
         UnitTally t = ctx.TallyOf(self);
-        UnitDef seed = Grow ? UnitCatalog.SporeSeed : UnitCatalog.Spore;
+        UnitDef seed = Grow ? UnitCatalog.SporeSeed : SporeVersion.Of(self) ?? UnitCatalog.Spore;   // 第386期: 版のムグは版の胞子を撒く（印が無ければ今の胞子）
         int n = 0;
         while (ctx.SummonOverFallen(seed, self.TeamId, self) is { } s)
         {
@@ -13680,6 +13693,103 @@ public sealed class SporeGrowTrait : Trait
         int sown = self.RawCounter(SownKey);
         if (!self.IsAlive || sown <= 0 || ctx.Turn <= sown) return;
         if (ctx.GrowInto(self, UnitCatalog.YoungMug) is not null) ctx.TallyOf(self).R379Grown++;   // 計数のみ
+    }
+}
+
+/// <summary>
+/// 版の胞子を出す（第386期・ムグの版 S0 ／ P ／ Q ／ PQ・指示書 design/PHASE386_SPORE_SPEC.md §2-2）。ムグが持つ印（<see cref="TraitId.MugSporeS0"/> など）から、
+/// 撒く（<see cref="MugSowTrait"/>）／ 分裂（<see cref="SplitterTrait"/>）で出す胞子を引く。<b>印が無ければ null</b>（呼び手は今の胞子を出す・規定のムグは1ビットも変わらない）。
+/// </summary>
+public static class SporeVersion
+{
+    public static UnitDef? Of(UnitState u) =>
+        u.HasTrait(TraitId.MugSporeS0) ? UnitCatalog.SporeS0 : u.HasTrait(TraitId.MugSporeP) ? UnitCatalog.SporeP
+        : u.HasTrait(TraitId.MugSporeQ) ? UnitCatalog.SporeQ : u.HasTrait(TraitId.MugSporePQ) ? UnitCatalog.SporePQ : null;
+}
+
+/// <summary>
+/// 殴らない胞子（第386期・版の胞子 S0 ／ P）。手番に何もしない——<b>不動（<see cref="ImmobileTrait"/>）と同じ形</b>で攻撃だけを止め、
+/// 差し出した手番として数えない（号令 ／ 据えの無償の収入にしない）。札の名前を分けたのは、不動の読み手（棘を剥く ／ 潰れた内訳の「不動」）に混ぜないため。
+/// </summary>
+public sealed class SporeIdleTrait : Trait
+{
+    public override TraitId Id => TraitId.SporeIdle;
+    public override bool CanAct(BattleContext ctx, UnitState self, ActionKind kind) => kind != ActionKind.Attack;
+    public override bool SurrendersTurn => false;
+    public override bool NeverAttacksOwnTurn => true;
+}
+
+/// <summary>
+/// 弾けて毒（第386期・版の胞子 P ／ PQ）。倒れたとき、<b>倒した者が敵なら</b>その敵に毒 +<see cref="Layers"/>（窓口 <see cref="BattleContext.Poison"/>・経路 <see cref="PoisonRoute.SporeBurst"/>）。
+/// 撃破者のいない死（朽ち ／ 燃焼 ／ 毒の刻みなど）では撒かない。撃破者は <see cref="BattleContext.DyingKiller"/>（`HandleDeath` が自分の死の札の間だけ立てる）。<b>乱数を引かない。</b>
+/// </summary>
+public sealed class SporeBurstTrait : Trait
+{
+    public const int Layers = 6;
+    public override TraitId Id => TraitId.SporeBurst;
+
+    public override void OnDeath(BattleContext ctx, UnitState self)
+    {
+        UnitState? k = ctx.DyingKiller;
+        if (k is null || k.TeamId == self.TeamId || !k.IsAlive) return;
+        int b = k.RawCounter(StatusKeys.Poison);
+        ctx.Poison(k, Layers, self, PoisonRoute.SporeBurst);
+        UnitTally t = ctx.TallyOf(self);
+        t.R386Burst++; t.R386BurstPoison += Math.Max(0, k.RawCounter(StatusKeys.Poison) - b);   // 計数のみ
+        ctx.Log($"    {self.Name} が弾けて {k.Name} に毒を撒いた", LogKind.Trigger);
+    }
+}
+
+/// <summary>
+/// 寄生（第386期・版の胞子 Q ／ PQ）。手番（`[Skill]`）で、<b>ふつうの攻撃の的と同じ規則</b>（<see cref="BattleContext.SelectTarget"/>・庇い ／ 標の介入も同じ）で選んだ敵に寄生し、
+/// 盤から消える（<see cref="BattleContext.Infest"/>・死ではない——死の出来事を出さず、層 ／ 音 ／ 死の読み手は動かない・枠は空く）。宿主は寄生の数（<see cref="CountKey"/>・私有）を持つ（重なる・上限なし）。
+/// <list type="bullet">
+///   <item>寄生の食い（<see cref="Feed"/>・engine の <c>TickStatuses</c> の最後）: 宿主はターンの頭に 寄生の数 × <see cref="FeedPer"/> のダメージ（`ApplyDamage`・撃ち手は <see cref="TraitId.ParasiteFeed"/> を持つ生きた駒・いなければ無し）。</item>
+///   <item>亡骸から湧く（<see cref="Bloom"/>・engine の `HandleDeath`・宿主の自分の死の札の直後）: 宿主が倒れると、寄生の数だけ版の胞子が相手の陣営の召喚枠に湧く（<see cref="BattleContext.SummonOverFallen"/>・湧かなかった分は捨てる）。</item>
+/// </list>
+/// 的を選ぶ乱数は、今の胞子が殴るときの的の選び方と同じ（新しい種類の乱数は引かない）。
+/// </summary>
+public sealed class SporeParasiteTrait : Trait
+{
+    public const int FeedPer = 4;
+    /// <summary>宿主の寄生の数 ／ 湧く胞子の種類（1 ＝ Q ／ 2 ＝ PQ）（私有キー・`StatusKeys.All` に入れない）。</summary>
+    public const string CountKey = "parasite386", KindKey = "parasiteKind386";
+    public override TraitId Id => TraitId.SporeParasite;
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+    {
+        if (!self.IsAlive || !ctx.TeamAlive(ctx.Opponent(self.TeamId))) return;
+        UnitState? host = ctx.SelectTarget(self);
+        if (host is null) return;
+        ctx.Infest(self, host, self.HasTrait(TraitId.SporeBurst) ? 2 : 1);
+    }
+
+    /// <summary>寄生の食い（engine の <c>TickStatuses</c> が、寄生の数を持つ生きた駒ごとに呼ぶ）。</summary>
+    public static void Feed(BattleContext ctx, UnitState host)
+    {
+        int n = host.RawCounter(CountKey);
+        if (n <= 0 || !host.IsAlive) return;
+        UnitState? src = null;
+        foreach (UnitState u in ctx.LivingMembers(ctx.Opponent(host.TeamId)))
+            if (u.HasTrait(TraitId.ParasiteFeed)) { src = u; break; }
+        int hb = host.Hp;
+        ctx.Log($"    {host.Name} は寄生した胞子に中から食われている（{n} 体・{n * FeedPer}）", LogKind.Status);
+        ctx.ApplyDamage(host, n * FeedPer, src);
+        ctx.TallyOf(host).R386FeedDmg += Math.Max(0, hb - Math.Max(0, host.Hp));   // 計数のみ
+    }
+
+    /// <summary>亡骸から湧く（engine の `HandleDeath` が、寄生の数を持つ駒の死で呼ぶ）。数は 0 に戻す。</summary>
+    public static void Bloom(BattleContext ctx, UnitState dead)
+    {
+        int n = dead.RawCounter(CountKey);
+        if (n <= 0) return;
+        UnitDef seed = dead.RawCounter(KindKey) == 2 ? UnitCatalog.SporePQ : UnitCatalog.SporeQ;
+        dead.SetCounter(CountKey, 0);
+        int team = ctx.Opponent(dead.TeamId), got = 0;
+        while (got < n && ctx.SummonOverFallen(seed, team, dead) is not null) got++;
+        UnitTally t = ctx.TallyOf(dead);
+        t.R386Bloom += got; t.R386BloomLost += n - got;   // 計数のみ
+        if (got > 0) ctx.Log($"    {dead.Name} の亡骸から胞子が湧き出した（{got} 体{(got < n ? $"・{n - got} 体は場所が無く消えた" : "")}）", LogKind.Trigger);
     }
 }
 
@@ -19457,6 +19567,15 @@ public static class TraitCatalog
         new MugSowTrait(TraitId.MugSowAll, all: true, grow: false),  // 第379期（撒き全）
         new MugSowTrait(TraitId.MugSowGrow, all: false, grow: true), // 第379期（育つ）
         new SporeGrowTrait(),                                        // 第379期（育つ胞子）
+        new SporeIdleTrait(),                                        // 第386期（殴らない胞子）
+        new SporeBurstTrait(),                                       // 第386期（弾けて毒）
+        new SporeParasiteTrait(),                                    // 第386期（寄生）
+        new MarkOnlyTrait(TraitId.ParasiteFeed),                     // 第386期（寄生の食い・撃ち手の印・判定は engine）
+        new MarkOnlyTrait(TraitId.ParasiteBloom),                    // 第386期（亡骸から湧く・印・判定は engine）
+        new MarkOnlyTrait(TraitId.MugSporeS0),                       // 第386期（版の胞子を出す・印）
+        new MarkOnlyTrait(TraitId.MugSporeP),
+        new MarkOnlyTrait(TraitId.MugSporeQ),
+        new MarkOnlyTrait(TraitId.MugSporePQ),
         new VelSoulTrait(TraitId.SoulSplitHalf),                     // 第381期（魂を分ける・半分）
         new VelSoulTrait(TraitId.SoulSplitTen),                      // 第381期（魂を分ける・十）
         new VelSoulTrait(TraitId.SoulSew),                           // 第381期（魂を縫い付ける）

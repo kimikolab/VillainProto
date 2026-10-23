@@ -1407,6 +1407,9 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sh385 axes               # 第385期 §3-1 の 4: 死の台 6 ＋ 他の軸の試遊の台 8 × ボス ／ 近衛 ／ 大隊 ／ 本編 第5波 ／ 強い条件・倒しT・隊の1ターンの最大（死軸のまとめの表）
     dotnet run --project BattleSim -c Release 0 sh385 mix                # 第385期 §3-1 の 5: 寄せ集めの台 50（第377期と同じ台）× 素体 ／ 今のリィカ（seed 0..19）
     dotnet run --project BattleSim -c Release 0 sh385 check              # 第385期 自己検査（エレの札 ／ 文面 ／ `Id`・ロスター（ウケは `Retired`）・エレ ＝ G1 の動き・`compare` の2行・試遊の台・`checkup`・verbose・PickOne ／ Roll）
+    dotnet run --project BattleSim -c Release 0 sh386 vers               # 第386期 §3: 死の台 6 ＋ 試遊・毒（ドルガ → ムグ）× 胞子の版（規定 ／ S0 殴らない ／ P 弾けて毒 ／ Q 寄生 ／ PQ）× 8 物差し（seed 0..99）——§3-3 の 1〜8（胞子 ／ 毒 ／ 寄生 ／ 層 ／ 誰が何Tに ／ 壊れの兆し）
+    dotnet run --project BattleSim -c Release 0 sh386 compare [S0|P|Q|PQ] # 第386期 §3-1 の 3: `compare` のムグのいる行だけ × 胞子の版（seed 0..199・ムグのいない行は版の写像で変わらないことだけ確かめる）
+    dotnet run --project BattleSim -c Release 0 sh386 check              # 第386期 自己検査（版の胞子 ／ ムグの定義・撒く ／ 分裂で版の胞子・殴らない・弾けて毒（撃破者が敵だけ）・寄生（消える ／ 死なない ／ 層 ／ 音 ／ 枠）・寄生の食い（撃ち手）・亡骸から湧く（空いた枠まで）・規定の `compare` 全行・試遊の台・verbose・毒の経路・`checkup`・PickOne ／ Roll）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

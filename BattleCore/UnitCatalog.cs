@@ -653,6 +653,43 @@ public static class UnitCatalog
         MinusText = MugH379.MinusText + MugSowMinusTail380, Flavor = MugH379.Flavor,
     };
 
+    /// <summary>第386期 版の胞子の手番（寄生 Q ／ PQ・`[Skill]`・ラベルは表示だけ）。版の駒より前に置く（静的初期化の順）。</summary>
+    static readonly UnitAction[] SporeParasiteActions = { new(ActionKind.Skill, Label: "寄生した") };
+    /// <summary>第386期 版のムグのプラスの句（指示書 design/PHASE386_SPORE_SPEC.md §2-3 の叩き台）。</summary>
+    public const string MugBurstClause386 = "胞子は殴られて弾けると、殴った敵に毒を撒く";
+    public const string MugParasiteClause386 = "胞子は敵に取り付いて中から食い、宿主が倒れると、その亡骸から胞子が湧き出す";
+
+    /// <summary>第386期: 版の胞子（攻撃力 0・殴らない・HP 14 ／ 速 10 ／ 儚いは今のまま・`Id` ／ 名前は胞子のまま）。編成には選べない。</summary>
+    static UnitDef Spore386(TraitId[] add, bool parasite) => new()
+    {
+        Id = "spore", Name = "胞子", MaxHp = 14, Attack = 0, Speed = 10,
+        Traits = new[] { TraitId.Ephemeral }.Concat(add).ToArray(), Actions = parasite ? SporeParasiteActions : null, PlusText = "", MinusText = "",
+    };
+    /// <summary>胞子の版 S0（第386期）: 殴らない（手番は何もしない）。倒れ方は今どおり。</summary>
+    public static readonly UnitDef SporeS0 = Spore386(new[] { TraitId.SporeIdle }, parasite: false);
+    /// <summary>胞子の版 P（第386期）: 殴らない ＋ 弾けて毒（倒した敵に毒 +6）。</summary>
+    public static readonly UnitDef SporeP = Spore386(new[] { TraitId.SporeIdle, TraitId.SporeBurst }, parasite: false);
+    /// <summary>胞子の版 Q（第386期）: 手番で寄生して盤から消える。倒れ方は今どおり。</summary>
+    public static readonly UnitDef SporeQ = Spore386(new[] { TraitId.SporeParasite }, parasite: true);
+    /// <summary>胞子の版 PQ（第386期）: 寄生 ＋ 弾けて毒。</summary>
+    public static readonly UnitDef SporePQ = Spore386(new[] { TraitId.SporeParasite, TraitId.SporeBurst }, parasite: true);
+
+    /// <summary>第386期: 版のムグ ＝ 規定のムグ（撒き全・分裂の胞子2体）の写し ＋ 版の胞子を出す印（Q ／ PQ は寄生の食い ／ 亡骸から湧くの印も）。<see cref="All"/> の外（版・採否はポン）。</summary>
+    static UnitDef Mug386(TraitId[] add, string? clause) => new()
+    {
+        Id = Mug.Id, Name = Mug.Name, MaxHp = Mug.MaxHp, Attack = Mug.Attack, Speed = Mug.Speed,
+        Traits = Mug.Traits.Concat(add).ToArray(), Actions = Mug.Actions, PlusText = clause is null ? Mug.PlusText : Mug.PlusText + "／" + clause,
+        MinusText = Mug.MinusText, Flavor = Mug.Flavor,
+    };
+    /// <summary>ムグの版 S0（第386期）: 撒く ／ 分裂で出す胞子が殴らない胞子。文面は規定のまま。</summary>
+    public static readonly UnitDef MugS0 = Mug386(new[] { TraitId.MugSporeS0 }, null);
+    /// <summary>ムグの版 P（第386期）: 胞子が弾けて毒。</summary>
+    public static readonly UnitDef MugP = Mug386(new[] { TraitId.MugSporeP }, MugBurstClause386);
+    /// <summary>ムグの版 Q（第386期）: 胞子が寄生する（寄生の食い ／ 亡骸から湧く）。</summary>
+    public static readonly UnitDef MugQ = Mug386(new[] { TraitId.MugSporeQ, TraitId.ParasiteFeed, TraitId.ParasiteBloom }, MugParasiteClause386);
+    /// <summary>ムグの版 PQ（第386期）: P ＋ Q。</summary>
+    public static readonly UnitDef MugPQ = Mug386(new[] { TraitId.MugSporePQ, TraitId.ParasiteFeed, TraitId.ParasiteBloom }, MugBurstClause386 + "／" + MugParasiteClause386);
+
     public static readonly UnitDef Zoto = new()
     {
         Id = "zoto",

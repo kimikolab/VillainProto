@@ -2485,6 +2485,8 @@ public sealed class UnitTally
     public long R383EchoKills, R383EchoKillsEph, R383EchoKillsRise, R383EchoLayer;
     /// <summary>第384期（哀歌の音・**計数のみ**・楽士の側）: 傷から溜まった音 ／ 倒れた味方から溜まった音（上限の前）／ 上限で捨てた音 ／ 閾値に届かず殴った手番。</summary>
     public long R384SndDmg, R384SndDeath, R384SndWaste, R384Short;
+    /// <summary>第386期（胞子の版・**計数のみ**）。胞子の側: 弾けて撒いた回数 ／ 撒いた毒の層・寄生した回数。宿主の側: 寄生の食いで受けた量 ／ 倒れて湧いた胞子 ／ 枠が無くて捨てた胞子。</summary>
+    public long R386Burst, R386BurstPoison, R386Parasite, R386FeedDmg, R386Bloom, R386BloomLost;
     public int R378Layer6Turn, R378Layer9Turn;
     public long R377ChainSaved;
     public int R377PeakTurn, R377AwakeTurn;
@@ -3801,6 +3803,7 @@ public sealed class UnitTally
         R382EncoreTurns += o.R382EncoreTurns; R382EncoreDealt += o.R382EncoreDealt; R382EchoTurns += o.R382EchoTurns; R382EchoDealt += o.R382EchoDealt;   // 第382期
         R383EchoKills += o.R383EchoKills; R383EchoKillsEph += o.R383EchoKillsEph; R383EchoKillsRise += o.R383EchoKillsRise; R383EchoLayer += o.R383EchoLayer;   // 第383期
         R384SndDmg += o.R384SndDmg; R384SndDeath += o.R384SndDeath; R384SndWaste += o.R384SndWaste; R384Short += o.R384Short;   // 第384期
+        R386Burst += o.R386Burst; R386BurstPoison += o.R386BurstPoison; R386Parasite += o.R386Parasite; R386FeedDmg += o.R386FeedDmg; R386Bloom += o.R386Bloom; R386BloomLost += o.R386BloomLost;   // 第386期
         if (R378Layer6Turn == 0) R378Layer6Turn = o.R378Layer6Turn;
         if (R378Layer9Turn == 0) R378Layer9Turn = o.R378Layer9Turn;
         R377Raises += o.R377Raises; R377RaiseTurnSum += o.R377RaiseTurnSum; R377NoSeat += o.R377NoSeat; R377CostSelf += o.R377CostSelf; R377RotLost += o.R377RotLost; R377RotDeaths += o.R377RotDeaths; R377Sprouts += o.R377Sprouts; R377SproutTurnSum += o.R377SproutTurnSum; R377SproutNoSeat += o.R377SproutNoSeat;   // 第377期
@@ -4684,6 +4687,13 @@ public enum BattleEventKind
     /// <c>Death</c> は出ない（死の読み手は動かない）。<b>どの規則も読まない。</b>
     /// </summary>
     SporeGrow,
+
+    /// <summary>
+    /// 胞子が敵に寄生した（第386期・胞子の版 Q ／ PQ・<b>表示専用</b>）。胞子が手番で敵に取り付き、盤から消えた瞬間に1つ。
+    /// <c>ActorId</c> ＝ 寄生した胞子（以後は盤から消える・死ではない）／ <c>TargetId</c> ＝ 宿主 ／ <c>Amount</c> ＝ 宿主の寄生の数（足した後）／ <c>Slot</c> ＝ 胞子のいた席。
+    /// <c>Death</c> は出ない（死の読み手は動かない）。<b>どの規則も読まない。</b>
+    /// </summary>
+    Parasite,
 }
 /// <summary>`Shard`（第358期）の <c>Text</c>。</summary>
 public static class ShardLabels

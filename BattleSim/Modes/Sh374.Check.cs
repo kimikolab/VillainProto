@@ -55,7 +55,7 @@ static partial class Sh374Diag
                 && !CompareBuilds().Select(r => (r.Name, F: Pin374(r.F))).Any(r => r.F.Occupied().Any(o => o.Def.Traits.Any(t => t is TraitId.SidOpeningCloak10 or TraitId.SidOpeningCloak20 or TraitId.VioBloodSip)));
             bool def = UnitCatalog.SidH374.Traits.SequenceEqual(UnitCatalog.SidY.Traits)   /* 第375期: 規定は S10・第374期の規定は `SidH374` */ && UnitCatalog.VioH375.Traits.SequenceEqual(UnitCatalog.VioVa.Traits);
             int nr = Enum.GetValues<PoisonRoute>().Length;
-            bool route = (int)PoisonRoute.CloakOpening == nr - 1 && BattleContext.SoakBurnRouteIx == nr && BattleContext.SoakRouteCount == nr + 1;
+            bool route = (int)PoisonRoute.CloakOpening == 19 && BattleContext.SoakBurnRouteIx == nr && BattleContext.SoakRouteCount == nr + 1;   // 第386期: 弾けて毒（20）が後ろに足された
             Expect("版の定義: S10 ／ S20 ＝ 規定のスィド ＋ 開戦の衣（プラスの頭に一文）・C ＝ 規定のヴィオ ＋ 血を啜る（マイナスを差し替え）・`All` ／ `compare` の行には無い・規定のスィド ／ ヴィオは第373期のまま・経路 `CloakOpening` は末尾・燃焼の添字は後ろ",
                 sid && vio && none && def && route, $"経路 {nr} 本・`SoakRouteCount` {BattleContext.SoakRouteCount}・燃焼の添字 {BattleContext.SoakBurnRouteIx}");
         }

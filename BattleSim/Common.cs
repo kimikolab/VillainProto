@@ -705,7 +705,9 @@ public static UnitDef[] AllH384() => UnitCatalog.All.Select(d => ReferenceEquals
 public static readonly string[] CompareRows385 = { "燃焼×哀歌 (ボルグ×ホタ×エレ)", "死軸×哀歌 (リィカ×スィド×エレ)" };
 public static (string Name, Formation F)[] CompareBuildsH384() => CompareBuilds().Where(r => !CompareRows385.Contains(r.Name)).ToArray();
 /// <summary>第385期: 「試遊・死 エレ ／ 試遊・燃焼 エレ」を第384期の名前（「版・楽士 死 ／ 外」）と版の楽士（`Bard384G1`）に戻した写し（第382〜384期の器具の試遊の台の項目）。</summary>
-public static (string Name, Formation F)[] VersionsH384() => Presets.Versions.Select(r => (r.Name switch { "試遊・死 エレ" => "版・楽士 死", "試遊・燃焼 エレ" => "版・楽士 外", _ => r.Name }, Pin385(r.F))).ToArray();
+/// <summary>第386期: `Presets.Versions` の末尾に版の2台（「版・弾け ／ 寄生 死の連鎖」）を足した。第385期の一覧（足す前）は、末尾の版の台を除いた写し。</summary>
+public static (string Name, Formation F)[] VersionsH385() => Presets.Versions.Where(r => r.Name is not ("版・弾け 死の連鎖" or "版・寄生 死の連鎖")).ToArray();
+public static (string Name, Formation F)[] VersionsH384() => VersionsH385().Select(   /* 第386期: 版の2台を足す前の一覧から */r => (r.Name switch { "試遊・死 エレ" => "版・楽士 死", "試遊・燃焼 エレ" => "版・楽士 外", _ => r.Name }, Pin385(r.F))).ToArray();
 public static UnitDef PinV381(UnitDef d) => ReferenceEquals(d, UnitCatalog.Vel) ? UnitCatalog.VelH381 : d;
 public static Formation Pin381(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinV381(d); return g; }
 
