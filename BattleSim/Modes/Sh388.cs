@@ -67,7 +67,7 @@ static partial class Sh388Diag
     };
     /// <summary>列: 元の台 ／ 今のハギ ／ H1 ／ H2 ／ H3 ／ H3s ／ 素体（`null` ＝ 元の台のまま）。</summary>
     internal static readonly (string Name, UnitDef? D)[] Cols =
-        { ("元", null), ("今のハギ", UnitCatalog.Hagi), ("H1", UnitCatalog.HagiH1), ("H2", UnitCatalog.HagiH2), ("H3", UnitCatalog.HagiH3), ("H3s", UnitCatalog.HagiH3s), ("素体", PlainHagi) };
+        { ("元", null), ("今のハギ", UnitCatalog.HagiH389), ("H1", UnitCatalog.HagiH1), ("H2", UnitCatalog.HagiH2), ("H3", UnitCatalog.HagiH3), ("H3s", UnitCatalog.HagiH3s), ("素体", PlainHagi) };
 
     static readonly (string Name, I.W[] Ws)[] W8 = S377.VerWaves;   // ボス ／ 近衛 ／ 大隊 ／ 本編 第2 ／ 4 ／ 5波 ／ 九体 ／ 強 第2〜5波
     static readonly int[] W4 = { 0, 1, 2, 5 };                      // 4 波（ボス ／ 近衛 ／ 大隊 ／ 本編 第5波）
@@ -502,7 +502,7 @@ static partial class Sh388Diag
                 var x = top[v][k]; var b0 = baseM[x.B];
                 var a = M8(Put(boards[x.B].F, x.S, Vers[v].D));
                 var pl = M8(Put(boards[x.B].F, x.S, PlainHagi));
-                var cur = M8(Put(boards[x.B].F, x.S, UnitCatalog.Hagi));
+                var cur = M8(Put(boards[x.B].F, x.S, UnitCatalog.HagiH389));   // 第390期: 旧に固定
                 if (k == 0) bestOf[v] = (x.B, x.S, a);
                 string W(S377.B y) => $"{Per(X(y, "reaps"), y.N)} ／ {Per(X(y, "pursuits"), y.N)} ／ {Per(X(y, "soulPeak"), y.N)}";
                 Console.WriteLine($"| {(k == 0 ? Vers[v].Name : "")} | {k + 1} | {boards[x.B].Name} | {SeatName(x.S)}（{Short(boards[x.B].F[x.S]!)}）| {string.Join(" | ", Enumerable.Range(0, W8.Length).Select(wi => $"{F1(a[wi].Win)}（{Sg(a[wi].Win - b0[wi].Win)}）"))} | {Sg(D4(a, b0))} | {Sg(D4(pl, b0))} ／ {Sg(pl[WStrong].Win - b0[WStrong].Win)} | {Sg(D4(cur, b0))} ／ {Sg(cur[WStrong].Win - b0[WStrong].Win)} | ボス {W(a[0])}・近衛 {W(a[1])} |");

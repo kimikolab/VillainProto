@@ -2508,6 +2508,11 @@ public sealed class UnitTally
     /// <summary>第389期の補足（R5m・計数のみ）。ハギの側: 付けた刈りの印 ／ 印で深くなった線で刈った回数。敵の側: そのターンの終わりの印の数（印が付いたターンだけ書く・添字 ＝ ターン）。</summary>
     public long R389MarksPlaced, R389MarkReaps;
     public long[]? R389MarkByTurn;
+    /// <summary>
+    /// 第390期（ハギの段の動き V1 ／ V2 ／ V3・**計数のみ**）。ハギの側: 狙いが変わった（V1）／ そのうち印で線を切った敵へ ／ 魂 6〜8 で列ごと刈った振りと体数 ／ その後に再行動を止めた（V2）／
+    /// 刈り取りで倒した数。割った一撃の主の側: 魂の線を割った回数 ／ そのうち1ターン1回の門を外して数えた分（V3）。
+    /// </summary>
+    public long R390AimSwitch, R390AimMark, R390ColumnEarly, R390ColumnEarlyUnits, R390ColumnStops, R390ReapKills, R390LinesCrossed, R390LinesRepeat;
     public int R378Layer6Turn, R378Layer9Turn;
     public long R377ChainSaved;
     public int R377PeakTurn, R377AwakeTurn;
@@ -3841,6 +3846,8 @@ public sealed class UnitTally
         if (o.R389LastReapLine != 0) { R389LastReapLine = o.R389LastReapLine; R389LastReapHp = o.R389LastReapHp; }
         R389SoulByTurn = AddArr(R389SoulByTurn, o.R389SoulByTurn);   // 第389期
         R389MarksPlaced += o.R389MarksPlaced; R389MarkReaps += o.R389MarkReaps; R389MarkByTurn = AddArr(R389MarkByTurn, o.R389MarkByTurn);   // 第389期の補足
+        R390AimSwitch += o.R390AimSwitch; R390AimMark += o.R390AimMark; R390ColumnEarly += o.R390ColumnEarly; R390ColumnEarlyUnits += o.R390ColumnEarlyUnits; R390ColumnStops += o.R390ColumnStops;
+        R390ReapKills += o.R390ReapKills; R390LinesCrossed += o.R390LinesCrossed; R390LinesRepeat += o.R390LinesRepeat;   // 第390期
         if (R378Layer6Turn == 0) R378Layer6Turn = o.R378Layer6Turn;
         if (R378Layer9Turn == 0) R378Layer9Turn = o.R378Layer9Turn;
         R377Raises += o.R377Raises; R377RaiseTurnSum += o.R377RaiseTurnSum; R377NoSeat += o.R377NoSeat; R377CostSelf += o.R377CostSelf; R377RotLost += o.R377RotLost; R377RotDeaths += o.R377RotDeaths; R377Sprouts += o.R377Sprouts; R377SproutTurnSum += o.R377SproutTurnSum; R377SproutNoSeat += o.R377SproutNoSeat;   // 第377期

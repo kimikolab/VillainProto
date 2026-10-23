@@ -58,7 +58,7 @@ static partial class Sh387Diag
     // 棚卸しの 10 枚 ／ 素体 ／ 試遊の台 ／ 波
     // ---------------------------------------------------------------------------------
     internal static readonly UnitDef[] Ten =
-        { UnitCatalog.Kari, UnitCatalog.Uro, UnitCatalog.Tomo, UnitCatalog.Nomi, UnitCatalog.Sekki, UnitCatalog.Hagi, UnitCatalog.Kubi, UnitCatalog.Ban, UnitCatalog.Dolga, UnitCatalog.Gan };
+        { UnitCatalog.Kari, UnitCatalog.Uro, UnitCatalog.Tomo, UnitCatalog.Nomi, UnitCatalog.Sekki, UnitCatalog.HagiH389, UnitCatalog.Kubi, UnitCatalog.Ban, UnitCatalog.Dolga, UnitCatalog.Gan };
 
     /// <summary>素体（同じ体・札なし・ふつうに殴る・型 ／ 踏込はそのまま）。器具の中だけ（`Id` の尾に `_plain387`）。</summary>
     internal static UnitDef Plain(UnitDef d) => new()
@@ -68,7 +68,7 @@ static partial class Sh387Diag
     };
 
     /// <summary>今の試遊の台（`Presets.Versions` の「試遊・」の台すべて）。</summary>
-    internal static (string Name, Formation F)[] Play() => Presets.Versions.Where(r => r.Name.StartsWith("試遊・", StringComparison.Ordinal)).ToArray();
+    internal static (string Name, Formation F)[] Play() => VersionsH389().Where(   /* 第390期: 第389期の一覧（「試遊・ハギ 台B」「試遊・死神と墓守」を足す前）から */r => r.Name.StartsWith("試遊・", StringComparison.Ordinal)).ToArray();
 
     static bool Has(Formation f, string id) => f.Occupied().Any(o => o.Def.Id == id);
     static Formation Put(Formation f, int slot, UnitDef d) { var g = f.Clone(); g[slot] = d; return g; }

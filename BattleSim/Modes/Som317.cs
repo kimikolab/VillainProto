@@ -116,7 +116,7 @@ static class Som317Diag
         ("感電 行", RowF("感電 (シガ×カタ×ソム)")),
         ("勝ち台 ツギ→ソム", S309.Swap(WinSeat(), UnitCatalog.Tsugi, UnitCatalog.SomH317)),
         ("火の型 ソラ→ソム", S309.Swap(Playtest("試遊・感電 火の型"), UnitCatalog.Sora, UnitCatalog.SomH317)),
-        (HagiBoard, S309.Swap(Playtest(S309.Shield), UnitCatalog.Kubi, UnitCatalog.Hagi)),
+        (HagiBoard, S309.Swap(Playtest(S309.Shield), UnitCatalog.Kubi, UnitCatalog.HagiH389)),   // 第390期: ハギは旧（追い打ち）に固定
     };
 
     // ---------------------------------------------------------------------------------
@@ -938,7 +938,7 @@ static class Som317Diag
             var necroHolder = UnitCatalog.All.FirstOrDefault(d => d.Traits.Contains(TraitId.Necro));
             (long Atk, int NecroAtk, long Counted) One(UnitDef somDef)
             {
-                var f = Formation.Build(front1: UnitCatalog.Golm, center: UnitCatalog.Hagi, back1: necroHolder ?? UnitCatalog.TouH324, back3: somDef);
+                var f = Formation.Build(front1: UnitCatalog.Golm, center: UnitCatalog.HagiH389, back1: necroHolder ?? UnitCatalog.TouH324, back3: somDef);
                 var (ctx, p, _) = Board(f, Wave3());
                 var som = p.First(u => u.Def.Id == "som");
                 var nh = necroHolder is null ? null : p.First(u => u.Def.Id == necroHolder.Id);
@@ -952,7 +952,7 @@ static class Som317Diag
             var e2 = One(UnitCatalog.SomH317); var bd = One(UnitCatalog.SomBD);
             bool ok = e2.Atk == 0 && e2.Counted == 0 && bd.Atk >= 1 && bd.Counted >= 1 && bd.NecroAtk == 0 && necroHolder is not null;
             // 立った獣が弾けたら消えて数える（BD-BTa・獣に感電が残ったまま、味方の一撃 1 で弾けさせる）
-            var fb = Formation.Build(front1: UnitCatalog.Golm, center: UnitCatalog.Hagi, back3: BtBd);
+            var fb = Formation.Build(front1: UnitCatalog.Golm, center: UnitCatalog.HagiH389, back3: BtBd);
             var (cb, pb, _) = Board(fb, Wave3());
             var sb = pb.First(u => u.Def.Id == "som"); var hb = pb.First(u => u.Def.Id == "hagi"); var gb = pb.First(u => u.Def.Id == "golm");
             TurnStart(cb, sb);

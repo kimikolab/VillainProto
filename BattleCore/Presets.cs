@@ -998,9 +998,18 @@ public static class Presets
         // 第389期: 魂は「鎌が届く深さ」の版を試遊で触る2台。R5 と R5m のうち良かった方（両方の台で R5m）を置いた。採否はポン（R4 ／ R5n と他の台は `sh389` の中で組む）。
         //   版・R5 ハギ: 「試遊・ヴィオ 台B」のカドの席（後1）に R5m——`sh389 swap` のアタッカー以外の席の最良（1位の「試遊・死の連鎖 前1」は下の台と同じになるので2位）。
         //   版・R5 死神と墓守: 「試遊・死の連鎖」のゾトの席（前1）に R5m。
-        ("版・R5 ハギ", HagiPlay389()),
-        ("版・R5 死神と墓守", HagiDeath389()),
+        // 第390期: R5m を規定のハギにしたので「版・」を外した（台は同じ・置くのは規定のハギ）。第389期の名前と版の R5m は `Common.VersionsH389` が戻す。
+        ("試遊・ハギ 台B", HagiPlay389(UnitCatalog.Hagi)),
+        ("試遊・死神と墓守", HagiDeath389(UnitCatalog.Hagi)),
+        // 第390期: 段の動きの版と移動軸の台を試遊で触る2台。採否はポン（V1 ／ V2 ／ V3 と他の台は `sh390` の中で組む）。
+        //   版・VA ハギ: `sh390 boards` で VA がいちばん良かった台（試遊・死の連鎖のゾトの席・元より 4 波 +6.3）に VA——並びは「試遊・死神と墓守」と同じで、ハギだけ VA。
+        //   版・移動 ハギ: `sh390 move` の最良（`compare` の「移動改 (バサ×ヨミ×シオ)」のガルドの席（前3）に規定のハギ・ボス 8 → 17%・倒しT 14.2 → 7.0T）。
+        ("版・VA ハギ", HagiDeath389(UnitCatalog.HagiVA)),
+        ("版・移動 ハギ", HagiMove390()),
     };
+
+    /// <summary>第390期: 「版・移動 ハギ」の並び（`compare` の「移動改 (バサ×ヨミ×シオ)」のガルドの席（前3）にハギ: 前1 セロ ／ 前3 ハギ ／ 中央 シオ ／ 後1 ヨミ ／ 後3 バサ）。既定は規定のハギ。</summary>
+    public static Formation HagiMove390(UnitDef? hagi = null) => Formation.Build(front1: UnitCatalog.Sero, front3: hagi ?? UnitCatalog.Hagi, center: UnitCatalog.Shio, back1: UnitCatalog.Yomi, back3: UnitCatalog.Basa);
 
     /// <summary>第389期: 「版・R5 ハギ」の並び（試遊・ヴィオ 台B のカドの席（後1）にハギの版: 前1 ヴィオ ／ 前3 ミサ ／ 中央 ヒサ ／ 後1 ハギ ／ 後3 アカ）。既定は R5m。</summary>
     public static Formation HagiPlay389(UnitDef? hagi = null) { var f = BoardBVio375().Clone(); f[3] = hagi ?? UnitCatalog.HagiR5m; return f; }

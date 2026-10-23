@@ -338,7 +338,7 @@ static class Som320Diag
             var row = Pin321(Presets.Compare.First(r => r.Name == "感電 (シガ×カタ×ソム)").F);
             bool Same(Formation a, Formation b) { var x = a.Occupied().ToList(); var y = b.Occupied().ToList(); return a.Shape == b.Shape && x.Count == y.Count && x.Zip(y).All(q => q.First.Slot == q.Second.Slot && ReferenceEquals(q.First.Def, q.Second.Def)); }
             bool swOk = Same(sw, row) && sw.Occupied().Any(o => o.Slot == 0 && ReferenceEquals(o.Def, UnitCatalog.ShigaH321));
-            bool puOk = Same(pu, S309.Swap(Playtest(S309.Shield), UnitCatalog.Kubi, UnitCatalog.Hagi));
+            bool puOk = Same(pu, S309.Swap(Playtest(S309.Shield), UnitCatalog.Kubi, UnitCatalog.HagiH389));   // 第390期: ハギは旧に固定
             bool scOk = Same(sc, Candidates().First(c => c.Name == ScrapSource).F) && sc.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Tsugi));
             Expect($"(d) 打ち返し ＝ `compare` の `感電 (シガ×カタ×ソム)` と同じ駒と席（シガは前1）・追い打ち ＝ 光の盾のクビ → ハギ（席はそのまま）・瓦礫 ＝ {ScrapSource}",
                 swOk && puOk && scOk, $"打ち返し {Seats(sw)}・追い打ち {Seats(pu)}・瓦礫 {Seats(sc)}");

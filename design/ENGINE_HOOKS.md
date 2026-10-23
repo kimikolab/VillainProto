@@ -1602,3 +1602,12 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **刈りの印（`ApplyDamageBody` の HP を引いた直後 → `ReapMark389`）**: 札の保持者が出どころの一撃が HP に届き、相手が生きていれば印 +1（上限 5・刻み ／ 徴収 ／ 中継 ／ 共有は除く・刈り取りの一撃は `ReapBody388` を通るので付かない）。
 - **固定の巻き込み**: `SpillAmount388` が `HagiSpillFixed` なら 2。
 - 保持者がいない戦は `_depthLive389` ／ `_markLive389` の比較1つで抜ける（規定の `compare` 66 行 330 セル ずれ 0）。新しい出来事の種類は足していない。
+
+## 第390期 —— R5m を規定のハギに ／ 段の動きに意味を持たせる（ハギの版 V1 ／ V2 ／ V3 ／ VA）
+
+- **段0**: 規定のハギ（`UnitCatalog.Hagi`）が第389期の R5m の札を持つようになった——上の第388 ／ 389期の口（`ReapTurn388` ／ `ReapBody388` ／ `HalfCross388` ／ `ScytheSpill388` ／ `DepthCross389` ／ `ReapMark389`）が**規定の戦で走る**ようになった（`_reapLive` ／ `_depthLive389` ／ `_markLive389` はハギのいる戦で立つ）。旧の追い打ち（`Pursuer`）の保持者は 0 枚（口は残る）。
+- **狙いを刈れる敵に（V1・`HagiAimLine`・`ReapTurn388` の頭 → `ReapAimLine390`）**: 今どおりの狙い（`ReapAim388`・HP の割合）を引いた後、札の保持者だけ `TargetPool` のうち線（`ReapLineFor389` ＝ 魂の段 ＋ 刈りの印）を切っている敵の HP がいちばん低い駒（同じなら席番号）に替える。いなければ今どおり。乱数を引かない。
+- **列ごと刈るを早く（V2・`HagiColumnEarly`）**: `HagiDepthTrait.Column` が魂 6 から立つ。`ReapTurn388` の列ごと刈りで、振る前の魂が 9 未満なら、その振りの後は再行動しない（`colStop`）。
+- **線を割るたび数える（V3・`HagiLineEvery`・`DepthCross389`）**: 1つの敵の1つの線につき1ターン1回の門を、札の保持者にだけ掛けない。札の無い保持者には門のまま（保持者がいない戦は `_everyLive390` の比較1つで今どおり）。
+- **計数のみ**: `DepthCross389` に割った一撃の主（`source`）を渡し、その主の帳簿に `R390LinesCrossed` ／ `R390LinesRepeat`。`ReapBody388` の後に `R390ReapKills`。
+- 新しい出来事の種類は足していない。

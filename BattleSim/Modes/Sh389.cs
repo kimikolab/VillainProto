@@ -63,7 +63,7 @@ static partial class Sh389Diag
         { ("H2", UnitCatalog.HagiH2), ("R5", UnitCatalog.HagiR5), ("R4", UnitCatalog.HagiR4), ("R5n", UnitCatalog.HagiR5n), ("R5m", UnitCatalog.HagiR5m) };
     /// <summary>列: 元の台 ／ 今のハギ ／ 素体 ／ H2 ／ R5 ／ R4 ／ R5n（`null` ＝ 元の台のまま）。素体は第388期と同じ（器具の中だけ）。</summary>
     internal static readonly (string Name, UnitDef? D)[] Cols =
-        { ("元", null), ("今のハギ", UnitCatalog.Hagi), ("素体", S388.PlainHagi), ("H2", UnitCatalog.HagiH2), ("R5", UnitCatalog.HagiR5), ("R4", UnitCatalog.HagiR4), ("R5n", UnitCatalog.HagiR5n), ("R5m", UnitCatalog.HagiR5m) };
+        { ("元", null), ("今のハギ", UnitCatalog.HagiH389), ("素体", S388.PlainHagi), ("H2", UnitCatalog.HagiH2), ("R5", UnitCatalog.HagiR5), ("R4", UnitCatalog.HagiR4), ("R5n", UnitCatalog.HagiR5n), ("R5m", UnitCatalog.HagiR5m) };
     const int CR5 = 4, CR4 = 5, CR5n = 6, CR5m = 7;
 
     static readonly (string Name, I.W[] Ws)[] W8 = S377.VerWaves;

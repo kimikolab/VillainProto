@@ -699,7 +699,7 @@ public static UnitDef PinR378(UnitDef d) => ReferenceEquals(d, UnitCatalog.Rica)
 public static UnitDef PinM379(UnitDef d) => ReferenceEquals(d, UnitCatalog.Mug) || ReferenceEquals(d, UnitCatalog.MugH386) ? UnitCatalog.MugH379 : PinV381(d);   // 第387期: 第380〜386期の規定（`MugH386`）も第379期までの旧へ
 /// <summary>第382期: 魂を分けるヴェル（第381期の S2）を規定にしたので、第381期までの器具はヴェルを旧（`VelH381`）に固定する。`PinM379` の後ろ（古い口の終端からも通る）。</summary>
 /// <summary>第385期: 楽士 G1 を哀歌のエレ（`ere`・ウケの籍）にした。過去の器具はエレを第384期の版の楽士（`Bard384G1`）に、`All` はウケのいる第384期の並びに、`compare` は 64 行に固定する。</summary>
-public static UnitDef PinE385(UnitDef d) => ReferenceEquals(d, UnitCatalog.Ere) ? UnitCatalog.Bard384G1 : d;
+public static UnitDef PinE385(UnitDef d) => ReferenceEquals(d, UnitCatalog.Ere) ? UnitCatalog.Bard384G1 : PinH389(d);   // 第390期: 規定のハギも旧へ
 public static Formation Pin385(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinE385(d); return g; }
 public static UnitDef[] AllH384() => UnitCatalog.All.Select(d => ReferenceEquals(d, UnitCatalog.Ere) ? UnitCatalog.Uke : d).ToArray();
 public static readonly string[] CompareRows385 = { "燃焼×哀歌 (ボルグ×ホタ×エレ)", "死軸×哀歌 (リィカ×スィド×エレ)" };
@@ -708,15 +708,29 @@ public static (string Name, Formation F)[] CompareBuildsH384() => CompareBuilds(
 /// <summary>第386期: `Presets.Versions` の末尾に版の2台（「版・弾け ／ 寄生 死の連鎖」）を足した。第385期の一覧（足す前）は、末尾の版の台を除いた写し。</summary>
 public static (string Name, Formation F)[] VersionsH385() => VersionsH386().Where(r => r.Name is not ("版・弾け 死の連鎖" or "版・寄生 死の連鎖")).ToArray();   // 第387期: 第386期の一覧（ムグは旧）から
 /// <summary>第387期: 弾けて毒（P）を胞子 ／ ムグの規定にした。第380〜386期の規定のムグ（`MugH386`・旧の胞子 `SporeH386` を出す）で測った器具は、ムグを旧に固定する。ほかの駒はそのまま返す。</summary>
-public static UnitDef PinMug386(UnitDef d) => ReferenceEquals(d, UnitCatalog.Mug) ? UnitCatalog.MugH386 : d;
+public static UnitDef PinMug386(UnitDef d) => ReferenceEquals(d, UnitCatalog.Mug) ? UnitCatalog.MugH386 : PinH389(d);   // 第390期: 規定のハギも旧へ
 public static Formation Pin386(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinMug386(d); return g; }
 /// <summary>第387期: `Presets.Versions` から「版・弾け 死の連鎖」を外し、規定のムグを P にした。第386期の一覧は、各台のムグを旧に固定し、外した台を「版・寄生 死の連鎖」の手前に足し戻した写し。</summary>
 /// <summary>第388期: `Presets.Versions` の末尾に版のハギの2台（「版・H3 ハギ」「版・H3 死神と墓守」）を足した。第387期の一覧（足す前）は、その2台を除いた写し。</summary>
 public static (string Name, Formation F)[] VersionsH387() => VersionsH388().Where(r => r.Name is not ("版・H3 ハギ" or "版・H3 死神と墓守")).ToArray();   // 第389期: 第388期の一覧から
 /// <summary>第389期: `Presets.Versions` から版のハギ H3 の2台を外し、版の R5 の2台（「版・R5 ハギ」「版・R5 死神と墓守」）を末尾に足した。第388期の一覧は、R5 の2台を外して H3 の2台を末尾に足し戻した写し。</summary>
 public static (string Name, Formation F)[] VersionsH388() =>
-    Presets.Versions.Where(r => r.Name is not ("版・R5 ハギ" or "版・R5 死神と墓守"))
+    VersionsH389().Where(r => r.Name is not ("版・R5 ハギ" or "版・R5 死神と墓守"))   // 第390期: 第389期の一覧から
         .Append(("版・H3 ハギ", Presets.HagiBurn388())).Append(("版・H3 死神と墓守", Presets.HagiDeath388())).ToArray();
+/// <summary>第390期: 第389期の R5m を規定のハギにした（旧は `HagiH389`）。第389期までの器具はハギを旧に固定する。ほかの駒はそのまま返す。
+/// 古い口の終端（`PinV381`）と `PinMug386` ／ `PinE385` の後ろにも置いた（どの口を通ってもハギは旧になる）。</summary>
+public static UnitDef PinH389(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hagi) ? UnitCatalog.HagiH389 : d;
+public static Formation Pin389(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinH389(d); return g; }
+/// <summary>第390期: 「版・R5 ハギ」「版・R5 死神と墓守」を規定のハギの台「試遊・ハギ 台B」「試遊・死神と墓守」に改め、末尾に版の2台（「版・VA ハギ」「版・移動 ハギ」）を足した。
+/// 第389期の一覧は、足した2台を外し、改めた2台を第389期の名前と版の R5m に戻し、ほかの台のハギを旧に固定した写し。</summary>
+public static readonly string[] VersionRows390 = { "版・VA ハギ", "版・移動 ハギ" };
+public static (string Name, Formation F)[] VersionsH389() =>
+    Presets.Versions.Where(r => !VersionRows390.Contains(r.Name)).Select(r => r.Name switch
+    {
+        "試遊・ハギ 台B" => ("版・R5 ハギ", Presets.HagiPlay389(UnitCatalog.HagiR5m)),
+        "試遊・死神と墓守" => ("版・R5 死神と墓守", Presets.HagiDeath389(UnitCatalog.HagiR5m)),
+        _ => (r.Name, Pin389(r.F)),
+    }).ToArray();
 public static (string Name, Formation F)[] VersionsH386()
 {
     var l = VersionsH387().Select(r => (r.Name, F: Pin386(r.F))).ToList();   // 第388期: 版のハギの2台を足す前の一覧から
@@ -725,7 +739,7 @@ public static (string Name, Formation F)[] VersionsH386()
     return l.ToArray();
 }
 public static (string Name, Formation F)[] VersionsH384() => VersionsH385().Select(   /* 第386期: 版の2台を足す前の一覧から */r => (r.Name switch { "試遊・死 エレ" => "版・楽士 死", "試遊・燃焼 エレ" => "版・楽士 外", _ => r.Name }, Pin385(r.F))).ToArray();
-public static UnitDef PinV381(UnitDef d) => ReferenceEquals(d, UnitCatalog.Vel) ? UnitCatalog.VelH381 : d;
+public static UnitDef PinV381(UnitDef d) => ReferenceEquals(d, UnitCatalog.Vel) ? UnitCatalog.VelH381 : PinH389(d);   // 第390期: 規定のハギも旧へ（古い口の終端）
 public static Formation Pin381(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinV381(d); return g; }
 
 /// <summary>第380期: 撒き全をムグの規定にした。第379期の規定（リィカは目覚めたリィカ・ムグは旧）で測った器具はこれを通す。陣形とレリックは保つ。</summary>

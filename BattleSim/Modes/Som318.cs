@@ -107,7 +107,7 @@ static class Som318Diag
         ("感電 行", RowF("感電 (シガ×カタ×ソム)")),
         ("勝ち台 ツギ→ソム", S309.Swap(WinSeat(), UnitCatalog.Tsugi, UnitCatalog.SomH318)),
         ("火の型 ソラ→ソム", S309.Swap(Playtest("試遊・感電 火の型"), UnitCatalog.Sora, UnitCatalog.SomH318)),
-        (HagiBoard, S309.Swap(Playtest(S309.Shield), UnitCatalog.Kubi, UnitCatalog.Hagi)),
+        (HagiBoard, S309.Swap(Playtest(S309.Shield), UnitCatalog.Kubi, UnitCatalog.HagiH389)),   // 第390期: ハギは旧（追い打ち）に固定
     };
 
     // ---------------------------------------------------------------------------------
@@ -699,7 +699,7 @@ static class Som318Diag
             // ハギの追い打ちが獣の弾けで出る（規定）・旧の定義では出ない
             long Hagi(UnitDef sd)
             {
-                var f = Formation.Build(front1: UnitCatalog.Golm, center: UnitCatalog.Hagi, back3: sd);
+                var f = Formation.Build(front1: UnitCatalog.Golm, center: UnitCatalog.HagiH389, back3: sd);
                 var (ctx, p, _) = Board(f, WaveN(2));
                 var s = p.First(u => u.Def.Id == "som"); var hg = p.First(u => u.Def.Id == "hagi");
                 int ev0 = ctx.Events.Count;

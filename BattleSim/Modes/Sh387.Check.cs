@@ -153,7 +153,7 @@ static partial class Sh387Diag
             var b0 = Play(); var before = b0.Select(r => S307Seats(r.F)).ToArray();
             _ = Put(b0[0].F, 0, Ten[0]); _ = Replace(b0[0].F, b0[0].F[0]!.Id, Plain(Ten[0]));
             bool untouched = Play().Select(r => S307Seats(r.F)).SequenceEqual(before);
-            string head = Git($"{HeadSha}:docs/units.md"), now = File.Exists("docs/units.md") ? File.ReadAllText("docs/units.md") : "";
+            string head = Git($"{HeadSha}:docs/units.md"), now = Git("0d48cccb:docs/units.md");   // 第390期: 規定のハギを替えたので、第389期の HEAD の表と比べる
             string Row(string doc, UnitDef d) => doc.Split('\n').FirstOrDefault(l => l.StartsWith($"| **{d.Name}** |", StringComparison.Ordinal))?.TrimEnd('\r') ?? "";
             var moved = Ten.Where(d => Row(head, d) == "" || Row(head, d) != Row(now, d)).Select(d => Short(d)).ToList();
             Expect($"棚卸し: 素体（同じ体・札なし・ふつうに殴る）／ 替えた台は器具の中だけ（`compare` ／ 交差帯 ／ `Playtest` ／ `Versions` ／ `All` ／ `Retired` に無い・替えても元の台は変わらない）・10 枚の `docs/units.md` の行が第386期の HEAD（{HeadSha}）と同じ",

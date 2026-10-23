@@ -1004,6 +1004,11 @@ public enum TraitId
     HagiSoulMoves,        // 段の動き（R5 ／ R4）: 魂 3 で斬撃が薙ぎ（刈り取りは単体）／ 6 で追撃が 2 連 ／ 9 で刈り取りが的と同じ列 ＋ 中列の線以下の敵をまとめて刈る（`HagiDepthTrait.ModifyPattern` ／ engine の `ReapTurn388`）
     HagiReapMark,         // 刈りの印（R5m・第389期の補足）: ハギの斬撃 ／ 薙ぎ ／ 追撃が HP に届いた敵に印 +1（重なる・上限 5・倒れるまで残る・刈り取りの一撃では付けない）。印1つにつきその敵の刈り取りの線 +5%（魂の段の線に足す・合わせて最大 6 割）（**判定は engine の `ReapMark389` ／ `ReapLineFor389`**・札そのものは印）
     HagiSpillFixed,       // 固定の巻き込み（R5 ／ R4 ／ R5n・マイナス）: ハギが攻撃するたび、隣の味方それぞれに 2（素の攻撃力 16 の 1 割・固定）の味方からの傷（**判定は engine の `ScytheSpill388`**・札そのものは印）
+    // --- 第390期: 第389期の R5m（HagiReap ／ HagiHalfPursuit ／ HagiDepthSoul ／ HagiSoulMoves ／ HagiReapMark ／ HagiSpillFixed）を規定のハギにした（保持者 ハギ）。旧の追い打ち（`Pursuer`）の保持者は 0 枚 ---
+    // --- 第390期で足した札（指示書 design/PHASE390_HAGI_MOVE_SPEC.md §3）。段の動きに意味を持たせる（ハギの版 V1 ／ V2 ／ V3 ／ VA・`All` の外）。保持者 0 枚 ---
+    HagiAimLine,          // 狙いを刈れる敵に（V1）: 刈り取りの狙いを、線（魂の段 ＋ 刈りの印）を切っている敵のうち HP がいちばん低い敵にする（同じなら席番号）。いなければ今どおり HP の割合がいちばん低い敵（**判定は engine の `ReapAim388`**・札そのものは印）
+    HagiColumnEarly,      // 列ごと刈るを早く（V2）: 列をまとめて刈るのを魂 9 → 6 に。魂 6〜8 で列ごと刈った振りの後は再行動しない・魂 9 では今どおり再行動（2 回まで）（**判定は engine の `ReapTurn388`**・札そのものは印）
+    HagiLineEvery,        // 線を割るたび数える（V3）: 魂の「線を割る +1」の1つの敵の1つの線につき1ターン1回の門を外す（回復で戻されてまた割れば、また +1）（**判定は engine の `DepthCross389`**・札そのものは印）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -10472,7 +10477,9 @@ public sealed class HagiDepthTrait : Trait
     /// <summary>刈り取りの線（‰）。</summary>
     public static int LinePermil(UnitState h) => (h.HasTrait(TraitId.HagiDepthShallow) ? ShallowPermil : DeepPermil)[Stage(Soul(h))];
     /// <summary>魂 9 の「列をまとめて刈る」が立っているか（段の動きの札を持つときだけ）。</summary>
-    public static bool Column(UnitState h) => h.HasTrait(TraitId.HagiSoulMoves) && Soul(h) >= ColumnAt;
+    public static bool Column(UnitState h) => h.HasTrait(TraitId.HagiSoulMoves) && Soul(h) >= (h.HasTrait(TraitId.HagiColumnEarly) ? ColumnEarlyAt : ColumnAt);
+    /// <summary>第390期（V2・<see cref="TraitId.HagiColumnEarly"/>）: 列をまとめて刈る魂。魂 <see cref="ColumnEarlyAt"/>〜8 で列ごと刈った振りの後は再行動しない（魂 <see cref="ColumnAt"/> では今どおり）。</summary>
+    public const int ColumnEarlyAt = 6;
 
     public override void OnTurnStart(BattleContext ctx, UnitState self)
     {
@@ -10514,7 +10521,7 @@ public sealed class HagiDepthTrait : Trait
             ctx.Log($"    ★ {self.Name} の鎌が深く届くようになった（魂 {s}・刈り取りの線 {LinePermil(self) / 10.0:0.#}%{StageText(self, Stage(s))}）", LogKind.Highlight, self);
     }
 
-    static string StageText(UnitState h, int st) => !h.HasTrait(TraitId.HagiSoulMoves) ? "" : st switch { 1 => "・薙ぐ", 2 => "・薙ぐ ＋ 二度斬る", _ => "・列ごと刈る" };
+    static string StageText(UnitState h, int st) => !h.HasTrait(TraitId.HagiSoulMoves) ? "" : st switch { 1 => "・薙ぐ", 2 => h.HasTrait(TraitId.HagiColumnEarly) ? "・薙ぐ ＋ 二度斬る ＋ 列ごと刈る" : "・薙ぐ ＋ 二度斬る", _ => "・列ごと刈る" };
 
     /// <summary>会戦の境界。魂を持ち越さない（攻撃力に何も足していないので帳簿は無い）。</summary>
     public override void OnCarryOver(UnitState self)
@@ -19798,6 +19805,9 @@ public static class TraitCatalog
         new HagiDepthTrait(TraitId.HagiSoulMoves),                   // 第389期（段の動き）
         new MarkOnlyTrait(TraitId.HagiSpillFixed),                   // 第389期（固定の巻き込み・印・判定は engine）
         new MarkOnlyTrait(TraitId.HagiReapMark),                     // 第389期の補足（刈りの印 R5m・印・判定は engine）
+        new MarkOnlyTrait(TraitId.HagiAimLine),                      // 第390期（狙いを刈れる敵に V1・印・判定は engine）
+        new MarkOnlyTrait(TraitId.HagiColumnEarly),                  // 第390期（列ごと刈るを早く V2・印・判定は engine）
+        new MarkOnlyTrait(TraitId.HagiLineEvery),                    // 第390期（線を割るたび数える V3・印・判定は engine）
         new EruptTrait(),      // 第180期
         new SmearTrait(),      // 第180期
         new SpitTrait(),       // 第180期

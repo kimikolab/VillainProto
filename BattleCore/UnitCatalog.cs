@@ -2847,8 +2847,11 @@ public static class UnitCatalog
     /// <b>鍵が他人依存の駒は、時間を買っても働かない。要るのは時間ではなく鍵の供給である。</b>
     /// ハギを選んだのは「延命すると密度が<u>上がる</u>唯一の駒」（×1.10）だったからだが、
     /// <b>素の密度は下から3番目</b>で、<b>「延命と相性が良い」と「延命すれば働く」は別だった。</b></para>
+    ///
+    /// <para><b>第390期に規定を第389期の R5m（大鎌で刈る死神・<see cref="Hagi"/>）へ替えた。</b>これは第1〜389期の規定（追い打ち `Pursuer`・薙ぎ）の明示の定義。
+    /// 過去の器具は `Common.PinH389` ／ `Pin389` で固定する。`All` ／ `Retired` の外。</para>
     /// </summary>
-    public static readonly UnitDef Hagi = new()
+    public static readonly UnitDef HagiH389 = new()
     {
         Id = "hagi",
         Name = "追い打ちのハギ",
@@ -2870,7 +2873,7 @@ public static class UnitCatalog
     const string HagiSpillText = "大鎌の振りは、隣にいる仲間も巻き込む";
     static UnitDef HagiOn388(TraitId[] traits, string plus, string minus) => new()
     {
-        Id = Hagi.Id, Name = Hagi.Name, MaxHp = Hagi.MaxHp, Attack = Hagi.Attack, Speed = Hagi.Speed,
+        Id = HagiH389.Id, Name = HagiH389.Name, MaxHp = HagiH389.MaxHp, Attack = HagiH389.Attack, Speed = HagiH389.Speed,   // 第390期: 規定のハギが版の側へ移ったので、体は旧の規定から引く（同じ値）
         Traits = traits, Pattern = AttackPattern.Single, PlusText = plus, MinusText = minus,
         Flavor = "死神の大鎌は、弱った命から順に刈り取っていく。刈るほどに、刃は重くなる。",
     };
@@ -2903,6 +2906,28 @@ public static class UnitCatalog
         HagiDepthReapText + HagiPursuitText + HagiDepthText(5) + HagiMovesText + "。斬りつけた敵には刈りの印が刻まれ、印の数だけ鎌が深く届く（1つ +5%・合わせて最大 6 割）", HagiDepthMinusText);
     public static readonly UnitDef HagiR5n =HagiOn388(new[] { TraitId.HagiReap, TraitId.HagiHalfPursuit, TraitId.HagiDepthSoul, TraitId.HagiSpillFixed },
         HagiDepthReapText + HagiPursuitText + HagiDepthText(5), HagiDepthMinusText);
+
+    // ---- 第390期: 第389期の R5m を規定にした（指示書 design/PHASE390_HAGI_MOVE_SPEC.md §2・名前と二つ名は「追い打ちのハギ」のまま・フレーバーは仮）----
+    // 旧（第1〜389期の規定・追い打ち）は <see cref="HagiH389"/>。札は R5m と同じ並び・文面は叩き台 ＋ 刈りの印の句（第389期の R5m の句を言い替えた）。
+    static readonly TraitId[] HagiTraits390 = { TraitId.HagiReap, TraitId.HagiHalfPursuit, TraitId.HagiDepthSoul, TraitId.HagiSoulMoves, TraitId.HagiReapMark, TraitId.HagiSpillFixed };
+    const string HagiPlusText390 = HagiDepthReapText + HagiPursuitText + "。敵が倒れ、弱っていくほど魂が溜まり、鎌の届く線が深くなる（2 割 → 最大 5 割）" + HagiMovesText
+        + "。斬るたび、その敵の命に印を刻み、鎌の届く線を深くする（印1つ +5%・合わせて最大 6 割）";
+    /// <summary>追い打ちのハギ（第390期の規定 ＝ 第389期の R5m）: 刈り取り ／ 追撃 ／ 魂の深さ ／ 段の動き ／ 刈りの印 ／ 固定の巻き込み。旧は <see cref="HagiH389"/>。</summary>
+    public static readonly UnitDef Hagi = HagiOn388(HagiTraits390, HagiPlusText390, HagiDepthMinusText);
+    /// <summary>規定のハギの札に版の札を足す（刈りの印の後ろ・固定の巻き込みの前）。</summary>
+    static UnitDef HagiOn390(TraitId[] plus, string text)
+        => HagiOn388(HagiTraits390.Take(5).Concat(plus).Append(TraitId.HagiSpillFixed).ToArray(), HagiPlusText390 + text, HagiDepthMinusText);
+    const string HagiV1Text = "。線を切った敵がいれば、そのうち命のいちばん少ない敵を狙う";
+    const string HagiV2Text = "。列ごと刈るのは魂 6 から（魂 9 なら、列ごと刈った後もまた振る）";
+    const string HagiV3Text = "。敵が線を割るたびに魂が溜まる（癒されてまた割れば、また溜まる）";
+    /// <summary>ハギの版 V1（第390期）: 規定 ＋ 狙いを刈れる敵に（線を切っている敵のうち HP がいちばん低い敵・いなければ今どおり HP の割合）。</summary>
+    public static readonly UnitDef HagiV1 = HagiOn390(new[] { TraitId.HagiAimLine }, HagiV1Text);
+    /// <summary>ハギの版 V2（第390期）: 規定 ＋ 列ごと刈るを魂 6 から（魂 6〜8 は列ごと刈った振りで手番を終える・魂 9 は今どおり再行動 2 回まで）。</summary>
+    public static readonly UnitDef HagiV2 = HagiOn390(new[] { TraitId.HagiColumnEarly }, HagiV2Text);
+    /// <summary>ハギの版 V3（第390期）: 規定 ＋ 線を割るたび数える（1つの敵の1つの線につき1ターン1回の門を外す）。</summary>
+    public static readonly UnitDef HagiV3 = HagiOn390(new[] { TraitId.HagiLineEvery }, HagiV3Text);
+    /// <summary>ハギの版 VA（第390期）: V1 ＋ V2 ＋ V3。</summary>
+    public static readonly UnitDef HagiVA = HagiOn390(new[] { TraitId.HagiAimLine, TraitId.HagiColumnEarly, TraitId.HagiLineEvery }, HagiV1Text + HagiV2Text + HagiV3Text);
 
     public static readonly UnitDef Sekki = new()
     {

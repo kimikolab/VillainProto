@@ -71,7 +71,7 @@ static partial class Sh389Diag
             bool mk = r5m.Traits.SequenceEqual(new[] { TraitId.HagiReap, TraitId.HagiHalfPursuit, TraitId.HagiDepthSoul, TraitId.HagiSoulMoves, TraitId.HagiReapMark, TraitId.HagiSpillFixed })
                 && r5m.PlusText.StartsWith(r5.PlusText, StringComparison.Ordinal) && r5m.PlusText.EndsWith("（1つ +5%・合わせて最大 6 割）", StringComparison.Ordinal) && r5m.MinusText == r5.MinusText
                 && r5m.MaxHp == 62 && r5m.Attack == 16 && r5m.Speed == 7 && !UnitCatalog.Everyone.Contains(r5m) && !r5.Traits.Contains(TraitId.HagiReapMark);
-            bool def = UnitCatalog.Hagi.Traits.SequenceEqual(new[] { TraitId.Pursuer }) && UnitCatalog.Hagi.Pattern == AttackPattern.Sweep && UnitCatalog.All.Contains(UnitCatalog.Hagi);
+            bool def = UnitCatalog.HagiH389.Traits.SequenceEqual(new[] { TraitId.Pursuer }) && UnitCatalog.HagiH389.Pattern == AttackPattern.Sweep && UnitCatalog.HagiH389.Id == "hagi";   // 第390期: 第389期の規定（追い打ち）に固定
             Expect("版の札と文面: 体は今のハギ（62 ／ 16 ／ 7・単体）・H2 の札（刈り取り ／ 追撃）＋ 魂の深さ ＋ 固定の巻き込み・R5 ＋ 段の動き ／ R4 ＋ 浅い線 ＋ 段の動き ／ R5n は段の動き無し ／ R5m ＝ R5 ＋ 刈りの印・`All` ／ `Retired` の外・規定のハギは今どおり",
                 body && cards && text && mk && def, string.Join(" ／ ", new[] { ("R5", r5), ("R4", r4), ("R5n", r5n), ("R5m", r5m) }.Select(v => $"{v.Item1} {string.Join("・", v.Item2.Traits)}")));
         }
@@ -234,7 +234,7 @@ static partial class Sh389Diag
 
         // ---- 規定のハギ ／ ハギのいない compare の行 ----
         {
-            string head = Git($"{HeadSha}:docs/units.md"), now = File.Exists("docs/units.md") ? File.ReadAllText("docs/units.md") : "";
+            string head = Git($"{HeadSha}:docs/units.md"), now = Git("0d48cccb:docs/units.md");   // 第390期: 規定のハギを替えたので、第389期の HEAD の表と比べる
             string Row(string doc) => doc.Split('\n').FirstOrDefault(l => l.StartsWith($"| **{UnitCatalog.Hagi.Name}** |", StringComparison.Ordinal))?.TrimEnd('\r') ?? "";
             var bal = File.Exists("docs/balance.md") ? File.ReadAllLines("docs/balance.md") : Array.Empty<string>();
             var map = new Dictionary<string, string[]>();
@@ -254,14 +254,14 @@ static partial class Sh389Diag
         // ---- 替えた台 ／ 素体は器具の中だけ・試遊の台 ----
         {
             var vers = new[] { r5, r4, r5n, r5m, UnitCatalog.HagiH1, UnitCatalog.HagiH2, UnitCatalog.HagiH3, UnitCatalog.HagiH3s };
-            var verRows = Presets.Versions.Where(r => r.F.Occupied().Any(o => vers.Contains(o.Def))).Select(r => r.Name).ToList();
+            var verRows = VersionsH389().Where(   /* 第390期: 第389期の一覧 */ r => r.F.Occupied().Any(o => vers.Contains(o.Def))).Select(r => r.Name).ToList();
             bool rows2 = verRows.SequenceEqual(new[] { "版・R5 ハギ", "版・R5 死神と墓守" })
-                && Presets.Versions.Where(r => verRows.Contains(r.Name)).All(r => r.F.Occupied().Count(o => o.Def == r5 || o.Def == r5m) == 1)
-                && Presets.Versions.First(r => r.Name == "版・R5 死神と墓守").F[0] is { } z && (z == r5 || z == r5m)
+                && VersionsH389().Where(r => verRows.Contains(r.Name)).All(r => r.F.Occupied().Count(o => o.Def == r5 || o.Def == r5m) == 1)
+                && VersionsH389().First(r => r.Name == "版・R5 死神と墓守").F[0] is { } z && (z == r5 || z == r5m)
                 && VersionsH388().Count(r => r.Name is "版・H3 ハギ" or "版・H3 死神と墓守") == 2 && !VersionsH388().Any(r => verRows.Contains(r.Name))
                 && VersionsH387().Length == VersionsH388().Length - 2
                 && CompareBuilds().Concat(CrossBuilds()).Concat(Presets.Playtest).All(r => !r.F.Occupied().Any(o => vers.Contains(o.Def)));
-            bool inside = !CompareBuilds().Concat(CrossBuilds()).Concat(Presets.Playtest).Concat(Presets.Versions).SelectMany(r => r.F.Occupied()).Any(o => o.Def.Id.EndsWith("_plain388", StringComparison.Ordinal));
+            bool inside = !CompareBuilds().Concat(CrossBuilds()).Concat(Presets.Playtest).Concat(VersionsH389()).SelectMany(r => r.F.Occupied()).Any(o => o.Def.Id.EndsWith("_plain388", StringComparison.Ordinal));
             var b0 = S388.RicaBoards().Select(b => Som307Diag.Seats(b.F)).ToArray();
             foreach (var b in S388.RicaBoards()) _ = ColBoard(b, r5);
             bool untouched = S388.RicaBoards().Select(b => Som307Diag.Seats(b.F)).SequenceEqual(b0);

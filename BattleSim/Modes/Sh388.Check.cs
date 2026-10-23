@@ -58,7 +58,7 @@ static partial class Sh388Diag
 
         // ---- 版の札と文面 ----
         {
-            var h = UnitCatalog.Hagi;
+            var h = UnitCatalog.HagiH389;   // 第390期: 第388期の規定（追い打ち）に固定
             bool ok = Vers.All(v => v.D.Id == "hagi" && v.D.Name == h.Name && v.D.MaxHp == 62 && v.D.Attack == 16 && v.D.Speed == 7 && v.D.Pattern == AttackPattern.Single && v.D.Actions is null
                                     && !v.D.Traits.Contains(TraitId.Pursuer) && v.D.Traits.Contains(TraitId.HagiReap) && v.D.Traits[^1] == TraitId.HagiScytheSpill
                                     && !UnitCatalog.Everyone.Contains(v.D))
@@ -66,7 +66,7 @@ static partial class Sh388Diag
                 && UnitCatalog.HagiH3.Traits.Contains(TraitId.HagiSoul) && !UnitCatalog.HagiH3.Traits.Contains(TraitId.HagiHaste) && UnitCatalog.HagiH3s.Traits.Contains(TraitId.HagiHaste)
                 && UnitCatalog.HagiH3s.PlusText.EndsWith("。刈るたび、速くなる", StringComparison.Ordinal) && UnitCatalog.HagiH3.PlusText.StartsWith(UnitCatalog.HagiH2.PlusText, StringComparison.Ordinal)
                 && UnitCatalog.HagiH2.PlusText.StartsWith(UnitCatalog.HagiH1.PlusText, StringComparison.Ordinal) && UnitCatalog.HagiH3.MinusText.StartsWith(UnitCatalog.HagiH1.MinusText, StringComparison.Ordinal);
-            bool def = h.Traits.SequenceEqual(new[] { TraitId.Pursuer }) && h.Pattern == AttackPattern.Sweep && UnitCatalog.All.Contains(h);
+            bool def = h.Traits.SequenceEqual(new[] { TraitId.Pursuer }) && h.Pattern == AttackPattern.Sweep && h.Id == "hagi";   // 第390期: 旧の規定（`All` の外）に固定
             Expect("版の札と文面: 体は今のハギ（62 ／ 16 ／ 7）・追い打ちを外し単体・H1 刈り取り ＋ 巻き込み ／ H2 ＋ 追撃 ／ H3 ＋ 魂の段 ／ H3s ＋ 加速（文面は H3 から句を外す ／ 足す）・`All` ／ `Retired` の外・規定のハギは今どおり（追い打ち ／ 薙ぎ）",
                 ok && def, string.Join(" ／ ", Vers.Select(v => $"{v.Name} {string.Join("・", v.D.Traits)}")));
         }
@@ -195,7 +195,7 @@ static partial class Sh388Diag
 
         // ---- 規定のハギ ／ ハギのいない compare の行 ----
         {
-            string head = Git($"{HeadSha}:docs/units.md"), now = File.Exists("docs/units.md") ? File.ReadAllText("docs/units.md") : "";
+            string head = Git($"{HeadSha}:docs/units.md"), now = Git("0d48cccb:docs/units.md");   // 第390期: 規定のハギを替えたので、第389期の HEAD の表と比べる（第388 ／ 389期にハギの行が動いていないこと）
             string Row(string doc) => doc.Split('\n').FirstOrDefault(l => l.StartsWith($"| **{UnitCatalog.Hagi.Name}** |", StringComparison.Ordinal))?.TrimEnd('\r') ?? "";
             var bal = File.Exists("docs/balance.md") ? File.ReadAllLines("docs/balance.md") : Array.Empty<string>();
             var map = new Dictionary<string, string[]>();
