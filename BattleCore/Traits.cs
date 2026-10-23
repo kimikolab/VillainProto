@@ -992,6 +992,12 @@ public enum TraitId
     MugSporeP,            // 版の胞子を出す・P（ムグ・第387期から規定のムグ）: 同じ形で、弾けて毒の胞子（＝ 規定の胞子）にする
     MugSporeQ,            // 版の胞子を出す・Q（ムグ）: 同じ形で、寄生する胞子にする
     MugSporePQ,           // 版の胞子を出す・PQ（ムグ）: 同じ形で、寄生して弾ける胞子にする
+    // --- 第388期で足した札（指示書 design/PHASE388_HAGI_REAPER_SPEC.md §2）。大鎌で刈る死神（ハギの版 H1 ／ H2 ／ H3 ／ H3s・`All` の外）。保持者 0 枚 ---
+    HagiReap,             // 刈り取り（H1〜）: 手番で、HP の割合がいちばん低い敵（ふつうの攻撃が届く敵・同じなら席番号）を狙い、最大HPの 2 割以下なら残りの HP をそのまま与えて倒す（守り ／ 軛を通さない）。そうでなければふつうに斬る。自分で敵を倒すと同じ手番でもう一度振る（2 回まで）（**判定は engine の `ReapTurn388`**・札そのものは印）
+    HagiHalfPursuit,      // 半分を割った敵への追撃（H2〜）: 敵の HP が最大HPの 5 割を上から下へ割った一撃の後に、割り込んで一撃（攻撃力 ＋ その敵が失った HP の 1 割）。1つの敵に1ターンに1回・ハギ自身の攻撃では起きない・追撃では刈り取らない（**判定は engine の `HalfCross388`**・札そのものは印）
+    HagiSoul,             // 魂の段（H3〜）: 敵が倒れるたび魂 +2、5 割を割るたび +1。攻撃力 +5 × n(n+1)/2。魂 3 で斬撃が薙ぎ ／ 6 で刈り取りの線が 3 割 ／ 9 で追撃が 2 連。前のターンに敵が倒れず 5 割を割った敵もいなければ 1 つ薄れる（`HagiReaperTrait`）
+    HagiHaste,            // 加速（H3s）: 刈り取りで敵を倒すたび速さ +2（その戦の間・重なる・行動順の速さ `TurnSpeed` が読む）（`HagiReaperTrait`）
+    HagiScytheSpill,      // 大鎌の巻き込み（全版・マイナス）: ハギが攻撃するたび（斬撃 ／ 刈り取り ／ 追撃）、隣の味方それぞれに攻撃力の 1 割（最低 1）の味方からの傷（**判定は engine の `ScytheSpill388`**・札そのものは印）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -10322,6 +10328,106 @@ public sealed class PursuerTrait : Trait
 }
 
 /// <summary>
+/// 第388期（ハギの版 H1 ／ H2 ／ H3 ／ H3s・指示書 design/PHASE388_HAGI_REAPER_SPEC.md §2）——大鎌で刈る死神。保持者は版のハギだけ（`All` の外）。
+/// <list type="bullet">
+///   <item>刈り取り（<see cref="TraitId.HagiReap"/>・手番・印）: HP の割合がいちばん低い敵（ふつうの攻撃が届く敵の中から・同じなら席番号）を狙い、最大HPの <see cref="ReapPercent"/>% 以下
+///         （魂 <see cref="SoulDeepAt"/> から <see cref="ReapPercentDeep"/>%）なら残りの HP をそのまま与えて倒す（回避 ／ 軽減 ／ 肩代わり ／ 破片 ／ 軛を通さない）。そうでなければふつうに斬る。
+///         自分で敵を倒すと、同じ手番でもう一度振る（<see cref="MaxEncores"/> 回まで）。判定は engine の <c>ReapTurn388</c>。</item>
+///   <item>追撃（<see cref="TraitId.HagiHalfPursuit"/>・手番の外・印）: 敵の HP が最大HPの 5 割を上から下へ割った一撃の後に割り込んで一撃（攻撃力 ＋ その敵が失った HP の 1 割）。
+///         1つの敵に1ターンに1回・ハギ自身の攻撃では起きない・追撃では刈り取らない・魂 <see cref="SoulTwinAt"/> から 2 連。判定は engine の <c>HalfCross388</c>（経路は追い打ちと同じ <see cref="OutOfTurnRoute.Pursue"/>）。</item>
+///   <item>魂の段（<see cref="TraitId.HagiSoul"/>・この札）: 敵が倒れるたび +<see cref="SoulPerDeath"/>（誰が倒しても・敵の召喚も）、5 割を割るたび +<see cref="SoulPerCross"/>（誰が割っても）。
+///         攻撃力 +<see cref="SoulStep"/> × n(n+1)/2（墓守の層 <see cref="NecroTrait"/> と同じ三角数・自己強化なので <c>AtkBonus</c> を直に動かす）。
+///         魂 <see cref="SoulSweepAt"/> で斬撃が薙ぎ（刈り取り ／ 追撃は単体のまま）。前のターンに敵が倒れず 5 割を割った敵もいなければ 1 つ薄れる。会戦をまたがない。</item>
+///   <item>加速（<see cref="TraitId.HagiHaste"/>・この札）: 刈り取りで敵を倒すたび速さ +<see cref="HasteStep"/>（その戦の間・重なる）。行動順の速さ（<c>TurnSpeed</c>）が <see cref="HasteKey"/> を読む。</item>
+///   <item>大鎌の巻き込み（<see cref="TraitId.HagiScytheSpill"/>・マイナス・印）: ハギが攻撃するたび、隣の味方それぞれに攻撃力の <see cref="SpillPercent"/>%（最低 1）の味方からの傷。判定は engine の <c>ScytheSpill388</c>。</item>
+/// </list>
+/// 乱数を新たに引かない（狙いは決定的）。
+/// </summary>
+public sealed class HagiReaperTrait : Trait
+{
+    public const int ReapPercent = 20, ReapPercentDeep = 30, HalfPercent = 50, PursuitLostPercent = 10, SpillPercent = 10, MaxEncores = 2;
+    public const int SoulPerDeath = 2, SoulPerCross = 1, SoulStep = 5, SoulSweepAt = 3, SoulDeepAt = 6, SoulTwinAt = 9, HasteStep = 2;
+    /// <summary>魂の数 ／ 攻撃力に足した帳簿 ／ 最後に魂が溜まったターン ／ 加速の量（どれもハギの私有キー）。</summary>
+    public const string SoulKey = "hagiSoul388", SoulBonusKey = "hagiSoulBonus388", SoulTurnKey = "hagiSoulTurn388", HasteKey = "hagiHaste388";
+    /// <summary>敵の側の私有キー: 最後に 5 割を割ったターン ＋ 1（1つの敵に1ターンに1回）。</summary>
+    public const string CrossTurnKey = "hagiCross388";
+
+    readonly TraitId _id;
+    public HagiReaperTrait(TraitId id) { _id = id; }
+    public override TraitId Id => _id;
+
+    public static int Soul(UnitState u) => u.RawCounter(SoulKey);
+    /// <summary>刈り取りの線（最大HPの %）。魂の段を持ち、魂 6 以上なら 3 割。</summary>
+    public static int ReapLine(UnitState h) => h.HasTrait(TraitId.HagiSoul) && Soul(h) >= SoulDeepAt ? ReapPercentDeep : ReapPercent;
+    /// <summary>追撃の回数（魂 9 から 2 連）。</summary>
+    public static int PursuitHits(UnitState h) => h.HasTrait(TraitId.HagiSoul) && Soul(h) >= SoulTwinAt ? 2 : 1;
+
+    // 薄れるのは「前のターンに敵が1体も倒れず、5 割を割った敵もいなかった」ときだけ（墓守の層と同じ「連鎖が途切れたら罰する」）。
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (_id != TraitId.HagiSoul) return;
+        int s = Soul(self);
+        if (s > 0 && self.RawCounter(SoulTurnKey) < ctx.Turn - 1) SetSoul(ctx, self, s - 1, decayed: true);
+        UnitTally t = ctx.TallyOf(self);   // 計数のみ（ターンの頭の魂）
+        if (ctx.Turn >= 0 && ctx.Turn <= BattleEngine.MaxTurns) (t.R388SoulByTurn ??= new long[BattleEngine.MaxTurns + 2])[ctx.Turn] += Soul(self);
+    }
+
+    public override void OnAnyDeath(BattleContext ctx, UnitState self, UnitState dead)
+    {
+        if (_id != TraitId.HagiSoul || dead.TeamId == self.TeamId || !self.IsAlive) return;
+        Gain(ctx, self, SoulPerDeath, death: true);
+    }
+
+    public override AttackPattern ModifyPattern(UnitState self, AttackPattern p)
+        => _id == TraitId.HagiSoul && Soul(self) >= SoulSweepAt ? AttackPattern.Sweep : p;
+
+    /// <summary>魂を足す（敵の死 ／ 5 割を割った）。engine の <c>HalfCross388</c> も呼ぶ。</summary>
+    public static void Gain(BattleContext ctx, UnitState self, int n, bool death)
+    {
+        int before = Soul(self), s = before + n;
+        self.SetCounter(SoulTurnKey, ctx.Turn);
+        SetSoul(ctx, self, s, decayed: false);
+        UnitTally t = ctx.TallyOf(self);   // 計数のみ（出どころ）
+        if (death) t.R388SoulDeath += n; else t.R388SoulCross += n;
+        ctx.Log($"    {self.Name} の大鎌に魂が宿る（{(death ? "敵の死" : "半分を割った敵")}・魂 {s} ／ 攻撃 {self.CurrentAttack}）", LogKind.Trigger);
+        if (before < SoulSweepAt && s >= SoulSweepAt) ctx.Log($"    ★ {self.Name} の大鎌が広く薙ぐようになった（魂 {s}）", LogKind.Highlight, self);
+        if (before < SoulDeepAt && s >= SoulDeepAt) ctx.Log($"    ★ {self.Name} の大鎌が深く刈るようになった（魂 {s}・刈り取りの線 {ReapPercentDeep}%）", LogKind.Highlight, self);
+        if (before < SoulTwinAt && s >= SoulTwinAt) ctx.Log($"    ★ {self.Name} の大鎌が二度斬るようになった（魂 {s}・追撃が 2 連）", LogKind.Highlight, self);
+    }
+
+    static void SetSoul(BattleContext ctx, UnitState self, int s, bool decayed)
+    {
+        s = ApplySoul(self, s);
+        UnitTally t = ctx.TallyOf(self);   // 計数のみ（最大と、3 ／ 6 ／ 9 に届いたターン）
+        if (s > t.R388SoulPeak) t.R388SoulPeak = s;
+        if (self.CurrentAttack > t.R388AtkPeak) t.R388AtkPeak = self.CurrentAttack;
+        if (s >= SoulSweepAt && t.R388Soul3Turn == 0) t.R388Soul3Turn = Math.Max(1, ctx.Turn);
+        if (s >= SoulDeepAt && t.R388Soul6Turn == 0) t.R388Soul6Turn = Math.Max(1, ctx.Turn);
+        if (s >= SoulTwinAt && t.R388Soul9Turn == 0) t.R388Soul9Turn = Math.Max(1, ctx.Turn);
+        if (decayed) ctx.Log($"    {self.Name} の魂が薄れた（魂 {s}）", LogKind.Status);
+    }
+
+    /// <summary>SetSoul の純計算部（墓守の <c>ApplyStack</c> と同じ作り）。帳簿との差分だけ <c>AtkBonus</c> に足す。</summary>
+    static int ApplySoul(UnitState self, int s)
+    {
+        s = Math.Max(0, s);
+        int applied = self.RawCounter(SoulBonusKey);
+        int desired = SoulStep * s * (s + 1) / 2;
+        self.AtkBonus += desired - applied;
+        self.SetCounter(SoulKey, s);
+        self.SetCounter(SoulBonusKey, desired);
+        return s;
+    }
+
+    /// <summary>会戦の境界。魂も加速も持ち越さない（AtkBonus はエンジンが 0 にした後なので帳簿も 0 に戻す）。</summary>
+    public override void OnCarryOver(UnitState self)
+    {
+        if (_id == TraitId.HagiSoul) { self.SetCounter(SoulKey, 0); self.SetCounter(SoulBonusKey, 0); self.SetCounter(SoulTurnKey, 0); }
+        if (_id == TraitId.HagiHaste) self.SetCounter(HasteKey, 0);
+    }
+}
+
+/// <summary>
 /// 後備え。後列の味方への攻撃を肩代わりする。「庇う（Guardian）」が単体攻撃しか止められないのに対し、
 /// こちらは貫きにも割り込む。後列に稼ぎ頭を隠す編成に対する唯一の防御手段。
 /// </summary>
@@ -19585,6 +19691,11 @@ public static class TraitCatalog
         new DirgeTrait(TraitId.DirgeEchoAlways),                     // 第383期（哀歌は敵の耳にも届く・楽士 D2 のマイナス）
         new DirgeSoundTrait(TraitId.DirgeSoundG1, perDeath: 20, threshold: 50),   // 第384期（哀歌の音・傷寄り G1）
         new DirgeSoundTrait(TraitId.DirgeSoundG2, perDeath: 50, threshold: 50),   // 第384期（哀歌の音・死寄り G2）
+        new MarkOnlyTrait(TraitId.HagiReap),                         // 第388期（刈り取り・印・判定は engine）
+        new MarkOnlyTrait(TraitId.HagiHalfPursuit),                  // 第388期（半分を割った敵への追撃・印・判定は engine）
+        new HagiReaperTrait(TraitId.HagiSoul),                       // 第388期（魂の段）
+        new HagiReaperTrait(TraitId.HagiHaste),                      // 第388期（加速）
+        new MarkOnlyTrait(TraitId.HagiScytheSpill),                  // 第388期（大鎌の巻き込み・印・判定は engine）
         new EruptTrait(),      // 第180期
         new SmearTrait(),      // 第180期
         new SpitTrait(),       // 第180期

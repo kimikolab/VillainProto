@@ -123,7 +123,7 @@ static partial class Sh387Diag
             var f = Presets.DeathChain377();
             bool pin = PinMug386(UnitCatalog.Mug) == UnitCatalog.MugH386 && PinMug386(UnitCatalog.MugQ) == UnitCatalog.MugQ && Pin386(f)[2] == UnitCatalog.MugH386 && Pin386(f)[0] == f[0]
                 && PinM379(UnitCatalog.Mug) == UnitCatalog.MugH379;
-            var vr = Presets.Versions; var v386 = VersionsH386();
+            var vr = VersionsH387(); var v386 = VersionsH386();   // 第388期: 第387期の一覧（版のハギの2台を足す前）
             bool play = !vr.Any(r => r.Name == "版・弾け 死の連鎖") && vr[^1].Name == "版・寄生 死の連鎖" && vr[^1].F[2] == UnitCatalog.MugQ
                 && v386.Length == vr.Length + 1 && v386[^2].Name == "版・弾け 死の連鎖" && v386[^2].F[2] == UnitCatalog.MugP && v386[^1].Name == "版・寄生 死の連鎖"
                 && v386.Where(r => r.Name.StartsWith("試遊・", StringComparison.Ordinal)).All(r => !r.F.Occupied().Any(o => o.Def == UnitCatalog.Mug))

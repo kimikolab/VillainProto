@@ -994,7 +994,18 @@ public static class Presets
         // 第386期: 胞子らしい胞子の版の台（並びは試遊・死の連鎖・ムグだけ版 ＝ 弾けて毒 P ／ 寄生 Q）。採否はポン。S0 ／ PQ と他の台の版は `sh386` の中で組む。
         // 第387期: 弾けて毒（P）を規定にしたので「版・弾け 死の連鎖」は外した（規定と同じ・`Common.VersionsH386` が過去の器具のために足し戻す）。寄生（Q）は保留の版として残す。
         ("版・寄生 死の連鎖", DeathChain377(mug: UnitCatalog.MugQ)),
+        // 第388期: 大鎌で刈る死神（ハギの版 H3）を試遊で触る2台。採否はポン（H1 ／ H2 ／ H3s と他の台は `sh388` の中で組む）。
+        //   版・H3 ハギ: 「試遊・燃焼 ポンの台」のホタの席（中央）に H3——`sh388 atk`（アタッカーの1枚を替えた5台）で H3 の 4 波の平均がいちばん良かった台。
+        //   版・H3 死神と墓守: 「試遊・死の連鎖」のゾトの席（前1）に H3——`sh388 rica` の2台のうち良かった方（墓守のリィカと死神のハギが同じ台に立つ）。
+        ("版・H3 ハギ", HagiBurn388()),
+        ("版・H3 死神と墓守", HagiDeath388()),
     };
+
+    /// <summary>第388期: 「版・H3 ハギ」の並び（試遊・燃焼 ポンの台のホタの席（中央）にハギの版）。既定は H3。</summary>
+    public static Formation HagiBurn388(UnitDef? hagi = null) { var f = BurnPon(UnitCatalog.Borg, UnitCatalog.Hota, UnitCatalog.Hiyo).Clone(); f[2] = hagi ?? UnitCatalog.HagiH3; return f; }
+
+    /// <summary>第388期: 「版・H3 死神と墓守」の並び（試遊・死の連鎖のゾトの席（前1）にハギの版: 前1 ハギ ／ 前3 ゴルム ／ 中央 ムグ ／ 後1 ヴェル ／ 後3 リィカ）。既定は H3。</summary>
+    public static Formation HagiDeath388(UnitDef? hagi = null) { var f = DeathChain377().Clone(); f[0] = hagi ?? UnitCatalog.HagiH3; return f; }
 
     /// <summary>第379期: 「試遊・死 ソム」の並び（死の連鎖のゾトをソムに替えた: 前1 ソム ／ 前3 ゴルム ／ 中央 ムグ ／ 後1 ヴェル ／ 後3 リィカ）。ムグを差し替えて版の台を作る。</summary>
     public static Formation DeathSom379(UnitDef? mug = null) =>

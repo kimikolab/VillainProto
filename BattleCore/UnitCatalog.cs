@@ -2862,6 +2862,29 @@ public static class UnitCatalog
         Flavor = "止めを刺した者の背後から現れる。手柄だけを持っていく。"
     };
 
+    // ---- 第388期: 大鎌で刈る死神（ハギの版 H1 ／ H2 ／ H3 ／ H3s・指示書 design/PHASE388_HAGI_REAPER_SPEC.md §2・`All` に入れない・名前は版の間は「追い打ちのハギ」のまま）----
+    // 体は今のハギのまま（HP 62 ／ 攻 16 ／ 速 7）。追い打ち（`Pursuer`）を外し、ふつうの攻撃は単体（薙ぎは魂の段で）。
+    const string HagiReapText = "大鎌で、弱った敵を刈り取る（HP が 2 割を切った敵は一振りで倒す）。倒せば、もう一度振る";
+    const string HagiPursuitText = "。敵が半分まで弱ると、手番を待たずに斬りかかる（失った命が深いほど重く）";
+    const string HagiSoulText = "。敵の死と、半分を割った敵の数だけ魂が溜まり、鎌は重く、広く、深くなる";
+    const string HagiSpillText = "大鎌の振りは、隣にいる仲間も巻き込む";
+    static UnitDef HagiOn388(TraitId[] traits, string plus, string minus) => new()
+    {
+        Id = Hagi.Id, Name = Hagi.Name, MaxHp = Hagi.MaxHp, Attack = Hagi.Attack, Speed = Hagi.Speed,
+        Traits = traits, Pattern = AttackPattern.Single, PlusText = plus, MinusText = minus,
+        Flavor = "死神の大鎌は、弱った命から順に刈り取っていく。刈るほどに、刃は重くなる。",
+    };
+    /// <summary>ハギの版 H1（第388期）: 刈り取り（手番・2 割以下を一振りで倒す・倒せばもう一度・2 回まで）＋ 大鎌の巻き込み。</summary>
+    public static readonly UnitDef HagiH1 = HagiOn388(new[] { TraitId.HagiReap, TraitId.HagiScytheSpill }, HagiReapText, HagiSpillText);
+    /// <summary>ハギの版 H2（第388期）: H1 ＋ 5 割を割った敵への追撃（手番の外）。</summary>
+    public static readonly UnitDef HagiH2 = HagiOn388(new[] { TraitId.HagiReap, TraitId.HagiHalfPursuit, TraitId.HagiScytheSpill }, HagiReapText + HagiPursuitText, HagiSpillText);
+    /// <summary>ハギの版 H3（第388期）: H2 ＋ 魂の段（三角数・3 薙ぎ ／ 6 刈り取りの線 3 割 ／ 9 追撃 2 連・薄れる）。</summary>
+    public static readonly UnitDef HagiH3 = HagiOn388(new[] { TraitId.HagiReap, TraitId.HagiHalfPursuit, TraitId.HagiSoul, TraitId.HagiScytheSpill },
+        HagiReapText + HagiPursuitText + HagiSoulText, HagiSpillText + "。刈る相手がいなければ、魂は薄れていく");
+    /// <summary>ハギの版 H3s（第388期）: H3 ＋ 加速（刈り取りで倒すたび速さ +2）。</summary>
+    public static readonly UnitDef HagiH3s = HagiOn388(new[] { TraitId.HagiReap, TraitId.HagiHalfPursuit, TraitId.HagiSoul, TraitId.HagiHaste, TraitId.HagiScytheSpill },
+        HagiReapText + HagiPursuitText + HagiSoulText + "。刈るたび、速くなる", HagiSpillText + "。刈る相手がいなければ、魂は薄れていく");
+
     public static readonly UnitDef Sekki = new()
     {
         Id = "sekki",

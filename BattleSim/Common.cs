@@ -711,9 +711,11 @@ public static (string Name, Formation F)[] VersionsH385() => VersionsH386().Wher
 public static UnitDef PinMug386(UnitDef d) => ReferenceEquals(d, UnitCatalog.Mug) ? UnitCatalog.MugH386 : d;
 public static Formation Pin386(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinMug386(d); return g; }
 /// <summary>第387期: `Presets.Versions` から「版・弾け 死の連鎖」を外し、規定のムグを P にした。第386期の一覧は、各台のムグを旧に固定し、外した台を「版・寄生 死の連鎖」の手前に足し戻した写し。</summary>
+/// <summary>第388期: `Presets.Versions` の末尾に版のハギの2台（「版・H3 ハギ」「版・H3 死神と墓守」）を足した。第387期の一覧（足す前）は、その2台を除いた写し。</summary>
+public static (string Name, Formation F)[] VersionsH387() => Presets.Versions.Where(r => r.Name is not ("版・H3 ハギ" or "版・H3 死神と墓守")).ToArray();
 public static (string Name, Formation F)[] VersionsH386()
 {
-    var l = Presets.Versions.Select(r => (r.Name, F: Pin386(r.F))).ToList();
+    var l = VersionsH387().Select(r => (r.Name, F: Pin386(r.F))).ToList();   // 第388期: 版のハギの2台を足す前の一覧から
     int i = l.FindIndex(r => r.Name == "版・寄生 死の連鎖");
     l.Insert(i < 0 ? l.Count : i, ("版・弾け 死の連鎖", Presets.DeathChain377(mug: UnitCatalog.MugP)));
     return l.ToArray();

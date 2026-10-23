@@ -1582,3 +1582,12 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 
 - 段0: engine の口は変えていない（第381期の起き上がり `SoulRise` を規定のヴェルが使うようになった）。旧は `UnitCatalog.VelH381`。
 - **`BattleContext.DirgeTurn(bard)`**（哀歌・楽士の手番から）: 前の手番から味方が倒れていれば、いちばん攻撃力の高い味方（楽士を除く・同じなら席番号）の手番を1回控え、マイナス（`DirgeEcho`）があって敵が倒れていれば、その後にいちばん攻撃力の高い敵の手番を1回控える。口はヒヨ ／ ドハと同じ `_giftQueue`（`DrainGifts` に楽士の枝・手番の中では奏でない）。倒れた数は楽士の私有キー（`DirgeTrait.AllyKey` ／ `FoeKey`・`OnAnyDeath`）。乱数を引かない。
+
+## 第388期 —— 大鎌で刈る死神（ハギの版 H1 ／ H2 ／ H3 ／ H3s）
+
+- **刈り取りの手番（SwingTurnBody → ReapTurn388）**: 札 HagiReap の保持者の通常の手番。ふつうの攻撃が届く敵（TargetPool）のうち HP の割合がいちばん低い駒（同じなら席番号）を的に固定（_forcedTarget）し、最大HPの 2 割以下（魂 6 から 3 割）なら刈り取り、そうでなければ PerformAttack でふつうに斬る。自分の撃破（Kills の差・追撃での撃破は除く）があれば同じ手番でもう一度（2 回まで）。乱数を引かない。
+- **刈り取りの一撃**: PerformAttackBody の一発の札（_hagiHitActor388・ゴルムの _golmHitActor と同じ作法）で打点を残りの HP にし、ApplyDamageBody の入口の札（_reapNext388）で ReapBody388 へ回る——回避 ／ 逸らし ／ 軽減 ／ 肩代わり ／ 破片 ／ 身構え ／ 軛 ／ 焼け残り ／ 逃げ足 ／ 庇いを通らずに残りの HP をそのまま引く。台本（Damage）・帳簿・OnDamaged ／ OnAllyDamaged ／ HandleDeath はふつうの一撃と同じ（巻き込み則 ／ 呪いの共有 ／ 感電の起爆は起きない）。
+- **5 割を割った（ApplyDamageBody の HP を引いた後・HandleDeath の枝の else）→ HalfCross388**: 引く前の HP が引く前の最大HPの 5 割より上で、引いた後に生きていて 5 割以下。1つの駒に1ターンに1回（敵の側の私有キー HagiReaperTrait.CrossTurnKey）。相手の陣営のハギの魂 +1（誰が割っても）→ 追撃の札（HagiHalfPursuit）の保持者が割り込んで一撃（攻撃力 ＋ 失った HP の 1 割を一発の札で足す・単体・的は固定・Interrupt の中・経路は追い打ちと同じ OutOfTurnRoute.Pursue・ハギ自身の一撃で割ったときは起きない）。
+- **大鎌の巻き込み（ScytheSpill388）**: 斬撃 ／ 刈り取り ／ 追撃のたび、隣の味方それぞれに振る前の攻撃力の 1 割（最低 1）の味方からの傷（ApplyDamage(isFriendlyFire: true)）。
+- **行動順の速さ（TurnSpeed）**: 加速（HagiHaste）の保持者がいる戦だけ私有キー HagiReaperTrait.HasteKey を足す。
+- 保持者がいない戦は _reapLive ／ _hasteLive388 の比較1つで全部抜ける（規定の compare 66 行 330 セル ずれ 0）。新しい出来事の種類は足していない（見せ場は Highlight）。

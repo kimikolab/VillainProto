@@ -2487,6 +2487,16 @@ public sealed class UnitTally
     public long R384SndDmg, R384SndDeath, R384SndWaste, R384Short;
     /// <summary>第386期（胞子の版・**計数のみ**）。胞子の側: 弾けて撒いた回数 ／ 撒いた毒の層・寄生した回数。宿主の側: 寄生の食いで受けた量 ／ 倒れて湧いた胞子 ／ 枠が無くて捨てた胞子。</summary>
     public long R386Burst, R386BurstPoison, R386Parasite, R386FeedDmg, R386Bloom, R386BloomLost;
+    /// <summary>
+    /// 第388期（ハギの版・**計数のみ**）。ハギの側: 手番の斬撃 ／ 刈り取り ／ 刈り取った HP ／ 再行動 ／ 追撃（回数 ／ 与ダメ ／ 1回の最大 ／ 追撃での撃破 ／ 自分の一撃で割って追撃しなかった）／
+    /// 巻き込み（隣の味方から実際に減らした HP ／ 回数）／ 魂（敵の死から ／ 割ったから）／ 加速の量。巻き込まれた側: 巻き込みで減った HP ／ 巻き込みで倒れた回数。
+    /// </summary>
+    public long R388Strikes, R388Reaps, R388ReapHp, R388Encores, R388Pursuits, R388PursuitDmg, R388PursuitMax, R388PursuitKills, R388PursuitSelf,
+                R388Spill, R388SpillHits, R388SoulDeath, R388SoulCross, R388Haste, R388SpillTaken, R388SpillDeaths;
+    /// <summary>第388期（計数のみ）: 魂の最大 ／ 攻撃力の最大 ／ 魂 3 ／ 6 ／ 9 に届いたターン（0 ＝ 届かない）。</summary>
+    public int R388SoulPeak, R388AtkPeak, R388Soul3Turn, R388Soul6Turn, R388Soul9Turn;
+    /// <summary>第388期（計数のみ）: ターンの頭の魂（添字 ＝ ターン）。</summary>
+    public long[]? R388SoulByTurn;
     public int R378Layer6Turn, R378Layer9Turn;
     public long R377ChainSaved;
     public int R377PeakTurn, R377AwakeTurn;
@@ -3804,6 +3814,14 @@ public sealed class UnitTally
         R383EchoKills += o.R383EchoKills; R383EchoKillsEph += o.R383EchoKillsEph; R383EchoKillsRise += o.R383EchoKillsRise; R383EchoLayer += o.R383EchoLayer;   // 第383期
         R384SndDmg += o.R384SndDmg; R384SndDeath += o.R384SndDeath; R384SndWaste += o.R384SndWaste; R384Short += o.R384Short;   // 第384期
         R386Burst += o.R386Burst; R386BurstPoison += o.R386BurstPoison; R386Parasite += o.R386Parasite; R386FeedDmg += o.R386FeedDmg; R386Bloom += o.R386Bloom; R386BloomLost += o.R386BloomLost;   // 第386期
+        R388Strikes += o.R388Strikes; R388Reaps += o.R388Reaps; R388ReapHp += o.R388ReapHp; R388Encores += o.R388Encores; R388Pursuits += o.R388Pursuits; R388PursuitDmg += o.R388PursuitDmg;
+        R388PursuitMax = Math.Max(R388PursuitMax, o.R388PursuitMax); R388PursuitKills += o.R388PursuitKills; R388PursuitSelf += o.R388PursuitSelf; R388Spill += o.R388Spill; R388SpillHits += o.R388SpillHits;
+        R388SoulDeath += o.R388SoulDeath; R388SoulCross += o.R388SoulCross; R388Haste += o.R388Haste; R388SpillTaken += o.R388SpillTaken; R388SpillDeaths += o.R388SpillDeaths;
+        R388SoulPeak = Math.Max(R388SoulPeak, o.R388SoulPeak); R388AtkPeak = Math.Max(R388AtkPeak, o.R388AtkPeak);
+        if (R388Soul3Turn == 0) R388Soul3Turn = o.R388Soul3Turn;
+        if (R388Soul6Turn == 0) R388Soul6Turn = o.R388Soul6Turn;
+        if (R388Soul9Turn == 0) R388Soul9Turn = o.R388Soul9Turn;
+        R388SoulByTurn = AddArr(R388SoulByTurn, o.R388SoulByTurn);   // 第388期
         if (R378Layer6Turn == 0) R378Layer6Turn = o.R378Layer6Turn;
         if (R378Layer9Turn == 0) R378Layer9Turn = o.R378Layer9Turn;
         R377Raises += o.R377Raises; R377RaiseTurnSum += o.R377RaiseTurnSum; R377NoSeat += o.R377NoSeat; R377CostSelf += o.R377CostSelf; R377RotLost += o.R377RotLost; R377RotDeaths += o.R377RotDeaths; R377Sprouts += o.R377Sprouts; R377SproutTurnSum += o.R377SproutTurnSum; R377SproutNoSeat += o.R377SproutNoSeat;   // 第377期
