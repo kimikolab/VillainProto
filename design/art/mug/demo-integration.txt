@@ -1,0 +1,36 @@
+ムグ・胞子の立ち絵適用（2026-10-24）
+
+採用画像（このフォルダー内の原本 → ゲーム内パス）
+mug-floating-front-v2.png → DemoApp/assets/portraits/mug.png
+mug-floating-idle-right-v2.png → DemoApp/assets/portraits/battle/mug_idle_right.png
+spore-floating-front-v1.png → DemoApp/assets/portraits/spore.png
+spore-floating-idle-right-v1.png → DemoApp/assets/portraits/battle/spore_idle_right.png
+
+全画像1254x1254のRGBA透過PNG。原本を加工せずコピー。
+縦線目の浮遊する胞子体を採用。初期の植物型・点目・横線目は採用していない。
+駒IDから画像を引く既存の規約で、編成・戦闘・召喚に接続。
+UiKit.PortraitWorldHeight は mug=1.90、spore=1.10。
+BattlePortraitBottomPaddingRatio は両方0。ゾト同様、画像下端の透過余白を残して浮かせる。
+通常の待機時の上下動は既存の描画処理を利用。
+BattleCore、数値、特性、台本、生成docsに変更なし。
+
+素材確認
+GodotApp/ASSET_RESEARCH_AND_PLAN.md の購入素材一覧とDemoApp/PolyBlocksを確認。
+NatureBlocksは背景、EffectBlocksは汎用エフェクトで、今回の個別キャラクター画像に適合する部品はない。
+ユーザー採用のimage_gen原本を利用。背景・召喚エフェクトは既存のまま。
+
+検証
+dotnet build DemoApp/DemoApp.csproj --no-restore -v minimal 成功、エラー0。
+BattleCoreの既存警告CS0162・CS8602が各1件。
+capture-integration.gd は全4枚の寸法・四隅alpha=0・原本とのSHA-256一致を確認。
+実際の編成・戦闘開始・台本による胞子召喚を撮影し、Sprite3Dの表示高も確認。
+MUG_ART_CAPTURE_OK originals alpha mug=1.90 spore=1.10 actual-summon、終了コード0。
+selection-game-check.png / battle-game-check.png / summoned-spores-game-check.png / spores-settled-game-check.png。
+Vulkan Forward+実画面で通常絵・右向き絵・縦線目・透過・浮遊・体格差を目視確認。
+頭なし再生: 死の連鎖 (リィカ軸)、第三波、seed=0。
+DEMO_SMOKE_COMPLETE events=180 turns=4 won=True、終了コード0。
+終了時に既存の確認シーンと同種のRID/CanvasItem/ObjectDB等の解放診断が出る。
+git diff --check -- DemoApp/UiKit.cs 成功。
+
+再撮影
+& 'C:/tools/Godot_v4.7.2-stable_mono_win64/Godot_console.exe' --path DemoApp --windowed --resolution 1440x900 --script C:/works/VillainProto/design/art/mug/capture-integration.gd --audio-driver Dummy -- --demo-stage=2 --demo-seed=0

@@ -196,6 +196,8 @@ public static class UiKit
     {
         "rica" => 2.10f, // リメイク後の頭身に合わせ、小柄な成人として表示。
         "zoto" => 1.58f,
+        "mug" => 1.90f, // 浮遊する胞子の集合体。成人より小柄に表示。
+        "spore" => 1.10f, // 本体から分かれた小さな胞子。
         "susu" => 2.50f, // 血詠みのアカ（内部IDは旧ススのまま）
         "kata" => 2.50f,
         "som" => 2.50f,
@@ -272,6 +274,7 @@ public static class UiKit
         "hiyo_gift" => 0.004f,
         "hiyo_collect" => 0.012f,
         "zoto" => 0.0f, // 鉱石の浮遊体。画像下端の透明な空間を残して地面から浮かせる。
+        "mug" or "spore" => 0.0f, // 透過余白を残し、胞子の下端を地面へ寄せない。
         "kado" => 0.0198f,
         "gald" => 0.0547f,
         "gald_hit" => 109f / 1536f,
