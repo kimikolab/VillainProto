@@ -638,3 +638,8 @@
   - 直した後に照合を回し直して、上の結果になった。
 - **DemoApp**: ビルド 0 エラー。map11 の門（phase0 ／ 171 ／ 172 ／ 173）`ok=True`。`NineWaveCheck` ／ `DischargeCheck` ／ `ScorePanelCheck` `ok=True`。作戦マップの関係の表は触っていない。
 - 新しい札（`TaillightIdleYield` ／ `DolgaWakeDouble` ／ `DolgaWakeStack`）は、それぞれトモ ／ ドルガの札のまとまりの中に入れた。照合では名前の一覧の 1 行以外は一致した。
+
+## 8. コミットの後の照合 ／ promote
+
+- 本体のコミット e8474f0a の後、基準を第398期の保存（2f16fdfb）に固定した写し（`.tmp/p399/digest_pinned.ps1`）で `light -Units sekki,dolga,gan,tomo` を回し直した: 188 本のうち一致 168 ／ 差 19 ／ 新しい 1（`sh399 check`）。差の 19 本はコミット前と同じ（名前の一覧の 1 行 × 18 本・som307 compare の「`docs/balance.md` とのずれ」1 行）。機械で確かめた。
+- `tools/digest_cache.ps1 promote` で新しいビルドの指紋を保存した（`.tmp/digest_cache/e8474f0a`・2f16fdfb ＋ 188 本）。次の期はこれと比べる。
