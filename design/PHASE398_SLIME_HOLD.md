@@ -722,3 +722,8 @@
 - `TraitId` の新しい 2 枚（`SlimeMelt` ／ `SlimeHarden`）は、セッキの札のまとまりの中（`SlimeOverflow` の後）に入れた。列挙の値の並びで読む器具は無く、照合も名前の一覧の 1 行以外は一致した。
 - 寄せ集めの台数は 21（試遊・ の台からセッキのいる「試遊・手番 包み」「試遊・手番 芯4枚」を除いた数）で、第396〜397期と同じ台の組。
 
+
+## 8. コミットの後の照合 ／ promote
+
+- 本体のコミット 2f16fdfb の後、基準を第397期の保存（084b7b1e）に固定した写し（`.tmp/p398/digest_pinned.ps1`）で `light -Units sekki,dolga,gan,tomo` を回し直した: 187 本のうち一致 168 ／ 差 18 ／ 新しい 1（`sh398 check`）。差の 18 本はコミット前と同じく `Presets.Versions` の名前の一覧の 1 行だけ（機械で確かめた）。
+- `tools/digest_cache.ps1 promote` で新しいビルドの指紋を保存した（`.tmp/digest_cache/2f16fdfb`・084b7b1e ＋ 187 本）。次の期はこれと比べる。
