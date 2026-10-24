@@ -6901,6 +6901,21 @@ public static class UnitCatalog
         Flavor = "尾の灯は自分では見えない。照らせるのは、後ろにいる者だけ。"
     };
 
+    // ---- 第393期: 灯が休む者に溜まり、起こし、力を運ぶ（トモの版 T1 ／ T2 ／ T3・指示書 design/PHASE393_TEMPO_LAMP_SPEC.md §2・`All` に入れない・積み上げ）----
+    static UnitDef TomoOn393(TraitId[] plus, string plusText, string minusText) => new()
+    {
+        Id = Tomo.Id, Name = Tomo.Name, MaxHp = Tomo.MaxHp, Attack = Tomo.Attack, Speed = Tomo.Speed, Advances = Tomo.Advances, Actions = Tomo.Actions,
+        Traits = Tomo.Traits.Concat(plus).ToArray(), PlusText = plusText, MinusText = minusText, Flavor = Tomo.Flavor,
+    };
+    const string TomoT1Plus = "毎ターン、自分を除いて最も遅い味方に灯をともす（攻撃力 +5・累積）。休んでいる味方からも灯は外れない";
+    /// <summary>トモの版 T1（第393期）: 灯を外さない（尾灯の濾し W2 を外す）。</summary>
+    public static readonly UnitDef TomoT1 = TomoOn393(new[] { TraitId.TaillightKeep }, TomoT1Plus, Tomo.MinusText);
+    /// <summary>トモの版 T2（第393期）: T1 ＋ 灯が起こす（譲るとき休み番でも動ける）。</summary>
+    public static readonly UnitDef TomoT2 = TomoOn393(new[] { TraitId.TaillightKeep, TraitId.TaillightWake }, TomoT1Plus,
+        Tomo.MinusText.Replace("灯した味方に手番を譲る", "灯した味方に手番を譲る（休んでいても叩き起こす）"));
+    /// <summary>トモの版 T3（第393期）: T2 ＋ 灯が力を運ぶ（号令の「動かなかった味方」に数える・自分に積まれた力を灯に乗せて移す）。</summary>
+    public static readonly UnitDef TomoT3 = TomoOn393(new[] { TraitId.TaillightKeep, TraitId.TaillightWake, TraitId.TaillightCarry }, TomoT1Plus + "。自分に積まれた力は、灯に乗せて灯した味方へ渡す", TomoT2.MinusText);
+
     /// <summary>
     /// 編成に選べる 52 枚。<b>上限は 52 ＝ トランプ1組</b>で、第103期に確定した。
     ///

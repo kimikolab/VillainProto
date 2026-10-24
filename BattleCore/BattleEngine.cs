@@ -5750,6 +5750,12 @@ public sealed class BattleContext
     /// </summary>
     public bool Yielding;
 
+    /// <summary>
+    /// 第393期（トモの版 T2〜・`TaillightWake`）: いまトモの灯に起こされて手番を譲られている駒（のろまの休み番を破る）。
+    /// `TaillightTrait.Yield` が `TakeTurn` の間だけ立てて閉じる。**札の保持者がいなければ常に null**（のろまは今どおり）。
+    /// </summary>
+    public UnitState? TaillightWaking;
+
     // =====================================================================================
     // 第110期 —— 尾灯の譲渡条件（TaillightRule）。**既定は V0 ＝現行**で、
     // 渡さない限り `OnAnyDeath` の分岐も `_tlChainAtk` の走査も1回も走らない

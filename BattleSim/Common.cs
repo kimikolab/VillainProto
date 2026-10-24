@@ -733,8 +733,11 @@ public static Formation Pin391(Formation f) { var g = f.Clone(); foreach ((int s
 /// <summary>第392期: `Presets.Versions` から「版・P1 ハギ」を外し（並びは `Presets.HagiPlay389(HagiP1h)`）、末尾に「試遊・手番 探索1位」を足した。
 /// 第391期の一覧は、足した台を外し、各台のハギを旧に固定し、外した台を末尾に足し戻した写し。</summary>
 public static readonly string[] VersionRows392 = { "試遊・手番 探索1位" };
+/// <summary>第393期: `Presets.Versions` の末尾に「版・灯 手番」を足した。第392期の一覧は、その台を除いた写し。</summary>
+public static readonly string[] VersionRows393 = { "版・灯 手番" };
+public static (string Name, Formation F)[] VersionsH392() => Presets.Versions.Where(r => !VersionRows393.Contains(r.Name)).ToArray();
 public static (string Name, Formation F)[] VersionsH391() =>
-    Presets.Versions.Where(r => !VersionRows392.Contains(r.Name)).Select(r => (r.Name, Pin391(r.F)))
+    VersionsH392().Where(r => !VersionRows392.Contains(r.Name)).Select(r => (r.Name, Pin391(r.F)))   /* 第393期: 第392期の一覧から */
         .Append(("版・P1 ハギ", Presets.HagiPlay389(UnitCatalog.HagiP1h))).ToArray();
 public static (string Name, Formation F)[] VersionsH390()
 {

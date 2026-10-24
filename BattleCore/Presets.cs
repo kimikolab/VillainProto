@@ -1009,7 +1009,13 @@ public static class Presets
         // 第391期の「版・P1 ハギ」（試遊・ハギ 台B に P1h）は第392期に外した（P1h を規定にしたので「試遊・ハギ 台B」と同じになる・過去の器具は `Common.VersionsH391`）。
         // 第392期: 手番の軸の席の探索（`sh392 search`）の1位——芯の組 トモ ＋ ドルガ ＋ 残りの枠 ボルグ ／ トウ ／ ベニ（規定の駒）。
         ("試遊・手番 探索1位", TempoSeek392()),
+        // 第393期: 灯が休む者に溜まり、起こし、力を運ぶ版を試遊で触る台。`sh393 boards` ／ `search T3` で T3 がいちばん良く、芯 3 枚（トモ ＋ ガン ＋ ドルガ）の探索の1位も
+        //   第392期の芯 3 枚の最良と同じ並び（ボルグ ＋ ベニ・強い条件 47.5 → 69.2）だったので、その台のトモを T3 にした。採否はポン。
+        ("版・灯 手番", TempoLamp393()),
     };
+
+    /// <summary>第393期: 「版・灯 手番」の並び（前1 ボルグ ／ 前3 ドルガ ／ 中央 ベニ ／ 後1 ガン ／ 後3 トモ・既定はトモの版 T3）。</summary>
+    public static Formation TempoLamp393(UnitDef? tomo = null) => Formation.Build(front1: UnitCatalog.Borg, front3: UnitCatalog.Dolga, center: UnitCatalog.Beni, back1: UnitCatalog.Gan, back3: tomo ?? UnitCatalog.TomoT3);
 
     /// <summary>第392期: 「試遊・手番 探索1位」の並び（前1 ボルグ ／ 前3 ドルガ ／ 中央 ベニ ／ 後1 トモ ／ 後3 トウ・`sh392 search` の1位）。</summary>
     public static Formation TempoSeek392() => Formation.Build(front1: UnitCatalog.Borg, front3: UnitCatalog.Dolga, center: UnitCatalog.Beni, back1: UnitCatalog.Tomo, back3: UnitCatalog.Tou);

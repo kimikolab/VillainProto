@@ -35,7 +35,7 @@ static partial class Sh392Diag
             bool o = old.Traits.SequenceEqual(UnitCatalog.HagiR5m.Traits) && !UnitCatalog.Everyone.Contains(old) && old.PlusText.Contains("（失った命が深いほど重く）", StringComparison.Ordinal);
             bool pins = PinH391(hagi) == old && PinH391(old) == old && PinH389(hagi) == UnitCatalog.HagiH389 && PinH389(old) == UnitCatalog.HagiH389 && PinV381(hagi) == UnitCatalog.HagiH389
                 && Pin391(Presets.HagiPlay389(hagi))[3] == old;
-            var names = Presets.Versions.Select(r => r.Name).ToList();
+            var names = VersionsH392().Select(r => r.Name).ToList();   // 第393期: 第392期の一覧（「版・灯 手番」を足す前）
             var h391 = VersionsH391();
             bool rows = !names.Contains("版・P1 ハギ") && names.Contains("試遊・ハギ 台B") && names.Contains("版・移動 ハギ") && names[^1] == VersionRows392[0]
                 && h391[^1].Name == "版・P1 ハギ" && h391[^1].F[3] == p1h && !h391.Any(r => VersionRows392.Contains(r.Name))

@@ -1618,3 +1618,10 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **追撃の列ごと（P1w・`HagiPursuitColumn`）**: 刈るとき `HagiDepthTrait.Column`（魂 9）なら、的と同じ列 ＋ 中列（`SweepTargets`）の線以下の敵を振る前に控え、`_reapNext388` で同じ一撃を当てる（`ReapTurn388` の列ごとと同じ作り）。
 - **追撃 2 割（P1h・`HagiPursuitHeavy`）**: 上乗せの割合を `HagiDepthTrait.PursuitHeavyPercent`（20）に。
 - 保持者がいない戦は `_chaseLive391` の比較1つで抜ける（追撃のログの文は「1 割」のまま同じ）。計数のみ: `R391ChaseReaps` ／ `R391ChaseReapHp` ／ `R391ChaseReapSecond` ／ `R391ChaseReapKills` ／ `R391ChaseColumn*`。新しい出来事の種類は足していない。
+
+## 第393期 —— 灯が休む者に溜まり、起こし、力を運ぶ（トモの版 T1 ／ T2 ／ T3）
+
+- **灯を外さない（T1〜・`TaillightKeep`・`TaillightTrait.OnTurnStart`）**: 濾し W2（`LitFilter.ActingNow` で `CanActNow` が偽の駒を飛ばす）を、札の持ち主のトモだけ外す。全体の `LitFilter` は変えない。
+- **灯が起こす（T2〜・`TaillightWake`）**: `TaillightTrait.Yield` が、相手がのろまで偶数ターンなら `BattleContext.TaillightWaking` を `TakeTurn` の間だけ立て、`SluggishTrait.CanAct` がその相手にだけ真を返す（痺れ ／ 組み付き ／ 粛は `TakeTurnCore` の手前の門で今どおり止まる）。起こされて振ったら相手の `IdleTurn` を消す（号令が次のターンにその手番を買えない）。
+- **灯が力を運ぶ（T3・`TaillightCarry`）**: `RallyTrait.OnTurnStart` が T2 以降、札の持ち主のトモに +8 を払う（`IdleTurn` は立てない——叩き起こしの候補にならない）。灯をともすとき、トモの正の `AtkBonus` を直に引いて灯（`Whet` 経路 `Taillight`）に足す。消灯は今どおり `LitKey`（積んだ灯の累計）を引く。
+- engine に足したのは `BattleContext.TaillightWaking`（フィールド1本）だけ。保持者がいない戦では null のまま・のろま ／ 号令 ／ 尾灯は札の比較で今どおり。新しい出来事の種類は足していない。

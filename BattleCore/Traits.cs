@@ -1012,6 +1012,10 @@ public enum TraitId
     HagiPursuitReap,      // 追撃の刈り取り（P1〜）: 追撃の一撃ごとに、その一撃の前に的の HP がその的の線（魂の段 ＋ 刈りの印）以下なら、ふつうの一撃の代わりに刈り取る（手番の刈り取りと同じ一撃）。2 連の2発目の前にもう一度判定・手番の外なので再行動しない（**判定は engine の `PursuitStrike388`**・札そのものは印）
     HagiPursuitColumn,    // 追撃の列ごと（P1w）: 列をまとめて刈る魂（9）なら、追撃の刈り取りも的と同じ列 ＋ 中列の線以下の敵をまとめて刈る（**判定は engine の `PursuitStrike388`**・札そのものは印）
     HagiPursuitHeavy,     // 追撃 2 割（P1h）: 追撃の上乗せを、その敵が失った HP の 1 割 → 2 割に（**判定は engine の `PursuitStrike388`**・札そのものは印）
+    // --- 第393期で足した札（指示書 design/PHASE393_TEMPO_LAMP_SPEC.md §2）。灯が休む者に溜まり、起こし、力を運ぶ（トモの版 T1 ／ T2 ／ T3・`All` の外）。保持者 0 枚 ---
+    TaillightKeep,        // 灯を外さない（T1〜）: 尾灯の濾し W2（そのターン `CanAct` が偽の駒を飛ばす）を外す——休み番 ／ 痺れの味方からも灯は外れない。W1（恒久的に殴らない駒）は今どおり飛ばす（**判定は `TaillightTrait.OnTurnStart`**・札そのものは印）
+    TaillightWake,        // 灯が起こす（T2〜）: トモが手番を譲るとき、相手がのろまの休み番でも動ける（`SluggishTrait.CanAct` が `BattleContext.TaillightWaking` を読む）。起こされて振った手番は「動いた」ことにして `IdleTurn` を消す。痺れ ／ 粛などは今どおり破らない（札そのものは印）
+    TaillightCarry,       // 灯が力を運ぶ（T3）: ①トモは号令（ガン）の「前のターンに動かなかった味方」に数える（+8・叩き起こしの候補には入らない）②灯をともすとき、トモに積まれた力（正の `AtkBonus`）を灯に乗せて灯した味方へ移す（写しではなく移し）（**判定は `TaillightTrait.OnTurnStart` ／ `RallyTrait.OnTurnStart`**・札そのものは印）
     HagiLineEvery,        // 線を割るたび数える（V3）: 魂の「線を割る +1」の1つの敵の1つの線につき1ターン1回の門を外す（回復で戻されてまた割れば、また +1）（**判定は engine の `DepthCross389`**・札そのものは印）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -1403,7 +1407,8 @@ public sealed class SluggishTrait : Trait
     // （不動＝「攻撃だけ断る」との違いがここ。Trait.CanAct の説明を参照）。
     public override bool CanAct(BattleContext ctx, UnitState self, ActionKind kind)
     {
-        bool act = ctx.Turn % 2 == 1;
+        // 第393期（トモの版 T2〜・`TaillightWake`）: 灯に起こされた手番だけ、休み番を破る。**灯が起こしていなければ1ビットも変わらない。**
+        bool act = ctx.Turn % 2 == 1 || ReferenceEquals(ctx.TaillightWaking, self);
         if (!act) ctx.Log($"    {self.Name} はまだ動き出せない", LogKind.Action);
         return act;
     }
@@ -7340,6 +7345,16 @@ public sealed class RallyTrait : Trait
         {
             if (ally == self) continue;
 
+            // 第393期（トモの版 T3・`TaillightCarry`）: 自分の手番に動かないトモを「前のターンに動かなかった味方」に数える（+8 だけ・叩き起こしの候補には入れない）。
+            // **札が無ければ比較1つで抜ける。**
+            if (ctx.Turn >= 2 && ally.HasTrait(TraitId.TaillightCarry))
+            {
+                ctx.WhetEach(ctx.SupportTargets(ally), ally, Gain, WhetRoute.RallyTurn);
+                ctx.TallyOf(ally).R393RallyToLamp++;   // 計数のみ
+                ctx.Log($"    {self.Name} の号令が灯をかざす {ally.Name} にも届いた（攻撃 +{Gain}）", LogKind.Trigger);
+                continue;
+            }
+
             int idle = ally.Counter(StatusKeys.IdleTurn);
             if (idle <= 0 || idle != ctx.Turn - 1) continue;
 
@@ -12318,7 +12333,8 @@ public sealed class TaillightTrait : Trait
             { ctx.TallyOf(a).TaillightSkipStatic++; continue; }
             // W2（動的）——そのターン `CanAct` が偽の駒（のろまの休み番・痺れ）。
             // **`OnTurnStart` は行動順ループの外側**なので、ここで問うのは「この後の手番で振れるか」。
-            if (filter == LitFilter.ActingNow && !ctx.CanActNow(a))
+            // 第393期（トモの版 T1〜・`TaillightKeep`）: W2 を外す——休み番 ／ 痺れの味方からも灯は外れない。
+            if (filter == LitFilter.ActingNow && !ctx.CanActNow(a) && !self.HasTrait(TraitId.TaillightKeep))
             { ctx.TallyOf(a).TaillightSkipNow++; continue; }
             if (pick is null || a.Def.Speed < pick.Def.Speed
                 || (a.Def.Speed == pick.Def.Speed && a.Slot < pick.Slot)) pick = a;
@@ -12336,13 +12352,22 @@ public sealed class TaillightTrait : Trait
         bool switched = prev is not null && !ReferenceEquals(prev, pick);
         if (!ReferenceEquals(prev, pick)) Douse(ctx, self, prev);
 
-        ctx.Whet(pick, Lumen, WhetRoute.Taillight);
+        // 第393期（トモの版 T3・`TaillightCarry`）: 自分に積まれた力（正の `AtkBonus`）を灯に乗せて移す（自分から引く・持ち替えなので直叩き）。
+        int lumen = Lumen, carried = 0;
+        if (self.HasTrait(TraitId.TaillightCarry) && self.AtkBonus > 0)
+        {
+            carried = self.AtkBonus;
+            self.AtkBonus -= carried;
+            lumen += carried;
+        }
+        ctx.Whet(pick, lumen, WhetRoute.Taillight);
         self.SetCounter(TargetKey, pick.InstanceId + 1);
-        self.SetCounter(LitKey, self.RawCounter(LitKey) + Lumen);
+        self.SetCounter(LitKey, self.RawCounter(LitKey) + lumen);
 
         UnitTally t = ctx.TallyOf(self);
         t.TaillightFires++;
-        t.TaillightLumen += Lumen;
+        t.TaillightLumen += lumen;
+        if (carried > 0) { t.R393Carried += carried; t.R393CarryLights++; }   // 第393期・計数のみ
         if (switched) t.TaillightSwitches++;
         // 第109期の観測。**到達点は総量では測れない**（対象が変わると消える）ので、
         // いま1体に載っている累計の最大を控える。**盤面には触らない。**
@@ -12352,7 +12377,7 @@ public sealed class TaillightTrait : Trait
         rt.TaillightLitReceived++;
         rt.TaillightLitLumen += Lumen;
         ctx.Log($"    {self.Name} が {pick.Name} に灯をともした"
-            + $"（攻撃 +{Lumen} → {pick.CurrentAttack}）", LogKind.Trigger);
+            + $"（攻撃 +{lumen}{(carried > 0 ? $"・うち運んだ力 {carried}" : "")} → {pick.CurrentAttack}）", LogKind.Trigger);
     }
 
     /// <summary>
@@ -12403,13 +12428,28 @@ public sealed class TaillightTrait : Trait
         int s0 = lt.StallStun, s1 = lt.StallSlumber, s2 = lt.StallImmobile + lt.StallCanAct;
 
         ctx.Yielding = true;
+        // 第393期（トモの版 T2〜・`TaillightWake`）: 灯した相手がのろまの休み番でも、この手番だけ動ける。**札が無ければ立てない。**
+        bool waking = self.HasTrait(TraitId.TaillightWake) && lit.HasTrait(TraitId.Sluggish) && ctx.Turn % 2 == 0;
+        if (waking) ctx.TaillightWaking = lit;
         try
         {
             t.TaillightYields++;
             if (pair) t.TaillightPair++;
-            ctx.Log($"    {self.Name} は前へ出ず、灯した {lit.Name} に道を譲る", LogKind.Highlight, self);
+            ctx.Log($"    {self.Name} は前へ出ず、灯した {lit.Name} に道を譲る{(waking ? "（休んでいても叩き起こす）" : "")}", LogKind.Highlight, self);
             // 第109期。**内訳を数えるだけ**（第104期の再行動と同じ形）。盤面には触らない。
-            switch (ctx.TakeTurn(lit))
+            TurnOutcome outcome = ctx.TakeTurn(lit);
+            // 第393期: 起こされて振った手番は「動いた」ことにする（`IdleTurn` を消す——号令の +8 と叩き起こしは次のターンにこの手番を買えない）。
+            if (waking && outcome == TurnOutcome.Attack)
+            {
+                t.R393Wakes++;
+                if (lit.RawCounter(StatusKeys.IdleTurn) == ctx.Turn)
+                {
+                    lit.SetCounter(StatusKeys.IdleTurn, 0);
+                    t.R393WakeClearedIdle++;
+                    if (ctx.LivingMembers(lit.TeamId).Any(u => u.HasTrait(TraitId.Rally))) t.R393WakeAteRally++;   // 計数のみ（号令が買えたはずの手番）
+                }
+            }
+            switch (outcome)
             {
                 case TurnOutcome.Attack: t.TaillightYieldAttack++; break;
                 case TurnOutcome.Skill:  t.TaillightYieldSkill++;  break;
@@ -12420,7 +12460,7 @@ public sealed class TaillightTrait : Trait
             t.TaillightStallSlumber += lt.StallSlumber - s1;
             t.TaillightStallCanAct  += lt.StallImmobile + lt.StallCanAct - s2;
         }
-        finally { ctx.Yielding = false; }
+        finally { ctx.Yielding = false; if (waking) ctx.TaillightWaking = null; }
     }
 
     /// <summary>
@@ -19815,6 +19855,9 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.HagiColumnEarly),                  // 第390期（列ごと刈るを早く V2・印・判定は engine）
         new MarkOnlyTrait(TraitId.HagiLineEvery),                    // 第390期（線を割るたび数える V3・印・判定は engine）
         new MarkOnlyTrait(TraitId.HagiPursuitReap),                  // 第391期（追撃の刈り取り P1〜・印・判定は engine）
+        new MarkOnlyTrait(TraitId.TaillightKeep),                    // 第393期（灯を外さない T1〜・印・判定は尾灯）
+        new MarkOnlyTrait(TraitId.TaillightWake),                    // 第393期（灯が起こす T2〜・印・判定は尾灯 ／ のろま）
+        new MarkOnlyTrait(TraitId.TaillightCarry),                   // 第393期（灯が力を運ぶ T3・印・判定は尾灯 ／ 号令）
         new MarkOnlyTrait(TraitId.HagiPursuitColumn),                // 第391期（追撃の列ごと P1w・印・判定は engine）
         new MarkOnlyTrait(TraitId.HagiPursuitHeavy),                 // 第391期（追撃 2 割 P1h・印・判定は engine）
         new EruptTrait(),      // 第180期

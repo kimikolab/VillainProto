@@ -8,6 +8,8 @@ description: 第259期に `CLAUDE.md` の「現状値」節を**逐語で**移�
 
 ## 現状値
 
+**第393期は軽い期で、規定を1つも変えず、トモの版 3 つ（T1 灯を外さない ／ T2 灯が起こす ／ T3 灯が力を運ぶ・積み上げ）を測った**（指示書は design/PHASE393_TEMPO_LAMP_SPEC.md・報告は design/PHASE393_TEMPO_LAMP.md）。版のトモは `UnitCatalog.TomoT1` ／ `TomoT2` ／ `TomoT3`（`All` の外）・札 3 枚（`TaillightKeep` ／ `TaillightWake` ／ `TaillightCarry`・保持者 0 枚・engine は `BattleContext.TaillightWaking` だけ）。`compare` は規定で 0 セル・全66行 100 / 97.2 / 97.7 / 98.5 / 96.0・主判定19行 100 / 98.9 / 99.9 / 99.9 / 97.3・情報セル 34 / 11——どれも動かない。試遊の台に「版・灯 手番」を足した（過去の器具の一覧は `Common.VersionsH392`）。
+
 **第392期は軽い期で、段0 に第391期の P1h をハギの規定にし（旧は `UnitCatalog.HagiH391`・R5m）、本体で手番の軸（トモ ／ ドルガ ／ ガンほか）を棚卸しした（数えるだけ・規則は変えない）**（指示書は design/PHASE392_TEMPO_INVENTORY_SPEC.md・報告は design/PHASE392_TEMPO_INVENTORY.md）。過去の器具の固定は `Common.PinH391` ／ `Pin391` ／ `VersionsH391`。`compare` は 0 セル（第391期の P1h の列と同じ）・全66行 100 / 97.2 / 97.7 / 98.5 / 96.0・主判定19行 100 / 98.9 / 99.9 / 99.9 / 97.3・情報セル 34 / 11——どれも動かない。試遊の台は「版・P1 ハギ」を外し「試遊・手番 探索1位」（ボルグ ／ ドルガ ／ ベニ ／ トモ ／ トウ）を足した。
 
 **第391期は軽い期で、規定を1つも変えず、ハギの版 3 つ（追撃でも刈り取る: P1 ／ P1w 追撃の列ごと ／ P1h 追撃 2 割）を測った**（指示書は design/PHASE391_HAGI_CHASE_REAP_SPEC.md・報告は design/PHASE391_HAGI_CHASE_REAP.md）。版のハギは `UnitCatalog.HagiP1` ／ `HagiP1w` ／ `HagiP1h`（`All` の外・`Id` ＝ hagi）・札 3 枚（`HagiPursuitReap` ／ `HagiPursuitColumn` ／ `HagiPursuitHeavy`・保持者 0 枚・engine の口は `PursuitStrike388` の頭）。`compare` は規定で 0 セル・全66行 100 / 97.2 / 97.7 / 98.5 / 96.0・主判定19行 100 / 98.9 / 99.9 / 99.9 / 97.3・情報セル 34 / 11——どれも動かない。試遊の台は「版・VA ハギ」を外し「版・P1 ハギ」（試遊・ハギ 台B に P1h）を足した（過去の器具の一覧は `Common.VersionsH390`）。

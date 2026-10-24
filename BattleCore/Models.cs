@@ -2515,6 +2515,8 @@ public sealed class UnitTally
     public long R390AimSwitch, R390AimMark, R390ColumnEarly, R390ColumnEarlyUnits, R390ColumnStops, R390ReapKills, R390LinesCrossed, R390LinesRepeat;
     /// <summary>第391期（ハギの追撃の刈り取り P1 ／ P1w ／ P1h・**計数のみ**）: 追撃の刈り取り（回 ／ HP ／ 2 連の2発目で ／ 倒した数）・追撃の列ごと（振り ／ 体 ／ HP）。</summary>
     public long R391ChaseReaps, R391ChaseReapHp, R391ChaseReapSecond, R391ChaseReapKills, R391ChaseColumn, R391ChaseColumnUnits, R391ChaseColumnHp;
+    /// <summary>第393期（トモの版 T1 ／ T2 ／ T3・**計数のみ**）。トモの側: 灯に乗せて運んだ力（量 ／ 回数）・休み番を起こして振らせた回数 ／ そのうち消した `IdleTurn` ／ そのうち号令の持ち主がいた回数（号令が買えたはずの手番）・号令の +8 を受けた回数。</summary>
+    public long R393Carried, R393CarryLights, R393Wakes, R393WakeClearedIdle, R393WakeAteRally, R393RallyToLamp;
     public int R378Layer6Turn, R378Layer9Turn;
     public long R377ChainSaved;
     public int R377PeakTurn, R377AwakeTurn;
@@ -3852,6 +3854,7 @@ public sealed class UnitTally
         R390ReapKills += o.R390ReapKills; R390LinesCrossed += o.R390LinesCrossed; R390LinesRepeat += o.R390LinesRepeat;   // 第390期
         R391ChaseReaps += o.R391ChaseReaps; R391ChaseReapHp += o.R391ChaseReapHp; R391ChaseReapSecond += o.R391ChaseReapSecond; R391ChaseReapKills += o.R391ChaseReapKills;
         R391ChaseColumn += o.R391ChaseColumn; R391ChaseColumnUnits += o.R391ChaseColumnUnits; R391ChaseColumnHp += o.R391ChaseColumnHp;   // 第391期
+        R393Carried += o.R393Carried; R393CarryLights += o.R393CarryLights; R393Wakes += o.R393Wakes; R393WakeClearedIdle += o.R393WakeClearedIdle; R393WakeAteRally += o.R393WakeAteRally; R393RallyToLamp += o.R393RallyToLamp;   // 第393期
         if (R378Layer6Turn == 0) R378Layer6Turn = o.R378Layer6Turn;
         if (R378Layer9Turn == 0) R378Layer9Turn = o.R378Layer9Turn;
         R377Raises += o.R377Raises; R377RaiseTurnSum += o.R377RaiseTurnSum; R377NoSeat += o.R377NoSeat; R377CostSelf += o.R377CostSelf; R377RotLost += o.R377RotLost; R377RotDeaths += o.R377RotDeaths; R377Sprouts += o.R377Sprouts; R377SproutTurnSum += o.R377SproutTurnSum; R377SproutNoSeat += o.R377SproutNoSeat;   // 第377期
