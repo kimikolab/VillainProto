@@ -374,3 +374,7 @@
 - **`sweep fast`**: 合格（異常終了 0 本・上限 0 本）。`Presets` に台を足したので、夜の `sweep nightly` でも拾われる。
 - **作戦マップ**: DemoApp ビルド 0 エラー・`--map11-phase0` ／ `171` ／ `172` ／ `173` すべて `ok=True`・`NineWaveCheck` ／ `DischargeCheck` ／ `ScorePanelCheck` `ok=True`。
 - **過去の器具の照合（軽い・`-Units tomo,dolga,gan`）**: HEAD（f79f7422）の保存は無いが、BattleCore ／ BattleSim が同じ第394期の保存（fa41a486）と比べた。**照合 171 本: 一致 151 ／ 差 19 ／ 保存に無い 1（`sh395 check`）**。差 19 本はすべて確かめた（判定の ○ ／ × の数は保存と同じ）: 18 本（`flow347` ／ `burn349` ／ `db351` ／ `sh358` 〜 `sh361` ／ `sh366` 〜 `sh376` の `check`）は `Presets.Versions` の名前を並べる備考の列に「版・壁 E」が増えただけ・`sh394 check` は項目の文言（「`Presets.Versions` の末尾」→「`VersionsH394()` の末尾」・この期に直した）。
+
+### 6-1. コミットの後の照合
+
+コミット（97e39b7d）の後に、基準を第394期の保存（fa41a486）に固定した写しの器具で回し直した——**照合 171 本: 一致 151 ／ 差 19 ／ 保存に無い 1（`sh395 check`）**（差は上と同じ 19 本・中身も同じ）。期の最後に `promote`（97e39b7d ＝ fa41a486 ＋ 171 本）。push の前に、ローカルの master に自分以外の未 push のコミットは無かった。作業中に他の人が触っている `DemoApp/*.cs`（`BattlePawn3D` ／ `BattlefieldView3D` ／ `FxLivePlayback` ／ `Main.FxViewer` ／ `Main` ／ `UiKit`）はコミットに含めていない。
