@@ -1016,7 +1016,13 @@ public static class Presets
         // 第394期: 休む巨兵は壁（ドルガの版）を試遊で触る台。`sh394 boards` で D2（開戦で構える ＋ 壁）が「試遊・手番 芯3枚」でいちばん良かった
         //   （強い条件 69.2 → 84.5・素体との差 +2.0 → +17.3）ので、その台のドルガを D2 にした。採否はポン。
         ("版・壁 ドルガ", TempoLamp393(UnitCatalog.Tomo, UnitCatalog.DolgaD2)),
+        // 第395期: 壁で倒れない版（E1 ／ E2 ／ E12）を試遊で触る台。`sh395 boards` で E の版がいちばん効いたのは「縛め収入型（バンの席にトモ）」の E1
+        //   （倒れる前に下がる・近衛 規定 22 ／ D2 0 → 39%・4 波 30.5 → 34.8）なので、その台のドルガを E1 にした。採否はポン。
+        ("版・壁 E", BindTempo395(UnitCatalog.DolgaE1)),
     };
+
+    /// <summary>第395期: 「版・壁 E」の並び（`compare` の「縛め収入型 (クグ×バン×ガン)」のバンの席（後1）にトモ: 前1 ガルド ／ 前3 クグ ／ 中央 ガン ／ 後1 トモ ／ 後3 ドルガ）。既定は規定のドルガ。</summary>
+    public static Formation BindTempo395(UnitDef? dolga = null) => Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Kugu, center: UnitCatalog.Gan, back1: UnitCatalog.Tomo, back3: dolga ?? UnitCatalog.Dolga);
 
     /// <summary>第393期: 「版・灯 手番」の並び（前1 ボルグ ／ 前3 ドルガ ／ 中央 ベニ ／ 後1 ガン ／ 後3 トモ・既定はトモの版 T3 ／ 規定のドルガ）。第394期から「試遊・手番 芯3枚」・「版・壁 ドルガ」はドルガを D2 に。</summary>
     public static Formation TempoLamp393(UnitDef? tomo = null, UnitDef? dolga = null) => Formation.Build(front1: UnitCatalog.Borg, front3: dolga ?? UnitCatalog.Dolga, center: UnitCatalog.Beni, back1: UnitCatalog.Gan, back3: tomo ?? UnitCatalog.TomoT3);

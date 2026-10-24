@@ -1457,6 +1457,10 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sh394 cmp                # 第394期 §4-3 の 8: ドルガのいる `compare` の行 × 列（規定 ／ D0 ／ D1 ／ D2・第1〜5波・seed 0..199）
     dotnet run --project BattleSim -c Release 0 sh394 log <台の頭> <列> <物差し 0..7> <seed>   # 第394期: 1戦のログ
     dotnet run --project BattleSim -c Release 0 sh394 check              # 第394期 自己検査（段0 の規定のトモ ／ 旧 ／ 固定の口・D0 の休み番のずれと号令 ／ 叩き起こし ／ 灯の起こし・D1 の壁の規則・規定の `compare` 全行・試遊の台・`checkup`・verbose・PickOne ／ Roll）
+    dotnet run --project BattleSim -c Release 0 sh395 boards             # 第395期 §3-3: 第394期と同じ 28 台 × 列（規定 ／ D2 ／ E1 ／ E2 ／ E12 ／ 素体）× 8 物差し——素体との差 ／ 壁と下がった回数 ／ 振らずに倒れた戦 ／ 倒れた T ／ 止め ／ 壊れの兆し（20 秒）
+    dotnet run --project BattleSim -c Release 0 sh395 cmp                # 第395期 §3-3 の 7: `compare` 全 66 行 × 列（規定 ／ D2 ／ E1 ／ E2 ／ E12・seed 0..199・ドルガだけ替える）＋ −10pt 以上落ちた行の (G2) の分け
+    dotnet run --project BattleSim -c Release 0 sh395 log <台の頭> <列> <物差し 0..7> <seed>   # 第395期: 1戦のログ
+    dotnet run --project BattleSim -c Release 0 sh395 check              # 第395期 自己検査（版の札と文面・E1 の下がる ／ 戻る・E2 の 3 割・E12・D2 の壁の規則は今どおり・規定の `compare` 全行・試遊の台 ／ `VersionsH394`・`checkup`・verbose・PickOne ／ Roll）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

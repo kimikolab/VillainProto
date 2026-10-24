@@ -14082,10 +14082,23 @@ public sealed class BattleContext
         {
             UnitState? wallD = null;
             foreach (UnitState w in _dolgaWalls)
-                if (w.IsAlive && w.TeamId == target.TeamId && w != target && w != source && SluggishTrait.Resting(this, w) && (wallD is null || w.Slot < wallD.Slot)) wallD = w;
+            {
+                if (!(w.IsAlive && w.TeamId == target.TeamId && w != target && w != source && SluggishTrait.Resting(this, w))) continue;
+                // 第395期（E1 ／ E12・`DolgaWallRetreat`）: その一撃を受ける前の HP が最大の半分を切っていれば下がる（回復で戻れば再び壁）
+                if (w.HasTrait(TraitId.DolgaWallRetreat) && w.Hp * 2 < w.MaxHp)
+                {
+                    UnitTally rt = TallyOf(w);   // 計数のみ
+                    rt.R395WallRetreats++;
+                    if (_turn >= 0 && _turn <= BattleEngine.MaxTurns) (rt.R395RetreatByTurn ??= new long[BattleEngine.MaxTurns + 2])[_turn]++;
+                    continue;
+                }
+                if (wallD is null || w.Slot < wallD.Slot) wallD = w;
+            }
             if (wallD is not null)
             {
-                int half = amount / 2;
+                // 第395期（E2 ／ E12・`DolgaWallLight`）: 受ける量は 3 割（切り捨て）・殴られた味方は残りを受ける（D1 ／ D2 は半分を受け、殴られた味方は何も受けない）
+                bool light = wallD.HasTrait(TraitId.DolgaWallLight);
+                int half = light ? amount * 3 / 10 : amount / 2;
                 UnitTally wt = TallyOf(wallD);   // 計数のみ
                 wt.R394WallHits++; wt.R394WallAmt += half;
                 if (_turn >= 0 && _turn <= BattleEngine.MaxTurns) (wt.R394WallByTurn ??= new long[BattleEngine.MaxTurns + 2])[_turn] += half;
@@ -14095,7 +14108,9 @@ public sealed class BattleContext
                 if (half > 0) ApplyDamage(wallD, half, source, isFriendlyFire: true, relayed: true, pattern: pattern);
                 int lost = hp0 - Math.Max(0, wallD.Hp) + (ar0 - wallD.RawCounter(StatusKeys.Armor));
                 if (half > 0 && lost < half) wt.R394WallMitigated++;   // 計数のみ（ドルガの側の軽減と重なった）
-                return;
+                if (!light) return;
+                amount -= half;                                         // 第395期（E2 ／ E12）: 残りは殴られた味方が受ける（続きの段へ）
+                if (!target.IsAlive || amount <= 0) return;
             }
         }
 

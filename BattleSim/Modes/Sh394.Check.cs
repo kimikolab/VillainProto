@@ -68,7 +68,7 @@ static partial class Sh394Diag
             Expect("段0: 規定のトモは第393期の T3 と同じ動き（トモのいる台 × ボス ／ 近衛 ／ 大隊 ／ 第5波 × seed 0..9 で勝敗 ／ T ／ 生存数の差 0）", diff == 0 && cells > 0, $"{cells} 戦・差 {diff}");
         }
         {
-            var v = Presets.Versions.Select(r => r.Name).ToList(); var h3 = VersionsH393();
+            var v = VersionsH394().Select(r => r.Name).ToList(); var h3 = VersionsH393();   // 第395期: 第394期の一覧
             bool ok = v.Contains("試遊・手番 芯3枚") && v.Contains("試遊・手番 探索1位") && !v.Contains("版・灯 手番")
                 && h3[^1].Name == "版・灯 手番" && h3[^1].F.Occupied().Any(o => o.Def == t3) && h3.Select(r => r.Name).Count(n => n == "試遊・手番 芯3枚") == 0
                 && Presets.Versions.First(r => r.Name == "試遊・手番 芯3枚").F.Occupied().Any(o => o.Def == t)
@@ -196,11 +196,11 @@ static partial class Sh394Diag
             var vers = new[] { d0, d1, d2 };
             var everywhere = CompareBuilds().Concat(CrossBuilds()).Concat(Presets.Playtest).Concat(Presets.Versions).SelectMany(r => r.F.Occupied()).Select(o => o.Def).ToList();
             bool inside = !everywhere.Any(x => x.Id.EndsWith("_plain392", StringComparison.Ordinal));
-            var verRows = Presets.Versions.Where(r => r.F.Occupied().Any(o => vers.Contains(o.Def))).Select(r => r.Name).ToList();
-            bool rows = verRows.SequenceEqual(VersionRows394) && Presets.Versions[^1].Name == "版・壁 ドルガ" && Presets.Versions[^1].F.Occupied().Count(o => vers.Contains(o.Def)) == 1
+            var verRows = VersionsH394().Where(r => r.F.Occupied().Any(o => vers.Contains(o.Def))).Select(r => r.Name).ToList();   // 第395期: 第394期の一覧（「版・壁 E」を足す前）
+            bool rows = verRows.SequenceEqual(VersionRows394) && VersionsH394()[^1].Name == "版・壁 ドルガ" && VersionsH394()[^1].F.Occupied().Count(o => vers.Contains(o.Def)) == 1
                 && !CompareBuilds().Concat(CrossBuilds()).Concat(Presets.Playtest).Any(r => r.F.Occupied().Any(o => vers.Contains(o.Def)))
                 && VersionsH393().All(r => !r.F.Occupied().Any(o => vers.Contains(o.Def)));
-            Expect("替えた台 ／ 素体は器具の中だけ・版のドルガが居る試遊の台は「版・壁 ドルガ」（`Presets.Versions` の末尾）だけ", inside && rows, string.Join("、", verRows));
+            Expect("替えた台 ／ 素体は器具の中だけ・版のドルガが居る試遊の台は「版・壁 ドルガ」（`VersionsH394()` の末尾）だけ", inside && rows, string.Join("、", verRows));
         }
 
         // ---- checkup ----

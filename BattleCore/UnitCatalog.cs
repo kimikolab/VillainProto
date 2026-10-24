@@ -3819,6 +3819,17 @@ public static class UnitCatalog
     /// <summary>ドルガの版 D2（第394期）: D0 ＋ D1（構えて壁）。</summary>
     public static readonly UnitDef DolgaD2 = DolgaOn394(new[] { TraitId.SluggishShift, TraitId.DolgaWall }, Dolga.PlusText + DolgaWallText, "2ターンに1回しか動けない（開戦のターンは構えて動かない）");
 
+    // ---- 第395期: 壁で倒れない（ドルガの版 E1 ／ E2 ／ E12・D2 の上・指示書 design/PHASE395_DOLGA_WALL_TRIM_SPEC.md §2・`All` に入れない）----
+    const string DolgaWallRetreatText = "。休んでいるあいだは仲間の前に立ち、単体の攻撃を半分にして代わりに受ける（自分が半分まで傷つくと下がる）";
+    const string DolgaWallLightText = "。休んでいるあいだは仲間の前に立ち、単体の攻撃の 3 割を代わりに受ける";
+    /// <summary>ドルガの版 E1（第395期）: D2 ＋ 倒れる前に下がる（HP が最大の半分を切っているあいだは壁をやめる）。</summary>
+    public static readonly UnitDef DolgaE1 = DolgaOn394(new[] { TraitId.SluggishShift, TraitId.DolgaWall, TraitId.DolgaWallRetreat }, Dolga.PlusText + DolgaWallRetreatText, DolgaD2.MinusText);
+    /// <summary>ドルガの版 E2（第395期）: D2 ＋ 浅く受ける（壁で受ける量を 3 割に・殴られた味方は残りを受ける）。</summary>
+    public static readonly UnitDef DolgaE2 = DolgaOn394(new[] { TraitId.SluggishShift, TraitId.DolgaWall, TraitId.DolgaWallLight }, Dolga.PlusText + DolgaWallLightText, DolgaD2.MinusText);
+    /// <summary>ドルガの版 E12（第395期）: E1 ＋ E2。</summary>
+    public static readonly UnitDef DolgaE12 = DolgaOn394(new[] { TraitId.SluggishShift, TraitId.DolgaWall, TraitId.DolgaWallRetreat, TraitId.DolgaWallLight },
+        Dolga.PlusText + DolgaWallLightText.Replace("代わりに受ける", "代わりに受ける（自分が半分まで傷つくと下がる）"), DolgaD2.MinusText);
+
     /// <summary>
     /// 熾のホタ。<b>第130期に「火を配る」を測って、採用しなかった</b>
     /// （<see cref="EmberRule"/> の既定は <c>Off</c> で残置。説明文も元に戻してある）。

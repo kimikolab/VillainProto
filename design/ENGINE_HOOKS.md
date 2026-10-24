@@ -1632,3 +1632,9 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **休み番の判定の1か所（`SluggishTrait.Resting`）**: のろまの休み番は規定で偶数ターン、`SluggishShift`（D0 ／ D2）の保持者は奇数ターン。`SluggishTrait.CanAct` ／ `CanReact`・`TaillightTrait.Yield`（灯の起こし）・`ApplyDamage` の壁がこれを読む。号令の +8 と叩き起こしは `IdleTurn`（動けなかったターン）を読むので、ずれた休み番にそのまま付いていく。
 - **休む巨兵は壁（`DolgaWall`・`ApplyDamage` の肩代わりの族の先頭——ソラの SR-a の後・巨躯 ／ 分かちの手前）**: 敵が出どころの `pattern == Single` の一撃で、刻み ／ 徴収 ／ 中継 ／ 共有 ／ 同士討ち ／ 庇いの段でなければ、休み番（`Resting`）の生きている保持者（的 ／ 出どころ自身を除く・複数なら席番号の若い方）が、量の半分（切り捨て）を `ApplyDamage(wall, half, source, isFriendlyFire: true, relayed: true, pattern)` で受け、殴られた味方は何も受けない（`return`）。起こされて振ったターンも休み番なので壁は続く。
 - 保持者がいない戦は `_dolgaWalls.Count` の比較1つで抜ける（規定の `compare` 66 行 330 セル ずれ 0）。計数のみ: `R394WallHits` ／ `R394WallAmt` ／ `R394WallMitigated`（ドルガの側の軽減と重なった）／ `R394WallByTurn` ／ `R394WalledFor`（殴られた側）。新しい出来事の種類は足していない。
+
+## 第395期 —— 壁で倒れない（ドルガの版 E1 ／ E2 ／ E12・D2 の上）
+
+- **倒れる前に下がる（`DolgaWallRetreat`・E1 ／ E12）**: 壁の段で保持者を選ぶとき、札を持つドルガの `Hp * 2 < MaxHp`（その一撃を受ける前）なら選ばない（回復で戻れば再び選ぶ）。計数のみ: `UnitTally.R395WallRetreats` ／ `R395RetreatByTurn`。
+- **浅く受ける（`DolgaWallLight`・E2 ／ E12）**: 受ける量を `amount * 3 / 10`（切り捨て）にし、ドルガへ渡した後 `return` せずに `amount` から引いて、残りを殴られた味方が今の段の続き（巨躯 ／ 分かち ／ 破片 …）で受ける。D1 ／ D2（札なし）は今どおり半分を受けて `return`。
+- どちらも `_dolgaWalls`（壁の保持者がいる戦）の中だけで読む。規定の `compare` 66 行 330 セル ずれ 0。新しい出来事の種類は足していない。

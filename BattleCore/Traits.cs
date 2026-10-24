@@ -1015,6 +1015,8 @@ public enum TraitId
     // --- 第393期で足した札（指示書 design/PHASE393_TEMPO_LAMP_SPEC.md §2）。灯が休む者に溜まり、起こし、力を運ぶ（トモの版 T1 ／ T2 ／ T3・`All` の外）。保持者 0 枚 ---
     // --- 第394期で足した札（指示書 design/PHASE394_DOLGA_WALL_SPEC.md §3）。休む巨兵は壁（ドルガの版 D0 ／ D1 ／ D2・`All` の外）。保持者 0 枚 ---
     SluggishShift,        // 開戦で構える（D0 ／ D2）: のろまの休み番を奇数ターンへずらす（偶数ターンに振る・T1 は動かない）。休み番の判定は `SluggishTrait.Resting` の1か所（号令 ／ 叩き起こし ／ 灯の起こしも付いていく）（札そのものは印）
+    DolgaWallRetreat,     // 倒れる前に下がる（E1 ／ E12）: 壁を持つドルガの HP が最大の半分を切っているあいだは壁をやめる（その一撃を受ける前の HP で判定・回復で戻れば再び壁）（判定は engine の壁の段・札そのものは印）
+    DolgaWallLight,       // 浅く受ける（E2 ／ E12）: 壁で受ける量を半分 → 3 割（切り捨て）・殴られた味方は残りの 7 割を受ける（判定は engine の壁の段・札そのものは印）
     DolgaWall,            // 休む巨兵は壁（D1 ／ D2）: 休み番のあいだ、味方への敵の単体の攻撃を代わりに受ける（受ける量は半分・列を問わない・薙ぎ ／ 貫き ／ 全体 ／ 刻みは受けない・起こされたターンも壁は続く）（**判定は engine の `ApplyDamageBody` の肩代わりの族の先頭**・札そのものは印）
     // --- 第394期: 第393期の T3（TaillightKeep ／ TaillightWake ／ TaillightCarry）を規定のトモにした（保持者 トモ）---
     TaillightKeep,        // 灯を外さない（T1〜）: 尾灯の濾し W2（そのターン `CanAct` が偽の駒を飛ばす）を外す——休み番 ／ 痺れの味方からも灯は外れない。W1（恒久的に殴らない駒）は今どおり飛ばす（**判定は `TaillightTrait.OnTurnStart`**・札そのものは印）
@@ -19868,6 +19870,8 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.HagiPursuitReap),                  // 第391期（追撃の刈り取り P1〜・印・判定は engine）
         new MarkOnlyTrait(TraitId.SluggishShift),                    // 第394期（開戦で構える D0 ／ D2・印・判定は のろま）
         new MarkOnlyTrait(TraitId.DolgaWall),                        // 第394期（休む巨兵は壁 D1 ／ D2・印・判定は engine）
+        new MarkOnlyTrait(TraitId.DolgaWallRetreat),                 // 第395期（倒れる前に下がる E1 ／ E12・印・判定は engine）
+        new MarkOnlyTrait(TraitId.DolgaWallLight),                   // 第395期（浅く受ける E2 ／ E12・印・判定は engine）
         new MarkOnlyTrait(TraitId.TaillightKeep),                    // 第393期（灯を外さない T1〜・印・判定は尾灯）
         new MarkOnlyTrait(TraitId.TaillightWake),                    // 第393期（灯が起こす T2〜・印・判定は尾灯 ／ のろま）
         new MarkOnlyTrait(TraitId.TaillightCarry),                   // 第393期（灯が力を運ぶ T3・印・判定は尾灯 ／ 号令）
