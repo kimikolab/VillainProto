@@ -3001,7 +3001,8 @@ public static class UnitCatalog
     /// 包みのセッキ（第398期の規定 ＝ 第397期の B）: S2h ＋ 膨らむ（吸うたび、吸った量の 2 割だけ最大 HP と HP が増える・溢れの線は素の 70 のまま）。
     /// 札と文面は <see cref="SekkiB"/> と同じ（別の定義）。旧は <see cref="SekkiH397"/>（S2h）／ その前は <see cref="SekkiH396"/>（後備え）。名前は仮（ポンが決める）。
     /// </summary>
-    public static readonly UnitDef Sekki = SekkiOn397(new[] { TraitId.SlimeWrap, TraitId.SlimeOverflow, TraitId.SlimeDeep, TraitId.SlimeSwell },
+    /// <summary>包みのセッキ（第398期の規定 ＝ 第397期の B・`All` の外）。第399期に K1 を規定にしたので旧として残す——第398期の器具はこれに固定する。</summary>
+    public static readonly UnitDef SekkiH398 = SekkiOn397(new[] { TraitId.SlimeWrap, TraitId.SlimeOverflow, TraitId.SlimeDeep, TraitId.SlimeSwell },
         (SlimePlus396 + SlimeOverflowText396).Replace("3 割", "5 割") + "。吸うほど体が膨らむ", SlimeMinus397);
 
     // ---- 第398期: セッキの版 K1 ／ K2 ／ K12（規定（B）の上に・`All` に入れない）----
@@ -3012,6 +3013,12 @@ public static class UnitCatalog
     public static readonly UnitDef SekkiK2 = SekkiOn397(new[] { TraitId.SlimeWrap, TraitId.SlimeOverflow, TraitId.SlimeDeep, TraitId.SlimeSwell, TraitId.SlimeHarden },
         (SlimePlus396 + SlimeOverflowText396).Replace("3 割", "5 割") + "。吸うほど体が膨らむ。溜めた衝撃でゼリーが固まり、自分への攻撃が軽くなる。弾き返すと柔らかく戻る", SlimeMinus397);
     /// <summary>セッキの版 K12（第398期）: K1 ＋ K2。</summary>
+    /// <summary>
+    /// 包みのセッキ（第399期の規定 ＝ 第398期の K1）: B ＋ ゼリーが消す（包むとき HP で受けるのは吸った量の 2 割）。札と文面は <see cref="SekkiK1"/> と同じ（別の定義）。
+    /// 旧は <see cref="SekkiH398"/>（B）／ その前は <see cref="SekkiH397"/>（S2h）。
+    /// </summary>
+    public static readonly UnitDef Sekki = SekkiOn397(new[] { TraitId.SlimeWrap, TraitId.SlimeOverflow, TraitId.SlimeDeep, TraitId.SlimeSwell, TraitId.SlimeMelt },
+        (SlimePlus396 + SlimeOverflowText396).Replace("3 割", "5 割").Replace("衝撃の 5 割を吸い取る", "衝撃の 5 割を吸い取る（ほとんどはゼリーに溶けて消える）") + "。吸うほど体が膨らむ", SlimeMinus397);
     public static readonly UnitDef SekkiK12 = SekkiOn397(new[] { TraitId.SlimeWrap, TraitId.SlimeOverflow, TraitId.SlimeDeep, TraitId.SlimeSwell, TraitId.SlimeMelt, TraitId.SlimeHarden },
         (SlimePlus396 + SlimeOverflowText396).Replace("3 割", "5 割").Replace("衝撃の 5 割を吸い取る", "衝撃の 5 割を吸い取る（ほとんどはゼリーに溶けて消える）") + "。吸うほど体が膨らむ。溜めた衝撃でゼリーが固まり、自分への攻撃が軽くなる。弾き返すと柔らかく戻る", SlimeMinus397);
 
@@ -3908,6 +3915,12 @@ public static class UnitCatalog
     /// 旧は <see cref="DolgaH397"/>（E1）／ その前は <see cref="DolgaH395"/>。名前と二つ名は据え置き。
     /// </summary>
     public static readonly UnitDef Dolga = DolgaOn394(DolgaTraitsE1.Append(TraitId.DolgaFocus).Append(TraitId.DolgaHeavy).ToArray(), DolgaH395.PlusText + DolgaFocusText + DolgaWallRetreatText + DolgaHeavyText, DolgaD2.MinusText);
+
+    // ---- 第399期: 放つターンに 3,000 を出す（ドルガの版 X1 ／ X2・規定のドルガの上に・`All` に入れない）----
+    /// <summary>ドルガの版 X1（第399期・基準）: 休み番（動けなかったターン）の後の最初の一振りが 2 倍（G1 の配り直しの後・G2 の足し分の前）。</summary>
+    public static readonly UnitDef DolgaX1 = DolgaOn394(DolgaTraitsE1.Append(TraitId.DolgaFocus).Append(TraitId.DolgaHeavy).Append(TraitId.DolgaWakeDouble).ToArray(), Dolga.PlusText + "。休み明けの一撃は倍の重さ", Dolga.MinusText);
+    /// <summary>ドルガの版 X2（第399期）: 2 ターン以上続けて動けなかった後の最初の一振りに、積まれた力（正の `AtkBonus`）を「続けて動けなかったターン数 − 1」回ぶん足す（`AtkBonus` は動かない）。</summary>
+    public static readonly UnitDef DolgaX2 = DolgaOn394(DolgaTraitsE1.Append(TraitId.DolgaFocus).Append(TraitId.DolgaHeavy).Append(TraitId.DolgaWakeStack).ToArray(), Dolga.PlusText + "。長く止められるほど、目覚めの一撃に力がこもる", Dolga.MinusText);
 
     /// <summary>
     /// 熾のホタ。<b>第130期に「火を配る」を測って、採用しなかった</b>
@@ -7022,6 +7035,9 @@ public static class UnitCatalog
     public static readonly UnitDef TomoT3 = TomoOn393(new[] { TraitId.TaillightKeep, TraitId.TaillightWake, TraitId.TaillightCarry }, TomoT1Plus + "。自分に積まれた力は、灯に乗せて灯した味方へ渡す", TomoT2.MinusText);
     /// <summary>尾灯のトモ（第394期の規定 ＝ 第393期の T3）: 灯を外さない ／ 灯が起こす ／ 灯が力を運ぶ。札と文面は <see cref="TomoT3"/> と同じ（別の定義）。旧は <see cref="TomoH393"/>。</summary>
     public static readonly UnitDef Tomo = TomoOn393(new[] { TraitId.TaillightKeep, TraitId.TaillightWake, TraitId.TaillightCarry }, TomoT1Plus + "。自分に積まれた力は、灯に乗せて灯した味方へ渡す", TomoT2.MinusText);
+    /// <summary>トモの版 L1（第399期・起きた背を押す）: 規定 ＋ 灯した味方が前のターンに動けなかった（`IdleTurn` ＝ 前のターン）ときも手番を譲る（敵が倒れていたときと、どちらか）。</summary>
+    public static readonly UnitDef TomoL1 = TomoOn393(new[] { TraitId.TaillightKeep, TraitId.TaillightWake, TraitId.TaillightCarry, TraitId.TaillightIdleYield }, Tomo.PlusText,
+        Tomo.MinusText.Replace("敵が倒れていたら、", "敵が倒れていたか、灯した味方が前のターンに動けなかったら、"));
 
     /// <summary>
     /// 編成に選べる 52 枚。<b>上限は 52 ＝ トランプ1組</b>で、第103期に確定した。

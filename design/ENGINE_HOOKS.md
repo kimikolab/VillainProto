@@ -1661,3 +1661,12 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **ゼリーが消す（`SlimeMelt`・K1）**: 包むの段で、HP で受ける量を吸った量の半分 → 2 割（`SlimeTrait.MeltHpTenths`・切り捨て）に。避難所（R）の札があればそちらが先。計数のみ `R398MeltSaved`。
 - **固まる（`SlimeHarden`・K2）**: `ApplyDamage` の軽減の族の末尾（盾の配りの後・`if (amount <= 0) return;` と肩代わりの族の手前）。持ち主が受ける敵の一撃（中継・包みで受ける分を含む・刻み ／ 徴収は除く）を帳簿の 1 割（切り捨て）だけ減らす（下限 0）。帳簿は弾き返しで 0 になる。保持者がいない戦は `_slimeHardenLive` の真偽1つで抜ける。計数のみ `R398HardenHits` ／ `R398HardenSaved`。
 - 計数のみ: `R398BurstByTurn`（`SlimeBurst`・ターンごとの弾き返した量）／ `R398WrapHpByTurn`（包むの段・ターンごとに HP で受けた量）。新しい出来事の種類は足していない。
+
+## 第399期 —— セッキ K1 を規定に ／ 放つターンに 3,000 を出す（トモの版 L1 ／ ドルガの版 X1 ／ X2）
+
+- **段0**: 規定のセッキが `SlimeMelt`（ゼリーが消す）を持つようになった——第398期の口（包むの段で HP に受けるのは吸った量の 2 割）が**規定の戦で走る**。旧の規定は `UnitCatalog.SekkiH398`（固定の口 `Common.PinS398` ／ `Pin398` ／ `VersionsH398`）。
+- **起きた背を押す（`TaillightIdleYield`・L1）**: `TaillightTrait.OnAction` の「敵が倒れていたか」の門に、灯した味方の `IdleTurn` ＝ 前のターンを**どちらか**で足した。1ホップ ／ 敵がいない ／ 譲った手番が潰れる、は今どおり。計数のみ `R399IdleYields`（トモ）／ `R399IdleYieldTo`（譲られた側）。
+- **休み明けの一撃（`DolgaWakeDouble`・X1 ／ `DolgaWakeStack`・X2）**: 札は `DolgaWakeTrait`（私有キー `RunKey` ／ `LastKey`・`OnCarryOver` で消す）。
+  - 数えるのは `TakeTurnFramed`: 手番が `Stalled` で `IdleTurn` ＝ このターンなら、前のターンも動けなかったときは続き、そうでなければ 1 から。同じターンの二度目は数えない。
+  - 使うのは `PerformAttack` の一撃の本体（G1 の配り直しの後・G2 の足し分の前）: X1 は × 2、X2 は連続 ≥ 2 で正の `AtkBonus` × (連続 − 1) を足す（`AtkBonus` は動かさない）。主目標と巻き込みの両方に。使ったら 0 に戻す。
+  - 保持者がいない戦は `_dolgaWakeLive` の真偽1つで抜ける。計数のみ `R399Run1` ／ `Run2` ／ `Run3` ／ `DoubleHits` ／ `DoubleAdd` ／ `StackHits` ／ `StackAdd`。新しい出来事の種類は足していない。

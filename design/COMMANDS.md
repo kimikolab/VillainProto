@@ -1481,6 +1481,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sh398 cmp                # 第398期 §5-1 の 4: `compare` 全 66 行 × セッキの版（seed 0..199）＋ (G2)
     dotnet run --project BattleSim -c Release 0 sh398 log <台の頭> <列> <物差し 0..7> <seed> [席]   # 第398期: 1戦のログ
     dotnet run --project BattleSim -c Release 0 sh398 check              # 第398期 自己検査（段0 の規定のセッキ ／ ドルガ ／ 旧 ／ 固定の口 ／ 試遊の台・K1 ／ K2 の規則・ボスで分岐していない・規定の `compare`・`checkup`・verbose・PickOne ／ Roll）
+    dotnet run --project BattleSim -c Release 0 sh399 zero               # 第399期 §2 段0: `compare` の動き（第398期の HEAD の表と ／ 第398期の K1 の列と・(G2)）＋ 試遊の 4 台 × 5 物差し（規定 ／ 第398期）
+    dotnet run --project BattleSim -c Release 0 sh399 boards             # 第399期 §4-1 の 1・2: 燃焼のいない手番の軸の 4 台 ＋ 燃焼のいる 3 台 × 列（規定 ／ L1 ／ X1 ／ X2 ／ L1+X1 ／ L1+X2 ／ ドルガの素体）× 8 物差し——放つターン（振りの出どころ ／ 勇者への与ダメ ／ 3,000 に届いた戦）・トモの譲り・ドルガの休み明け・止め・誰が何Tに倒れたか
+    dotnet run --project BattleSim -c Release 0 sh399 cmp                # 第399期 §4-1 の 3: `compare` 全 66 行 × 列（seed 0..199）＋ (G2)
+    dotnet run --project BattleSim -c Release 0 sh399 log <台の頭> <列> <物差し 0..7> <seed>   # 第399期: 1戦のログ
+    dotnet run --project BattleSim -c Release 0 sh399 check              # 第399期 自己検査（段0 の規定のセッキ ／ 旧 ／ 固定の口 ／ 試遊の台・L1 ／ X1 ／ X2 の規則・ボスで分岐していない・規定の `compare`・`checkup`・verbose・PickOne ／ Roll）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

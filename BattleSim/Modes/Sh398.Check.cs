@@ -42,7 +42,7 @@ static partial class Sh398Diag
         Console.WriteLine();
         Console.WriteLine("| 項目 | 判定 | 備考 |");
         Console.WriteLine("|---|---|---|");
-        UnitDef k = UnitCatalog.Sekki, kb = UnitCatalog.SekkiB, kh = UnitCatalog.SekkiH397, s2h = UnitCatalog.SekkiS2h, k1 = UnitCatalog.SekkiK1, k2 = UnitCatalog.SekkiK2, k12 = UnitCatalog.SekkiK12;
+        UnitDef k = UnitCatalog.SekkiH398,   /* 第399期: 第398期の規定は旧へ */ kb = UnitCatalog.SekkiB, kh = UnitCatalog.SekkiH397, s2h = UnitCatalog.SekkiS2h, k1 = UnitCatalog.SekkiK1, k2 = UnitCatalog.SekkiK2, k12 = UnitCatalog.SekkiK12;
         UnitDef d = UnitCatalog.Dolga, g12 = UnitCatalog.DolgaG12, dh = UnitCatalog.DolgaH397, e1 = UnitCatalog.DolgaE1;
 
         // ---- 段0 ----
@@ -52,7 +52,7 @@ static partial class Sh398Diag
                 && !ReferenceEquals(k, kb) && !ReferenceEquals(d, g12);
             bool old = kh.Traits.SequenceEqual(s2h.Traits) && kh.PlusText == s2h.PlusText && kh.MinusText == s2h.MinusText && kh.Name == "包みのセッキ"
                 && dh.Traits.SequenceEqual(e1.Traits) && dh.PlusText == e1.PlusText && dh.MinusText == e1.MinusText
-                && UnitCatalog.All.Contains(k) && UnitCatalog.All.Contains(d) && !UnitCatalog.Everyone.Contains(kh) && !UnitCatalog.Everyone.Contains(dh)
+                && UnitCatalog.All.Contains(UnitCatalog.Sekki) && !UnitCatalog.Everyone.Contains(k) && UnitCatalog.All.Contains(d) && !UnitCatalog.Everyone.Contains(kh) && !UnitCatalog.Everyone.Contains(dh)
                 && new[] { kb, UnitCatalog.SekkiR, s2h, UnitCatalog.SekkiS1, UnitCatalog.SekkiS2, k1, k2, k12, g12, UnitCatalog.DolgaG1, UnitCatalog.DolgaG2, e1 }.All(v => !UnitCatalog.Everyone.Contains(v));
             bool pins = PinX397(k) == kh && PinX397(d) == dh && PinX397(UnitCatalog.Tomo) == UnitCatalog.Tomo && PinK396(kh) == UnitCatalog.SekkiH396 && PinK396(k) == UnitCatalog.SekkiH396
                 && PinD395(dh) == UnitCatalog.DolgaH395 && PinD395(d) == UnitCatalog.DolgaH395 && PinT393(d) == UnitCatalog.DolgaH395 && PinT393(k) == UnitCatalog.SekkiH396
@@ -70,14 +70,14 @@ static partial class Sh398Diag
         }
         {
             long cells = 0, diff = 0;
-            var bds = new[] { Presets.SlimeLamp396(), Presets.FourCore397(), Presets.BindTempo395(), Presets.TempoLamp393() };
+            var bds = new[] { Presets.SlimeLamp396(), Presets.FourCore397(), Presets.BindTempo395(), Presets.TempoLamp393() }.Select(Pin398).ToArray();   // 第399期: セッキは第398期の規定（B）
             foreach (var f in bds)
                 foreach (var w in new[] { I.Boss, I.Guard, I.Bat, I.M5 })
                     for (int sd = 0; sd < 10; sd++) { cells++; if (!Same(I.Raw(f, w, sd).R, I.Raw(Swap2(f, Has(f, "sekki") ? kb : k, Has(f, "dolga") ? g12 : d), w, sd).R)) diff++; }
             Expect("段0: 規定は第397期の B ／ G12 と同じ動き（試遊の 4 台 × ボス ／ 近衛 ／ 大隊 ／ 第5波 × seed 0..9 で勝敗 ／ T ／ 生存数の差 0）", diff == 0 && cells > 0, $"{cells} 戦・差 {diff}");
         }
         {
-            var v = Presets.Versions; var h7 = VersionsH397(); var names7 = h7.Select(r => r.Name).ToList();
+            var v = VersionsH398(); var h7 = VersionsH397(); var names7 = h7.Select(r => r.Name).ToList();   // 第399期: 第398期の一覧
             var four = v.FirstOrDefault(r => r.Name == "試遊・手番 芯4枚");
             bool ok = four.F is not null && four.F.Occupied().Any(o => o.Def == d) && four.F.Occupied().Any(o => o.Def == k)
                 && !v.Any(r => r.Name is "版・膨らむ セッキ" or "版・必殺 ドルガ")
@@ -92,7 +92,7 @@ static partial class Sh398Diag
                 && new[] { k1, k2, k12 }.All(x => x.Id == "sekki" && x.Name == k.Name && x.MaxHp == k.MaxHp && x.Attack == k.Attack && x.Speed == k.Speed && x.MinusText == k.MinusText)
                 && k1.PlusText.Contains("衝撃の 5 割を吸い取る（ほとんどはゼリーに溶けて消える）", StringComparison.Ordinal) && !k2.PlusText.Contains("溶けて", StringComparison.Ordinal)
                 && k2.PlusText.EndsWith("溜めた衝撃でゼリーが固まり、自分への攻撃が軽くなる。弾き返すと柔らかく戻る", StringComparison.Ordinal) && k12.PlusText.Contains("溶けて消える", StringComparison.Ordinal) && k12.PlusText.EndsWith("弾き返すと柔らかく戻る", StringComparison.Ordinal)
-                && !UnitCatalog.Everyone.Any(u => u.Traits.Any(t => t is TraitId.SlimeMelt or TraitId.SlimeHarden));
+                && !UnitCatalog.Everyone.Where(u => u != UnitCatalog.Sekki).Any(u => u.Traits.Any(t => t is TraitId.SlimeMelt or TraitId.SlimeHarden));   // 第399期: 規定のセッキは K1 の札を持つ
             Expect("版の札と文面: K1 ＝ 規定 ＋ ゼリーが消す ／ K2 ＋ 固まる ／ K12 ＝ 両方・数値は規定のまま・`All` ／ `Retired` の外", ok);
         }
 
@@ -162,10 +162,11 @@ static partial class Sh398Diag
         // ---- 替えた台 ／ 素体は器具の中だけ・試遊の台 ----
         {
             var vers = new[] { k1, k2, k12 };
-            var everywhere = CompareBuilds().Concat(CrossBuilds()).Concat(Presets.Playtest).Concat(Presets.Versions).SelectMany(r => r.F.Occupied()).Select(o => o.Def).ToList();
+            var everywhere = CompareBuilds().Concat(CrossBuilds()).Concat(Presets.Playtest).Concat(VersionsH398()).SelectMany(r => r.F.Occupied()).Select(o => o.Def).ToList();
             bool inside = !everywhere.Any(x => x.Id.EndsWith("_plain392", StringComparison.Ordinal));
-            var verRows = Presets.Versions.Where(r => r.F.Occupied().Any(o => vers.Contains(o.Def))).Select(r => r.Name).ToList();
-            bool rows = verRows.SequenceEqual(VersionRows398) && Presets.Versions[^1].Name == VersionRows398[0] && Presets.Versions[^1].F.Occupied().Count(o => vers.Contains(o.Def)) == 1
+            var v8 = VersionsH398();   // 第399期: 第398期の一覧
+            var verRows = v8.Where(r => r.F.Occupied().Any(o => vers.Contains(o.Def))).Select(r => r.Name).ToList();
+            bool rows = verRows.SequenceEqual(VersionRows398) && v8[^1].Name == VersionRows398[0] && v8[^1].F.Occupied().Count(o => vers.Contains(o.Def)) == 1
                 && !CompareBuilds().Concat(CrossBuilds()).Concat(Presets.Playtest).Any(r => r.F.Occupied().Any(o => vers.Contains(o.Def)));
             Expect("替えた台 ／ 素体は器具の中だけ・版の駒が居る試遊の台は「版・耐える セッキ」（`Presets.Versions` の末尾）だけ", inside && rows, string.Join("、", verRows));
         }
@@ -179,7 +180,7 @@ static partial class Sh398Diag
             if (!Has2(TraitId.SlimeSwell, "第398期から規定（セッキ）")) miss.Add("SlimeSwell");
             foreach (var id in new[] { TraitId.DolgaFocus, TraitId.DolgaHeavy }) if (!Has2(id, "第398期から規定（ドルガ）")) miss.Add(id.ToString());
             foreach (var id in new[] { TraitId.SluggishShift, TraitId.DolgaWall, TraitId.DolgaWallRetreat }) if (!Has2(id, "規定（ドルガ）")) miss.Add(id.ToString());
-            foreach (var id in new[] { TraitId.SlimeMelt, TraitId.SlimeHarden }) if (!Has2(id, "第398期[^\"]*保持者 0 枚")) miss.Add(id.ToString());
+            foreach (var id in new[] { TraitId.SlimeMelt, TraitId.SlimeHarden }) if (!Has2(id, "第398期[^\"]*(保持者 0 枚|第399期から規定（[^）]*）)")) miss.Add(id.ToString());
             Expect("`checkup` の札の分類表: 規定になった B の札は「第398期から規定（セッキ）」・G12 の札 2 枚は「第398期から規定（ドルガ）」・版の札 2 枚がある（ソースを読んで確かめる）", miss.Count == 0, miss.Count == 0 ? "" : "無い: " + string.Join("・", miss));
         }
 

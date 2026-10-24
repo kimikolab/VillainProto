@@ -9742,6 +9742,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.SlimeWrap) && !_slimeWraps.Contains(u)) _slimeWraps.Add(u);   // 第396期（包むセッキ）
         if (u.HasTrait(TraitId.SlimeHaven)) _slimeHavenLive = true;                           // 第397期（R 避難所・包まれた味方は次の手番を失う）
         if (u.HasTrait(TraitId.SlimeHarden)) _slimeHardenLive = true;                         // 第398期（K2 固まる）
+        if (u.HasTrait(TraitId.DolgaWakeDouble) || u.HasTrait(TraitId.DolgaWakeStack)) _dolgaWakeLive = true;   // 第399期（X1 ／ X2 休み明けの一撃）
         if (u.HasTrait(TraitId.DolgaFocus) || u.HasTrait(TraitId.DolgaHeavy)) _dolgaHitLive = true;   // 第397期（G1 ／ G2・ドルガの一撃）
         if (u.HasTrait(TraitId.VioRetchHalf) || u.HasTrait(TraitId.VioRetchThird)) { _retchLive = true; _retchHolders.Add(u); }   // 第373期（ヴィオの吐き戻し A1 ／ A2）
         if (CommandTrait.BurstUnit(u) > 0) { _burstLive = true; _burstHolders.Add(u); }   // 第321期（HQ-a ／ HQ-b・溜まったら吐く）
@@ -13299,8 +13300,14 @@ public sealed class BattleContext
             }
             heavy = actor.HasTrait(TraitId.DolgaHeavy);
             if (focusN > 0) first = first * 5 / focusN;
-            if (heavy) first += HeavyAdd397(actor, target);
         }
+        // 第399期（X1 ／ X2・休み明けの一撃）: 続けて動けなかった後の最初の一振りで使い切る（振ると 0 に戻る）。X1 は × 2（G1 の後・G2 の前）、X2 は積まれた力 × (連続 − 1) を足す（`AtkBonus` は動かさない）。
+        // **保持者がいなければ真偽1つで抜ける。乱数を引かない。ボスの名前 ／ 種類では分岐しない。**
+        int wakeMul = 1, wakeAdd = 0;
+        if (_dolgaWakeLive) WakeSwing399(actor, out wakeMul, out wakeAdd);
+        if (wakeMul != 1) { int f0 = first; first *= wakeMul; TallyOf(actor).R399DoubleAdd += first - f0; }
+        if (wakeAdd > 0) { first += wakeAdd; TallyOf(actor).R399StackAdd += wakeAdd; }
+        if (heavy) first += HeavyAdd397(actor, target);
         if (whip is not null) first = WhipAmount(whip, target, first);   // 第217期（当てる前の2倍）
         UnitState firstRecv = shield is null ? target : ShieldRecv(shield, target, ref first);
         if (_fireLvLive) NoteFireContact(actor, firstRecv);   // 第242期（燃え広がりの控え・当てる前）
@@ -13326,6 +13333,8 @@ public sealed class BattleContext
             Log($"    刃が {extra.Name} まで届く", LogKind.Damage);
             int share = Math.Max(1, dealt * SecondaryPercent / 100);
             if (focusN > 0) share = share * 5 / focusN;               // 第397期（G1）
+            if (wakeMul != 1) { int s0w = share; share *= wakeMul; TallyOf(actor).R399DoubleAdd += share - s0w; }   // 第399期（X1）
+            if (wakeAdd > 0) { share += wakeAdd; TallyOf(actor).R399StackAdd += wakeAdd; }                          // 第399期（X2）
             if (heavy) share += HeavyAdd397(actor, extra);            // 第397期（G2）
             if (whip is not null) share = WhipAmount(whip, extra, share);   // 第217期（当てる前の2倍・当たる駒ごと）
             UnitState recv = shield is null ? extra : ShieldRecv(shield, extra, ref share);
@@ -15163,6 +15172,10 @@ public sealed class BattleContext
             FearMark fm = fear ? FearHead(actor) : default;
             TurnOutcome outcome = TakeTurnCore(actor);
             if (fear) FearTail(actor, fm, outcome);
+            // 第399期（X1 ／ X2）: 動けなかった手番（`IdleTurn` ＝ このターン）を、続けて動けなかったターン数に数える（同じターンの二度目は数えない）。**保持者がいなければ真偽1つで抜ける。**
+            if (_dolgaWakeLive && outcome == TurnOutcome.Stalled && actor.RawCounter(StatusKeys.IdleTurn) == _turn
+                && (actor.HasTrait(TraitId.DolgaWakeDouble) || actor.HasTrait(TraitId.DolgaWakeStack)))
+                NoteIdle399(actor);
             if (_verbose) Hands.Add(new HandRecord(_turn, actor.InstanceId, actor.TeamId, outcome, handEv0, _events.Count));
             // 第217期（**計数のみ**）: 手番を続けて失った数。見せしめか感電がある戦闘でだけ数える（私有キー・誰も読んで分岐しない）。
             if (_restrainLive || _shockLive)
@@ -18310,8 +18323,35 @@ public sealed class BattleContext
     readonly List<UnitState> _slimeWraps = new();   // 第396期（包むセッキ・`SlimeWrap` の保持者）
     bool _slimeHavenLive, _dolgaHitLive;            // 第397期（R 避難所 ／ ドルガの G1 ・ G2 の保持者がいる戦）
     bool _slimeHardenLive;                          // 第398期（K2 固まる・`SlimeHarden` の保持者がいる戦）
+    bool _dolgaWakeLive;                            // 第399期（X1 ／ X2 休み明けの一撃の保持者がいる戦）
 
     /// <summary>第397期（G2 大物ほど重い）: 当たる敵の最大 HP の 5%（切り捨て）。計数のみ帳簿に足す。ボスの名前 ／ 種類では分岐しない。</summary>
+    /// <summary>第399期（X1 ／ X2）: 動けなかった手番を数える（前のターンも動けなかったら続き・同じターンの二度目は数えない）。計数も控える。</summary>
+    void NoteIdle399(UnitState actor)
+    {
+        int last = actor.RawCounter(DolgaWakeTrait.LastKey);
+        if (last == _turn) return;
+        int run = last == _turn - 1 ? actor.RawCounter(DolgaWakeTrait.RunKey) + 1 : 1;
+        actor.SetCounter(DolgaWakeTrait.RunKey, run);
+        actor.SetCounter(DolgaWakeTrait.LastKey, _turn);
+    }
+
+    /// <summary>第399期（X1 ／ X2）: 一撃の本体の頭で、休みの連続を使い切る（0 に戻す）。X1 は倍率、X2 は足す量を返す。持ち主でなければ 1 ／ 0。</summary>
+    void WakeSwing399(UnitState actor, out int mul, out int add)
+    {
+        mul = 1; add = 0;
+        bool x1 = actor.HasTrait(TraitId.DolgaWakeDouble), x2 = actor.HasTrait(TraitId.DolgaWakeStack);
+        if (!x1 && !x2) return;
+        int run = actor.RawCounter(DolgaWakeTrait.RunKey);
+        if (run <= 0) return;
+        actor.SetCounter(DolgaWakeTrait.RunKey, 0);
+        UnitTally t = TallyOf(actor);   // 計数のみ
+        if (run == 1) t.R399Run1++; else if (run == 2) t.R399Run2++; else t.R399Run3++;
+        if (x1) { mul = DolgaWakeTrait.DoubleMul; t.R399DoubleHits++; }
+        if (x2 && run >= 2 && actor.AtkBonus > 0) { add = actor.AtkBonus * (run - 1); t.R399StackHits++; }
+        if (mul != 1 || add > 0) Log($"    {actor.Name} の目覚めの一撃（休み {run}T{(mul != 1 ? $"・× {mul}" : "")}{(add > 0 ? $"・+{add}" : "")}）", LogKind.Trigger);
+    }
+
     int HeavyAdd397(UnitState actor, UnitState hit)
     {
         int add = hit.MaxHp * 5 / 100;

@@ -1022,6 +1022,8 @@ public enum TraitId
     SlimeSwell,           // 膨らむ（第397期・セッキの版 B）: 吸うたび、吸った量の 2 割（切り捨て）だけ最大 HP と HP が増える（戦闘をまたがない）。溢れの線は素の最大 HP のまま（判定は engine の包むの段 ／ `SlimeTrait.CanAct`・札そのものは印）
     SlimeHaven,           // 避難所（第397期・セッキの版 R）: 範囲の一撃を丸ごと包む（殴られた味方は何も受けない・セッキは吸った量の 2 割を HP で受ける）。包まれた味方は次の自分の手番を1回失う（`IdleTurn` が立つ・判定は engine・札そのものは印）
     DolgaFocus,           // 力が一点に集まる（第397期・ドルガの版 G1 ／ G12）: 全体の薙ぎの1体あたりの量を × 5 ÷ 当たる敵の数（切り捨て）に配り直す（薙ぎ ／ ふつうの一撃は今のまま・判定は engine・札そのものは印）
+    DolgaWakeDouble,      // 休み明けは倍（第399期・ドルガの版 X1・基準）: 動けなかったターンの後の最初の一振りの量を 2 倍（G1 の後・G2 の前・判定は engine・札は `DolgaWakeTrait`）
+    DolgaWakeStack,       // 止められるほど重い（第399期・ドルガの版 X2）: 2 ターン以上続けて動けなかった後の最初の一振りに、積まれた力（正の `AtkBonus`）を「続けて動けなかったターン数 − 1」回ぶん足す（`AtkBonus` は動かない・判定は engine・札は `DolgaWakeTrait`）
     DolgaHeavy,           // 大物ほど重い（第397期・ドルガの版 G2 ／ G12）: ドルガの一撃（ふつう ／ 薙ぎ ／ 全体）に、当たる敵の最大 HP の 5%（切り捨て）を1体ごとに足す（`AtkBonus` は動かない・判定は engine・札そのものは印）
     SlimeDeep,            // 深く包む（第396期・S2h）: 吸い取る量を 3 割 → 5 割（札そのものは印・判定は engine）
     DolgaWallRetreat,     // 倒れる前に下がる（E1 ／ E12）: 壁を持つドルガの HP が最大の半分を切っているあいだは壁をやめる（その一撃を受ける前の HP で判定・回復で戻れば再び壁）（判定は engine の壁の段・札そのものは印）
@@ -1030,6 +1032,7 @@ public enum TraitId
     // --- 第394期: 第393期の T3（TaillightKeep ／ TaillightWake ／ TaillightCarry）を規定のトモにした（保持者 トモ）---
     TaillightKeep,        // 灯を外さない（T1〜）: 尾灯の濾し W2（そのターン `CanAct` が偽の駒を飛ばす）を外す——休み番 ／ 痺れの味方からも灯は外れない。W1（恒久的に殴らない駒）は今どおり飛ばす（**判定は `TaillightTrait.OnTurnStart`**・札そのものは印）
     TaillightWake,        // 灯が起こす（T2〜）: トモが手番を譲るとき、相手がのろまの休み番でも動ける（`SluggishTrait.CanAct` が `BattleContext.TaillightWaking` を読む）。起こされて振った手番は「動いた」ことにして `IdleTurn` を消す。痺れ ／ 粛などは今どおり破らない（札そのものは印）
+    TaillightIdleYield,   // 起きた背を押す（第399期・トモの版 L1）: 灯した味方が前のターンに動けなかった（`IdleTurn` ＝ 前のターン）ときも手番を譲る（敵が倒れていたときと、どちらか・1ターン1回 ／ 1ホップは今どおり・判定は `TaillightTrait.OnAction`・札そのものは印）
     TaillightCarry,       // 灯が力を運ぶ（T3）: ①トモは号令（ガン）の「前のターンに動かなかった味方」に数える（+8・叩き起こしの候補には入らない）②灯をともすとき、トモに積まれた力（正の `AtkBonus`）を灯に乗せて灯した味方へ移す（写しではなく移し）（**判定は `TaillightTrait.OnTurnStart` ／ `RallyTrait.OnTurnStart`**・札そのものは印）
     HagiLineEvery,        // 線を割るたび数える（V3）: 魂の「線を割る +1」の1つの敵の1つの線につき1ターン1回の門を外す（回復で戻されてまた割れば、また +1）（**判定は engine の `DepthCross389`**・札そのものは印）
 
@@ -10611,6 +10614,25 @@ public sealed class SlimeTrait : Trait
     public override void OnCarryOver(UnitState self) => self.SetCounter(StoreKey, 0);
 }
 
+/// <summary>
+/// 第399期（ドルガの版 X1 ／ X2）: 休み明けの一撃。続けて動けなかったターン数（私有キー <see cref="RunKey"/>）と最後に動けなかったターン（<see cref="LastKey"/>）を
+/// engine の手番の枠（`TakeTurnFramed`）が数え、一撃の本体（`PerformAttack`）が使い切って 0 に戻す。札そのものは挙動を持たない。
+/// 私有キーは `StatusKeys.All` に入れない（会戦の境界は <see cref="OnCarryOver"/> で消す）。乱数を引かない。
+/// </summary>
+public sealed class DolgaWakeTrait : Trait
+{
+    /// <summary>続けて動けなかったターン数（振ると 0）。</summary>
+    public const string RunKey = "dolgaIdleRun";
+    /// <summary>最後に動けなかったターン番号（同じターンの二度目の停止を数えない・続きかどうかを読む）。</summary>
+    public const string LastKey = "dolgaIdleLast";
+    /// <summary>X1 の倍率。</summary>
+    public const int DoubleMul = 2;
+    readonly TraitId _id;
+    public DolgaWakeTrait(TraitId id) { _id = id; }
+    public override TraitId Id => _id;
+    public override void OnCarryOver(UnitState self) { self.SetCounter(RunKey, 0); self.SetCounter(LastKey, 0); }
+}
+
 public sealed class RearGuardTrait : Trait
 {
     public const int RedirectPercent = 45;
@@ -12453,7 +12475,14 @@ public sealed class TaillightTrait : Trait
         // V1（窓・第110期）は<b>前のターンの撃破も読む</b>。**記録の書き方は変えない**
         // （`SawKey` はターン番号を書くだけ）——読む側で 1 ターンぶん広げるだけである。
         bool window = ctx.Taillight.Mode == YieldMode.OwnTurnWindow && saw > 0 && saw == now - 1;
-        if (saw != now && !window) { t.TaillightNoDeath++; return; }
+        // 第399期（トモの版 L1・`TaillightIdleYield`）: 灯した味方が前のターンに動けなかった（`IdleTurn` ＝ 前のターン）ときも譲る。**札が無ければ比較1つで抜ける。**
+        bool idleLast = false;
+        if (saw != now && !window && self.HasTrait(TraitId.TaillightIdleYield))
+        {
+            UnitState? l0 = Lit(ctx, self);
+            idleLast = l0 is not null && l0.IsAlive && now >= 2 && l0.RawCounter(StatusKeys.IdleTurn) == now - 1;
+        }
+        if (saw != now && !window && !idleLast) { t.TaillightNoDeath++; return; }
         if (window) t.TaillightSaw2++;   // V0 では立たなかったぶん（計数のみ）
 
         UnitState? lit = Lit(ctx, self);
@@ -12465,6 +12494,7 @@ public sealed class TaillightTrait : Trait
         // ——門2（条件成立）を段の和として閉じるために要る。
         if (!ctx.TeamAlive(ctx.Opponent(self.TeamId))) { t.TaillightNoFoe++; return; }
 
+        if (idleLast) { t.R399IdleYields++; ctx.TallyOf(lit).R399IdleYieldTo++; }   // 第399期・計数のみ（L1 で増えた譲り・譲られた側も）
         Yield(ctx, self, lit, pair: false);   // 自分の手番なので死亡通知の連鎖の中ではない
     }
 
@@ -19922,10 +19952,13 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.SlimeHaven),                       // 第397期（避難所 R・印・判定は engine）
         new MarkOnlyTrait(TraitId.DolgaFocus),                       // 第397期（力が一点に集まる G1 ／ G12・印・判定は engine）
         new MarkOnlyTrait(TraitId.DolgaHeavy),                       // 第397期（大物ほど重い G2 ／ G12・印・判定は engine）
+        new DolgaWakeTrait(TraitId.DolgaWakeDouble),                 // 第399期（休み明けは倍 X1・判定は engine）
+        new DolgaWakeTrait(TraitId.DolgaWakeStack),                  // 第399期（止められるほど重い X2・判定は engine）
         new MarkOnlyTrait(TraitId.DolgaWallLight),                   // 第395期（浅く受ける E2 ／ E12・印・判定は engine）
         new MarkOnlyTrait(TraitId.TaillightKeep),                    // 第393期（灯を外さない T1〜・印・判定は尾灯）
         new MarkOnlyTrait(TraitId.TaillightWake),                    // 第393期（灯が起こす T2〜・印・判定は尾灯 ／ のろま）
         new MarkOnlyTrait(TraitId.TaillightCarry),                   // 第393期（灯が力を運ぶ T3・印・判定は尾灯 ／ 号令）
+        new MarkOnlyTrait(TraitId.TaillightIdleYield),               // 第399期（起きた背を押す L1・印・判定は尾灯）
         new MarkOnlyTrait(TraitId.HagiPursuitColumn),                // 第391期（追撃の列ごと P1w・印・判定は engine）
         new MarkOnlyTrait(TraitId.HagiPursuitHeavy),                 // 第391期（追撃 2 割 P1h・印・判定は engine）
         new EruptTrait(),      // 第180期

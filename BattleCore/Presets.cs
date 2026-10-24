@@ -1032,11 +1032,14 @@ public static class Presets
         ("試遊・手番 芯4枚", FourCore397()),
         // 第398期: スライムが勇者の全体攻撃をしのぐ版（K1 ゼリーが消す ／ K2 固まる ／ K12）のうち、燃焼の駒がいない手番の軸の台でボスにいちばん勝ったのは
         //   試遊・手番 芯4枚 のセッキ（後1）を K1 に（ボス 1 → 17%）。採否はポン。
-        ("版・耐える セッキ", FourCore397(sekki: UnitCatalog.SekkiK1)),
+        // 第399期: K1 をセッキの規定にしたので「版・耐える セッキ」は「試遊・手番 芯4枚」と同じになり、外した（過去の器具は `Common.VersionsH398`）。
+        // 第399期: 放つターンに 3,000 を出す版（トモ L1 ／ ドルガ X1 ／ X2 と組み合わせ）のうち、燃焼の駒がいない台でボスにいちばん勝ったのは
+        //   試遊・手番 芯4枚 のトモを L1・ドルガを X1 に（ボス 17 → 100%）。採否はポン。
+        ("版・目覚め ドルガ", FourCore397(dolga: UnitCatalog.DolgaX1, tomo: UnitCatalog.TomoL1)),
     };
 
-    /// <summary>第397期: 「版・必殺 ドルガ」の並び（第396期の芯 4 枚 ＋ 1枠の探索の1位: 前1 ガン ／ 前3 トモ ／ 中央 ドルガ ／ 後1 セッキ ／ 後3 シオ）。既定は規定のドルガ ／ セッキ。第398期から「試遊・手番 芯4枚」・「版・耐える セッキ」はセッキを K1 に。</summary>
-    public static Formation FourCore397(UnitDef? dolga = null, UnitDef? sekki = null) => Formation.Build(front1: UnitCatalog.Gan, front3: UnitCatalog.Tomo, center: dolga ?? UnitCatalog.Dolga, back1: sekki ?? UnitCatalog.Sekki, back3: UnitCatalog.Shio);
+    /// <summary>第397期: 「版・必殺 ドルガ」の並び（第396期の芯 4 枚 ＋ 1枠の探索の1位: 前1 ガン ／ 前3 トモ ／ 中央 ドルガ ／ 後1 セッキ ／ 後3 シオ）。既定は規定のドルガ ／ セッキ。第398期から「試遊・手番 芯4枚」・「版・耐える セッキ」はセッキを K1 に（第399期に「版・耐える セッキ」を外した）。第399期の「版・目覚め ドルガ」はトモを L1・ドルガを X1 に。</summary>
+    public static Formation FourCore397(UnitDef? dolga = null, UnitDef? sekki = null, UnitDef? tomo = null) => Formation.Build(front1: UnitCatalog.Gan, front3: tomo ?? UnitCatalog.Tomo, center: dolga ?? UnitCatalog.Dolga, back1: sekki ?? UnitCatalog.Sekki, back3: UnitCatalog.Shio);
 
     /// <summary>第396期: 「版・包み セッキ」の並び（「試遊・手番 芯3枚」の後1（ガン）の席にセッキ: 前1 ボルグ ／ 前3 ドルガ ／ 中央 ベニ ／ 後1 セッキ ／ 後3 トモ）。既定は規定のセッキ。</summary>
     public static Formation SlimeLamp396(UnitDef? sekki = null) => Formation.Build(front1: UnitCatalog.Borg, front3: UnitCatalog.Dolga, center: UnitCatalog.Beni, back1: sekki ?? UnitCatalog.Sekki, back3: UnitCatalog.Tomo);

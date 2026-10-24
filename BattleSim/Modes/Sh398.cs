@@ -49,6 +49,8 @@ static partial class Sh398Diag
         }
     }
 
+    /// <summary>第399期: `compare` の行を第398期の姿で（セッキは旧 `SekkiH398`）。</summary>
+    static (string Name, Formation F)[] CB398() => CompareBuilds().Select(r => (r.Name, Pin398(r.F))).ToArray();
     static string F1(double x) => S307.F1(x);
     static string F0(double x) => double.IsNaN(x) ? "—" : x.ToString("#,0");
     static string Sg(double x) => double.IsNaN(x) ? "—" : x.ToString("+0.0;-0.0;0.0");
@@ -71,25 +73,25 @@ static partial class Sh398Diag
     // ---------------------------------------------------------------------------------
     // 版 ／ 列 ／ 台
     // ---------------------------------------------------------------------------------
-    internal static readonly (string Name, UnitDef D)[] Vers = { ("規定", UnitCatalog.Sekki), ("K1", UnitCatalog.SekkiK1), ("K2", UnitCatalog.SekkiK2), ("K12", UnitCatalog.SekkiK12) };
-    internal static UnitDef PlainSekki => _plainS ??= S392.Plain(UnitCatalog.Sekki);
+    internal static readonly (string Name, UnitDef D)[] Vers = { ("規定", UnitCatalog.SekkiH398), ("K1", UnitCatalog.SekkiK1), ("K2", UnitCatalog.SekkiK2), ("K12", UnitCatalog.SekkiK12) };
+    internal static UnitDef PlainSekki => _plainS ??= S392.Plain(UnitCatalog.SekkiH398);
     static UnitDef? _plainS;
     internal static (string Name, UnitDef D)[] Cols => Vers.Append(("素体", PlainSekki)).ToArray();
 
     /// <summary>§3 の台（燃焼の駒がいない手番の軸の台）と §5-1 の 2 の台（燃焼の駒がいる台）。`Burn` は燃焼の駒がいる台。</summary>
     internal static (string Name, Formation F, bool Burn)[] BoardList()
     {
-        var all = CompareBuilds();
+        var all = CB398();
         Formation Row(string n) => all.First(r => r.Name == n).F;
         var tame = Row("溜め改 (クグ×バン×ガン)");
         return new (string, Formation, bool)[]
         {
-            ("試遊・手番 縛め", Presets.BindTempo395(), false),
+            ("試遊・手番 縛め", Pin398(Presets.BindTempo395()), false),
             ("縛め収入型 (クグ×バン×ガン)", Row("縛め収入型 (クグ×バン×ガン)"), false),
             ("溜め改（バンの席にトモ）", Put(tame, SlotOf(tame, "ban"), UnitCatalog.Tomo), false),
-            ("試遊・手番 芯4枚", Presets.FourCore397(), false),
-            ("試遊・手番 芯3枚", Presets.TempoLamp393(), true),
-            ("試遊・手番 包み", Presets.SlimeLamp396(), true),
+            ("試遊・手番 芯4枚", Pin398(Presets.FourCore397()), false),
+            ("試遊・手番 芯3枚", Pin398(Presets.TempoLamp393()), true),
+            ("試遊・手番 包み", Pin398(Presets.SlimeLamp396()), true),
         };
     }
     static string BurnNote(Formation f) { var b = f.Occupied().Where(o => BurnIds.Contains(o.Def.Id)).Select(o => Short(o.Def)).ToList(); return b.Count == 0 ? "燃焼の駒なし" : "燃焼の駒: " + string.Join("・", b); }
@@ -256,7 +258,7 @@ static partial class Sh398Diag
     static void Zero()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = CompareBuilds();
+        var rows = CB398();
         int nw = EnemyCatalog.Stages.Count;
         var now = CGrid(rows, CompareSeeds);
         var bg = CGrid(rows.Select(r => (r.Name, Swap2(r.F, UnitCatalog.SekkiB, UnitCatalog.DolgaG12))).ToArray(), CompareSeeds);
@@ -297,7 +299,7 @@ static partial class Sh398Diag
         Console.WriteLine("（行が無ければ −10pt 以上落ちた行は無い）");
         Console.WriteLine();
 
-        var boards = new (string Name, Formation F)[] { ("試遊・手番 芯3枚", Presets.TempoLamp393()), ("試遊・手番 包み", Presets.SlimeLamp396()), ("試遊・手番 縛め", Presets.BindTempo395()), ("試遊・手番 芯4枚", Presets.FourCore397()) };
+        var boards = new (string Name, Formation F)[] { ("試遊・手番 芯3枚", Pin398(Presets.TempoLamp393())), ("試遊・手番 包み", Pin398(Presets.SlimeLamp396())), ("試遊・手番 縛め", Pin398(Presets.BindTempo395())), ("試遊・手番 芯4枚", Pin398(Presets.FourCore397())) };
         var ws = new[] { WBoss, WGuard, WBat, WM5, WStrong };
         Console.WriteLine($"## 2. 試遊の 4 台 × ボス ／ 近衛 ／ 大隊 ／ 本編 第5波 ／ 強い条件（seed 0..{Seeds - 1}）・規定 ／ 第397期（セッキ ／ ドルガを旧に）");
         Console.WriteLine();
@@ -511,7 +513,7 @@ static partial class Sh398Diag
     // ---------------------------------------------------------------------------------
     // §5-1 の 3: 寄せ集め
     // ---------------------------------------------------------------------------------
-    internal static (string Name, Formation F)[] Play() => Presets.Versions.Where(r => r.Name.StartsWith("試遊・", StringComparison.Ordinal) && !Has(r.F, "sekki")).ToArray();
+    internal static (string Name, Formation F)[] Play() => VersionsH398().Where(r => r.Name.StartsWith("試遊・", StringComparison.Ordinal) && !Has(r.F, "sekki")).ToArray();
 
     static void SMix()
     {
@@ -585,7 +587,7 @@ static partial class Sh398Diag
     static void Cmp()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var all = CompareBuilds();
+        var all = CB398();
         int nw = EnemyCatalog.Stages.Count;
         Console.WriteLine($"# {Tag} §5-1 の 4 `compare` 全 {all.Length} 行 × セッキの版（第1〜5波・seed 0..{CompareSeeds - 1}）");
         Console.WriteLine();

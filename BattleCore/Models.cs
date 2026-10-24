@@ -2535,6 +2535,8 @@ public sealed class UnitTally
     public long R398MeltSaved, R398HardenHits, R398HardenSaved;
     /// <summary>第398期（計数のみ）: ターンごとの弾き返した量（帳簿の推移 ＝ 吸った量の累計 − 弾き返した量の累計・`R396WrapByTurn` と対）。</summary>
     public long[]? R398BurstByTurn, R398WrapHpByTurn;
+    /// <summary>第399期（計数のみ）: L1 で増えた譲り（トモの側）・X の休みの連続の記録（1 ／ 2 ／ 3 以上・ドルガの側）・X1 の倍が起きた回数 ／ 足した量・X2 の上乗せが起きた回数 ／ 量。</summary>
+    public long R399IdleYields, R399Run1, R399Run2, R399Run3, R399DoubleHits, R399DoubleAdd, R399StackHits, R399StackAdd, R399IdleYieldTo;
     public int R378Layer6Turn, R378Layer9Turn;
     public long R377ChainSaved;
     public int R377PeakTurn, R377AwakeTurn;
@@ -3878,7 +3880,8 @@ public sealed class UnitTally
         R396WrapByTurn = AddArr(R396WrapByTurn, o.R396WrapByTurn);
         R396Bursts += o.R396Bursts; R396BurstAmt += o.R396BurstAmt; R396BurstDealt += o.R396BurstDealt; R396BurstMax = Math.Max(R396BurstMax, o.R396BurstMax);
         R397SwellGain += o.R397SwellGain; R397MaxHpPeak = Math.Max(R397MaxHpPeak, o.R397MaxHpPeak); R397HavenHolds += o.R397HavenHolds; R397HeldLost += o.R397HeldLost; R397FocusSwings += o.R397FocusSwings; R397HeavyAdd += o.R397HeavyAdd; R397FocusByN = AddArr(R397FocusByN, o.R397FocusByN);   // 第397期
-        R398MeltSaved += o.R398MeltSaved; R398HardenHits += o.R398HardenHits; R398HardenSaved += o.R398HardenSaved; R398BurstByTurn = AddArr(R398BurstByTurn, o.R398BurstByTurn); R398WrapHpByTurn = AddArr(R398WrapHpByTurn, o.R398WrapHpByTurn);   // 第398期
+        R398MeltSaved += o.R398MeltSaved; R398HardenHits += o.R398HardenHits; R398HardenSaved += o.R398HardenSaved; R398BurstByTurn = AddArr(R398BurstByTurn, o.R398BurstByTurn); R398WrapHpByTurn = AddArr(R398WrapHpByTurn, o.R398WrapHpByTurn);
+        R399IdleYields += o.R399IdleYields; R399Run1 += o.R399Run1; R399Run2 += o.R399Run2; R399Run3 += o.R399Run3; R399DoubleHits += o.R399DoubleHits; R399DoubleAdd += o.R399DoubleAdd; R399StackHits += o.R399StackHits; R399StackAdd += o.R399StackAdd; R399IdleYieldTo += o.R399IdleYieldTo;   // 第399期   // 第398期
         R396BurstInterrupt += o.R396BurstInterrupt; R396BurstYield += o.R396BurstYield; R396BurstGift += o.R396BurstGift; R396BurstOverflow += o.R396BurstOverflow; R396BurstOther += o.R396BurstOther;
         R393Carried += o.R393Carried; R393CarryLights += o.R393CarryLights; R393Wakes += o.R393Wakes; R393WakeClearedIdle += o.R393WakeClearedIdle; R393WakeAteRally += o.R393WakeAteRally; R393RallyToLamp += o.R393RallyToLamp;   // 第393期
         if (R378Layer6Turn == 0) R378Layer6Turn = o.R378Layer6Turn;
