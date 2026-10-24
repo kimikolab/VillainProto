@@ -1461,6 +1461,13 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sh395 cmp                # 第395期 §3-3 の 7: `compare` 全 66 行 × 列（規定 ／ D2 ／ E1 ／ E2 ／ E12・seed 0..199・ドルガだけ替える）＋ −10pt 以上落ちた行の (G2) の分け
     dotnet run --project BattleSim -c Release 0 sh395 log <台の頭> <列> <物差し 0..7> <seed>   # 第395期: 1戦のログ
     dotnet run --project BattleSim -c Release 0 sh395 check              # 第395期 自己検査（版の札と文面・E1 の下がる ／ 戻る・E2 の 3 割・E12・D2 の壁の規則は今どおり・規定の `compare` 全行・試遊の台 ／ `VersionsH394`・`checkup`・verbose・PickOne ／ Roll）
+    dotnet run --project BattleSim -c Release 0 sh396 zero               # 第396期 §2 段0: `compare` の動き（第395期の HEAD の表と ／ 第395期の E1 の列と）＋ 3 台 × ドルガ（規定 ／ E1 ／ 旧）× 5 物差し
+    dotnet run --project BattleSim -c Release 0 sh396 boards             # 第396期 §4-1 の 1: 手番の軸の 3 台 × 1枚をセッキに（席は全通り・列ごとに最良）× 列（元 ／ 旧セッキ ／ S1 ／ S2 ／ S2h ／ 素体）× 8 物差し——包む ／ 弾き返す ／ 倒れた T ／ ドルガ ／ 止め ／ 壊れの兆し（10 秒）
+    dotnet run --project BattleSim -c Release 0 sh396 search <版>        # 第396期 §4-1 の 2: 芯（トモ ＋ ガン ＋ ドルガ ＋ セッキの版）＋ 1枠 × 並び全通り → 上位 3 台 × 8 物差し（10 秒）
+    dotnet run --project BattleSim -c Release 0 sh396 mix                # 第396期 §4-1 の 3: 試遊の台すべて × アタッカー以外の席の最良にセッキ（版ごと・同じ席に素体）
+    dotnet run --project BattleSim -c Release 0 sh396 cmp                # 第396期 §4-3 の 7: `compare` 全 66 行 × 列（旧セッキ ／ S1 ／ S2 ／ S2h・seed 0..199）＋ (G2)
+    dotnet run --project BattleSim -c Release 0 sh396 log <台の頭> <列> <物差し 0..7> <seed> [席]   # 第396期: 1戦のログ
+    dotnet run --project BattleSim -c Release 0 sh396 check              # 第396期 自己検査（段0 の規定のドルガ ／ 旧 ／ 固定の口 ／ 試遊の台・包む ／ 溜める ／ 弾き返す ／ 手番・`IdleTurn` と号令・規定の `compare`・`checkup`・verbose・PickOne ／ Roll）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

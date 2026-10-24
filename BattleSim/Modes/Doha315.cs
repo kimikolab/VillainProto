@@ -256,7 +256,7 @@ static class Doha315Diag
     static (long Hands, long Strike, long Stalled, long Skill) StrikeCensus(UnitDef d, (string Name, Formation F)[] rows)
     {
         var boards = rows.Where(r => r.F.Occupied().Any(o => ReferenceEquals(o.Def, d))).Select(r => r.F).ToList();
-        boards.Add(Formation.Build(front1: d, front3: UnitCatalog.Dolga, center: UnitCatalog.Dolga, back1: UnitCatalog.Dolga, back3: UnitCatalog.Dolga));
+        boards.Add(Formation.Build(front1: d, front3: UnitCatalog.DolgaH395, center: UnitCatalog.DolgaH395, back1: UnitCatalog.DolgaH395, back3: UnitCatalog.DolgaH395));
         long hands = 0, strike = 0, stalled = 0, skill = 0;
         foreach (var f in boards)
             for (int wi = 1; wi < EnemyCatalog.Stages.Count; wi++)
@@ -366,7 +366,7 @@ static class Doha315Diag
                 {
                     var v = Versions.Select(x => Measure(Swap(bf, UnitCatalog.DohaH316, x.Def), w, seeds)).ToArray();
                     detail.Add((w, v));
-                    string dolga = v.Any(x => x.WinRate >= 50) ? Measure(Swap(bf, UnitCatalog.DohaH316, UnitCatalog.Dolga), w, seeds).Win : "—";
+                    string dolga = v.Any(x => x.WinRate >= 50) ? Measure(Swap(bf, UnitCatalog.DohaH316, UnitCatalog.DolgaH395), w, seeds).Win : "—";
                     string Cell(int i) => i == 0 ? v[0].Win : $"{v[i].Win}（{Sg(v[i].WinRate - v[0].WinRate)}）";
                     Console.WriteLine($"| {w.Name} | {Cell(0)} | {Cell(1)} | {Cell(2)} | {Cell(3)} | {Cell(4)} | {dolga} | {string.Join(" ／ ", v.Select(x => x.WinTurn))} | {string.Join(" ／ ", v.Select(x => x.LossTurn))} | "
                         + $"{string.Join(" ／ ", v.Select(x => x.Avg(x.FirstDeathT, x.FirstDeathN)))} | {string.Join(" ／ ", v.Select(x => x.Per(x.DohaTurns)))} |");
@@ -503,7 +503,7 @@ static class Doha315Diag
                 double b = Best(UnitCatalog.DohaH316, out var sb), v = Best(dv, out var sv);
                 if (Math.Max(b, v) < 50) return;
                 var seat = v >= b ? sv : sb;
-                double dolga = 100.0 * Wins(Seat(new[] { UnitCatalog.Dolga, atk, c[0], c[1], c[2] }, seat)) / seeds;
+                double dolga = 100.0 * Wins(Seat(new[] { UnitCatalog.DolgaH395, atk, c[0], c[1], c[2] }, seat)) / seeds;
                 rows.Add((Short(atk), c.Select(Short).ToArray(), b, v, dolga, seat));
             });
         }
@@ -641,7 +641,7 @@ static class Doha315Diag
     {
         var ctx = new BattleContext(0, true);
         p = BattleEngine.Materialize(pl, BattleContext.PlayerTeam);
-        var foe = UnitCatalog.Dolga.WithStats(5000, 10);   // 倒れない敵（反撃で落ちて一撃が消えないように）・攻 10
+        var foe = UnitCatalog.DolgaH395.WithStats(5000, 10);   // 倒れない敵（反撃で落ちて一撃が消えないように）・攻 10
         e = BattleEngine.Materialize(Formation.Build(front1: foe, front3: foe), BattleContext.EnemyTeam, EnemyScaleRule.None);
         foreach (var u in p) AddUnit.Invoke(ctx, new object[] { u });
         foreach (var u in e) AddUnit.Invoke(ctx, new object[] { u });

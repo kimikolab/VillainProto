@@ -402,7 +402,7 @@ static class Som319Diag
         foreach (var (n, f) in Boards()) foreach (var v in vers) { var fv = Apply(f, v); foreach (var w in Waves) { var (s, x) = Measure(fv, w); cells.Add((n, f, w, v, s, x)); } }
         var ctl = new Dictionary<(string, string, string), string>();
         foreach (var c in cells.Where(c => c.S.Win >= 50))
-            ctl[(c.B, c.W.Name, c.V.Name)] = F1(100.0 * WinsLite(S309.Swap(Apply(c.F0, c.V), c.V.Som, UnitCatalog.Dolga), c.W, Seeds) / Seeds);
+            ctl[(c.B, c.W.Name, c.V.Name)] = F1(100.0 * WinsLite(S309.Swap(Apply(c.F0, c.V), c.V.Som, UnitCatalog.DolgaH395), c.W, Seeds) / Seeds);
         var bv = vers[0];
         (S318.St S, X X) Cell(string b, Ver v, S287.Wave w) { var c = cells.First(x => x.B == b && x.V == v && x.W == w); return (c.S, c.X); }
 
@@ -595,7 +595,7 @@ static class Som319Diag
             Interlocked.Increment(ref cutPass);
             int wins = W(f, w, Seeds, out long wt);
             int ctl = -1;
-            if (wins * 2 >= Seeds) ctl = W(S309.Swap(f, v.Som, UnitCatalog.Dolga), w, Seeds, out _);
+            if (wins * 2 >= Seeds) ctl = W(S309.Swap(f, v.Som, UnitCatalog.DolgaH395), w, Seeds, out _);
             res[i] = (wins, wt, ctl);
         });
         var all = res.Where(r => r is not null).Select(r => r!.Value).ToList();

@@ -315,7 +315,7 @@ static class Som310Diag
         foreach (var c in cells.Where(c => c.S.Win >= 50))
         {
             var fv = c.V.Apply(c.F0);
-            ctl[(c.B, c.W.Name, c.V.Name)] = 100.0 * WinsLite(S309.Swap(fv, fv.Occupied().First(o => o.Def.Id == "som").Def, UnitCatalog.Dolga), c.W, Seeds, out _) / Seeds;
+            ctl[(c.B, c.W.Name, c.V.Name)] = 100.0 * WinsLite(S309.Swap(fv, fv.Occupied().First(o => o.Def.Id == "som").Def, UnitCatalog.DolgaH395), c.W, Seeds, out _) / Seeds;
         }
 
         Console.WriteLine("# 第310期 §4-1 代表台 × 波 × 版（規定 ＝ LV-a ／ E1 ／ E2 ／ SG-f・seed 0..199・verbose）");
@@ -536,7 +536,7 @@ static class Som310Diag
             Interlocked.Increment(ref cutPass);
             int wins = W(f, w, Seeds);
             int ctl = -1;
-            if (wins * 2 >= Seeds) { var som = f.Occupied().First(o => o.Def.Id == "som").Def; ctl = W(S309.Swap(f, som, UnitCatalog.Dolga), w, Seeds); }
+            if (wins * 2 >= Seeds) { var som = f.Occupied().First(o => o.Def.Id == "som").Def; ctl = W(S309.Swap(f, som, UnitCatalog.DolgaH395), w, Seeds); }
             res[i] = (wins, ctl);
         });
         var all = res.Where(r => r is not null).Select(r => r!.Value).ToList();

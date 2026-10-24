@@ -9739,6 +9739,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.HagiLineEvery)) _everyLive390 = true;   // 第390期（V3 線を割るたび数える）
         if (u.HasTrait(TraitId.HagiPursuitReap) || u.HasTrait(TraitId.HagiPursuitHeavy)) _chaseLive391 = true;   // 第391期（P1 〜 追撃の刈り取り ／ 2 割）
         if (u.HasTrait(TraitId.DolgaWall) && !_dolgaWalls.Contains(u)) _dolgaWalls.Add(u);   // 第394期（休む巨兵は壁）
+        if (u.HasTrait(TraitId.SlimeWrap) && !_slimeWraps.Contains(u)) _slimeWraps.Add(u);   // 第396期（包むセッキ）
         if (u.HasTrait(TraitId.VioRetchHalf) || u.HasTrait(TraitId.VioRetchThird)) { _retchLive = true; _retchHolders.Add(u); }   // 第373期（ヴィオの吐き戻し A1 ／ A2）
         if (CommandTrait.BurstUnit(u) > 0) { _burstLive = true; _burstHolders.Add(u); }   // 第321期（HQ-a ／ HQ-b・溜まったら吐く）
         if (u.HasTrait(TraitId.HisaCover)) _coverHolders.Add(u);       // 第301期（HC・庇い）
@@ -11391,6 +11392,8 @@ public sealed class BattleContext
     public void PerformAttack(UnitState actor, string prefix = "  ",
                               int attackPercent = 100, AttackPattern? patternOverride = null)
     {
+        // 第396期（包むセッキ）: 帳簿があれば、殴る代わりに敵全体へ弾き返す（帳簿が 0 ならふつうに殴る）。**保持者がいなければ件数の比較1つで抜ける。**
+        if (_slimeWraps.Count > 0 && actor.HasTrait(TraitId.SlimeWrap) && actor.RawCounter(SlimeTrait.StoreKey) > 0) { SlimeBurst(actor, prefix); return; }
         // 第255期（被弾の燃焼）: 1回の攻撃の枠。札が無ければ比較1つで素通り。
         if (OpenBurnHitScope(actor))
         {
@@ -14111,6 +14114,41 @@ public sealed class BattleContext
                 if (!light) return;
                 amount -= half;                                         // 第395期（E2 ／ E12）: 残りは殴られた味方が受ける（続きの段へ）
                 if (!target.IsAlive || amount <= 0) return;
+            }
+        }
+
+        // 第396期（セッキの版 S1 ／ S2 ／ S2h・`SlimeWrap`）: 敵の**範囲**の一撃（型が単体でない・薙ぎ ／ 貫き ／ 全体）がセッキ以外の味方に当たるとき、
+        // その量の 3 割（`SlimeDeep` は 5 割・切り捨て）をセッキが吸い取り、半分（切り捨て）を HP で受ける（中継・セッキ側の軽減は今の順でもう一度かかる）。
+        // 吸った量の全部を帳簿に積む。殴られた味方は残りを受ける（続きの段へ）。単体 ／ 刻み ／ 徴収 ／ 中継 ／ 共有 ／ 同士討ち ／ 庇いの段は包まない・**`u != source`**・倒れたセッキは包まない。
+        // 置き場所はドルガの壁（単体だけ）の後・巨躯 ／ 分かちの手前。**保持者がいなければ件数の比較1つで抜ける。乱数を引かない**（保持者が複数なら席番号の若い方）。
+        if (_slimeWraps.Count > 0 && source is not null && source.TeamId != target.TeamId && pattern is { } wrapPat && wrapPat != AttackPattern.Single
+            && !burnTick && !levy && !relayed && !hexShare && !isFriendlyFire && !coverHit)
+        {
+            UnitState? sl = null;
+            foreach (UnitState w in _slimeWraps)
+                if (w.IsAlive && w.TeamId == target.TeamId && w != target && w != source && (sl is null || w.Slot < sl.Slot)) sl = w;
+            if (sl is not null)
+            {
+                int taken = amount * (sl.HasTrait(TraitId.SlimeDeep) ? SlimeTrait.DeepTenths : SlimeTrait.WrapTenths) / 10;
+                if (taken > 0)
+                {
+                    amount -= taken;
+                    int store = sl.RawCounter(SlimeTrait.StoreKey) + taken;
+                    sl.SetCounter(SlimeTrait.StoreKey, store);
+                    UnitTally st = TallyOf(sl);   // 計数のみ
+                    st.R396WrapHits++; st.R396WrapAmt += taken; if (store > st.R396StoreMax) st.R396StoreMax = store;
+                    if (_turn >= 0 && _turn <= BattleEngine.MaxTurns) (st.R396WrapByTurn ??= new long[BattleEngine.MaxTurns + 2])[_turn] += taken;
+                    TallyOf(target).R396WrappedFor++;
+                    Log($"    {sl.Name} がゼリーの体で {target.Name} を包み、衝撃を吸い取った（{taken}）", LogKind.Trigger);
+                    int hpPart = taken / 2;
+                    if (hpPart > 0)
+                    {
+                        int hp0 = sl.Hp;
+                        ApplyDamage(sl, hpPart, source, isFriendlyFire: true, relayed: true, pattern: pattern);
+                        st.R396WrapHp += Math.Max(0, hp0 - Math.Max(0, sl.Hp));
+                    }
+                    if (!target.IsAlive || amount <= 0) return;
+                }
             }
         }
 
@@ -18204,6 +18242,35 @@ public sealed class BattleContext
     bool _aimLive390, _everyLive390;
     /// <summary>第394期: 休む巨兵は壁（`DolgaWall`・D1 ／ D2）の保持者（<see cref="Add"/> が積む）。いなければ `ApplyDamageBody` は件数の比較1つで抜ける。</summary>
     readonly List<UnitState> _dolgaWalls = new();
+    readonly List<UnitState> _slimeWraps = new();   // 第396期（包むセッキ・`SlimeWrap` の保持者）
+
+    /// <summary>第396期: いまの手番が「譲られた手番」（尾灯の譲り ／ ヒヨのターンギフト）か。包むセッキ（`SlimeTrait.CanAct`）が読む。</summary>
+    public bool InGivenTurn => Yielding || _inGift;
+
+    /// <summary>
+    /// 第396期（包むセッキ）: 溜めた衝撃（`SlimeTrait.StoreKey`）を敵全体へそのまま与えて帳簿を 0 にする（1体ずつ同じ量・出どころはセッキ・型は全体・守りは今どおり通る）。
+    /// `PerformAttack` の頭から呼ぶ（帳簿が 0 ならふつうに殴る）。攻撃の後の札（`OnAfterAttack`）は走らない。乱数を引かない。
+    /// </summary>
+    void SlimeBurst(UnitState s, string prefix)
+    {
+        int amt = s.RawCounter(SlimeTrait.StoreKey);
+        s.SetCounter(SlimeTrait.StoreKey, 0);
+        UnitTally t = TallyOf(s);   // 計数のみ
+        t.R396Bursts++; t.R396BurstAmt += amt; if (amt > t.R396BurstMax) t.R396BurstMax = amt;
+        if (InInterrupt) t.R396BurstInterrupt++;
+        else if (Yielding) t.R396BurstYield++;
+        else if (_inGift) t.R396BurstGift++;
+        else if (InReaction) t.R396BurstOther++;
+        else t.R396BurstOverflow++;
+        Log($"{prefix}★ {s.Name} が溜めた衝撃を敵全体へ弾き返した（{amt}）", LogKind.Highlight, s);
+        foreach (UnitState e in LivingMembers(Opponent(s.TeamId)))
+        {
+            if (!e.IsAlive) continue;
+            int hp0 = e.Hp;
+            ApplyDamage(e, amt, s, pattern: AttackPattern.All);
+            t.R396BurstDealt += Math.Max(0, hp0 - Math.Max(0, e.Hp));
+        }
+    }
     /// <summary>第391期: 追撃の刈り取り（`HagiPursuitReap`）／ 追撃 2 割（`HagiPursuitHeavy`）の保持者がいる戦。いなければ追撃は第388期のまま。</summary>
     bool _chaseLive391;
 

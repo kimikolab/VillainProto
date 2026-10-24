@@ -94,7 +94,7 @@ static partial class Sh392Diag
             string Row(string doc, UnitDef d) => doc.Split('\n').FirstOrDefault(l => l.StartsWith($"| **{d.Name}** |", StringComparison.Ordinal))?.TrimEnd('\r') ?? "";
             bool urow = Row(units, hagi).Contains("線を切った敵なら、その一振りで刈り取る", StringComparison.Ordinal);
             string head = S390.GitShow($"{HeadSha}:docs/units.md");
-            var tempo = new[] { UnitCatalog.TomoH393, UnitCatalog.Dolga, UnitCatalog.Gan, UnitCatalog.Ban, UnitCatalog.Kugu };
+            var tempo = new[] { UnitCatalog.TomoH393, UnitCatalog.DolgaH395, UnitCatalog.Gan, UnitCatalog.Ban, UnitCatalog.Kugu };
             var movedT = tempo.Where(d => Row(head, d) == "" || Row(head, d) != Row(units, d)).Select(Short).ToList();
             Expect("`docs/` は規定のハギで再生成した（`compare` 全行 × 5 波 × seed 0..199 が `docs/balance.md` と一致・ハギの行が規定の文面）・手番の軸の駒（トモ ／ ドルガ ／ ガン ／ バン ／ クグ）の `docs/units.md` の行は第391期の HEAD と同じ（規定の駒を変えていない）",
                 diff == 0 && miss == 0 && urow && movedT.Count == 0, $"{rows.Length} 行・ずれ {diff}・表に無い行 {miss}・ハギの行 {(urow ? "規定" : "×")}{(movedT.Count == 0 ? "" : "・動いた行: " + string.Join("・", movedT))}");

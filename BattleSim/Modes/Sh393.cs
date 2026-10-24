@@ -80,7 +80,7 @@ static partial class Sh393Diag
         Formation Row(string n) => all.First(r => r.Name == n).F;
         int SlotOf(Formation f, string id) => f.Occupied().First(o => o.Def.Id == id).Slot;
         var lamp = Row("灯×薙ぎ (トモ×ドルガ)"); var bind = Row("縛め収入型 (クグ×バン×ガン)"); var tame = Row("溜め改 (クグ×バン×ガン)");
-        var core3 = Formation.Build(front1: UnitCatalog.Borg, front3: UnitCatalog.Dolga, center: UnitCatalog.Beni, back1: UnitCatalog.Gan, back3: UnitCatalog.Tomo);
+        var core3 = Formation.Build(front1: UnitCatalog.Borg, front3: UnitCatalog.DolgaH395, center: UnitCatalog.Beni, back1: UnitCatalog.Gan, back3: UnitCatalog.Tomo);
         var seek = Presets.TempoSeek392();
         return new (string, Formation, int, Formation?)[]
         {
@@ -414,7 +414,7 @@ static partial class Sh393Diag
 
     internal static List<(string Free, Formation F, S377.B[] M)> SearchCore(UnitDef tomo, int top)
     {
-        var core = new[] { tomo, UnitCatalog.Gan, UnitCatalog.Dolga };
+        var core = new[] { tomo, UnitCatalog.Gan, UnitCatalog.DolgaH395 };   // 第396期: ドルガは第395期までの規定に固定
         var heal = S392.HealPool;
         var cands = UnitCatalog.All.Where(d => d.Id is not "tomo" and not "gan" and not "dolga" and not "tsugi" and not "lili").ToArray();
         var pairs = new List<UnitDef[]>();

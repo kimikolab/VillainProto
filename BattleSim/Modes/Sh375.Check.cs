@@ -30,15 +30,15 @@ static partial class Sh375Diag
                 && h.Traits.SequenceEqual(UnitCatalog.SidY.Traits);
             bool pins = PinS374(s) == h && PinS374(UnitCatalog.Gald) == UnitCatalog.Gald && PinV372(s) == h && PinS371(s) == UnitCatalog.SidH371 && PinS371(h) == UnitCatalog.SidH371
                 && PinGVS371(h) == UnitCatalog.SidH371 && PinGVH367(s) == UnitCatalog.SidH371
-                && Pin374(Presets.PoisonHero367()).Occupied().Select(o => o.Def).SequenceEqual(Presets.PoisonHero367(vio: UnitCatalog.VioH375, sid: h).Occupied().Select(o => o.Def));   // 第376期: `Pin374` はヴィオも第375期までの規定へ
+                && Pin374(Pin395(Presets.PoisonHero367())).Occupied().Select(o => o.Def).SequenceEqual(Pin395(Presets.PoisonHero367(vio: UnitCatalog.VioH375, sid: h)).Occupied().Select(o => o.Def));   // 第376期: `Pin374` はヴィオも第375期までの規定へ
             Expect("段0: 規定のスィド ＝ 第374期の S10（`SidH374` ＋ 開戦の衣 +10）・文面は S10 の文面・旧の定義 `SidH374`（`All` の外 ＝ 第372〜374期の規定）・固定の口（`Pin374` ／ `PinV372` ／ `PinS371` ／ `PinGVS371` が旧へ）", cards && pins);
         }
         {
             long diff = 0, cells = 0;
             var pairs = new (Formation Now, Formation S10)[]
             {
-                (Pin375(Presets.Versions.First(r => r.Name == "試遊・毒").F), Pin375(Presets.PoisonHero367(sid: UnitCatalog.SidS10))),
-                (Pin375(Presets.Versions.First(r => r.Name == "試遊・毒 席替え").F), Pin375(Presets.PoisonSeat372(sid: UnitCatalog.SidS10))),
+                (Pin375(Presets.Versions.First(r => r.Name == "試遊・毒").F), Pin375(Pin395(Presets.PoisonHero367(sid: UnitCatalog.SidS10)))),
+                (Pin375(Presets.Versions.First(r => r.Name == "試遊・毒 席替え").F), Pin375(Pin395(Presets.PoisonSeat372(sid: UnitCatalog.SidS10)))),
                 (Pin375(Presets.Versions.First(r => r.Name == "試遊・毒 紅").F), Formation.Build(front1: UnitCatalog.Borg, front3: UnitCatalog.SidS10, center: UnitCatalog.Beni, back1: UnitCatalog.Rau, back3: UnitCatalog.Guza)),
             };
             foreach (var (now, s10) in pairs)

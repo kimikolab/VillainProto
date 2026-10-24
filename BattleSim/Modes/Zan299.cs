@@ -353,7 +353,7 @@ static class Zan299Diag
         {
             string Ctl(int idx)
             {
-                var five = r.Five.Select((d, i) => i == idx ? UnitCatalog.Dolga : d).ToArray();
+                var five = r.Five.Select((d, i) => i == idx ? UnitCatalog.DolgaH395 : d).ToArray();
                 return (100.0 * WinsAt(Apply(At(r.Seat, five), va), -1) / seeds).ToString("F0");
             }
             Console.WriteLine($"| {r.Base:F0} | {r.Ver:F0} | {Ctl(0)} | {Ctl(1)} | {Ctl(2)} | {r.A}・{r.B} |");
@@ -452,7 +452,7 @@ static class Zan299Diag
             && !UnitCatalog.Everyone.Contains(UnitCatalog.HisaHKb));
 
         // 盤面を直に組む: 前1 ドルガ ／ 前3 ザン ／ 中央 ミサ ／ 後1 カタ ／ 後3 ヒサ
-        Formation Sq(UnitDef m, UnitDef z, UnitDef h) => Formation.Build(front1: UnitCatalog.Dolga, front3: z, center: m, back1: UnitCatalog.KataH324, back3: h);
+        Formation Sq(UnitDef m, UnitDef z, UnitDef h) => Formation.Build(front1: UnitCatalog.DolgaH395, front3: z, center: m, back1: UnitCatalog.KataH324, back3: h);
         {
             // (c) 段0-2: 仲間が満タンでヒサだけ傷ついているとき、叫びの「最も傷ついた味方」はヒサ（旧ならヒサは癒されない）
             (long self, int hp) Shout(UnitDef h)
@@ -473,7 +473,7 @@ static class Zan299Diag
         // 仇巡り: 敵の盤面 前1 ガルド ／ 前3 ドルガ ／ 後1 ドルガ（後列）。ザンの手番を直に1回回す。
         (UnitTally zt, List<UnitState> e, BattleContext ctx, int[] layers) Round(UnitDef zv, int[] marks, UnitDef? h = null, bool full = false)
         {
-            var en = Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, back1: UnitCatalog.Dolga);
+            var en = Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.DolgaH395, back1: UnitCatalog.DolgaH395);
             var ctx = Ctx(Sq(UnitCatalog.TomeMb, zv, h ?? UnitCatalog.HisaHKb), en, out var p, out var e);
             for (int i = 0; i < e.Count && i < marks.Length; i++) { e[i].MaxHp = e[i].Hp = 10000; if (marks[i] > 0) e[i].SetCounter(StatusKeys.Marked, marks[i]); }
             if (!full) foreach (var u in p) u.Hp = u.MaxHp;
@@ -502,7 +502,7 @@ static class Zan299Diag
         }
         {
             // (h) 返り血が付かない・羽を呼ばない（ミサは MF-b の規定）・叫びは1手番に1回
-            var en = Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, back1: UnitCatalog.Dolga);
+            var en = Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.DolgaH395, back1: UnitCatalog.DolgaH395);
             var ctx = Ctx(Sq(UnitCatalog.Tome, UnitCatalog.ZanZMa, UnitCatalog.HisaHKs), en, out var p, out var e);
             foreach (var u in e) { u.MaxHp = u.Hp = 10000; }
             e[0].SetCounter(StatusKeys.Marked, 2); e[2].SetCounter(StatusKeys.Marked, 3);
@@ -525,7 +525,7 @@ static class Zan299Diag
         }
         {
             // (j) 的が倒れたら次の敵へ（層 3 の1体目が1太刀で倒れる → 2体目へ）
-            var en = Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, back1: UnitCatalog.Dolga);
+            var en = Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.DolgaH395, back1: UnitCatalog.DolgaH395);
             var ctx = Ctx(Sq(UnitCatalog.TomeMb, UnitCatalog.ZanZMa, UnitCatalog.HisaHKb), en, out var p, out var e);
             foreach (var u in e) { u.MaxHp = u.Hp = 10000; }
             e[2].Hp = 1; e[2].SetCounter(StatusKeys.Marked, 3); e[0].SetCounter(StatusKeys.Marked, 2);

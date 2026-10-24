@@ -1015,11 +1015,18 @@ public static class Presets
         ("試遊・手番 芯3枚", TempoLamp393(UnitCatalog.Tomo)),
         // 第394期: 休む巨兵は壁（ドルガの版）を試遊で触る台。`sh394 boards` で D2（開戦で構える ＋ 壁）が「試遊・手番 芯3枚」でいちばん良かった
         //   （強い条件 69.2 → 84.5・素体との差 +2.0 → +17.3）ので、その台のドルガを D2 にした。採否はポン。
-        ("版・壁 ドルガ", TempoLamp393(UnitCatalog.Tomo, UnitCatalog.DolgaD2)),
+        // 第396期: 「版・壁 ドルガ」（D2）は外した（並びは `TempoLamp393(UnitCatalog.Tomo, UnitCatalog.DolgaD2)`・過去の器具は `Common.VersionsH395`）。
         // 第395期: 壁で倒れない版（E1 ／ E2 ／ E12）を試遊で触る台。`sh395 boards` で E の版がいちばん効いたのは「縛め収入型（バンの席にトモ）」の E1
         //   （倒れる前に下がる・近衛 規定 22 ／ D2 0 → 39%・4 波 30.5 → 34.8）なので、その台のドルガを E1 にした。採否はポン。
-        ("版・壁 E", BindTempo395(UnitCatalog.DolgaE1)),
+        // 第396期: E1 をドルガの規定にしたので「版・壁 E」を「試遊・手番 縛め」に改めた（置くのは規定のドルガ）。
+        ("試遊・手番 縛め", BindTempo395()),
+        // 第396期: 包むセッキ（セッキの転生の版 S1 ／ S2 ／ S2h）を試遊で触る台。`sh396 boards` でいちばん良かったのは「試遊・手番 芯3枚」の後1（ガンの席）を S2h にした台
+        //   （強い条件 76.8 → 89.2・同じ席の素体より +54.3）なので、その台にした。採否はポン。
+        ("版・包み セッキ", SlimeLamp396(UnitCatalog.SekkiS2h)),
     };
+
+    /// <summary>第396期: 「版・包み セッキ」の並び（「試遊・手番 芯3枚」の後1（ガン）の席にセッキ: 前1 ボルグ ／ 前3 ドルガ ／ 中央 ベニ ／ 後1 セッキ ／ 後3 トモ）。既定は規定のセッキ。</summary>
+    public static Formation SlimeLamp396(UnitDef? sekki = null) => Formation.Build(front1: UnitCatalog.Borg, front3: UnitCatalog.Dolga, center: UnitCatalog.Beni, back1: sekki ?? UnitCatalog.Sekki, back3: UnitCatalog.Tomo);
 
     /// <summary>第395期: 「版・壁 E」の並び（`compare` の「縛め収入型 (クグ×バン×ガン)」のバンの席（後1）にトモ: 前1 ガルド ／ 前3 クグ ／ 中央 ガン ／ 後1 トモ ／ 後3 ドルガ）。既定は規定のドルガ。</summary>
     public static Formation BindTempo395(UnitDef? dolga = null) => Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Kugu, center: UnitCatalog.Gan, back1: UnitCatalog.Tomo, back3: dolga ?? UnitCatalog.Dolga);

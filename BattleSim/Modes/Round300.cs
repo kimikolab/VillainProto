@@ -309,9 +309,9 @@ static class Round300Diag
         // 一撃を直に `ApplyDamage` して HP の減りを旧（`HisaHKs`）と規定で比べる（他の軽減の段は両方に同じだけ掛かる）。
         int Loss(UnitDef h, string shooter, bool beckonTarget)
         {
-            var ctx = Ctx(Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Golm, center: UnitCatalog.Tome, back1: UnitCatalog.Borg, back3: h), Formation.Build(front1: UnitCatalog.Gald), out var p, out var e);
+            var ctx = Ctx(Formation.Build(front1: UnitCatalog.DolgaH395, front3: UnitCatalog.Golm, center: UnitCatalog.Tome, back1: UnitCatalog.Borg, back3: h), Formation.Build(front1: UnitCatalog.Gald), out var p, out var e);
             var hi = p.First(u => u.Def.Id == "hisa");
-            var dolga = p.First(u => u.Def.Id == UnitCatalog.Dolga.Id);
+            var dolga = p.First(u => u.Def.Id == UnitCatalog.DolgaH395.Id);
             var golm = p.First(u => u.Def.Id == UnitCatalog.Golm.Id);
             hi.SetCounter(BeckonTrait.TargetKey, dolga.InstanceId + 1);
             dolga.SetCounter(StatusKeys.Marked, 1); golm.SetCounter(StatusKeys.Marked, 1);   // 矢面の守りは標が残っている間だけ（`BeckonGuardOf`）。比べる2体に同じ標を付ける

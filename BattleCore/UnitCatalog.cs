@@ -2960,6 +2960,22 @@ public static class UnitCatalog
         Flavor = "前に出ろと言われても決して出ない。背中しか守らない。"
     };
 
+    // ---- 第396期: セッキの転生の版（包みのセッキ S1 ／ S2 ／ S2h・指示書 design/PHASE396_SEKKI_SLIME_SPEC.md §3・`All` に入れない・数値は今のセッキのまま）----
+    const string SlimePlus396 = "範囲の攻撃が来た瞬間、ゼリーの体で仲間を包み、衝撃の 3 割を吸い取る。吸った衝撃は体に溜まり、動かされたとき敵全体へ弾き返す";
+    const string SlimeOverflowText396 = "。溜まりすぎると自分から弾き返す";
+    static UnitDef SekkiOn396(TraitId[] traits, string plusText) => new()
+    {
+        Id = Sekki.Id, Name = "包みのセッキ", MaxHp = Sekki.MaxHp, Attack = Sekki.Attack, Speed = Sekki.Speed, Advances = Sekki.Advances,
+        Traits = traits, PlusText = plusText, MinusText = "単体の攻撃は包まない。自分の手番はぷるぷるしているだけで動かない",
+        Flavor = "何を食べてここまで大きくなったのか、誰も知らない。殴っても手応えがない。",
+    };
+    /// <summary>セッキの版 S1（第396期）: 包む ＋ 起こされて弾く（手番の外で動かされたとき、殴る代わりに弾き返す）。後備え ／ 憤怒は外す。</summary>
+    public static readonly UnitDef SekkiS1 = SekkiOn396(new[] { TraitId.SlimeWrap }, SlimePlus396);
+    /// <summary>セッキの版 S2（第396期）: S1 ＋ 溢れたら弾く（自分の手番でも、帳簿が最大 HP 以上なら弾き返す）。</summary>
+    public static readonly UnitDef SekkiS2 = SekkiOn396(new[] { TraitId.SlimeWrap, TraitId.SlimeOverflow }, SlimePlus396 + SlimeOverflowText396);
+    /// <summary>セッキの版 S2h（第396期）: S2 ＋ 深く包む（吸い取る量 3 割 → 5 割）。</summary>
+    public static readonly UnitDef SekkiS2h = SekkiOn396(new[] { TraitId.SlimeWrap, TraitId.SlimeOverflow, TraitId.SlimeDeep }, (SlimePlus396 + SlimeOverflowText396).Replace("3 割", "5 割"));
+
     /// <summary>
     /// 背かれのソム（第103期・<b>最後の1枠</b>）。<b>第276期に転生した</b>（規定 ＝ S1x・ポンの判断）——
     /// 喚ばれた餌が感電を纏って立ち（<see cref="TraitId.BetrayedShockNoThunder"/>）、纏った餌にはカタの雷が落ちない。
@@ -3781,7 +3797,8 @@ public static class UnitCatalog
         MinusText = ""
     };
 
-    public static readonly UnitDef Dolga = new()
+    /// <summary>のろまの巨兵ドルガ（第395期までの規定・`All` の外）。第396期に E1 を規定にしたので旧として残す——第394〜395期の版の駒と過去の器具はこれから作る ／ これに固定する。</summary>
+    public static readonly UnitDef DolgaH395 = new()
     {
         Id = "dolga",
         Name = "のろまの巨兵ドルガ",
@@ -3808,27 +3825,33 @@ public static class UnitCatalog
     // ---- 第394期: 休む巨兵は壁（ドルガの版 D0 ／ D1 ／ D2・指示書 design/PHASE394_DOLGA_WALL_SPEC.md §3・`All` に入れない）----
     static UnitDef DolgaOn394(TraitId[] plus, string plusText, string minusText) => new()
     {
-        Id = Dolga.Id, Name = Dolga.Name, MaxHp = Dolga.MaxHp, Attack = Dolga.Attack, Speed = Dolga.Speed, Advances = Dolga.Advances, Pattern = Dolga.Pattern,
-        Traits = Dolga.Traits.Concat(plus).ToArray(), PlusText = plusText, MinusText = minusText, Flavor = Dolga.Flavor,
+        Id = DolgaH395.Id, Name = DolgaH395.Name, MaxHp = DolgaH395.MaxHp, Attack = DolgaH395.Attack, Speed = DolgaH395.Speed, Advances = DolgaH395.Advances, Pattern = DolgaH395.Pattern,
+        Traits = DolgaH395.Traits.Concat(plus).ToArray(), PlusText = plusText, MinusText = minusText, Flavor = DolgaH395.Flavor,
     };
     const string DolgaWallText = "。休んでいるあいだは仲間の前に立ち、単体の攻撃を半分にして代わりに受ける";
     /// <summary>ドルガの版 D0（第394期・切り分け用）: 開戦で構える——奇数ターンが休み、偶数ターンに振る。</summary>
-    public static readonly UnitDef DolgaD0 = DolgaOn394(new[] { TraitId.SluggishShift }, Dolga.PlusText, "2ターンに1回しか動けない（開戦のターンは構えて動かない）");
+    public static readonly UnitDef DolgaD0 = DolgaOn394(new[] { TraitId.SluggishShift }, DolgaH395.PlusText, "2ターンに1回しか動けない（開戦のターンは構えて動かない）");
     /// <summary>ドルガの版 D1（第394期）: 休む巨兵は壁——休み番のあいだ、味方への単体の攻撃を半分にして代わりに受ける。</summary>
-    public static readonly UnitDef DolgaD1 = DolgaOn394(new[] { TraitId.DolgaWall }, Dolga.PlusText + DolgaWallText, Dolga.MinusText);
+    public static readonly UnitDef DolgaD1 = DolgaOn394(new[] { TraitId.DolgaWall }, DolgaH395.PlusText + DolgaWallText, DolgaH395.MinusText);
     /// <summary>ドルガの版 D2（第394期）: D0 ＋ D1（構えて壁）。</summary>
-    public static readonly UnitDef DolgaD2 = DolgaOn394(new[] { TraitId.SluggishShift, TraitId.DolgaWall }, Dolga.PlusText + DolgaWallText, "2ターンに1回しか動けない（開戦のターンは構えて動かない）");
+    public static readonly UnitDef DolgaD2 = DolgaOn394(new[] { TraitId.SluggishShift, TraitId.DolgaWall }, DolgaH395.PlusText + DolgaWallText, "2ターンに1回しか動けない（開戦のターンは構えて動かない）");
 
     // ---- 第395期: 壁で倒れない（ドルガの版 E1 ／ E2 ／ E12・D2 の上・指示書 design/PHASE395_DOLGA_WALL_TRIM_SPEC.md §2・`All` に入れない）----
     const string DolgaWallRetreatText = "。休んでいるあいだは仲間の前に立ち、単体の攻撃を半分にして代わりに受ける（自分が半分まで傷つくと下がる）";
     const string DolgaWallLightText = "。休んでいるあいだは仲間の前に立ち、単体の攻撃の 3 割を代わりに受ける";
     /// <summary>ドルガの版 E1（第395期）: D2 ＋ 倒れる前に下がる（HP が最大の半分を切っているあいだは壁をやめる）。</summary>
-    public static readonly UnitDef DolgaE1 = DolgaOn394(new[] { TraitId.SluggishShift, TraitId.DolgaWall, TraitId.DolgaWallRetreat }, Dolga.PlusText + DolgaWallRetreatText, DolgaD2.MinusText);
+    public static readonly UnitDef DolgaE1 = DolgaOn394(new[] { TraitId.SluggishShift, TraitId.DolgaWall, TraitId.DolgaWallRetreat }, DolgaH395.PlusText + DolgaWallRetreatText, DolgaD2.MinusText);
     /// <summary>ドルガの版 E2（第395期）: D2 ＋ 浅く受ける（壁で受ける量を 3 割に・殴られた味方は残りを受ける）。</summary>
-    public static readonly UnitDef DolgaE2 = DolgaOn394(new[] { TraitId.SluggishShift, TraitId.DolgaWall, TraitId.DolgaWallLight }, Dolga.PlusText + DolgaWallLightText, DolgaD2.MinusText);
+    public static readonly UnitDef DolgaE2 = DolgaOn394(new[] { TraitId.SluggishShift, TraitId.DolgaWall, TraitId.DolgaWallLight }, DolgaH395.PlusText + DolgaWallLightText, DolgaD2.MinusText);
     /// <summary>ドルガの版 E12（第395期）: E1 ＋ E2。</summary>
     public static readonly UnitDef DolgaE12 = DolgaOn394(new[] { TraitId.SluggishShift, TraitId.DolgaWall, TraitId.DolgaWallRetreat, TraitId.DolgaWallLight },
-        Dolga.PlusText + DolgaWallLightText.Replace("代わりに受ける", "代わりに受ける（自分が半分まで傷つくと下がる）"), DolgaD2.MinusText);
+        DolgaH395.PlusText + DolgaWallLightText.Replace("代わりに受ける", "代わりに受ける（自分が半分まで傷つくと下がる）"), DolgaD2.MinusText);
+
+    /// <summary>
+    /// のろまの巨兵ドルガ（第396期の規定 ＝ 第395期の E1）: 旧（<see cref="DolgaH395"/>）＋ 開戦で構える ＋ 休む巨兵は壁 ＋ 倒れる前に下がる。
+    /// 札と文面は <see cref="DolgaE1"/> と同じ（別の定義）。名前と二つ名は据え置き。
+    /// </summary>
+    public static readonly UnitDef Dolga = DolgaOn394(new[] { TraitId.SluggishShift, TraitId.DolgaWall, TraitId.DolgaWallRetreat }, DolgaH395.PlusText + DolgaWallRetreatText, DolgaD2.MinusText);
 
     /// <summary>
     /// 熾のホタ。<b>第130期に「火を配る」を測って、採用しなかった</b>

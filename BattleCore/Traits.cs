@@ -1015,6 +1015,9 @@ public enum TraitId
     // --- 第393期で足した札（指示書 design/PHASE393_TEMPO_LAMP_SPEC.md §2）。灯が休む者に溜まり、起こし、力を運ぶ（トモの版 T1 ／ T2 ／ T3・`All` の外）。保持者 0 枚 ---
     // --- 第394期で足した札（指示書 design/PHASE394_DOLGA_WALL_SPEC.md §3）。休む巨兵は壁（ドルガの版 D0 ／ D1 ／ D2・`All` の外）。保持者 0 枚 ---
     SluggishShift,        // 開戦で構える（D0 ／ D2）: のろまの休み番を奇数ターンへずらす（偶数ターンに振る・T1 は動かない）。休み番の判定は `SluggishTrait.Resting` の1か所（号令 ／ 叩き起こし ／ 灯の起こしも付いていく）（札そのものは印）
+    SlimeWrap,            // 包む（第396期・セッキの版 S1 ／ S2 ／ S2h）: 敵の範囲の一撃（薙ぎ ／ 貫き ／ 全体）がセッキ以外の味方に当たるとき、その量の 3 割を吸い取り（半分を HP で受ける）、吸った量を私有の帳簿に溜める。動かされたとき（手番の外・譲られた手番）は殴る代わりに敵全体へ帳簿の量を弾き返す。自分の手番では動かない（`IdleTurn` が立つ）。判定は engine の肩代わりの段と `PerformAttack` の頭
+    SlimeOverflow,        // 溢れたら弾く（第396期・S2 ／ S2h）: 自分の手番でも、帳簿が自分の最大 HP 以上なら弾き返す（札そのものは印・判定は `SlimeTrait.CanAct`）
+    SlimeDeep,            // 深く包む（第396期・S2h）: 吸い取る量を 3 割 → 5 割（札そのものは印・判定は engine）
     DolgaWallRetreat,     // 倒れる前に下がる（E1 ／ E12）: 壁を持つドルガの HP が最大の半分を切っているあいだは壁をやめる（その一撃を受ける前の HP で判定・回復で戻れば再び壁）（判定は engine の壁の段・札そのものは印）
     DolgaWallLight,       // 浅く受ける（E2 ／ E12）: 壁で受ける量を半分 → 3 割（切り捨て）・殴られた味方は残りの 7 割を受ける（判定は engine の壁の段・札そのものは印）
     DolgaWall,            // 休む巨兵は壁（D1 ／ D2）: 休み番のあいだ、味方への敵の単体の攻撃を代わりに受ける（受ける量は半分・列を問わない・薙ぎ ／ 貫き ／ 全体 ／ 刻みは受けない・起こされたターンも壁は続く）（**判定は engine の `ApplyDamageBody` の肩代わりの族の先頭**・札そのものは印）
@@ -10569,6 +10572,31 @@ public sealed class HagiDepthTrait : Trait
 /// 後備え。後列の味方への攻撃を肩代わりする。「庇う（Guardian）」が単体攻撃しか止められないのに対し、
 /// こちらは貫きにも割り込む。後列に稼ぎ頭を隠す編成に対する唯一の防御手段。
 /// </summary>
+/// <summary>
+/// 包む（第396期・セッキの版 S1 ／ S2 ／ S2h・`SlimeWrap`）。**包む ／ 溜める ／ 弾き返すの判定は engine**（`ApplyDamage` の肩代わりの段 ／ `PerformAttack` の頭の `SlimeBurst`）。
+/// この札が持つのは「自分の手番では動かない」だけ: 譲られた手番（灯 ／ ターンギフト）では動き、S2（`SlimeOverflow`）は帳簿が最大 HP 以上なら自分の手番でも動く。
+/// それ以外の手番は `CanAct` が偽 ＝ `IdleTurn` が立ち、号令（ガン）の +8 ／ 叩き起こしの候補に入る（差し出した手番・<see cref="Trait.SurrendersTurn"/> は真のまま）。
+/// 帳簿（<see cref="StoreKey"/>）は `StatusKeys.All` に入れない私有キーで、戦闘をまたがない（<see cref="OnCarryOver"/> で 0）。
+/// </summary>
+public sealed class SlimeTrait : Trait
+{
+    public override TraitId Id => TraitId.SlimeWrap;
+    /// <summary>吸い取った衝撃の帳簿（私有キー・上限なし）。</summary>
+    public const string StoreKey = "slimeStore";
+    /// <summary>吸い取る割合（10 分率）: 規定 3 割 ／ 深く包む（`SlimeDeep`）5 割。</summary>
+    public const int WrapTenths = 3, DeepTenths = 5;
+    /// <summary>自分の手番では殴らない型（尾灯の W1 で灯が付かない）。</summary>
+    public override bool NeverAttacksOwnTurn => true;
+
+    public override bool CanAct(BattleContext ctx, UnitState self, ActionKind kind)
+    {
+        if (ctx.InGivenTurn) return true;
+        return self.HasTrait(TraitId.SlimeOverflow) && self.RawCounter(StoreKey) >= self.MaxHp;
+    }
+
+    public override void OnCarryOver(UnitState self) => self.SetCounter(StoreKey, 0);
+}
+
 public sealed class RearGuardTrait : Trait
 {
     public const int RedirectPercent = 45;
@@ -19871,6 +19899,9 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.SluggishShift),                    // 第394期（開戦で構える D0 ／ D2・印・判定は のろま）
         new MarkOnlyTrait(TraitId.DolgaWall),                        // 第394期（休む巨兵は壁 D1 ／ D2・印・判定は engine）
         new MarkOnlyTrait(TraitId.DolgaWallRetreat),                 // 第395期（倒れる前に下がる E1 ／ E12・印・判定は engine）
+        new SlimeTrait(),                                            // 第396期（包む・セッキの版 S1 ／ S2 ／ S2h）
+        new MarkOnlyTrait(TraitId.SlimeOverflow),                    // 第396期（溢れたら弾く S2 ／ S2h・印・判定は SlimeTrait.CanAct）
+        new MarkOnlyTrait(TraitId.SlimeDeep),                        // 第396期（深く包む S2h・印・判定は engine）
         new MarkOnlyTrait(TraitId.DolgaWallLight),                   // 第395期（浅く受ける E2 ／ E12・印・判定は engine）
         new MarkOnlyTrait(TraitId.TaillightKeep),                    // 第393期（灯を外さない T1〜・印・判定は尾灯）
         new MarkOnlyTrait(TraitId.TaillightWake),                    // 第393期（灯が起こす T2〜・印・判定は尾灯 ／ のろま）

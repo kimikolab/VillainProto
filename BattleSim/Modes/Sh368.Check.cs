@@ -63,8 +63,8 @@ static partial class Sh368Diag
             Expect("段0: 固定の口（`Pin367` ／ 古い口の終端 `PinAG364` → `PinGVH367` ／ `PinH337` ／ `IsHisaNow` が `HisaH367` も受ける）", pin);
             int same = 0, n = 0;
             var play = Pin371(Presets.Versions.First(r => r.Name == "試遊・毒").F);   // 第372期: 第371期までの規定に固定
-            var v367 = Presets.PoisonHero367(UnitCatalog.GuzaG, UnitCatalog.VioV, UnitCatalog.SidH371);
-            var bB = Presets.HisaBoard366(); var bB367 = Presets.HisaBoard366(UnitCatalog.HisaY1);
+            var v367 = Pin395(Presets.PoisonHero367(UnitCatalog.GuzaG, UnitCatalog.VioV, UnitCatalog.SidH371));
+            var bB = Pin395(Presets.HisaBoard366()); var bB367 = Pin395(Presets.HisaBoard366(UnitCatalog.HisaY1));
             foreach (var w in new[] { I.Boss, I.Guard, I.M5, S366.BossNoTax })
                 for (int s = 0; s < 10; s++)
                 {

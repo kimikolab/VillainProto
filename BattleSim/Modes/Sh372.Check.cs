@@ -67,15 +67,15 @@ static partial class Sh372Diag
             bool pins = PinGVS371(UnitCatalog.Guza) == UnitCatalog.GuzaH371 && PinGVS371(UnitCatalog.VioH372) == UnitCatalog.VioH371 && PinGVS371(UnitCatalog.SidH374) == UnitCatalog.SidH371
                 && PinGVH367(UnitCatalog.Guza) == UnitCatalog.GuzaH367 && PinGVH367(UnitCatalog.GuzaH371) == UnitCatalog.GuzaH367 && PinGVH367(UnitCatalog.VioH372) == UnitCatalog.VioH367 && PinGVH367(UnitCatalog.VioH371) == UnitCatalog.VioH367
                 && PinGVH367(UnitCatalog.SidH374) == UnitCatalog.SidH371 && PinGVH367(UnitCatalog.Gald) == UnitCatalog.Gald
-                && Pin371(Presets.PoisonHero367()).Occupied().Select(o => o.Def).SequenceEqual(Presets.PoisonHero367(UnitCatalog.GuzaH371, UnitCatalog.VioH371, UnitCatalog.SidH371).Occupied().Select(o => o.Def));
+                && Pin371(Pin395(Presets.PoisonHero367())).Occupied().Select(o => o.Def).SequenceEqual(Pin395(Presets.PoisonHero367(UnitCatalog.GuzaH371, UnitCatalog.VioH371, UnitCatalog.SidH371)).Occupied().Select(o => o.Def));
             Expect("段0: 規定のグザ ／ ヴィオ ／ スィドの札 ＝ 第371期の W5（グザ W3 ／ ヴィオ W ／ スィド Y）・文面・旧の定義（`*H371`・`All` の外）・固定の口（`Pin371` ／ `PinGVH367` の終端 `PinS371`）", w5 && txt && old && pins);
         }
         {
             long diff = 0, cells = 0;
             var pairs = new (Formation Now, Formation W5)[]
             {
-                (Pin372(Presets.Versions.First(r => r.Name == "試遊・毒").F), Presets.PoisonHero367(UnitCatalog.GuzaW3, UnitCatalog.VioW, UnitCatalog.SidY)),   // 第373期: 第372期の規定に固定
-                (Pin372(Presets.Versions.First(r => r.Name == "試遊・毒 席替え").F), Presets.PoisonSeat372(UnitCatalog.GuzaW3, UnitCatalog.VioW, UnitCatalog.SidY)),
+                (Pin372(Presets.Versions.First(r => r.Name == "試遊・毒").F), Pin395(Presets.PoisonHero367(UnitCatalog.GuzaW3, UnitCatalog.VioW, UnitCatalog.SidY))),   // 第373期: 第372期の規定に固定
+                (Pin372(Presets.Versions.First(r => r.Name == "試遊・毒 席替え").F), Pin395(Presets.PoisonSeat372(UnitCatalog.GuzaW3, UnitCatalog.VioW, UnitCatalog.SidY))),
             };
             foreach (var (now, w5) in pairs)
                 foreach (var w in Waves)

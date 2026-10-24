@@ -8,6 +8,8 @@ description: 第259期に `CLAUDE.md` の「現状値」節を**逐語で**移�
 
 ## 現状値
 
+**第396期は軽い期で、段0 に第395期の E1 をドルガの規定にし（旧は `UnitCatalog.DolgaH395`・のろま ＋ 段違い）、本体でセッキの転生の版 3 つ（S1 起こされて弾く ／ S2 溢れたら弾く ／ S2h 深く包む——範囲の一撃を包んで溜め、動かされたとき敵全体へ弾き返すスライム）を測った——セッキの規定は変えない**（指示書は design/PHASE396_SEKKI_SLIME_SPEC.md・報告は design/PHASE396_SEKKI_SLIME.md）。過去の器具の固定は `Common.PinD395` ／ `Pin395` ／ `VersionsH395`（`PinT393` の終端）。版のセッキは `UnitCatalog.SekkiS1` ／ `SekkiS2` ／ `SekkiS2h`（`All` の外・札 `SlimeWrap` ／ `SlimeOverflow` ／ `SlimeDeep`・保持者 0 枚）。`compare` は 8 行 15 セル（第395期の E1 の列と同じ）・全66行 100 / 96.6 / 97.7 / 98.5 / 96.4・主判定19行 100 / 98.5 / 99.9 / 99.9 / 96.9・情報セル 32 / 13。試遊の台「版・壁 ドルガ」を外し、「版・壁 E」を「試遊・手番 縛め」に改め、「版・包み セッキ」を足した。
+
 **第395期は軽い期で、規定を1つも変えず、ドルガの版 3 つ（第394期の D2 の上に E1 倒れる前に下がる ／ E2 浅く受ける ／ E12 両方）を測った**（指示書は design/PHASE395_DOLGA_WALL_TRIM_SPEC.md・報告は design/PHASE395_DOLGA_WALL_TRIM.md）。版のドルガは `UnitCatalog.DolgaE1` ／ `DolgaE2` ／ `DolgaE12`（`All` の外）・札 2 枚（`DolgaWallRetreat` ／ `DolgaWallLight`・保持者 0 枚・判定は engine の壁の段）。`compare` は規定で 0 セル（`docs/` は再生成していない）。試遊の台に「版・壁 E」を足した（過去の器具の一覧は `Common.VersionsH394`）。
 
 **第394期は軽い期で、段0 に第393期の T3 をトモの規定にし（旧は `UnitCatalog.TomoH393`・尾灯だけ）、本体でドルガの版 3 つ（D0 開戦で構える ／ D1 休む巨兵は壁 ／ D2 両方）を測った——ドルガの規定は変えない**（指示書は design/PHASE394_DOLGA_WALL_SPEC.md・報告は design/PHASE394_DOLGA_WALL.md）。過去の器具の固定は `Common.PinT393` ／ `Pin393` ／ `VersionsH393`（「版・灯 手番」の名前と T3 を戻す）。版のドルガは `UnitCatalog.DolgaD0` ／ `DolgaD1` ／ `DolgaD2`（`All` の外）・札 2 枚（`SluggishShift` ／ `DolgaWall`・保持者 0 枚）・休み番の判定は `SluggishTrait.Resting` の1か所・壁は `ApplyDamage` の肩代わりの族の先頭。`compare` は 0 セル（第393期の T3 の列と同じ）・全66行 100 / 97.2 / 97.7 / 98.5 / 96.0・主判定19行 100 / 98.9 / 99.9 / 99.9 / 97.3・情報セル 34 / 11——どれも動かない。試遊の台「版・灯 手番」を「試遊・手番 芯3枚」に改め、「版・壁 ドルガ」（芯 3 枚の台に D2）を足した。

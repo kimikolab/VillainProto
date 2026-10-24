@@ -16,8 +16,8 @@ static partial class Sh359Diag
     /// <summary>第359期の「版・」の3台（第360期に `Presets.Versions` から外した並びを器具の中に固定）。</summary>
     internal static (string Name, Formation F)[] Boards359() => new (string, Formation)[]
     {
-        ("版・HB-s 破片", Formation.Build(front1: UnitCatalog.SasaH360, front3: UnitCatalog.Golm, center: UnitCatalog.Dolga, back1: UnitCatalog.GareH364, back3: UnitCatalog.HibiHBs)),
-        ("版・HB-f 破片", Formation.Build(front1: UnitCatalog.SasaH360, front3: UnitCatalog.Golm, center: UnitCatalog.Dolga, back1: UnitCatalog.GareH364, back3: UnitCatalog.HibiHBf)),
+        ("版・HB-s 破片", Formation.Build(front1: UnitCatalog.SasaH360, front3: UnitCatalog.Golm, center: UnitCatalog.DolgaH395, back1: UnitCatalog.GareH364, back3: UnitCatalog.HibiHBs)),
+        ("版・HB-f 破片", Formation.Build(front1: UnitCatalog.SasaH360, front3: UnitCatalog.Golm, center: UnitCatalog.DolgaH395, back1: UnitCatalog.GareH364, back3: UnitCatalog.HibiHBf)),
         ("版・HB-f 破片 呪い", Formation.Build(front1: UnitCatalog.Tsugi, front3: UnitCatalog.Golm, center: UnitCatalog.GareH364, back1: UnitCatalog.Nel, back3: UnitCatalog.HibiHBf)),
     };
 

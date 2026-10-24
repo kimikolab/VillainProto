@@ -64,7 +64,7 @@ static partial class Sh395Diag
     // 版 ／ 列 ／ 台
     // ---------------------------------------------------------------------------------
     internal static readonly (string Name, UnitDef D)[] Vers =
-        { ("規定", UnitCatalog.Dolga), ("D2", UnitCatalog.DolgaD2), ("E1", UnitCatalog.DolgaE1), ("E2", UnitCatalog.DolgaE2), ("E12", UnitCatalog.DolgaE12) };
+        { ("規定", UnitCatalog.DolgaH395), ("D2", UnitCatalog.DolgaD2), ("E1", UnitCatalog.DolgaE1), ("E2", UnitCatalog.DolgaE2), ("E12", UnitCatalog.DolgaE12) };
     /// <summary>列: 規定 ／ D2 ／ E1 ／ E2 ／ E12 ／ ドルガを素体に替えた台（第392〜394期と同じ素体）。</summary>
     internal static (string Name, UnitDef D)[] Cols => Vers.Append(("素体", S394.PlainDolga)).ToArray();
     internal static (string Name, Formation F, int Slot)[] BoardList() => S394.BoardList();

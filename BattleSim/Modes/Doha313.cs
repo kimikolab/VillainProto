@@ -288,7 +288,7 @@ static class Doha313Diag
             {
                 var v = Versions.Select(x => Measure(Swap(bf, UnitCatalog.DohaH316, x.Def), w, seeds)).ToArray();
                 detail.Add((w, v));
-                string dolga = v.Any(x => x.WinRate >= 50) ? Measure(Swap(bf, UnitCatalog.DohaH316, UnitCatalog.Dolga), w, seeds).Win : "—";
+                string dolga = v.Any(x => x.WinRate >= 50) ? Measure(Swap(bf, UnitCatalog.DohaH316, UnitCatalog.DolgaH395), w, seeds).Win : "—";
                 string Cell(int i) => i == 0 ? v[0].Win : $"{v[i].Win}（{Sg(v[i].WinRate - v[0].WinRate)}）";
                 Console.WriteLine($"| {w.Name} | {Cell(0)} | {Cell(1)} | {Cell(2)} | {Cell(3)} | {dolga} | {string.Join(" ／ ", v.Select(x => x.WinTurn))} | {string.Join(" ／ ", v.Select(x => x.LossTurn))} | "
                     + $"{string.Join(" ／ ", v.Select(x => x.Avg(x.FirstDeathT, x.FirstDeathN)))} | {string.Join(" ／ ", v.Select(x => x.Avg(x.DohaDeathT, x.DohaDeathN)))} |");
@@ -431,7 +431,7 @@ static class Doha313Diag
                 double b = Best(UnitCatalog.DohaH316, out var sb), v = Best(dv, out var sv);
                 if (Math.Max(b, v) < 50) return;
                 var seat = v >= b ? sv : sb;
-                double dolga = 100.0 * Wins(Seat(new[] { UnitCatalog.Dolga, atk, c[0], c[1], c[2] }, seat)) / seeds;
+                double dolga = 100.0 * Wins(Seat(new[] { UnitCatalog.DolgaH395, atk, c[0], c[1], c[2] }, seat)) / seeds;
                 rows.Add((Short(atk), c.Select(Short).ToArray(), b, v, dolga, seat));
             });
         }
@@ -537,7 +537,7 @@ static class Doha313Diag
     {
         var ctx = new BattleContext(0, true);
         p = BattleEngine.Materialize(pl, BattleContext.PlayerTeam);
-        e = BattleEngine.Materialize(Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Dolga), BattleContext.EnemyTeam, EnemyScaleRule.None);
+        e = BattleEngine.Materialize(Formation.Build(front1: UnitCatalog.DolgaH395, front3: UnitCatalog.DolgaH395), BattleContext.EnemyTeam, EnemyScaleRule.None);
         foreach (var u in p) AddUnit.Invoke(ctx, new object[] { u });
         foreach (var u in e) AddUnit.Invoke(ctx, new object[] { u });
         TurnProp.SetValue(ctx, 1);
@@ -554,7 +554,7 @@ static class Doha313Diag
 
         // (a) DP-a: 最も肩代わりした味方に1回だけ・ドハ自身は選ばない
         {
-            var ctx = Ctx(Formation.Build(front1: UnitCatalog.Dolga, center: UnitCatalog.DohaDPa, back1: UnitCatalog.Dolga), out var p, out var e);
+            var ctx = Ctx(Formation.Build(front1: UnitCatalog.DolgaH395, center: UnitCatalog.DohaDPa, back1: UnitCatalog.DolgaH395), out var p, out var e);
             var doha = p.First(u => u.Def.Id == "doha"); var dolga = p.First(u => u.Slot == 0); var mio = p.First(u => u.Slot == 3);
             ctx.ApplyDamage(dolga, 20, e[0]);
             ctx.ApplyDamage(mio, 30, e[0]);
@@ -571,13 +571,13 @@ static class Doha313Diag
         }
         // (b) 同じ額なら攻撃力 → 席
         {
-            var ctx = Ctx(Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Dolga, center: UnitCatalog.DohaDPa), out var p, out var e);
+            var ctx = Ctx(Formation.Build(front1: UnitCatalog.DolgaH395, front3: UnitCatalog.DolgaH395, center: UnitCatalog.DohaDPa), out var p, out var e);
             var doha = p.First(u => u.Def.Id == "doha");
             var d0 = p.First(u => u.Slot == 0); var d1 = p.First(u => u.Slot == 1);
             ctx.ApplyDamage(d0, 20, e[0]); ctx.ApplyDamage(d1, 20, e[0]);
             ctx.SharePushTurn(doha);
             Expect("(b) 同じ額・同じ攻撃力なら席の若い方", QueueFirstTo(ctx) == d0 && Tal(ctx, "doha").PushTies == 1, $"相手の席 {QueueFirstTo(ctx)?.Slot}");
-            var ctx2 = Ctx(Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Dolga, center: UnitCatalog.DohaDPa), out var p2, out var e2);
+            var ctx2 = Ctx(Formation.Build(front1: UnitCatalog.DolgaH395, front3: UnitCatalog.DolgaH395, center: UnitCatalog.DohaDPa), out var p2, out var e2);
             var doha2 = p2.First(u => u.Def.Id == "doha");
             var x0 = p2.First(u => u.Slot == 0); var x1 = p2.First(u => u.Slot == 1);
             ctx2.Whet(x1, 5);
@@ -587,7 +587,7 @@ static class Doha313Diag
         }
         // (c) DP-b: 上乗せがすべて移り、ドハは素の攻撃力に戻る
         {
-            var ctx = Ctx(Formation.Build(front1: UnitCatalog.Dolga, center: UnitCatalog.DohaDPb), out var p, out var e);
+            var ctx = Ctx(Formation.Build(front1: UnitCatalog.DolgaH395, center: UnitCatalog.DohaDPb), out var p, out var e);
             var doha = p.First(u => u.Def.Id == "doha"); var dolga = p.First(u => u.Def.Id == "dolga");
             ctx.Whet(doha, 30);
             ctx.ApplyDamage(dolga, 20, e[0]);   // 痛み ÷ 2 の返し（DH-a）は押す前に入る
@@ -595,7 +595,7 @@ static class Doha313Diag
             bool ok = ctx.SharePushTurn(doha);
             Expect("(c) DP-b: ドハの上乗せ 30 がすべて相手に移り、ドハは素の攻撃力に戻る", ok && doha.AtkBonus == 0 && doha.CurrentAttack == doha.Def.Attack && dolga.CurrentAttack == atk0 + 30 && Tal(ctx, "doha").PushPassed == 30,
                 $"ドハ {doha.CurrentAttack}（素 {doha.Def.Attack}）・ドルガ {atk0} → {dolga.CurrentAttack}");
-            var ctx2 = Ctx(Formation.Build(front1: UnitCatalog.Dolga, center: UnitCatalog.DohaDPa), out var p2, out var e2);
+            var ctx2 = Ctx(Formation.Build(front1: UnitCatalog.DolgaH395, center: UnitCatalog.DohaDPa), out var p2, out var e2);
             var doha2 = p2.First(u => u.Def.Id == "doha"); var dolga2 = p2.First(u => u.Def.Id == "dolga");
             ctx2.Whet(doha2, 30);
             ctx2.ApplyDamage(dolga2, 20, e2[0]);
@@ -604,7 +604,7 @@ static class Doha313Diag
         }
         // (d) DP-c: 味方に最も多く与えた敵に標が1層
         {
-            var ctx = Ctx(Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Gald, center: UnitCatalog.DohaDPc), out var p, out var e);
+            var ctx = Ctx(Formation.Build(front1: UnitCatalog.DolgaH395, front3: UnitCatalog.Gald, center: UnitCatalog.DohaDPc), out var p, out var e);
             var doha = p.First(u => u.Def.Id == "doha"); var dolga = p.First(u => u.Def.Id == "dolga"); var gald = p.First(u => u.Def.Id == "gald");
             ctx.ApplyDamage(dolga, 10, e[0]);
             ctx.ApplyDamage(gald, 25, e[1]);
@@ -617,7 +617,7 @@ static class Doha313Diag
         }
         // (e) 送り出された手番の中では押さない（連鎖しない）
         {
-            var ctx = Ctx(Formation.Build(front1: UnitCatalog.Dolga, center: UnitCatalog.DohaDPa), out var p, out var e);
+            var ctx = Ctx(Formation.Build(front1: UnitCatalog.DolgaH395, center: UnitCatalog.DohaDPa), out var p, out var e);
             var doha = p.First(u => u.Def.Id == "doha"); var dolga = p.First(u => u.Def.Id == "dolga");
             ctx.ApplyDamage(dolga, 20, e[0]);
             InGift.SetValue(ctx, true);

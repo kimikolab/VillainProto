@@ -44,7 +44,7 @@ static partial class Sh394Diag
         Console.WriteLine("| 項目 | 判定 | 備考 |");
         Console.WriteLine("|---|---|---|");
         UnitDef t = UnitCatalog.Tomo, h = UnitCatalog.TomoH393, t3 = UnitCatalog.TomoT3;
-        UnitDef d = UnitCatalog.Dolga, d0 = UnitCatalog.DolgaD0, d1 = UnitCatalog.DolgaD1, d2 = UnitCatalog.DolgaD2;
+        UnitDef d = UnitCatalog.DolgaH395, d0 = UnitCatalog.DolgaD0, d1 = UnitCatalog.DolgaD1, d2 = UnitCatalog.DolgaD2;
 
         // ---- 段0: 規定のトモ ----
         {
@@ -170,9 +170,9 @@ static partial class Sh394Diag
                 && d0.Traits.Skip(2).SequenceEqual(new[] { TraitId.SluggishShift }) && d1.Traits.Skip(2).SequenceEqual(new[] { TraitId.DolgaWall }) && d2.Traits.Skip(2).SequenceEqual(new[] { TraitId.SluggishShift, TraitId.DolgaWall })
                 && d0.MinusText == "2ターンに1回しか動けない（開戦のターンは構えて動かない）" && d2.MinusText == d0.MinusText && d1.MinusText == d.MinusText && d0.PlusText == d.PlusText
                 && d1.PlusText.EndsWith("休んでいるあいだは仲間の前に立ち、単体の攻撃を半分にして代わりに受ける", StringComparison.Ordinal) && d2.PlusText == d1.PlusText
-                && d.Traits.SequenceEqual(new[] { TraitId.Sluggish, TraitId.GradeStep }) && d.MinusText == "2ターンに1回しか動けない" && UnitCatalog.All.Contains(d)
-                && !UnitCatalog.Everyone.Any(u => u.Traits.Contains(TraitId.SluggishShift) || u.Traits.Contains(TraitId.DolgaWall));
-            string units = File.Exists("docs/units.md") ? File.ReadAllText("docs/units.md") : "", head = S390.GitShow($"{HeadSha}:docs/units.md");
+                && d.Traits.SequenceEqual(new[] { TraitId.Sluggish, TraitId.GradeStep }) && d.MinusText == "2ターンに1回しか動けない" && UnitCatalog.All.Contains(UnitCatalog.Dolga) && !UnitCatalog.All.Contains(d)   // 第396期: 旧の規定は `DolgaH395`
+                && !UnitCatalog.Everyone.Where(u => u != UnitCatalog.Dolga).Any(u => u.Traits.Contains(TraitId.SluggishShift) || u.Traits.Contains(TraitId.DolgaWall));
+            string units = S390.GitShow("ff751426:docs/units.md"), head = S390.GitShow($"{HeadSha}:docs/units.md");   // 第396期: 規定のドルガを替えたので、第395期の HEAD の表と比べる
             string Row(string s) => s.Split('\n').FirstOrDefault(l => l.StartsWith("| **のろまの巨兵ドルガ** |", StringComparison.Ordinal))?.TrimEnd('\r') ?? "";
             bool same = Row(units) != "" && Row(units) == Row(head);
             Expect("版の札と文面: D0 ＝ 規定 ＋ 開戦で構える ／ D1 ＋ 壁 ／ D2 ＝ 両方・文面は叩き台・`All` ／ `Retired` の外・規定のドルガは今どおり（`docs/units.md` の行が第393期の HEAD と同じ）", ok && same, $"units.md の行 {(same ? "同じ" : "違う")}");
@@ -209,7 +209,7 @@ static partial class Sh394Diag
             bool Has2(TraitId id, string must) => System.Text.RegularExpressions.Regex.IsMatch(src, $@"\[TraitId\.{id}\]\s*=\s*\(Hc[A-Za-z]+L,\s*""[^""]*{must}""");
             var miss = new List<string>();
             foreach (var id in new[] { TraitId.TaillightKeep, TraitId.TaillightWake, TraitId.TaillightCarry }) if (!Has2(id, "第394期から規定（トモ）")) miss.Add(id.ToString());
-            foreach (var id in new[] { TraitId.SluggishShift, TraitId.DolgaWall }) if (!Has2(id, "第394期[^\"]*保持者 0 枚")) miss.Add(id.ToString());
+            foreach (var id in new[] { TraitId.SluggishShift, TraitId.DolgaWall }) if (!Has2(id, "第394期[^\"]*(保持者 0 枚|第396期から規定（ドルガ）)")) miss.Add(id.ToString());   // 第396期: 規定のドルガが持つ
             Expect("`checkup` の札の分類表: トモの札 3 枚は「第394期から規定（トモ）」・ドルガの版の札 2 枚（開戦で構える ／ 壁）がある（ソースを読んで確かめる）", miss.Count == 0, miss.Count == 0 ? "" : "無い: " + string.Join("・", miss));
         }
 

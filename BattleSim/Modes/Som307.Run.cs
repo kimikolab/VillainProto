@@ -315,7 +315,7 @@ static partial class Som307Diag
             if (res[i].Win < 50 || res[i].SomN == 0) continue;
             var f = cells[i].F;
             var cur = f.Occupied().First(o => o.Def.Id == "som").Def;
-            int dw = WinsPar(FvSwap(f, cur, UnitCatalog.Dolga), cells[i].W, Seeds);
+            int dw = WinsPar(FvSwap(f, cur, UnitCatalog.DolgaH395), cells[i].W, Seeds);
             double dv = 100.0 * dw / Seeds;
             Console.WriteLine($"| {cells[i].W.Name} | {cells[i].Board} | {cells[i].V.Name} | {F1(res[i].Win)} | {F1(dv)} | {(dv * 2 <= res[i].Win ? "○" : "")} |");
         }
@@ -358,7 +358,7 @@ static partial class Som307Diag
                 for (int c = 0; c < fixedU.Length; c++)
                 {
                     var occ = f.Occupied().First(o => o.Def.Id == fixedU[c].Id).Def;
-                    ctl[v][c] = Wins(FvSwap(f, occ, UnitCatalog.Dolga), w, Seeds, out _);
+                    ctl[v][c] = Wins(FvSwap(f, occ, UnitCatalog.DolgaH395), w, Seeds, out _);
                 }
             }
             res[i] = new GridRes(boards[i], wins, wt, ctl);
@@ -515,8 +515,8 @@ static partial class Som307Diag
         // 直の盤面: 味方 ソム（版）・ドルガ・ゴルム ／ 敵 ドルガ ×3（ガルドは一撃で弾けない札を持つので使わない）
         BattleContext Ctx(UnitDef somDef, out List<UnitState> p, out List<UnitState> e, UnitDef? enemyCenter = null, Formation? pl = null)
         {
-            var ctx = H304.Ctx(pl ?? Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.GolmH344, center: somDef),
-                               Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Dolga, center: enemyCenter ?? UnitCatalog.Dolga), out p, out e);
+            var ctx = H304.Ctx(pl ?? Formation.Build(front1: UnitCatalog.DolgaH395, front3: UnitCatalog.GolmH344, center: somDef),
+                               Formation.Build(front1: UnitCatalog.DolgaH395, front3: UnitCatalog.DolgaH395, center: enemyCenter ?? UnitCatalog.DolgaH395), out p, out e);
             foreach (var u in p.Concat(e)) { u.MaxHp = 1000; u.Hp = 500; }
             return ctx;
         }
@@ -551,7 +551,7 @@ static partial class Som307Diag
             if (fod is not null) ctx.ApplyDamage(fod, 1, p.First(u => u.Def.Id == "dolga"));
             var t = H304.Tal(ctx, "som");
             // 糸玉: クグの組の盤面で、敵 e[0] の隣に糸玉を張り、e[0] を弾けさせる
-            var ctx2 = Ctx(UnitCatalog.SomSHa, out var p2, out var e2, pl: Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.KuguH324, center: UnitCatalog.SomSHa));
+            var ctx2 = Ctx(UnitCatalog.SomSHa, out var p2, out var e2, pl: Formation.Build(front1: UnitCatalog.DolgaH395, front3: UnitCatalog.KuguH324, center: UnitCatalog.SomSHa));
             var ball = ctx2.PlaceSilkBall(p2.First(u => u.Def.Id == "kugu"), e2[0]);
             ctx2.MarkShock(e2[0], SomOf(p2));
             ctx2.ApplyDamage(e2[0], 10, p2.First(u => u.Def.Id == "dolga"));
@@ -624,7 +624,7 @@ static partial class Som307Diag
 
         // (g) ベニの隣では光の癒しが傷になる
         {
-            var ctx = Ctx(UnitCatalog.SomSHa, out var p, out var e, pl: Formation.Build(front1: UnitCatalog.Dolga, center: UnitCatalog.Beni, back3: UnitCatalog.SomSHa));
+            var ctx = Ctx(UnitCatalog.SomSHa, out var p, out var e, pl: Formation.Build(front1: UnitCatalog.DolgaH395, center: UnitCatalog.Beni, back3: UnitCatalog.SomSHa));
             var s = SomOf(p); var d = p.First(u => u.Def.Id == "dolga"); var beni = p.First(u => u.Def.Id == "beni");
             bool adj = FormationRules.AreAdjacent(d, beni);
             ctx.MarkShock(e[0], s);

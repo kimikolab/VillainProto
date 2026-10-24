@@ -2523,6 +2523,11 @@ public sealed class UnitTally
     /// <summary>第395期（E1 ／ E12）: 休み番で壁に立てたのに HP が最大の半分を切っていて下がった回数 ／ ターンごと（計数のみ）。</summary>
     public long R395WallRetreats;
     public long[]? R395RetreatByTurn;
+    /// <summary>第396期（セッキの版・包む ／ 弾き返す・計数のみ）。包んだ回数 ／ 吸った量 ／ HP で受けた量 ／ ターンごとの吸った量 ／ 包まれた側の回数 ／ 帳簿の最大。</summary>
+    public long R396WrapHits, R396WrapAmt, R396WrapHp, R396WrappedFor, R396StoreMax;
+    public long[]? R396WrapByTurn;
+    /// <summary>第396期: 弾き返した回数 ／ 帳簿の量の合計 ／ 敵が失った HP の合計 ／ 1回の最大・きっかけ（割り込み＝叩き起こしなど ／ 灯の譲り ／ ターンギフト ／ 溢れ（自分の手番）／ ほか）。</summary>
+    public long R396Bursts, R396BurstAmt, R396BurstDealt, R396BurstMax, R396BurstInterrupt, R396BurstYield, R396BurstGift, R396BurstOverflow, R396BurstOther;
     public int R378Layer6Turn, R378Layer9Turn;
     public long R377ChainSaved;
     public int R377PeakTurn, R377AwakeTurn;
@@ -3862,6 +3867,10 @@ public sealed class UnitTally
         R391ChaseColumn += o.R391ChaseColumn; R391ChaseColumnUnits += o.R391ChaseColumnUnits; R391ChaseColumnHp += o.R391ChaseColumnHp;   // 第391期
         R394WallHits += o.R394WallHits; R394WallAmt += o.R394WallAmt; R394WallMitigated += o.R394WallMitigated; R394WalledFor += o.R394WalledFor; R394WallByTurn = AddArr(R394WallByTurn, o.R394WallByTurn);   // 第394期
         R395WallRetreats += o.R395WallRetreats; R395RetreatByTurn = AddArr(R395RetreatByTurn, o.R395RetreatByTurn);   // 第395期
+        R396WrapHits += o.R396WrapHits; R396WrapAmt += o.R396WrapAmt; R396WrapHp += o.R396WrapHp; R396WrappedFor += o.R396WrappedFor; R396StoreMax = Math.Max(R396StoreMax, o.R396StoreMax);   // 第396期
+        R396WrapByTurn = AddArr(R396WrapByTurn, o.R396WrapByTurn);
+        R396Bursts += o.R396Bursts; R396BurstAmt += o.R396BurstAmt; R396BurstDealt += o.R396BurstDealt; R396BurstMax = Math.Max(R396BurstMax, o.R396BurstMax);
+        R396BurstInterrupt += o.R396BurstInterrupt; R396BurstYield += o.R396BurstYield; R396BurstGift += o.R396BurstGift; R396BurstOverflow += o.R396BurstOverflow; R396BurstOther += o.R396BurstOther;
         R393Carried += o.R393Carried; R393CarryLights += o.R393CarryLights; R393Wakes += o.R393Wakes; R393WakeClearedIdle += o.R393WakeClearedIdle; R393WakeAteRally += o.R393WakeAteRally; R393RallyToLamp += o.R393RallyToLamp;   // 第393期
         if (R378Layer6Turn == 0) R378Layer6Turn = o.R378Layer6Turn;
         if (R378Layer9Turn == 0) R378Layer9Turn = o.R378Layer9Turn;

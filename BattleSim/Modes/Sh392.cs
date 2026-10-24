@@ -384,9 +384,9 @@ static partial class Sh392Diag
     static bool IsHealer(UnitDef d) => HealPool.Any(h => h.Id == d.Id);
     internal static readonly (string Name, UnitDef[] Core)[] Cores =
     {
-        ("トモ ＋ ガン ＋ ドルガ", new[] { UnitCatalog.TomoH393, UnitCatalog.Gan, UnitCatalog.Dolga }),   // 第394期: トモは第393期までの規定に固定
-        ("トモ ＋ ドルガ", new[] { UnitCatalog.TomoH393, UnitCatalog.Dolga }),
-        ("ガン ＋ ドルガ", new[] { UnitCatalog.Gan, UnitCatalog.Dolga }),
+        ("トモ ＋ ガン ＋ ドルガ", new[] { UnitCatalog.TomoH393, UnitCatalog.Gan, UnitCatalog.DolgaH395 }),   // 第396期: ドルガも旧に   // 第394期: トモは第393期までの規定に固定
+        ("トモ ＋ ドルガ", new[] { UnitCatalog.TomoH393, UnitCatalog.DolgaH395 }),
+        ("ガン ＋ ドルガ", new[] { UnitCatalog.Gan, UnitCatalog.DolgaH395 }),
     };
     /// <summary>残りの枠の候補: ロスター 52 枚から芯の駒とツギ ／ リリを除いた駒。ヒーラー（`Boss283Diag.HealPoolNow`）は残りの枠に1枚まで。</summary>
     internal static UnitDef[] Cands(UnitDef[] core) => UnitCatalog.All.Where(d => !core.Any(c => c.Id == d.Id) && d.Id is not "tsugi" and not "lili").ToArray();

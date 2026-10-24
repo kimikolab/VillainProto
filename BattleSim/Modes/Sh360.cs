@@ -80,7 +80,7 @@ static partial class Sh360Diag
     // 台
     // ---------------------------------------------------------------------------------
     internal static readonly UnitDef[] Fixed = { UnitCatalog.SasaH360, UnitCatalog.Hibi, UnitCatalog.GareH364 };
-    internal static readonly UnitDef[] Pool = { UnitCatalog.Uro, UnitCatalog.Gald, UnitCatalog.Dolga, UnitCatalog.Golm, UnitCatalog.Nel, UnitCatalog.Ban, UnitCatalog.Kubi, UnitCatalog.Som };
+    internal static readonly UnitDef[] Pool = { UnitCatalog.Uro, UnitCatalog.Gald, UnitCatalog.DolgaH395, UnitCatalog.Golm, UnitCatalog.Nel, UnitCatalog.Ban, UnitCatalog.Kubi, UnitCatalog.Som };
     internal static Formation ByKey(string key)
     {
         var defs = key.Split('・').Select(n => Fixed.Concat(Pool).Append(UnitCatalog.Tsugi).First(d => Short(d) == n)).ToArray();

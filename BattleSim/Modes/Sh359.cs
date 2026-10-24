@@ -83,7 +83,7 @@ static partial class Sh359Diag
     static Formation Row(string n) => CompareBuilds().Concat(CrossBuilds()).First(r => r.Name == n).F;
     internal const string KeyA = "ウロ・ガルド・ガレ・ツギ・ヒビ", KeyB = "ドルガ・ササ・ゴルム・ヒビ・ガレ";   // 第358期の A ／ B（駒は規定・段0 入り）
     internal static readonly UnitDef[] Fixed = { UnitCatalog.HibiH359, UnitCatalog.GareH364 };
-    internal static readonly UnitDef[] Pool = { UnitCatalog.Uro, UnitCatalog.Tsugi, UnitCatalog.SasaH360, UnitCatalog.Gald, UnitCatalog.Dolga, UnitCatalog.Golm, UnitCatalog.Nel };
+    internal static readonly UnitDef[] Pool = { UnitCatalog.Uro, UnitCatalog.Tsugi, UnitCatalog.SasaH360, UnitCatalog.Gald, UnitCatalog.DolgaH395, UnitCatalog.Golm, UnitCatalog.Nel };
     internal static Formation ByKey(string key)
     {
         var defs = key.Split('・').Select(n => Fixed.Concat(Pool).First(d => Short(d) == n)).ToArray();

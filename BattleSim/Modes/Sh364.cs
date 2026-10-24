@@ -81,7 +81,7 @@ static partial class Sh364Diag
     internal static readonly UnitDef[] AkaFixed = { UnitCatalog.Kado, UnitCatalog.SusuH364 };
     internal static readonly UnitDef[] AkaPool = { UnitCatalog.Rica, UnitCatalog.Tome, UnitCatalog.Guza, UnitCatalog.Borg, UnitCatalog.Hisa, UnitCatalog.Doha, UnitCatalog.Mudo, UnitCatalog.Lili };
     internal static readonly UnitDef[] GareFixed = { UnitCatalog.Sasa, UnitCatalog.Hibi, UnitCatalog.GareH364 };
-    internal static readonly UnitDef[] GarePool = { UnitCatalog.Uro, UnitCatalog.Gald, UnitCatalog.Dolga, UnitCatalog.Golm, UnitCatalog.Nel, UnitCatalog.Ban, UnitCatalog.Kubi, UnitCatalog.Som };
+    internal static readonly UnitDef[] GarePool = { UnitCatalog.Uro, UnitCatalog.Gald, UnitCatalog.DolgaH395, UnitCatalog.Golm, UnitCatalog.Nel, UnitCatalog.Ban, UnitCatalog.Kubi, UnitCatalog.Som };
     internal static Formation ByKey(string key)
     {
         var all = AkaFixed.Concat(AkaPool).Concat(GareFixed).Concat(GarePool).ToArray();

@@ -83,7 +83,7 @@ static class Sh376Diag
                 && v.PlusText == h.PlusText && UnitCatalog.All.Contains(v) && !UnitCatalog.All.Contains(h) && UnitCatalog.All.Count == 52 && h.Traits.SequenceEqual(UnitCatalog.VioVa.Traits);
             bool pins = PinV375(v) == h && PinV375(UnitCatalog.Gald) == UnitCatalog.Gald && PinS374(v) == h && PinV372(v) == UnitCatalog.VioH372 && PinV372(h) == UnitCatalog.VioH372
                 && PinGVS371(h) == UnitCatalog.VioH371 && PinGVH367(h) == UnitCatalog.VioH367
-                && Pin375(Presets.PoisonHero367()).Occupied().Select(o => o.Def).SequenceEqual(Presets.PoisonHero367(vio: h).Occupied().Select(o => o.Def));
+                && Pin375(Pin395(Presets.PoisonHero367())).Occupied().Select(o => o.Def).SequenceEqual(Pin395(Presets.PoisonHero367(vio: h)).Occupied().Select(o => o.Def));
             Expect("段0: 規定のヴィオ ＝ 第375期の規定（`VioH375` ＝ Va）＋ 血を啜る・マイナスは第374期の版 C の文面・旧の定義 `VioH375`（`All` の外）・固定の口（`Pin375` ／ `PinS374` ／ `PinV372` ／ `PinGVS371` ／ `PinGVH367` が旧へ）", cards && pins);
         }
         {
@@ -91,7 +91,7 @@ static class Sh376Diag
             var diffs = new List<string>();
             foreach (var n in new[] { "試遊・毒", "試遊・毒 席替え", "試遊・毒 紅" })
             {
-                var now = Presets.Versions.First(r => r.Name == n).F;
+                var now = Pin395(Presets.Versions.First(r => r.Name == n).F);   // 第396期: ドルガは第395期までの規定に固定
                 var old = Pin375(now);
                 foreach (var w in Waves)
                     for (int sd = 0; sd < 10; sd++)

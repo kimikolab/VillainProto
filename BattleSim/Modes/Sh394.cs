@@ -64,8 +64,8 @@ static partial class Sh394Diag
     // 版 ／ 列 ／ 台
     // ---------------------------------------------------------------------------------
     internal static readonly (string Name, UnitDef D)[] Vers =
-        { ("規定", UnitCatalog.Dolga), ("D0", UnitCatalog.DolgaD0), ("D1", UnitCatalog.DolgaD1), ("D2", UnitCatalog.DolgaD2) };
-    internal static UnitDef PlainDolga => _plain ??= S392.Plain(UnitCatalog.Dolga);
+        { ("規定", UnitCatalog.DolgaH395), ("D0", UnitCatalog.DolgaD0), ("D1", UnitCatalog.DolgaD1), ("D2", UnitCatalog.DolgaD2) };
+    internal static UnitDef PlainDolga => _plain ??= S392.Plain(UnitCatalog.DolgaH395);   // 第396期: 旧の規定（数値は同じ）
     static UnitDef? _plain;
     /// <summary>列: 規定 ／ D0 ／ D1 ／ D2 ／ ドルガを素体に替えた台（第392 ／ 393期と同じ素体）。</summary>
     internal static (string Name, UnitDef D)[] Cols => Vers.Append(("素体", PlainDolga)).ToArray();

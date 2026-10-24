@@ -327,7 +327,7 @@ static class Tou323Diag
             if (vers.Any(v => res[(bn, v.Name, w.Name)].Wins * 2 >= Seeds))
             {
                 guza[(bn, w.Name)] = WinsLite(S316.SwapId(bf, "tou", UnitCatalog.GuzaH367)   /* 第368期: 第367期までのグザに固定 */, w);
-                dolga[(bn, w.Name)] = WinsLite(S316.SwapId(bf, "tou", UnitCatalog.Dolga), w);
+                dolga[(bn, w.Name)] = WinsLite(S316.SwapId(bf, "tou", UnitCatalog.DolgaH395), w);
             }
         Console.WriteLine($"# {tag} §3-2 代表台 {boards.Length} × {Waves.Length} 波 × 版（{string.Join(" ／ ", vers.Select(v => v.Name))}）・seed 0..{Seeds - 1}");
         Console.WriteLine();
@@ -645,8 +645,8 @@ static class Tou323Diag
         TurnProp.SetValue(ctx, 1);
         return ctx;
     }
-    internal static UnitDef Wall => UnitCatalog.Dolga.WithStats(5000, 1);
-    internal static UnitDef Mate => UnitCatalog.Dolga.WithStats(5000, 1);
+    internal static UnitDef Wall => UnitCatalog.DolgaH395.WithStats(5000, 1);
+    internal static UnitDef Mate => UnitCatalog.DolgaH395.WithStats(5000, 1);
     internal static int Shock(UnitState u) => u.RawCounter(StatusKeys.Shock);
     internal static int Spent(BattleContext ctx, UnitState u, int from) => ctx.Events.Skip(from).Count(x => x.Kind == BattleEventKind.ShockSpent && x.TargetId == u.InstanceId);
     static List<int> DisAmounts(BattleContext ctx, UnitState src, int from) => ctx.Events.Skip(from).Where(x => x.Kind == BattleEventKind.Discharge && x.ActorId == src.InstanceId).Select(x => x.Amount).ToList();

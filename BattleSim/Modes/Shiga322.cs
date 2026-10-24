@@ -246,7 +246,7 @@ static class Shiga322Diag
         foreach (var (bn, bf) in boards) foreach (var v in vers) foreach (var w in Waves) res[(bn, v.Name, w.Name)] = Measure(Apply(bf, v.Def), w);
         var dolga = new Dictionary<(string, string), int>();
         foreach (var (bn, bf) in boards) foreach (var w in Waves)
-            if (vers.Any(v => res[(bn, v.Name, w.Name)].S.Wins * 2 >= Seeds)) dolga[(bn, w.Name)] = WinsLite(Apply(bf, UnitCatalog.Dolga), w);
+            if (vers.Any(v => res[(bn, v.Name, w.Name)].S.Wins * 2 >= Seeds)) dolga[(bn, w.Name)] = WinsLite(Apply(bf, UnitCatalog.DolgaH395), w);
         Console.WriteLine($"# 第322期 §5-2 ／ §5-5 代表台 {boards.Length} × {Waves.Length} 波 × 版（{string.Join(" ／ ", vers.Select(v => v.Name))}）・seed 0..{Seeds - 1}");
         Console.WriteLine();
         Console.WriteLine("## 1. 勝率（括弧は規定との差）と対照（シガ → ドルガ・どれかの版で 50% 以上のセルだけ）");
@@ -433,8 +433,8 @@ static class Shiga322Diag
             var fv = Apply(f0, v.Def);
             if (Wins(f0, cut).W < 5 && Wins(fv, cut).W < 5) return;
             var (wb, tb) = Wins(f0, Seeds); var (wv, tv) = Wins(fv, Seeds);
-            int db = wb * 2 >= Seeds ? Wins(Apply(f0, UnitCatalog.Dolga), Seeds).W : -1;
-            int dv = wv * 2 >= Seeds ? (db >= 0 ? db : Wins(Apply(f0, UnitCatalog.Dolga), Seeds).W) : -1;
+            int db = wb * 2 >= Seeds ? Wins(Apply(f0, UnitCatalog.DolgaH395), Seeds).W : -1;
+            int dv = wv * 2 >= Seeds ? (db >= 0 ? db : Wins(Apply(f0, UnitCatalog.DolgaH395), Seeds).W) : -1;
             res[i] = (wb, wv, db, dv, tb, tv);
         });
         var all = res.Where(r => r is not null).Select(r => r!.Value).ToList();
@@ -523,7 +523,7 @@ static class Shiga322Diag
         TurnProp.SetValue(ctx, 1);
         return ctx;
     }
-    static UnitDef Wall => UnitCatalog.Dolga.WithStats(5000, 1);
+    static UnitDef Wall => UnitCatalog.DolgaH395.WithStats(5000, 1);
     static int Shock(UnitState u) => u.RawCounter(StatusKeys.Shock);
     static int Spent(BattleContext ctx, UnitState u, int from, string? text = null) =>
         ctx.Events.Skip(from).Count(x => x.Kind == BattleEventKind.ShockSpent && x.TargetId == u.InstanceId && (text is null || x.Text == text));
@@ -613,7 +613,7 @@ static class Shiga322Diag
 
         // ---- SD: シガ以外の一撃では消える
         {
-            var ctx = Ctx(Formation.Build(front1: UnitCatalog.ShigaSD, front3: UnitCatalog.Dolga), Formation.Build(front1: Wall), out var p, out var e);
+            var ctx = Ctx(Formation.Build(front1: UnitCatalog.ShigaSD, front3: UnitCatalog.DolgaH395), Formation.Build(front1: Wall), out var p, out var e);
             var dolga = p.First(u => u.Def.Id == "dolga");
             ctx.MarkShock(e[0], e[0]);
             int from = ctx.Events.Count;

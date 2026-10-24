@@ -737,13 +737,32 @@ public static readonly string[] VersionRows392 = { "試遊・手番 探索1位" 
 public static readonly string[] VersionRows393 = { "版・灯 手番" };
 public static (string Name, Formation F)[] VersionsH392() => VersionsH393().Where(r => !VersionRows393.Contains(r.Name)).ToArray();   // 第394期: 第393期の一覧から
 /// <summary>第394期: 第393期の T3 を規定のトモにした（旧は `TomoH393`）。第393期までの器具はトモを旧に固定する。ほかの駒はそのまま返す。古い口の終端（`PinH389` ／ `PinH391`）の後ろにも置いた。</summary>
-public static UnitDef PinT393(UnitDef d) => ReferenceEquals(d, UnitCatalog.Tomo) ? UnitCatalog.TomoH393 : d;
+public static UnitDef PinT393(UnitDef d) => ReferenceEquals(d, UnitCatalog.Tomo) ? UnitCatalog.TomoH393 : PinD395(d);   // 第396期: 規定のドルガも旧へ（古い口の終端）
+/// <summary>第396期: ドルガ ＝ 第395期の E1 を規定にした。第395期までの規定のドルガで測った器具はこれを通す（ドルガ → `DolgaH395`）。ほかの駒はそのまま返す。</summary>
+public static UnitDef PinD395(UnitDef d) => ReferenceEquals(d, UnitCatalog.Dolga) ? UnitCatalog.DolgaH395 : d;
+public static Formation Pin395(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinD395(d); return g; }
 public static Formation Pin393(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinT393(d); return g; }
 /// <summary>第394期: 「版・灯 手番」を「試遊・手番 芯3枚」（規定のトモ）に改め、末尾に「版・壁 ドルガ」を足した。第393期の一覧は、足した台を外し、改めた台を第393期の名前と T3 に戻し、各台のトモを旧に固定した写し。</summary>
 public static readonly string[] VersionRows394 = { "版・壁 ドルガ" };
 /// <summary>第395期: `Presets.Versions` の末尾に「版・壁 E」を足した。第394期の一覧（足す前）は、その台を除いた写し。</summary>
 public static readonly string[] VersionRows395 = { "版・壁 E" };
-public static (string Name, Formation F)[] VersionsH394() => Presets.Versions.Where(r => !VersionRows395.Contains(r.Name)).ToArray();
+public static (string Name, Formation F)[] VersionsH394() => VersionsH395().Where(r => !VersionRows395.Contains(r.Name)).ToArray();   // 第396期: 第395期の一覧から
+/// <summary>第396期: 「版・包み セッキ」を足し、「版・壁 ドルガ」を外し、「版・壁 E」を「試遊・手番 縛め」（規定のドルガ）に改めた。第395期の一覧はそれを戻した写し（ドルガは旧）。</summary>
+public static readonly string[] VersionRows396 = { "版・包み セッキ" };
+public static (string Name, Formation F)[] VersionsH395()
+{
+    var l = new List<(string Name, Formation F)>();
+    foreach (var r in Presets.Versions.Where(r => !VersionRows396.Contains(r.Name)))
+    {
+        if (r.Name == "試遊・手番 縛め")
+        {
+            l.Add(("版・壁 ドルガ", Presets.TempoLamp393(UnitCatalog.Tomo, UnitCatalog.DolgaD2)));
+            l.Add(("版・壁 E", Presets.BindTempo395(UnitCatalog.DolgaE1)));
+        }
+        else l.Add((r.Name, Pin395(r.F)));
+    }
+    return l.ToArray();
+}
 public static (string Name, Formation F)[] VersionsH393() =>
     VersionsH394().Where(r => !VersionRows394.Contains(r.Name))   /* 第395期: 第394期の一覧から */.Select(r => r.Name == "試遊・手番 芯3枚" ? ("版・灯 手番", Presets.TempoLamp393(UnitCatalog.TomoT3)) : (r.Name, Pin393(r.F))).ToArray();
 public static (string Name, Formation F)[] VersionsH391() =>

@@ -364,7 +364,7 @@ static class Som318Diag
         foreach (var c in cells.Where(c => c.S.Win >= 50))
         {
             var fv = Apply(c.F0, c.V);
-            ctl[(c.B, c.W.Name, c.V.Name)] = F1(100.0 * WinsLite(S309.Swap(fv, c.V.Som, UnitCatalog.Dolga), c.W, Seeds) / Seeds);
+            ctl[(c.B, c.W.Name, c.V.Name)] = F1(100.0 * WinsLite(S309.Swap(fv, c.V.Som, UnitCatalog.DolgaH395), c.W, Seeds) / Seeds);
         }
 
         Console.WriteLine($"# 第318期 §5-2 代表台 × 波 × 版（{string.Join(" ／ ", vers.Select(v => v.Name))}・seed 0..{Seeds - 1}・verbose）");
@@ -557,7 +557,7 @@ static class Som318Diag
             Interlocked.Increment(ref cutPass);
             int wins = W(f, w, Seeds, out long wt);
             int ctl = -1;
-            if (wins * 2 >= Seeds) ctl = W(S309.Swap(f, v.Som, UnitCatalog.Dolga), w, Seeds, out _);
+            if (wins * 2 >= Seeds) ctl = W(S309.Swap(f, v.Som, UnitCatalog.DolgaH395), w, Seeds, out _);
             res[i] = (wins, wt, ctl);
         });
         var all = res.Where(r => r is not null).Select(r => r!.Value).ToList();

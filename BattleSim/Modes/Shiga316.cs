@@ -154,7 +154,7 @@ static class Shiga316Diag
                 foreach (var w in st ? strong : waves)
                 {
                     var v = DVers.Select(x => DMeasure(SwapId(bf, "doha", x.Def), w)).ToArray();
-                    string dolga = v.Any(x => x.WinRate >= 50) ? DMeasure(SwapId(bf, "doha", UnitCatalog.Dolga), w).Win : "—";
+                    string dolga = v.Any(x => x.WinRate >= 50) ? DMeasure(SwapId(bf, "doha", UnitCatalog.DolgaH395), w).Win : "—";
                     var s = v[3];
                     double dd = s.WinRate - v[1].WinRate;
                     if (st && bn0 == "守り型") { gb.Add($"{w.Name} {Sg(dd)}"); if (Math.Abs(dd) > 5) gbOk = false; }
@@ -286,7 +286,7 @@ static class Shiga316Diag
                 double b = Best(basis, out var sb), v = Best(dv, out var sv);
                 if (Math.Max(b, v) < 50) return;
                 var seat = v >= b ? sv : sb;
-                double dolga = 100.0 * Wins(Seat(new[] { UnitCatalog.Dolga, atk, c[0], c[1], c[2] }, seat)) / seeds;
+                double dolga = 100.0 * Wins(Seat(new[] { UnitCatalog.DolgaH395, atk, c[0], c[1], c[2] }, seat)) / seeds;
                 rows.Add((Short(atk), b, v, dolga));
             });
         }
@@ -569,7 +569,7 @@ static class Shiga316Diag
             {
                 var v = vers.Select(x => Measure(SwapId(bf, "shiga", x.Def), w)).ToArray();
                 detail.Add((w, v));
-                string dolga = v.Any(x => x.WinRate >= 50) ? Measure(SwapId(bf, "shiga", UnitCatalog.Dolga), w).Win : "—";
+                string dolga = v.Any(x => x.WinRate >= 50) ? Measure(SwapId(bf, "shiga", UnitCatalog.DolgaH395), w).Win : "—";
                 Console.WriteLine($"| {w.Name} | {string.Join(" | ", v.Select((x, i) => i == 0 ? x.Win : $"{x.Win}（{Sg(x.WinRate - v[0].WinRate)}）"))} | {dolga} | "
                     + $"{string.Join(" ／ ", v.Select(x => x.WinTurn))} | {string.Join(" ／ ", v.Select(x => x.LossTurn))} | {string.Join(" ／ ", v.Select(x => x.Life))} |");
                 double th = w.Boss ? 3 : 5, gth = w.Boss ? 5 : 10;
@@ -669,8 +669,8 @@ static class Shiga316Diag
             var fv = SwapId(f0, "shiga", v.Def);
             if (Wins(f0, cut) < 5 && Wins(fv, cut) < 5) return;
             int wb = Wins(f0, Seeds), wv = Wins(fv, Seeds);
-            int db = wb * 2 >= Seeds ? Wins(SwapId(f0, "shiga", UnitCatalog.Dolga), Seeds) : -1;
-            int dv = wv * 2 >= Seeds ? (db >= 0 ? db : Wins(SwapId(f0, "shiga", UnitCatalog.Dolga), Seeds)) : -1;
+            int db = wb * 2 >= Seeds ? Wins(SwapId(f0, "shiga", UnitCatalog.DolgaH395), Seeds) : -1;
+            int dv = wv * 2 >= Seeds ? (db >= 0 ? db : Wins(SwapId(f0, "shiga", UnitCatalog.DolgaH395), Seeds)) : -1;
             res[i] = (wb, wv, db, dv);
         });
         var all = res.Where(r => r is not null).Select(r => r!.Value).ToList();
@@ -782,7 +782,7 @@ static class Shiga316Diag
         TurnProp.SetValue(ctx, 1);
         return ctx;
     }
-    static UnitDef Wall => UnitCatalog.Dolga.WithStats(5000, 1);
+    static UnitDef Wall => UnitCatalog.DolgaH395.WithStats(5000, 1);
 
     static void Check()
     {

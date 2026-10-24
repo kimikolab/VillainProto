@@ -352,7 +352,7 @@ static class Som314Diag
         foreach (var c in cells.Where(c => c.S.Win >= 50))
         {
             var fv = Apply(c.F0, c.V);
-            ctl[(c.B, c.W.Name, c.V.Name)] = F1(100.0 * WinsLite(S309.Swap(fv, c.V.Som, UnitCatalog.Dolga), c.W, Seeds, out _) / Seeds);
+            ctl[(c.B, c.W.Name, c.V.Name)] = F1(100.0 * WinsLite(S309.Swap(fv, c.V.Som, UnitCatalog.DolgaH395), c.W, Seeds, out _) / Seeds);
         }
 
         Console.WriteLine($"# 第314期 §4-2 代表台 × 波 × 版（{string.Join(" ／ ", vers.Select(v => v.Name))}・seed 0..{Seeds - 1}・verbose）");
@@ -501,7 +501,7 @@ static class Som314Diag
             ("火の型 ソラ→H", S309.Swap(Playtest("試遊・感電 火の型"), UnitCatalog.Sora, som), S309.Swap(Playtest("試遊・感電 火の型"), UnitCatalog.Sora, tsugi)),
             ("勝ち台 ツギの席（元の勝ち台）", S309.Swap(win, tsugi, som), win),
             ("勝ち台 ゴルム→H", S309.Swap(win, UnitCatalog.GolmH344, som), null),
-            ("感電 行（もう片方 → ドルガ）", S309.Swap(shock, tsugi, UnitCatalog.Dolga), S309.Swap(shock, som, UnitCatalog.Dolga)),
+            ("感電 行（もう片方 → ドルガ）", S309.Swap(shock, tsugi, UnitCatalog.DolgaH395), S309.Swap(shock, som, UnitCatalog.DolgaH395)),
             ("光の盾", Playtest(S309.Shield), S309.Swap(Playtest(S309.Shield), som, tsugi)),
             ("光の盾 重", Playtest(S309.ShieldHeavy), S309.Swap(Playtest(S309.ShieldHeavy), som, tsugi)),
         };
@@ -579,7 +579,7 @@ static class Som314Diag
             Interlocked.Increment(ref cutPass);
             int wins = W(f, w, Seeds, out long wt);
             int ctl = -1;
-            if (wins * 2 >= Seeds) ctl = W(S309.Swap(f, v.Som, UnitCatalog.Dolga), w, Seeds, out _);
+            if (wins * 2 >= Seeds) ctl = W(S309.Swap(f, v.Som, UnitCatalog.DolgaH395), w, Seeds, out _);
             res[i] = (wins, wt, ctl);
         });
         var all = res.Where(r => r is not null).Select(r => r!.Value).ToList();

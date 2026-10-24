@@ -305,9 +305,9 @@ static class Som311Diag
         {
             var fv = c.V.Apply(c.F0);
             var somDef = fv.Occupied().First(o => o.Def.Id == "som").Def;
-            string s = F1(100.0 * WinsLite(S309.Swap(fv, somDef, UnitCatalog.Dolga), c.W, Seeds, out _) / Seeds);
+            string s = F1(100.0 * WinsLite(S309.Swap(fv, somDef, UnitCatalog.DolgaH395), c.W, Seeds, out _) / Seeds);
             if (c.V.Name is "萎縮" or "重ね" && HasId(fv, "kubi"))
-                s += "／ク " + F1(100.0 * WinsLite(S309.Swap(fv, UnitCatalog.Kubi, UnitCatalog.Dolga), c.W, Seeds, out _) / Seeds);
+                s += "／ク " + F1(100.0 * WinsLite(S309.Swap(fv, UnitCatalog.Kubi, UnitCatalog.DolgaH395), c.W, Seeds, out _) / Seeds);
             ctl[(c.B, c.W.Name, c.V.Name)] = s;
         }
 
@@ -512,7 +512,7 @@ static class Som311Diag
             Interlocked.Increment(ref cutPass);
             int wins = W(f, w, Seeds, out long wt);
             int ctl = -1;
-            if (wins * 2 >= Seeds) { var som = f.Occupied().First(o => o.Def.Id == "som").Def; ctl = W(S309.Swap(f, som, UnitCatalog.Dolga), w, Seeds, out _); }
+            if (wins * 2 >= Seeds) { var som = f.Occupied().First(o => o.Def.Id == "som").Def; ctl = W(S309.Swap(f, som, UnitCatalog.DolgaH395), w, Seeds, out _); }
             res[i] = (wins, wt, ctl);
         });
         var all = res.Where(r => r is not null).Select(r => r!.Value).ToList();
@@ -556,7 +556,7 @@ static class Som311Diag
                 ("被ダメ −30%（`Huddle`）", S309.Swap(f, UnitCatalog.Kubi, Without(UnitCatalog.Kubi, TraitId.Huddle))),
                 ("萎縮（`Daunt`）", S309.Swap(f, UnitCatalog.Kubi, Without(UnitCatalog.Kubi, TraitId.Daunt))),
                 ("漏れ（`DauntLeak`）", S309.Swap(f, UnitCatalog.Kubi, Without(UnitCatalog.Kubi, TraitId.DauntLeak))),
-                ("クビ → ドルガ", S309.Swap(f, UnitCatalog.Kubi, UnitCatalog.Dolga)),
+                ("クビ → ドルガ", S309.Swap(f, UnitCatalog.Kubi, UnitCatalog.DolgaH395)),
                 ("クビ → シガ", S309.Swap(f, UnitCatalog.Kubi, UnitCatalog.ShigaSWa)),
             })
             {

@@ -88,7 +88,7 @@ static class Som309Diag
             ("火の型 ソラ→H", "試遊", Swap(Playtest("試遊・感電 火の型"), UnitCatalog.Sora, Som), Swap(Playtest("試遊・感電 火の型"), UnitCatalog.Sora, Tsugi)),
             ("勝ち台 ツギの席（元の勝ち台）", "代表台 ／ 元の勝ち台", Swap(win, Tsugi, Som), win),
             ("勝ち台 ゴルム→H", "代表台", Swap(win, UnitCatalog.GolmH344, Som), null),   // 第345期: 勝ち台は固定の口を通るのでゴルムは `GolmH344`
-            ("感電 行（もう片方 → ドルガ）", "compare", Swap(shock, Tsugi, UnitCatalog.Dolga), Swap(shock, Som, UnitCatalog.Dolga)),
+            ("感電 行（もう片方 → ドルガ）", "compare", Swap(shock, Tsugi, UnitCatalog.DolgaH395), Swap(shock, Som, UnitCatalog.DolgaH395)),
         };
         if (PlaytestH311.Any(r => r.Name == Shield)) list.Add(("光の盾", "試遊（§3-1）", Playtest(Shield), Swap(Playtest(Shield), Som, Tsugi)));
         if (PlaytestH311.Any(r => r.Name == ShieldHeavy)) list.Add(("光の盾 重", "試遊（§3-1）", Playtest(ShieldHeavy), Swap(Playtest(ShieldHeavy), Som, Tsugi)));
@@ -268,7 +268,7 @@ static class Som309Diag
             {
                 var f = Playtest(n);
                 var a = Measure(f, w);
-                int dv = WinsLite(Swap(f, Som, UnitCatalog.Dolga), w, Seeds, out _);
+                int dv = WinsLite(Swap(f, Som, UnitCatalog.DolgaH395), w, Seeds, out _);
                 Console.WriteLine($"| {n} | {w.Name} | {F1(a.Win)} | {Per1(a.WinT, a.Wins)} | {Per1(a.LoseT, a.N - a.Wins)}{(a.Caps > 0 ? $"（上限 {Pct(a.Caps, a.N)}）" : "")} | {Dt(a.FirstDeathN, a.FirstDeathT, a.N)} | {Dt(a.HDied, a.HDeathT, a.N)} | "
                     + $"{Per0(a.SomHealed, a.N)} ／ {Per0(a.VeilSoaked, a.N)} ／ {Per0(a.VeilAdded, a.N)} | {F1(100.0 * dv / Seeds)} |");
             }
@@ -383,7 +383,7 @@ static class Som309Diag
                 var fixedV = fixedBase.Append(hs[v]).ToArray();
                 ctl[v] = fixedV.Select(_ => -1).ToArray();
                 if (w.Boss ? wins[v] == 0 : wins[v] * 2 < Seeds) continue;
-                for (int c = 0; c < fixedV.Length; c++) ctl[v][c] = W(Swap(fs[v], fixedV[c], UnitCatalog.Dolga), w, Seeds, out _);
+                for (int c = 0; c < fixedV.Length; c++) ctl[v][c] = W(Swap(fs[v], fixedV[c], UnitCatalog.DolgaH395), w, Seeds, out _);
             }
             res[i] = new GR(boards[i], wins, wt, ctl);
         });
@@ -561,7 +561,7 @@ static class Som309Diag
                 var diff = Enumerable.Range(0, FormationRules.PlayableSlotCount).Where(i => !ReferenceEquals(s[i], t[i])).ToList();
                 bool one = diff.Count == 1 && s.Shape == t.Shape && Enumerable.Range(0, FormationRules.PlayableSlotCount).All(i => s.RelicAt(i) == t.RelicAt(i));
                 bool hs = n.StartsWith("感電 行", StringComparison.Ordinal)
-                    ? diff.Count == 2 && ReferenceEquals(s[diff[0]], UnitCatalog.Dolga) != ReferenceEquals(t[diff[0]], UnitCatalog.Dolga)
+                    ? diff.Count == 2 && ReferenceEquals(s[diff[0]], UnitCatalog.DolgaH395) != ReferenceEquals(t[diff[0]], UnitCatalog.DolgaH395)
                     : one && ReferenceEquals(s[diff[0]], som) && ReferenceEquals(t[diff[0]], UnitCatalog.Tsugi);
                 if (!hs) { ok = false; notes.Add(n); }
             }

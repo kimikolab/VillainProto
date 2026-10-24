@@ -26,7 +26,7 @@ static partial class Sh393Diag
     static (BattleContext C, UnitState T, UnitState D, UnitState M, List<UnitState> P) Bench(UnitDef tomo, int turn, bool gan = false, bool ban = false)
     {
         var ctx = new BattleContext(0, true);
-        var f = new Formation(); f[4] = tomo; f[0] = UnitCatalog.Dolga; f[1] = Mate;
+        var f = new Formation(); f[4] = tomo; f[0] = UnitCatalog.DolgaH395; f[1] = Mate;   // 第396期: ドルガは第395期までの規定に固定
         if (gan) f[2] = UnitCatalog.Gan;
         if (ban) f[3] = UnitCatalog.Ban;
         var g = new Formation(); g[0] = Foe;

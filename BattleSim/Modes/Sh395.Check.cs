@@ -54,7 +54,7 @@ static partial class Sh395Diag
         Console.WriteLine();
         Console.WriteLine("| 項目 | 判定 | 備考 |");
         Console.WriteLine("|---|---|---|");
-        UnitDef d = UnitCatalog.Dolga, d2 = UnitCatalog.DolgaD2, e1 = UnitCatalog.DolgaE1, e2 = UnitCatalog.DolgaE2, e12 = UnitCatalog.DolgaE12;
+        UnitDef d = UnitCatalog.DolgaH395, d2 = UnitCatalog.DolgaD2, e1 = UnitCatalog.DolgaE1, e2 = UnitCatalog.DolgaE2, e12 = UnitCatalog.DolgaE12;
         int max = d.MaxHp;   // 85
 
         // ---- 版の札と文面 ----
@@ -66,7 +66,7 @@ static partial class Sh395Diag
                 && e1.PlusText.EndsWith("単体の攻撃を半分にして代わりに受ける（自分が半分まで傷つくと下がる）", StringComparison.Ordinal)
                 && e2.PlusText.EndsWith("単体の攻撃の 3 割を代わりに受ける", StringComparison.Ordinal)
                 && e12.PlusText.EndsWith("単体の攻撃の 3 割を代わりに受ける（自分が半分まで傷つくと下がる）", StringComparison.Ordinal)
-                && !UnitCatalog.Everyone.Any(u => u.Traits.Contains(TraitId.DolgaWallRetreat) || u.Traits.Contains(TraitId.DolgaWallLight));
+                && !UnitCatalog.Everyone.Where(u => u != UnitCatalog.Dolga).Any(u => u.Traits.Contains(TraitId.DolgaWallRetreat) || u.Traits.Contains(TraitId.DolgaWallLight));   // 第396期: 規定のドルガ（E1）を除く
             Expect("版の札と文面: E1 ＝ D2 ＋ 倒れる前に下がる ／ E2 ＝ D2 ＋ 浅く受ける ／ E12 ＝ 両方・文面は叩き台・`All` ／ `Retired` の外・数値はドルガのまま", ok,
                 string.Join(" ／ ", new[] { ("E1", e1), ("E2", e2), ("E12", e12) }.Select(x => $"{x.Item1} ＋{string.Join("・", x.Item2.Traits.Skip(d2.Traits.Count))}")));
         }
@@ -111,8 +111,8 @@ static partial class Sh395Diag
                 ok &= g; notes.Add($"{name}{(g ? "" : " ×")}");
             }
             var pl = Hit(d, 2);
-            bool g0 = pl.Mate == 40 && pl.Dolga == 0 && d.Traits.SequenceEqual(new[] { TraitId.Sluggish, TraitId.GradeStep }) && d.MinusText == "2ターンに1回しか動けない" && UnitCatalog.All.Contains(d);
-            string units = File.Exists("docs/units.md") ? File.ReadAllText("docs/units.md") : "", head = S390.GitShow($"{HeadSha}:docs/units.md");
+            bool g0 = pl.Mate == 40 && pl.Dolga == 0 && d.Traits.SequenceEqual(new[] { TraitId.Sluggish, TraitId.GradeStep }) && d.MinusText == "2ターンに1回しか動けない" && UnitCatalog.All.Contains(UnitCatalog.Dolga) && !UnitCatalog.All.Contains(d);   // 第396期: 旧の規定は `DolgaH395`
+            string units = S390.GitShow("ff751426:docs/units.md"), head = S390.GitShow($"{HeadSha}:docs/units.md");   // 第396期: 規定のドルガを替えたので、第395期の HEAD の表と比べる
             string Row(string s) => s.Split('\n').FirstOrDefault(l => l.StartsWith("| **のろまの巨兵ドルガ** |", StringComparison.Ordinal))?.TrimEnd('\r') ?? "";
             g0 &= Row(units) != "" && Row(units) == Row(head);
             ok &= g0; notes.Add($"規定のドルガは今どおり（壁なし・札・`docs/units.md` の行が第394期の HEAD と同じ）{(g0 ? "" : " ×")}");
@@ -137,17 +137,18 @@ static partial class Sh395Diag
             var vers = new[] { e1, e2, e12 };
             var everywhere = CompareBuilds().Concat(CrossBuilds()).Concat(Presets.Playtest).Concat(Presets.Versions).SelectMany(r => r.F.Occupied()).Select(o => o.Def).ToList();
             bool inside = !everywhere.Any(x => x.Id.EndsWith("_plain392", StringComparison.Ordinal));
-            var verRows = Presets.Versions.Where(r => r.F.Occupied().Any(o => vers.Contains(o.Def))).Select(r => r.Name).ToList();
-            bool rows = verRows.SequenceEqual(VersionRows395) && Presets.Versions[^1].Name == "版・壁 E" && Presets.Versions[^1].F.Occupied().Count(o => vers.Contains(o.Def)) == 1
+            var h5 = VersionsH395();   // 第396期: 第395期の一覧
+            var verRows = h5.Where(r => r.F.Occupied().Any(o => vers.Contains(o.Def))).Select(r => r.Name).ToList();
+            bool rows = verRows.SequenceEqual(VersionRows395) && h5[^1].Name == "版・壁 E" && h5[^1].F.Occupied().Count(o => vers.Contains(o.Def)) == 1
                 && !CompareBuilds().Concat(CrossBuilds()).Concat(Presets.Playtest).Any(r => r.F.Occupied().Any(o => vers.Contains(o.Def)))
-                && VersionsH394().Select(r => r.Name).SequenceEqual(Presets.Versions.Select(r => r.Name).SkipLast(1)) && VersionsH394()[^1].Name == "版・壁 ドルガ";
+                && VersionsH394().Select(r => r.Name).SequenceEqual(h5.Select(r => r.Name).SkipLast(1)) && VersionsH394()[^1].Name == "版・壁 ドルガ";
             Expect("替えた台 ／ 素体は器具の中だけ・E の版のドルガが居る試遊の台は「版・壁 E」（`Presets.Versions` の末尾）だけ・第394期の一覧は `VersionsH394()`", inside && rows, string.Join("、", verRows));
         }
 
         // ---- checkup ----
         {
             string src = File.ReadAllText("BattleSim/Modes/Checkup.cs");
-            var miss = new[] { TraitId.DolgaWallRetreat, TraitId.DolgaWallLight }.Where(t => !System.Text.RegularExpressions.Regex.IsMatch(src, $@"\[TraitId\.{t}\]\s*=\s*\(Hc[A-Za-z]+L,\s*""[^""]*第395期[^""]*保持者 0 枚""")).ToList();
+            var miss = new[] { TraitId.DolgaWallRetreat, TraitId.DolgaWallLight }.Where(t => !System.Text.RegularExpressions.Regex.IsMatch(src, $@"\[TraitId\.{t}\]\s*=\s*\(Hc[A-Za-z]+L,\s*""[^""]*第395期[^""]*(保持者 0 枚|第396期から規定（ドルガ）)""")).ToList();
             Expect("`checkup` の札の分類表に第395期の札 2 枚（倒れる前に下がる ／ 浅く受ける）がある（ソースを読んで確かめる）", miss.Count == 0, miss.Count == 0 ? "" : "無い: " + string.Join("・", miss));
         }
 

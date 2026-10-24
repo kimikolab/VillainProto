@@ -1638,3 +1638,11 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **倒れる前に下がる（`DolgaWallRetreat`・E1 ／ E12）**: 壁の段で保持者を選ぶとき、札を持つドルガの `Hp * 2 < MaxHp`（その一撃を受ける前）なら選ばない（回復で戻れば再び選ぶ）。計数のみ: `UnitTally.R395WallRetreats` ／ `R395RetreatByTurn`。
 - **浅く受ける（`DolgaWallLight`・E2 ／ E12）**: 受ける量を `amount * 3 / 10`（切り捨て）にし、ドルガへ渡した後 `return` せずに `amount` から引いて、残りを殴られた味方が今の段の続き（巨躯 ／ 分かち ／ 破片 …）で受ける。D1 ／ D2（札なし）は今どおり半分を受けて `return`。
 - どちらも `_dolgaWalls`（壁の保持者がいる戦）の中だけで読む。規定の `compare` 66 行 330 セル ずれ 0。新しい出来事の種類は足していない。
+
+## 第396期 —— ドルガの E1 を規定に ／ 包むセッキ（セッキの版 S1 ／ S2 ／ S2h）
+
+- **段0**: 規定のドルガ（`UnitCatalog.Dolga`）が第395期の E1 の札（`SluggishShift` ／ `DolgaWall` ／ `DolgaWallRetreat`）を持つようになった——第394〜395期の口（`SluggishTrait.Resting` のずれ ／ 壁 ／ 下がる）が**規定の戦で走る**（ドルガのいる戦）。旧は `DolgaH395`。
+- **包む（`SlimeWrap`・`ApplyDamage` の肩代わりの族——ドルガの壁の後・巨躯 ／ 分かちの手前）**: 敵が出どころの、型が単体でない一撃（薙ぎ ／ 貫き ／ 全体）で、刻み ／ 徴収 ／ 中継 ／ 共有 ／ 同士討ち ／ 庇いの段でなければ、保持者（的 ／ 出どころ自身を除く・生きている・複数なら席番号の若い方）が `amount * 3 / 10`（`SlimeDeep` は 5 / 10）を吸い取る。吸った量の全部を私有の帳簿 `SlimeTrait.StoreKey`（`StatusKeys.All` に入れない・`OnCarryOver` で 0）に積み、半分（切り捨て）を `ApplyDamage(slime, half, source, isFriendlyFire: true, relayed: true, pattern)` で受ける。殴られた味方は残りで続きの段へ。
+- **弾き返す（`PerformAttack` の頭 → `SlimeBurst`）**: 保持者の攻撃で帳簿が 1 以上なら、殴る代わりに敵全体へ帳簿の量を `ApplyDamage(e, amt, slime, pattern: All)` で与えて帳簿を 0 にする（`OnAfterAttack` は走らない）。叩き起こし（割り込みの中の `PerformAttack`）・灯の譲り ／ ターンギフト（`TakeTurn`）・溢れ（S2 の自分の手番）がここを通る。
+- **自分の手番では動かない（`SlimeTrait.CanAct`）**: 譲られた手番（`BattleContext.InGivenTurn` ＝ `Yielding` か ギフトの中）か、`SlimeOverflow` で帳簿 ≧ 最大 HP のときだけ真。それ以外は偽 ＝ `IdleTurn` が立つ（`SurrendersTurn` は真のまま ＝ 号令 ／ 叩き起こしの候補）。`NeverAttacksOwnTurn` は真（尾灯の W1 で灯が付かない）。
+- 保持者がいない戦は `_slimeWraps.Count` の比較1つで抜ける（規定の `compare` は段0 のドルガの分だけ動く・セッキの版の札は保持者 0）。計数のみ: `UnitTally.R396Wrap*` ／ `R396Burst*` ／ `R396StoreMax`。新しい出来事の種類は足していない（弾き返しは見せ場の `Highlight` と各敵の `Damage`）。

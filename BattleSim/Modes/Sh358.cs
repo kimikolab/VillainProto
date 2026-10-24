@@ -79,7 +79,7 @@ static partial class Sh358Diag
     // 台
     // ---------------------------------------------------------------------------------
     internal const string GareRow = "礫 (ガレ×ヒビ×ウロ)", UroRow = "鱗改 (ウロ×ヒビ)", WallRow = "試遊・呪い 壁";
-    static Formation Row(string n) => CompareBuilds().Concat(CrossBuilds()).First(r => r.Name == n).F;
+    static Formation Row(string n) => Pin395(CompareBuilds().Concat(CrossBuilds()).First(r => r.Name == n).F);   // 第396期: ドルガは第395期までの規定に固定
     /// <summary>ツギのいる台（決めたこと: 「試遊・呪い 壁」・第356期の総当たりでツギの板がボスへ届かせた台・ヒビ ／ ガレはいない）。</summary>
     static Formation Wall => Presets.Versions.First(r => r.Name == WallRow).F;
     internal static I.Board[] P0Boards() => new[]
@@ -95,7 +95,7 @@ static partial class Sh358Diag
     {
         "gare" => Row(GareRow), "uro" => Row(UroRow), "wall" => Wall,
         _ when n.Contains('・') => ByKey(n),
-        _ => CompareBuilds().Concat(CrossBuilds()).Concat(Presets.Versions).First(r => r.Name.StartsWith(n, StringComparison.Ordinal)).F,
+        _ => Pin395(CompareBuilds().Concat(CrossBuilds()).Concat(Presets.Versions).First(r => r.Name.StartsWith(n, StringComparison.Ordinal)).F),   // 第396期: ドルガは旧に
     };
 
     static void Log(Ver v, string board, string wave, int seed)

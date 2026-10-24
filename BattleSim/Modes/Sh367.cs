@@ -80,7 +80,7 @@ static partial class Sh367Diag
 
     internal const string BombRow = "毒爆弾 (ラウ×ヴィオ)";
     /// <summary>§3-2 の毒特化・勇者の守りの候補（ラウの席 ＝ 後3 に置く）。</summary>
-    internal static readonly UnitDef[] Guards = { UnitCatalog.Golm, UnitCatalog.Dolga, UnitCatalog.Sasa };
+    internal static readonly UnitDef[] Guards = { UnitCatalog.Golm, UnitCatalog.DolgaH395, UnitCatalog.Sasa };
     internal static Formation HeroBoardOf(UnitDef guard) => S316.SwapId(Row(BombRow), "rau", guard);
 
     /// <summary>§3-2 の4台（駒はいまの規定）。毒特化・勇者は `pick` で選んだ守り（`Presets.PoisonHero367`）。</summary>

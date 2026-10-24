@@ -396,7 +396,7 @@ static class Som308Diag
             if (res[i].Win < 50 || res[i].SomN == 0) continue;
             var f = cells[i].F;
             var cur = f.Occupied().First(o => o.Def.Id == "som").Def;
-            double dv = 100.0 * WinsPar(FvSwap(f, cur, UnitCatalog.Dolga), cells[i].W, Seeds) / Seeds;
+            double dv = 100.0 * WinsPar(FvSwap(f, cur, UnitCatalog.DolgaH395), cells[i].W, Seeds) / Seeds;
             Console.WriteLine($"| {cells[i].W.Name} | {cells[i].Board} | {cells[i].V.Name} | {F1(res[i].Win)} | {F1(dv)} | {(dv * 2 <= res[i].Win ? "○" : "")} |");
         }
         Console.WriteLine();
@@ -460,8 +460,8 @@ static class Som308Diag
 
         BattleContext Ctx(UnitDef somDef, out List<UnitState> p, out List<UnitState> e, Formation? pl = null, UnitDef? enemyCenter = null)
         {
-            var ctx = H304.Ctx(pl ?? Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.GolmH344, center: somDef),
-                               Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Dolga, center: enemyCenter ?? UnitCatalog.Dolga), out p, out e);
+            var ctx = H304.Ctx(pl ?? Formation.Build(front1: UnitCatalog.DolgaH395, front3: UnitCatalog.GolmH344, center: somDef),
+                               Formation.Build(front1: UnitCatalog.DolgaH395, front3: UnitCatalog.DolgaH395, center: enemyCenter ?? UnitCatalog.DolgaH395), out p, out e);
             foreach (var u in p.Concat(e)) { u.MaxHp = 1000; u.Hp = 1000; }
             return ctx;
         }
