@@ -7034,10 +7034,16 @@ public static class UnitCatalog
     /// <summary>トモの版 T3（第393期）: T2 ＋ 灯が力を運ぶ（号令の「動かなかった味方」に数える・自分に積まれた力を灯に乗せて移す）。</summary>
     public static readonly UnitDef TomoT3 = TomoOn393(new[] { TraitId.TaillightKeep, TraitId.TaillightWake, TraitId.TaillightCarry }, TomoT1Plus + "。自分に積まれた力は、灯に乗せて灯した味方へ渡す", TomoT2.MinusText);
     /// <summary>尾灯のトモ（第394期の規定 ＝ 第393期の T3）: 灯を外さない ／ 灯が起こす ／ 灯が力を運ぶ。札と文面は <see cref="TomoT3"/> と同じ（別の定義）。旧は <see cref="TomoH393"/>。</summary>
-    public static readonly UnitDef Tomo = TomoOn393(new[] { TraitId.TaillightKeep, TraitId.TaillightWake, TraitId.TaillightCarry }, TomoT1Plus + "。自分に積まれた力は、灯に乗せて灯した味方へ渡す", TomoT2.MinusText);
+    public static readonly UnitDef TomoH399 = TomoOn393(new[] { TraitId.TaillightKeep, TraitId.TaillightWake, TraitId.TaillightCarry }, TomoT1Plus + "。自分に積まれた力は、灯に乗せて灯した味方へ渡す", TomoT2.MinusText);   // 第400期: 第394〜399期の規定（T3）を旧として残す（`All` の外）
     /// <summary>トモの版 L1（第399期・起きた背を押す）: 規定 ＋ 灯した味方が前のターンに動けなかった（`IdleTurn` ＝ 前のターン）ときも手番を譲る（敵が倒れていたときと、どちらか）。</summary>
-    public static readonly UnitDef TomoL1 = TomoOn393(new[] { TraitId.TaillightKeep, TraitId.TaillightWake, TraitId.TaillightCarry, TraitId.TaillightIdleYield }, Tomo.PlusText,
-        Tomo.MinusText.Replace("敵が倒れていたら、", "敵が倒れていたか、灯した味方が前のターンに動けなかったら、"));
+    public static readonly UnitDef TomoL1 = TomoOn393(new[] { TraitId.TaillightKeep, TraitId.TaillightWake, TraitId.TaillightCarry, TraitId.TaillightIdleYield }, TomoH399.PlusText,
+        TomoH399.MinusText.Replace("敵が倒れていたら、", "敵が倒れていたか、灯した味方が前のターンに動けなかったら、"));
+    /// <summary>
+    /// 尾灯のトモ（第400期の規定 ＝ 第399期の L1）: T3 ＋ 起きた背を押す（灯した味方が前のターンに動けなかったときも手番を譲る）。札と文面は <see cref="TomoL1"/> と同じ（別の定義）。
+    /// 旧は <see cref="TomoH399"/>（T3）／ その前は <see cref="TomoH393"/>（尾灯だけ）。
+    /// </summary>
+    public static readonly UnitDef Tomo = TomoOn393(new[] { TraitId.TaillightKeep, TraitId.TaillightWake, TraitId.TaillightCarry, TraitId.TaillightIdleYield }, TomoH399.PlusText,
+        TomoH399.MinusText.Replace("敵が倒れていたら、", "敵が倒れていたか、灯した味方が前のターンに動けなかったら、"));
 
     /// <summary>
     /// 編成に選べる 52 枚。<b>上限は 52 ＝ トランプ1組</b>で、第103期に確定した。

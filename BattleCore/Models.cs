@@ -4774,6 +4774,67 @@ public enum BattleEventKind
     /// <c>Death</c> は出ない（死の読み手は動かない）。<b>どの規則も読まない。</b>
     /// </summary>
     Parasite,
+
+    /// <summary>
+    /// 包みのセッキ（第400期・<b>表示専用</b>）。<c>Text</c> ＝ <see cref="SlimeLabels"/>・<c>ActorId</c> ＝ セッキ・<c>StatusRemaining</c> ＝ その時点の溜め（帳簿）。
+    /// <see cref="SlimeLabels.Wrap"/>（包む・範囲の一撃が味方に当たるとき・当たった味方ごとに1つ）: <c>TargetId</c> ＝ 包んだ味方・<c>Amount</c> ＝ 吸った量・<c>Slot</c> ＝ セッキが HP で受ける量（この後のセッキへの <c>Damage</c>（<c>Relayed</c>）の素の値）。
+    ///   並び: 「包む」→（膨らむ）→ セッキへの <c>Damage</c>（<c>Relayed</c>）→ 包んだ味方への <c>Damage</c>（残り）。
+    /// <see cref="SlimeLabels.Swell"/>（膨らむ・吸うたび）: <c>Amount</c> ＝ 増えた最大 HP・<c>Slot</c> ＝ 新しい最大 HP・<c>HpAfter</c> ＝ 膨らんだ後の HP。
+    /// <see cref="SlimeLabels.Burst"/>（弾き返す）: <c>Amount</c> ＝ 弾き返した量（敵1体あたり）・<c>Slot</c> ＝ きっかけ（<see cref="SlimeLabels.ByWake"/> 叩き起こしなどの割り込み ／ <see cref="SlimeLabels.ByYield"/> 灯の譲り ／
+    ///   <see cref="SlimeLabels.ByGift"/> ターンギフト ／ <see cref="SlimeLabels.ByOverflow"/> 溢れ（自分の手番）／ <see cref="SlimeLabels.ByOther"/> ほか）・<c>StatusRemaining</c> ＝ 0。直後に敵全体への <c>Damage</c>（<c>Pattern</c> ＝ 全体）が並ぶ。
+    /// <see cref="SlimeLabels.Idle"/>（ぷるぷる・自分の手番に動かなかった）: <c>StatusRemaining</c> ＝ 溜め。<b>どの規則も読まない。</b>
+    /// </summary>
+    Slime,
+
+    /// <summary>
+    /// のろまの巨兵ドルガ（第400期・<b>表示専用</b>）。<c>Text</c> ＝ <see cref="WallLabels"/>・<c>ActorId</c> ＝ ドルガ。
+    /// <see cref="WallLabels.Rest"/>（構える・休み番で自分の手番に動かなかった）: <c>Amount</c> ＝ 1 壁として立つ（壁の札あり・HP が半分以上）／ 0 立たない。
+    /// <see cref="WallLabels.Take"/>（受ける・休み番のドルガが味方への単体の一撃を代わりに受けた）: <c>TargetId</c> ＝ 守った味方・<c>Amount</c> ＝ もとの一撃の量・<c>Slot</c> ＝ ドルガが受ける量。直後にドルガへの <c>Damage</c>（<c>Relayed</c>）。
+    /// <see cref="WallLabels.Down"/>（下がる・HP が半分を切って壁をやめた）／ <see cref="WallLabels.Up"/>（戻る・回復で半分に戻って再び壁に）: 壁の判定の瞬間に、状態が変わったときだけ1つ。<c>HpAfter</c> ＝ その時の HP。
+    /// <see cref="WallLabels.Focus"/>（集める・全体の薙ぎの力が一点に）: <c>TargetId</c> ＝ 主目標・<c>Amount</c> ＝ 当たる敵の数 n（1体あたり × 5 ÷ n）。
+    /// <see cref="WallLabels.Heavy"/>（重い・大物への上乗せ）: <c>TargetId</c> ＝ 主目標・<c>Amount</c> ＝ 主目標への上乗せ（最大 HP の 5%）。どちらも直後の主目標への <c>Damage</c> より<b>前</b>に出る。<b>どの規則も読まない。</b>
+    /// </summary>
+    Wall,
+
+    /// <summary>
+    /// 尾灯のトモ（第400期・<b>表示専用</b>）。<c>Text</c> ＝ <see cref="LampLabels"/>・<c>ActorId</c> ＝ トモ。
+    /// <see cref="LampLabels.Light"/>（灯す・ターンの頭）: <c>TargetId</c> ＝ 灯した味方・<c>Amount</c> ＝ 灯の量（運んだ力を含む）・<c>Slot</c> ＝ そのうち運んだ力・<c>StatusRemaining</c> ＝ その味方に灯っている累計。同じ瞬間の <c>Whet</c>（経路 ＝ 灯）と対。
+    /// <see cref="LampLabels.Douse"/>（消える）: <c>TargetId</c> ＝ 灯が消えた味方・<c>Amount</c> ＝ 消えた量・<c>Slot</c> ＝ 理由（<see cref="LampLabels.Switched"/> 相手が変わった ／ <see cref="LampLabels.NoOne"/> 照らす相手がいない）。
+    /// <see cref="LampLabels.Yield"/>（譲る）: <c>TargetId</c> ＝ 譲った味方・<c>Slot</c> ＝ きっかけ（<see cref="LampLabels.ForDeath"/> 敵が倒れた ／ <see cref="LampLabels.ForIdle"/> 相手が前のターンに動けなかった）・
+    ///   <c>Amount</c> ＝ 1 休み番を起こした ／ 0。直後に譲られた味方の手番（<c>Attack</c> など）が並ぶ。<b>どの規則も読まない。</b>
+    /// </summary>
+    Lamp,
+}
+
+/// <summary>`Slime`（第400期）の <c>Text</c> と、弾き返しのきっかけ（<c>Slot</c>）。</summary>
+public static class SlimeLabels
+{
+    public const string Wrap = "包む";
+    public const string Swell = "膨らむ";
+    public const string Burst = "弾き返す";
+    public const string Idle = "ぷるぷる";
+    public const int ByWake = 1, ByYield = 2, ByGift = 3, ByOverflow = 4, ByOther = 5;
+}
+
+/// <summary>`Wall`（第400期）の <c>Text</c>。</summary>
+public static class WallLabels
+{
+    public const string Rest = "構える";
+    public const string Take = "受ける";
+    public const string Down = "下がる";
+    public const string Up = "戻る";
+    public const string Focus = "集める";
+    public const string Heavy = "重い";
+}
+
+/// <summary>`Lamp`（第400期）の <c>Text</c> と、消える理由 ／ 譲るきっかけ（<c>Slot</c>）。</summary>
+public static class LampLabels
+{
+    public const string Light = "灯す";
+    public const string Douse = "消える";
+    public const string Yield = "譲る";
+    public const int Switched = 1, NoOne = 2;
+    public const int ForDeath = 1, ForIdle = 2;
 }
 /// <summary>`Shard`（第358期）の <c>Text</c>。</summary>
 public static class ShardLabels

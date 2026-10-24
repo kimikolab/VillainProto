@@ -88,7 +88,7 @@ static partial class Sh398Diag
         {
             ("試遊・手番 縛め", Pin398(Presets.BindTempo395()), false),
             ("縛め収入型 (クグ×バン×ガン)", Row("縛め収入型 (クグ×バン×ガン)"), false),
-            ("溜め改（バンの席にトモ）", Put(tame, SlotOf(tame, "ban"), UnitCatalog.Tomo), false),
+            ("溜め改（バンの席にトモ）", Put(tame, SlotOf(tame, "ban"), UnitCatalog.TomoH399), false),
             ("試遊・手番 芯4枚", Pin398(Presets.FourCore397()), false),
             ("試遊・手番 芯3枚", Pin398(Presets.TempoLamp393()), true),
             ("試遊・手番 包み", Pin398(Presets.SlimeLamp396()), true),

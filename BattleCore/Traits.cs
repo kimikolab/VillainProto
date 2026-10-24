@@ -12383,7 +12383,7 @@ public sealed class TaillightTrait : Trait
         self.SetCounter(YieldedKey, now);
         // 指示書 Q3 —— **この死亡通知の連鎖の中で、譲渡より前に味方の振りが走っていたか。**
         // 追い打ち（ハギ）は同じ `OnAnyDeath` で、しかも席が若い（前1）ので先に走る。
-        Yield(ctx, self, lit, pair: ctx.TaillightChainSwung);
+        Yield(ctx, self, lit, pair: ctx.TaillightChainSwung, why: LampLabels.ForDeath);
     }
 
     /// <summary>灯をともす。<b>行動順ループの外側</b>なので、その手番の前に全員へ効く。</summary>
@@ -12419,7 +12419,7 @@ public sealed class TaillightTrait : Trait
 
         if (pick is null)
         {
-            Douse(ctx, self, prev);
+            Douse(ctx, self, prev, LampLabels.NoOne);
             ctx.TallyOf(self).TaillightIdle++;
             ctx.Log($"    {self.Name} の灯は照らす相手がいない", LogKind.Action);
             return;
@@ -12427,7 +12427,7 @@ public sealed class TaillightTrait : Trait
 
         // **対象が変わったときだけ消す。** 同じ相手なら積み上がる（灯は累積する）。
         bool switched = prev is not null && !ReferenceEquals(prev, pick);
-        if (!ReferenceEquals(prev, pick)) Douse(ctx, self, prev);
+        if (!ReferenceEquals(prev, pick)) Douse(ctx, self, prev, LampLabels.Switched);
 
         // 第393期（トモの版 T3・`TaillightCarry`）: 自分に積まれた力（正の `AtkBonus`）を灯に乗せて移す（自分から引く・持ち替えなので直叩き）。
         int lumen = Lumen, carried = 0;
@@ -12453,6 +12453,7 @@ public sealed class TaillightTrait : Trait
         UnitTally rt = ctx.TallyOf(pick);
         rt.TaillightLitReceived++;
         rt.TaillightLitLumen += Lumen;
+        ctx.EmitLamp(LampLabels.Light, self, pick, lumen, carried, self.RawCounter(LitKey));   // 第400期・表示専用
         ctx.Log($"    {self.Name} が {pick.Name} に灯をともした"
             + $"（攻撃 +{lumen}{(carried > 0 ? $"・うち運んだ力 {carried}" : "")} → {pick.CurrentAttack}）", LogKind.Trigger);
     }
@@ -12495,7 +12496,7 @@ public sealed class TaillightTrait : Trait
         if (!ctx.TeamAlive(ctx.Opponent(self.TeamId))) { t.TaillightNoFoe++; return; }
 
         if (idleLast) { t.R399IdleYields++; ctx.TallyOf(lit).R399IdleYieldTo++; }   // 第399期・計数のみ（L1 で増えた譲り・譲られた側も）
-        Yield(ctx, self, lit, pair: false);   // 自分の手番なので死亡通知の連鎖の中ではない
+        Yield(ctx, self, lit, pair: false, why: idleLast && saw != now && !window ? LampLabels.ForIdle : LampLabels.ForDeath);   // 自分の手番なので死亡通知の連鎖の中ではない
     }
 
     /// <summary>
@@ -12506,7 +12507,7 @@ public sealed class TaillightTrait : Trait
     /// ——engine に1行も足さずに済む。<b>入れ子（譲られた手番の中で再行動が走る）では
     /// そのぶんも混ざる</b>ので、厳密な分解ではないことを断って使うこと。</para>
     /// </summary>
-    private static void Yield(BattleContext ctx, UnitState self, UnitState lit, bool pair)
+    private static void Yield(BattleContext ctx, UnitState self, UnitState lit, bool pair, int why)
     {
         UnitTally t = ctx.TallyOf(self);
         UnitTally lt = ctx.TallyOf(lit);
@@ -12521,6 +12522,7 @@ public sealed class TaillightTrait : Trait
             t.TaillightYields++;
             if (pair) t.TaillightPair++;
             ctx.Log($"    {self.Name} は前へ出ず、灯した {lit.Name} に道を譲る{(waking ? "（休んでいても叩き起こす）" : "")}", LogKind.Highlight, self);
+            ctx.EmitLamp(LampLabels.Yield, self, lit, waking ? 1 : 0, why);   // 第400期・表示専用
             // 第109期。**内訳を数えるだけ**（第104期の再行動と同じ形）。盤面には触らない。
             TurnOutcome outcome = ctx.TakeTurn(lit);
             // 第393期: 起こされて振った手番は「動いた」ことにする（`IdleTurn` を消す——号令の +8 と叩き起こしは次のターンにこの手番を買えない）。
@@ -12576,7 +12578,7 @@ public sealed class TaillightTrait : Trait
     /// 前の灯を消す。<b><see cref="BattleContext.Dull"/> を通さない</b>（上の doc の理由）。
     /// 引くのは<b>自分が積んだぶんちょうど</b>で、他の経路が足した強化には触れない。
     /// </summary>
-    private static void Douse(BattleContext ctx, UnitState self, UnitState? prev)
+    private static void Douse(BattleContext ctx, UnitState self, UnitState? prev, int why)
     {
         int lit = self.RawCounter(LitKey);
         self.SetCounter(TargetKey, 0);
@@ -12584,6 +12586,7 @@ public sealed class TaillightTrait : Trait
         if (prev is null || lit <= 0) return;
         prev.AtkBonus -= lit;
         ctx.TallyOf(self).TaillightDoused += lit;
+        ctx.EmitLamp(LampLabels.Douse, self, prev, lit, why);   // 第400期・表示専用
         ctx.Log($"    {prev.Name} の灯が消えた（攻撃 -{lit}）", LogKind.Status);
     }
 }

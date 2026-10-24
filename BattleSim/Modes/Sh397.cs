@@ -87,7 +87,7 @@ static partial class Sh397Diag
     /// <summary>§4-1 の 1 の台: 試遊・手番 芯3枚 ／ 試遊・手番 包み（セッキの席だけ）／ 試遊・手番 縛め。</summary>
     internal static (string Name, Formation F)[] SBoardList() => new (string, Formation)[]
     {
-        ("試遊・手番 芯3枚", Presets.TempoLamp393(UnitCatalog.Tomo, UnitCatalog.DolgaH397)), ("試遊・手番 包み", Pin397(Presets.SlimeLamp396())), ("試遊・手番 縛め", Pin397(Presets.BindTempo395())),
+        ("試遊・手番 芯3枚", Presets.TempoLamp393(UnitCatalog.TomoH399, UnitCatalog.DolgaH397)), ("試遊・手番 包み", Pin397(Presets.SlimeLamp396())), ("試遊・手番 縛め", Pin397(Presets.BindTempo395())),
     };
 
     /// <summary>
@@ -101,16 +101,16 @@ static partial class Sh397Diag
         var tame = Row("溜め改 (クグ×バン×ガン)");
         return new (string, Formation)[]
         {
-            ("試遊・手番 芯3枚", Presets.TempoLamp393(UnitCatalog.Tomo, UnitCatalog.DolgaH397)),
+            ("試遊・手番 芯3枚", Presets.TempoLamp393(UnitCatalog.TomoH399, UnitCatalog.DolgaH397)),
             ("試遊・手番 縛め", Pin397(Presets.BindTempo395())),
             ("試遊・手番 包み", Pin397(Presets.SlimeLamp396())),
             ("試遊・手番 探索1位", Pin397(Presets.TempoSeek392())),
             ("灯×薙ぎ (トモ×ドルガ)", Row("灯×薙ぎ (トモ×ドルガ)")),
             ("縛め収入型 (クグ×バン×ガン)", Row("縛め収入型 (クグ×バン×ガン)")),
-            ("溜め改（バンの席にトモ）", Put(tame, SlotOf(tame, "ban"), UnitCatalog.Tomo)),
-            ("芯4枚 1位（＋シオ）", Formation.Build(front1: UnitCatalog.Gan, front3: UnitCatalog.Tomo, center: UnitCatalog.DolgaH397, back1: UnitCatalog.SekkiH397, back3: UnitCatalog.Shio)),
-            ("芯4枚 2位（＋トウ）", Formation.Build(front1: UnitCatalog.SekkiH397, front3: UnitCatalog.Tou, center: UnitCatalog.Tomo, back1: UnitCatalog.DolgaH397, back3: UnitCatalog.Gan)),
-            ("芯4枚 3位（＋ボルグ）", Formation.Build(front1: UnitCatalog.SekkiH397, front3: UnitCatalog.Tomo, center: UnitCatalog.DolgaH397, back1: UnitCatalog.Borg, back3: UnitCatalog.Gan)),
+            ("溜め改（バンの席にトモ）", Put(tame, SlotOf(tame, "ban"), UnitCatalog.TomoH399)),
+            ("芯4枚 1位（＋シオ）", Formation.Build(front1: UnitCatalog.Gan, front3: UnitCatalog.TomoH399, center: UnitCatalog.DolgaH397, back1: UnitCatalog.SekkiH397, back3: UnitCatalog.Shio)),
+            ("芯4枚 2位（＋トウ）", Formation.Build(front1: UnitCatalog.SekkiH397, front3: UnitCatalog.Tou, center: UnitCatalog.TomoH399, back1: UnitCatalog.DolgaH397, back3: UnitCatalog.Gan)),
+            ("芯4枚 3位（＋ボルグ）", Formation.Build(front1: UnitCatalog.SekkiH397, front3: UnitCatalog.TomoH399, center: UnitCatalog.DolgaH397, back1: UnitCatalog.Borg, back3: UnitCatalog.Gan)),
         };
     }
     static string BurnNote(Formation f) { var b = f.Occupied().Where(o => BurnIds.Contains(o.Def.Id)).Select(o => Short(o.Def)).ToList(); return b.Count == 0 ? "燃焼の駒なし" : "燃焼の駒: " + string.Join("・", b); }
@@ -306,7 +306,7 @@ static partial class Sh397Diag
         Console.WriteLine("（行が無ければ −10pt 以上落ちた行は無い）");
         Console.WriteLine();
 
-        var boards = new (string Name, Formation F)[] { ("試遊・手番 芯3枚", Presets.TempoLamp393(UnitCatalog.Tomo, UnitCatalog.DolgaH397)), ("試遊・手番 包み", Pin397(Presets.SlimeLamp396())) };
+        var boards = new (string Name, Formation F)[] { ("試遊・手番 芯3枚", Presets.TempoLamp393(UnitCatalog.TomoH399, UnitCatalog.DolgaH397)), ("試遊・手番 包み", Pin397(Presets.SlimeLamp396())) };
         var ws = new[] { WBoss, WGuard, WBat, WM5, WStrong };
         Console.WriteLine($"## 2. 試遊・手番 芯3枚 ／ 試遊・手番 包み × ボス ／ 近衛 ／ 大隊 ／ 本編 第5波 ／ 強い条件（seed 0..{Seeds - 1}）・包みはセッキ（規定 ／ 第396期の S2h ／ 旧）");
         Console.WriteLine();

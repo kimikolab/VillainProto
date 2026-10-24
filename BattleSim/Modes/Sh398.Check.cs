@@ -54,7 +54,7 @@ static partial class Sh398Diag
                 && dh.Traits.SequenceEqual(e1.Traits) && dh.PlusText == e1.PlusText && dh.MinusText == e1.MinusText
                 && UnitCatalog.All.Contains(UnitCatalog.Sekki) && !UnitCatalog.Everyone.Contains(k) && UnitCatalog.All.Contains(d) && !UnitCatalog.Everyone.Contains(kh) && !UnitCatalog.Everyone.Contains(dh)
                 && new[] { kb, UnitCatalog.SekkiR, s2h, UnitCatalog.SekkiS1, UnitCatalog.SekkiS2, k1, k2, k12, g12, UnitCatalog.DolgaG1, UnitCatalog.DolgaG2, e1 }.All(v => !UnitCatalog.Everyone.Contains(v));
-            bool pins = PinX397(k) == kh && PinX397(d) == dh && PinX397(UnitCatalog.Tomo) == UnitCatalog.Tomo && PinK396(kh) == UnitCatalog.SekkiH396 && PinK396(k) == UnitCatalog.SekkiH396
+            bool pins = PinX397(k) == kh && PinX397(d) == dh && PinX397(UnitCatalog.Tomo) == UnitCatalog.TomoH399 /* 第400期: トモも旧へ */ && PinK396(kh) == UnitCatalog.SekkiH396 && PinK396(k) == UnitCatalog.SekkiH396
                 && PinD395(dh) == UnitCatalog.DolgaH395 && PinD395(d) == UnitCatalog.DolgaH395 && PinT393(d) == UnitCatalog.DolgaH395 && PinT393(k) == UnitCatalog.SekkiH396
                 && Pin397(Presets.FourCore397()).Occupied().Count(o => o.Def == kh || o.Def == dh) == 2;
             Expect("段0: 規定のセッキ ＝ 第397期の B ／ 規定のドルガ ＝ 第397期の G12（札 ／ 文面 ／ 名前 ／ 数値・別の定義）・旧は `SekkiH397`（S2h）／ `DolgaH397`（E1・`All` の外）・版の駒は `All` ／ `Retired` の外・固定の口 `PinX397` ／ `Pin397`（`PinK396` ／ `PinD395` は H397 も第396 ／ 395期までの旧へ）",

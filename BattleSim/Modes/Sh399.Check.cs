@@ -44,7 +44,7 @@ static partial class Sh399Diag
         Console.WriteLine("| 項目 | 判定 | 備考 |");
         Console.WriteLine("|---|---|---|");
         UnitDef k = UnitCatalog.Sekki, k1 = UnitCatalog.SekkiK1, kh = UnitCatalog.SekkiH398, kb = UnitCatalog.SekkiB;
-        UnitDef d = UnitCatalog.Dolga, x1 = UnitCatalog.DolgaX1, x2 = UnitCatalog.DolgaX2, t0 = UnitCatalog.Tomo, l1 = UnitCatalog.TomoL1;
+        UnitDef d = UnitCatalog.Dolga, x1 = UnitCatalog.DolgaX1, x2 = UnitCatalog.DolgaX2, t0 = UnitCatalog.TomoH399 /* 第400期: 第399期の規定は旧へ */, l1 = UnitCatalog.TomoL1;
 
         // ---- 段0 ----
         {
@@ -68,7 +68,7 @@ static partial class Sh399Diag
             Expect("段0: 規定は第398期の K1 と同じ動き（セッキのいる試遊の 2 台 × ボス ／ 近衛 ／ 大隊 ／ 第5波 × seed 0..9 で勝敗 ／ T ／ 生存数の差 0）", diff == 0 && cells > 0, $"{cells} 戦・差 {diff}");
         }
         {
-            var v = Presets.Versions; var h8 = VersionsH398(); var n8 = h8.Select(r => r.Name).ToList();
+            var v = VersionsH399(); var h8 = VersionsH398(); var n8 = h8.Select(r => r.Name).ToList();
             bool ok = !v.Any(r => r.Name == "版・耐える セッキ") && n8.SkipWhile(n => n != "試遊・手番 芯4枚").Take(2).SequenceEqual(new[] { "試遊・手番 芯4枚", "版・耐える セッキ" })
                 && h8.First(r => r.Name == "版・耐える セッキ").F.Occupied().Any(o => o.Def == k1) && !h8.Any(r => r.F.Occupied().Any(o => o.Def == k)) && !n8.Any(n => VersionRows399.Contains(n))
                 && VersionsH397().Select(r => r.Name).TakeLast(2).SequenceEqual(new[] { "版・膨らむ セッキ", "版・必殺 ドルガ" }) && !VersionsH397().Any(r => r.F.Occupied().Any(o => o.Def == k || o.Def == kh));
@@ -79,7 +79,7 @@ static partial class Sh399Diag
                 && l1.MinusText.Contains("敵が倒れていたか、灯した味方が前のターンに動けなかったら、", StringComparison.Ordinal) && l1.PlusText == t0.PlusText
                 && x1.PlusText.EndsWith("休み明けの一撃は倍の重さ", StringComparison.Ordinal) && x2.PlusText.EndsWith("長く止められるほど、目覚めの一撃に力がこもる", StringComparison.Ordinal)
                 && new[] { l1, x1, x2 }.All(v => v.MaxHp == (v.Id == "tomo" ? t0 : d).MaxHp && v.Attack == (v.Id == "tomo" ? t0 : d).Attack && v.Speed == (v.Id == "tomo" ? t0 : d).Speed)
-                && !UnitCatalog.Everyone.Any(u => u.Traits.Any(t => t is TraitId.TaillightIdleYield or TraitId.DolgaWakeDouble or TraitId.DolgaWakeStack));
+                && !UnitCatalog.Everyone.Where(u => u != UnitCatalog.Tomo).Any(u => u.Traits.Any(t => t is TraitId.TaillightIdleYield or TraitId.DolgaWakeDouble or TraitId.DolgaWakeStack));
             Expect("版の札と文面: L1 ＝ 規定のトモ ＋ 起きた背を押す ／ X1 ＝ 規定のドルガ ＋ 休み明けは倍 ／ X2 ＋ 止められるほど重い・数値は規定のまま・`All` ／ `Retired` の外", ok);
         }
 
@@ -163,7 +163,7 @@ static partial class Sh399Diag
             // ボスの名前 ／ 種類で分岐していない: L1 ／ X の口のソースにボス ／ 勇者の語が無い
             string eng = File.ReadAllText("BattleCore/BattleEngine.cs"), tr = File.ReadAllText("BattleCore/Traits.cs");
             int a = eng.IndexOf("void NoteIdle399(", StringComparison.Ordinal), b = eng.IndexOf("int HeavyAdd397(", a, StringComparison.Ordinal);
-            int c = eng.IndexOf("// 第399期（X1 ／ X2・休み明けの一撃）", StringComparison.Ordinal), e2 = eng.IndexOf("if (heavy) first += HeavyAdd397", c, StringComparison.Ordinal);
+            int c = eng.IndexOf("// 第399期（X1 ／ X2・休み明けの一撃）", StringComparison.Ordinal), e2 = eng.IndexOf("if (heavy)", c, StringComparison.Ordinal);   // 第400期: 目印の行に表示専用の札を足したので、行の頭で切る
             int f = tr.IndexOf("// 第399期（トモの版 L1・`TaillightIdleYield`）", StringComparison.Ordinal), h = tr.IndexOf("if (window) t.TaillightSaw2++;", f, StringComparison.Ordinal);
             string body = a > 0 && b > a && c > 0 && e2 > c && f > 0 && h > f ? eng[a..b] + eng[c..e2] + tr[f..h] : "";
             bool noBoss = body.Length > 0 && !body.Contains("Boss", StringComparison.Ordinal) && !body.Contains("勇者", StringComparison.Ordinal) && !body.Contains("\"dolga\"", StringComparison.Ordinal);
@@ -186,10 +186,11 @@ static partial class Sh399Diag
         // ---- 替えた台 ／ 素体は器具の中だけ・試遊の台 ----
         {
             var vers = new[] { l1, x1, x2 };
-            var everywhere = CompareBuilds().Concat(CrossBuilds()).Concat(Presets.Playtest).Concat(Presets.Versions).SelectMany(r => r.F.Occupied()).Select(o => o.Def).ToList();
+            var everywhere = CompareBuilds().Concat(CrossBuilds()).Concat(Presets.Playtest).Concat(VersionsH399()).SelectMany(r => r.F.Occupied()).Select(o => o.Def).ToList();
             bool inside = !everywhere.Any(x => x.Id.EndsWith("_plain392", StringComparison.Ordinal));
-            var verRows = Presets.Versions.Where(r => r.F.Occupied().Any(o => vers.Contains(o.Def))).Select(r => r.Name).ToList();
-            bool rows = verRows.SequenceEqual(VersionRows399) && Presets.Versions[^1].Name == VersionRows399[0]
+            var v9 = VersionsH399();   // 第400期: 第399期の一覧
+            var verRows = v9.Where(r => r.F.Occupied().Any(o => vers.Contains(o.Def))).Select(r => r.Name).ToList();
+            bool rows = verRows.SequenceEqual(VersionRows399) && v9[^1].Name == VersionRows399[0]
                 && !CompareBuilds().Concat(CrossBuilds()).Concat(Presets.Playtest).Any(r => r.F.Occupied().Any(o => vers.Contains(o.Def)));
             Expect("替えた台 ／ 素体は器具の中だけ・版の駒が居る試遊の台は「版・目覚め ドルガ」（`Presets.Versions` の末尾）だけ", inside && rows, string.Join("、", verRows));
         }
@@ -201,7 +202,7 @@ static partial class Sh399Diag
             var miss = new List<string>();
             if (!Has2(TraitId.SlimeMelt, "第399期から規定（セッキ）")) miss.Add("SlimeMelt");
             if (!Has2(TraitId.SlimeSwell, "第398期から規定（セッキ）")) miss.Add("SlimeSwell");
-            foreach (var id in new[] { TraitId.TaillightIdleYield, TraitId.DolgaWakeDouble, TraitId.DolgaWakeStack }) if (!Has2(id, "第399期[^\"]*保持者 0 枚")) miss.Add(id.ToString());
+            foreach (var id in new[] { TraitId.TaillightIdleYield, TraitId.DolgaWakeDouble, TraitId.DolgaWakeStack }) if (!Has2(id, "第399期[^\"]*(保持者 0 枚|第400期から規定（[^）]*）)")) miss.Add(id.ToString());
             Expect("`checkup` の札の分類表: 規定になった K1 の札は「第399期から規定（セッキ）」・版の札 3 枚がある（ソースを読んで確かめる）", miss.Count == 0, miss.Count == 0 ? "" : "無い: " + string.Join("・", miss));
         }
 

@@ -30,7 +30,7 @@
 | 3 | のろまの巨兵ドルガ | -1.02 | -11.99 | 別扱い | 24 | 0 | 30.0 | 化ける | 左下（送り先を選べば働く） |  | Sluggish / GradeStep / SluggishShift / DolgaWall / DolgaWallRetreat / DolgaFocus / DolgaHeavy |
 | 4 | 追い打ちのハギ | -0.10 | -33.36 | 転生 | 5 | 0 | 25.0 | 化ける | 左下（送り先を選べば働く） | −5.3pt | HagiReap / HagiHalfPursuit / HagiDepthSoul / HagiSoulMoves / HagiReapMark / HagiPursuitReap / HagiPursuitHeavy / HagiSpillFixed |
 | 5 | 哀歌のエレ | +0.00 | — | — | 2 | 0 | 28.0 | 化ける | — |  | DirgeSoundG1 / DirgeEchoAlways |
-| 6 | 尾灯のトモ | +0.00 | +17.75 | 残す | 1 | 0 | 19.0 | 化ける | 上（単独で強い） |  | Taillight / TaillightKeep / TaillightWake / TaillightCarry |
+| 6 | 尾灯のトモ | +0.00 | +17.75 | 残す | 1 | 0 | 19.0 | 化ける | 上（単独で強い） |  | Taillight / TaillightKeep / TaillightWake / TaillightCarry / TaillightIdleYield |
 | 7 | 泥人形ムド | +0.00 | +16.35 | 残す | 9 | 0 | 21.0 | 化ける | 上（単独で強い） |  | Erupt / Smear / Hex / MudoCurseRage / MudoCurseHeavy |
 | 8 | 渡しのワタ | +0.00 | +2.05 | 残す | 1 | 0 | 10.0 | どこでも同じ | 上（単独で強い） |  | Relay / RelayWide / RelayFeed / RelayFeedMudo |
 | 9 | 澱み喰いのヴィオ | +0.00 | +2.62 | 残す | 2 | 0 | 22.0 | 化ける | 上（単独で強い） |  | Blightfed / BlightfedSkipCloak / StrikePoison / PoisonProof / VioFlurryA / VioBloodSip |
@@ -70,7 +70,7 @@
 | 43 | 棘鎧のカド | +15.14 | +32.59 | 残す | 10 | 0 | 14.0 | どこでも同じ | 上（単独で強い） |  | ThornGuard / Thorns / Immobile / Havoc / ThornsArmored / ThornsWound / ThornsBare |
 | 44 | 焼け残りのボルグ | +15.82 | -4.51 | 転生 | 14 | 0 | 44.0 | 化ける | 左下（送り先を選べば働く） | 0.0pt | Splash / FireFeed / Cinder / FireArmor / FireSplash / SelfKindle / FireMend / FireWardAll / FireLevel / CinderWide / FireKeep / FireSpreadCap / FireUnleash / FoeFireLevel / FoeFireTick / FoeFireBrittle / FoeFireSpread / AllyFireTick / RadiateCall / CallFull / UnleashBlaze / BlazeSolo / KindleGuard / BlazeHoard / KindleOpen / BlazeFoeSurgeMax / BurnHitNoMend |
 | 45 | 砕け盾のヒビ | +17.78 | +4.64 | 残す | 4 | 0 | 21.0 | 化ける | 上（単独で強い） |  | ShardGift / ShardOpen / ShardBareNoPlank / ShardFull |
-| 46 | 逸らしのソラ | +18.10 | +1.62 | 残す | 6 | 0 | 8.0 | どこでも同じ | 上（単独で強い） |  | Divert / Deflect / Thrust / DivertPressure / DivertKeepBeckon |
+| 46 | 逸らしのソラ | +18.10 | +1.62 | 残す | 6 | 0 | 7.0 | どこでも同じ | 上（単独で強い） |  | Divert / Deflect / Thrust / DivertPressure / DivertKeepBeckon |
 | 47 | 継ぎ接ぎのヴェル | +19.57 | +10.99 | 残す | 15 | 0 | 6.0 | どこでも同じ | 上（単独で強い） |  | SoulSplitHalf / SoulSew |
 | 48 | 逆しまのウツ | +25.60 | +3.89 | 残す | 5 | 0 | 27.0 | 化ける | 上（単独で強い） |  | Perverse / PerverseOver |
 | 49 | 包みのセッキ | +25.62 | — | — | 3 | 0 | 35.0 | 化ける | — |  | SlimeWrap / SlimeOverflow / SlimeDeep / SlimeSwell / SlimeMelt |
@@ -84,4 +84,4 @@
 - `checkup ideal` が値を返した駒: 51 / 52 （返さないのは `CompareBuilds()` に在席 0 枠の駒だけ）
 - `stage catalog` が引けた駒: 51 / 52
 
-所要 667.5 秒（うち `stage catalog` が 645.1 秒）。
+所要 538.6 秒（うち `stage catalog` が 510.6 秒）。

@@ -87,9 +87,9 @@ static partial class Sh396Diag
         var tame = CB397().First(r => r.Name == "溜め改 (クグ×バン×ガン)").F;
         return new (string, Formation)[]
         {
-            ("試遊・手番 芯3枚", Presets.TempoLamp393(UnitCatalog.Tomo, UnitCatalog.DolgaH397)),
+            ("試遊・手番 芯3枚", Presets.TempoLamp393(UnitCatalog.TomoH399, UnitCatalog.DolgaH397)),
             ("試遊・手番 縛め", Pin397(Presets.BindTempo395())),
-            ("溜め改（バンの席にトモ）", Put(tame, SlotOf(tame, "ban"), UnitCatalog.Tomo)),
+            ("溜め改（バンの席にトモ）", Put(tame, SlotOf(tame, "ban"), UnitCatalog.TomoH399)),
         };
     }
 
@@ -231,7 +231,7 @@ static partial class Sh396Diag
 
         var boards = new (string Name, Formation F)[]
         {
-            ("試遊・手番 芯3枚", Presets.TempoLamp393(UnitCatalog.Tomo, UnitCatalog.DolgaH397)), ("試遊・手番 縛め", Pin397(Presets.BindTempo395())), ("試遊・手番 探索1位", Pin397(Presets.TempoSeek392())),
+            ("試遊・手番 芯3枚", Presets.TempoLamp393(UnitCatalog.TomoH399, UnitCatalog.DolgaH397)), ("試遊・手番 縛め", Pin397(Presets.BindTempo395())), ("試遊・手番 探索1位", Pin397(Presets.TempoSeek392())),
         };
         var dols = new (string Name, UnitDef D)[] { ("規定（第396期）", UnitCatalog.DolgaH397), ("第395期の E1", UnitCatalog.DolgaE1), ("旧 DolgaH395", UnitCatalog.DolgaH395) };
         var ws = new[] { WBoss, WGuard, WBat, WM5, WStrong };
@@ -421,7 +421,7 @@ static partial class Sh396Diag
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var v = Vers.FirstOrDefault(x => x.Name == ver);
         if (v.D is null) { Console.WriteLine($"版が無い: {ver}"); return; }
-        var core = new[] { UnitCatalog.Tomo, UnitCatalog.Gan, UnitCatalog.DolgaH397, v.D };
+        var core = new[] { UnitCatalog.TomoH399, UnitCatalog.Gan, UnitCatalog.DolgaH397, v.D };
         var cands = UnitCatalog.All.Where(d => d.Id is not "tomo" and not "gan" and not "dolga" and not "sekki" and not "tsugi" and not "lili").ToArray();
         var cs = cands.SelectMany(c => Perms.Select(pm => (Free: c, F: Board(core.Append(c).ToArray(), pm)))).ToArray();
         var s1 = new Score[cs.Length];

@@ -81,11 +81,11 @@ static partial class Sh394Diag
         var bind = Row("縛め収入型 (クグ×バン×ガン)"); var tame = Row("溜め改 (クグ×バン×ガン)");
         var l = new List<(string, Formation)>
         {
-            ("試遊・手番 芯3枚", Presets.TempoLamp393(UnitCatalog.Tomo)),
+            ("試遊・手番 芯3枚", Presets.TempoLamp393(UnitCatalog.TomoH399)),
             ("試遊・手番 探索1位", Presets.TempoSeek392()),
             ("灯×薙ぎ (トモ×ドルガ)", Row("灯×薙ぎ (トモ×ドルガ)")),
-            ("縛め収入型（バンの席にトモ）", Put(bind, SlotOf(bind, "ban"), UnitCatalog.Tomo)),
-            ("溜め改（バンの席にトモ）", Put(tame, SlotOf(tame, "ban"), UnitCatalog.Tomo)),
+            ("縛め収入型（バンの席にトモ）", Put(bind, SlotOf(bind, "ban"), UnitCatalog.TomoH399)),
+            ("溜め改（バンの席にトモ）", Put(tame, SlotOf(tame, "ban"), UnitCatalog.TomoH399)),
             ("縛め収入型 (クグ×バン×ガン)", bind),
             ("溜め改 (クグ×バン×ガン)", tame),
         };
@@ -200,7 +200,7 @@ static partial class Sh394Diag
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var boards = BoardList().Take(3).ToArray();
-        var tomos = new (string Name, UnitDef D)[] { ("規定（第394期）", UnitCatalog.Tomo), ("第393期の T3", UnitCatalog.TomoT3), ("旧 TomoH393", UnitCatalog.TomoH393) };
+        var tomos = new (string Name, UnitDef D)[] { ("規定（第394期）", UnitCatalog.TomoH399), ("第393期の T3", UnitCatalog.TomoT3), ("旧 TomoH393", UnitCatalog.TomoH393) };
         var ws = new[] { WBoss, WGuard, WBat, WM5, WStrong };
         Console.WriteLine($"# {Tag} §2 段0: 3 台 × トモ（{string.Join(" ／ ", tomos.Select(x => x.Name))}）× ボス ／ 近衛 ／ 大隊 ／ 本編 第5波 ／ 強い条件（seed 0..{Seeds - 1}）");
         Console.WriteLine();

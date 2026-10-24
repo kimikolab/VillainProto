@@ -588,7 +588,7 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.DolgaHeavy]          = (HcPlusL, "大物ほど重い（第397期・ドルガ G2 ／ G12）: 一撃に当たる敵の最大 HP の 5% を足す（`AtkBonus` は動かない・判定は engine）。第398期から規定（ドルガ）"),
         [TraitId.SlimeMelt]           = (HcPlusL, "ゼリーが消す（第398期・セッキ K1 ／ K12）: 包むとき HP で受ける量を吸った量の半分 → 2 割に（判定は engine）。第399期から規定（セッキ）"),
         [TraitId.SlimeHarden]         = (HcPlusL, "固まる（第398期・セッキ K2 ／ K12）: 自分が受ける一撃（刻み ／ 徴収を除く・包みで受ける分にも）を帳簿の 1 割だけ軽くする・下限 0（判定は engine）。保持者 0 枚"),
-        [TraitId.TaillightIdleYield]  = (HcPlusL, "起きた背を押す（第399期・トモ L1）: 灯した味方が前のターンに動けなかったときも手番を譲る（敵が倒れていたときと、どちらか）。保持者 0 枚"),
+        [TraitId.TaillightIdleYield]  = (HcPlusL, "起きた背を押す（第399期・トモ L1）: 灯した味方が前のターンに動けなかったときも手番を譲る（敵が倒れていたときと、どちらか）。第400期から規定（トモ）"),
         [TraitId.DolgaWakeDouble]     = (HcPlusL, "休み明けは倍（第399期・ドルガ X1）: 動けなかったターンの後の最初の一振りが 2 倍（判定は engine）。保持者 0 枚"),
         [TraitId.DolgaWakeStack]      = (HcPlusL, "止められるほど重い（第399期・ドルガ X2）: 2 ターン以上続けて動けなかった後の最初の一振りに、積まれた力を「連続 − 1」回ぶん足す（判定は engine）。保持者 0 枚"),
         [TraitId.DirgeEcho]           = (HcMinusL, "哀歌は敵にも届く（第382期・弔いの楽士 D1 のマイナス）: 前の手番から敵が倒れていれば、味方の後に、いちばん攻撃力の高い敵がもう一度動く。保持者 0 枚"),

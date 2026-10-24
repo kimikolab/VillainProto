@@ -43,14 +43,14 @@ static partial class Sh394Diag
         Console.WriteLine();
         Console.WriteLine("| 項目 | 判定 | 備考 |");
         Console.WriteLine("|---|---|---|");
-        UnitDef t = UnitCatalog.Tomo, h = UnitCatalog.TomoH393, t3 = UnitCatalog.TomoT3;
+        UnitDef t = UnitCatalog.TomoH399 /* 第400期: 第394〜399期の規定は旧へ */, h = UnitCatalog.TomoH393, t3 = UnitCatalog.TomoT3;
         UnitDef d = UnitCatalog.DolgaH395, d0 = UnitCatalog.DolgaD0, d1 = UnitCatalog.DolgaD1, d2 = UnitCatalog.DolgaD2;
 
         // ---- 段0: 規定のトモ ----
         {
             bool cards = t.Traits.SequenceEqual(new[] { TraitId.Taillight, TraitId.TaillightKeep, TraitId.TaillightWake, TraitId.TaillightCarry }) && t.Traits.SequenceEqual(t3.Traits)
                 && t.PlusText == t3.PlusText && t.MinusText == t3.MinusText && t.Id == "tomo" && t.MaxHp == h.MaxHp && t.Attack == h.Attack && t.Speed == h.Speed && t.Actions == h.Actions && t.Flavor == h.Flavor
-                && UnitCatalog.All.Contains(t) && !UnitCatalog.All.Contains(h) && !UnitCatalog.All.Contains(t3) && h.Traits.SequenceEqual(new[] { TraitId.Taillight })
+                && UnitCatalog.All.Contains(UnitCatalog.Tomo) && !UnitCatalog.All.Contains(t) && !UnitCatalog.All.Contains(h) && !UnitCatalog.All.Contains(t3) && h.Traits.SequenceEqual(new[] { TraitId.Taillight })
                 && new[] { UnitCatalog.TomoT1, UnitCatalog.TomoT2, t3 }.All(v => v.Traits.Take(h.Traits.Count).SequenceEqual(h.Traits) && v.MaxHp == h.MaxHp && v.Speed == h.Speed && v.Actions == h.Actions);
             bool pins = PinT393(t) == h && PinT393(d) == d && PinT393(h) == h && Pin393(Presets.TempoSeek392()).Occupied().Any(o => o.Def == h) && !Pin393(Presets.TempoSeek392()).Occupied().Any(o => o.Def == t);
             Expect("段0: 規定のトモ ＝ 第393期の T3（札 ／ 文面 ／ 数値）・旧は `TomoH393`（`All` の外・尾灯 1 枚）・第393期の版の駒は旧から作ったまま・固定の口 `PinT393` ／ `Pin393`", cards && pins,
@@ -71,7 +71,7 @@ static partial class Sh394Diag
             var v = VersionsH394().Select(r => r.Name).ToList(); var h3 = VersionsH393();   // 第395期: 第394期の一覧
             bool ok = v.Contains("試遊・手番 芯3枚") && v.Contains("試遊・手番 探索1位") && !v.Contains("版・灯 手番")
                 && h3[^1].Name == "版・灯 手番" && h3[^1].F.Occupied().Any(o => o.Def == t3) && h3.Select(r => r.Name).Count(n => n == "試遊・手番 芯3枚") == 0
-                && Presets.Versions.First(r => r.Name == "試遊・手番 芯3枚").F.Occupied().Any(o => o.Def == t)
+                && VersionsH394().First(r => r.Name == "試遊・手番 芯3枚").F.Occupied().Any(o => o.Def == t)   // 第400期: 第394期の一覧で（トモは旧）
                 && h3.Where(r => r.Name != "版・灯 手番").All(r => !r.F.Occupied().Any(o => o.Def == t))
                 && VersionsH392().Select(r => r.Name).SequenceEqual(h3.Select(r => r.Name).SkipLast(1));
             Expect("段0: 試遊の台「版・灯 手番」→「試遊・手番 芯3枚」（規定のトモ）・「試遊・手番 探索1位」は残す・第393期の一覧は `VersionsH393()`（名前と T3 を戻し、ほかのトモは旧）", ok, $"`Presets.Versions` {v.Count} 台");

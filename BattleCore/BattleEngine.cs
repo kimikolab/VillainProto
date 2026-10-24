@@ -13307,7 +13307,8 @@ public sealed class BattleContext
         if (_dolgaWakeLive) WakeSwing399(actor, out wakeMul, out wakeAdd);
         if (wakeMul != 1) { int f0 = first; first *= wakeMul; TallyOf(actor).R399DoubleAdd += first - f0; }
         if (wakeAdd > 0) { first += wakeAdd; TallyOf(actor).R399StackAdd += wakeAdd; }
-        if (heavy) first += HeavyAdd397(actor, target);
+        if (_verbose && focusN > 0) EmitWall(WallLabels.Focus, actor, target, focusN, 0);   // 第400期・表示専用
+        if (heavy) { int hv = HeavyAdd397(actor, target); first += hv; if (_verbose) EmitWall(WallLabels.Heavy, actor, target, hv, 0); }   // 第400期: 表示専用の札を足した（量は今どおり）
         if (whip is not null) first = WhipAmount(whip, target, first);   // 第217期（当てる前の2倍）
         UnitState firstRecv = shield is null ? target : ShieldRecv(shield, target, ref first);
         if (_fireLvLive) NoteFireContact(actor, firstRecv);   // 第242期（燃え広がりの控え・当てる前）
@@ -14135,11 +14136,13 @@ public sealed class BattleContext
                 // 第395期（E1 ／ E12・`DolgaWallRetreat`）: その一撃を受ける前の HP が最大の半分を切っていれば下がる（回復で戻れば再び壁）
                 if (w.HasTrait(TraitId.DolgaWallRetreat) && w.Hp * 2 < w.MaxHp)
                 {
+                    if (_verbose && _wallDown400.Add(w.InstanceId)) EmitWall(WallLabels.Down, w, null, 0, 0);   // 第400期・表示専用（状態が変わったときだけ）
                     UnitTally rt = TallyOf(w);   // 計数のみ
                     rt.R395WallRetreats++;
                     if (_turn >= 0 && _turn <= BattleEngine.MaxTurns) (rt.R395RetreatByTurn ??= new long[BattleEngine.MaxTurns + 2])[_turn]++;
                     continue;
                 }
+                if (_verbose && _wallDown400.Remove(w.InstanceId)) EmitWall(WallLabels.Up, w, null, 0, 0);   // 第400期・表示専用（回復で戻った）
                 if (wallD is null || w.Slot < wallD.Slot) wallD = w;
             }
             if (wallD is not null)
@@ -14152,6 +14155,7 @@ public sealed class BattleContext
                 if (_turn >= 0 && _turn <= BattleEngine.MaxTurns) (wt.R394WallByTurn ??= new long[BattleEngine.MaxTurns + 2])[_turn] += half;
                 TallyOf(target).R394WalledFor++;
                 Log($"    {wallD.Name} が {target.Name} の前に立ち、一撃を代わりに受けた（{amount} → {half}）", LogKind.Trigger);
+                if (_verbose) EmitWall(WallLabels.Take, wallD, target, amount, half);   // 第400期・表示専用
                 int hp0 = wallD.Hp, ar0 = wallD.RawCounter(StatusKeys.Armor);
                 if (half > 0) ApplyDamage(wallD, half, source, isFriendlyFire: true, relayed: true, pattern: pattern);
                 int lost = hp0 - Math.Max(0, wallD.Hp) + (ar0 - wallD.RawCounter(StatusKeys.Armor));
@@ -14185,6 +14189,7 @@ public sealed class BattleContext
                     {
                         int grow = taken * SlimeTrait.SwellTenths / 10;
                         if (grow > 0) { sl.MaxHp += grow; sl.Hp += grow; UnitTally gt = TallyOf(sl); gt.R397SwellGain += grow; if (sl.MaxHp > gt.R397MaxHpPeak) gt.R397MaxHpPeak = sl.MaxHp; }
+                        if (_verbose && grow > 0) Emit(new BattleEvent { Kind = BattleEventKind.Slime, Turn = _turn, Text = SlimeLabels.Swell, ActorId = sl.InstanceId, TargetId = sl.InstanceId, Amount = grow, Slot = sl.MaxHp, HpAfter = sl.Hp, StatusRemaining = sl.RawCounter(SlimeTrait.StoreKey), Team = sl.TeamId });   // 第400期・表示専用
                     }
                     // 第397期（R）: 包まれた味方は次の自分の手番を1回失う（印は 1 まで・失うのは `TakeTurnCore` の頭）
                     if (haven && target.RawCounter(SlimeTrait.HeldKey) == 0) { target.SetCounter(SlimeTrait.HeldKey, 1); TallyOf(sl).R397HavenHolds++; }
@@ -14199,6 +14204,7 @@ public sealed class BattleContext
                     bool melt = !haven && sl.HasTrait(TraitId.SlimeMelt);
                     int hpPart = haven ? taken * SlimeTrait.HavenHpTenths / 10 : melt ? taken * SlimeTrait.MeltHpTenths / 10 : taken / 2;
                     if (melt) st.R398MeltSaved += taken / 2 - hpPart;   // 計数のみ
+                    if (_verbose) EmitSlime(SlimeLabels.Wrap, sl, target, taken, hpPart, store);   // 第400期・表示専用
                     if (hpPart > 0)
                     {
                         int hp0 = sl.Hp;
@@ -15173,6 +15179,8 @@ public sealed class BattleContext
             TurnOutcome outcome = TakeTurnCore(actor);
             if (fear) FearTail(actor, fm, outcome);
             // 第399期（X1 ／ X2）: 動けなかった手番（`IdleTurn` ＝ このターン）を、続けて動けなかったターン数に数える（同じターンの二度目は数えない）。**保持者がいなければ真偽1つで抜ける。**
+            // 第400期（表示専用）: セッキが自分の手番に動かなかった（ぷるぷる）／ ドルガの休み番（構える）。**verbose でなければ1行も走らない。**
+            if (_verbose && outcome == TurnOutcome.Stalled) EmitIdle400(actor);
             if (_dolgaWakeLive && outcome == TurnOutcome.Stalled && actor.RawCounter(StatusKeys.IdleTurn) == _turn
                 && (actor.HasTrait(TraitId.DolgaWakeDouble) || actor.HasTrait(TraitId.DolgaWakeStack)))
                 NoteIdle399(actor);
@@ -18352,6 +18360,35 @@ public sealed class BattleContext
         if (mul != 1 || add > 0) Log($"    {actor.Name} の目覚めの一撃（休み {run}T{(mul != 1 ? $"・× {mul}" : "")}{(add > 0 ? $"・+{add}" : "")}）", LogKind.Trigger);
     }
 
+    // ---- 第400期: 手番の軸の出来事（表示専用・`Slime` ／ `Wall` ／ `Lamp`）。**どれも verbose でなければ何もしない。盤面は読むだけ。** ----
+    readonly HashSet<int> _wallDown400 = new();   // 壁をやめているドルガ（表示専用・状態が変わったときだけ出すための控え・verbose のときだけ書く）
+
+    internal void EmitSlime(string label, UnitState sekki, UnitState? target, int amount, int slot, int? store)
+    {
+        if (!_verbose) return;
+        Emit(new BattleEvent { Kind = BattleEventKind.Slime, Turn = _turn, Text = label, ActorId = sekki.InstanceId, TargetId = target?.InstanceId, Amount = amount, Slot = slot, StatusRemaining = store, HpAfter = sekki.Hp, Team = sekki.TeamId });
+    }
+
+    internal void EmitWall(string label, UnitState dolga, UnitState? target, int amount, int slot)
+    {
+        if (!_verbose) return;
+        Emit(new BattleEvent { Kind = BattleEventKind.Wall, Turn = _turn, Text = label, ActorId = dolga.InstanceId, TargetId = target?.InstanceId, Amount = amount, Slot = slot, HpAfter = dolga.Hp, Team = dolga.TeamId });
+    }
+
+    internal void EmitLamp(string label, UnitState tomo, UnitState? target, int amount, int slot, int? lit = null)
+    {
+        if (!_verbose) return;
+        Emit(new BattleEvent { Kind = BattleEventKind.Lamp, Turn = _turn, Text = label, ActorId = tomo.InstanceId, TargetId = target?.InstanceId, Amount = amount, Slot = slot, StatusRemaining = lit, Team = tomo.TeamId });
+    }
+
+    /// <summary>第400期（表示専用）: 手番が潰れたとき。セッキ（包む札・譲られた手番でない）は「ぷるぷる」、のろまの休み番は「構える」。</summary>
+    void EmitIdle400(UnitState actor)
+    {
+        if (actor.HasTrait(TraitId.SlimeWrap) && !InGivenTurn) EmitSlime(SlimeLabels.Idle, actor, null, 0, 0, actor.RawCounter(SlimeTrait.StoreKey));
+        if (SluggishTrait.Resting(this, actor))
+            EmitWall(WallLabels.Rest, actor, null, actor.HasTrait(TraitId.DolgaWall) && !(actor.HasTrait(TraitId.DolgaWallRetreat) && actor.Hp * 2 < actor.MaxHp) ? 1 : 0, 0);
+    }
+
     int HeavyAdd397(UnitState actor, UnitState hit)
     {
         int add = hit.MaxHp * 5 / 100;
@@ -18379,6 +18416,8 @@ public sealed class BattleContext
         else if (InReaction) t.R396BurstOther++;
         else t.R396BurstOverflow++;
         Log($"{prefix}★ {s.Name} が溜めた衝撃を敵全体へ弾き返した（{amt}）", LogKind.Highlight, s);
+        // 第400期（表示専用）: きっかけは上の計数と同じ順で読む。
+        if (_verbose) EmitSlime(SlimeLabels.Burst, s, null, amt, InInterrupt ? SlimeLabels.ByWake : Yielding ? SlimeLabels.ByYield : _inGift ? SlimeLabels.ByGift : InReaction ? SlimeLabels.ByOther : SlimeLabels.ByOverflow, 0);
         foreach (UnitState e in LivingMembers(Opponent(s.TeamId)))
         {
             if (!e.IsAlive) continue;

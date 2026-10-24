@@ -1670,3 +1670,13 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
   - 数えるのは `TakeTurnFramed`: 手番が `Stalled` で `IdleTurn` ＝ このターンなら、前のターンも動けなかったときは続き、そうでなければ 1 から。同じターンの二度目は数えない。
   - 使うのは `PerformAttack` の一撃の本体（G1 の配り直しの後・G2 の足し分の前）: X1 は × 2、X2 は連続 ≥ 2 で正の `AtkBonus` × (連続 − 1) を足す（`AtkBonus` は動かさない）。主目標と巻き込みの両方に。使ったら 0 に戻す。
   - 保持者がいない戦は `_dolgaWakeLive` の真偽1つで抜ける。計数のみ `R399Run1` ／ `Run2` ／ `Run3` ／ `DoubleHits` ／ `DoubleAdd` ／ `StackHits` ／ `StackAdd`。新しい出来事の種類は足していない。
+
+## 第400期 —— トモの L1 を規定に ／ 手番の軸の出来事（表示専用・盤面は変えない）
+
+- **段0**: 規定のトモが `TaillightIdleYield`（起きた背を押す）を持つようになった——第399期の口（`TaillightTrait.OnAction` の譲りの門）が**規定の戦で走る**。旧の規定は `UnitCatalog.TomoH399`（固定の口 `Common.PinT399` ／ `Pin399` ／ `VersionsH399`・`PinT393` は H399 も第393期までの旧へ）。
+- **新しい出来事の種類が 3 つ**（`BattleEventKind.Slime` ／ `Wall` ／ `Lamp`・`Text` の札は `SlimeLabels` ／ `WallLabels` ／ `LampLabels`・どれも verbose のときだけ積む・**どの規則も読まない**）:
+  - `Slime`（セッキ）: 包む（包むの段・セッキの HP 分の `ApplyDamage` の前）／ 膨らむ（膨らむの段）／ 弾き返す（`SlimeBurst`・きっかけは計数と同じ順で読む）／ ぷるぷる（`TakeTurnFramed` で手番が潰れたとき・譲られた手番でない）。溜めは各出来事の `StatusRemaining`。
+  - `Wall`（ドルガ）: 構える（`TakeTurnFramed` で手番が潰れて `SluggishTrait.Resting`）／ 受ける（壁の段・ドルガの分の `ApplyDamage` の前）／ 下がる ・ 戻る（壁の判定の瞬間・状態が変わったときだけ・控えは verbose のときだけ書く `_wallDown400`）／ 集める ・ 重い（`PerformAttack` の一撃の本体・主目標の `ApplyDamage` の前）。
+  - `Lamp`（トモ）: 灯す（`TaillightTrait.OnTurnStart`・`Whet` の後）／ 消える（`Douse`・理由を引数で渡す）／ 譲る（`Yield`・きっかけを引数で渡す・`TakeTurn` の前）。
+- ガンの開戦の +4 ／ 号令の +8（`Whet`・経路 `RallyOpening` ／ `RallyTurn`）と叩き起こし（`Reveille`）は前から台本に出ているので、足していない。
+- 窓口: `BattleContext.EmitSlime` ／ `EmitWall` ／ `EmitLamp`（`internal`・verbose でなければ何もしない）。

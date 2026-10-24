@@ -45,6 +45,8 @@ static partial class Sh399Diag
         }
     }
 
+    /// <summary>第400期: `compare` の行を第399期の姿で（トモは旧 `TomoH399`）。</summary>
+    static (string Name, Formation F)[] CB399() => CompareBuilds().Select(r => (r.Name, Pin399(r.F))).ToArray();
     static string F1(double x) => S307.F1(x);
     static string F0(double x) => double.IsNaN(x) ? "—" : x.ToString("#,0");
     static string Sg(double x) => double.IsNaN(x) ? "—" : x.ToString("+0.0;-0.0;0.0");
@@ -71,8 +73,8 @@ static partial class Sh399Diag
     /// <summary>§3-3 の 6 列 ＋ ドルガの素体（規定のトモで）。</summary>
     internal static (string Name, UnitDef Tomo, UnitDef Dolga)[] Cols => new[]
     {
-        ("規定", UnitCatalog.Tomo, UnitCatalog.Dolga), ("L1", UnitCatalog.TomoL1, UnitCatalog.Dolga), ("X1", UnitCatalog.Tomo, UnitCatalog.DolgaX1), ("X2", UnitCatalog.Tomo, UnitCatalog.DolgaX2),
-        ("L1+X1", UnitCatalog.TomoL1, UnitCatalog.DolgaX1), ("L1+X2", UnitCatalog.TomoL1, UnitCatalog.DolgaX2), ("ドルガ素体", UnitCatalog.Tomo, PlainDolga),
+        ("規定", UnitCatalog.TomoH399, UnitCatalog.Dolga), ("L1", UnitCatalog.TomoL1, UnitCatalog.Dolga), ("X1", UnitCatalog.TomoH399, UnitCatalog.DolgaX1), ("X2", UnitCatalog.TomoH399, UnitCatalog.DolgaX2),
+        ("L1+X1", UnitCatalog.TomoL1, UnitCatalog.DolgaX1), ("L1+X2", UnitCatalog.TomoL1, UnitCatalog.DolgaX2), ("ドルガ素体", UnitCatalog.TomoH399, PlainDolga),
     };
     internal static Formation Apply(Formation f, UnitDef tomo, UnitDef dolga)
     {
@@ -84,18 +86,18 @@ static partial class Sh399Diag
     /// <summary>§4-1 の 1・2 の台。`Burn` は燃焼の駒がいる台。</summary>
     internal static (string Name, Formation F, bool Burn)[] BoardList()
     {
-        var all = CompareBuilds();
+        var all = CB399();
         Formation Row(string n) => all.First(r => r.Name == n).F;
         var tame = Row("溜め改 (クグ×バン×ガン)"); var bind = Row("縛め収入型 (クグ×バン×ガン)");
         return new (string, Formation, bool)[]
         {
-            ("試遊・手番 縛め", Presets.BindTempo395(), false),
-            ("試遊・手番 芯4枚", Presets.FourCore397(), false),
-            ("溜め改（バンの席にトモ）", Put(tame, SlotOf(tame, "ban"), UnitCatalog.Tomo), false),
-            ("縛め収入型（バンの席にトモ）", Put(bind, SlotOf(bind, "ban"), UnitCatalog.Tomo), false),
-            ("試遊・手番 芯3枚", Presets.TempoLamp393(), true),
-            ("試遊・手番 包み", Presets.SlimeLamp396(), true),
-            ("試遊・手番 探索1位", Presets.TempoSeek392(), true),
+            ("試遊・手番 縛め", Pin399(Presets.BindTempo395()), false),
+            ("試遊・手番 芯4枚", Pin399(Presets.FourCore397()), false),
+            ("溜め改（バンの席にトモ）", Put(tame, SlotOf(tame, "ban"), UnitCatalog.TomoH399), false),
+            ("縛め収入型（バンの席にトモ）", Put(bind, SlotOf(bind, "ban"), UnitCatalog.TomoH399), false),
+            ("試遊・手番 芯3枚", Pin399(Presets.TempoLamp393()), true),
+            ("試遊・手番 包み", Pin399(Presets.SlimeLamp396()), true),
+            ("試遊・手番 探索1位", Pin399(Presets.TempoSeek392()), true),
         };
     }
     static string BurnNote(Formation f) { var b = f.Occupied().Where(o => BurnIds.Contains(o.Def.Id)).Select(o => Short(o.Def)).ToList(); return b.Count == 0 ? "燃焼の駒なし" : "燃焼の駒: " + string.Join("・", b); }
@@ -247,7 +249,7 @@ static partial class Sh399Diag
     static void Zero()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = CompareBuilds();
+        var rows = CB399();
         int nw = EnemyCatalog.Stages.Count;
         var now = CGrid(rows, CompareSeeds);
         var k1 = CGrid(rows.Select(r => (r.Name, Has(r.F, "sekki") ? I.Swap(Pin398(r.F), "sekki", UnitCatalog.SekkiK1) : r.F)).ToArray(), CompareSeeds);
@@ -287,7 +289,7 @@ static partial class Sh399Diag
         Console.WriteLine("（行が無ければ −10pt 以上落ちた行は無い）");
         Console.WriteLine();
 
-        var boards = new (string Name, Formation F)[] { ("試遊・手番 芯3枚", Presets.TempoLamp393()), ("試遊・手番 包み", Presets.SlimeLamp396()), ("試遊・手番 縛め", Presets.BindTempo395()), ("試遊・手番 芯4枚", Presets.FourCore397()) };
+        var boards = new (string Name, Formation F)[] { ("試遊・手番 芯3枚", Pin399(Presets.TempoLamp393())), ("試遊・手番 包み", Pin399(Presets.SlimeLamp396())), ("試遊・手番 縛め", Pin399(Presets.BindTempo395())), ("試遊・手番 芯4枚", Pin399(Presets.FourCore397())) };
         var ws = new[] { WBoss, WGuard, WBat, WM5, WStrong };
         Console.WriteLine($"## 2. 試遊の 4 台 × ボス ／ 近衛 ／ 大隊 ／ 本編 第5波 ／ 強い条件（seed 0..{Seeds - 1}）・規定 ／ 第398期（セッキを旧に）");
         Console.WriteLine();
@@ -449,7 +451,7 @@ static partial class Sh399Diag
     static void Cmp()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var all = CompareBuilds();
+        var all = CB399();
         int nw = EnemyCatalog.Stages.Count;
         var cols = Cols.Take(6).ToArray();
         Console.WriteLine($"# {Tag} §4-1 の 3 `compare` 全 {all.Length} 行 × 列（第1〜5波・seed 0..{CompareSeeds - 1}）");
