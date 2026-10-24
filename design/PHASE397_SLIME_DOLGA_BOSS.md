@@ -460,3 +460,7 @@
 - **`sweep fast`**: 合格（異常終了 0 本・上限 0 本）。`Presets` と駒が動いたので、夜の `sweep nightly` でも同じ本が回る。
 - **作戦マップ**: DemoApp ビルド 0 エラー・`--map11-phase0` ／ `171` ／ `172` ／ `173` すべて `ok=True`（セッキの札が替わっても関係の表は止まらなかったので、行は足していない）・`NineWaveCheck` ／ `DischargeCheck` ／ `ScorePanelCheck` `ok=True`。
 - **過去の器具の照合（`-Units sekki,dolga,gan,tomo`）**: HEAD（4220eab3）の保存は無いが、BattleCore ／ BattleSim が同じ第396期の保存（02100b70）と比べた。**照合 186 本: 一致 166 ／ 差 19 ／ 保存に無い 1（`sh397 check`）**。差 19 本はすべて確かめた（判定の ○ ／ × の数は保存と同じ）: 18 本（`flow347` ／ `burn349` ／ `db351` ／ `sh358`〜`sh361` ／ `sh366`〜`sh376` の `check`）は `Presets.Versions` の名前を並べる備考の列だけ・`som307 compare` は「規定の列と `docs/balance.md` のずれ」84 → 89（器具の側の列は旧のセッキに固定されたまま・再生成した `balance.md`（段0 の 6 セルのうち 5 セルがこの器具の 64 行）と比べるため）。
+
+### 6-1. コミットの後の照合
+
+コミット（084b7b1e）の後に、基準を第396期の保存（02100b70）に固定した写しの器具で回し直した——**照合 186 本: 一致 166 ／ 差 19 ／ 保存に無い 1（`sh397 check`）**（差は上と同じ 19 本・中身も同じ）。期の最後に `promote`（084b7b1e ＝ 02100b70 ＋ 186 本）。push の前に、ローカルの master に自分以外の未 push のコミットは無かった。他の人が作業中の `DemoApp/*.cs` ／ `tools/comfy_idle_loop/prompts.json` はコミットに含めていない。
