@@ -3805,6 +3805,20 @@ public static class UnitCatalog
         Flavor = "強い。ただ遅い。それだけの理由で外された。"
     };
 
+    // ---- 第394期: 休む巨兵は壁（ドルガの版 D0 ／ D1 ／ D2・指示書 design/PHASE394_DOLGA_WALL_SPEC.md §3・`All` に入れない）----
+    static UnitDef DolgaOn394(TraitId[] plus, string plusText, string minusText) => new()
+    {
+        Id = Dolga.Id, Name = Dolga.Name, MaxHp = Dolga.MaxHp, Attack = Dolga.Attack, Speed = Dolga.Speed, Advances = Dolga.Advances, Pattern = Dolga.Pattern,
+        Traits = Dolga.Traits.Concat(plus).ToArray(), PlusText = plusText, MinusText = minusText, Flavor = Dolga.Flavor,
+    };
+    const string DolgaWallText = "。休んでいるあいだは仲間の前に立ち、単体の攻撃を半分にして代わりに受ける";
+    /// <summary>ドルガの版 D0（第394期・切り分け用）: 開戦で構える——奇数ターンが休み、偶数ターンに振る。</summary>
+    public static readonly UnitDef DolgaD0 = DolgaOn394(new[] { TraitId.SluggishShift }, Dolga.PlusText, "2ターンに1回しか動けない（開戦のターンは構えて動かない）");
+    /// <summary>ドルガの版 D1（第394期）: 休む巨兵は壁——休み番のあいだ、味方への単体の攻撃を半分にして代わりに受ける。</summary>
+    public static readonly UnitDef DolgaD1 = DolgaOn394(new[] { TraitId.DolgaWall }, Dolga.PlusText + DolgaWallText, Dolga.MinusText);
+    /// <summary>ドルガの版 D2（第394期）: D0 ＋ D1（構えて壁）。</summary>
+    public static readonly UnitDef DolgaD2 = DolgaOn394(new[] { TraitId.SluggishShift, TraitId.DolgaWall }, Dolga.PlusText + DolgaWallText, "2ターンに1回しか動けない（開戦のターンは構えて動かない）");
+
     /// <summary>
     /// 熾のホタ。<b>第130期に「火を配る」を測って、採用しなかった</b>
     /// （<see cref="EmberRule"/> の既定は <c>Off</c> で残置。説明文も元に戻してある）。
@@ -6884,7 +6898,8 @@ public static class UnitCatalog
     /// ローカル台でだけ走らせていた。<b>灯の対象がドルガに一意に決まる台</b>を採ってある
     /// ——トモを除いて最も遅いのは速4のガルドだが <see cref="TraitId.Stoic"/> で灯の候補から外れる。</para>
     /// </summary>
-    public static readonly UnitDef Tomo = new()
+    /// <summary>尾灯のトモ（第108〜393期の規定）。<b>第394期に規定を第393期の T3（<see cref="Tomo"/>）へ替えた</b>ので明示の定義として残す。過去の器具は `Common.PinT393` ／ `Pin393` で固定する。第393期の版は ここから作る。</summary>
+    public static readonly UnitDef TomoH393 = new()
     {
         Id = "tomo",
         Name = "尾灯のトモ",
@@ -6904,17 +6919,19 @@ public static class UnitCatalog
     // ---- 第393期: 灯が休む者に溜まり、起こし、力を運ぶ（トモの版 T1 ／ T2 ／ T3・指示書 design/PHASE393_TEMPO_LAMP_SPEC.md §2・`All` に入れない・積み上げ）----
     static UnitDef TomoOn393(TraitId[] plus, string plusText, string minusText) => new()
     {
-        Id = Tomo.Id, Name = Tomo.Name, MaxHp = Tomo.MaxHp, Attack = Tomo.Attack, Speed = Tomo.Speed, Advances = Tomo.Advances, Actions = Tomo.Actions,
-        Traits = Tomo.Traits.Concat(plus).ToArray(), PlusText = plusText, MinusText = minusText, Flavor = Tomo.Flavor,
+        Id = TomoH393.Id, Name = TomoH393.Name, MaxHp = TomoH393.MaxHp, Attack = TomoH393.Attack, Speed = TomoH393.Speed, Advances = TomoH393.Advances, Actions = TomoH393.Actions,
+        Traits = TomoH393.Traits.Concat(plus).ToArray(), PlusText = plusText, MinusText = minusText, Flavor = TomoH393.Flavor,   // 第394期: 旧の規定から作る（同じ値）
     };
     const string TomoT1Plus = "毎ターン、自分を除いて最も遅い味方に灯をともす（攻撃力 +5・累積）。休んでいる味方からも灯は外れない";
     /// <summary>トモの版 T1（第393期）: 灯を外さない（尾灯の濾し W2 を外す）。</summary>
-    public static readonly UnitDef TomoT1 = TomoOn393(new[] { TraitId.TaillightKeep }, TomoT1Plus, Tomo.MinusText);
+    public static readonly UnitDef TomoT1 = TomoOn393(new[] { TraitId.TaillightKeep }, TomoT1Plus, TomoH393.MinusText);
     /// <summary>トモの版 T2（第393期）: T1 ＋ 灯が起こす（譲るとき休み番でも動ける）。</summary>
     public static readonly UnitDef TomoT2 = TomoOn393(new[] { TraitId.TaillightKeep, TraitId.TaillightWake }, TomoT1Plus,
-        Tomo.MinusText.Replace("灯した味方に手番を譲る", "灯した味方に手番を譲る（休んでいても叩き起こす）"));
+        TomoH393.MinusText.Replace("灯した味方に手番を譲る", "灯した味方に手番を譲る（休んでいても叩き起こす）"));
     /// <summary>トモの版 T3（第393期）: T2 ＋ 灯が力を運ぶ（号令の「動かなかった味方」に数える・自分に積まれた力を灯に乗せて移す）。</summary>
     public static readonly UnitDef TomoT3 = TomoOn393(new[] { TraitId.TaillightKeep, TraitId.TaillightWake, TraitId.TaillightCarry }, TomoT1Plus + "。自分に積まれた力は、灯に乗せて灯した味方へ渡す", TomoT2.MinusText);
+    /// <summary>尾灯のトモ（第394期の規定 ＝ 第393期の T3）: 灯を外さない ／ 灯が起こす ／ 灯が力を運ぶ。札と文面は <see cref="TomoT3"/> と同じ（別の定義）。旧は <see cref="TomoH393"/>。</summary>
+    public static readonly UnitDef Tomo = TomoOn393(new[] { TraitId.TaillightKeep, TraitId.TaillightWake, TraitId.TaillightCarry }, TomoT1Plus + "。自分に積まれた力は、灯に乗せて灯した味方へ渡す", TomoT2.MinusText);
 
     /// <summary>
     /// 編成に選べる 52 枚。<b>上限は 52 ＝ トランプ1組</b>で、第103期に確定した。

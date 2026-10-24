@@ -9738,6 +9738,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.HagiAimLine)) _aimLive390 = true;       // 第390期（V1 狙いを刈れる敵に）
         if (u.HasTrait(TraitId.HagiLineEvery)) _everyLive390 = true;   // 第390期（V3 線を割るたび数える）
         if (u.HasTrait(TraitId.HagiPursuitReap) || u.HasTrait(TraitId.HagiPursuitHeavy)) _chaseLive391 = true;   // 第391期（P1 〜 追撃の刈り取り ／ 2 割）
+        if (u.HasTrait(TraitId.DolgaWall) && !_dolgaWalls.Contains(u)) _dolgaWalls.Add(u);   // 第394期（休む巨兵は壁）
         if (u.HasTrait(TraitId.VioRetchHalf) || u.HasTrait(TraitId.VioRetchThird)) { _retchLive = true; _retchHolders.Add(u); }   // 第373期（ヴィオの吐き戻し A1 ／ A2）
         if (CommandTrait.BurstUnit(u) > 0) { _burstLive = true; _burstHolders.Add(u); }   // 第321期（HQ-a ／ HQ-b・溜まったら吐く）
         if (u.HasTrait(TraitId.HisaCover)) _coverHolders.Add(u);       // 第301期（HC・庇い）
@@ -14073,6 +14074,31 @@ public sealed class BattleContext
             }
         }
 
+        // 第394期（ドルガの版 D1 ／ D2・`DolgaWall`）: 休み番のドルガが、味方への敵の**単体**の一撃を代わりに受ける（受ける量は半分・列を問わない）。
+        // 肩代わりの族の先頭（ソラの SR-a の後・巨躯 ／ 分かちの手前）。刻み ／ 徴収 ／ 中継 ／ 共有 ／ 同士討ち ／ 庇いの段は受けない・**`u != source`**・倒れた壁は除く。
+        // 殴られた味方は何も受けない。**保持者がいなければ件数の比較1つで抜ける。乱数を引かない**（保持者が複数なら席番号の若い方）。
+        if (_dolgaWalls.Count > 0 && source is not null && source.TeamId != target.TeamId && pattern == AttackPattern.Single
+            && !burnTick && !levy && !relayed && !hexShare && !isFriendlyFire && !coverHit)
+        {
+            UnitState? wallD = null;
+            foreach (UnitState w in _dolgaWalls)
+                if (w.IsAlive && w.TeamId == target.TeamId && w != target && w != source && SluggishTrait.Resting(this, w) && (wallD is null || w.Slot < wallD.Slot)) wallD = w;
+            if (wallD is not null)
+            {
+                int half = amount / 2;
+                UnitTally wt = TallyOf(wallD);   // 計数のみ
+                wt.R394WallHits++; wt.R394WallAmt += half;
+                if (_turn >= 0 && _turn <= BattleEngine.MaxTurns) (wt.R394WallByTurn ??= new long[BattleEngine.MaxTurns + 2])[_turn] += half;
+                TallyOf(target).R394WalledFor++;
+                Log($"    {wallD.Name} が {target.Name} の前に立ち、一撃を代わりに受けた（{amount} → {half}）", LogKind.Trigger);
+                int hp0 = wallD.Hp, ar0 = wallD.RawCounter(StatusKeys.Armor);
+                if (half > 0) ApplyDamage(wallD, half, source, isFriendlyFire: true, relayed: true, pattern: pattern);
+                int lost = hp0 - Math.Max(0, wallD.Hp) + (ar0 - wallD.RawCounter(StatusKeys.Armor));
+                if (half > 0 && lost < half) wt.R394WallMitigated++;   // 計数のみ（ドルガの側の軽減と重なった）
+                return;
+            }
+        }
+
         // 巨躯: 自分より前の列に立つ壁が、後ろの味方への攻撃を引き受ける。
         // 標的選択（庇う・後備え）と違って damage の層なので、薙ぎ・全体・貫きの一発ずつを拾える。
         //
@@ -18161,6 +18187,8 @@ public sealed class BattleContext
     bool _markLive389;
     /// <summary>第390期: 狙いを刈れる敵に（V1・`HagiAimLine`）／ 線を割るたび数える（V3・`HagiLineEvery`）の保持者がいる戦。V2（`HagiColumnEarly`）は `HagiDepthTrait.Column` と手番の中の札の比較で読む。</summary>
     bool _aimLive390, _everyLive390;
+    /// <summary>第394期: 休む巨兵は壁（`DolgaWall`・D1 ／ D2）の保持者（<see cref="Add"/> が積む）。いなければ `ApplyDamageBody` は件数の比較1つで抜ける。</summary>
+    readonly List<UnitState> _dolgaWalls = new();
     /// <summary>第391期: 追撃の刈り取り（`HagiPursuitReap`）／ 追撃 2 割（`HagiPursuitHeavy`）の保持者がいる戦。いなければ追撃は第388期のまま。</summary>
     bool _chaseLive391;
 

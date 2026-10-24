@@ -1011,11 +1011,15 @@ public static class Presets
         ("試遊・手番 探索1位", TempoSeek392()),
         // 第393期: 灯が休む者に溜まり、起こし、力を運ぶ版を試遊で触る台。`sh393 boards` ／ `search T3` で T3 がいちばん良く、芯 3 枚（トモ ＋ ガン ＋ ドルガ）の探索の1位も
         //   第392期の芯 3 枚の最良と同じ並び（ボルグ ＋ ベニ・強い条件 47.5 → 69.2）だったので、その台のトモを T3 にした。採否はポン。
-        ("版・灯 手番", TempoLamp393()),
+        // 第394期: T3 をトモの規定にしたので「版・灯 手番」を「試遊・手番 芯3枚」に改めた（置くのは規定のトモ・第393期の名前と T3 は `Common.VersionsH393` が戻す）。
+        ("試遊・手番 芯3枚", TempoLamp393(UnitCatalog.Tomo)),
+        // 第394期: 休む巨兵は壁（ドルガの版）を試遊で触る台。`sh394 boards` で D2（開戦で構える ＋ 壁）が「試遊・手番 芯3枚」でいちばん良かった
+        //   （強い条件 69.2 → 84.5・素体との差 +2.0 → +17.3）ので、その台のドルガを D2 にした。採否はポン。
+        ("版・壁 ドルガ", TempoLamp393(UnitCatalog.Tomo, UnitCatalog.DolgaD2)),
     };
 
-    /// <summary>第393期: 「版・灯 手番」の並び（前1 ボルグ ／ 前3 ドルガ ／ 中央 ベニ ／ 後1 ガン ／ 後3 トモ・既定はトモの版 T3）。</summary>
-    public static Formation TempoLamp393(UnitDef? tomo = null) => Formation.Build(front1: UnitCatalog.Borg, front3: UnitCatalog.Dolga, center: UnitCatalog.Beni, back1: UnitCatalog.Gan, back3: tomo ?? UnitCatalog.TomoT3);
+    /// <summary>第393期: 「版・灯 手番」の並び（前1 ボルグ ／ 前3 ドルガ ／ 中央 ベニ ／ 後1 ガン ／ 後3 トモ・既定はトモの版 T3 ／ 規定のドルガ）。第394期から「試遊・手番 芯3枚」・「版・壁 ドルガ」はドルガを D2 に。</summary>
+    public static Formation TempoLamp393(UnitDef? tomo = null, UnitDef? dolga = null) => Formation.Build(front1: UnitCatalog.Borg, front3: dolga ?? UnitCatalog.Dolga, center: UnitCatalog.Beni, back1: UnitCatalog.Gan, back3: tomo ?? UnitCatalog.TomoT3);
 
     /// <summary>第392期: 「試遊・手番 探索1位」の並び（前1 ボルグ ／ 前3 ドルガ ／ 中央 ベニ ／ 後1 トモ ／ 後3 トウ・`sh392 search` の1位）。</summary>
     public static Formation TempoSeek392() => Formation.Build(front1: UnitCatalog.Borg, front3: UnitCatalog.Dolga, center: UnitCatalog.Beni, back1: UnitCatalog.Tomo, back3: UnitCatalog.Tou);

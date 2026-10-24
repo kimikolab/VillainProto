@@ -8,6 +8,8 @@ description: 第259期に `CLAUDE.md` の「現状値」節を**逐語で**移�
 
 ## 現状値
 
+**第394期は軽い期で、段0 に第393期の T3 をトモの規定にし（旧は `UnitCatalog.TomoH393`・尾灯だけ）、本体でドルガの版 3 つ（D0 開戦で構える ／ D1 休む巨兵は壁 ／ D2 両方）を測った——ドルガの規定は変えない**（指示書は design/PHASE394_DOLGA_WALL_SPEC.md・報告は design/PHASE394_DOLGA_WALL.md）。過去の器具の固定は `Common.PinT393` ／ `Pin393` ／ `VersionsH393`（「版・灯 手番」の名前と T3 を戻す）。版のドルガは `UnitCatalog.DolgaD0` ／ `DolgaD1` ／ `DolgaD2`（`All` の外）・札 2 枚（`SluggishShift` ／ `DolgaWall`・保持者 0 枚）・休み番の判定は `SluggishTrait.Resting` の1か所・壁は `ApplyDamage` の肩代わりの族の先頭。`compare` は 0 セル（第393期の T3 の列と同じ）・全66行 100 / 97.2 / 97.7 / 98.5 / 96.0・主判定19行 100 / 98.9 / 99.9 / 99.9 / 97.3・情報セル 34 / 11——どれも動かない。試遊の台「版・灯 手番」を「試遊・手番 芯3枚」に改め、「版・壁 ドルガ」（芯 3 枚の台に D2）を足した。
+
 **第393期は軽い期で、規定を1つも変えず、トモの版 3 つ（T1 灯を外さない ／ T2 灯が起こす ／ T3 灯が力を運ぶ・積み上げ）を測った**（指示書は design/PHASE393_TEMPO_LAMP_SPEC.md・報告は design/PHASE393_TEMPO_LAMP.md）。版のトモは `UnitCatalog.TomoT1` ／ `TomoT2` ／ `TomoT3`（`All` の外）・札 3 枚（`TaillightKeep` ／ `TaillightWake` ／ `TaillightCarry`・保持者 0 枚・engine は `BattleContext.TaillightWaking` だけ）。`compare` は規定で 0 セル・全66行 100 / 97.2 / 97.7 / 98.5 / 96.0・主判定19行 100 / 98.9 / 99.9 / 99.9 / 97.3・情報セル 34 / 11——どれも動かない。試遊の台に「版・灯 手番」を足した（過去の器具の一覧は `Common.VersionsH392`）。
 
 **第392期は軽い期で、段0 に第391期の P1h をハギの規定にし（旧は `UnitCatalog.HagiH391`・R5m）、本体で手番の軸（トモ ／ ドルガ ／ ガンほか）を棚卸しした（数えるだけ・規則は変えない）**（指示書は design/PHASE392_TEMPO_INVENTORY_SPEC.md・報告は design/PHASE392_TEMPO_INVENTORY.md）。過去の器具の固定は `Common.PinH391` ／ `Pin391` ／ `VersionsH391`。`compare` は 0 セル（第391期の P1h の列と同じ）・全66行 100 / 97.2 / 97.7 / 98.5 / 96.0・主判定19行 100 / 98.9 / 99.9 / 99.9 / 97.3・情報セル 34 / 11——どれも動かない。試遊の台は「版・P1 ハギ」を外し「試遊・手番 探索1位」（ボルグ ／ ドルガ ／ ベニ ／ トモ ／ トウ）を足した。

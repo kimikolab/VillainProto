@@ -57,7 +57,7 @@ static partial class Sh382Diag
     };
     internal static readonly (string Name, UnitDef D)[] CandOf =
     {
-        ("D1", UnitCatalog.Bard382), ("D1n", UnitCatalog.Bard382n), ("トモ", UnitCatalog.Tomo), ("ドハ", UnitCatalog.Doha), ("ガン", UnitCatalog.Gan), ("素体", Plain),
+        ("D1", UnitCatalog.Bard382), ("D1n", UnitCatalog.Bard382n), ("トモ", UnitCatalog.TomoH393), ("ドハ", UnitCatalog.Doha), ("ガン", UnitCatalog.Gan), ("素体", Plain),
     };
     /// <summary>台 1〜3 の固定の1枚（芯 リィカ ／ ヴェル ／ ムグ ＋ この1枚 ＋ 候補）。</summary>
     internal static readonly (string Name, UnitDef D)[] Partners = { ("スィド ＋ 候補", UnitCatalog.Sid), ("ゴルム ＋ 候補", UnitCatalog.Golm), ("ボルグ ＋ 候補", UnitCatalog.Borg) };
@@ -102,7 +102,7 @@ static partial class Sh382Diag
         void Add(string k, long v) { if (v != 0) x[k] = x.GetValueOrDefault(k) + v; }
         if (r.TallyByUnit.TryGetValue(UnitCatalog.Bard382.Id, out var bt))
         { Add("songs", bt.R382Songs); Add("noDeath", bt.R382NoDeath); Add("noOne", bt.R382NoOne); Add("inGift", bt.R382InGift); Add("echoes", bt.R382Echoes); Add("skipped", bt.R382Skipped); }
-        if (r.TallyByUnit.TryGetValue(UnitCatalog.Tomo.Id, out var tt)) { Add("tlFires", tt.TaillightFires); Add("tlYields", tt.TaillightYields); Add("tlYieldDmg", tt.TaillightYieldDamage); }
+        if (r.TallyByUnit.TryGetValue(UnitCatalog.TomoH393.Id, out var tt)) { Add("tlFires", tt.TaillightFires); Add("tlYields", tt.TaillightYields); Add("tlYieldDmg", tt.TaillightYieldDamage); }
         if (r.TallyByUnit.TryGetValue(UnitCatalog.Doha.Id, out var dt)) { Add("pushes", dt.Pushes); Add("pushPassed", dt.PushPassed); }
         if (r.TallyByUnit.TryGetValue(UnitCatalog.Gan.Id, out var gt)) { Add("revFires", gt.ReveilleFires); Add("revMiss", gt.ReveilleMisses); }
         foreach (var id in p.Select(u => u.Def.Id).Distinct())

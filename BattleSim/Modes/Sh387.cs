@@ -58,7 +58,7 @@ static partial class Sh387Diag
     // 棚卸しの 10 枚 ／ 素体 ／ 試遊の台 ／ 波
     // ---------------------------------------------------------------------------------
     internal static readonly UnitDef[] Ten =
-        { UnitCatalog.Kari, UnitCatalog.Uro, UnitCatalog.Tomo, UnitCatalog.Nomi, UnitCatalog.Sekki, UnitCatalog.HagiH389, UnitCatalog.Kubi, UnitCatalog.Ban, UnitCatalog.Dolga, UnitCatalog.Gan };
+        { UnitCatalog.Kari, UnitCatalog.Uro, UnitCatalog.TomoH393, UnitCatalog.Nomi, UnitCatalog.Sekki, UnitCatalog.HagiH389, UnitCatalog.Kubi, UnitCatalog.Ban, UnitCatalog.Dolga, UnitCatalog.Gan };
 
     /// <summary>素体（同じ体・札なし・ふつうに殴る・型 ／ 踏込はそのまま）。器具の中だけ（`Id` の尾に `_plain387`）。</summary>
     internal static UnitDef Plain(UnitDef d) => new()

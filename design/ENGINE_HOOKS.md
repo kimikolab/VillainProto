@@ -1625,3 +1625,10 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **灯が起こす（T2〜・`TaillightWake`）**: `TaillightTrait.Yield` が、相手がのろまで偶数ターンなら `BattleContext.TaillightWaking` を `TakeTurn` の間だけ立て、`SluggishTrait.CanAct` がその相手にだけ真を返す（痺れ ／ 組み付き ／ 粛は `TakeTurnCore` の手前の門で今どおり止まる）。起こされて振ったら相手の `IdleTurn` を消す（号令が次のターンにその手番を買えない）。
 - **灯が力を運ぶ（T3・`TaillightCarry`）**: `RallyTrait.OnTurnStart` が T2 以降、札の持ち主のトモに +8 を払う（`IdleTurn` は立てない——叩き起こしの候補にならない）。灯をともすとき、トモの正の `AtkBonus` を直に引いて灯（`Whet` 経路 `Taillight`）に足す。消灯は今どおり `LitKey`（積んだ灯の累計）を引く。
 - engine に足したのは `BattleContext.TaillightWaking`（フィールド1本）だけ。保持者がいない戦では null のまま・のろま ／ 号令 ／ 尾灯は札の比較で今どおり。新しい出来事の種類は足していない。
+
+## 第394期 —— トモの T3 を規定に ／ 休む巨兵は壁（ドルガの版 D0 ／ D1 ／ D2）
+
+- **段0**: 規定のトモ（`UnitCatalog.Tomo`）が第393期の T3 の札（`TaillightKeep` ／ `TaillightWake` ／ `TaillightCarry`）を持つようになった——上の第393期の口（`TaillightWaking` ／ 号令の +8 をトモに ／ 灯の運び）が**規定の戦で走る**（トモのいる戦）。旧は `TomoH393`。
+- **休み番の判定の1か所（`SluggishTrait.Resting`）**: のろまの休み番は規定で偶数ターン、`SluggishShift`（D0 ／ D2）の保持者は奇数ターン。`SluggishTrait.CanAct` ／ `CanReact`・`TaillightTrait.Yield`（灯の起こし）・`ApplyDamage` の壁がこれを読む。号令の +8 と叩き起こしは `IdleTurn`（動けなかったターン）を読むので、ずれた休み番にそのまま付いていく。
+- **休む巨兵は壁（`DolgaWall`・`ApplyDamage` の肩代わりの族の先頭——ソラの SR-a の後・巨躯 ／ 分かちの手前）**: 敵が出どころの `pattern == Single` の一撃で、刻み ／ 徴収 ／ 中継 ／ 共有 ／ 同士討ち ／ 庇いの段でなければ、休み番（`Resting`）の生きている保持者（的 ／ 出どころ自身を除く・複数なら席番号の若い方）が、量の半分（切り捨て）を `ApplyDamage(wall, half, source, isFriendlyFire: true, relayed: true, pattern)` で受け、殴られた味方は何も受けない（`return`）。起こされて振ったターンも休み番なので壁は続く。
+- 保持者がいない戦は `_dolgaWalls.Count` の比較1つで抜ける（規定の `compare` 66 行 330 セル ずれ 0）。計数のみ: `R394WallHits` ／ `R394WallAmt` ／ `R394WallMitigated`（ドルガの側の軽減と重なった）／ `R394WallByTurn` ／ `R394WalledFor`（殴られた側）。新しい出来事の種類は足していない。

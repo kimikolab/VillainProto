@@ -1013,6 +1013,10 @@ public enum TraitId
     HagiPursuitColumn,    // 追撃の列ごと（P1w）: 列をまとめて刈る魂（9）なら、追撃の刈り取りも的と同じ列 ＋ 中列の線以下の敵をまとめて刈る（**判定は engine の `PursuitStrike388`**・札そのものは印）
     HagiPursuitHeavy,     // 追撃 2 割（P1h）: 追撃の上乗せを、その敵が失った HP の 1 割 → 2 割に（**判定は engine の `PursuitStrike388`**・札そのものは印）
     // --- 第393期で足した札（指示書 design/PHASE393_TEMPO_LAMP_SPEC.md §2）。灯が休む者に溜まり、起こし、力を運ぶ（トモの版 T1 ／ T2 ／ T3・`All` の外）。保持者 0 枚 ---
+    // --- 第394期で足した札（指示書 design/PHASE394_DOLGA_WALL_SPEC.md §3）。休む巨兵は壁（ドルガの版 D0 ／ D1 ／ D2・`All` の外）。保持者 0 枚 ---
+    SluggishShift,        // 開戦で構える（D0 ／ D2）: のろまの休み番を奇数ターンへずらす（偶数ターンに振る・T1 は動かない）。休み番の判定は `SluggishTrait.Resting` の1か所（号令 ／ 叩き起こし ／ 灯の起こしも付いていく）（札そのものは印）
+    DolgaWall,            // 休む巨兵は壁（D1 ／ D2）: 休み番のあいだ、味方への敵の単体の攻撃を代わりに受ける（受ける量は半分・列を問わない・薙ぎ ／ 貫き ／ 全体 ／ 刻みは受けない・起こされたターンも壁は続く）（**判定は engine の `ApplyDamageBody` の肩代わりの族の先頭**・札そのものは印）
+    // --- 第394期: 第393期の T3（TaillightKeep ／ TaillightWake ／ TaillightCarry）を規定のトモにした（保持者 トモ）---
     TaillightKeep,        // 灯を外さない（T1〜）: 尾灯の濾し W2（そのターン `CanAct` が偽の駒を飛ばす）を外す——休み番 ／ 痺れの味方からも灯は外れない。W1（恒久的に殴らない駒）は今どおり飛ばす（**判定は `TaillightTrait.OnTurnStart`**・札そのものは印）
     TaillightWake,        // 灯が起こす（T2〜）: トモが手番を譲るとき、相手がのろまの休み番でも動ける（`SluggishTrait.CanAct` が `BattleContext.TaillightWaking` を読む）。起こされて振った手番は「動いた」ことにして `IdleTurn` を消す。痺れ ／ 粛などは今どおり破らない（札そのものは印）
     TaillightCarry,       // 灯が力を運ぶ（T3）: ①トモは号令（ガン）の「前のターンに動かなかった味方」に数える（+8・叩き起こしの候補には入らない）②灯をともすとき、トモに積まれた力（正の `AtkBonus`）を灯に乗せて灯した味方へ移す（写しではなく移し）（**判定は `TaillightTrait.OnTurnStart` ／ `RallyTrait.OnTurnStart`**・札そのものは印）
@@ -1405,10 +1409,17 @@ public sealed class SluggishTrait : Trait
 
     // 種別は見ない。のろまは無力化なので、溜めでも術でも偶数ターンには動けない
     // （不動＝「攻撃だけ断る」との違いがここ。Trait.CanAct の説明を参照）。
+    /// <summary>
+    /// 第394期: **休み番の判定の1か所**。規定は偶数ターン、開戦で構える（`SluggishShift`・D0 ／ D2）は奇数ターン（T1 は動かない）。
+    /// 号令 ／ 叩き起こしは `IdleTurn` と `CanReact` で、灯の起こしは `TaillightTrait.Yield` でこれを読む。のろまでない駒は偽。
+    /// </summary>
+    public static bool Resting(BattleContext ctx, UnitState u)
+        => u.HasTrait(TraitId.Sluggish) && (u.HasTrait(TraitId.SluggishShift) ? ctx.Turn % 2 == 1 : ctx.Turn % 2 == 0);
+
     public override bool CanAct(BattleContext ctx, UnitState self, ActionKind kind)
     {
         // 第393期（トモの版 T2〜・`TaillightWake`）: 灯に起こされた手番だけ、休み番を破る。**灯が起こしていなければ1ビットも変わらない。**
-        bool act = ctx.Turn % 2 == 1 || ReferenceEquals(ctx.TaillightWaking, self);
+        bool act = !Resting(ctx, self) || ReferenceEquals(ctx.TaillightWaking, self);
         if (!act) ctx.Log($"    {self.Name} はまだ動き出せない", LogKind.Action);
         return act;
     }
@@ -1416,7 +1427,7 @@ public sealed class SluggishTrait : Trait
     // 割り込みでも動けない。のろまは「自分からは振らない」型ではなく無力化なので、
     // 動かされたからといって偶数ターンに振れてはいけない。
     // 現ロスターにのろま＋割り込みの同居はないため、この行は将来の穴を塞ぐためのもの。
-    public override bool CanReact(BattleContext ctx, UnitState self) => ctx.Turn % 2 == 1;
+    public override bool CanReact(BattleContext ctx, UnitState self) => !Resting(ctx, self);   // 第394期: 休み番の判定は `Resting` の1か所
 }
 
 /// <summary>脆弱。受けるダメージが5割増し。</summary>
@@ -12429,7 +12440,7 @@ public sealed class TaillightTrait : Trait
 
         ctx.Yielding = true;
         // 第393期（トモの版 T2〜・`TaillightWake`）: 灯した相手がのろまの休み番でも、この手番だけ動ける。**札が無ければ立てない。**
-        bool waking = self.HasTrait(TraitId.TaillightWake) && lit.HasTrait(TraitId.Sluggish) && ctx.Turn % 2 == 0;
+        bool waking = self.HasTrait(TraitId.TaillightWake) && SluggishTrait.Resting(ctx, lit);   // 第394期: 休み番の判定は `SluggishTrait.Resting` の1か所
         if (waking) ctx.TaillightWaking = lit;
         try
         {
@@ -19855,6 +19866,8 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.HagiColumnEarly),                  // 第390期（列ごと刈るを早く V2・印・判定は engine）
         new MarkOnlyTrait(TraitId.HagiLineEvery),                    // 第390期（線を割るたび数える V3・印・判定は engine）
         new MarkOnlyTrait(TraitId.HagiPursuitReap),                  // 第391期（追撃の刈り取り P1〜・印・判定は engine）
+        new MarkOnlyTrait(TraitId.SluggishShift),                    // 第394期（開戦で構える D0 ／ D2・印・判定は のろま）
+        new MarkOnlyTrait(TraitId.DolgaWall),                        // 第394期（休む巨兵は壁 D1 ／ D2・印・判定は engine）
         new MarkOnlyTrait(TraitId.TaillightKeep),                    // 第393期（灯を外さない T1〜・印・判定は尾灯）
         new MarkOnlyTrait(TraitId.TaillightWake),                    // 第393期（灯が起こす T2〜・印・判定は尾灯 ／ のろま）
         new MarkOnlyTrait(TraitId.TaillightCarry),                   // 第393期（灯が力を運ぶ T3・印・判定は尾灯 ／ 号令）

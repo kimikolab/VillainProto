@@ -2517,6 +2517,9 @@ public sealed class UnitTally
     public long R391ChaseReaps, R391ChaseReapHp, R391ChaseReapSecond, R391ChaseReapKills, R391ChaseColumn, R391ChaseColumnUnits, R391ChaseColumnHp;
     /// <summary>第393期（トモの版 T1 ／ T2 ／ T3・**計数のみ**）。トモの側: 灯に乗せて運んだ力（量 ／ 回数）・休み番を起こして振らせた回数 ／ そのうち消した `IdleTurn` ／ そのうち号令の持ち主がいた回数（号令が買えたはずの手番）・号令の +8 を受けた回数。</summary>
     public long R393Carried, R393CarryLights, R393Wakes, R393WakeClearedIdle, R393WakeAteRally, R393RallyToLamp;
+    /// <summary>第394期（ドルガの版 D1 ／ D2・**計数のみ**）。壁の側: 代わりに受けた回数 ／ 量（半分にした後）／ ドルガの側の軽減と重なった回数・ターンごとの量。守られた側: 代わりに受けてもらった回数。</summary>
+    public long R394WallHits, R394WallAmt, R394WallMitigated, R394WalledFor;
+    public long[]? R394WallByTurn;
     public int R378Layer6Turn, R378Layer9Turn;
     public long R377ChainSaved;
     public int R377PeakTurn, R377AwakeTurn;
@@ -3854,6 +3857,7 @@ public sealed class UnitTally
         R390ReapKills += o.R390ReapKills; R390LinesCrossed += o.R390LinesCrossed; R390LinesRepeat += o.R390LinesRepeat;   // 第390期
         R391ChaseReaps += o.R391ChaseReaps; R391ChaseReapHp += o.R391ChaseReapHp; R391ChaseReapSecond += o.R391ChaseReapSecond; R391ChaseReapKills += o.R391ChaseReapKills;
         R391ChaseColumn += o.R391ChaseColumn; R391ChaseColumnUnits += o.R391ChaseColumnUnits; R391ChaseColumnHp += o.R391ChaseColumnHp;   // 第391期
+        R394WallHits += o.R394WallHits; R394WallAmt += o.R394WallAmt; R394WallMitigated += o.R394WallMitigated; R394WalledFor += o.R394WalledFor; R394WallByTurn = AddArr(R394WallByTurn, o.R394WallByTurn);   // 第394期
         R393Carried += o.R393Carried; R393CarryLights += o.R393CarryLights; R393Wakes += o.R393Wakes; R393WakeClearedIdle += o.R393WakeClearedIdle; R393WakeAteRally += o.R393WakeAteRally; R393RallyToLamp += o.R393RallyToLamp;   // 第393期
         if (R378Layer6Turn == 0) R378Layer6Turn = o.R378Layer6Turn;
         if (R378Layer9Turn == 0) R378Layer9Turn = o.R378Layer9Turn;

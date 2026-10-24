@@ -64,7 +64,7 @@ static partial class Sh393Diag
     // 版 ／ 列 ／ 台
     // ---------------------------------------------------------------------------------
     internal static readonly (string Name, UnitDef D)[] Vers =
-        { ("規定", UnitCatalog.Tomo), ("T1", UnitCatalog.TomoT1), ("T2", UnitCatalog.TomoT2), ("T3", UnitCatalog.TomoT3) };
+        { ("規定", UnitCatalog.TomoH393), ("T1", UnitCatalog.TomoT1), ("T2", UnitCatalog.TomoT2), ("T3", UnitCatalog.TomoT3) };
     internal static UnitDef PlainTomo => _plain ??= S392.Plain(UnitCatalog.Tomo);
     static UnitDef? _plain;
     /// <summary>列: 規定 ／ T1 ／ T2 ／ T3 ／ トモを素体に替えた台（`null` の列は無い——元の台は別に並べる）。</summary>

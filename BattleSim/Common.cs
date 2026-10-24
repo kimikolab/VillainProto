@@ -703,7 +703,7 @@ public static UnitDef PinE385(UnitDef d) => ReferenceEquals(d, UnitCatalog.Ere) 
 public static Formation Pin385(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinE385(d); return g; }
 public static UnitDef[] AllH384() => UnitCatalog.All.Select(d => ReferenceEquals(d, UnitCatalog.Ere) ? UnitCatalog.Uke : d).ToArray();
 public static readonly string[] CompareRows385 = { "燃焼×哀歌 (ボルグ×ホタ×エレ)", "死軸×哀歌 (リィカ×スィド×エレ)" };
-public static (string Name, Formation F)[] CompareBuildsH384() => CompareBuilds().Where(r => !CompareRows385.Contains(r.Name)).ToArray();
+public static (string Name, Formation F)[] CompareBuildsH384() => CompareBuilds().Where(r => !CompareRows385.Contains(r.Name)).Select(r => (r.Name, Pin393(r.F))).ToArray();   // 第394期: 過去の器具の行なのでトモも旧へ
 /// <summary>第385期: 「試遊・死 エレ ／ 試遊・燃焼 エレ」を第384期の名前（「版・楽士 死 ／ 外」）と版の楽士（`Bard384G1`）に戻した写し（第382〜384期の器具の試遊の台の項目）。</summary>
 /// <summary>第386期: `Presets.Versions` の末尾に版の2台（「版・弾け ／ 寄生 死の連鎖」）を足した。第385期の一覧（足す前）は、末尾の版の台を除いた写し。</summary>
 public static (string Name, Formation F)[] VersionsH385() => VersionsH386().Where(r => r.Name is not ("版・弾け 死の連鎖" or "版・寄生 死の連鎖")).ToArray();   // 第387期: 第386期の一覧（ムグは旧）から
@@ -719,7 +719,7 @@ public static (string Name, Formation F)[] VersionsH388() =>
         .Append(("版・H3 ハギ", Presets.HagiBurn388())).Append(("版・H3 死神と墓守", Presets.HagiDeath388())).ToArray();
 /// <summary>第390期: 第389期の R5m を規定のハギにした（旧は `HagiH389`）。第389期までの器具はハギを旧に固定する。ほかの駒はそのまま返す。
 /// 古い口の終端（`PinV381`）と `PinMug386` ／ `PinE385` の後ろにも置いた（どの口を通ってもハギは旧になる）。</summary>
-public static UnitDef PinH389(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hagi) || ReferenceEquals(d, UnitCatalog.HagiH391) ? UnitCatalog.HagiH389 : d;   // 第392期: 第390〜391期の規定（`HagiH391`）も第389期までの旧へ
+public static UnitDef PinH389(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hagi) || ReferenceEquals(d, UnitCatalog.HagiH391) ? UnitCatalog.HagiH389 : PinT393(d);   // 第394期: 規定のトモも旧へ（古い口の終端）   // 第392期: 第390〜391期の規定（`HagiH391`）も第389期までの旧へ
 public static Formation Pin389(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinH389(d); return g; }
 /// <summary>第390期: 「版・R5 ハギ」「版・R5 死神と墓守」を規定のハギの台「試遊・ハギ 台B」「試遊・死神と墓守」に改め、末尾に版の2台（「版・VA ハギ」「版・移動 ハギ」）を足した。
 /// 第389期の一覧は、足した2台を外し、改めた2台を第389期の名前と版の R5m に戻し、ほかの台のハギを旧に固定した写し。</summary>
@@ -728,14 +728,21 @@ public static readonly string[] VersionRows390 = { "版・VA ハギ", "版・移
 /// 第390期の一覧は、足した台を外し、外した台を「版・移動 ハギ」の手前に足し戻した写し。</summary>
 public static readonly string[] VersionRows391 = { "版・P1 ハギ" };
 /// <summary>第392期: 第391期の P1h を規定のハギにした（旧は `HagiH391`・R5m）。第390〜391期の器具はハギを旧に固定する。ほかの駒はそのまま返す。</summary>
-public static UnitDef PinH391(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hagi) ? UnitCatalog.HagiH391 : d;
+public static UnitDef PinH391(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hagi) ? UnitCatalog.HagiH391 : PinT393(d);   // 第394期: 規定のトモも旧へ
 public static Formation Pin391(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinH391(d); return g; }
 /// <summary>第392期: `Presets.Versions` から「版・P1 ハギ」を外し（並びは `Presets.HagiPlay389(HagiP1h)`）、末尾に「試遊・手番 探索1位」を足した。
 /// 第391期の一覧は、足した台を外し、各台のハギを旧に固定し、外した台を末尾に足し戻した写し。</summary>
 public static readonly string[] VersionRows392 = { "試遊・手番 探索1位" };
 /// <summary>第393期: `Presets.Versions` の末尾に「版・灯 手番」を足した。第392期の一覧は、その台を除いた写し。</summary>
 public static readonly string[] VersionRows393 = { "版・灯 手番" };
-public static (string Name, Formation F)[] VersionsH392() => Presets.Versions.Where(r => !VersionRows393.Contains(r.Name)).ToArray();
+public static (string Name, Formation F)[] VersionsH392() => VersionsH393().Where(r => !VersionRows393.Contains(r.Name)).ToArray();   // 第394期: 第393期の一覧から
+/// <summary>第394期: 第393期の T3 を規定のトモにした（旧は `TomoH393`）。第393期までの器具はトモを旧に固定する。ほかの駒はそのまま返す。古い口の終端（`PinH389` ／ `PinH391`）の後ろにも置いた。</summary>
+public static UnitDef PinT393(UnitDef d) => ReferenceEquals(d, UnitCatalog.Tomo) ? UnitCatalog.TomoH393 : d;
+public static Formation Pin393(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinT393(d); return g; }
+/// <summary>第394期: 「版・灯 手番」を「試遊・手番 芯3枚」（規定のトモ）に改め、末尾に「版・壁 ドルガ」を足した。第393期の一覧は、足した台を外し、改めた台を第393期の名前と T3 に戻し、各台のトモを旧に固定した写し。</summary>
+public static readonly string[] VersionRows394 = { "版・壁 ドルガ" };
+public static (string Name, Formation F)[] VersionsH393() =>
+    Presets.Versions.Where(r => !VersionRows394.Contains(r.Name)).Select(r => r.Name == "試遊・手番 芯3枚" ? ("版・灯 手番", Presets.TempoLamp393(UnitCatalog.TomoT3)) : (r.Name, Pin393(r.F))).ToArray();
 public static (string Name, Formation F)[] VersionsH391() =>
     VersionsH392().Where(r => !VersionRows392.Contains(r.Name)).Select(r => (r.Name, Pin391(r.F)))   /* 第393期: 第392期の一覧から */
         .Append(("版・P1 ハギ", Presets.HagiPlay389(UnitCatalog.HagiP1h))).ToArray();

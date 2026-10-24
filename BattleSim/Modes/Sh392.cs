@@ -87,7 +87,7 @@ static partial class Sh392Diag
     /// </summary>
     internal static (string Name, Formation F)[] Rows()
     {
-        var all = CompareBuilds();
+        var all = CompareBuilds().Select(r => (r.Name, F: Pin393(r.F))).ToArray();   // 第394期: トモは第393期までの規定に固定
         var named = NamedRows.Select(n => all.First(r => r.Name == n)).ToList();
         var pool = all.Where(r => !NamedRows.Contains(r.Name) && (Has(r.F, "dolga") || Has(r.F, "gan"))).ToArray();
         var el = new double[pool.Length];
@@ -384,8 +384,8 @@ static partial class Sh392Diag
     static bool IsHealer(UnitDef d) => HealPool.Any(h => h.Id == d.Id);
     internal static readonly (string Name, UnitDef[] Core)[] Cores =
     {
-        ("トモ ＋ ガン ＋ ドルガ", new[] { UnitCatalog.Tomo, UnitCatalog.Gan, UnitCatalog.Dolga }),
-        ("トモ ＋ ドルガ", new[] { UnitCatalog.Tomo, UnitCatalog.Dolga }),
+        ("トモ ＋ ガン ＋ ドルガ", new[] { UnitCatalog.TomoH393, UnitCatalog.Gan, UnitCatalog.Dolga }),   // 第394期: トモは第393期までの規定に固定
+        ("トモ ＋ ドルガ", new[] { UnitCatalog.TomoH393, UnitCatalog.Dolga }),
         ("ガン ＋ ドルガ", new[] { UnitCatalog.Gan, UnitCatalog.Dolga }),
     };
     /// <summary>残りの枠の候補: ロスター 52 枚から芯の駒とツギ ／ リリを除いた駒。ヒーラー（`Boss283Diag.HealPoolNow`）は残りの枠に1枚まで。</summary>
@@ -554,7 +554,7 @@ static partial class Sh392Diag
     static void Seek()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var f = Presets.TempoSeek392();
+        var f = Pin393(Presets.TempoSeek392());   // 第394期: トモは第393期までの規定に固定
         S377.B[] M(Formation x) { var g = new S377.B[W8.Length]; Parallel.For(0, W8.Length, wi => g[wi] = S377.Measure(x, W8[wi].Ws, Seeds, Extra)); return g; }
         var b0 = M(f);
         Console.WriteLine($"# {Tag} §3-5 の補足 「試遊・手番 探索1位」（{Seats(f)}）の駒を1枚ずつ同じ席の素体に替えた差（seed 0..{Seeds - 1}）");

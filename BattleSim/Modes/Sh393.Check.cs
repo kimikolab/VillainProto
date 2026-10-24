@@ -47,7 +47,7 @@ static partial class Sh393Diag
         Console.WriteLine();
         Console.WriteLine("| 項目 | 判定 | 備考 |");
         Console.WriteLine("|---|---|---|");
-        UnitDef t0 = UnitCatalog.Tomo, t1 = UnitCatalog.TomoT1, t2 = UnitCatalog.TomoT2, t3 = UnitCatalog.TomoT3;
+        UnitDef t0 = UnitCatalog.TomoH393, t1 = UnitCatalog.TomoT1, t2 = UnitCatalog.TomoT2, t3 = UnitCatalog.TomoT3;
 
         // ---- 版の札と文面 ----
         {
@@ -56,7 +56,7 @@ static partial class Sh393Diag
                 && t3.Traits.SequenceEqual(new[] { TraitId.Taillight, TraitId.TaillightKeep, TraitId.TaillightWake, TraitId.TaillightCarry })
                 && t1.PlusText.EndsWith("休んでいる味方からも灯は外れない", StringComparison.Ordinal) && t2.MinusText.Contains("灯した味方に手番を譲る（休んでいても叩き起こす）", StringComparison.Ordinal)
                 && t3.PlusText.EndsWith("自分に積まれた力は、灯に乗せて灯した味方へ渡す", StringComparison.Ordinal) && t0.Traits.SequenceEqual(new[] { TraitId.Taillight })
-                && !UnitCatalog.Everyone.Any(d => d.Traits.Contains(TraitId.TaillightKeep) || d.Traits.Contains(TraitId.TaillightWake) || d.Traits.Contains(TraitId.TaillightCarry));
+                && !UnitCatalog.Everyone.Where(d => d != UnitCatalog.Tomo).Any(d => d.Traits.Contains(TraitId.TaillightKeep) || d.Traits.Contains(TraitId.TaillightWake) || d.Traits.Contains(TraitId.TaillightCarry));
             Expect("版の札と文面: T1 ＝ 規定 ＋ 灯を外さない ／ T2 ＋ 灯が起こす ／ T3 ＋ 灯が力を運ぶ（積み上げ）・文面は叩き台・`All` ／ `Retired` の外・規定のトモは今どおり", ok,
                 string.Join(" ／ ", new[] { ("T1", t1), ("T2", t2), ("T3", t3) }.Select(x => $"{x.Item1} {string.Join("・", x.Item2.Traits.Skip(1))}")));
         }
@@ -163,19 +163,19 @@ static partial class Sh393Diag
         // ---- 替えた台 ／ 素体は器具の中だけ・試遊の台 ----
         {
             var vers = new[] { t1, t2, t3 };
-            var everywhere = CompareBuilds().Concat(CrossBuilds()).Concat(Presets.Playtest).Concat(Presets.Versions).SelectMany(r => r.F.Occupied()).Select(o => o.Def).ToList();
+            var everywhere = CompareBuilds().Concat(CrossBuilds()).Concat(Presets.Playtest).Concat(VersionsH393()).SelectMany(r => r.F.Occupied()).Select(o => o.Def).ToList();
             bool inside = !everywhere.Any(d => d.Id.EndsWith("_plain392", StringComparison.Ordinal));
-            var verRows = Presets.Versions.Where(r => r.F.Occupied().Any(o => vers.Contains(o.Def))).Select(r => r.Name).ToList();
-            bool rows = verRows.SequenceEqual(new[] { "版・灯 手番" }) && Presets.Versions[^1].Name == "版・灯 手番" && Presets.Versions[^1].F.Occupied().Count(o => vers.Contains(o.Def)) == 1
+            var verRows = VersionsH393().Where(r => r.F.Occupied().Any(o => vers.Contains(o.Def))).Select(r => r.Name).ToList();
+            bool rows = verRows.SequenceEqual(new[] { "版・灯 手番" }) && VersionsH393()[^1].Name == "版・灯 手番" && VersionsH393()[^1].F.Occupied().Count(o => vers.Contains(o.Def)) == 1
                 && !CompareBuilds().Concat(CrossBuilds()).Concat(Presets.Playtest).Any(r => r.F.Occupied().Any(o => vers.Contains(o.Def)))
-                && VersionsH392().Select(r => r.Name).SequenceEqual(Presets.Versions.Select(r => r.Name).SkipLast(1));
-            Expect("替えた台 ／ 素体は器具の中だけ・版のトモが居る試遊の台は「版・灯 手番」（`Presets.Versions` の末尾）だけ・第392期の一覧は `VersionsH392`", inside && rows, string.Join("、", verRows));
+                && VersionsH392().Select(r => r.Name).SequenceEqual(VersionsH393().Select(r => r.Name).SkipLast(1));
+            Expect("替えた台 ／ 素体は器具の中だけ・版のトモが居る試遊の台は「版・灯 手番」（`VersionsH393()` の末尾）だけ・第392期の一覧は `VersionsH392`", inside && rows, string.Join("、", verRows));
         }
 
         // ---- checkup ----
         {
             string src = File.ReadAllText("BattleSim/Modes/Checkup.cs");
-            var miss = new[] { TraitId.TaillightKeep, TraitId.TaillightWake, TraitId.TaillightCarry }.Where(t => !System.Text.RegularExpressions.Regex.IsMatch(src, $@"\[TraitId\.{t}\]\s*=\s*\(Hc[A-Za-z]+L,\s*""[^""]*第393期[^""]*保持者 0 枚""")).ToList();
+            var miss = new[] { TraitId.TaillightKeep, TraitId.TaillightWake, TraitId.TaillightCarry }.Where(t => !System.Text.RegularExpressions.Regex.IsMatch(src, $@"\[TraitId\.{t}\]\s*=\s*\(Hc[A-Za-z]+L,\s*""[^""]*第393期[^""]*(保持者 0 枚|第394期から規定（トモ）)""")).ToList();
             Expect("`checkup` の札の分類表に第393期の札 3 枚（灯を外さない ／ 灯が起こす ／ 灯が力を運ぶ）がある（ソースを読んで確かめる）", miss.Count == 0, miss.Count == 0 ? "" : "無い: " + string.Join("・", miss));
         }
 
