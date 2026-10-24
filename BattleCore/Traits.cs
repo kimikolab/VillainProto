@@ -1017,6 +1017,8 @@ public enum TraitId
     SluggishShift,        // 開戦で構える（D0 ／ D2）: のろまの休み番を奇数ターンへずらす（偶数ターンに振る・T1 は動かない）。休み番の判定は `SluggishTrait.Resting` の1か所（号令 ／ 叩き起こし ／ 灯の起こしも付いていく）（札そのものは印）
     SlimeWrap,            // 包む（第396期・セッキの版 S1 ／ S2 ／ S2h）: 敵の範囲の一撃（薙ぎ ／ 貫き ／ 全体）がセッキ以外の味方に当たるとき、その量の 3 割を吸い取り（半分を HP で受ける）、吸った量を私有の帳簿に溜める。動かされたとき（手番の外・譲られた手番）は殴る代わりに敵全体へ帳簿の量を弾き返す。自分の手番では動かない（`IdleTurn` が立つ）。判定は engine の肩代わりの段と `PerformAttack` の頭
     SlimeOverflow,        // 溢れたら弾く（第396期・S2 ／ S2h）: 自分の手番でも、帳簿が自分の最大 HP 以上なら弾き返す（札そのものは印・判定は `SlimeTrait.CanAct`）
+    SlimeMelt,            // ゼリーが消す（第398期・セッキの版 K1 ／ K12）: 包むとき HP で受ける量を吸った量の半分 → 2 割（切り捨て）に（判定は engine の包むの段・札そのものは印）
+    SlimeHarden,          // 固まる（第398期・セッキの版 K2 ／ K12）: セッキが受ける一撃（刻み ／ 徴収を除く・包みで受ける分にも）を帳簿の 1 割（切り捨て）だけ軽くする・下限 0（判定は engine・札そのものは印）
     SlimeSwell,           // 膨らむ（第397期・セッキの版 B）: 吸うたび、吸った量の 2 割（切り捨て）だけ最大 HP と HP が増える（戦闘をまたがない）。溢れの線は素の最大 HP のまま（判定は engine の包むの段 ／ `SlimeTrait.CanAct`・札そのものは印）
     SlimeHaven,           // 避難所（第397期・セッキの版 R）: 範囲の一撃を丸ごと包む（殴られた味方は何も受けない・セッキは吸った量の 2 割を HP で受ける）。包まれた味方は次の自分の手番を1回失う（`IdleTurn` が立つ・判定は engine・札そのものは印）
     DolgaFocus,           // 力が一点に集まる（第397期・ドルガの版 G1 ／ G12）: 全体の薙ぎの1体あたりの量を × 5 ÷ 当たる敵の数（切り捨て）に配り直す（薙ぎ ／ ふつうの一撃は今のまま・判定は engine・札そのものは印）
@@ -10591,6 +10593,8 @@ public sealed class SlimeTrait : Trait
     public const int WrapTenths = 3, DeepTenths = 5;
     /// <summary>第397期（B 膨らむ）: 吸った量のうち最大 HP と HP に足す割合（10 分率）。R（避難所）: 吸った量のうち HP で受ける割合（10 分率）。</summary>
     public const int SwellTenths = 2, HavenHpTenths = 2;
+    /// <summary>第398期（K1 ゼリーが消す・`SlimeMelt`）: 吸った量のうち HP で受ける割合（10 分率・規定は半分）。K2（固まる・`SlimeHarden`）は帳簿の 1 割だけ自分への一撃を軽くする（判定は engine）。</summary>
+    public const int MeltHpTenths = 2;
     /// <summary>第397期（R 避難所）: 包まれた味方に立てる「次の自分の手番を失う」の印（私有キー・`StatusKeys.All` に入れない）。</summary>
     public const string HeldKey = "slimeHeld";
     /// <summary>自分の手番では殴らない型（尾灯の W1 で灯が付かない）。</summary>
@@ -19913,6 +19917,8 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.SlimeOverflow),                    // 第396期（溢れたら弾く S2 ／ S2h・印・判定は SlimeTrait.CanAct）
         new MarkOnlyTrait(TraitId.SlimeDeep),                        // 第396期（深く包む S2h・印・判定は engine）
         new MarkOnlyTrait(TraitId.SlimeSwell),                       // 第397期（膨らむ B・印・判定は engine ／ SlimeTrait.CanAct）
+        new MarkOnlyTrait(TraitId.SlimeMelt),                        // 第398期（ゼリーが消す K1 ／ K12・印・判定は engine）
+        new MarkOnlyTrait(TraitId.SlimeHarden),                      // 第398期（固まる K2 ／ K12・印・判定は engine）
         new MarkOnlyTrait(TraitId.SlimeHaven),                       // 第397期（避難所 R・印・判定は engine）
         new MarkOnlyTrait(TraitId.DolgaFocus),                       // 第397期（力が一点に集まる G1 ／ G12・印・判定は engine）
         new MarkOnlyTrait(TraitId.DolgaHeavy),                       // 第397期（大物ほど重い G2 ／ G12・印・判定は engine）

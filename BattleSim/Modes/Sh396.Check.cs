@@ -53,17 +53,17 @@ static partial class Sh396Diag
         Console.WriteLine();
         Console.WriteLine("| 項目 | 判定 | 備考 |");
         Console.WriteLine("|---|---|---|");
-        UnitDef d = UnitCatalog.Dolga, h = UnitCatalog.DolgaH395, e1 = UnitCatalog.DolgaE1;
+        UnitDef d = UnitCatalog.DolgaH397, h = UnitCatalog.DolgaH395, e1 = UnitCatalog.DolgaE1;
         UnitDef s0 = UnitCatalog.SekkiH396, s1 = UnitCatalog.SekkiS1, s2 = UnitCatalog.SekkiS2, s2h = UnitCatalog.SekkiS2h;
 
         // ---- 段0: 規定のドルガ ----
         {
             bool cards = d.Traits.SequenceEqual(e1.Traits) && d.Traits.SequenceEqual(new[] { TraitId.Sluggish, TraitId.GradeStep, TraitId.SluggishShift, TraitId.DolgaWall, TraitId.DolgaWallRetreat })
                 && d.PlusText == e1.PlusText && d.MinusText == e1.MinusText && d.Id == "dolga" && d.MaxHp == h.MaxHp && d.Attack == h.Attack && d.Speed == h.Speed && d.Pattern == h.Pattern && d.Flavor == h.Flavor
-                && UnitCatalog.All.Contains(d) && !UnitCatalog.All.Contains(h) && !UnitCatalog.All.Contains(e1) && h.Traits.SequenceEqual(new[] { TraitId.Sluggish, TraitId.GradeStep })
+                && UnitCatalog.All.Contains(UnitCatalog.Dolga) && !UnitCatalog.All.Contains(d) /* 第398期: 第396〜397期の規定は `DolgaH397` */ && !UnitCatalog.All.Contains(h) && !UnitCatalog.All.Contains(e1) && h.Traits.SequenceEqual(new[] { TraitId.Sluggish, TraitId.GradeStep })
                 && h.MinusText == "2ターンに1回しか動けない"
                 && new[] { UnitCatalog.DolgaD0, UnitCatalog.DolgaD1, UnitCatalog.DolgaD2, e1, UnitCatalog.DolgaE2, UnitCatalog.DolgaE12 }.All(v => v.Traits.Take(2).SequenceEqual(h.Traits) && v.MaxHp == h.MaxHp && v.Flavor == h.Flavor);
-            bool pins = PinD395(d) == h && PinD395(e1) == e1 && PinT393(d) == h && PinT393(UnitCatalog.Tomo) == UnitCatalog.TomoH393 && Pin395(Presets.BindTempo395()).Occupied().Any(o => o.Def == h) && Pin393(Presets.TempoSeek392()).Occupied().Any(o => o.Def == h);
+            bool pins = PinD395(d) == h && PinD395(e1) == e1 && PinT393(d) == h && PinT393(UnitCatalog.Tomo) == UnitCatalog.TomoH393 && Pin395(Pin397(Presets.BindTempo395())).Occupied().Any(o => o.Def == h) && Pin393(Pin397(Presets.TempoSeek392())).Occupied().Any(o => o.Def == h);
             Expect("段0: 規定のドルガ ＝ 第395期の E1（札 ／ 文面 ／ 数値）・旧は `DolgaH395`（`All` の外・のろま ＋ 段違い）・第394〜395期の版の駒は旧から作ったまま・固定の口 `PinD395` ／ `Pin395`（`PinT393` の終端）", cards && pins,
                 $"規定 {string.Join("・", d.Traits)}");
         }
@@ -77,7 +77,7 @@ static partial class Sh396Diag
         {
             var v = VersionsH396().Select(r => r.Name).ToList(); var h5 = VersionsH395();   // 第397期: 第396期の一覧
             bool ok = v.Contains("試遊・手番 縛め") && v.Contains("試遊・手番 芯3枚") && v.Contains("試遊・手番 探索1位") && !v.Contains("版・壁 ドルガ") && !v.Contains("版・壁 E")
-                && Presets.Versions.First(r => r.Name == "試遊・手番 縛め").F.Occupied().Any(o => o.Def == d)
+                && VersionsH396().First(r => r.Name == "試遊・手番 縛め").F.Occupied().Any(o => o.Def == d)   // 第398期: 第396期の一覧で
                 && h5.Select(r => r.Name).TakeLast(2).SequenceEqual(new[] { "版・壁 ドルガ", "版・壁 E" }) && h5[^1].F.Occupied().Any(o => o.Def == e1) && h5[^2].F.Occupied().Any(o => o.Def == UnitCatalog.DolgaD2)
                 && !h5.Any(r => r.F.Occupied().Any(o => o.Def == d)) && !h5.Any(r => VersionRows396.Contains(r.Name))
                 && VersionsH394().Select(r => r.Name).SequenceEqual(h5.Select(r => r.Name).SkipLast(1));
@@ -153,7 +153,7 @@ static partial class Sh396Diag
             bool rally = s.AtkBonus - a0 == RallyTrait.Gain;
             // 実戦: 試遊・手番 縛め に S1 で、号令の +8 がセッキに入る ／ 叩き起こしでセッキが選ばれる戦がある
             long r8 = 0, rev = 0;
-            var bd = Presets.BindTempo395(); int seat = 3;
+            var bd = Pin397(Presets.BindTempo395()); int seat = 3;
             foreach (var w in new[] { I.Boss, I.Guard, I.Bat, I.M5 })
                 for (int sd = 0; sd < 10; sd++)
                 {

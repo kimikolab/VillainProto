@@ -2531,6 +2531,10 @@ public sealed class UnitTally
     /// <summary>第397期（計数のみ）: B 膨らんだ量 ／ 最大 HP の最大・R 包んで手番を奪った回数（セッキの側）／ 包まれて手番を失った回数（失った側）・G1 全体の薙ぎの振り ／ 当たった敵の数ごとの振り・G2 足した量。</summary>
     public long R397SwellGain, R397MaxHpPeak, R397HavenHolds, R397HeldLost, R397FocusSwings, R397HeavyAdd;
     public long[]? R397FocusByN;
+    /// <summary>第398期（計数のみ）: K1 ゼリーが消した量（半分との差）・K2 固まって軽くした回数 ／ 量（セッキの側）。</summary>
+    public long R398MeltSaved, R398HardenHits, R398HardenSaved;
+    /// <summary>第398期（計数のみ）: ターンごとの弾き返した量（帳簿の推移 ＝ 吸った量の累計 − 弾き返した量の累計・`R396WrapByTurn` と対）。</summary>
+    public long[]? R398BurstByTurn, R398WrapHpByTurn;
     public int R378Layer6Turn, R378Layer9Turn;
     public long R377ChainSaved;
     public int R377PeakTurn, R377AwakeTurn;
@@ -3874,6 +3878,7 @@ public sealed class UnitTally
         R396WrapByTurn = AddArr(R396WrapByTurn, o.R396WrapByTurn);
         R396Bursts += o.R396Bursts; R396BurstAmt += o.R396BurstAmt; R396BurstDealt += o.R396BurstDealt; R396BurstMax = Math.Max(R396BurstMax, o.R396BurstMax);
         R397SwellGain += o.R397SwellGain; R397MaxHpPeak = Math.Max(R397MaxHpPeak, o.R397MaxHpPeak); R397HavenHolds += o.R397HavenHolds; R397HeldLost += o.R397HeldLost; R397FocusSwings += o.R397FocusSwings; R397HeavyAdd += o.R397HeavyAdd; R397FocusByN = AddArr(R397FocusByN, o.R397FocusByN);   // 第397期
+        R398MeltSaved += o.R398MeltSaved; R398HardenHits += o.R398HardenHits; R398HardenSaved += o.R398HardenSaved; R398BurstByTurn = AddArr(R398BurstByTurn, o.R398BurstByTurn); R398WrapHpByTurn = AddArr(R398WrapHpByTurn, o.R398WrapHpByTurn);   // 第398期
         R396BurstInterrupt += o.R396BurstInterrupt; R396BurstYield += o.R396BurstYield; R396BurstGift += o.R396BurstGift; R396BurstOverflow += o.R396BurstOverflow; R396BurstOther += o.R396BurstOther;
         R393Carried += o.R393Carried; R393CarryLights += o.R393CarryLights; R393Wakes += o.R393Wakes; R393WakeClearedIdle += o.R393WakeClearedIdle; R393WakeAteRally += o.R393WakeAteRally; R393RallyToLamp += o.R393RallyToLamp;   // 第393期
         if (R378Layer6Turn == 0) R378Layer6Turn = o.R378Layer6Turn;

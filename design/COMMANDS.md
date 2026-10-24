@@ -1475,6 +1475,12 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sh397 cmp                # 第397期 §4-3 の 10: `compare` 全 66 行 × セッキの版 ／ ドルガの版（seed 0..199）＋ (G2)
     dotnet run --project BattleSim -c Release 0 sh397 log <s|d> <台の頭> <列> <物差し 0..7> <seed>   # 第397期: 1戦のログ（s ＝ セッキの台 ／ d ＝ ドルガの台）
     dotnet run --project BattleSim -c Release 0 sh397 check              # 第397期 自己検査（段0 の規定のセッキ ／ 旧 ／ 固定の口 ／ 試遊の台・B ／ R ／ G1 ／ G2 ／ G12 の規則・ボスで分岐していない・規定の `compare`・`checkup`・verbose・PickOne ／ Roll）
+    dotnet run --project BattleSim -c Release 0 sh398 zero               # 第398期 §2 段0: `compare` の動き（第397期の HEAD の表と ／ 第397期の B ＋ G12 の列と・(G2)）＋ 試遊の 4 台 × 5 物差し（規定 ／ 第397期）
+    dotnet run --project BattleSim -c Release 0 sh398 boards             # 第398期 §3 ／ §5-1 の 1・2: 燃焼のいない手番の軸の 4 台 ＋ 燃焼のいる 2 台 × 列（規定 ／ K1 ／ K2 ／ K12 ／ 素体）× 8 物差し——勇者の規則・ボス戦の T1〜T8（一撃 ／ 吸った ／ HP ／ 帳簿 ／ 立っている数 ／ ドルガの振り）・セッキが倒れたT ／ 崩れ ／ T6 に立つ数・勇者の止め ／ 内訳・T6 のドルガの攻撃力
+    dotnet run --project BattleSim -c Release 0 sh398 smix               # 第398期 §5-1 の 3: 寄せ集め 21 台 × アタッカー以外の席の最良にセッキ（規定 ／ K1 ／ K2 ／ K12・段2 seed 0..49）
+    dotnet run --project BattleSim -c Release 0 sh398 cmp                # 第398期 §5-1 の 4: `compare` 全 66 行 × セッキの版（seed 0..199）＋ (G2)
+    dotnet run --project BattleSim -c Release 0 sh398 log <台の頭> <列> <物差し 0..7> <seed> [席]   # 第398期: 1戦のログ
+    dotnet run --project BattleSim -c Release 0 sh398 check              # 第398期 自己検査（段0 の規定のセッキ ／ ドルガ ／ 旧 ／ 固定の口 ／ 試遊の台・K1 ／ K2 の規則・ボスで分岐していない・規定の `compare`・`checkup`・verbose・PickOne ／ Roll）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

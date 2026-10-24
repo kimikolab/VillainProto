@@ -739,9 +739,15 @@ public static (string Name, Formation F)[] VersionsH392() => VersionsH393().Wher
 /// <summary>第394期: 第393期の T3 を規定のトモにした（旧は `TomoH393`）。第393期までの器具はトモを旧に固定する。ほかの駒はそのまま返す。古い口の終端（`PinH389` ／ `PinH391`）の後ろにも置いた。</summary>
 public static UnitDef PinT393(UnitDef d) => ReferenceEquals(d, UnitCatalog.Tomo) ? UnitCatalog.TomoH393 : PinD395(d);   // 第396期: 規定のドルガも旧へ（古い口の終端）
 /// <summary>第396期: ドルガ ＝ 第395期の E1 を規定にした。第395期までの規定のドルガで測った器具はこれを通す（ドルガ → `DolgaH395`）。ほかの駒はそのまま返す。</summary>
-public static UnitDef PinD395(UnitDef d) => ReferenceEquals(d, UnitCatalog.Dolga) ? UnitCatalog.DolgaH395 : PinK396(d);   // 第397期: 規定のセッキも旧へ（古い口の終端）
+public static UnitDef PinD395(UnitDef d) => ReferenceEquals(d, UnitCatalog.Dolga) || ReferenceEquals(d, UnitCatalog.DolgaH397) ? UnitCatalog.DolgaH395 : PinK396(d);   // 第398期: 第396〜397期の規定（`DolgaH397`）も第395期までの旧へ   // 第397期: 規定のセッキも旧へ（古い口の終端）
 /// <summary>第397期: セッキ ＝ 第396期の S2h（包みのセッキ）で転生した。第396期までの規定のセッキで測った器具はこれを通す（セッキ → `SekkiH396`）。ほかの駒はそのまま返す。</summary>
-public static UnitDef PinK396(UnitDef d) => ReferenceEquals(d, UnitCatalog.Sekki) ? UnitCatalog.SekkiH396 : d;
+public static UnitDef PinK396(UnitDef d) => ReferenceEquals(d, UnitCatalog.Sekki) || ReferenceEquals(d, UnitCatalog.SekkiH397) ? UnitCatalog.SekkiH396 : d;   // 第398期: 第397期の規定（`SekkiH397`）も第396期までの旧へ
+/// <summary>第398期: セッキ ＝ B ／ ドルガ ＝ G12 を規定にした。第396〜397期の規定で測った器具はこれを通す（セッキ → `SekkiH397`（S2h）・ドルガ → `DolgaH397`（E1））。ほかの駒はそのまま返す。</summary>
+public static UnitDef PinX397(UnitDef d) => ReferenceEquals(d, UnitCatalog.Sekki) ? UnitCatalog.SekkiH397 : ReferenceEquals(d, UnitCatalog.Dolga) ? UnitCatalog.DolgaH397 : d;
+public static Formation Pin397(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinX397(d); return g; }
+/// <summary>第398期: 片方だけを旧に（セッキだけ ／ ドルガだけ）。台の組み立て（`Presets` の既定の駒を使う関数）を第397期の姿に戻すときに使う。</summary>
+public static Formation PinSekki397(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = ReferenceEquals(d, UnitCatalog.Sekki) ? UnitCatalog.SekkiH397 : d; return g; }
+public static Formation PinDolga397(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = ReferenceEquals(d, UnitCatalog.Dolga) ? UnitCatalog.DolgaH397 : d; return g; }
 public static Formation Pin396(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinK396(d); return g; }
 public static Formation Pin395(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinD395(d); return g; }
 public static Formation Pin393(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinT393(d); return g; }
@@ -755,8 +761,21 @@ public static readonly string[] VersionRows396 = { "版・包み セッキ" };
 /// <summary>第397期: 「版・包み セッキ」を「試遊・手番 包み」（規定のセッキ）に改め、版の台を足した。第396期の一覧はそれを戻した写し（セッキは旧）。</summary>
 public static readonly string[] VersionRows397 = { "版・膨らむ セッキ", "版・避難所 セッキ", "版・必殺 ドルガ" };
 public static (string Name, Formation F)[] VersionsH396() =>
-    Presets.Versions.Where(r => !VersionRows397.Contains(r.Name))
-        .Select(r => r.Name == "試遊・手番 包み" ? ("版・包み セッキ", Presets.SlimeLamp396(UnitCatalog.SekkiS2h)) : (r.Name, Pin396(r.F))).ToArray();
+    VersionsH397().Where(r => !VersionRows397.Contains(r.Name))   /* 第398期: 第397期の一覧から */
+        .Select(r => r.Name == "試遊・手番 包み" ? ("版・包み セッキ", PinDolga397(Presets.SlimeLamp396(UnitCatalog.SekkiS2h))) : (r.Name, Pin396(r.F))).ToArray();
+/// <summary>第398期: 「版・膨らむ セッキ」を外し、「版・必殺 ドルガ」を「試遊・手番 芯4枚」（規定のドルガ）に改め、末尾に「版・耐える セッキ」を足した。第397期の一覧はそれを戻した写し（セッキ ／ ドルガは旧）。</summary>
+public static readonly string[] VersionRows398 = { "版・耐える セッキ" };
+public static (string Name, Formation F)[] VersionsH397()
+{
+    var l = new List<(string Name, Formation F)>();
+    foreach (var r in Presets.Versions.Where(r => !VersionRows398.Contains(r.Name)))
+    {
+        if (r.Name == "試遊・手番 芯4枚") { l.Add(("版・必殺 ドルガ", PinSekki397(Presets.FourCore397(UnitCatalog.DolgaG12)))); continue; }
+        l.Add((r.Name, Pin397(r.F)));
+        if (r.Name == "試遊・手番 包み") l.Add(("版・膨らむ セッキ", PinDolga397(Presets.SlimeLamp396(UnitCatalog.SekkiB))));
+    }
+    return l.ToArray();
+}
 public static (string Name, Formation F)[] VersionsH395()
 {
     var l = new List<(string Name, Formation F)>();

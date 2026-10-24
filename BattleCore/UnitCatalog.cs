@@ -2995,7 +2995,25 @@ public static class UnitCatalog
         "範囲の攻撃が来た瞬間、ゼリーの体で仲間を丸ごと包み、衝撃を吸い取る。吸った衝撃は体に溜まり、動かされたとき敵全体へ弾き返す" + SlimeOverflowText396,
         SlimeMinus397 + "。包まれた仲間はゼリーに絡まり、次の手番を失う");
 
-    public static readonly UnitDef Sekki = SekkiOn396(new[] { TraitId.SlimeWrap, TraitId.SlimeOverflow, TraitId.SlimeDeep }, (SlimePlus396 + SlimeOverflowText396).Replace("3 割", "5 割"));
+    /// <summary>包みのセッキ（第397期の規定 ＝ 第396期の S2h・`All` の外）。第398期に B（膨らむ）を規定にしたので旧として残す——第397期の器具はこれに固定する。</summary>
+    public static readonly UnitDef SekkiH397 = SekkiOn396(new[] { TraitId.SlimeWrap, TraitId.SlimeOverflow, TraitId.SlimeDeep }, (SlimePlus396 + SlimeOverflowText396).Replace("3 割", "5 割"));
+    /// <summary>
+    /// 包みのセッキ（第398期の規定 ＝ 第397期の B）: S2h ＋ 膨らむ（吸うたび、吸った量の 2 割だけ最大 HP と HP が増える・溢れの線は素の 70 のまま）。
+    /// 札と文面は <see cref="SekkiB"/> と同じ（別の定義）。旧は <see cref="SekkiH397"/>（S2h）／ その前は <see cref="SekkiH396"/>（後備え）。名前は仮（ポンが決める）。
+    /// </summary>
+    public static readonly UnitDef Sekki = SekkiOn397(new[] { TraitId.SlimeWrap, TraitId.SlimeOverflow, TraitId.SlimeDeep, TraitId.SlimeSwell },
+        (SlimePlus396 + SlimeOverflowText396).Replace("3 割", "5 割") + "。吸うほど体が膨らむ", SlimeMinus397);
+
+    // ---- 第398期: セッキの版 K1 ／ K2 ／ K12（規定（B）の上に・`All` に入れない）----
+    /// <summary>セッキの版 K1（第398期）: 規定 ＋ ゼリーが消す（HP で受ける量を吸った量の半分 → 2 割）。</summary>
+    public static readonly UnitDef SekkiK1 = SekkiOn397(new[] { TraitId.SlimeWrap, TraitId.SlimeOverflow, TraitId.SlimeDeep, TraitId.SlimeSwell, TraitId.SlimeMelt },
+        (SlimePlus396 + SlimeOverflowText396).Replace("3 割", "5 割").Replace("衝撃の 5 割を吸い取る", "衝撃の 5 割を吸い取る（ほとんどはゼリーに溶けて消える）") + "。吸うほど体が膨らむ", SlimeMinus397);
+    /// <summary>セッキの版 K2（第398期）: 規定 ＋ 固まる（自分が受ける一撃が帳簿の 1 割だけ軽い・弾き返して帳簿が 0 になると戻る）。</summary>
+    public static readonly UnitDef SekkiK2 = SekkiOn397(new[] { TraitId.SlimeWrap, TraitId.SlimeOverflow, TraitId.SlimeDeep, TraitId.SlimeSwell, TraitId.SlimeHarden },
+        (SlimePlus396 + SlimeOverflowText396).Replace("3 割", "5 割") + "。吸うほど体が膨らむ。溜めた衝撃でゼリーが固まり、自分への攻撃が軽くなる。弾き返すと柔らかく戻る", SlimeMinus397);
+    /// <summary>セッキの版 K12（第398期）: K1 ＋ K2。</summary>
+    public static readonly UnitDef SekkiK12 = SekkiOn397(new[] { TraitId.SlimeWrap, TraitId.SlimeOverflow, TraitId.SlimeDeep, TraitId.SlimeSwell, TraitId.SlimeMelt, TraitId.SlimeHarden },
+        (SlimePlus396 + SlimeOverflowText396).Replace("3 割", "5 割").Replace("衝撃の 5 割を吸い取る", "衝撃の 5 割を吸い取る（ほとんどはゼリーに溶けて消える）") + "。吸うほど体が膨らむ。溜めた衝撃でゼリーが固まり、自分への攻撃が軽くなる。弾き返すと柔らかく戻る", SlimeMinus397);
 
     /// <summary>
     /// 背かれのソム（第103期・<b>最後の1枠</b>）。<b>第276期に転生した</b>（規定 ＝ S1x・ポンの判断）——
@@ -3872,7 +3890,8 @@ public static class UnitCatalog
     /// のろまの巨兵ドルガ（第396期の規定 ＝ 第395期の E1）: 旧（<see cref="DolgaH395"/>）＋ 開戦で構える ＋ 休む巨兵は壁 ＋ 倒れる前に下がる。
     /// 札と文面は <see cref="DolgaE1"/> と同じ（別の定義）。名前と二つ名は据え置き。
     /// </summary>
-    public static readonly UnitDef Dolga = DolgaOn394(new[] { TraitId.SluggishShift, TraitId.DolgaWall, TraitId.DolgaWallRetreat }, DolgaH395.PlusText + DolgaWallRetreatText, DolgaD2.MinusText);
+    /// <summary>のろまの巨兵ドルガ（第396〜397期の規定 ＝ 第395期の E1・`All` の外）。第398期に G12 を規定にしたので旧として残す——第396〜397期の器具はこれに固定する。</summary>
+    public static readonly UnitDef DolgaH397 = DolgaOn394(new[] { TraitId.SluggishShift, TraitId.DolgaWall, TraitId.DolgaWallRetreat }, DolgaH395.PlusText + DolgaWallRetreatText, DolgaD2.MinusText);
 
     // ---- 第397期: ドルガの一撃をボスに届かせる（ドルガの版 G1 ／ G2 ／ G12・規定（E1）の上に・`All` に入れない）----
     static readonly TraitId[] DolgaTraitsE1 = { TraitId.SluggishShift, TraitId.DolgaWall, TraitId.DolgaWallRetreat };
@@ -3884,6 +3903,11 @@ public static class UnitCatalog
     public static readonly UnitDef DolgaG2 = DolgaOn394(DolgaTraitsE1.Append(TraitId.DolgaHeavy).ToArray(), DolgaH395.PlusText + DolgaWallRetreatText + DolgaHeavyText, DolgaD2.MinusText);
     /// <summary>ドルガの版 G12（第397期）: G1 ＋ G2（G2 の足し分は配り直しの後）。</summary>
     public static readonly UnitDef DolgaG12 = DolgaOn394(DolgaTraitsE1.Append(TraitId.DolgaFocus).Append(TraitId.DolgaHeavy).ToArray(), DolgaH395.PlusText + DolgaFocusText + DolgaWallRetreatText + DolgaHeavyText, DolgaD2.MinusText);
+    /// <summary>
+    /// のろまの巨兵ドルガ（第398期の規定 ＝ 第397期の G12）: E1 ＋ 力が一点に集まる ＋ 大物ほど重い。札と文面は <see cref="DolgaG12"/> と同じ（別の定義）。
+    /// 旧は <see cref="DolgaH397"/>（E1）／ その前は <see cref="DolgaH395"/>。名前と二つ名は据え置き。
+    /// </summary>
+    public static readonly UnitDef Dolga = DolgaOn394(DolgaTraitsE1.Append(TraitId.DolgaFocus).Append(TraitId.DolgaHeavy).ToArray(), DolgaH395.PlusText + DolgaFocusText + DolgaWallRetreatText + DolgaHeavyText, DolgaD2.MinusText);
 
     /// <summary>
     /// 熾のホタ。<b>第130期に「火を配る」を測って、採用しなかった</b>

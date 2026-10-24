@@ -52,6 +52,8 @@ static partial class Sh397Diag
         }
     }
 
+    /// <summary>第398期: `compare` の行を第397期の姿で（セッキ ／ ドルガは旧 `SekkiH397` ／ `DolgaH397`）。</summary>
+    static (string Name, Formation F)[] CB397() => CompareBuilds().Select(r => (r.Name, Pin397(r.F))).ToArray();
     static string F1(double x) => S307.F1(x);
     static string F0(double x) => double.IsNaN(x) ? "—" : x.ToString("#,0");
     static string Sg(double x) => double.IsNaN(x) ? "—" : x.ToString("+0.0;-0.0;0.0");
@@ -75,8 +77,8 @@ static partial class Sh397Diag
     // ---------------------------------------------------------------------------------
     // 版 ／ 列 ／ 台
     // ---------------------------------------------------------------------------------
-    internal static readonly (string Name, UnitDef D)[] SVers = { ("規定", UnitCatalog.Sekki), ("B", UnitCatalog.SekkiB), ("R", UnitCatalog.SekkiR) };
-    internal static readonly (string Name, UnitDef D)[] DVers = { ("規定", UnitCatalog.Dolga), ("G1", UnitCatalog.DolgaG1), ("G2", UnitCatalog.DolgaG2), ("G12", UnitCatalog.DolgaG12) };
+    internal static readonly (string Name, UnitDef D)[] SVers = { ("規定", UnitCatalog.SekkiH397), ("B", UnitCatalog.SekkiB), ("R", UnitCatalog.SekkiR) };
+    internal static readonly (string Name, UnitDef D)[] DVers = { ("規定", UnitCatalog.DolgaH397), ("G1", UnitCatalog.DolgaG1), ("G2", UnitCatalog.DolgaG2), ("G12", UnitCatalog.DolgaG12) };
     internal static UnitDef PlainSekki => _plainS ??= S392.Plain(UnitCatalog.SekkiH396);
     static UnitDef? _plainS;
     internal static (string Name, UnitDef D)[] SCols => SVers.Append(("素体", PlainSekki)).ToArray();
@@ -85,7 +87,7 @@ static partial class Sh397Diag
     /// <summary>§4-1 の 1 の台: 試遊・手番 芯3枚 ／ 試遊・手番 包み（セッキの席だけ）／ 試遊・手番 縛め。</summary>
     internal static (string Name, Formation F)[] SBoardList() => new (string, Formation)[]
     {
-        ("試遊・手番 芯3枚", Presets.TempoLamp393(UnitCatalog.Tomo, UnitCatalog.Dolga)), ("試遊・手番 包み", Presets.SlimeLamp396()), ("試遊・手番 縛め", Presets.BindTempo395()),
+        ("試遊・手番 芯3枚", Presets.TempoLamp393(UnitCatalog.Tomo, UnitCatalog.DolgaH397)), ("試遊・手番 包み", Pin397(Presets.SlimeLamp396())), ("試遊・手番 縛め", Pin397(Presets.BindTempo395())),
     };
 
     /// <summary>
@@ -94,21 +96,21 @@ static partial class Sh397Diag
     /// </summary>
     internal static (string Name, Formation F)[] DBoardList()
     {
-        var all = CompareBuilds();
+        var all = CB397();
         Formation Row(string n) => all.First(r => r.Name == n).F;
         var tame = Row("溜め改 (クグ×バン×ガン)");
         return new (string, Formation)[]
         {
-            ("試遊・手番 芯3枚", Presets.TempoLamp393(UnitCatalog.Tomo, UnitCatalog.Dolga)),
-            ("試遊・手番 縛め", Presets.BindTempo395()),
-            ("試遊・手番 包み", Presets.SlimeLamp396()),
-            ("試遊・手番 探索1位", Presets.TempoSeek392()),
+            ("試遊・手番 芯3枚", Presets.TempoLamp393(UnitCatalog.Tomo, UnitCatalog.DolgaH397)),
+            ("試遊・手番 縛め", Pin397(Presets.BindTempo395())),
+            ("試遊・手番 包み", Pin397(Presets.SlimeLamp396())),
+            ("試遊・手番 探索1位", Pin397(Presets.TempoSeek392())),
             ("灯×薙ぎ (トモ×ドルガ)", Row("灯×薙ぎ (トモ×ドルガ)")),
             ("縛め収入型 (クグ×バン×ガン)", Row("縛め収入型 (クグ×バン×ガン)")),
             ("溜め改（バンの席にトモ）", Put(tame, SlotOf(tame, "ban"), UnitCatalog.Tomo)),
-            ("芯4枚 1位（＋シオ）", Formation.Build(front1: UnitCatalog.Gan, front3: UnitCatalog.Tomo, center: UnitCatalog.Dolga, back1: UnitCatalog.Sekki, back3: UnitCatalog.Shio)),
-            ("芯4枚 2位（＋トウ）", Formation.Build(front1: UnitCatalog.Sekki, front3: UnitCatalog.Tou, center: UnitCatalog.Tomo, back1: UnitCatalog.Dolga, back3: UnitCatalog.Gan)),
-            ("芯4枚 3位（＋ボルグ）", Formation.Build(front1: UnitCatalog.Sekki, front3: UnitCatalog.Tomo, center: UnitCatalog.Dolga, back1: UnitCatalog.Borg, back3: UnitCatalog.Gan)),
+            ("芯4枚 1位（＋シオ）", Formation.Build(front1: UnitCatalog.Gan, front3: UnitCatalog.Tomo, center: UnitCatalog.DolgaH397, back1: UnitCatalog.SekkiH397, back3: UnitCatalog.Shio)),
+            ("芯4枚 2位（＋トウ）", Formation.Build(front1: UnitCatalog.SekkiH397, front3: UnitCatalog.Tou, center: UnitCatalog.Tomo, back1: UnitCatalog.DolgaH397, back3: UnitCatalog.Gan)),
+            ("芯4枚 3位（＋ボルグ）", Formation.Build(front1: UnitCatalog.SekkiH397, front3: UnitCatalog.Tomo, center: UnitCatalog.DolgaH397, back1: UnitCatalog.Borg, back3: UnitCatalog.Gan)),
         };
     }
     static string BurnNote(Formation f) { var b = f.Occupied().Where(o => BurnIds.Contains(o.Def.Id)).Select(o => Short(o.Def)).ToList(); return b.Count == 0 ? "燃焼の駒なし" : "燃焼の駒: " + string.Join("・", b); }
@@ -238,7 +240,7 @@ static partial class Sh397Diag
         });
         return g;
     }
-    static (string Name, Formation F)[] SwapRows(string id, UnitDef d) => CompareBuilds().Select(r => (r.Name, Has(r.F, id) ? I.Swap(r.F, id, d) : r.F)).ToArray();
+    static (string Name, Formation F)[] SwapRows(string id, UnitDef d) => CB397().Select(r => (r.Name, Has(r.F, id) ? I.Swap(r.F, id, d) : r.F)).ToArray();
 
     /// <summary>(G2): <paramref name="baseG"/> から −10pt 以上落ちた行（第2〜5波）を、その行の駒の「その駒を含む他の行」の第2〜5波の平均の変化で分ける。</summary>
     static void G2Split(string ver, (string Name, Formation F)[] all, double[,] baseG, double[,] g, IEnumerable<int> rowsToCheck)
@@ -264,7 +266,7 @@ static partial class Sh397Diag
     static void Zero()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = CompareBuilds();
+        var rows = CB397();
         int nw = EnemyCatalog.Stages.Count;
         var now = CGrid(rows, CompareSeeds);
         var s2h = CGrid(SwapRows("sekki", UnitCatalog.SekkiS2h), CompareSeeds);
@@ -304,7 +306,7 @@ static partial class Sh397Diag
         Console.WriteLine("（行が無ければ −10pt 以上落ちた行は無い）");
         Console.WriteLine();
 
-        var boards = new (string Name, Formation F)[] { ("試遊・手番 芯3枚", Presets.TempoLamp393(UnitCatalog.Tomo, UnitCatalog.Dolga)), ("試遊・手番 包み", Presets.SlimeLamp396()) };
+        var boards = new (string Name, Formation F)[] { ("試遊・手番 芯3枚", Presets.TempoLamp393(UnitCatalog.Tomo, UnitCatalog.DolgaH397)), ("試遊・手番 包み", Pin397(Presets.SlimeLamp396())) };
         var ws = new[] { WBoss, WGuard, WBat, WM5, WStrong };
         Console.WriteLine($"## 2. 試遊・手番 芯3枚 ／ 試遊・手番 包み × ボス ／ 近衛 ／ 大隊 ／ 本編 第5波 ／ 強い条件（seed 0..{Seeds - 1}）・包みはセッキ（規定 ／ 第396期の S2h ／ 旧）");
         Console.WriteLine();
@@ -312,7 +314,7 @@ static partial class Sh397Diag
         Console.WriteLine("|---|---|" + string.Concat(ws.Select(_ => "---|")) + "---|");
         foreach (var bd in boards)
         {
-            var defs = Has(bd.F, "sekki") ? new (string Name, UnitDef D)[] { ("規定（第397期）", UnitCatalog.Sekki), ("第396期の S2h", UnitCatalog.SekkiS2h), ("旧 SekkiH396", UnitCatalog.SekkiH396) } : new (string Name, UnitDef D)[] { ("—（セッキなし）", null!) };
+            var defs = Has(bd.F, "sekki") ? new (string Name, UnitDef D)[] { ("規定（第397期）", UnitCatalog.SekkiH397), ("第396期の S2h", UnitCatalog.SekkiS2h), ("旧 SekkiH396", UnitCatalog.SekkiH396) } : new (string Name, UnitDef D)[] { ("—（セッキなし）", null!) };
             var m = defs.Select(x => { var f = x.D is null ? bd.F : Put(bd.F, SlotOf(bd.F, "sekki"), x.D); var g = new S377.B[ws.Length]; Parallel.For(0, ws.Length, k => g[k] = S377.Measure(f, W8[ws[k]].Ws, Seeds, Extra)); return g; }).ToArray();
             for (int i = 0; i < defs.Length; i++)
                 Console.WriteLine($"| {(i == 0 ? $"{bd.Name}（{Seats(bd.F)}）" : "")} | {defs[i].Name} | {string.Join(" | ", m[i].Select(x => x.Cell))} | {(i == 0 && defs.Length > 1 ? $"違うセル {Enumerable.Range(0, ws.Length).Count(k => m[0][k].Cell != m[1][k].Cell)}" : "")} |");
@@ -448,7 +450,7 @@ static partial class Sh397Diag
     // ---------------------------------------------------------------------------------
     // §4-1 の 2: 寄せ集め
     // ---------------------------------------------------------------------------------
-    internal static (string Name, Formation F)[] Play() => Presets.Versions.Where(r => r.Name.StartsWith("試遊・", StringComparison.Ordinal) && !Has(r.F, "sekki")).ToArray();
+    internal static (string Name, Formation F)[] Play() => VersionsH397().Where(r => r.Name.StartsWith("試遊・", StringComparison.Ordinal) && !Has(r.F, "sekki")).ToArray();
 
     static void SMix()
     {
@@ -599,7 +601,7 @@ static partial class Sh397Diag
     static void Cmp()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var all = CompareBuilds();
+        var all = CB397();
         int nw = EnemyCatalog.Stages.Count;
         Console.WriteLine($"# {Tag} §4-3 の 10 `compare` 全 {all.Length} 行 × 版（第1〜5波・seed 0..{CompareSeeds - 1}）");
         Console.WriteLine();

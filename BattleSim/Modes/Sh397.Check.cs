@@ -42,16 +42,16 @@ static partial class Sh397Diag
         Console.WriteLine();
         Console.WriteLine("| 項目 | 判定 | 備考 |");
         Console.WriteLine("|---|---|---|");
-        UnitDef k = UnitCatalog.Sekki, kh = UnitCatalog.SekkiH396, s2h = UnitCatalog.SekkiS2h, kb = UnitCatalog.SekkiB, kr = UnitCatalog.SekkiR;
-        UnitDef d = UnitCatalog.Dolga, g1 = UnitCatalog.DolgaG1, g2 = UnitCatalog.DolgaG2, g12 = UnitCatalog.DolgaG12;
+        UnitDef k = UnitCatalog.SekkiH397,   /* 第398期: 第397期の規定は旧へ */ kh = UnitCatalog.SekkiH396, s2h = UnitCatalog.SekkiS2h, kb = UnitCatalog.SekkiB, kr = UnitCatalog.SekkiR;
+        UnitDef d = UnitCatalog.DolgaH397, g1 = UnitCatalog.DolgaG1, g2 = UnitCatalog.DolgaG2, g12 = UnitCatalog.DolgaG12;
 
         // ---- 段0 ----
         {
             bool cards = k.Traits.SequenceEqual(s2h.Traits) && k.Traits.SequenceEqual(new[] { TraitId.SlimeWrap, TraitId.SlimeOverflow, TraitId.SlimeDeep })
                 && k.PlusText == s2h.PlusText && k.MinusText == s2h.MinusText && k.Name == "包みのセッキ" && k.Id == "sekki" && k.MaxHp == 70 && k.Attack == 2 && k.Speed == 2
-                && UnitCatalog.All.Contains(k) && !UnitCatalog.All.Contains(kh) && !UnitCatalog.All.Contains(s2h) && kh.Traits.SequenceEqual(new[] { TraitId.RearGuard, TraitId.Rage }) && kh.Name == "後備えのセッキ"
+                && UnitCatalog.All.Contains(UnitCatalog.Sekki) && !UnitCatalog.All.Contains(k) && !UnitCatalog.All.Contains(kh) && !UnitCatalog.All.Contains(s2h) && kh.Traits.SequenceEqual(new[] { TraitId.RearGuard, TraitId.Rage }) && kh.Name == "後備えのセッキ"
                 && new[] { UnitCatalog.SekkiS1, UnitCatalog.SekkiS2, s2h, kb, kr }.All(v => v.MaxHp == kh.MaxHp && v.Attack == kh.Attack && v.Speed == kh.Speed && !UnitCatalog.Everyone.Contains(v));
-            bool pins = PinK396(k) == kh && PinK396(s2h) == s2h && PinD395(k) == kh && PinT393(k) == kh && PinT393(d) == UnitCatalog.DolgaH395 && Pin396(Presets.SlimeLamp396()).Occupied().Any(o => o.Def == kh);
+            bool pins = PinK396(k) == kh && PinK396(s2h) == s2h && PinD395(k) == kh && PinT393(k) == kh && PinT393(d) == UnitCatalog.DolgaH395 && Pin396(Pin397(Presets.SlimeLamp396())).Occupied().Any(o => o.Def == kh);
             Expect("段0: 規定のセッキ ＝ 第396期の S2h（札 ／ 文面 ／ 名前「包みのセッキ」／ 数値）・旧は `SekkiH396`（後備え ＋ 憤怒・`All` の外）・第396期の版の駒は旧の数値から作ったまま・固定の口 `PinK396` ／ `Pin396`（`PinD395` の終端）", cards && pins, $"規定 {string.Join("・", k.Traits)}");
         }
         {
@@ -65,8 +65,8 @@ static partial class Sh397Diag
             Expect("段0: 規定のセッキは第396期の S2h と同じ動き（3 台 × 4 物差し × seed 0..9 で勝敗 ／ T ／ 生存数の差 0）", diff == 0 && cells > 0, $"{cells} 戦・差 {diff}");
         }
         {
-            var v = Presets.Versions.Select(r => r.Name).ToList(); var h6 = VersionsH396();
-            bool ok = v.Contains("試遊・手番 包み") && !v.Contains("版・包み セッキ") && Presets.Versions.First(r => r.Name == "試遊・手番 包み").F.Occupied().Any(o => o.Def == k)
+            var v7 = VersionsH397(); var v = v7.Select(r => r.Name).ToList(); var h6 = VersionsH396();   // 第398期: 第397期の一覧は `VersionsH397()`
+            bool ok = v.Contains("試遊・手番 包み") && !v.Contains("版・包み セッキ") && v7.First(r => r.Name == "試遊・手番 包み").F.Occupied().Any(o => o.Def == k)
                 && h6[^1].Name == "版・包み セッキ" && h6[^1].F.Occupied().Any(o => o.Def == s2h) && !h6.Any(r => r.F.Occupied().Any(o => o.Def == k)) && !h6.Any(r => VersionRows397.Contains(r.Name))
                 && VersionsH395().Select(r => r.Name).SequenceEqual(h6.Select(r => r.Name).SkipLast(1).Take(h6.Length - 2).Concat(new[] { "版・壁 ドルガ", "版・壁 E" }));
             Expect("段0: 「版・包み セッキ」→「試遊・手番 包み」（規定のセッキ）・第396期の一覧は `VersionsH396()`（名前と S2h を戻し、ほかのセッキは旧）・`VersionsH395()` はそこから", ok, $"`Presets.Versions` {v.Count} 台");
@@ -79,8 +79,8 @@ static partial class Sh397Diag
                 && new[] { g1, g2, g12 }.All(x => x.Traits.Take(d.Traits.Count).SequenceEqual(d.Traits) && x.MaxHp == d.MaxHp && x.Attack == d.Attack && x.Speed == d.Speed && !UnitCatalog.Everyone.Contains(x))
                 && g1.Traits.Skip(d.Traits.Count).SequenceEqual(new[] { TraitId.DolgaFocus }) && g2.Traits.Skip(d.Traits.Count).SequenceEqual(new[] { TraitId.DolgaHeavy }) && g12.Traits.Skip(d.Traits.Count).SequenceEqual(new[] { TraitId.DolgaFocus, TraitId.DolgaHeavy })
                 && g1.PlusText.Contains("敵全体を薙ぎ払う（敵が少ないほど、一体に力が集まる）", StringComparison.Ordinal) && g2.PlusText.EndsWith("巨体の一撃は、大きな相手ほど深く響く", StringComparison.Ordinal)
-                && !UnitCatalog.Everyone.Any(u => u.Traits.Any(t => t is TraitId.SlimeSwell or TraitId.SlimeHaven or TraitId.DolgaFocus or TraitId.DolgaHeavy));
-            string units = File.Exists("docs/units.md") ? File.ReadAllText("docs/units.md") : "", head = S390.GitShow($"{HeadSha}:docs/units.md");
+                && !UnitCatalog.Everyone.Where(u => u != UnitCatalog.Sekki && u != UnitCatalog.Dolga).Any(u => u.Traits.Any(t => t is TraitId.SlimeSwell or TraitId.SlimeHaven or TraitId.DolgaFocus or TraitId.DolgaHeavy));   // 第398期: 規定のセッキ ／ ドルガは B ／ G12 の札を持つ
+            string units = S390.GitShow("084b7b1e:docs/units.md") /* 第398期: 第397期の HEAD の表（ドルガは G12 を規定にした） */, head = S390.GitShow($"{HeadSha}:docs/units.md");
             string Row(string s) => s.Split('\n').FirstOrDefault(l => l.StartsWith("| **のろまの巨兵ドルガ** |", StringComparison.Ordinal))?.TrimEnd('\r') ?? "";
             bool same = Row(units) != "" && Row(units) == Row(head);
             Expect("版の札と文面: B ＝ 規定 ＋ 膨らむ ／ R ＝ 包む ＋ 溢れ ＋ 避難所（深く包むの代わり）・G1 ＝ 規定のドルガ ＋ 力が一点に ／ G2 ＋ 大物ほど重い ／ G12 ＝ 両方・`All` ／ `Retired` の外・規定のドルガは今どおり（`docs/units.md` の行が第396期の HEAD と同じ）", ok && same, $"units.md のドルガの行 {(same ? "同じ" : "違う")}");
@@ -182,11 +182,12 @@ static partial class Sh397Diag
         // ---- 替えた台 ／ 素体は器具の中だけ・試遊の台 ----
         {
             var vers = new[] { kb, kr, g1, g2, g12 };
-            var everywhere = CompareBuilds().Concat(CrossBuilds()).Concat(Presets.Playtest).Concat(Presets.Versions).SelectMany(r => r.F.Occupied()).Select(o => o.Def).ToList();
+            var everywhere = CompareBuilds().Concat(CrossBuilds()).Concat(Presets.Playtest).Concat(VersionsH397()).SelectMany(r => r.F.Occupied()).Select(o => o.Def).ToList();
             bool inside = !everywhere.Any(x => x.Id.EndsWith("_plain392", StringComparison.Ordinal));
-            var verRows = Presets.Versions.Where(r => r.F.Occupied().Any(o => vers.Contains(o.Def))).Select(r => r.Name).ToList();
-            bool rows = verRows.Count == 2 && verRows.All(n => VersionRows397.Contains(n)) && Presets.Versions.TakeLast(2).Select(r => r.Name).SequenceEqual(verRows)
-                && Presets.Versions.TakeLast(2).All(r => r.F.Occupied().Count(o => vers.Contains(o.Def)) == 1)
+            var v7 = VersionsH397();   // 第398期: 第397期の一覧
+            var verRows = v7.Where(r => r.F.Occupied().Any(o => vers.Contains(o.Def))).Select(r => r.Name).ToList();
+            bool rows = verRows.Count == 2 && verRows.All(n => VersionRows397.Contains(n)) && v7.TakeLast(2).Select(r => r.Name).SequenceEqual(verRows)
+                && v7.TakeLast(2).All(r => r.F.Occupied().Count(o => vers.Contains(o.Def)) == 1)
                 && !CompareBuilds().Concat(CrossBuilds()).Concat(Presets.Playtest).Any(r => r.F.Occupied().Any(o => vers.Contains(o.Def)));
             Expect("替えた台 ／ 素体は器具の中だけ・版の駒が居る試遊の台は足した 2 台（`Presets.Versions` の末尾）だけ", inside && rows, string.Join("、", verRows));
         }
@@ -197,7 +198,7 @@ static partial class Sh397Diag
             bool Has2(TraitId id, string must) => System.Text.RegularExpressions.Regex.IsMatch(src, $@"\[TraitId\.{id}\]\s*=\s*\(Hc[A-Za-z]+L,\s*""[^""]*{must}""");
             var miss = new List<string>();
             foreach (var id in new[] { TraitId.SlimeWrap, TraitId.SlimeOverflow, TraitId.SlimeDeep }) if (!Has2(id, "第397期から規定（セッキ）")) miss.Add(id.ToString());
-            foreach (var id in new[] { TraitId.SlimeSwell, TraitId.SlimeHaven, TraitId.DolgaFocus, TraitId.DolgaHeavy }) if (!Has2(id, "第397期[^\"]*保持者 0 枚")) miss.Add(id.ToString());
+            foreach (var id in new[] { TraitId.SlimeSwell, TraitId.SlimeHaven, TraitId.DolgaFocus, TraitId.DolgaHeavy }) if (!Has2(id, "第397期[^\"]*(保持者 0 枚|第398期から規定（[^）]*）)")) miss.Add(id.ToString());
             Expect("`checkup` の札の分類表: 規定のセッキの札 3 枚は「第397期から規定（セッキ）」・版の札 4 枚がある（ソースを読んで確かめる）", miss.Count == 0, miss.Count == 0 ? "" : "無い: " + string.Join("・", miss));
         }
 

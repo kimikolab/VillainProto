@@ -1654,3 +1654,10 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **避難所（`SlimeHaven`・R）**: 包むの段で、吸う量 ＝ 一撃の全部（殴られた味方は何も受けない・`return`）・HP で受けるのは 2 割。殴られた味方に私有キー `SlimeTrait.HeldKey`（1 まで・`StatusKeys.All` に入れない）を立てる。`TakeTurnCore` の頭で印を読んで消し、痺れ ／ 転倒の後・組み付きの前の段で `IdleTurn` を立てて `Stalled` を返す（転倒と同じ形・`CanAct` は偽にしない ＝ 号令 ／ 叩き起こしが読む）。計数のみ `R397HavenHolds` ／ `R397HeldLost`。
 - **力が一点に集まる（`DolgaFocus`・G1）／ 大物ほど重い（`DolgaHeavy`・G2）**: `PerformAttack` の一撃の本体（主目標の `first` と巻き込みの `share`）で、全体の一撃なら振る前の生きている敵の数 n で `× 5 ÷ n`（G1）、当たる敵ごとに `MaxHp * 5 / 100` を足す（G2・配り直しの後）。`AtkBonus` は動かない。ボスの名前 ／ 種類では分岐しない。計数のみ `R397FocusSwings` ／ `R397FocusByN` ／ `R397HeavyAdd`。
 - 保持者がいない戦は `_slimeHavenLive` ／ `_dolgaHitLive` の比較1つで抜ける（版の札は保持者 0 枚）。新しい出来事の種類は足していない。
+
+## 第398期 —— セッキ B ／ ドルガ G12 を規定に ／ スライムが勇者の全体攻撃をしのぐ（セッキの版 K1 ／ K2 ／ K12）
+
+- **段0**: 規定のセッキが `SlimeSwell`（膨らむ）を、規定のドルガが `DolgaFocus` ／ `DolgaHeavy` を持つようになった——第397期の口（膨らむの段 ／ `PerformAttack` の × 5 ÷ n と +5%）が**規定の戦で走る**。旧の規定は `UnitCatalog.SekkiH397` ／ `DolgaH397`（固定の口 `Common.PinX397` ／ `Pin397`）。
+- **ゼリーが消す（`SlimeMelt`・K1）**: 包むの段で、HP で受ける量を吸った量の半分 → 2 割（`SlimeTrait.MeltHpTenths`・切り捨て）に。避難所（R）の札があればそちらが先。計数のみ `R398MeltSaved`。
+- **固まる（`SlimeHarden`・K2）**: `ApplyDamage` の軽減の族の末尾（盾の配りの後・`if (amount <= 0) return;` と肩代わりの族の手前）。持ち主が受ける敵の一撃（中継・包みで受ける分を含む・刻み ／ 徴収は除く）を帳簿の 1 割（切り捨て）だけ減らす（下限 0）。帳簿は弾き返しで 0 になる。保持者がいない戦は `_slimeHardenLive` の真偽1つで抜ける。計数のみ `R398HardenHits` ／ `R398HardenSaved`。
+- 計数のみ: `R398BurstByTurn`（`SlimeBurst`・ターンごとの弾き返した量）／ `R398WrapHpByTurn`（包むの段・ターンごとに HP で受けた量）。新しい出来事の種類は足していない。

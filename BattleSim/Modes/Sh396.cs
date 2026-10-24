@@ -51,6 +51,8 @@ static partial class Sh396Diag
         }
     }
 
+    /// <summary>第398期: `compare` の行を第397期の姿で（セッキ ／ ドルガは旧 `SekkiH397` ／ `DolgaH397`）。</summary>
+    static (string Name, Formation F)[] CB397() => CompareBuilds().Select(r => (r.Name, Pin397(r.F))).ToArray();
     static string F1(double x) => S307.F1(x);
     static string F0(double x) => double.IsNaN(x) ? "—" : x.ToString("#,0");
     static string Sg(double x) => double.IsNaN(x) ? "—" : x.ToString("+0.0;-0.0;0.0");
@@ -82,11 +84,11 @@ static partial class Sh396Diag
     /// <summary>§4-1 の 1 の台: 試遊・手番 芯3枚 ／ 試遊・手番 縛め ／ 溜め改（バンの席にトモ・第393〜395期と同じ）。ドルガは規定（E1）。</summary>
     internal static (string Name, Formation F)[] TempoBoards()
     {
-        var tame = CompareBuilds().First(r => r.Name == "溜め改 (クグ×バン×ガン)").F;
+        var tame = CB397().First(r => r.Name == "溜め改 (クグ×バン×ガン)").F;
         return new (string, Formation)[]
         {
-            ("試遊・手番 芯3枚", Presets.TempoLamp393(UnitCatalog.Tomo, UnitCatalog.Dolga)),
-            ("試遊・手番 縛め", Presets.BindTempo395()),
+            ("試遊・手番 芯3枚", Presets.TempoLamp393(UnitCatalog.Tomo, UnitCatalog.DolgaH397)),
+            ("試遊・手番 縛め", Pin397(Presets.BindTempo395())),
             ("溜め改（バンの席にトモ）", Put(tame, SlotOf(tame, "ban"), UnitCatalog.Tomo)),
         };
     }
@@ -196,7 +198,7 @@ static partial class Sh396Diag
     static void Zero()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = CompareBuilds();
+        var rows = CB397();
         int nw = EnemyCatalog.Stages.Count;
         var now = CGrid(rows, CompareSeeds);
         var e1 = CGrid(rows.Select(r => (r.Name, Has(r.F, "dolga") ? I.Swap(r.F, "dolga", UnitCatalog.DolgaE1) : r.F)).ToArray(), CompareSeeds);
@@ -229,9 +231,9 @@ static partial class Sh396Diag
 
         var boards = new (string Name, Formation F)[]
         {
-            ("試遊・手番 芯3枚", Presets.TempoLamp393(UnitCatalog.Tomo, UnitCatalog.Dolga)), ("試遊・手番 縛め", Presets.BindTempo395()), ("試遊・手番 探索1位", Presets.TempoSeek392()),
+            ("試遊・手番 芯3枚", Presets.TempoLamp393(UnitCatalog.Tomo, UnitCatalog.DolgaH397)), ("試遊・手番 縛め", Pin397(Presets.BindTempo395())), ("試遊・手番 探索1位", Pin397(Presets.TempoSeek392())),
         };
-        var dols = new (string Name, UnitDef D)[] { ("規定（第396期）", UnitCatalog.Dolga), ("第395期の E1", UnitCatalog.DolgaE1), ("旧 DolgaH395", UnitCatalog.DolgaH395) };
+        var dols = new (string Name, UnitDef D)[] { ("規定（第396期）", UnitCatalog.DolgaH397), ("第395期の E1", UnitCatalog.DolgaE1), ("旧 DolgaH395", UnitCatalog.DolgaH395) };
         var ws = new[] { WBoss, WGuard, WBat, WM5, WStrong };
         Console.WriteLine($"## 2. 3 台 × ドルガ（{string.Join(" ／ ", dols.Select(x => x.Name))}）× ボス ／ 近衛 ／ 大隊 ／ 本編 第5波 ／ 強い条件（seed 0..{Seeds - 1}）");
         Console.WriteLine();
@@ -419,7 +421,7 @@ static partial class Sh396Diag
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var v = Vers.FirstOrDefault(x => x.Name == ver);
         if (v.D is null) { Console.WriteLine($"版が無い: {ver}"); return; }
-        var core = new[] { UnitCatalog.Tomo, UnitCatalog.Gan, UnitCatalog.Dolga, v.D };
+        var core = new[] { UnitCatalog.Tomo, UnitCatalog.Gan, UnitCatalog.DolgaH397, v.D };
         var cands = UnitCatalog.All.Where(d => d.Id is not "tomo" and not "gan" and not "dolga" and not "sekki" and not "tsugi" and not "lili").ToArray();
         var cs = cands.SelectMany(c => Perms.Select(pm => (Free: c, F: Board(core.Append(c).ToArray(), pm)))).ToArray();
         var s1 = new Score[cs.Length];
@@ -454,7 +456,7 @@ static partial class Sh396Diag
     // ---------------------------------------------------------------------------------
     // §4-1 の 3: 寄せ集め（試遊の台すべて × アタッカー以外の席の最良）
     // ---------------------------------------------------------------------------------
-    internal static (string Name, Formation F)[] Play() => Presets.Versions.Where(r => r.Name.StartsWith("試遊・", StringComparison.Ordinal) && !Has(r.F, "sekki")).ToArray();
+    internal static (string Name, Formation F)[] Play() => VersionsH396().Where(r => r.Name.StartsWith("試遊・", StringComparison.Ordinal) && !Has(r.F, "sekki")).ToArray();
 
     static void Mix()
     {
@@ -518,12 +520,12 @@ static partial class Sh396Diag
     // ---------------------------------------------------------------------------------
     // §4-3 の 7: `compare` ＋ (G2)
     // ---------------------------------------------------------------------------------
-    internal static (string Name, Formation F)[] RowsFor(UnitDef d) => CompareBuilds().Select(r => (r.Name, Has(r.F, "sekki") ? I.Swap(r.F, "sekki", d) : r.F)).ToArray();
+    internal static (string Name, Formation F)[] RowsFor(UnitDef d) => CB397().Select(r => (r.Name, Has(r.F, "sekki") ? I.Swap(r.F, "sekki", d) : r.F)).ToArray();
 
     static void Cmp()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var all = CompareBuilds();
+        var all = CB397();
         int nw = EnemyCatalog.Stages.Count;
         var grids = Vers.Select(v => CGrid(RowsFor(v.D), CompareSeeds)).ToArray();
         var sRows = Enumerable.Range(0, all.Length).Where(ri => Has(all[ri].F, "sekki")).ToArray();

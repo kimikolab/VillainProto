@@ -9741,6 +9741,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.DolgaWall) && !_dolgaWalls.Contains(u)) _dolgaWalls.Add(u);   // 第394期（休む巨兵は壁）
         if (u.HasTrait(TraitId.SlimeWrap) && !_slimeWraps.Contains(u)) _slimeWraps.Add(u);   // 第396期（包むセッキ）
         if (u.HasTrait(TraitId.SlimeHaven)) _slimeHavenLive = true;                           // 第397期（R 避難所・包まれた味方は次の手番を失う）
+        if (u.HasTrait(TraitId.SlimeHarden)) _slimeHardenLive = true;                         // 第398期（K2 固まる）
         if (u.HasTrait(TraitId.DolgaFocus) || u.HasTrait(TraitId.DolgaHeavy)) _dolgaHitLive = true;   // 第397期（G1 ／ G2・ドルガの一撃）
         if (u.HasTrait(TraitId.VioRetchHalf) || u.HasTrait(TraitId.VioRetchThird)) { _retchLive = true; _retchHolders.Add(u); }   // 第373期（ヴィオの吐き戻し A1 ／ A2）
         if (CommandTrait.BurstUnit(u) > 0) { _burstLive = true; _burstHolders.Add(u); }   // 第321期（HQ-a ／ HQ-b・溜まったら吐く）
@@ -14069,6 +14070,21 @@ public sealed class BattleContext
             }
         }
 
+        // 第398期（セッキの版 K2 ／ K12・`SlimeHarden`）: セッキが受ける敵の一撃（包みで受ける分・肩代わりの中継も含む・刻み ／ 徴収は除く）は、
+        // 帳簿（溜めた衝撃）の 1 割（切り捨て）だけ軽い（下限 0）。弾き返して帳簿が 0 になれば軽くならない。軽減の族の末尾（肩代わりの族の手前）。
+        // **保持者がいなければ真偽1つで抜ける。乱数を引かない。**
+        if (_slimeHardenLive && amount > 0 && source is not null && source.TeamId != target.TeamId && !burnTick && !levy && target.HasTrait(TraitId.SlimeHarden))
+        {
+            int cut = Math.Min(amount, target.RawCounter(SlimeTrait.StoreKey) / 10);
+            if (cut > 0)
+            {
+                amount -= cut;
+                UnitTally ht = TallyOf(target);   // 計数のみ
+                ht.R398HardenHits++; ht.R398HardenSaved += cut;
+                Log($"    {target.Name} の固まったゼリーが一撃を和らげた（-{cut}）", LogKind.Trigger);
+            }
+        }
+
         if (amount <= 0) return;
 
         // 肩代わり（第294期・SR-a・`DeflectWideTrait`）。**肩代わりの族の先頭**（巨躯・分かちの手前・軽減の族の後）——ソラが受けるのは
@@ -14170,12 +14186,16 @@ public sealed class BattleContext
                     if (_turn >= 0 && _turn <= BattleEngine.MaxTurns) (st.R396WrapByTurn ??= new long[BattleEngine.MaxTurns + 2])[_turn] += taken;
                     TallyOf(target).R396WrappedFor++;
                     Log($"    {sl.Name} がゼリーの体で {target.Name} を包み、衝撃を吸い取った（{taken}）", LogKind.Trigger);
-                    int hpPart = haven ? taken * SlimeTrait.HavenHpTenths / 10 : taken / 2;
+                    // 第398期（K1 ／ K12・`SlimeMelt`）: HP で受けるのは吸った量の 2 割（切り捨て）・残りはゼリーに消える
+                    bool melt = !haven && sl.HasTrait(TraitId.SlimeMelt);
+                    int hpPart = haven ? taken * SlimeTrait.HavenHpTenths / 10 : melt ? taken * SlimeTrait.MeltHpTenths / 10 : taken / 2;
+                    if (melt) st.R398MeltSaved += taken / 2 - hpPart;   // 計数のみ
                     if (hpPart > 0)
                     {
                         int hp0 = sl.Hp;
                         ApplyDamage(sl, hpPart, source, isFriendlyFire: true, relayed: true, pattern: pattern);
                         st.R396WrapHp += Math.Max(0, hp0 - Math.Max(0, sl.Hp));
+                        if (_turn >= 0 && _turn <= BattleEngine.MaxTurns) (st.R398WrapHpByTurn ??= new long[BattleEngine.MaxTurns + 2])[_turn] += Math.Max(0, hp0 - Math.Max(0, sl.Hp));   // 第398期・計数のみ
                     }
                     if (!target.IsAlive || amount <= 0) return;
                 }
@@ -18289,6 +18309,7 @@ public sealed class BattleContext
     readonly List<UnitState> _dolgaWalls = new();
     readonly List<UnitState> _slimeWraps = new();   // 第396期（包むセッキ・`SlimeWrap` の保持者）
     bool _slimeHavenLive, _dolgaHitLive;            // 第397期（R 避難所 ／ ドルガの G1 ・ G2 の保持者がいる戦）
+    bool _slimeHardenLive;                          // 第398期（K2 固まる・`SlimeHarden` の保持者がいる戦）
 
     /// <summary>第397期（G2 大物ほど重い）: 当たる敵の最大 HP の 5%（切り捨て）。計数のみ帳簿に足す。ボスの名前 ／ 種類では分岐しない。</summary>
     int HeavyAdd397(UnitState actor, UnitState hit)
@@ -18311,6 +18332,7 @@ public sealed class BattleContext
         s.SetCounter(SlimeTrait.StoreKey, 0);
         UnitTally t = TallyOf(s);   // 計数のみ
         t.R396Bursts++; t.R396BurstAmt += amt; if (amt > t.R396BurstMax) t.R396BurstMax = amt;
+        if (_turn >= 0 && _turn <= BattleEngine.MaxTurns) (t.R398BurstByTurn ??= new long[BattleEngine.MaxTurns + 2])[_turn] += amt;   // 第398期・計数のみ
         if (InInterrupt) t.R396BurstInterrupt++;
         else if (Yielding) t.R396BurstYield++;
         else if (_inGift) t.R396BurstGift++;
