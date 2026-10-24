@@ -138,3 +138,8 @@
   - 直した後に照合を回し直して、上の結果になった。
 - **DemoApp**: ビルド 0 エラー。map11 の門（phase0 ／ 171 ／ 172 ／ 173）`ok=True`。`NineWaveCheck` ／ `DischargeCheck` ／ `ScorePanelCheck` `ok=True`。手番の軸の試遊の 5 台 × ボス ／ 近衛の単発の再生は 10 本とも最後まで通った（新しい出来事は素通り）。作戦マップの関係の表は触っていない。
 - **Codex 向けメモ**: `design/PHASE291_CODEX_MEMO.md` に §67 を足した（動き → 出来事の表・確かめる試遊の台・1戦あたりの回数・単発の再生の例）。`design/CODEX_BRIEF_SEKKI.md`（ポンが置いた発注メモ）には触っていない。
+
+## 7. コミットの後の照合 ／ promote
+
+- 本体のコミット 14d42798 の後、基準を第399期の保存（e8474f0a）に固定した写し（`.tmp/p400/digest_pinned.ps1`）で `light -Units sekki,dolga,gan,tomo` を回し直した: 189 本のうち一致 168 ／ 差 20 ／ 新しい 1（`sh400 check`）。差の 20 本はコミット前と同じ（名前の一覧の 1 行 × 18 本・`sh398` ／ `sh399` の切り出しの文字数）。機械で確かめた。
+- `tools/digest_cache.ps1 promote` で新しいビルドの指紋を保存した（`.tmp/digest_cache/14d42798`・e8474f0a ＋ 189 本）。次の期はこれと比べる。
