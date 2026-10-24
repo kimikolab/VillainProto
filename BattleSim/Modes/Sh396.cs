@@ -73,8 +73,8 @@ static partial class Sh396Diag
     // 版 ／ 列 ／ 台
     // ---------------------------------------------------------------------------------
     internal static readonly (string Name, UnitDef D)[] Vers =
-        { ("旧セッキ", UnitCatalog.Sekki), ("S1", UnitCatalog.SekkiS1), ("S2", UnitCatalog.SekkiS2), ("S2h", UnitCatalog.SekkiS2h) };
-    internal static UnitDef PlainSekki => _plain ??= S392.Plain(UnitCatalog.Sekki);
+        { ("旧セッキ", UnitCatalog.SekkiH396), ("S1", UnitCatalog.SekkiS1), ("S2", UnitCatalog.SekkiS2), ("S2h", UnitCatalog.SekkiS2h) };
+    internal static UnitDef PlainSekki => _plain ??= S392.Plain(UnitCatalog.SekkiH396);   // 第397期: 旧の規定（数値は同じ）
     static UnitDef? _plain;
     /// <summary>列: 旧セッキ（今の規定）／ S1 ／ S2 ／ S2h ／ セッキを素体にした駒（第392期と同じ素体）。元の台（セッキを入れる前）は別に並べる。</summary>
     internal static (string Name, UnitDef D)[] Cols => Vers.Append(("素体", PlainSekki)).ToArray();
@@ -445,7 +445,7 @@ static partial class Sh396Diag
         }
         Console.WriteLine();
         int ss = SlotOf(top.F, "sekki");
-        var pl = M8(Put(top.F, ss, PlainSekki)); var old = M8(Put(top.F, ss, UnitCatalog.Sekki));
+        var pl = M8(Put(top.F, ss, PlainSekki)); var old = M8(Put(top.F, ss, UnitCatalog.SekkiH396));
         Console.WriteLine($"- 1位の台のセッキを替えた差: 素体 4 波 {Sg(D4(top.M, pl))} ／ 強 {Sg(top.M[WStrong].Win - pl[WStrong].Win)}・旧セッキ 4 波 {Sg(D4(top.M, old))} ／ 強 {Sg(top.M[WStrong].Win - old[WStrong].Win)}");
         Console.WriteLine();
         Console.WriteLine($"所要 {sw.Elapsed.TotalSeconds:F0} 秒。");

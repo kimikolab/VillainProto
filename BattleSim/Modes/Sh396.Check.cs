@@ -54,7 +54,7 @@ static partial class Sh396Diag
         Console.WriteLine("| 項目 | 判定 | 備考 |");
         Console.WriteLine("|---|---|---|");
         UnitDef d = UnitCatalog.Dolga, h = UnitCatalog.DolgaH395, e1 = UnitCatalog.DolgaE1;
-        UnitDef s0 = UnitCatalog.Sekki, s1 = UnitCatalog.SekkiS1, s2 = UnitCatalog.SekkiS2, s2h = UnitCatalog.SekkiS2h;
+        UnitDef s0 = UnitCatalog.SekkiH396, s1 = UnitCatalog.SekkiS1, s2 = UnitCatalog.SekkiS2, s2h = UnitCatalog.SekkiS2h;
 
         // ---- 段0: 規定のドルガ ----
         {
@@ -75,7 +75,7 @@ static partial class Sh396Diag
             Expect("段0: 規定のドルガは第395期の E1 と同じ動き（手番の軸の 3 台 × ボス ／ 近衛 ／ 大隊 ／ 第5波 × seed 0..9 で勝敗 ／ T ／ 生存数の差 0）", diff == 0 && cells > 0, $"{cells} 戦・差 {diff}");
         }
         {
-            var v = Presets.Versions.Select(r => r.Name).ToList(); var h5 = VersionsH395();
+            var v = VersionsH396().Select(r => r.Name).ToList(); var h5 = VersionsH395();   // 第397期: 第396期の一覧
             bool ok = v.Contains("試遊・手番 縛め") && v.Contains("試遊・手番 芯3枚") && v.Contains("試遊・手番 探索1位") && !v.Contains("版・壁 ドルガ") && !v.Contains("版・壁 E")
                 && Presets.Versions.First(r => r.Name == "試遊・手番 縛め").F.Occupied().Any(o => o.Def == d)
                 && h5.Select(r => r.Name).TakeLast(2).SequenceEqual(new[] { "版・壁 ドルガ", "版・壁 E" }) && h5[^1].F.Occupied().Any(o => o.Def == e1) && h5[^2].F.Occupied().Any(o => o.Def == UnitCatalog.DolgaD2)
@@ -90,10 +90,10 @@ static partial class Sh396Diag
                     && x.MinusText == "単体の攻撃は包まない。自分の手番はぷるぷるしているだけで動かない" && x.Flavor.StartsWith("何を食べてここまで大きくなったのか", StringComparison.Ordinal))
                 && s1.Traits.SequenceEqual(new[] { TraitId.SlimeWrap }) && s2.Traits.SequenceEqual(new[] { TraitId.SlimeWrap, TraitId.SlimeOverflow }) && s2h.Traits.SequenceEqual(new[] { TraitId.SlimeWrap, TraitId.SlimeOverflow, TraitId.SlimeDeep })
                 && s1.PlusText.Contains("衝撃の 3 割を吸い取る", StringComparison.Ordinal) && s2.PlusText.EndsWith("溜まりすぎると自分から弾き返す", StringComparison.Ordinal) && s2h.PlusText.Contains("衝撃の 5 割", StringComparison.Ordinal)
-                && s0.Traits.SequenceEqual(new[] { TraitId.RearGuard, TraitId.Rage }) && UnitCatalog.All.Contains(s0)
-                && !UnitCatalog.Everyone.Any(u => u.Traits.Contains(TraitId.SlimeWrap) || u.Traits.Contains(TraitId.SlimeOverflow) || u.Traits.Contains(TraitId.SlimeDeep));
+                && s0.Traits.SequenceEqual(new[] { TraitId.RearGuard, TraitId.Rage }) && UnitCatalog.All.Contains(UnitCatalog.Sekki) && !UnitCatalog.All.Contains(s0)   // 第397期: 旧の規定は `SekkiH396`
+                && !UnitCatalog.Everyone.Where(u => u != UnitCatalog.Sekki).Any(u => u.Traits.Contains(TraitId.SlimeWrap) || u.Traits.Contains(TraitId.SlimeOverflow) || u.Traits.Contains(TraitId.SlimeDeep));
             string Row(string s) => s.Split('\n').FirstOrDefault(l => l.StartsWith("| **後備えのセッキ** |", StringComparison.Ordinal))?.TrimEnd('\r') ?? "";
-            string units = File.Exists("docs/units.md") ? File.ReadAllText("docs/units.md") : "", head = S390.GitShow($"{HeadSha}:docs/units.md");
+            string units = S390.GitShow("4220eab3:docs/units.md"), head = S390.GitShow($"{HeadSha}:docs/units.md");   // 第397期: 規定のセッキを替えたので、第396期の HEAD の表と比べる
             bool same = Row(units) != "" && Row(units) == Row(head);
             Expect("版の札と文面: S1 ＝ 包む ／ S2 ＋ 溢れたら弾く ／ S2h ＋ 深く包む・後備え ／ 憤怒は外す・数値は今のセッキ（HP 70 ／ 攻 2 ／ 速 2）・`All` ／ `Retired` の外・規定のセッキは今どおり（`docs/units.md` の行が第395期の HEAD と同じ）", ok && same,
                 $"units.md の行 {(same ? "同じ" : "違う")}");
@@ -183,8 +183,9 @@ static partial class Sh396Diag
             var vers = new[] { s1, s2, s2h };
             var everywhere = CompareBuilds().Concat(CrossBuilds()).Concat(Presets.Playtest).Concat(Presets.Versions).SelectMany(r => r.F.Occupied()).Select(o => o.Def).ToList();
             bool inside = !everywhere.Any(x => x.Id.EndsWith("_plain392", StringComparison.Ordinal));
-            var verRows = Presets.Versions.Where(r => r.F.Occupied().Any(o => vers.Contains(o.Def))).Select(r => r.Name).ToList();
-            bool rows = verRows.SequenceEqual(VersionRows396) && Presets.Versions[^1].Name == "版・包み セッキ" && Presets.Versions[^1].F.Occupied().Count(o => vers.Contains(o.Def)) == 1
+            var h6 = VersionsH396();   // 第397期: 第396期の一覧
+            var verRows = h6.Where(r => r.F.Occupied().Any(o => vers.Contains(o.Def))).Select(r => r.Name).ToList();
+            bool rows = verRows.SequenceEqual(VersionRows396) && h6[^1].Name == "版・包み セッキ" && h6[^1].F.Occupied().Count(o => vers.Contains(o.Def)) == 1
                 && !CompareBuilds().Concat(CrossBuilds()).Concat(Presets.Playtest).Any(r => r.F.Occupied().Any(o => vers.Contains(o.Def)));
             Expect("替えた台 ／ 素体は器具の中だけ・版のセッキが居る試遊の台は「版・包み セッキ」（`Presets.Versions` の末尾）だけ", inside && rows, string.Join("、", verRows));
         }
@@ -195,7 +196,7 @@ static partial class Sh396Diag
             bool Has2(TraitId id, string must) => System.Text.RegularExpressions.Regex.IsMatch(src, $@"\[TraitId\.{id}\]\s*=\s*\(Hc[A-Za-z]+L,\s*""[^""]*{must}""");
             var miss = new List<string>();
             foreach (var id in new[] { TraitId.SluggishShift, TraitId.DolgaWall, TraitId.DolgaWallRetreat }) if (!Has2(id, "第396期から規定（ドルガ）")) miss.Add(id.ToString());
-            foreach (var id in new[] { TraitId.SlimeWrap, TraitId.SlimeOverflow, TraitId.SlimeDeep }) if (!Has2(id, "第396期[^\"]*保持者 0 枚")) miss.Add(id.ToString());
+            foreach (var id in new[] { TraitId.SlimeWrap, TraitId.SlimeOverflow, TraitId.SlimeDeep }) if (!Has2(id, "第396期[^\"]*(保持者 0 枚|第397期から規定（セッキ）)")) miss.Add(id.ToString());   // 第397期: 規定のセッキが持つ
             Expect("`checkup` の札の分類表: 規定のドルガの札 3 枚は「第396期から規定（ドルガ）」・セッキの版の札 3 枚がある（ソースを読んで確かめる）", miss.Count == 0, miss.Count == 0 ? "" : "無い: " + string.Join("・", miss));
         }
 

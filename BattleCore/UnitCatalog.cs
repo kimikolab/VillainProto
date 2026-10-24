@@ -2946,7 +2946,8 @@ public static class UnitCatalog
     /// <summary>ハギの版 VA（第390期）: V1 ＋ V2 ＋ V3。</summary>
     public static readonly UnitDef HagiVA = HagiOn390(new[] { TraitId.HagiAimLine, TraitId.HagiColumnEarly, TraitId.HagiLineEvery }, HagiV1Text + HagiV2Text + HagiV3Text);
 
-    public static readonly UnitDef Sekki = new()
+    /// <summary>後備えのセッキ（第396期までの規定・`All` の外）。第397期に S2h（包みのセッキ）で転生したので旧として残す——第396期の版の駒と過去の器具はこれから作る ／ これに固定する。</summary>
+    public static readonly UnitDef SekkiH396 = new()
     {
         Id = "sekki",
         Name = "後備えのセッキ",
@@ -2965,7 +2966,7 @@ public static class UnitCatalog
     const string SlimeOverflowText396 = "。溜まりすぎると自分から弾き返す";
     static UnitDef SekkiOn396(TraitId[] traits, string plusText) => new()
     {
-        Id = Sekki.Id, Name = "包みのセッキ", MaxHp = Sekki.MaxHp, Attack = Sekki.Attack, Speed = Sekki.Speed, Advances = Sekki.Advances,
+        Id = SekkiH396.Id, Name = "包みのセッキ", MaxHp = SekkiH396.MaxHp, Attack = SekkiH396.Attack, Speed = SekkiH396.Speed, Advances = SekkiH396.Advances,
         Traits = traits, PlusText = plusText, MinusText = "単体の攻撃は包まない。自分の手番はぷるぷるしているだけで動かない",
         Flavor = "何を食べてここまで大きくなったのか、誰も知らない。殴っても手応えがない。",
     };
@@ -2975,6 +2976,26 @@ public static class UnitCatalog
     public static readonly UnitDef SekkiS2 = SekkiOn396(new[] { TraitId.SlimeWrap, TraitId.SlimeOverflow }, SlimePlus396 + SlimeOverflowText396);
     /// <summary>セッキの版 S2h（第396期）: S2 ＋ 深く包む（吸い取る量 3 割 → 5 割）。</summary>
     public static readonly UnitDef SekkiS2h = SekkiOn396(new[] { TraitId.SlimeWrap, TraitId.SlimeOverflow, TraitId.SlimeDeep }, (SlimePlus396 + SlimeOverflowText396).Replace("3 割", "5 割"));
+    /// <summary>
+    /// 包みのセッキ（第397期の規定 ＝ 第396期の S2h・転生）: 範囲の一撃の 5 割を包んで溜め、動かされたとき ／ 溜めが最大 HP 以上の自分の手番に敵全体へ弾き返す。自分の手番は動かない。
+    /// 札と文面は <see cref="SekkiS2h"/> と同じ（別の定義）。旧は <see cref="SekkiH396"/>（後備え ＋ 憤怒）。名前は仮（ポンが決める）。
+    /// </summary>
+    // ---- 第397期: 包みのセッキの版（規定の S2h の上に・`All` に入れない）----
+    static UnitDef SekkiOn397(TraitId[] traits, string plusText, string minusText) => new()
+    {
+        Id = SekkiH396.Id, Name = "包みのセッキ", MaxHp = SekkiH396.MaxHp, Attack = SekkiH396.Attack, Speed = SekkiH396.Speed, Advances = SekkiH396.Advances,
+        Traits = traits, PlusText = plusText, MinusText = minusText, Flavor = "何を食べてここまで大きくなったのか、誰も知らない。殴っても手応えがない。",
+    };
+    const string SlimeMinus397 = "単体の攻撃は包まない。自分の手番はぷるぷるしているだけで動かない";
+    /// <summary>セッキの版 B（第397期）: 規定（S2h）＋ 膨らむ（吸った量の 2 割だけ最大 HP と HP が増える・溢れの線は素の 70 のまま）。</summary>
+    public static readonly UnitDef SekkiB = SekkiOn397(new[] { TraitId.SlimeWrap, TraitId.SlimeOverflow, TraitId.SlimeDeep, TraitId.SlimeSwell },
+        (SlimePlus396 + SlimeOverflowText396).Replace("3 割", "5 割") + "。吸うほど体が膨らむ", SlimeMinus397);
+    /// <summary>セッキの版 R（第397期）: 規定の「包む」を避難所に置き換え（範囲の一撃を丸ごと包む・HP で受けるのは 2 割・包まれた味方は次の手番を失う）。</summary>
+    public static readonly UnitDef SekkiR = SekkiOn397(new[] { TraitId.SlimeWrap, TraitId.SlimeOverflow, TraitId.SlimeHaven },
+        "範囲の攻撃が来た瞬間、ゼリーの体で仲間を丸ごと包み、衝撃を吸い取る。吸った衝撃は体に溜まり、動かされたとき敵全体へ弾き返す" + SlimeOverflowText396,
+        SlimeMinus397 + "。包まれた仲間はゼリーに絡まり、次の手番を失う");
+
+    public static readonly UnitDef Sekki = SekkiOn396(new[] { TraitId.SlimeWrap, TraitId.SlimeOverflow, TraitId.SlimeDeep }, (SlimePlus396 + SlimeOverflowText396).Replace("3 割", "5 割"));
 
     /// <summary>
     /// 背かれのソム（第103期・<b>最後の1枠</b>）。<b>第276期に転生した</b>（規定 ＝ S1x・ポンの判断）——
@@ -3852,6 +3873,17 @@ public static class UnitCatalog
     /// 札と文面は <see cref="DolgaE1"/> と同じ（別の定義）。名前と二つ名は据え置き。
     /// </summary>
     public static readonly UnitDef Dolga = DolgaOn394(new[] { TraitId.SluggishShift, TraitId.DolgaWall, TraitId.DolgaWallRetreat }, DolgaH395.PlusText + DolgaWallRetreatText, DolgaD2.MinusText);
+
+    // ---- 第397期: ドルガの一撃をボスに届かせる（ドルガの版 G1 ／ G2 ／ G12・規定（E1）の上に・`All` に入れない）----
+    static readonly TraitId[] DolgaTraitsE1 = { TraitId.SluggishShift, TraitId.DolgaWall, TraitId.DolgaWallRetreat };
+    const string DolgaFocusText = "（敵が少ないほど、一体に力が集まる）";
+    const string DolgaHeavyText = "。巨体の一撃は、大きな相手ほど深く響く";
+    /// <summary>ドルガの版 G1（第397期）: 規定 ＋ 力が一点に集まる（全体の薙ぎの1体あたり × 5 ÷ 当たる敵の数）。</summary>
+    public static readonly UnitDef DolgaG1 = DolgaOn394(DolgaTraitsE1.Append(TraitId.DolgaFocus).ToArray(), DolgaH395.PlusText + DolgaFocusText + DolgaWallRetreatText, DolgaD2.MinusText);
+    /// <summary>ドルガの版 G2（第397期）: 規定 ＋ 大物ほど重い（一撃に当たる敵の最大 HP の 5% を足す）。</summary>
+    public static readonly UnitDef DolgaG2 = DolgaOn394(DolgaTraitsE1.Append(TraitId.DolgaHeavy).ToArray(), DolgaH395.PlusText + DolgaWallRetreatText + DolgaHeavyText, DolgaD2.MinusText);
+    /// <summary>ドルガの版 G12（第397期）: G1 ＋ G2（G2 の足し分は配り直しの後）。</summary>
+    public static readonly UnitDef DolgaG12 = DolgaOn394(DolgaTraitsE1.Append(TraitId.DolgaFocus).Append(TraitId.DolgaHeavy).ToArray(), DolgaH395.PlusText + DolgaFocusText + DolgaWallRetreatText + DolgaHeavyText, DolgaD2.MinusText);
 
     /// <summary>
     /// 熾のホタ。<b>第130期に「火を配る」を測って、採用しなかった</b>

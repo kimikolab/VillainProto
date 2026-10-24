@@ -2528,6 +2528,9 @@ public sealed class UnitTally
     public long[]? R396WrapByTurn;
     /// <summary>第396期: 弾き返した回数 ／ 帳簿の量の合計 ／ 敵が失った HP の合計 ／ 1回の最大・きっかけ（割り込み＝叩き起こしなど ／ 灯の譲り ／ ターンギフト ／ 溢れ（自分の手番）／ ほか）。</summary>
     public long R396Bursts, R396BurstAmt, R396BurstDealt, R396BurstMax, R396BurstInterrupt, R396BurstYield, R396BurstGift, R396BurstOverflow, R396BurstOther;
+    /// <summary>第397期（計数のみ）: B 膨らんだ量 ／ 最大 HP の最大・R 包んで手番を奪った回数（セッキの側）／ 包まれて手番を失った回数（失った側）・G1 全体の薙ぎの振り ／ 当たった敵の数ごとの振り・G2 足した量。</summary>
+    public long R397SwellGain, R397MaxHpPeak, R397HavenHolds, R397HeldLost, R397FocusSwings, R397HeavyAdd;
+    public long[]? R397FocusByN;
     public int R378Layer6Turn, R378Layer9Turn;
     public long R377ChainSaved;
     public int R377PeakTurn, R377AwakeTurn;
@@ -3870,6 +3873,7 @@ public sealed class UnitTally
         R396WrapHits += o.R396WrapHits; R396WrapAmt += o.R396WrapAmt; R396WrapHp += o.R396WrapHp; R396WrappedFor += o.R396WrappedFor; R396StoreMax = Math.Max(R396StoreMax, o.R396StoreMax);   // 第396期
         R396WrapByTurn = AddArr(R396WrapByTurn, o.R396WrapByTurn);
         R396Bursts += o.R396Bursts; R396BurstAmt += o.R396BurstAmt; R396BurstDealt += o.R396BurstDealt; R396BurstMax = Math.Max(R396BurstMax, o.R396BurstMax);
+        R397SwellGain += o.R397SwellGain; R397MaxHpPeak = Math.Max(R397MaxHpPeak, o.R397MaxHpPeak); R397HavenHolds += o.R397HavenHolds; R397HeldLost += o.R397HeldLost; R397FocusSwings += o.R397FocusSwings; R397HeavyAdd += o.R397HeavyAdd; R397FocusByN = AddArr(R397FocusByN, o.R397FocusByN);   // 第397期
         R396BurstInterrupt += o.R396BurstInterrupt; R396BurstYield += o.R396BurstYield; R396BurstGift += o.R396BurstGift; R396BurstOverflow += o.R396BurstOverflow; R396BurstOther += o.R396BurstOther;
         R393Carried += o.R393Carried; R393CarryLights += o.R393CarryLights; R393Wakes += o.R393Wakes; R393WakeClearedIdle += o.R393WakeClearedIdle; R393WakeAteRally += o.R393WakeAteRally; R393RallyToLamp += o.R393RallyToLamp;   // 第393期
         if (R378Layer6Turn == 0) R378Layer6Turn = o.R378Layer6Turn;

@@ -1646,3 +1646,11 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **弾き返す（`PerformAttack` の頭 → `SlimeBurst`）**: 保持者の攻撃で帳簿が 1 以上なら、殴る代わりに敵全体へ帳簿の量を `ApplyDamage(e, amt, slime, pattern: All)` で与えて帳簿を 0 にする（`OnAfterAttack` は走らない）。叩き起こし（割り込みの中の `PerformAttack`）・灯の譲り ／ ターンギフト（`TakeTurn`）・溢れ（S2 の自分の手番）がここを通る。
 - **自分の手番では動かない（`SlimeTrait.CanAct`）**: 譲られた手番（`BattleContext.InGivenTurn` ＝ `Yielding` か ギフトの中）か、`SlimeOverflow` で帳簿 ≧ 最大 HP のときだけ真。それ以外は偽 ＝ `IdleTurn` が立つ（`SurrendersTurn` は真のまま ＝ 号令 ／ 叩き起こしの候補）。`NeverAttacksOwnTurn` は真（尾灯の W1 で灯が付かない）。
 - 保持者がいない戦は `_slimeWraps.Count` の比較1つで抜ける（規定の `compare` は段0 のドルガの分だけ動く・セッキの版の札は保持者 0）。計数のみ: `UnitTally.R396Wrap*` ／ `R396Burst*` ／ `R396StoreMax`。新しい出来事の種類は足していない（弾き返しは見せ場の `Highlight` と各敵の `Damage`）。
+
+## 第397期 —— セッキの S2h を規定に（転生）／ スライムらしさ（セッキの版 B ／ R）／ ドルガの一撃（ドルガの版 G1 ／ G2 ／ G12）
+
+- **段0**: 規定のセッキ（`UnitCatalog.Sekki`・包みのセッキ）が第396期の S2h の札（`SlimeWrap` ／ `SlimeOverflow` ／ `SlimeDeep`）を持つようになった——第396期の口（包む ／ 弾き返す ／ `SlimeTrait.CanAct`）が**規定の戦で走る**（セッキのいる戦）。旧は `SekkiH396`（後備え ＋ 憤怒）。
+- **膨らむ（`SlimeSwell`・B）**: 包むの段で、吸った量の 2 割（切り捨て）だけ `MaxHp` と `Hp` を増やす（HP で受ける前）。溢れの線（`SlimeTrait.CanAct`）は札の持ち主だけ `Def.MaxHp`（素の最大 HP）を読む。計数のみ `R397SwellGain` ／ `R397MaxHpPeak`。
+- **避難所（`SlimeHaven`・R）**: 包むの段で、吸う量 ＝ 一撃の全部（殴られた味方は何も受けない・`return`）・HP で受けるのは 2 割。殴られた味方に私有キー `SlimeTrait.HeldKey`（1 まで・`StatusKeys.All` に入れない）を立てる。`TakeTurnCore` の頭で印を読んで消し、痺れ ／ 転倒の後・組み付きの前の段で `IdleTurn` を立てて `Stalled` を返す（転倒と同じ形・`CanAct` は偽にしない ＝ 号令 ／ 叩き起こしが読む）。計数のみ `R397HavenHolds` ／ `R397HeldLost`。
+- **力が一点に集まる（`DolgaFocus`・G1）／ 大物ほど重い（`DolgaHeavy`・G2）**: `PerformAttack` の一撃の本体（主目標の `first` と巻き込みの `share`）で、全体の一撃なら振る前の生きている敵の数 n で `× 5 ÷ n`（G1）、当たる敵ごとに `MaxHp * 5 / 100` を足す（G2・配り直しの後）。`AtkBonus` は動かない。ボスの名前 ／ 種類では分岐しない。計数のみ `R397FocusSwings` ／ `R397FocusByN` ／ `R397HeavyAdd`。
+- 保持者がいない戦は `_slimeHavenLive` ／ `_dolgaHitLive` の比較1つで抜ける（版の札は保持者 0 枚）。新しい出来事の種類は足していない。

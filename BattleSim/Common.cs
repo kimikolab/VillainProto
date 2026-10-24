@@ -739,7 +739,10 @@ public static (string Name, Formation F)[] VersionsH392() => VersionsH393().Wher
 /// <summary>第394期: 第393期の T3 を規定のトモにした（旧は `TomoH393`）。第393期までの器具はトモを旧に固定する。ほかの駒はそのまま返す。古い口の終端（`PinH389` ／ `PinH391`）の後ろにも置いた。</summary>
 public static UnitDef PinT393(UnitDef d) => ReferenceEquals(d, UnitCatalog.Tomo) ? UnitCatalog.TomoH393 : PinD395(d);   // 第396期: 規定のドルガも旧へ（古い口の終端）
 /// <summary>第396期: ドルガ ＝ 第395期の E1 を規定にした。第395期までの規定のドルガで測った器具はこれを通す（ドルガ → `DolgaH395`）。ほかの駒はそのまま返す。</summary>
-public static UnitDef PinD395(UnitDef d) => ReferenceEquals(d, UnitCatalog.Dolga) ? UnitCatalog.DolgaH395 : d;
+public static UnitDef PinD395(UnitDef d) => ReferenceEquals(d, UnitCatalog.Dolga) ? UnitCatalog.DolgaH395 : PinK396(d);   // 第397期: 規定のセッキも旧へ（古い口の終端）
+/// <summary>第397期: セッキ ＝ 第396期の S2h（包みのセッキ）で転生した。第396期までの規定のセッキで測った器具はこれを通す（セッキ → `SekkiH396`）。ほかの駒はそのまま返す。</summary>
+public static UnitDef PinK396(UnitDef d) => ReferenceEquals(d, UnitCatalog.Sekki) ? UnitCatalog.SekkiH396 : d;
+public static Formation Pin396(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinK396(d); return g; }
 public static Formation Pin395(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinD395(d); return g; }
 public static Formation Pin393(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinT393(d); return g; }
 /// <summary>第394期: 「版・灯 手番」を「試遊・手番 芯3枚」（規定のトモ）に改め、末尾に「版・壁 ドルガ」を足した。第393期の一覧は、足した台を外し、改めた台を第393期の名前と T3 に戻し、各台のトモを旧に固定した写し。</summary>
@@ -749,10 +752,15 @@ public static readonly string[] VersionRows395 = { "版・壁 E" };
 public static (string Name, Formation F)[] VersionsH394() => VersionsH395().Where(r => !VersionRows395.Contains(r.Name)).ToArray();   // 第396期: 第395期の一覧から
 /// <summary>第396期: 「版・包み セッキ」を足し、「版・壁 ドルガ」を外し、「版・壁 E」を「試遊・手番 縛め」（規定のドルガ）に改めた。第395期の一覧はそれを戻した写し（ドルガは旧）。</summary>
 public static readonly string[] VersionRows396 = { "版・包み セッキ" };
+/// <summary>第397期: 「版・包み セッキ」を「試遊・手番 包み」（規定のセッキ）に改め、版の台を足した。第396期の一覧はそれを戻した写し（セッキは旧）。</summary>
+public static readonly string[] VersionRows397 = { "版・膨らむ セッキ", "版・避難所 セッキ", "版・必殺 ドルガ" };
+public static (string Name, Formation F)[] VersionsH396() =>
+    Presets.Versions.Where(r => !VersionRows397.Contains(r.Name))
+        .Select(r => r.Name == "試遊・手番 包み" ? ("版・包み セッキ", Presets.SlimeLamp396(UnitCatalog.SekkiS2h)) : (r.Name, Pin396(r.F))).ToArray();
 public static (string Name, Formation F)[] VersionsH395()
 {
     var l = new List<(string Name, Formation F)>();
-    foreach (var r in Presets.Versions.Where(r => !VersionRows396.Contains(r.Name)))
+    foreach (var r in VersionsH396().Where(r => !VersionRows396.Contains(r.Name)))   /* 第397期: 第396期の一覧から */
     {
         if (r.Name == "試遊・手番 縛め")
         {

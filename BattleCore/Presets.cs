@@ -1022,8 +1022,17 @@ public static class Presets
         ("試遊・手番 縛め", BindTempo395()),
         // 第396期: 包むセッキ（セッキの転生の版 S1 ／ S2 ／ S2h）を試遊で触る台。`sh396 boards` でいちばん良かったのは「試遊・手番 芯3枚」の後1（ガンの席）を S2h にした台
         //   （強い条件 76.8 → 89.2・同じ席の素体より +54.3）なので、その台にした。採否はポン。
-        ("版・包み セッキ", SlimeLamp396(UnitCatalog.SekkiS2h)),
+        // 第397期: S2h をセッキの規定にした（転生）ので「版・包み セッキ」を「試遊・手番 包み」に改めた（置くのは規定のセッキ）。
+        ("試遊・手番 包み", SlimeLamp396()),
+        // 第397期: スライムらしさ（セッキの版 B 膨らむ ／ R 避難所）のうち良かった B を、§4-1 の 1 でいちばん良かった台（試遊・手番 包み のセッキの席・強い条件 89.2 → 91.8）に置いた。採否はポン。
+        ("版・膨らむ セッキ", SlimeLamp396(UnitCatalog.SekkiB)),
+        // 第397期: ドルガの一撃をボスに届かせる版（G1 ／ G2 ／ G12）のうち、燃焼の駒がいない手番の軸の台でボスにいちばん勝ったのは
+        //   第396期の芯 4 枚 ＋ 1枠の探索の1位（＋シオ）に G12（ボス 0 → 2%）。採否はポン。
+        ("版・必殺 ドルガ", FourCore397(UnitCatalog.DolgaG12)),
     };
+
+    /// <summary>第397期: 「版・必殺 ドルガ」の並び（第396期の芯 4 枚 ＋ 1枠の探索の1位: 前1 ガン ／ 前3 トモ ／ 中央 ドルガ ／ 後1 セッキ ／ 後3 シオ）。既定は規定のドルガ。</summary>
+    public static Formation FourCore397(UnitDef? dolga = null) => Formation.Build(front1: UnitCatalog.Gan, front3: UnitCatalog.Tomo, center: dolga ?? UnitCatalog.Dolga, back1: UnitCatalog.Sekki, back3: UnitCatalog.Shio);
 
     /// <summary>第396期: 「版・包み セッキ」の並び（「試遊・手番 芯3枚」の後1（ガン）の席にセッキ: 前1 ボルグ ／ 前3 ドルガ ／ 中央 ベニ ／ 後1 セッキ ／ 後3 トモ）。既定は規定のセッキ。</summary>
     public static Formation SlimeLamp396(UnitDef? sekki = null) => Formation.Build(front1: UnitCatalog.Borg, front3: UnitCatalog.Dolga, center: UnitCatalog.Beni, back1: sekki ?? UnitCatalog.Sekki, back3: UnitCatalog.Tomo);

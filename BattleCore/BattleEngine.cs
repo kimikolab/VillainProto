@@ -9740,6 +9740,8 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.HagiPursuitReap) || u.HasTrait(TraitId.HagiPursuitHeavy)) _chaseLive391 = true;   // 第391期（P1 〜 追撃の刈り取り ／ 2 割）
         if (u.HasTrait(TraitId.DolgaWall) && !_dolgaWalls.Contains(u)) _dolgaWalls.Add(u);   // 第394期（休む巨兵は壁）
         if (u.HasTrait(TraitId.SlimeWrap) && !_slimeWraps.Contains(u)) _slimeWraps.Add(u);   // 第396期（包むセッキ）
+        if (u.HasTrait(TraitId.SlimeHaven)) _slimeHavenLive = true;                           // 第397期（R 避難所・包まれた味方は次の手番を失う）
+        if (u.HasTrait(TraitId.DolgaFocus) || u.HasTrait(TraitId.DolgaHeavy)) _dolgaHitLive = true;   // 第397期（G1 ／ G2・ドルガの一撃）
         if (u.HasTrait(TraitId.VioRetchHalf) || u.HasTrait(TraitId.VioRetchThird)) { _retchLive = true; _retchHolders.Add(u); }   // 第373期（ヴィオの吐き戻し A1 ／ A2）
         if (CommandTrait.BurstUnit(u) > 0) { _burstLive = true; _burstHolders.Add(u); }   // 第321期（HQ-a ／ HQ-b・溜まったら吐く）
         if (u.HasTrait(TraitId.HisaCover)) _coverHolders.Add(u);       // 第301期（HC・庇い）
@@ -13282,6 +13284,22 @@ public sealed class BattleContext
         // 呪いの共有（第96期）は**単体攻撃の一撃そのもの**にだけ札を付ける。
         // 副次目標（薙ぎ・全体）と貫きの段には付けない——範囲が二乗で伸びるのを止める構造。
         int first = dealt;
+        // 第397期（G1 ／ G2・ドルガの一撃）: G1 は全体の薙ぎの1体あたりを × 5 ÷ 当たる敵の数（振る前の生きている敵の数）・G2 は当たる敵の最大 HP の 5% を足す（配り直しの後）。
+        // **保持者がいなければ比較1つで抜ける。乱数を引かない。ボスの名前 ／ 種類では分岐しない。**
+        int focusN = 0; bool heavy = false;
+        if (_dolgaHitLive)
+        {
+            if (pattern == AttackPattern.All && actor.HasTrait(TraitId.DolgaFocus))
+            {
+                focusN = Math.Max(1, LivingMembers(Opponent(actor.TeamId)).Count);
+                UnitTally ft = TallyOf(actor);   // 計数のみ
+                ft.R397FocusSwings++;
+                (ft.R397FocusByN ??= new long[10])[Math.Min(focusN, 9)]++;
+            }
+            heavy = actor.HasTrait(TraitId.DolgaHeavy);
+            if (focusN > 0) first = first * 5 / focusN;
+            if (heavy) first += HeavyAdd397(actor, target);
+        }
         if (whip is not null) first = WhipAmount(whip, target, first);   // 第217期（当てる前の2倍）
         UnitState firstRecv = shield is null ? target : ShieldRecv(shield, target, ref first);
         if (_fireLvLive) NoteFireContact(actor, firstRecv);   // 第242期（燃え広がりの控え・当てる前）
@@ -13306,6 +13324,8 @@ public sealed class BattleContext
                 TallyOf(actor).ReaderSplash++;
             Log($"    刃が {extra.Name} まで届く", LogKind.Damage);
             int share = Math.Max(1, dealt * SecondaryPercent / 100);
+            if (focusN > 0) share = share * 5 / focusN;               // 第397期（G1）
+            if (heavy) share += HeavyAdd397(actor, extra);            // 第397期（G2）
             if (whip is not null) share = WhipAmount(whip, extra, share);   // 第217期（当てる前の2倍・当たる駒ごと）
             UnitState recv = shield is null ? extra : ShieldRecv(shield, extra, ref share);
             if (_fireLvLive) NoteFireContact(actor, recv);   // 第242期
@@ -14129,10 +14149,20 @@ public sealed class BattleContext
                 if (w.IsAlive && w.TeamId == target.TeamId && w != target && w != source && (sl is null || w.Slot < sl.Slot)) sl = w;
             if (sl is not null)
             {
-                int taken = amount * (sl.HasTrait(TraitId.SlimeDeep) ? SlimeTrait.DeepTenths : SlimeTrait.WrapTenths) / 10;
+                // 第397期（R 避難所・`SlimeHaven`）: 一撃を丸ごと包む（殴られた味方は何も受けない）
+                bool haven = sl.HasTrait(TraitId.SlimeHaven);
+                int taken = haven ? amount : amount * (sl.HasTrait(TraitId.SlimeDeep) ? SlimeTrait.DeepTenths : SlimeTrait.WrapTenths) / 10;
                 if (taken > 0)
                 {
                     amount -= taken;
+                    // 第397期（B 膨らむ・`SlimeSwell`）: 吸った量の 2 割だけ最大 HP と HP が増える（HP で受ける前に）
+                    if (sl.HasTrait(TraitId.SlimeSwell))
+                    {
+                        int grow = taken * SlimeTrait.SwellTenths / 10;
+                        if (grow > 0) { sl.MaxHp += grow; sl.Hp += grow; UnitTally gt = TallyOf(sl); gt.R397SwellGain += grow; if (sl.MaxHp > gt.R397MaxHpPeak) gt.R397MaxHpPeak = sl.MaxHp; }
+                    }
+                    // 第397期（R）: 包まれた味方は次の自分の手番を1回失う（印は 1 まで・失うのは `TakeTurnCore` の頭）
+                    if (haven && target.RawCounter(SlimeTrait.HeldKey) == 0) { target.SetCounter(SlimeTrait.HeldKey, 1); TallyOf(sl).R397HavenHolds++; }
                     int store = sl.RawCounter(SlimeTrait.StoreKey) + taken;
                     sl.SetCounter(SlimeTrait.StoreKey, store);
                     UnitTally st = TallyOf(sl);   // 計数のみ
@@ -14140,7 +14170,7 @@ public sealed class BattleContext
                     if (_turn >= 0 && _turn <= BattleEngine.MaxTurns) (st.R396WrapByTurn ??= new long[BattleEngine.MaxTurns + 2])[_turn] += taken;
                     TallyOf(target).R396WrappedFor++;
                     Log($"    {sl.Name} がゼリーの体で {target.Name} を包み、衝撃を吸い取った（{taken}）", LogKind.Trigger);
-                    int hpPart = taken / 2;
+                    int hpPart = haven ? taken * SlimeTrait.HavenHpTenths / 10 : taken / 2;
                     if (hpPart > 0)
                     {
                         int hp0 = sl.Hp;
@@ -15147,6 +15177,9 @@ public sealed class BattleContext
     /// <summary>手番の中身（第104期に切り出した本体。第105期に枠を被せた）。</summary>
     private TurnOutcome TakeTurnCore(UnitState actor)
     {
+        // 第397期（R 避難所）: 手番の頭で印を読んで消す（この手番が痺れ ／ 転倒などで潰れても、失うのはこの手番）。
+        bool heldNow = _slimeHavenLive && actor.RawCounter(SlimeTrait.HeldKey) > 0;
+        if (heldNow) actor.SetCounter(SlimeTrait.HeldKey, 0);
         // 第185期: 竦みのハメ防止の印は「次の自分の手番の頭」で落とす（ShameTrait.GuardKey）。
         if (_restrainLive && actor.RawCounter(ShameTrait.GuardKey) > 0) actor.SetCounter(ShameTrait.GuardKey, 0);
         // 第217期（G3H）: 感電の痺れのハメ防止の印も同じく「次の自分の手番の頭」で落とす。
@@ -15192,6 +15225,18 @@ public sealed class BattleContext
             // 第145期（表示専用）: 手番を失った瞬間。付与はターン頭なので別の出来事として打つ。
             EmitStagger(actor, StaggerLabels.Lost, null);
             Log($"  {actor.Name} は転んで動けない", LogKind.Status);
+            return TurnOutcome.Stalled;
+        }
+
+        // 第397期（R 避難所）: 包まれた味方は次の自分の手番を1回失う。**転倒とまったく同じ形で立てる**（engine 側で IdleTurn を立てて Stalled を返す・
+        // CanAct は偽にしない ＝ 号令 ／ 叩き起こしがそのまま読む）。痺れ ／ 転倒で先に潰れた手番では、印はそこで消えている（下の頭の行）。
+        // **保持者がいなければ `_slimeHavenLive` の比較1つで抜ける。**
+        if (heldNow)
+        {
+            actor.SetCounter(StatusKeys.IdleTurn, Turn);
+            TallyOf(actor).R397HeldLost++;
+            if (DeepWatch) NoteDeepStalled(actor);
+            Log($"  {actor.Name} はゼリーに絡まって動けない", LogKind.Status);
             return TurnOutcome.Stalled;
         }
 
@@ -18243,6 +18288,15 @@ public sealed class BattleContext
     /// <summary>第394期: 休む巨兵は壁（`DolgaWall`・D1 ／ D2）の保持者（<see cref="Add"/> が積む）。いなければ `ApplyDamageBody` は件数の比較1つで抜ける。</summary>
     readonly List<UnitState> _dolgaWalls = new();
     readonly List<UnitState> _slimeWraps = new();   // 第396期（包むセッキ・`SlimeWrap` の保持者）
+    bool _slimeHavenLive, _dolgaHitLive;            // 第397期（R 避難所 ／ ドルガの G1 ・ G2 の保持者がいる戦）
+
+    /// <summary>第397期（G2 大物ほど重い）: 当たる敵の最大 HP の 5%（切り捨て）。計数のみ帳簿に足す。ボスの名前 ／ 種類では分岐しない。</summary>
+    int HeavyAdd397(UnitState actor, UnitState hit)
+    {
+        int add = hit.MaxHp * 5 / 100;
+        TallyOf(actor).R397HeavyAdd += add;
+        return add;
+    }
 
     /// <summary>第396期: いまの手番が「譲られた手番」（尾灯の譲り ／ ヒヨのターンギフト）か。包むセッキ（`SlimeTrait.CanAct`）が読む。</summary>
     public bool InGivenTurn => Yielding || _inGift;

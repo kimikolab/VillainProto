@@ -8,6 +8,8 @@ description: 第259期に `CLAUDE.md` の「現状値」節を**逐語で**移�
 
 ## 現状値
 
+**第397期は、段0 にセッキを第396期の S2h で転生させ（包みのセッキ・旧は `UnitCatalog.SekkiH396`・後備え ＋ 憤怒）、本体でセッキの版 2 つ（B 膨らむ ／ R 避難所）とドルガの版 3 つ（G1 力が一点に集まる ／ G2 大物ほど重い ／ G12 両方）を測った——本体の版はどれも規定にしない**（指示書は design/PHASE397_SLIME_DOLGA_BOSS_SPEC.md・報告は design/PHASE397_SLIME_DOLGA_BOSS.md）。過去の器具の固定は `Common.PinK396` ／ `Pin396` ／ `VersionsH396`（`PinD395` の終端）。版の駒は `UnitCatalog.SekkiB` ／ `SekkiR` ／ `DolgaG1` ／ `DolgaG2` ／ `DolgaG12`（`All` の外・札 `SlimeSwell` ／ `SlimeHaven` ／ `DolgaFocus` ／ `DolgaHeavy`・保持者 0 枚）。`compare` は 2 行 6 セル（第396期の S2h の列と同じ）・全66行 100 / 98.1 / 99.2 / 98.5 / 97.9・主判定19行 100 / 98.5 / 99.9 / 99.9 / 97.0・情報セル 31 / 12。試遊の台「版・包み セッキ」を「試遊・手番 包み」に改め、「版・膨らむ セッキ」「版・必殺 ドルガ」を足した。
+
 **第396期は軽い期で、段0 に第395期の E1 をドルガの規定にし（旧は `UnitCatalog.DolgaH395`・のろま ＋ 段違い）、本体でセッキの転生の版 3 つ（S1 起こされて弾く ／ S2 溢れたら弾く ／ S2h 深く包む——範囲の一撃を包んで溜め、動かされたとき敵全体へ弾き返すスライム）を測った——セッキの規定は変えない**（指示書は design/PHASE396_SEKKI_SLIME_SPEC.md・報告は design/PHASE396_SEKKI_SLIME.md）。過去の器具の固定は `Common.PinD395` ／ `Pin395` ／ `VersionsH395`（`PinT393` の終端）。版のセッキは `UnitCatalog.SekkiS1` ／ `SekkiS2` ／ `SekkiS2h`（`All` の外・札 `SlimeWrap` ／ `SlimeOverflow` ／ `SlimeDeep`・保持者 0 枚）。`compare` は 8 行 15 セル（第395期の E1 の列と同じ）・全66行 100 / 96.6 / 97.7 / 98.5 / 96.4・主判定19行 100 / 98.5 / 99.9 / 99.9 / 96.9・情報セル 32 / 13。試遊の台「版・壁 ドルガ」を外し、「版・壁 E」を「試遊・手番 縛め」に改め、「版・包み セッキ」を足した。
 
 **第395期は軽い期で、規定を1つも変えず、ドルガの版 3 つ（第394期の D2 の上に E1 倒れる前に下がる ／ E2 浅く受ける ／ E12 両方）を測った**（指示書は design/PHASE395_DOLGA_WALL_TRIM_SPEC.md・報告は design/PHASE395_DOLGA_WALL_TRIM.md）。版のドルガは `UnitCatalog.DolgaE1` ／ `DolgaE2` ／ `DolgaE12`（`All` の外）・札 2 枚（`DolgaWallRetreat` ／ `DolgaWallLight`・保持者 0 枚・判定は engine の壁の段）。`compare` は規定で 0 セル（`docs/` は再生成していない）。試遊の台に「版・壁 E」を足した（過去の器具の一覧は `Common.VersionsH394`）。

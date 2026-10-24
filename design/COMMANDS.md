@@ -1468,6 +1468,13 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sh396 cmp                # 第396期 §4-3 の 7: `compare` 全 66 行 × 列（旧セッキ ／ S1 ／ S2 ／ S2h・seed 0..199）＋ (G2)
     dotnet run --project BattleSim -c Release 0 sh396 log <台の頭> <列> <物差し 0..7> <seed> [席]   # 第396期: 1戦のログ
     dotnet run --project BattleSim -c Release 0 sh396 check              # 第396期 自己検査（段0 の規定のドルガ ／ 旧 ／ 固定の口 ／ 試遊の台・包む ／ 溜める ／ 弾き返す ／ 手番・`IdleTurn` と号令・規定の `compare`・`checkup`・verbose・PickOne ／ Roll）
+    dotnet run --project BattleSim -c Release 0 sh397 zero               # 第397期 §2 段0: `compare` の動き（第396期の HEAD の表と ／ 第396期の S2h の列と・(G2)）＋ 試遊・手番 芯3枚 ／ 包み × 5 物差し
+    dotnet run --project BattleSim -c Release 0 sh397 sboards            # 第397期 §4-1 の 1: 試遊・手番 芯3枚 ／ 包み ／ 縛め × セッキの席（全通り・包みはセッキの席）× 列（規定 ／ B ／ R ／ 素体）× 8 物差し——包む ／ 膨らむ ／ 弾き返す ／ R の手番（失った手番 ／ +8 ／ 与ダメの差）
+    dotnet run --project BattleSim -c Release 0 sh397 smix               # 第397期 §4-1 の 2: 寄せ集め 21 台 × アタッカー以外の席の最良にセッキ（規定 ／ B ／ R・段2 seed 0..49）
+    dotnet run --project BattleSim -c Release 0 sh397 dboards            # 第397期 §4-1 の 4: ドルガのいる台 10 × 列（規定 ／ G1 ／ G2 ／ G12 ／ 素体）× 8 物差し——勇者の止め ／ 勇者への与ダメの内訳 ／ 一振りの量 ／ 精鋭 ／ 本編
+    dotnet run --project BattleSim -c Release 0 sh397 cmp                # 第397期 §4-3 の 10: `compare` 全 66 行 × セッキの版 ／ ドルガの版（seed 0..199）＋ (G2)
+    dotnet run --project BattleSim -c Release 0 sh397 log <s|d> <台の頭> <列> <物差し 0..7> <seed>   # 第397期: 1戦のログ（s ＝ セッキの台 ／ d ＝ ドルガの台）
+    dotnet run --project BattleSim -c Release 0 sh397 check              # 第397期 自己検査（段0 の規定のセッキ ／ 旧 ／ 固定の口 ／ 試遊の台・B ／ R ／ G1 ／ G2 ／ G12 の規則・ボスで分岐していない・規定の `compare`・`checkup`・verbose・PickOne ／ Roll）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）
