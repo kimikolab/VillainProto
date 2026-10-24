@@ -1,5 +1,25 @@
 {
   "_readme": "④b（キャラごとの文）。組み立ては idle_loop.py の compose(): HEAD + char + motion + 共通の縛り（sway を含む）。neg は共通の負のプロンプトの後ろに足す。新しいキャラは既存の項目を写して char / motion / sway を書き換える。motion には『膝がはっきり曲がって伸びる・弾む』を必ず入れる（『ゆっくり重く』『わずかに』と書くと止まる）。",
+  "rica": {
+    "still": "DemoApp/assets/portraits/battle/rica_idle_right.png",
+    "pronoun": "she",
+    "char": "The slender adult female elf gravekeeper Rica keeps the exact same right-facing three-quarter planted ready stance with softly bent knees. She has silver-white hair with ONE thick braid draped on SCREEN RIGHT, long pointed ears, pale skin and calm ice-blue eyes. She wears a charcoal hood-down long cloak, a dark teal high-neck long-sleeved dress, a long tan canvas work apron with one flat pocket and repair stitches, a brown belt and pouch, cemetery keys, brown fingerless gloves, black stockings and brown cuffed work boots. She holds ONE ordinary gravedigger shovel diagonally across her body: the rear hand at screen left grips near its D handle beside her hip, and the forward hand at screen right supports the middle of the wooden shaft from underneath, with one thumb opposed to four fingers. The pointed metal spade stays low in front toward screen right. ",
+    "motion": "Like a patient fighting game character waiting in guard, she repeats a steady measured rhythmic springy breathing cycle in place: her knees clearly flex and straighten within a shallow ready stance, her hips and torso sink and recover together, and her shoulders and both supported forearms rise and settle as one connected body. She keeps the same lightly forward ready lean, a level chin and quiet focused gaze toward the opponent. Her head and neck naturally follow her torso without nodding. Both hands maintain their exact grips and spacing, and the supported shovel moves with her arms as one rigid object, never swung independently. Repeat the same restrained ready-guard cycle several times, never lowering into a deep squat or changing stance. ",
+    "sway": "Her single silver braid on screen right, short hair tips, charcoal cloak and long apron and dress hems softly follow through after the body and settle each cycle. The shovel D handle, straight wooden shaft, metal socket, central blade rib and pointed tip remain rigid and collinear, with constant shape, length and blade size. Fingers stay attached and wrapped around the handle, and the braid stays on screen right. No digging, no attack, no shovel flourish, no ghosts, no floating souls, no magic, no smoke, no particles, no glow.",
+    "neg": "deep squatting, extreme bounce, standing rigidly upright, widening stance, leaning farther forward, hunched back, bowing head, nodding, changing grip, hand sliding along shaft, missing thumb, extra fingertips, detached fingers, rubber shovel, curved shovel shaft, bent spade blade, twisting blade, shrinking shovel, changing D handle, digging, shovel swing, attacking, double braids, braid on screen left, changing apron, rising cloak hood, ghosts, souls, magic effects",
+    "note": "2026-10-24 リメイク戦闘v6から作成したB（seed5055・crossfade0・39コマ）をユーザーが採用し、ゲームへ適用。初版比較GIFの固定64コマによる不正な戻りをidle-loop-v2で修正し、39コマ固有周期のプレビューを承認してもらった。生成連番は変形していない。crossfade6の再切り出しは不採用。表示高2.10・足元固定・緑残り0。IdleLoopCheckにリィカを追加し、4種の検証と実画面確認が成功。記録はdesign/art/rica/idle-loop-v2/。",
+    "adopted": {
+      "tag": "rica_s5055",
+      "seed": 5055,
+      "crossfade": 0,
+      "frames": 39,
+      "fps": 16,
+      "geometry_postprocessing": false,
+      "loop": "rica",
+      "date": "2026-10-24",
+      "preview": "idle-loop-v2/B-loop.gif"
+    }
+  },
   "hibi": {
     "still": "DemoApp/assets/portraits/battle/hibi_idle_right.png",
     "pronoun": "she",

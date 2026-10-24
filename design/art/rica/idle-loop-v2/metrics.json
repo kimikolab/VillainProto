@@ -1,0 +1,168 @@
+{
+  "frames": 39,
+  "duration_ms": 2440,
+  "wrap_ratio": 0.9039720168834728,
+  "wrap_pair": [
+    38,
+    0
+  ],
+  "source_tag": "rica_s5055",
+  "source_frames": [
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_00.png",
+      "sha256": "f991c919c2f0417868cce157ddf5d105d985498420f1b09af5cab9a1643b097f"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_01.png",
+      "sha256": "5de5f23c3fc7ad0184a5870b86ba90e742f985bb92901d149cc0ff43a0df15d7"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_02.png",
+      "sha256": "2b42dc5706af944134d20518ea92b9ed148c6c77858cdbbd7fe93202fa67ee2c"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_03.png",
+      "sha256": "ecf7b978a258588db997e470b70d6cfe1ac08e46725cc91a11f36c2f49fa509d"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_04.png",
+      "sha256": "fd4272dd2cccbe69839f093e6927a43deb958bd0451b82ca61475d6c654f500d"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_05.png",
+      "sha256": "66eff66f0aca6c125bd09f84459bd6ef8d3d7d8ac59cc275f9afb4a892fa8604"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_06.png",
+      "sha256": "a5dcde781256619e5c68a4358157e41ccb2722607cb2d492498e3442ec16bf77"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_07.png",
+      "sha256": "e0cbd70dbb36bb7b639130af67e0e5802309b678708a0c1253f81ef744cbbbd0"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_08.png",
+      "sha256": "2d765025ec254a8b1088259065a9d137595e84c566c7d5dc5a5e8020f643690e"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_09.png",
+      "sha256": "9f92a81e5fc011679dad485ddeb991e9f499964f27288a7af7da0cd998490bbe"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_10.png",
+      "sha256": "d9d4900fd10509ca09045fd4a3e6fbcb972c155ce96d83ab028b788db4a99834"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_11.png",
+      "sha256": "c461f472e6d0f69bc529c08bd141d1c926e3947d713ad5b18a4a604c75b9b581"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_12.png",
+      "sha256": "d2f433eeba75b48a95fb9c88cf0e4d6e8ae53a32933373bc546d72b74710bb96"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_13.png",
+      "sha256": "1b0eacc35a9eb9e2fb22e0a81eee8677ad824f17b50197c9447a125f801fbe1a"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_14.png",
+      "sha256": "77e7459ccaa271deda26fe0e957e51120c2722e09018f5f9879710cfb0f18987"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_15.png",
+      "sha256": "5eb60d77c1bb265536a79f0c20e1841ff290f96d79fc253637eb19f07edbfa9f"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_16.png",
+      "sha256": "04f0146b891463a211227fc7e19ae02462725bf2d672b8b698c5fce81ecff931"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_17.png",
+      "sha256": "56ea30cb40ff3f227ad0bed239bec9a17b1790236b91ff008368fef8533771e0"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_18.png",
+      "sha256": "b774d2574537f3037173fade53079326395533d4d4cd1df985c29c1e968f8fb1"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_19.png",
+      "sha256": "0923690e3f661b3bb7b7da296aa8e61ddab811f2b724a026a69636bcac82234e"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_20.png",
+      "sha256": "83e6a040cff29305d6ab5e4bdd8126ba774a956cb3e89dd8b906fc99a0f05b59"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_21.png",
+      "sha256": "613c62e02eddd49393056fe09977990aad2b04576fb7a8e8e3ba8ad2df6462e9"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_22.png",
+      "sha256": "5098b9cc323ccfceaf77d0ac636cc98350b0ff1f1a78e5cd1df871c00d62c51d"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_23.png",
+      "sha256": "cf9bb016cf29dbfd62bb9fb895d768f7b89185bdba6f45c07258dcd231079d75"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_24.png",
+      "sha256": "ae7c5a8cbaf9e956bc2fe66ce44f5c8d74fa95550c324f6e990277147775d0de"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_25.png",
+      "sha256": "fde5fa5bb842e49462b7ab95bea54e48d3fb019e8de42a26a75831df727496f9"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_26.png",
+      "sha256": "b4ca0d6124211a9b3367517bb53a3951d42b61582d702a84615dce285eea232c"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_27.png",
+      "sha256": "982796af066c3eb28423a1d1d088919b1936e6a5578dbaeaf1f42da3149f19b2"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_28.png",
+      "sha256": "85f900317b206a4cf7b9b78e85e93e9601a7267f6f9f4afaa025f271c2e38fa0"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_29.png",
+      "sha256": "d62f5cea1a146f92e2ba30ceb7fd52da690629f6d35149e0f6a14b20cafbc41b"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_30.png",
+      "sha256": "3af5266aef6c6344ee229718fbd544f426b2f29c95b5d2277503ce05773ab5f5"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_31.png",
+      "sha256": "64af3ce6f84d1d7d365cb5ad043b02b3472e48287648f2bffe73dd4ebb88e1b3"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_32.png",
+      "sha256": "3d19d89f0279b87274ff5ee4d5c024a10a316fb2ea5d786a9957e0d8c9727c1c"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_33.png",
+      "sha256": "a360c63ca7873131184be4ba28764b604aa59ac2da818af1ad3ece7e75dea14c"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_34.png",
+      "sha256": "8313707493c0111cef6285839c99423c66e7085de5b5da0fea01fc54cc40554d"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_35.png",
+      "sha256": "0adc0b44841f164f7d124f553097b62e7f913bcd0ae8a8832e87b06dcf48358b"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_36.png",
+      "sha256": "896cc1dddf6c0b8f00eb4af05217f1b535c9ac7d23b74b109674c936c5b5d2a7"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_37.png",
+      "sha256": "60ee885e4b113777ea4168a46312fea240bd33b4e446c8b015bb70a97ad5972a"
+    },
+    {
+      "file": "idle-loop-v1\\B\\frames\\rica_idle_38.png",
+      "sha256": "0a73d84d0210c035ae7878f132fcd763fe1cbd516b430391dbd6158cbf778e28"
+    }
+  ]
+}

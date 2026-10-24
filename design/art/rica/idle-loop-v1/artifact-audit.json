@@ -1,0 +1,20 @@
+[
+  {
+    "candidate": "A",
+    "frames": 38,
+    "sha256_match": true,
+    "dimensions": [
+      640,
+      960
+    ]
+  },
+  {
+    "candidate": "B",
+    "frames": 39,
+    "sha256_match": true,
+    "dimensions": [
+      640,
+      960
+    ]
+  }
+]
