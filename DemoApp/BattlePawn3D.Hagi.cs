@@ -49,18 +49,15 @@ public partial class BattlePawn3D
         }
     }
     internal bool HagiActive => _alive && !_victory;
-    internal Vector2 HagiBladeAnchor => _movementPortrait switch
-    {
-        "hagi_follow" => new(.94f,.67f), "hagi_step" => new(.95f,.54f), _ => new(.84f,.14f)
-    };
-    internal Vector2[] HagiBladeContour => _movementPortrait switch
+    internal Vector2[] HagiBladeContour => CurrentHagiAnchors?.Contour ?? HagiIdleBladeContour ?? (_movementPortrait switch
     {
         "hagi_follow" => new[] { new Vector2(.88f,.45f), new Vector2(.96f,.53f), new Vector2(.985f,.64f), new Vector2(.94f,.77f), new Vector2(.81f,.88f), new Vector2(.62f,.95f) },
         "hagi_step" => new[] { new Vector2(.445f,.159f), new Vector2(.58f,.124f), new Vector2(.77f,.145f), new Vector2(.93f,.23f), new Vector2(.995f,.42f), new Vector2(.96f,.60f), new Vector2(.90f,.70f) },
         _ => new[] { new Vector2(.31f,.065f), new Vector2(.46f,.023f), new Vector2(.64f,.023f), new Vector2(.83f,.075f), new Vector2(.96f,.21f), new Vector2(.98f,.36f), new Vector2(.935f,.49f) }
-    };
+    });
     internal void ResetHagiVisual()
     {
+        CancelHagiMotion();
         HagiSouls = HagiMarks = HagiLine = 0; HagiReaped = false; _hagiDissolve = 0; HagiPaused = false;
         _hagiAura?.Hide(); _hagiAura?.QueueFree(); _hagiAura = null;
         Hud?.SetHagiLine(0);
@@ -79,19 +76,29 @@ public partial class HagiAura3D : Node3D
     private readonly Sprite3D[] _shards = new Sprite3D[9];
     private readonly float[] _alpha = new float[9];
     private readonly ImmediateMesh _blade = new();
+    private ShaderMaterial _bladeMaterial = null!;
     private MeshInstance3D _bladeNode = null!;
+    private readonly Sprite3D[] _embers = new Sprite3D[6];
+    private readonly Vector3[] _edge = new Vector3[97];
     private float _bladeStage;
     internal double Age { get; private set; }
+    internal float BladeStage => _bladeStage;
+    internal bool BladeVisible => _bladeNode.Visible;
+    internal Vector3 BladeEdgeMiddle => _edge[48];
     internal void Start(BattlePawn3D owner, Func<(bool, double)> clock)
     {
         _owner = owner; _clock = clock;
         ProcessPriority = 20;
-        var material = new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
-            Transparency = BaseMaterial3D.TransparencyEnum.Alpha, CullMode = BaseMaterial3D.CullModeEnum.Disabled,
-            AlbedoColor = new Color(.91f,.94f,1,.82f), EmissionEnabled = true, Emission = new Color(.93f,.95f,1),
-            EmissionEnergyMultiplier = 1.5f, NoDepthTest = true };
-        _bladeNode = new MeshInstance3D { Mesh = _blade, MaterialOverride = material, ExtraCullMargin = 10,
+        _bladeMaterial=new ShaderMaterial { Shader=new Shader { Code=Godot.FileAccess.GetFileAsString(
+            "res://assets/fx/hagi_blade_empower.gdshader") }, RenderPriority=8 };
+        _bladeNode = new MeshInstance3D { Mesh = _blade, MaterialOverride = _bladeMaterial, ExtraCullMargin = 10,
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off }; AddChild(_bladeNode);
+        for(int k=0;k<_embers.Length;k++)
+        {
+            _embers[k]=new Sprite3D { Texture=HagiLight3D.Sparkle, PixelSize=.001f, Shaded=false,
+                Billboard=BaseMaterial3D.BillboardModeEnum.Enabled, RenderPriority=9, Visible=false };
+            AddChild(_embers[k]);
+        }
         for (int k = 0; k < _shards.Length; k++)
         {
             _shards[k] = new Sprite3D { Texture = HagiLight3D.Sparkle, PixelSize = .001f, Shaded = false,
@@ -121,26 +128,51 @@ public partial class HagiAura3D : Node3D
     private void DrawBlade()
     {
         _blade.ClearSurfaces();
+        _bladeNode.Visible=false;
+        foreach(var ember in _embers)ember.Hide();
         if (_bladeStage <= .01f || GetViewport().GetCamera3D() is not { } camera) return;
         var points = _owner.HagiBladeContour;
-        var size = _owner.DeathSprite.Texture.GetSize();
-        Vector2 anchor = _owner.HagiBladeAnchor;
-        Vector3 normal = camera.GlobalBasis.Z;
-        _blade.SurfaceBegin(Mesh.PrimitiveType.TriangleStrip);
-        const int segments = 64;
+        Vector3 normal = camera.GlobalBasis.Z.Normalized();
+        Vector3 center=Vector3.Zero;
+        foreach(var point in points)center+=_owner.HagiBladePoint(point)/points.Length;
+        const int segments = 96;
         for (int i = 0; i <= segments; i++)
         {
             float t = i / (float)segments * (points.Length - 1);
             int k = Math.Min(points.Length - 2, (int)t); float fraction = t - k;
             Vector2 a = points[Math.Max(0,k-1)], b = points[k], c = points[k+1], d = points[Math.Min(points.Length-1,k+2)];
             Vector2 p = .5f * ((2*b)+(-a+c)*fraction+(2*a-5*b+4*c-d)*fraction*fraction+(-a+3*b-3*c+d)*fraction*fraction*fraction);
-            p = anchor + (p-anchor)*(1+_bladeStage*.09f);
-            Vector3 at = ToLocal(_owner.MovementPortraitPoint(p*size,camera)+normal*.012f);
-            Vector2 tangent = (c-b).Normalized();
-            Vector3 offset = (camera.GlobalBasis.X * -tangent.Y + camera.GlobalBasis.Y * -tangent.X)
-                * (.006f+_bladeStage*.003f)*Mathf.Sin(i/(float)segments*Mathf.Pi);
-            _blade.SurfaceAddVertex(at-offset); _blade.SurfaceAddVertex(at+offset);
+            _edge[i]=_owner.HagiBladePoint(p)+normal*.012f;
+        }
+        Vector3 middleTangent=(_edge[49]-_edge[47]).Normalized();
+        float sign=normal.Cross(middleTangent).Dot(_edge[48]-center)>=0?1:-1;
+        float inner=.018f+_bladeStage*.003f, outer=.045f+_bladeStage*.035f;
+        _bladeMaterial.SetShaderParameter("age",(float)Age);
+        _bladeMaterial.SetShaderParameter("stage",_bladeStage);
+        _blade.SurfaceBegin(Mesh.PrimitiveType.TriangleStrip);
+        for(int i=0;i<=segments;i++)
+        {
+            Vector3 tangent=(_edge[Math.Min(segments,i+1)]-_edge[Math.Max(0,i-1)]).Normalized();
+            Vector3 outward=normal.Cross(tangent).Normalized()*sign;
+            _blade.SurfaceSetUV(new Vector2(i/(float)segments,-inner));
+            _blade.SurfaceAddVertex(ToLocal(_edge[i]-outward*inner));
+            _blade.SurfaceSetUV(new Vector2(i/(float)segments,outer));
+            _blade.SurfaceAddVertex(ToLocal(_edge[i]+outward*outer));
         }
         _blade.SurfaceEnd();
+        _bladeNode.Show();
+        for(int k=0;k<_embers.Length;k++)
+        {
+            if(k>=Mathf.CeilToInt(_bladeStage*2))continue;
+            float phase=Mathf.PosMod((float)Age*(.28f+k*.017f)+k*.173f,1);
+            int at=Math.Clamp((int)(phase*segments),1,segments-1);
+            Vector3 tangent=(_edge[at+1]-_edge[at-1]).Normalized();
+            Vector3 outward=normal.Cross(tangent).Normalized()*sign;
+            _embers[k].GlobalPosition=_edge[at]+outward*Mathf.Sin(phase*Mathf.Pi)*(.025f+_bladeStage*.012f);
+            float size=(.020f+_bladeStage*.007f)/Math.Max(.001f,HagiLight3D.Sparkle.GetWidth()*.001f);
+            _embers[k].Scale=Vector3.One*size;
+            _embers[k].Modulate=new Color(1,.14f,.045f,Mathf.Sin(phase*Mathf.Pi)*Math.Min(1,_bladeStage)*.68f);
+            _embers[k].Show();
+        }
     }
 }

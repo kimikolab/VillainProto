@@ -33,25 +33,36 @@ public partial class HagiPresentationCheck : Control
                 _field.ApplyDeathState(new(2, 9, 0, 0, _field.FindPawn(2)!.MaxHp));
                 enemy.SetHp(enemy.MaxHp / 2);
                 await Wait(.24); await Capture("souls-" + souls);
+                var bladeAura=hagi.GetChildren().OfType<HagiAura3D>().Single();
+                Require(Math.Abs(bladeAura.BladeStage-souls/3f)<.03f,"強化の光は魂の実段階に一致");
+                Require(bladeAura.BladeVisible==(souls>0),"未強化では刃の炎を出さない");
             }
             var aura = hagi.GetChildren().OfType<HagiAura3D>().Single();
+            Vector3 bladeVertical=hagi.HagiBladePoint(new Vector2(.5f,0))-hagi.HagiBladePoint(new Vector2(.5f,1));
+            Vector3 spriteVertical=hagi.DeathSprite.GlobalBasis.Y*hagi.DeathSprite.Texture.GetHeight()*hagi.DeathSprite.PixelSize;
+            Require(bladeVertical.DistanceTo(spriteVertical)<.0001f,"刃の炎は斜めカメラでも立ち絵の実頂点変換を使う");
             Require(hagi.IdleLoopPlaying && hagi.IdleLoopFrameCount == 48, "採用済み48コマの待機ループ");
             _field.SetDeathClock(true, 1); double before = aura.Age;
+            Vector3 bladeBeforePause=aura.BladeEdgeMiddle;
             int idleBeforePause = hagi.IdleLoopFrame;
             await Wait(.12); Require(aura.Age == before, "停止中の魂");
+            Require(aura.BladeEdgeMiddle==bladeBeforePause,"停止中の刃の炎と追跡点も固定");
             Require(hagi.IdleLoopFrame == idleBeforePause, "再生時計の停止中は待機連番も止まる");
             _field.SetDeathClock(false, 2); await Wait(.12); Require(aura.Age - before > .15, "倍速の魂");
+            Require(aura.BladeEdgeMiddle.DistanceTo(bladeBeforePause)>.0001f,"再開で待機連番の刃へ追従");
             Require(hagi.IdleLoopFrame != idleBeforePause, "再生時計の再開で待機連番も進む");
             _field.SetDeathClock(false, 1);
-            var stopped = _field.PlayHagiSwing(hagi, new[] { enemy }, new(1, Array.Empty<int>(), true, false, false), () => { });
+            Vector3 strikeOrigin=Vector3.Zero;
+            var stopped = _field.PlayHagiSwing(hagi, new[] { enemy }, new(1, Array.Empty<int>(), true, false, false), () => strikeOrigin=hagi.GlobalPosition);
             await Wait(.04);
-            Require(hagi.MovementPortrait == "hagi_step" && UiKit.HasCustomBattlePortrait("hagi_step"), "移動中は踏み込み差分");
+            Require(hagi.AttackClipPlaying && hagi.HagiClipName == "hagi_reap_spin_v1", "踏み込みから全身の回転連番");
             Require(!hagi.IdleLoopPlaying, "踏み込み中は待機連番を出さない");
-            float stepFoot = hagi.DeathSprite.Position.Y - (1247 - 1374 * .5f) * hagi.DeathSprite.PixelSize;
+            float stepFoot = hagi.DeathSprite.Position.Y - (940 - 960 * .5f) * hagi.DeathSprite.PixelSize;
             Require(Math.Abs(stepFoot - BattlePawn3D.PortraitGroundYForCheck) < .01f, "踏み込みでも靴底を接地");
-            Require(Math.Abs(hagi.DeathSprite.PixelSize - UiKit.PortraitWorldHeight("hagi") / 1536f) < .00001f, "前傾姿勢を拡大せず待機絵と画素スケールを統一");
+            Require(Math.Abs(hagi.DeathSprite.PixelSize - UiKit.PortraitWorldHeight("hagi") / 960f) < .00001f, "しゃがみと跳躍は頭の実寸で統一");
             _field.SetDeathClock(true, 1); Vector3 frozen = hagi.Position;
-            await Wait(.12); Require(hagi.Position == frozen && hagi.MovementPortrait == "hagi_step" && !stopped.IsCompleted, "踏み込み中も停止");
+            int frozenCel = hagi.AttackClipFrame;
+            await Wait(.12); Require(hagi.Position == frozen && hagi.AttackClipFrame == frozenCel && !stopped.IsCompleted, "踏み込み中も移動と全身セルが停止");
             _field.SetDeathClock(false, 1); await Wait(.12);
             var reapFx = _field.HagiReapEffects.Single(); Require(!reapFx.Released,"溜めで光が刃に集まる");
             _field.SetDeathClock(true,1); double chargeAge = reapFx.Age;
@@ -59,11 +70,25 @@ public partial class HagiPresentationCheck : Control
             _field.SetDeathClock(false, 2); await stopped;
             Require(hagi.IdleLoopPlaying, "刈り取りの帰着で待機連番へ戻る");
             Require(reapFx.Released && reapFx.Age > 0,"接触で斬光と余韻へ移行");
+            Require(new Vector2(reapFx.SweepCenter.X-strikeOrigin.X,reapFx.SweepCenter.Z-strikeOrigin.Z).Length()<.001f,
+                "円弧の中心は標的ではなく攻撃したハギ");
+            foreach(float phase in new[]{0f,.25f,.5f,.75f,1f})
+            {
+                Vector3 p=reapFx.SweepPoint(phase);
+                Require(Math.Abs(p.Y-reapFx.SweepCenter.Y)<.001f,"斬撃の全周が地面と平行");
+                Require(Math.Abs(p.DistanceTo(reapFx.SweepCenter)-reapFx.SweepRadius)<.001f,"放射状に飛ばず同じ回転半径を保つ");
+            }
             _field.SetDeathClock(true,2); double releaseAge = reapFx.Age;
             await Wait(.08); Require(reapFx.Age == releaseAge,"刈り取りの残光も停止");
             _field.SetDeathClock(false, 1);
+            var normalSwing=_field.PlayHagiSwing(hagi,new[]{enemy},new(1,Array.Empty<int>(),false,false,false),()=>{});
+            await Wait(.25);
+            var normalFx=_field.HagiSweepEffects.Single(f=>!f.Heavy);
+            Require(normalFx.Released && Math.Abs(normalFx.SweepPoint(.65f).Y-normalFx.SweepCenter.Y)<.001f,
+                "通常攻撃も同じ水平円弧を使う");
+            await normalSwing;
             _field.BeginBattle(openings, "", 0); hagi = _field.FindPawn(1)!; enemy = _field.FindPawn(3)!;
-            Require(!_field.HagiReapEffects.Any(),"再戦で予兆と残光を破棄");
+            Require(!_field.HagiSweepEffects.Any(),"再戦で通常攻撃と刈り取りの残光を破棄");
             _field.ApplyHagiState(new(1, 9, 0, 0));
             aura = hagi.GetChildren().OfType<HagiAura3D>().Single();
             _field.ApplyDeathState(new(2, 9, 0, 0, _field.FindPawn(2)!.MaxHp));
@@ -79,12 +104,29 @@ public partial class HagiPresentationCheck : Control
             Require(hagi.HagiSouls == 0 && _field.HagiReaps == 0, "再戦で破棄");
             _field.ApplyHagiState(new(1, 6, 0, 0));
             task = _field.PlayHagiSwing(hagi, new[] { enemy }, new(1, Array.Empty<int>(), true, true, false), () => { });
-            await Wait(.025); Require(hagi.MovementPortrait == "hagi_step" && hagi.DeathSprite.FlipH, "敵側の踏み込み差分も左右反転");
+            await Wait(.025); Require(hagi.AttackClipPlaying && hagi.DeathSprite.FlipH, "敵側の全身セルも左右反転");
             await Wait(.135); await Capture("mirrored-pursuit"); await task;
             Require(hagi.DeathSprite.FlipH, "敵側の左右反転");
+            int contacts = 0;
+            await _field.PlayHagiSwing(hagi, new[] { enemy }, new(1, Array.Empty<int>(), true, false, false, Keep: true), () => contacts++);
+            Require(!hagi.AttackClipPlaying && !hagi.IdleLoopPlaying && hagi.HagiClipName == "hagi_reap_chain_v1", "連撃の間は着地姿勢を保持");
+            var heldFx=_field.HagiReapEffects.Last(); Vector3 heldCenter=heldFx.SweepCenter;
+            await Wait(.08); Require(heldFx.SweepCenter==heldCenter,"着地後の残光は命中位置に残す");
+            await _field.PlayHagiSwing(hagi, new[] { enemy }, new(1, Array.Empty<int>(), true, false, true), () => contacts++);
+            Require(contacts == 2 && hagi.HagiClipName is null && hagi.IdleLoopPlaying, "連撃の各一打は接触一度で待機へ帰着");
             var cancelled = _field.PlayHagiSwing(hagi, new[] { enemy }, new(1, Array.Empty<int>(), true, false, false), () => throw new Exception("中断した振りが接触した"));
             await Wait(.02); _field.BeginBattle(openings, "", 0); await cancelled;
             Require(_field.HagiSwings == 0, "途中で再戦しても古い振りを残さない");
+            hagi = _field.FindPawn(1)!; enemy = _field.FindPawn(3)!;
+            cancelled = _field.PlayHagiSwing(hagi, new[] { enemy }, new(1, Array.Empty<int>(), true, false, false), () => throw new Exception("中断した連番が接触した"));
+            await Wait(.02); hagi.CancelHagiMotion(); await cancelled;
+            Require(_field.HagiSwings == 0 && !hagi.AttackClipPlaying, "生存中の中断でも接触を起こさない");
+            cancelled = _field.PlayHagiSwing(hagi, new[] { enemy }, new(1, Array.Empty<int>(), true, false, false), () => throw new Exception("死亡した攻撃が接触した"));
+            await Wait(.02); hagi.SetHp(0); hagi.AnimateDeath(); await cancelled;
+            Require(!hagi.AttackClipPlaying && hagi.HagiClipName is null && _field.HagiSwings == 0
+                && _field.HagiSweepEffects.All(f=>f.Released), "死亡時は全身セルと未発動の斬撃を破棄");
+            hagi.SetHp(hagi.MaxHp); hagi.AnimateRevive();
+            Require(hagi.HagiClipName is null && hagi.IdleLoopPlaying, "復活は待機から再開");
             _field.QueueFree(); await Wait(.03);
             foreach (var fixture in fixtures)
             {
@@ -118,7 +160,7 @@ public partial class HagiPresentationCheck : Control
                 }
                 await main.StopViewerPlayback(); main.QueueFree(); await Wait(.03);
             }
-            GD.Print("HAGI_PRESENTATION_CHECK_OK parity=9 actual-values reap-count step-pose step-foot pause speed mirror cancel reset victory replay seek");
+            GD.Print("HAGI_PRESENTATION_CHECK_OK parity=9 actual-values reap-count acrobatic-cels head-scale ground horizontal-orbit actor-center fixed-radius normal-sweep blade-stage blade-idle-track blade-pause pause speed mirror combo cancel reset victory replay seek");
             GetTree().Quit();
         }
         catch (Exception error) { GD.PushError(error.ToString()); GetTree().Quit(1); }

@@ -1,0 +1,21 @@
+{
+  "source": "built-in image_gen, three full-body cel sheets",
+  "poses": [
+    {"key":"windup","sheet":"source-ground.png","cell":0,"head":[[501,14],[531,104]],"ground":[490,508],"socket":[126,196],"tip":[216,40],"contour":[[216,40],[108,83],[28,165],[30,273],[91,360],[152,401]]},
+    {"key":"ground_contact","sheet":"source-ground.png","cell":2,"head":[[355,540],[391,623]],"ground":[336,990],"socket":[797,699],"tip":[795,575],"contour":[[795,575],[890,600],[952,678],[963,769],[900,867],[718,927]]},
+    {"key":"takeoff","sheet":"source-air.png","cell":0,"head":[[519,18],[551,104]],"ground":[530,540],"socket":[144,198],"tip":[220,52],"contour":[[220,52],[104,89],[37,160],[16,245],[57,335],[134,394]]},
+    {"key":"back_spin","sheet":"source-air.png","cell":1,"head":[[1172,18],[1205,106]],"ground":[1184,536],"socket":[916,197],"tip":[989,38],"contour":[[989,38],[877,89],[813,178],[798,259],[834,331],[891,361]]},
+    {"key":"air_contact","sheet":"source-air.png","cell":2,"head":[[420,515],[449,605]],"ground":[360,988],"socket":[803,686],"tip":[739,551],"contour":[[739,551],[856,585],[921,654],[934,739],[884,853],[740,923]]},
+    {"key":"land","sheet":"source-air.png","cell":3,"head":[[1335,542],[1370,637]],"ground":[1310,1011],"socket":[1074,673],"tip":[1065,546],"contour":[[1065,546],[990,595],[951,681],[961,743],[1004,806],[1087,860]]},
+    {"key":"approach","sheet":"source-connect.png","cell":0,"head":[[568,80],[597,166]],"ground":[545,548],"socket":[160,147],"tip":[263,9],"contour":[[263,9],[147,44],[64,114],[40,197],[80,282],[165,327]]},
+    {"key":"turn","sheet":"source-connect.png","cell":1,"head":[[1140,82],[1181,173]],"ground":[1280,531],"socket":[1365,145],"tip":[1128,18],"contour":[[1128,18],[1262,21],[1395,65],[1467,143],[1490,273],[1449,390]]},
+    {"key":"follow","sheet":"source-connect.png","cell":2,"head":[[605,552],[641,633]],"ground":[580,982],"socket":[161,699],"tip":[226,534],"contour":[[226,534],[102,582],[33,663],[23,746],[82,817],[180,858]]},
+    {"key":"recover","sheet":"source-connect.png","cell":3,"head":[[1221,535],[1252,615]],"ground":[1250,1014],"socket":[1400,640],"tip":[1295,507],"contour":[[1295,507],[1383,541],[1450,617],[1475,711],[1483,811],[1440,867]]}
+  ],
+  "clips": [
+    {"key":"spin_v1","contact":6,"keys":[["approach",2],["windup",2],["back_spin",1],["turn",1],["ground_contact",1],["follow",1],["land",2],["recover",2]],"vertical":[0,0,0,0,0.18,0.18,0.08,0.08,0.03,0,0.08,0.08]},
+    {"key":"reap_spin_v1","contact":11,"keys":[["approach",3],["windup",3],["takeoff",2],["back_spin",2],["turn",1],["air_contact",1],["follow",2],["land",3],["recover",2]],"vertical":[0,0,0,0,0,0,0.18,0.42,0.64,0.68,0.64,0.56,0.42,0.24,0.12,0,0,0.08,0.08]},
+    {"key":"reap_chain_v1","contact":11,"keys":[["approach",3],["windup",3],["takeoff",2],["back_spin",2],["turn",1],["air_contact",1],["follow",2],["land",2]],"vertical":[0,0,0,0,0,0,0.18,0.42,0.64,0.68,0.64,0.56,0.42,0.24,0.12,0]},
+    {"key":"reap_return_v1","contact":7,"keys":[["land",2],["windup",2],["back_spin",2],["turn",1],["ground_contact",1],["follow",2],["land",2],["recover",2]],"vertical":[0,0,0,0,0.22,0.30,0.30,0.24,0.18,0.08,0,0,0.08,0.08]}
+  ]
+}

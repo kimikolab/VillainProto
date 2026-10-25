@@ -1,0 +1,12 @@
+{
+  "fps": 60,
+  "startFrame": 29,
+  "endFrame": 209,
+  "souls": [
+    0,
+    3,
+    6,
+    9
+  ],
+  "source": "\u672C\u756A\u306EBattlePawn3D\u3068\u63A1\u7528\u6E08\u307F48\u30B3\u30DE\u306E\u5F85\u6A5F\u9023\u756A"
+}

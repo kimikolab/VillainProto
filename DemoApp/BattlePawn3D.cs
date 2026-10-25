@@ -544,6 +544,7 @@ void fragment() {
         SetCurseStain(false);
         _statusSnapshot.Clear();
         _alive = false;
+        CancelHagiMotion();
         _misaFeathers?.SetActive(false);
         SetPlank(0);
         SetScrapStock(0);
@@ -587,6 +588,7 @@ void fragment() {
 
     public void AnimateRevive()
     {
+        CancelHagiMotion();
         HagiReaped = false; _hagiDissolve = 0;
         _portraitMaterial.SetShaderParameter("hagi_dissolve", 0f);
         ResumeDeathVisual();

@@ -1,0 +1,69 @@
+{
+  "date": "2026-10-26",
+  "validation": "GPU録画。炎シェーダーだけの見た目調整。台本検査は前版の記録を参照。",
+  "whiteArcUnchanged": true,
+  "whiteArcSha256": "10d3cd25d1ba55dbfa4fd52c7512522476f3ce4386a77c87e800c0fb0abecbbe",
+  "flameSha256": "218fb5292fe0a30a670018ef9a5e03eeb08711bfced8d8767559b47e31feafc3",
+  "capture": {
+    "fps": 60,
+    "cue": "hagi.live.0.2",
+    "speed": 1,
+    "segments": [
+      {
+        "name": "sweep",
+        "startFrame": 11,
+        "endFrame": 146,
+        "attackEvent": 37,
+        "attacks": 1,
+        "reaps": 0
+      },
+      {
+        "name": "reap",
+        "startFrame": 164,
+        "endFrame": 313,
+        "attackEvent": 365,
+        "attacks": 1,
+        "reaps": 2
+      },
+      {
+        "name": "chain",
+        "startFrame": 331,
+        "endFrame": 511,
+        "attackEvent": 225,
+        "attacks": 2,
+        "reaps": 2
+      }
+    ]
+  },
+  "gifs": [
+    {
+      "file": "chain-half.gif",
+      "frames": 72,
+      "durationMs": 6000,
+      "bytes": 6792572
+    },
+    {
+      "file": "reap-half.gif",
+      "frames": 60,
+      "durationMs": 5000,
+      "bytes": 5815136
+    },
+    {
+      "file": "sweep-half.gif",
+      "frames": 54,
+      "durationMs": 4500,
+      "bytes": 4773001
+    }
+  ],
+  "gpuErrors": false,
+  "gpuWarnings": false,
+  "movie": {
+    "fps": "60",
+    "size": [
+      1440,
+      700
+    ],
+    "audio": "aac",
+    "seconds": 7.754667
+  }
+}

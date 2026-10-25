@@ -10,8 +10,9 @@ public partial class BattlefieldView3D
     internal static readonly Color HagiSilver = new("edf1f8");
     private int _hagiGeneration;
     internal int HagiSwings, HagiReaps, HagiPursuits, HagiLinks, HagiColumns, HagiGrazes, HagiSoulFlows;
-    internal System.Collections.Generic.IEnumerable<HagiReapFx3D> HagiReapEffects
+    internal System.Collections.Generic.IEnumerable<HagiReapFx3D> HagiSweepEffects
         => _fxRoot.GetChildren().OfType<HagiReapFx3D>().Where(f => IsInstanceValid(f) && !f.IsQueuedForDeletion());
+    internal System.Collections.Generic.IEnumerable<HagiReapFx3D> HagiReapEffects => HagiSweepEffects.Where(f => f.Heavy);
     private (bool, double) HagiClock() => (_deathPaused, _deathSpeed);
     private void ResetHagiPresentation()
     {
@@ -20,7 +21,7 @@ public partial class BattlefieldView3D
         if (_fxRoot is not null)
         {
             foreach (var fx in _fxRoot.GetChildren().OfType<HagiLight3D>()) { fx.Hide(); fx.QueueFree(); }
-            foreach (var fx in HagiReapEffects.ToArray()) { fx.Hide(); fx.QueueFree(); }
+            foreach (var fx in HagiSweepEffects.ToArray()) { fx.Hide(); fx.QueueFree(); }
         }
         HagiSwings = HagiReaps = HagiPursuits = HagiLinks = HagiColumns = HagiGrazes = HagiSoulFlows = 0;
     }
@@ -67,17 +68,17 @@ public partial class BattlefieldView3D
     internal async Task PlayHagiSwing(BattlePawn3D? actor, IReadOnlyList<BattlePawn3D> targets,
         HagiPresentation.Swing cue, Action contact)
     {
-        if (actor is null || targets.Count == 0) return;
+        if (actor is null || targets.Count == 0 || !actor.CanPlayAttackClip || actor.Hp <= 0) return;
         int generation = _hagiGeneration;
         bool Valid() => generation == _hagiGeneration && IsInstanceValid(actor) && IsVisibleInTree();
+        bool Live() => Valid() && actor.CanPlayAttackClip && actor.Hp > 0;
         Vector3 start = actor.Position;
         Vector3 center = targets.Aggregate(Vector3.Zero, (p, target) => p + target.FxPoint) / targets.Count;
         Vector3 direction = (center - actor.FxPoint); direction.Y = 0;
         Vector3 destination = actor.Position + direction * Math.Min(.78f, Math.Max(0, direction.Length() - 1.35f) / Math.Max(.01f, direction.Length()));
         bool flip = (center - actor.FxPoint).Dot(_camera.GlobalBasis.X) < 0;
-        bool stepping = start.DistanceSquaredTo(destination) > .01f;
         actor.BeginHagiMotion();
-        actor.SetHagiPose(stepping ? "hagi_step" : "hagi_windup", flip);
+        actor.SetHagiPose(null, flip);
         if (cue.Pursuit)
         {
             HagiPursuits++;
@@ -85,41 +86,52 @@ public partial class BattlefieldView3D
             var shadow = new HagiLight3D(); _fxRoot.AddChild(shadow);
             shadow.Particles(actor.FxPoint, center, true, false, HagiClock);
         }
-        await HagiWait(cue.Link ? .035 : cue.Pursuit ? .065 : .13, generation,
-            t => actor.Position = start.Lerp(destination, 1 - (1 - t) * (1 - t)));
-        if (!Valid()) return;
-        actor.SetHagiPose("hagi_windup", flip);
         HagiReapFx3D? reaping = null;
         Vector3 side = _camera.GlobalBasis.X.Normalized();
         float span = targets.Max(p => p.FxPoint.Dot(side)) - targets.Min(p => p.FxPoint.Dot(side));
+        Vector3 Blade() => actor.MovementPortraitPoint((actor.CurrentHagiAnchors?.Tip ?? new Vector2(.60f,.035f))
+            * actor.DeathSprite.Texture.GetSize(), _camera);
+        Vector3 Orbit() => actor.GlobalPosition + Vector3.Up * (.95f + actor.AttackClipVertical);
         if (cue.Reap)
         {
             reaping = new HagiReapFx3D(); _fxRoot.AddChild(reaping);
             reaping.Start(center+Vector3.Up*.12f,span+4.2f,flip,_camera,
-                () => actor.MovementPortraitPoint(new Vector2(.60f,.035f)*actor.DeathSprite.Texture.GetSize(),_camera),HagiClock);
+                Blade,Orbit,HagiClock);
         }
-        // 刈り取りだけ溜めの静止を置く。追撃は同じ形を短い拍で返す。
-        if (cue.Reap) await HagiWait(cue.Pursuit || cue.Link ? .055 : .15, generation);
-        else if (stepping) await HagiWait(.04, generation);
-        if (!Valid()) return;
-        HagiSwings++; if (cue.Link) HagiLinks++;
-        if (cue.Reap && targets.Count > 1) HagiColumns++;
-        actor.SetHagiPose("hagi_follow", flip);
-        if (reaping is not null) reaping.Release();
-        else
+        string clip = !cue.Reap ? "hagi_spin_v1" : cue.Link ? "hagi_reap_return_v1"
+            : cue.Keep ? "hagi_reap_chain_v1" : "hagi_reap_spin_v1";
+        bool contacted = false;
+        // 命中は全身セルのcontactで一度だけ通知する。中断時に旧台本の接触を発生させない。
+        var animation = actor.PlayHagiClip(clip, () => {
+            if (!Live() || !actor.AttackClipPlaying) return;
+            contacted = true;
+            HagiSwings++; if (cue.Link) HagiLinks++;
+            if (cue.Reap && targets.Count > 1) HagiColumns++;
+            if (reaping is not null) reaping.Release();
+            else
+            {
+                var arc = new HagiReapFx3D(); _fxRoot.AddChild(arc);
+                arc.Start(center+Vector3.Up*.12f,span+2.8f,flip,_camera,Blade,Orbit,HagiClock,heavy:false);
+                arc.Release();
+            }
+            _attackAudio.PlayAttack("hagi", actor.Team, targets.Count > 1 ? AttackPattern.Sweep : AttackPattern.Single,
+                cue.Pursuit, cue.Reap);
+            foreach (var hit in targets) NotifyAttackContact(hit);
+            contact();
+        }, cue.Keep);
+        await HagiWait(cue.Link ? .035 : cue.Pursuit ? .065 : .13, generation,
+            t => { if (Live() && actor.AttackClipPlaying) actor.Position = start.Lerp(destination, 1 - (1 - t) * (1 - t)); });
+        await animation;
+        if (!Live() || !contacted)
         {
-            var arc = new HagiLight3D(); _fxRoot.AddChild(arc);
-            arc.Arc(center+Vector3.Up*.12f,span+1.6f,false,flip,HagiClock,_camera);
+            if (IsInstanceValid(reaping)) { reaping!.Hide(); reaping.QueueFree(); }
+            if (Live()) actor.Position = actor.Home;
+            return;
         }
-        _attackAudio.PlayAttack("hagi", actor.Team, targets.Count > 1 ? AttackPattern.Sweep : AttackPattern.Single,
-            cue.Pursuit, cue.Reap);
-        foreach (var hit in targets) NotifyAttackContact(hit);
-        contact();
-        await HagiWait(cue.Keep ? .07 : cue.Reap ? .18 : .09, generation);
-        if (!Valid() || cue.Keep) return;
+        if (cue.Keep) return;
         Vector3 end = actor.Position;
-        await HagiWait(.10, generation, t => actor.Position = end.Lerp(actor.Home, t));
-        if (Valid()) actor.SetHagiPose(null);
+        await HagiWait(.10, generation, t => { if (Live()) actor.Position = end.Lerp(actor.Home, t); });
+        if (Live()) actor.ReleaseHagiPose();
     }
     private async Task HagiWait(double seconds, int generation, Action<float>? tick = null)
     {

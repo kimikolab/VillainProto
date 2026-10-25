@@ -1,0 +1,62 @@
+{
+  "clips": [
+    {
+      "name": "hagi_reap_chain_v1",
+      "frames": 16,
+      "contact": 11,
+      "uniquePoses": 8
+    },
+    {
+      "name": "hagi_reap_return_v1",
+      "frames": 14,
+      "contact": 7,
+      "uniquePoses": 7
+    },
+    {
+      "name": "hagi_reap_spin_v1",
+      "frames": 19,
+      "contact": 11,
+      "uniquePoses": 9
+    },
+    {
+      "name": "hagi_spin_v1",
+      "frames": 12,
+      "contact": 6,
+      "uniquePoses": 8
+    }
+  ],
+  "previews": [
+    {
+      "file": "chain-half.gif",
+      "frames": 72,
+      "durationMs": 6000,
+      "bytes": 6881826
+    },
+    {
+      "file": "reap-half.gif",
+      "frames": 60,
+      "durationMs": 5000,
+      "bytes": 5730641
+    },
+    {
+      "file": "sweep-half.gif",
+      "frames": 54,
+      "durationMs": 4500,
+      "bytes": 4724300
+    }
+  ],
+  "checks": [
+    "HAGI_PRESENTATION_CHECK_OK parity=9 actual-values reap-count acrobatic-cels head-scale ground pause speed mirror combo trail cancel reset victory replay seek",
+    "IDLE_LOOP_CHECK_OK hiyo borg hota hota_burning gald gare hibi rica hagi start advance speed pause action gift burning burning-variant death revive victory enemy fallback sword kneel",
+    "RICA_MOTION_CHECK_OK checks=520 clips=7 stages=4 mirrors contacts pause speed cancel replay hp"
+  ],
+  "movie": {
+    "fps": "60",
+    "size": [
+      1440,
+      700
+    ],
+    "audio": "aac",
+    "durationSeconds": 7.754667
+  }
+}

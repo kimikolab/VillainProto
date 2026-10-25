@@ -27,6 +27,8 @@ public partial class HagiMovieCapture : Control
             if (chainAt < 0) throw new Exception("実戦台本に連続する刈り取りがありません");
             int chainCount = 1;
             while (chainAt + chainCount < swings.Length && swings[chainAt + chainCount].Value.Link) chainCount++;
+            if (OS.GetCmdlineUserArgs().Contains("--hagi-acrobatics"))
+                await Record("sweep", playback, index, swings.First(p => !p.Value.Reap && !p.Value.Pursuit).Key, 1);
             await Record("reap", playback, index, single.Key, 1);
             await Record("chain", playback, index, swings[chainAt].Key, chainCount);
             string output = OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--hagi-movie-dir=",StringComparison.Ordinal))

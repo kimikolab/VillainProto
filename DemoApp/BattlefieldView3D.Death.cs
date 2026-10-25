@@ -16,7 +16,11 @@ public partial class BattlefieldView3D
         _deathPaused = paused; _deathSpeed = Math.Max(0.1, speed);
         _attackAudio?.PauseRicaEvents(paused);
         foreach (var pawn in _pawns.Values) pawn.SetRicaMotionClock(paused,_deathSpeed);
-        foreach (var pawn in _pawns.Values) pawn.HagiPaused = paused;
+        foreach (var pawn in _pawns.Values)
+        {
+            pawn.HagiPaused = paused;
+            if (pawn.UnitId == "hagi") pawn.AnimationSpeed = _deathSpeed;
+        }
     }
     private void ResetDeathPresentation()
     {

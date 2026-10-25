@@ -1,0 +1,77 @@
+{
+  "date": "2026-10-26",
+  "check": "HAGI_PRESENTATION_CHECK_OK parity=9 actual-values reap-count acrobatic-cels head-scale ground horizontal-orbit actor-center fixed-radius normal-sweep pause speed mirror combo cancel reset victory replay seek",
+  "fixtures": [
+    "HAGI_REPLAY_OK hagi.live.0.0 swings=5 reaps=1 pursuits=1 links=0 columns=0 graze=16",
+    "HAGI_REPLAY_OK hagi.live.0.1 swings=8 reaps=4 pursuits=6 links=1 columns=0 graze=32",
+    "HAGI_REPLAY_OK hagi.live.0.2 swings=11 reaps=8 pursuits=7 links=3 columns=1 graze=31",
+    "HAGI_REPLAY_OK hagi.live.1.0 swings=6 reaps=1 pursuits=1 links=0 columns=0 graze=28",
+    "HAGI_REPLAY_OK hagi.live.1.1 swings=8 reaps=3 pursuits=4 links=1 columns=0 graze=49",
+    "HAGI_REPLAY_OK hagi.live.1.2 swings=8 reaps=5 pursuits=5 links=2 columns=0 graze=52",
+    "HAGI_REPLAY_OK hagi.live.2.0 swings=4 reaps=0 pursuits=0 links=0 columns=0 graze=11",
+    "HAGI_REPLAY_OK hagi.live.2.1 swings=6 reaps=2 pursuits=4 links=2 columns=0 graze=17",
+    "HAGI_REPLAY_OK hagi.live.2.2 swings=11 reaps=7 pursuits=9 links=3 columns=0 graze=21"
+  ],
+  "capture": {
+    "fps": 60,
+    "cue": "hagi.live.0.2",
+    "speed": 1,
+    "segments": [
+      {
+        "name": "sweep",
+        "startFrame": 11,
+        "endFrame": 146,
+        "attackEvent": 37,
+        "attacks": 1,
+        "reaps": 0
+      },
+      {
+        "name": "reap",
+        "startFrame": 164,
+        "endFrame": 313,
+        "attackEvent": 365,
+        "attacks": 1,
+        "reaps": 2
+      },
+      {
+        "name": "chain",
+        "startFrame": 331,
+        "endFrame": 511,
+        "attackEvent": 225,
+        "attacks": 2,
+        "reaps": 2
+      }
+    ]
+  },
+  "movie": {
+    "fps": "60",
+    "size": [
+      1440,
+      700
+    ],
+    "audio": "aac",
+    "seconds": 7.754667
+  },
+  "gifs": [
+    {
+      "file": "chain-half.gif",
+      "frames": 72,
+      "durationMs": 6000,
+      "bytes": 7046560
+    },
+    {
+      "file": "reap-half.gif",
+      "frames": 60,
+      "durationMs": 5000,
+      "bytes": 5744532
+    },
+    {
+      "file": "sweep-half.gif",
+      "frames": 54,
+      "durationMs": 4500,
+      "bytes": 4768306
+    }
+  ],
+  "headlessExitWarnings": "前版と同じRID/ObjectDB解放警告。検査成功後の終了処理のみ。",
+  "gpuExitWarnings": false
+}

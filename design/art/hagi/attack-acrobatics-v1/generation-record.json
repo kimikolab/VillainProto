@@ -1,0 +1,40 @@
+{
+  "date": "2026-10-26",
+  "tool": "image_gen.imagegen",
+  "transparent_background": true,
+  "reference": "DemoApp/assets/portraits/battle/hagi_idle_right.png",
+  "prompts": "generation-calls.json",
+  "outputs": [
+    {
+      "sheet": "source-ground.png",
+      "original": "C:\\Users\\Pon\\.codex\\generated_images\\01a16ee4-957d-7073-aa2e-d3e415aca3ce\\exec-97ce7a23-0c1f-4e12-80b0-f76492929057.png",
+      "sha256": "680f49241e4722063fabae2fc14d55298a8410b78c8703e10b0f9f34695c038a",
+      "selectedCells": [
+        0,
+        2
+      ]
+    },
+    {
+      "sheet": "source-air.png",
+      "original": "C:\\Users\\Pon\\.codex\\generated_images\\01a16ee4-957d-7073-aa2e-d3e415aca3ce\\exec-cc62756c-4e8c-4713-afbb-0a7c7667b0ca.png",
+      "sha256": "21603fddb5d6f4f4b3edd11dc316f8e1d2a6635101fd454d4816a302b1f5c7d0",
+      "selectedCells": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "sheet": "source-connect.png",
+      "original": "C:\\Users\\Pon\\.codex\\generated_images\\01a16ee4-957d-7073-aa2e-d3e415aca3ce\\exec-b8e5594a-91f4-435b-8140-b07ca00a84c8.png",
+      "sha256": "e2315885ed93e2fcf9055ea7dc27d295281b01496a0f116f9e36385c3e2e1fee",
+      "selectedCells": [
+        0,
+        1,
+        2,
+        3
+      ]
+    }
+  ]
+}

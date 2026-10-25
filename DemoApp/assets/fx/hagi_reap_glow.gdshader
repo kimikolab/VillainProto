@@ -4,6 +4,7 @@ render_mode unshaded, blend_mix, cull_disabled, depth_draw_never, depth_test_dis
 uniform float age = 0.0;
 uniform float release = 0.0;
 uniform int layer = 0;
+uniform float power = 1.0;
 
 void fragment() {
     vec2 p = (UV - 0.5) * 2.0;
@@ -28,5 +29,5 @@ void fragment() {
     }
     ALBEDO = tint;
     EMISSION = layer == 1 ? vec3(0.0) : tint * 1.7;
-    ALPHA = clamp(glow, 0.0, 0.92);
+    ALPHA = clamp(glow * power, 0.0, 0.92);
 }

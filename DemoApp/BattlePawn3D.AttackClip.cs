@@ -109,6 +109,7 @@ public partial class BattlePawn3D
     internal void ProcessAttackClip(double delta)
     {
         if (_unitId == "rica" && _ricaMotionPaused) return;
+        if (_unitId == "hagi" && HagiPaused) return;
         if (_attackClip is null) return;
         if (_victory || !_alive) { FinishAttackClip(restore: !_victory); return; }
         _attackClipTime += delta * Math.Max(0.1, AnimationSpeed);
@@ -171,15 +172,15 @@ public partial class BattlePawn3D
         if (_attackClip is null) return;
         TaskCompletionSource? done = _attackClipDone;
         Action? contact = _attackClipContact;
-        bool heldRica = HoldRicaLastFrame(restore && completed);
+        bool held = HoldRicaLastFrame(restore && completed) || HoldHagiLastFrame(restore && completed);
         _attackClip = null;
         _attackClipFrame = -1;
         AttackClipForward = 0;
-        if (!heldRica) AttackClipVertical = 0;
+        if (!held) AttackClipVertical = 0;
         _attackClipContact = null;
         _attackClipDone = null;
         contact?.Invoke(); // 当たる前に途切れても、待っている側を止めない
-        if (restore && !heldRica) RefreshBattlePortrait(); // 連撃のリィカは振り切りを次の一打まで保持する。
+        if (restore && !held) RefreshBattlePortrait(); // 連撃は振り切りを次の一打まで保持する。
         done?.TrySetResult();
     }
 }
