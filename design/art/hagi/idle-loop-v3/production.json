@@ -1,0 +1,15 @@
+{
+  "character": "hagi",
+  "status": "rejected",
+  "reason": "鎌をほぼ固定し、肘で身体の上下を受ける指示にしたが、上半身の動きも1〜2pxに止まった。身体をもっと動かす依頼を満たさないため採用候補から除外。",
+  "seed": 5055,
+  "source_tag": "hagi_body_v3_s5055",
+  "frames": 40,
+  "fps": 16,
+  "eye_vertical_range": 1,
+  "shoulder_vertical_range": 1,
+  "waist_vertical_range": 2,
+  "mouth": "元の半笑いを維持。口パクの大きな開閉は抑えられている。",
+  "recommended_revision": "../idle-loop-v2/B-loop.gif",
+  "runtime": "ゲーム未適用"
+}

@@ -1,0 +1,330 @@
+{
+  "1": {
+    "class_type": "UNETLoader",
+    "inputs": {
+      "unet_name": "wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors",
+      "weight_dtype": "default"
+    }
+  },
+  "2": {
+    "class_type": "UNETLoader",
+    "inputs": {
+      "unet_name": "wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors",
+      "weight_dtype": "default"
+    }
+  },
+  "3": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "type": "wan",
+      "device": "default"
+    }
+  },
+  "4": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "wan_2.1_vae.safetensors"
+    }
+  },
+  "5": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "vp_hagi.png"
+    }
+  },
+  "30": {
+    "class_type": "EmptyImage",
+    "inputs": {
+      "width": 1024,
+      "height": 1536,
+      "batch_size": 1,
+      "color": 45376
+    }
+  },
+  "31": {
+    "class_type": "InvertMask",
+    "inputs": {
+      "mask": [
+        "5",
+        1
+      ]
+    }
+  },
+  "32": {
+    "class_type": "ImageCompositeMasked",
+    "inputs": {
+      "destination": [
+        "30",
+        0
+      ],
+      "source": [
+        "5",
+        0
+      ],
+      "x": 0,
+      "y": 0,
+      "resize_source": false,
+      "mask": [
+        "31",
+        0
+      ]
+    }
+  },
+  "19": {
+    "class_type": "ImageScale",
+    "inputs": {
+      "image": [
+        "32",
+        0
+      ],
+      "upscale_method": "lanczos",
+      "width": 640,
+      "height": 960,
+      "crop": "disabled"
+    }
+  },
+  "6": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": [
+        "3",
+        0
+      ],
+      "text": "A 2D anime fighting game character idle animation, like a Street Fighter or Guilty Gear idle loop. The agile young adult female reaper Hagi is SILENTLY waiting in a fighting game guard stance, facing right at the same three-quarter angle. Her body actively bobs through the knees; she is not a still mannequin with moving clothes. Her original confident half-smile stays unchanged: lips and jaw keep exactly the same shape and the same small opening throughout, no speech or mouth animation. She has a short charcoal-black bob and a thin crimson side braid. Preserve the exact black, muted crimson, gray and gold costume, opaque short skirt with long asymmetric cloth tails, one black thigh-high stocking and black gold-trimmed boots. BOTH hands keep firmly closed around ONE straight black scythe shaft in front of her: lower hand at screen left beside her hip, upper hand at screen right beside her shoulder, thumbs opposed to curled fingers. The huge clean silver crescent blade remains above and to screen right, with exactly ONE large oval hole in the gold root and three narrow dark engraved grooves. A clearly visible FULL-BODY fighting game guard bounce. Repeat two or three distinct rhythmic cycles: BOTH knees clearly bend, the pelvis and waist sink by about half a palm width, the chest, shoulders and head lower together as one connected body, then the legs straighten back to the original ready stance. The body visibly moves even without the loose clothes. Keep the chest lifted, back straight, chin level and gaze forward. Both soles stay firmly planted in their exact spots. The highest position is the original stance; the body dips below it and never rises above it. She actively holds the large scythe STEADY in its original screen position and diagonal angle: both gripping hands stay at their original positions on the rigid shaft while her elbows naturally flex to absorb the bobbing of her shoulders and pelvis. The knees and torso move; the weapon is supported steadily, never lowered with each bounce. The ENTIRE scythe including the small gold butt spike at bottom LEFT and the crescent blade at top RIGHT stays fully INSIDE the frame with empty space around both tips in EVERY frame. Keep the exact same confident half-smile and unchanged lips and jaw throughout. Both feet stay flat on the ground in exactly the same spots; she never jumps and never steps. Her body keeps facing right and does not turn toward the camera. Short bob tips, crimson braid, loose sleeve ends and long cloth tails make restrained secondary follow-through AFTER the moving body, then settle on each beat; no independent continuous wind. The torso, pelvis and knees are the primary movement, never only fluttering clothes. The opaque skirt keeps the same length and coverage. Scythe shaft and blade stay rigid and nearly stationary in their original screen position and diagonal angle, constant in length and shape with the single large oval hole. The complete butt spike stays visible at bottom left, with a clear margin to the left edge. Fingers stay firmly wrapped around the shaft. No speaking, no lip sync, no chewing, no mouth opening and closing, no weapon flourish, no attack, no bells, no added chains, no blood, no fire, no smoke, no souls, no particles, no glow. Same face, same costume, same colors. Fixed camera, no zoom, full body always visible, flat plain green background."
+    }
+  },
+  "7": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": [
+        "3",
+        0
+      ],
+      "text": "static image, frozen pose, walking, moving across the frame, turning around, camera movement, zoom, cuts, jumping, hopping, feet leaving the ground, stepping, turning to face the camera, cropped feet, cropped ears, multiple characters, changing costume, changing face, extra limbs, extra fingers, deformed hands, flicker, text, watermark, background change, shadows on background, talking, speaking, lip sync, lip movement, mouth opening and closing, chewing, singing, shouting, changing smile, jaw movement, still torso, frozen pelvis, stationary shoulders, mannequin pose, only clothes moving, only hair moving, wind animation, shallow imperceptible breathing, whole image translation, floating feet, deep squatting, jumping, hopping, stepping, foot sliding, widening stance, standing upright, hunched back, slouching, looking down, nodding, turning toward camera, changing grip, open grip, floating hand, sliding hands, detached fingers, extra thumbs, curved shaft, bent pole, split shaft, rubber scythe, flexible blade, independently moving blade, shrinking blade, extra blade holes, two oval holes, red blade, blood, bells, dangling chains, scythe swing, spinning weapon, long hair, ponytail, shortening skirt, exposed underwear, costume recoloring, purple magic, scythe bobbing up and down, lowering scythe, translating weapon with torso, cropped weapon, cropped shaft, missing butt spike, weapon leaving the frame"
+    }
+  },
+  "8": {
+    "class_type": "ModelSamplingSD3",
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "shift": 8.0
+    }
+  },
+  "9": {
+    "class_type": "ModelSamplingSD3",
+    "inputs": {
+      "model": [
+        "2",
+        0
+      ],
+      "shift": 8.0
+    }
+  },
+  "10": {
+    "class_type": "WanImageToVideo",
+    "inputs": {
+      "positive": [
+        "6",
+        0
+      ],
+      "negative": [
+        "7",
+        0
+      ],
+      "vae": [
+        "4",
+        0
+      ],
+      "width": 640,
+      "height": 960,
+      "length": 81,
+      "batch_size": 1,
+      "start_image": [
+        "19",
+        0
+      ]
+    }
+  },
+  "11": {
+    "class_type": "KSamplerAdvanced",
+    "inputs": {
+      "model": [
+        "8",
+        0
+      ],
+      "add_noise": "enable",
+      "noise_seed": 5055,
+      "steps": 20,
+      "cfg": 3.5,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "positive": [
+        "10",
+        0
+      ],
+      "negative": [
+        "10",
+        1
+      ],
+      "latent_image": [
+        "10",
+        2
+      ],
+      "start_at_step": 0,
+      "end_at_step": 10,
+      "return_with_leftover_noise": "enable"
+    }
+  },
+  "12": {
+    "class_type": "KSamplerAdvanced",
+    "inputs": {
+      "model": [
+        "9",
+        0
+      ],
+      "add_noise": "disable",
+      "noise_seed": 0,
+      "steps": 20,
+      "cfg": 3.5,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "positive": [
+        "10",
+        0
+      ],
+      "negative": [
+        "10",
+        1
+      ],
+      "latent_image": [
+        "11",
+        0
+      ],
+      "start_at_step": 10,
+      "end_at_step": 20,
+      "return_with_leftover_noise": "disable"
+    }
+  },
+  "13": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "12",
+        0
+      ],
+      "vae": [
+        "4",
+        0
+      ]
+    }
+  },
+  "14": {
+    "class_type": "CreateVideo",
+    "inputs": {
+      "images": [
+        "13",
+        0
+      ],
+      "fps": 16.0
+    }
+  },
+  "15": {
+    "class_type": "SaveVideo",
+    "inputs": {
+      "video": [
+        "14",
+        0
+      ],
+      "filename_prefix": "VillainProto/idle_loop/hagi_body_v3_s5055_raw",
+      "format": "auto",
+      "codec": "auto"
+    }
+  },
+  "40": {
+    "class_type": "VPIdleLoopFind",
+    "inputs": {
+      "images": [
+        "13",
+        0
+      ],
+      "min_length": 16,
+      "max_length": 48,
+      "skip_head": 8,
+      "min_motion": 3.0,
+      "compare_size": 192,
+      "min_step": 2.5,
+      "crossfade": 0
+    }
+  },
+  "45": {
+    "class_type": "PreviewAny",
+    "inputs": {
+      "source": [
+        "40",
+        4
+      ]
+    }
+  },
+  "41": {
+    "class_type": "BiRefNetRMBG",
+    "inputs": {
+      "image": [
+        "40",
+        0
+      ],
+      "model": "BiRefNet_toonout",
+      "sensitivity": 1.0,
+      "mask_blur": 0,
+      "mask_offset": 0,
+      "invert_output": false,
+      "refine_foreground": false,
+      "background": "Alpha",
+      "background_color": "#222222"
+    }
+  },
+  "42": {
+    "class_type": "VPGreenKeyAlpha",
+    "inputs": {
+      "images": [
+        "40",
+        0
+      ],
+      "mask": [
+        "41",
+        1
+      ],
+      "key_low": 25.0,
+      "key_high": 75.0,
+      "despill": true,
+      "edge_width": 12
+    }
+  },
+  "43": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "42",
+        0
+      ],
+      "filename_prefix": "VillainProto/idle_loop/hagi_body_v3_s5055_rgba/f"
+    }
+  },
+  "44": {
+    "class_type": "SaveAnimatedWEBP",
+    "inputs": {
+      "images": [
+        "42",
+        0
+      ],
+      "filename_prefix": "VillainProto/idle_loop/hagi_body_v3_s5055_loop",
+      "fps": 16.0,
+      "lossless": false,
+      "quality": 90,
+      "method": "default"
+    }
+  }
+}

@@ -219,7 +219,7 @@ public static class UiKit
         "doha" => 2.65f,
         "egu" => 2.80f,
         "nomi" => 2.30f,
-        "hagi" => 2.55f,
+        "hagi" => 2.25f, // 大鎌込みの高さ。本人の体格はリィカと揃える。
         "vel" => 2.45f,
         "hiyo" => 2.10f, // リィカと同じ基準高。支援動作も同率で拡大する。
         "gan" => 2.85f,
@@ -312,7 +312,10 @@ public static class UiKit
         "sora" => 0.0951f,
         "egu" => 0.1139f,
         "nomi" => 0.0430f,
-        "hagi" => 0.0534f,
+        "hagi" => 30f / 1536f, // 死神少女の戦闘絵の足元余白。
+        "hagi_step" => 127f / 1374f, // 前傾突進の前足1247pxを接地へ合わせる。
+        "hagi_windup" => 48f / 1536f,
+        "hagi_follow" => 172f / 1536f, // 刃先ではなく左足の接地で合わせる。
         "vel" => 0.0130f,
         "hiyo" => 0.0215f,
         "gan" => 0.0384f,

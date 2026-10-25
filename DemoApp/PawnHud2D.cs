@@ -142,7 +142,7 @@ public partial class PawnHud2D : Control
         {
             Layout();
             float half = _barWidth * 0.5f + 1;
-            float top = -_barHeight - 1;
+            float top = -_barHeight - (_hagiLine > 0 ? 16 : 1);
             if (_detail.Visible)
             {
                 half = Mathf.Max(half, _detail.Size.X * 0.5f);
@@ -186,6 +186,7 @@ public partial class PawnHud2D : Control
 
     public override void _Draw()
     {
+        DrawHagiLine();
         if (_nudge.LengthSquared() <= 36) return;
         // 原点（バーの下）から、本来の頭の位置（−Nudge）へ。
         Color line = new(_team, 0.75f);
@@ -197,7 +198,7 @@ public partial class PawnHud2D : Control
     /// <summary>下から バー → 詳細 → 標の層数 → 状態アイコン → 予告 の順に積む。</summary>
     private void Layout()
     {
-        float top = -_barHeight - 2;
+        float top = -_barHeight - (_hagiLine > 0 ? 16 : 2);
         if (_detail.Visible)
         {
             Vector2 size = _detail.GetCombinedMinimumSize();

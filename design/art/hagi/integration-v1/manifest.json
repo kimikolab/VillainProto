@@ -1,0 +1,46 @@
+{
+  "applied_on": "2026-10-25",
+  "selection": "fresh-redraw-v1 before palette changes",
+  "world_height": 2.25,
+  "bottom_padding_pixels": 30,
+  "canvas_height": 1536,
+  "portraits": [
+    {
+      "source": "design/art/hagi/fresh-redraw-v1/hagi-standing-fresh-v1.png",
+      "destination": "DemoApp/assets/portraits/hagi.png",
+      "source_sha256": "0b3f6a08a01f3403d4a8a6e6261e7ef99b41325522c7d96d4d0182e737afcf76",
+      "destination_sha256": "0b3f6a08a01f3403d4a8a6e6261e7ef99b41325522c7d96d4d0182e737afcf76",
+      "backup": "design\\art\\hagi\\integration-v1\\originals\\hagi-before-reaper.png"
+    },
+    {
+      "source": "design/art/hagi/fresh-redraw-v1/hagi-battle-idle-right-fresh-v2.png",
+      "destination": "DemoApp/assets/portraits/battle/hagi_idle_right.png",
+      "source_sha256": "1e68069b0851d65349a171aac192c62044ee95527212f10014c68d015c4c3420",
+      "destination_sha256": "1e68069b0851d65349a171aac192c62044ee95527212f10014c68d015c4c3420",
+      "backup": "design\\art\\hagi\\integration-v1\\originals\\hagi-idle-right-before-reaper.png"
+    }
+  ],
+  "verification": {
+    "build": "success, 0 errors, 2 existing BattleCore warnings",
+    "render_capture": "HAGI_REAPER_GAME_CAPTURE_OK",
+    "world_height": 2.25,
+    "foot_y": 0.04999991098884,
+    "formation_battle_burning_victory": true,
+    "hagi_board_smoke": {
+      "events": 153,
+      "turns": 2,
+      "won": true
+    },
+    "death_pair_smoke": {
+      "events": 261,
+      "turns": 4,
+      "won": true,
+      "existing_rica_finished_tween_errors": 27
+    },
+    "screenshots": [
+      "selection-game-check.png",
+      "battle-game-check.png",
+      "victory-game-check.png"
+    ]
+  }
+}

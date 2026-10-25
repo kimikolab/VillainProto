@@ -1,0 +1,54 @@
+{
+  "character": "hagi",
+  "request": "待機v1はBの方が好み。ただし服だけに見えるため身体の動きを増やし、口パクをなくす。",
+  "status": "installed",
+  "source": "source.png",
+  "prompt": "prompt.json",
+  "fps": 16,
+  "resolution": [
+    640,
+    960
+  ],
+  "previous_B": {
+    "eye_vertical_range": 3,
+    "shoulder_vertical_range": 2,
+    "waist_vertical_range": 2,
+    "mouth": "顔の追跡確認窓で開閉を確認"
+  },
+  "A": {
+    "source_tag": "hagi_body_v2_s5055",
+    "seed": 5055,
+    "status": "rejected",
+    "reason": "肩と腰が約28px動くが、柄末端の画面外へのはみ出しがある。後半の連続区間で切り直しても二重像と継ぎ目3.51xが残るため不採用。",
+    "originals": "A-cropped-original/",
+    "recut_command": "recut hagi_body_v2_s5055 --crossfade 6 --min-length 20 --max-length 27 --skip-head 53"
+  },
+  "B": {
+    "source_tag": "hagi_body_v2_s3033_final",
+    "seed": 3033,
+    "status": "adopted-and-installed",
+    "frames": 48,
+    "period_seconds": 3.0,
+    "crossfade_frames": 6,
+    "geometry_postprocessing": false,
+    "eye_vertical_range": 6,
+    "shoulder_vertical_range": 4,
+    "waist_vertical_range": 10,
+    "foot_bottom": [
+      940,
+      940
+    ],
+    "gif_wrap_ratio": 0.35619754582780017,
+    "border_pixels": 0,
+    "green_pixels": 0,
+    "mouth": "元の半笑いを維持し、v1の大きな口の開閉が抑えられていることを代表コマと顔の追跡確認窓で確認。",
+    "raw_generation_warning": "背景込みの平均コマ差1.94で動きが小さいとの報告あり。v1との比較用に残し、さらに身体を動かすv3を追加生成。",
+    "gif": "B-loop.gif",
+    "video": "B-idle-1x.mp4"
+  },
+  "verification": "固有周期全コマのGIFを読み戻し。口元・握り・武器の形・接地・画面端・継ぎ目を確認。BのMP4を全コマデコード。",
+  "runtime": "2026-10-26 ユーザーが修正版のゲーム適用を依頼。idle_loop/hagiへ48コマを配置。攻撃差分・停止・死亡・蘇生・勝利の確認が成功。",
+  "next_version": "../idle-loop-v3/",
+  "next_version_assessment": "v3は鎌固定の指示で上半身が1〜2pxに止まったため不採用。身体のつながりと口元が自然なv2-Bを修正版として提示する。",
+  "integration": "integration.json"
+}

@@ -4,7 +4,7 @@
 Claude Code・Codex・人のどれが作業しても同じ結果になるように、操作は `tools/comfy_idle_loop/idle_loop.py` の命令にまとめてある。
 採用までの経緯と数値は `design/art/hane/hane-idle-loop-v1-notes.md`（方式の比較・ボルグ／ホタ／ヒヨ）と `design/art/hiyo/hiyo-idle-loop-comfyui-v1.md`（ゲームへの接続・燃焼差分）。
 
-**いまゲームに入っているもの**: ヒヨ（`hiyo`）・ボルグ（`borg`）・ホタ（`hota`）・ホタの燃焼差分（`hota_burning`）・ガルド（`gald`、v4 A・32コマ、記録は `design/art/gald/idle-loop-v4/notes.md`）・ガレ（`gare`、v3 A70・30コマ、記録は `design/art/gare/idle-loop-v3/notes.md`）・ヒビ（`hibi`、v2・元動画の30コマを直接使用、記録は `design/art/hibi/idle-loop-v2/notes.md`）・リィカ（`rica`、B・39コマ、記録は `design/art/rica/idle-loop-v2/notes.md`）。
+**いまゲームに入っているもの**: ヒヨ（`hiyo`）・ボルグ（`borg`）・ホタ（`hota`）・ホタの燃焼差分（`hota_burning`）・ガルド（`gald`、v4 A・32コマ、記録は `design/art/gald/idle-loop-v4/notes.md`）・ガレ（`gare`、v3 A70・30コマ、記録は `design/art/gare/idle-loop-v3/notes.md`）・ヒビ（`hibi`、v2・元動画の30コマを直接使用、記録は `design/art/hibi/idle-loop-v2/notes.md`）・リィカ（`rica`、B・39コマ、記録は `design/art/rica/idle-loop-v2/notes.md`）・ハギ（`hagi`、修正版B・48コマ、記録は `design/art/hagi/idle-loop-v2/integration.json`）。
 
 ---
 
@@ -97,6 +97,7 @@ D:/comfyui/venv/Scripts/python.exe tools/comfy_idle_loop/idle_loop.py gen hiyo -
 - 1 本 約 13 分。複数の seed はまとめて投入され、順に終わる（2 本で約 26 分）。**seed は 2〜3 本回す**（当たり外れが大きい）。
   これまで動いた seed: 2022（5 体中 5 体）・5055・3033。**4044 はボルグ・ホタで 4 本ともほぼ静止**した。
 - 出力名は `<key>_s<seed>`。同じ名前の出力が既にあると止まる（消すか別の seed）。
+- 同じseedで指示だけを変えて再試作するときは `gen <key> --seeds 5055,3033 --prefix <別の試作名>` と指定できる。出力は `<別の試作名>_s<seed>` になり、以前の生成物を残せる。
 - 終わると `VP Idle Loop Find` の報告が 1 行出る:
   - `loop [a, b) = n frames / seam … = 0.50x … (滑らか)` … 区間と継ぎ目。**1.0x 以下は滑らか、1.5x 超は §7 の recut**。
   - `動きが小さすぎる` … 1 コマの差が 2.5 未満。ほぼ静止。**seed を替える**（あるいは motion を強める）。
@@ -131,6 +132,7 @@ D:/comfyui/venv/Scripts/python.exe tools/comfy_idle_loop/idle_loop.py recut hota
 `--crossfade n` はループの最後の n コマを始点の直前のコマへ少しずつ混ぜる（髪がわずかに二重になる代わりに継ぎ目が消える）。
 報告に「混ぜた → 継ぎ目 …x」が出る。長い髪が流れ続けるキャラ（ホタ）は周期が閉じにくいので 6 を基本にする。
 48 コマ以内で閉じないときは `--max-length 64 --crossfade 8`（ヒヨ 3033 で 2.71x → 0.91x）。
+序盤に武器の画面外へのはみ出しなどがあり、後半に完全な周期が残っている場合は、`--skip-head <先頭から除くコマ数>` で探索開始を遅らせられる（既定8）。切れたコマを途中から間引かず、残った連続区間から周期を選び直す。
 
 ### 全身の振れ幅を抑える（ガルド v3 の例）
 
@@ -175,7 +177,7 @@ C:/tools/Godot_v4.7.2-stable_mono_win64/Godot_console.exe --path DemoApp --headl
 合否は `IDLE_LOOP_CHECK_OK` / `PORTRAIT_STATE_CHECK_OK` / `FIRE_CHECK_OK` / `MOVEMENT_PORTRAIT_CHECK_OK` の行で読む
 （終了時の `RID allocations … leaked` は既存の警告）。
 
-- **`IdleLoopCheck.cs` はコマ数を数えている**（ヒヨ 19・ボルグ 44・ホタ 36・ガルド 32・ガレ 30・ヒビ 30・リィカ 39）。入れ替えたら数を直す。新しい駒を足したら、その駒の「開戦から連番・同じ高さ」の確認を足す。
+- **`IdleLoopCheck.cs` はコマ数を数えている**（ヒヨ 19・ボルグ 44・ホタ 36・ガルド 32・ガレ 30・ヒビ 30・リィカ 39・ハギ 48）。入れ替えたら数を直す。新しい駒を足したら、その駒の「開戦から連番・同じ高さ」の確認を足す。
 - 実戦の画面は窓ありで撮る:
   `Godot.exe --path DemoApp -- --demo-autoplay "--demo-preset=火選り (ヒヨ×ホタ)" --demo-stage=2 --demo-seed=1 "--demo-capture-dir=<出力先>"`（6 枚撮って終わる）。
 

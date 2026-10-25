@@ -1201,6 +1201,9 @@ public partial class Main : Control
         foreach (DemoOpening opening in _battleOpening) _openingById[opening.InstanceId] = opening;
         _zan = ZanPresentation.Build(_result.Events, _battleOpening, _markRally);
         _hush = HushPresentation.Build(_result.Events, _battleOpening);
+        _hagi = HagiPresentation.Build(_result.Events, _battleOpening, _death?.Hagi);
+        _hagiFrame = -1;
+        _shownHagiDamage.Clear();
 
         _battleMode = true;
         _rosterPanel.Visible = false;
@@ -1431,6 +1434,7 @@ public partial class Main : Control
         BattlePawn3D? target = _battleField.FindPawn(e.TargetId);
         if (actor is not null) actor.AnimationSpeed = Math.Max(0.1, _speed);
         if (target is not null) target.AnimationSpeed = Math.Max(0.1, _speed);
+        ObserveHagiEvent(e, eventIndex, target);
         if (await PlayDeathAxis(e, eventIndex, actor, target)) return;
         // 第125期 段2: 拍の境目でだけ画面を変える。**ここでは待たない**（間は下の switch の中だけ）。
         ObserveSomEvent(e, eventIndex);
@@ -1555,18 +1559,20 @@ public partial class Main : Control
                 _movement.Attacks.TryGetValue(eventIndex, out var movementCue);
                 bool misaAttack = _misa.Attacks.Contains(eventIndex) || _markLoop.FeatherAttacks.Contains(eventIndex);
                 bool golmAttack = _golm.Attacks.ContainsKey(eventIndex);
-                bool flowingAttack = golmAttack || misaAttack || actor?.UnitId == "shiga" || movementCue is not null || actor?.UnitId == "sero"
+                bool flowingAttack = golmAttack || misaAttack || actor?.UnitId is "shiga" or "hagi" || movementCue is not null || actor?.UnitId == "sero"
                     || actor?.UnitId == "basa" && e.Pattern == AttackPattern.Sweep;
                 if (e.Reaction && !continuingCombo && !flowingAttack)
                     await _battleField.ShowBonusAttack(actor);
                 // 責め苦も位置保持だけを共用する。Attackの回数・連撃の計数は増やさない。
-                int? holdEnd = misaAttack || golmAttack ? null : FindComboEnd(eventIndex, e)
+                int? holdEnd = misaAttack || golmAttack || actor?.UnitId == "hagi" ? null : FindComboEnd(eventIndex, e)
                     ?? (actor?.UnitId == "shiga" && _result is not null ? FindTormentEnd(_result.Events, eventIndex) : null);
                 if (!continuingCombo && actor is not null && holdEnd is { } comboEnd)
                 {
                     _comboEnds[actor] = comboEnd;
                 }
-                if (golmAttack)
+                if (actor?.UnitId == "hagi")
+                    await PlayHagiAttack(eventIndex, actor, target);
+                else if (golmAttack)
                     await _battleField.PlayGolmImpact(actor, target, e, _golm.Attacks[eventIndex] == GolmArmLabels.Stomp,
                         captureFollows: _golm.CapturingAttacks.Contains(eventIndex));
                 else if (misaAttack)
@@ -1611,7 +1617,7 @@ public partial class Main : Control
                 // ——単体は1件しか無いので、まとめても絵が変わらない。
                 if (pattern != AttackPattern.Single && ApplyLinkedDamageAtOnce(eventIndex, e) > 0)
                 {
-                    await Delay(0.30);
+                    await Delay(actor?.UnitId == "hagi" ? 0.045 : 0.30);
                     _battleField.EndGuards();
                 }
                 break;
@@ -1683,7 +1689,7 @@ public partial class Main : Control
                 }
                 await PlayTormentHit(eventIndex, actor, target);
                 ShowDamage(eventIndex, e, actor, target);
-                await Delay(_markLoop.FeatherHits.Contains(eventIndex) ? 0.09 : IsMudoCombo(actor) ? 0.10 : 0.16);
+                await Delay(actor?.UnitId == "hagi" ? 0.025 : _markLoop.FeatherHits.Contains(eventIndex) ? 0.09 : IsMudoCombo(actor) ? 0.10 : 0.16);
                 if (!e.Relayed && target?.IsGuarding == true)
                 {
                     await Delay(0.10);
@@ -1825,7 +1831,7 @@ public partial class Main : Control
                     target.PlankKnockout();
                 }
                 AppendLog($"  [color=#{UiKit.Hurt.ToHtml(false)}][b]{NameOf(e.TargetId)} 撃破[/b][/color]");
-                if (!InLiliRite(eventIndex)) await Delay(MireFollowsDeath(eventIndex, e.TargetId) ? 0.06 : 0.36);
+                if (!InLiliRite(eventIndex)) await Delay(target?.HagiReaped == true ? 0.045 : MireFollowsDeath(eventIndex, e.TargetId) ? 0.06 : 0.36);
                 break;
 
             case BattleEventKind.Summon:
@@ -1971,6 +1977,8 @@ public partial class Main : Control
                 break;
 
             case BattleEventKind.Highlight:
+                // 大鎌の見せ場は絵で伝える。字幕の待ちで連続する振りを切らない。
+                if (actor?.UnitId == "hagi") { AppendLog(e.Text ?? ""); break; }
                 // 第124期 3-e: 「テロップは1倍速でも読むのが難しい」「『火のそばを見ている』
                 // だけではなんのことやら」への直答。**段2 で書き手が載ったので駒に紐づけて出せる。**
                 // 中央のバナーは**誰の見せ場か**を前置し、駒の頭上にも札を置く
@@ -2092,6 +2100,7 @@ public partial class Main : Control
     private void ShowDamage(int eventIndex, BattleEvent e, BattlePawn3D? actor, BattlePawn3D? target,
                             bool withSource = true)
     {
+        if (ShowHagiDamage(eventIndex, e, actor, target)) return;
         // 範囲攻撃は着弾を前へ寄せるので、直前の軛も同じ拍へ寄せる。
         if (_result is not null)
         for (int i = eventIndex - 1; i >= 0; i--)

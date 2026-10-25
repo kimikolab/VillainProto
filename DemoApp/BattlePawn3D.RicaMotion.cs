@@ -29,17 +29,25 @@ public partial class BattlePawn3D
     private bool _ricaIdleB;
     internal bool RicaLinkActive { get; private set; }
     private bool _ricaMotionPaused;
+    private Tween? _ricaClockPausedTween;
     private double _ricaMotionTweenSpeed = 1;
     internal void SetRicaMotionClock(bool paused,double speed)
     {
         if (_unitId != "rica") return;
-        _ricaMotionPaused = paused;
         AnimationSpeed = Math.Max(.1,speed);
         if (_motion?.IsValid() == true)
         {
             _motion.SetSpeedScale((float)(AnimationSpeed / Math.Max(.1,_ricaMotionTweenSpeed)));
-            if (paused) _motion.Pause(); else _motion.Play();
+            if (paused && _motion.IsRunning())
+            {
+                _ricaClockPausedTween = _motion;
+                _motion.Pause();
+            }
+            else if (!paused && _ricaMotionPaused && _ricaClockPausedTween == _motion)
+                _motion.Play();
         }
+        if (!paused) _ricaClockPausedTween = null;
+        _ricaMotionPaused = paused;
     }
     private int _ricaSwing;
     internal string? RicaClipName => AttackClipPlaying ? _ricaClipName : _ricaHeldName;

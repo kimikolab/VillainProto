@@ -1,0 +1,660 @@
+using BattleCore;
+using Godot;
+using System;
+using System.Collections.Generic;
+
+public static class UiKit
+{
+    public static readonly Color Ink = Color.FromHtml("#f4f0dd");
+    public static readonly Color Muted = Color.FromHtml("#a9b3a8");
+    public static readonly Color Faint = Color.FromHtml("#6f7f76");
+    public static readonly Color Panel = Color.FromHtml("#17221f");
+    public static readonly Color Panel2 = Color.FromHtml("#22322b");
+    public static readonly Color Line = Color.FromHtml("#3c5547");
+    public static readonly Color Player = Color.FromHtml("#69bfe0");
+    public static readonly Color Enemy = Color.FromHtml("#ee7962");
+    public static readonly Color Gold = Color.FromHtml("#efc66a");
+    public static readonly Color Heal = Color.FromHtml("#71d7a1");
+    public static readonly Color Hurt = Color.FromHtml("#ff766b");
+    public static readonly Color Violet = Color.FromHtml("#bf91f3");
+    public static readonly Color Poison = Color.FromHtml("#ce83ff");
+    public static readonly Color Burn = Color.FromHtml("#ff9a55");
+    public static readonly Color Wound = Color.FromHtml("#ef6f91");
+    public static readonly Color Shadow = new(0.02f, 0.04f, 0.035f, 0.86f);
+
+    // 立ち絵は「駒 ID から規約で引く」——辞書に書かずにファイルの有無だけを見る（第124期 §6-1）。
+    // 絵を足すのに .cs を触らないため。無ければ従来のアトラスへ落ちる。
+    private static string PortraitPathOf(string key) => $"res://assets/portraits/{key}.png";
+    private static string BattlePortraitPathOf(string key) => $"res://assets/portraits/battle/{key}_idle_right.png";
+
+    // 存在の判定はファイルごとに1度だけ（見つからなかったことも憶える）。
+    private static readonly Dictionary<string, string?> PortraitPathCache = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, string?> BattlePortraitPathCache = new(StringComparer.Ordinal);
+
+    private static string? FindPortrait(string key)
+    {
+        if (IsSomSpirit(key)) return SomSpiritPortrait(key);
+        if (PortraitPathCache.TryGetValue(key, out string? cached)) return cached;
+        string path = PortraitPathOf(key);
+        string? found = Godot.FileAccess.FileExists(path) ? path : null;
+        PortraitPathCache[key] = found;
+        return found;
+    }
+
+    private static string? FindBattlePortrait(string key)
+    {
+        if (IsSomSpirit(key)) return SomSpiritPortrait(key);
+        if (BattlePortraitPathCache.TryGetValue(key, out string? cached)) return cached;
+        string path = BattlePortraitPathOf(key);
+        // 待機の構え差分を優先し、従来の立ち絵も素材として残す。
+        string ready = $"res://assets/portraits/battle/{key}_ready_right.png";
+        string vector = $"res://assets/portraits/battle/{key}_idle_right.svg";
+        string? found = Godot.FileAccess.FileExists(ready) ? ready
+            : Godot.FileAccess.FileExists(path) ? path : Godot.FileAccess.FileExists(vector) ? vector : null;
+        BattlePortraitPathCache[key] = found;
+        return found;
+    }
+
+    private static readonly Dictionary<string, Texture2D> PortraitCache = new(StringComparer.Ordinal);
+    private static bool IsSomSpirit(string key) => key == "fodder" || key.StartsWith("fodder_", StringComparison.Ordinal);
+    private static string SomSpiritPortrait(string key)
+        => key.StartsWith("fodder_majestic", StringComparison.Ordinal) ? SomSpiritArt.InterruptPath : SomSpiritArt.TurnPath;
+    private static readonly Dictionary<string, Texture2D> BattlePortraitCache = new(StringComparer.Ordinal);
+    private static ShaderMaterial? _portraitCutoutMaterial;
+
+    private static readonly Color[] UnitTints =
+    {
+        Color.FromHtml("#f7d7b1"), Color.FromHtml("#b8e5d0"), Color.FromHtml("#d7c4f1"),
+        Color.FromHtml("#f2b8a8"), Color.FromHtml("#bad7f0"), Color.FromHtml("#d7e3a5"),
+        Color.FromHtml("#e9c2dd"), Color.FromHtml("#cfd0bd")
+    };
+
+    public static StyleBoxFlat Box(Color background, Color? border = null, int width = 1, int radius = 10)
+    {
+        var box = new StyleBoxFlat
+        {
+            BgColor = background,
+            CornerRadiusTopLeft = radius,
+            CornerRadiusTopRight = radius,
+            CornerRadiusBottomLeft = radius,
+            CornerRadiusBottomRight = radius,
+            ContentMarginLeft = 10,
+            ContentMarginRight = 10,
+            ContentMarginTop = 8,
+            ContentMarginBottom = 8,
+        };
+        if (border is { } c)
+        {
+            box.BorderColor = c;
+            box.BorderWidthLeft = width;
+            box.BorderWidthRight = width;
+            box.BorderWidthTop = width;
+            box.BorderWidthBottom = width;
+        }
+        return box;
+    }
+
+    public static Label Text(string value, int size = 14, Color? color = null)
+    {
+        var label = new Label { Text = value };
+        label.AddThemeFontSizeOverride("font_size", size);
+        label.AddThemeColorOverride("font_color", color ?? Ink);
+        return label;
+    }
+
+    public static Button ActionButton(string value, Color? accent = null)
+    {
+        Color c = accent ?? Line;
+        var button = new Button { Text = value, FocusMode = Control.FocusModeEnum.None };
+        button.AddThemeStyleboxOverride("normal", Box(c.Darkened(0.48f), c, 1, 8));
+        button.AddThemeStyleboxOverride("hover", Box(c.Darkened(0.32f), c.Lightened(0.14f), 1, 8));
+        button.AddThemeStyleboxOverride("pressed", Box(c.Darkened(0.58f), c.Lightened(0.24f), 2, 8));
+        button.AddThemeColorOverride("font_color", Ink);
+        button.AddThemeColorOverride("font_hover_color", Colors.White);
+        return button;
+    }
+
+    public static Texture2D LoadTexture(string path, bool mipmaps = false)
+    {
+        using Image image = Image.LoadFromFile(ProjectSettings.GlobalizePath(path));
+        if (image.IsEmpty())
+            throw new InvalidOperationException($"画像を読み込めません: {path}");
+        // 細かい銀の装飾は戦場で縮小するとちらつくため、縮小用の画像も持つ。
+        if (mipmaps) image.GenerateMipmaps();
+        return ImageTexture.CreateFromImage(image);
+    }
+
+    public static Texture2D Portrait(Texture2D atlas, string key)
+    {
+        if (FindPortrait(key) is string path)
+        {
+            if (!PortraitCache.TryGetValue(key, out Texture2D? portrait))
+            {
+                portrait = LoadTexture(path, mipmaps: key == "tome");
+                PortraitCache[key] = portrait;
+            }
+            return portrait;
+        }
+
+        int index = (int)(StableHash(key) % 6);
+        int w = atlas.GetWidth() / 3;
+        int h = atlas.GetHeight() / 2;
+        return new AtlasTexture
+        {
+            Atlas = atlas,
+            Region = new Rect2((index % 3) * w, (index / 3) * h, w, h),
+            FilterClip = true,
+        };
+    }
+
+    public static Texture2D BattlePortrait(Texture2D atlas, string key, bool burning = false)
+    {
+        // 状態差分が無い駒は通常絵へ戻す。燃焼の判定は台本の通知だけが担う。
+        string variantKey = key + "_burning";
+        if (burning && FindBattlePortrait(variantKey) is string variantPath)
+        {
+            if (!BattlePortraitCache.TryGetValue(variantKey, out Texture2D? variant))
+            {
+                variant = LoadTexture(variantPath);
+                BattlePortraitCache[variantKey] = variant;
+            }
+            return variant;
+        }
+
+        if (FindBattlePortrait(key) is string path)
+        {
+            if (!BattlePortraitCache.TryGetValue(key, out Texture2D? portrait))
+            {
+                portrait = LoadTexture(path, mipmaps: key == "tome" || key.StartsWith("tome_"));
+                BattlePortraitCache[key] = portrait;
+            }
+            return portrait;
+        }
+
+        if (key == "husher_shattered")
+        {
+            if (!BattlePortraitCache.TryGetValue(key, out var placeholder))
+                BattlePortraitCache[key] = placeholder = LoadTexture("res://assets/fx/husher_shattered_placeholder.svg");
+            return placeholder;
+        }
+        return Portrait(atlas, key);
+    }
+
+    public static bool HasCustomPortrait(string key) => FindPortrait(key) is not null;
+    public static bool HasCustomBattlePortrait(string key) => FindBattlePortrait(key) is not null;
+
+    public static Color PortraitTint(string key, bool enemy = false)
+        => HasCustomPortrait(key) ? Colors.White : Tint(key, enemy);
+
+    // 戦闘専用の立ち絵も原色で表示する。編成用の仮画像の色分けとは分ける。
+    public static Color BattlePortraitTint(string key, bool enemy = false)
+        => HasCustomBattlePortrait(key) ? Colors.White : PortraitTint(key, enemy);
+
+    /// <summary>
+    /// 生成立ち絵の相対体格。元画像のピクセル数ではなく、この高さで戦場上の見た目を揃える。
+    /// </summary>
+    public static float PortraitWorldHeight(string key) => key switch
+    {
+        "rica" => 2.10f, // リメイク後の頭身に合わせ、小柄な成人として表示。
+        "zoto" => 1.58f,
+        "mug" => 1.90f, // 浮遊する胞子の集合体。成人より小柄に表示。
+        "spore" => 1.10f, // 本体から分かれた小さな胞子。
+        "susu" => 2.50f, // 血詠みのアカ（内部IDは旧ススのまま）
+        "kata" => 2.50f,
+        "som" => 2.50f,
+        "fodder" => 1.72f, // 手番の雷人形。割り込みは専用ノードで小柄な雷精を描く。
+        "kado" => 2.40f,
+        "sid" => 2.55f,
+        "guza" => 2.00f, // 大袋を抱えた低頭身の運び手。
+        "rau" => 2.45f, // つば広帽とペストマスクの疫病運び。
+        "vio" => 2.25f, // 四足の毒竜。横に広がる尾を含む。
+        "borg" => 2.65f,
+        "gald" => 2.85f,
+        "sero" => 2.15f,
+        "golm" => 3.35f,
+        "dolga" => 3.30f,
+        "sasa" => 1.90f,
+        "tome" => 2.45f,
+        "sora" => 2.65f,
+        "doha" => 2.65f,
+        "egu" => 2.80f,
+        "nomi" => 2.30f,
+        "hagi" => 2.55f,
+        "vel" => 2.45f,
+        "hiyo" => 2.10f, // リィカと同じ基準高。支援動作も同率で拡大する。
+        "gan" => 2.85f,
+        "yomi" => 2.35f,
+        "basa" => 2.55f,
+        "nara" => 2.50f,
+        "nel" => 2.50f,
+        "ere" => 2.50f,
+        "utsu" => 2.50f,
+        "gare" => 2.65f,
+        "hibi" => 3.15f,
+        "axeman" => 2.65f,
+        "knight" => 2.65f,
+        "warden" => 3.10f,
+        "yoker" => 3.10f,
+        "axeman_g" => 2.65f,
+        _ => 2.25f,
+    };
+
+    public static float PortraitHudHeight(string key)
+        => PortraitWorldHeight(key) * (key == "hibi" ? 1212f / 1536f : 1f);
+
+    /// <summary>
+    /// 透過キャンバス下端から足元までの余白率。足元を地面へ固定するため、採用画像ごとに保持する。
+    /// </summary>
+    public static float BattlePortraitBottomPaddingRatio(string key) => key switch
+    {
+        "gare_load" => 20f / 1536f,
+        "gare_fire" => 66f / 1536f,
+        "gare_empty" => 15f / 1536f,
+        "susu_read" => 18f / 1536f,
+        "susu_cast" => 24f / 1536f,
+        "rica" => 40f / 1536f, // リメイク戦闘絵の足元余白。
+        "sid" => 0.0040f,
+        "guza" => 78f / 1536f,
+        "rau" => 54f / 1536f,
+        "rau_touch" => 158f / 1536f,
+        "rau_spread" => 76f / 1536f,
+        "vio" => 17f / 1024f,
+        "vio_fed" => 16f / 1024f,
+        "vio_gorged" => 12f / 1024f,
+        "guza_vent" => 81f / 1536f,
+        "borg" => 0.0384f,
+        "borg_guard" => 0.030f,
+        "borg_release" => 0.055f,
+        "hota_charge" => 0.014f,
+        "hota_release" => 0.055f,
+        "hota_embers" => 0.012f,
+        "hota_sword_raise" => 0.010f,
+        "hota_sword_slam" => 0.055f,
+        "hiyo_fan" => 0.015f,
+        "hiyo_stoke" => 0.015f,
+        "hiyo_gift" => 0.004f,
+        "hiyo_collect" => 0.012f,
+        "zoto" => 0.0f, // 鉱石の浮遊体。画像下端の透明な空間を残して地面から浮かせる。
+        "mug" or "spore" => 0.0f, // 透過余白を残し、胞子の下端を地面へ寄せない。
+        "kado" => 0.0198f,
+        "gald" => 0.0547f,
+        "gald_hit" => 109f / 1536f,
+        "gald_parry" => 91f / 1536f,
+        "sero" => 0.02309f,
+        "sero_attack" => 0.02243f,
+        "sero_move_shot" => 0.0117188f,
+        "sero_evade" => 0.07878f,
+        "sero_last_dodge" => 0.05924f,
+        "sero_decoy" => 0.03190f,
+        "hane_spring" => 0.07227f,
+        "hane_dropkick" => 0.01855f,
+        "hane_flying_kick" => 0.04492f,
+        "hane_palm" => 0.014648f,
+        "hane_spring_guard" => 0.0146484f,
+        "hane_rescue" => 0.148f,
+        "hane_bump_rebound" => 0.012f,
+        "hane_bump_apology" => 0.042f,
+        "basa_flap" => 0.01485f,
+        "yomi_stumble" => 0.11198f,
+        "yomi_iai" => 0.03776f,
+        "yomi_iai_extra" => 0.06459f,
+        "golm" => 0.0871f,
+        "golm_rocket" => 149f / 1515f,
+        "dolga" => 0.0699f,
+        "sasa" => 0.0267f,
+        "tome" => 0.02083f, // 右向き待機絵。1536px の下端に32px。
+        "tome_attack" => 0.05859f, // 攻撃絵の足元は1446px。
+        "tome_control" => 0.008f,
+        "tome_spray" => 0.019f,
+        "tou_powder" => 0.034f,
+        "shiga_interrupt" => 0.021f,
+        "kata_thunder" => 0.018f,
+        "sora" => 0.0951f,
+        "egu" => 0.1139f,
+        "nomi" => 0.0430f,
+        "hagi" => 0.0534f,
+        "vel" => 0.0130f,
+        "hiyo" => 0.0215f,
+        "gan" => 0.0384f,
+        "yomi" => 0.0286f,
+        "hota" => 0.0120f,
+        "hisa" => 0.0150f,
+        "hisa_rally" => 0.019f,
+        "hisa_command" => 0.0078125f, // 1536pxの下端から靴底まで12px。
+        "hisa_cover" => 0.0240885f, // v3：右向き。1536pxの下端から靴底まで37px。
+        "zan" => 0.0078f,
+        "zan_vendetta" => 0.120f,
+        "doha" => 0.0032552f, // 1536px の下端から足先まで5px。
+        "doha_receive" => 0.015625f, // 受け止め：下端24px。
+        "doha_give" => 0.0162760f, // 力返し：下端25px。
+        "kugu" => 0.02995f,
+        "shiga" => 0.03125f,
+        "som" => 0.01953125f, // 1536px の下端から靴底まで30px。
+        "som_summon" or "som_stunned" => 0.01953125f,
+        "fodder_lookback" or "fodder_snub" or "fodder_run" or "fodder_majestic_lookback"
+            or "fodder_majestic_run" or "fodder_stance" or "fodder_majestic_stance" or "fodder" => 0,
+        "tou" => 0.0201823f, // 1536px の下端から足元まで31px。
+        "shio" => 0.0182f,
+        "shio_retreat" => 0.0546875f,
+        "shio_support" => 0.0279948f,
+        "susu" => 0.01628f,
+        "kata" => 0.02214f,
+        "basa" => 0.0540f,
+        "hane" => 0.0403646f, // 後屈立ちの待機構え：1536px の下端に62pxの透過余白。
+        "nara" => 0.1400f,
+        "nel" => 0.0378f,
+        "ere" => 16f / 1536f,
+        "ere_singing" => 13f / 1536f,
+        "utsu" => 0.0436f,
+        "gare" => 31f / 1536f,
+        "hibi" => 146f / 1536f,
+        "recruit" => 0.0260f,
+        "axeman" => 0.0326f,
+        "knight_g" => 0.0150f,
+        "husher" => 0.0189f,
+        "chaplain_g" => 0.0208f,
+        "archer_g" => 0.0163f,
+        "knight" => 0.0117f,
+        "hero" => 0.0137f,
+        "droughter" => 0.0052f,
+        "archer" => 0.0085f,
+        "warden" => 0.0241f,
+        "yoker" => 0.0221f,
+        "chanter" => 0.0143f,
+        "priest" => 0.0085f,
+        "axeman_g" => 0.0254f,
+        "hero_v" => 0.0078f,
+        "accuser" => 0.0072f,
+        "seer" => 0.0091f,
+        "lancer" => 0.0195f,
+        _ => 0.0f,
+    };
+
+    public static Material? PortraitCanvasMaterial(string key)
+    {
+        if (!HasCustomPortrait(key)) return null;
+        if (_portraitCutoutMaterial is not null) return _portraitCutoutMaterial;
+
+        var shader = new Shader
+        {
+            Code = @"shader_type canvas_item;
+void fragment() {
+    vec4 c = texture(TEXTURE, UV);
+    vec4 top_left = texture(TEXTURE, vec2(0.02, 0.02));
+    vec4 top_right = texture(TEXTURE, vec2(0.98, 0.02));
+    vec4 bottom_left = texture(TEXTURE, vec2(0.02, 0.98));
+    vec4 bottom_right = texture(TEXTURE, vec2(0.98, 0.98));
+    vec3 top_bg = mix(top_left.rgb, top_right.rgb, UV.x);
+    vec3 bottom_bg = mix(bottom_left.rgb, bottom_right.rgb, UV.x);
+    vec3 expected_bg = mix(top_bg, bottom_bg, UV.y);
+    float silhouette = smoothstep(0.075, 0.19, distance(c.rgb, expected_bg));
+    // 隅の1点に靴や武器がかかっても、透明な隅があれば素材のアルファを使う。
+    float corner_alpha = min(min(top_left.a, top_right.a), min(bottom_left.a, bottom_right.a));
+    float has_alpha_background = 1.0 - step(0.08, corner_alpha);
+    float mask = mix(silhouette, 1.0, has_alpha_background);
+    // 緑単色の素材だけ、輪郭に混じった緑も除く。
+    if (has_alpha_background < 0.5 && expected_bg.g > 0.8 && max(expected_bg.r, expected_bg.b) < 0.15) {
+        mask = 1.0 - smoothstep(0.02, 0.18, c.g - max(c.r, c.b));
+        c.g = min(c.g, max(c.r, c.b));
+    }
+    COLOR = vec4(c.rgb, c.a * mask);
+}"
+        };
+        _portraitCutoutMaterial = new ShaderMaterial { Shader = shader };
+        return _portraitCutoutMaterial;
+    }
+
+    public static Color Tint(string key, bool enemy = false)
+    {
+        Color tint = UnitTints[StableHash(key) % (uint)UnitTints.Length];
+        return enemy ? tint.Lerp(new Color(1.0f, 0.62f, 0.56f), 0.28f) : tint;
+    }
+
+    public static uint StableHash(string value)
+    {
+        uint hash = 2166136261;
+        foreach (char c in value)
+        {
+            hash ^= c;
+            hash *= 16777619;
+        }
+        return hash;
+    }
+
+    public static string PatternLabel(AttackPattern pattern) => pattern switch
+    {
+        AttackPattern.Sweep => "薙ぎ",
+        AttackPattern.Pierce => "貫き",
+        AttackPattern.All => "全体",
+        _ => "単体",
+    };
+
+    /// <summary>
+    /// 行の表示名（第123期）。<b>席から行を引くのは <see cref="FormationRules.RowOf"/> の1箇所だけ</b>で、
+    /// ここは <see cref="Row"/> の3値に日本語を当てるだけ（席の表を手で並べない）。
+    /// </summary>
+    public static string RowLabel(Row row) => row switch
+    {
+        Row.Front => "前列",
+        Row.Mid => "中列",
+        _ => "後列",
+    };
+
+    /// <summary>
+    /// 席名と行名（例: <c>前1 / 前列</c>）。席名は陣形の <see cref="FormationShape.SeatName"/>（第202期）——
+    /// パターン2の編成の席は編成画面と同じ名前（「前衛」「中衛・上」…）、X 字と召喚枠は <see cref="FormationRules.SeatNames"/>。
+    /// </summary>
+    public static string SeatLabel(int slot, FormationShape? shape = null) =>
+        $"{(shape ?? FormationShape.X).SeatName(slot)} / {RowLabel(FormationRules.RowOf(slot))}";
+}
+
+public partial class RosterCard : PanelContainer
+{
+    private UnitDef? _def;
+    private TextureRect _portrait = null!;
+    private Label _name = null!;
+    private Label _stats = null!;
+    private Label _plus = null!;
+    private Label _mark = null!;
+    private StyleBoxFlat _style = null!;
+
+    public Action<UnitDef>? Chosen;
+    public Action<UnitDef>? Inspected;
+
+    public UnitDef? Definition => _def;
+
+    public void Configure(UnitDef def, Texture2D atlas)
+    {
+        _def = def;
+        CustomMinimumSize = new Vector2(0, 102);
+        MouseDefaultCursorShape = CursorShape.PointingHand;
+        TooltipText = "クリックで編成 / ドラッグで席を指定";
+
+        _style = UiKit.Box(new Color(0.08f, 0.12f, 0.105f, 0.94f), UiKit.Line, 1, 8);
+        AddThemeStyleboxOverride("panel", _style);
+
+        var row = new HBoxContainer();
+        row.AddThemeConstantOverride("separation", 10);
+        AddChild(row);
+
+        var portraitFrame = new PanelContainer { CustomMinimumSize = new Vector2(76, 84) };
+        portraitFrame.AddThemeStyleboxOverride("panel", UiKit.Box(UiKit.Shadow, UiKit.Line, 1, 7));
+        _portrait = new TextureRect
+        {
+            Texture = UiKit.Portrait(atlas, def.Id),
+            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+            StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+            SelfModulate = UiKit.PortraitTint(def.Id),
+            Material = UiKit.PortraitCanvasMaterial(def.Id),
+            MouseFilter = MouseFilterEnum.Ignore,
+        };
+        portraitFrame.AddChild(_portrait);
+        row.AddChild(portraitFrame);
+
+        var text = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        text.AddThemeConstantOverride("separation", 2);
+        row.AddChild(text);
+
+        var title = new HBoxContainer();
+        _name = UiKit.Text(def.Name, 14, UiKit.Ink);
+        _name.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        title.AddChild(_name);
+        _mark = UiKit.Text("", 15, UiKit.Gold);
+        title.AddChild(_mark);
+        text.AddChild(title);
+
+        _stats = UiKit.Text($"HP {def.MaxHp}   攻 {def.Attack}   速 {def.Speed}   {UiKit.PatternLabel(def.Pattern)}", 11, UiKit.Muted);
+        text.AddChild(_stats);
+        _plus = UiKit.Text(def.PlusText, 10, UiKit.Faint);
+        _plus.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        _plus.MaxLinesVisible = 2;
+        _plus.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+        text.AddChild(_plus);
+    }
+
+    public void SetSelected(bool selected)
+    {
+        if (_def is null) return;
+        _mark.Text = selected ? "◆" : "";
+        _style.BgColor = selected ? new Color(0.12f, 0.22f, 0.18f, 0.98f) : new Color(0.08f, 0.12f, 0.105f, 0.94f);
+        _style.BorderColor = selected ? UiKit.Gold : UiKit.Line;
+    }
+
+    public override void _GuiInput(InputEvent @event)
+    {
+        if (_def is null) return;
+        if (@event is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left })
+        {
+            Inspected?.Invoke(_def);
+            Chosen?.Invoke(_def);
+            AcceptEvent();
+        }
+    }
+
+    public override Variant _GetDragData(Vector2 atPosition)
+    {
+        if (_def is null) return default;
+        Inspected?.Invoke(_def);
+        var preview = UiKit.Text(_def.Name, 14, UiKit.Ink);
+        preview.AddThemeStyleboxOverride("normal", UiKit.Box(UiKit.Panel, UiKit.Gold, 1, 7));
+        preview.CustomMinimumSize = new Vector2(170, 40);
+        SetDragPreview(preview);
+        return _def.Id;
+    }
+}
+
+public partial class FormationSlot : PanelContainer
+{
+    private Texture2D _atlas = null!;
+    private TextureRect _portrait = null!;
+    private Label _seat = null!;
+    private Label _name = null!;
+    private Label _stats = null!;
+    private Label _empty = null!;
+    private StyleBoxFlat _style = null!;
+    private UnitDef? _def;
+
+    public int Slot { get; private set; }
+    public Action<int>? Clicked;
+    public Action<int>? RemoveRequested;
+    public Action<int, string>? Dropped;
+
+    /// <summary>席名だけを付け替える（第201期・陣形を切り替えたとき）。</summary>
+    public void SetSeatLabel(string text) => _seat.Text = text;
+
+    public void Configure(int slot, Texture2D atlas)
+    {
+        Slot = slot;
+        _atlas = atlas;
+        CustomMinimumSize = new Vector2(138, 168);
+        Size = CustomMinimumSize;
+        MouseDefaultCursorShape = CursorShape.PointingHand;
+        _style = UiKit.Box(new Color(0.05f, 0.09f, 0.075f, 0.78f), new Color(UiKit.Player, 0.72f), 2, 16);
+        AddThemeStyleboxOverride("panel", _style);
+
+        var stack = new VBoxContainer();
+        stack.AddThemeConstantOverride("separation", 2);
+        AddChild(stack);
+
+        _seat = UiKit.Text(FormationRules.SeatNames[slot], 10, UiKit.Player.Lightened(0.2f));
+        _seat.HorizontalAlignment = HorizontalAlignment.Center;
+        stack.AddChild(_seat);
+
+        _portrait = new TextureRect
+        {
+            CustomMinimumSize = new Vector2(0, 92),
+            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+            StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+            MouseFilter = MouseFilterEnum.Ignore,
+        };
+        stack.AddChild(_portrait);
+
+        _name = UiKit.Text("", 11, UiKit.Ink);
+        _name.HorizontalAlignment = HorizontalAlignment.Center;
+        _name.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+        stack.AddChild(_name);
+        _stats = UiKit.Text("", 9, UiKit.Muted);
+        _stats.HorizontalAlignment = HorizontalAlignment.Center;
+        stack.AddChild(_stats);
+
+        _empty = UiKit.Text("＋ ここに配置", 11, new Color(UiKit.Player, 0.72f));
+        _empty.HorizontalAlignment = HorizontalAlignment.Center;
+        _empty.VerticalAlignment = VerticalAlignment.Center;
+        _empty.SetAnchorsPreset(LayoutPreset.FullRect);
+        _empty.MouseFilter = MouseFilterEnum.Ignore;
+        AddChild(_empty);
+    }
+
+    public void SetUnit(UnitDef? def)
+    {
+        _def = def;
+        _empty.Visible = def is null;
+        _portrait.Visible = def is not null;
+        _name.Visible = def is not null;
+        _stats.Visible = def is not null;
+        if (def is null)
+        {
+            TooltipText = "ロスターからドラッグ、またはユニットを選んでクリック";
+            _style.BorderColor = new Color(UiKit.Player, 0.62f);
+            return;
+        }
+
+        _portrait.Texture = UiKit.Portrait(_atlas, def.Id);
+        _portrait.SelfModulate = UiKit.PortraitTint(def.Id);
+        _portrait.Material = UiKit.PortraitCanvasMaterial(def.Id);
+        _name.Text = def.Name;
+        _stats.Text = $"HP {def.MaxHp}  攻 {def.Attack}  速 {def.Speed}";
+        TooltipText = $"{def.Name}\nドラッグで入れ替え / 右クリックで外す";
+        _style.BorderColor = UiKit.Gold;
+    }
+
+    public override void _GuiInput(InputEvent @event)
+    {
+        if (@event is not InputEventMouseButton { Pressed: true } mouse) return;
+        if (mouse.ButtonIndex == MouseButton.Right)
+        {
+            RemoveRequested?.Invoke(Slot);
+            AcceptEvent();
+        }
+        else if (mouse.ButtonIndex == MouseButton.Left)
+        {
+            Clicked?.Invoke(Slot);
+            AcceptEvent();
+        }
+    }
+
+    public override Variant _GetDragData(Vector2 atPosition)
+    {
+        if (_def is null) return default;
+        var preview = UiKit.Text(_def.Name, 14, UiKit.Ink);
+        preview.CustomMinimumSize = new Vector2(170, 40);
+        SetDragPreview(preview);
+        return _def.Id;
+    }
+
+    public override bool _CanDropData(Vector2 atPosition, Variant data)
+        => data.VariantType == Variant.Type.String && !string.IsNullOrWhiteSpace(data.AsString());
+
+    public override void _DropData(Vector2 atPosition, Variant data)
+        => Dropped?.Invoke(Slot, data.AsString());
+}

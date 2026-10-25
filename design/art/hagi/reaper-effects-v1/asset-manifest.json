@@ -1,0 +1,14 @@
+[
+  {
+    "path": "DemoApp/assets/portraits/battle/hagi_idle_right.png",
+    "sha256": "e357d00a20270443a334f1fce1a23400bc3b1cea13a0593f13a848586152ba46"
+  },
+  {
+    "path": "DemoApp/assets/portraits/battle/hagi_windup_idle_right.png",
+    "sha256": "6c36cc07c1d4d35dc400b059dbf017480538fb8d9e17213e182cf50d68e9972b"
+  },
+  {
+    "path": "DemoApp/assets/portraits/battle/hagi_follow_idle_right.png",
+    "sha256": "454bf8802641b72e687dd27f1c3cafe7901ebb04c177861d365724c35f125f84"
+  }
+]

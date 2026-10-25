@@ -205,6 +205,13 @@ public partial class BattlePawn3D : Node3D
             _ = UiKit.BattlePortrait(atlas, "hane_flying_kick");
             _ = UiKit.BattlePortrait(atlas, "hane_palm");
         }
+        // 初回の踏み込みで差分の復号を待たないよう、開戦時に読み込む。
+        if (opening.UnitId == "hagi")
+        {
+            _ = UiKit.BattlePortrait(atlas, "hagi_step");
+            _ = UiKit.BattlePortrait(atlas, "hagi_windup");
+            _ = UiKit.BattlePortrait(atlas, "hagi_follow");
+        }
         bool hasCustomPortrait = UiKit.HasCustomBattlePortrait(opening.UnitId)
             || UiKit.HasCustomPortrait(opening.UnitId);
         _portraitHeight = UiKit.PortraitWorldHeight(opening.UnitId);
@@ -241,8 +248,20 @@ uniform float powder_burn_char = 0.0;
 uniform float golm_gray = 0.0;
 uniform float golm_crumble = 0.0;
 uniform float grave_heat = 0.0;
+uniform float hagi_marks = 0.0;
+uniform float hagi_eligible = 0.0;
+uniform float hagi_dissolve = 0.0;
 uniform vec2 grave_eye = vec2(0.561,0.152);
 uniform vec4 grave_tint : source_color = vec4(0.7,0.85,1.0,1.0);
+float hagi_noise(vec2 p) {
+    vec2 cell = floor(p), f = fract(p);
+    f = f*f*(3.0-2.0*f);
+    float a = fract(sin(dot(cell,vec2(127.1,311.7)))*43758.5453);
+    float b = fract(sin(dot(cell+vec2(1.0,0.0),vec2(127.1,311.7)))*43758.5453);
+    float c = fract(sin(dot(cell+vec2(0.0,1.0),vec2(127.1,311.7)))*43758.5453);
+    float d = fract(sin(dot(cell+vec2(1.0),vec2(127.1,311.7)))*43758.5453);
+    return mix(mix(a,b,f.x),mix(c,d,f.x),f.y);
+}
 void fragment() {
     vec4 c = texture(portrait_texture, UV);
     vec4 top_left = texture(portrait_texture, vec2(0.02, 0.02));
@@ -270,6 +289,20 @@ void fragment() {
     float grain = fract(sin(dot(cell,vec2(12.9898,78.233)))*43758.5453);
     float shell = UV.y * 0.60 + grain * 0.40;
     alpha *= 1.0 - smoothstep(shell, shell + 0.035, golm_crumble * 1.05);
+    // 刈れる相手の輪郭。透明PNG以外は既存の背景除去を保ち、内側の縁だけ光らせる。
+    vec2 px = 2.5 / vec2(textureSize(portrait_texture,0));
+    float near_alpha = max(max(texture(portrait_texture,UV+vec2(px.x,0.0)).a,texture(portrait_texture,UV-vec2(px.x,0.0)).a),max(texture(portrait_texture,UV+vec2(0.0,px.y)).a,texture(portrait_texture,UV-vec2(0.0,px.y)).a));
+    float inner_alpha = min(min(texture(portrait_texture,UV+vec2(px.x,0.0)).a,texture(portrait_texture,UV-vec2(px.x,0.0)).a),min(texture(portrait_texture,UV+vec2(0.0,px.y)).a,texture(portrait_texture,UV-vec2(0.0,px.y)).a));
+    float silver_edge = max(0.0,near_alpha-inner_alpha)*hagi_eligible*mask;
+    alpha = max(alpha,silver_edge*portrait_tint.a);
+    // 刈られた命は細かな銀の縁からほどける。ゴルムの四角い破片とは別の消え方にする。
+    float dissolve_edge = 0.0, hagi_flash = 0.0;
+    if (hagi_dissolve > 0.0001) {
+        float hagi_field = UV.y*0.62+UV.x*0.14+hagi_noise(UV*vec2(96.0,144.0))*0.24;
+        dissolve_edge = 1.0-smoothstep(0.0,0.065,abs(hagi_field-hagi_dissolve*1.12));
+        hagi_flash = smoothstep(0.0,0.025,hagi_dissolve)*exp(-hagi_dissolve*8.0);
+        alpha *= 1.0-smoothstep(hagi_field,hagi_field+0.035,hagi_dissolve*1.12);
+    }
     if (alpha < 0.02) discard;
     ALBEDO = mix(c.rgb * portrait_tint.rgb, portrait_tint.rgb, aura_amount);
     ALBEDO = mix(ALBEDO, ALBEDO * vec3(0.58,0.20,0.78), numb_amount * 0.7);
@@ -297,6 +330,16 @@ void fragment() {
     float grave_eyes = exp(-dot((UV-grave_eye)*vec2(170.0,240.0),(UV-grave_eye)*vec2(170.0,240.0)));
     ALBEDO = mix(ALBEDO,grave_tint.rgb,clamp(grave_eyes*grave_heat*3.0,0.0,1.0));
     EMISSION += grave_tint.rgb*grave_eyes*grave_heat*4.0;
+    float cuts = 0.0;
+    for(int i=0;i<5;i++){
+        float line_y=0.39+float(i)*0.045+(UV.x-0.5)*(0.42-float(i%2)*0.8);
+        cuts+=step(float(i)+0.5,hagi_marks)*exp(-abs(UV.y-line_y)*1000.0)*(1.0-smoothstep(0.08,0.18,abs(UV.x-0.5)));
+    }
+    float silver = clamp(cuts+silver_edge+dissolve_edge,0.0,1.0);
+    ALBEDO = mix(ALBEDO,vec3(0.95,0.97,1.0),silver);
+    EMISSION += vec3(0.92,0.95,1.0)*silver*1.2;
+    ALBEDO = mix(ALBEDO,vec3(0.98,0.99,1.0),hagi_flash*0.88);
+    EMISSION += vec3(0.94,0.97,1.0)*hagi_flash*2.8;
     ALPHA = alpha;
 }"
         };
@@ -338,6 +381,7 @@ void fragment() {
     {
         Hp = Math.Clamp(hp, 0, MaxHp);
         Hud.SetHp(Hp, MaxHp);
+        RefreshHagiEligibility();
         SyncPoisonVisual();
     }
 
@@ -494,7 +538,7 @@ void fragment() {
         SetThrustCharge(0);
         _thrustPosition = null;
         CancelCharge();
-        if (!_golmConsumed) ShowLifeTransition(LifeTransition3D.Kind.Death);
+        if (!_golmConsumed && !HagiReaped) ShowLifeTransition(LifeTransition3D.Kind.Death);
         ClearAuras();
         _statusIcons.Clear();
         SetCurseStain(false);
@@ -533,6 +577,7 @@ void fragment() {
             _sprite.Modulate = Colors.White;
             return;
         }
+        if (HagiReaped) { _motion?.Kill(); _shadow.Hide(); return; }
         var tween = BeginMotion().SetParallel();
         tween.TweenProperty(this, "position", Position + new Vector3(0.38f, -0.68f, 0.25f), 0.46)
             .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
@@ -542,6 +587,8 @@ void fragment() {
 
     public void AnimateRevive()
     {
+        HagiReaped = false; _hagiDissolve = 0;
+        _portraitMaterial.SetShaderParameter("hagi_dissolve", 0f);
         ResumeDeathVisual();
         SetDirgeSinging(false);
         SetDecoyShown(false);
@@ -655,6 +702,8 @@ void fragment() {
 
     public override void _Process(double delta)
     {
+        ProcessHagiVisual((float)(delta * AnimationSpeed));
+        if (_unitId == "hagi" && (HagiPaused || _movementPortrait is "hagi_step" or "hagi_windup")) return;
         if (_unitId == "rica" && _ricaMotionPaused) return;
         _phase += (float)delta * 2.1f;
         UpdateKataStakes();

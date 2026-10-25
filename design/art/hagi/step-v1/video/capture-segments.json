@@ -1,0 +1,23 @@
+{
+  "fps": 60,
+  "cue": "hagi.live.0.2",
+  "speed": 1,
+  "segments": [
+    {
+      "name": "reap",
+      "startFrame": 11,
+      "endFrame": 148,
+      "attackEvent": 365,
+      "attacks": 1,
+      "reaps": 2
+    },
+    {
+      "name": "chain",
+      "startFrame": 166,
+      "endFrame": 314,
+      "attackEvent": 225,
+      "attacks": 2,
+      "reaps": 2
+    }
+  ]
+}

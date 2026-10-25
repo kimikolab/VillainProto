@@ -4,7 +4,8 @@
 #   D:\comfyui\venv\Scripts\python.exe tools\comfy_idle_loop\idle_loop.py <命令> ...
 #
 #   status                         ComfyUI が動いているか・待ち行列・自作ノードの有無
-#   gen <key> [--seeds 2022,5055]  prompts.json の <key> で 08 の生成を回す（1 本 約 13 分）。出力名は <key>_s<seed>
+#   gen <key> [--seeds 2022,5055] [--prefix 試作名]
+#                                  prompts.json の <key> で 08 の生成を回す（1 本 約 13 分）。既定の出力名は <key>_s<seed>
 #   recut <tag> [--crossfade 6] [--max-length 48]
 #                                  <tag> の生の動画から区間と透過だけやり直す（1 分ほど）。出力名は <tag>_final
 #   check <tag> <key>              確認シート・元絵と並べた GIF・数値（足元・頭の上下・前傾・緑の抜け残り）
@@ -82,9 +83,9 @@ def nodes08(image, pos, neg, seed, prefix, width=1024, height=1536):
     ]
 
 
-def post_nodes(images, prefix, crossfade, max_length, min_length=16):
+def post_nodes(images, prefix, crossfade, max_length, min_length=16, skip_head=8):
     return [
-        (40, "VPIdleLoopFind", {"images": images, "min_length": min_length, "max_length": max_length, "skip_head": 8, "min_motion": 3.0,
+        (40, "VPIdleLoopFind", {"images": images, "min_length": min_length, "max_length": max_length, "skip_head": skip_head, "min_motion": 3.0,
                                 "compare_size": 192, "min_step": 2.5, "crossfade": crossfade}, (4, 2), "⑥ 継ぎ目のいちばん目立たない区間を自動で切る"),
         (45, "PreviewAny", {"source": [40, 4]}, (5, 2), "区間と継ぎ目の報告（1.0x 以下なら滑らか）"),
         (41, "BiRefNetRMBG", {"image": [40, 0], "model": "BiRefNet_toonout", "sensitivity": 1.0, "mask_blur": 0, "mask_offset": 0,
@@ -98,11 +99,11 @@ def post_nodes(images, prefix, crossfade, max_length, min_length=16):
     ]
 
 
-def nodes09(video, prefix, crossfade, max_length, min_length=16):
+def nodes09(video, prefix, crossfade, max_length, min_length=16, skip_head=8):
     return [
         (1, "LoadVideo", {"file": video}, (0, 0), "① 08 が保存した生の動画（*_raw_*.mp4 を input へ置く）"),
         (2, "GetVideoComponents", {"video": [1, 0]}, (0, 1), None),
-        *post_nodes([2, 0], prefix, crossfade=crossfade, max_length=max_length, min_length=min_length),
+        *post_nodes([2, 0], prefix, crossfade=crossfade, max_length=max_length, min_length=min_length, skip_head=skip_head),
     ]
 
 
@@ -187,7 +188,7 @@ def cmd_gen(a):
         print(f"注意: 待ち行列に他の仕事がある（実行中 {r} / 待ち {p}）。その後ろに並ぶ")
     jobs = []
     for seed in [int(s) for s in a.seeds.split(",")]:
-        tag = f"{a.key}_s{seed}"
+        tag = f"{getattr(a, 'prefix', None) or a.key}_s{seed}"
         if glob.glob(f"{OUT}/{tag}_rgba/*.png"):
             sys.exit(f"{tag} の出力が既にある（{OUT}/{tag}_rgba）。消すか別の seed にする")
         jobs.append((tag, submit(nodes08(image, pos, neg, seed, tag, w, h))))
@@ -205,7 +206,7 @@ def cmd_recut(a):
     shutil.copy(raws[-1], f"{COMFY}/input/{video}")
     prefix = f"{a.tag}_final"
     shutil.rmtree(f"{OUT}/{prefix}_rgba", ignore_errors=True)  # 前の切り直しの連番と混ざらないように
-    wait(submit(nodes09(video, prefix, a.crossfade, a.max_length, a.min_length)), prefix)
+    wait(submit(nodes09(video, prefix, a.crossfade, a.max_length, a.min_length, getattr(a, "skip_head", 8))), prefix)
 
 
 def frames_of(tag):
@@ -397,9 +398,13 @@ def main():
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("status").set_defaults(f=cmd_status)
     p = sub.add_parser("prompt"); p.add_argument("key"); p.set_defaults(f=cmd_prompt)
-    p = sub.add_parser("gen"); p.add_argument("key"); p.add_argument("--seeds", default="2022,5055"); p.set_defaults(f=cmd_gen)
+    p = sub.add_parser("gen"); p.add_argument("key"); p.add_argument("--seeds", default="2022,5055")
+    p.add_argument("--prefix", help="出力名の先頭。省略時はkey。再試作で以前の出力を残すために指定する")
+    p.set_defaults(f=cmd_gen)
     p = sub.add_parser("recut"); p.add_argument("tag"); p.add_argument("--crossfade", type=int, default=6)
-    p.add_argument("--max-length", type=int, default=48); p.add_argument("--min-length", type=int, default=16); p.set_defaults(f=cmd_recut)
+    p.add_argument("--max-length", type=int, default=48); p.add_argument("--min-length", type=int, default=16)
+    p.add_argument("--skip-head", type=int, default=8, help="ループ探索から除く先頭コマ数。序盤だけ武器が切れる場合などに指定する")
+    p.set_defaults(f=cmd_recut)
     p = sub.add_parser("check"); p.add_argument("tag"); p.add_argument("key"); p.set_defaults(f=cmd_check)
     p = sub.add_parser("install"); p.add_argument("tag"); p.add_argument("loop"); p.set_defaults(f=cmd_install)
     sub.add_parser("workflows").set_defaults(f=cmd_workflows)

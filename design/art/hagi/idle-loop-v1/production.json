@@ -1,0 +1,57 @@
+{
+  "character": "hagi",
+  "date": "2026-10-25",
+  "status": "revision-requested",
+  "guide": "design/IDLE_LOOP_COMFYUI_GUIDE.md",
+  "method": "Wan2.2 I2V 14B, 20 steps, CFG 3.5, shift 8, 81 generated frames at 16 fps, ComfyUI",
+  "source": "source.png",
+  "prompt": "prompt.json",
+  "resolution": [
+    640,
+    960
+  ],
+  "candidates": {
+    "A": {
+      "install_tag": "hagi_s2022_final",
+      "seed": 2022,
+      "frames": 48,
+      "period_seconds": 3.0,
+      "crossfade_frames": 6,
+      "description": "控えめな呼吸と髪・裾の揺れ",
+      "raw_generation_warning": "平均コマ差1.70で動きが小さいとの報告。控えめな比較候補として残し、採否は動画で選ぶ。",
+      "foot_bottom": [
+        939,
+        941
+      ],
+      "gif_wrap_ratio": 0.5869313356254648,
+      "gif": "A-loop.gif",
+      "video": "A-idle-1x.mp4"
+    },
+    "B": {
+      "install_tag": "hagi_s5055_grounded",
+      "seed": 5055,
+      "frames": 38,
+      "period_seconds": 2.375,
+      "crossfade_frames": 6,
+      "description": "呼吸と裾の揺れが大きめの身軽な待機",
+      "foot_anchor": "全体を上へ1〜5pxの整数平行移動。伸縮・部分変形・補間なし。画素の切れなし。",
+      "foot_bottom": [
+        940,
+        940
+      ],
+      "gif_wrap_ratio": 0.8372410041348143,
+      "gif": "B-loop.gif",
+      "video": "B-idle-1x.mp4"
+    }
+  },
+  "verification": [
+    "元絵と同じキャンバス比率。接地行は元絵940pxに対しA±1px、B一致。",
+    "両候補とも緑の抜け残り0px。不透明部分のキャンバス端への接触0px。",
+    "両手の握り・直線柄・銀の刃・根元の穴1つを代表コマと拡大シートで目視確認。",
+    "個別GIFは固有周期を全コマ使用。実ファイルを読み戻し、継ぎ目と60/70ms配分を検証。",
+    "A/Bの等速MP4を全コマデコード済み。",
+    "ゲーム未適用。採用選択後にIdleLoopCheckへの追加と攻撃差分・停止・死亡・勝利を確認する。"
+  ],
+  "feedback": "Bを選好。ただし服だけが動いているように見えるため身体の動きを増やし、口パクをなくす。",
+  "next_version": "../idle-loop-v2"
+}

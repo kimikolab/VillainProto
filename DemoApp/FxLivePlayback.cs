@@ -12,7 +12,9 @@ internal sealed record FxLivePlayback(IReadOnlyList<DemoOpening> Openings, Battl
         if (!FxCatalog.TryGetPreset(cue, out var formation))
             throw new InvalidOperationException($"プリセットが見つかりません: {cue.PresetName}");
         var players = BattleEngine.Materialize(formation, 0);
-        var enemies = BattleEngine.Materialize(EnemyCatalog.Stages[cue.Stage].Enemy, 1);
+        var enemies = cue.PlaytestWave is int wave
+            ? BattleEngine.MaterializeEnemy(EnemyCatalog.PlaytestStages[wave].Enemy, EnemyCatalog.PlaytestStages[wave].Scale)
+            : BattleEngine.Materialize(EnemyCatalog.Stages[cue.Stage].Enemy, 1);
         // 個体IDは engine の Add が振る。開始時の値を控え、IDだけは Run 後に読む（Main と同じ）。
         var pending = players.Concat(enemies).Select(u => new {
             Unit = u, u.Slot, u.Hp, u.MaxHp, Attack = u.CurrentAttack, Pattern = u.CurrentPattern,

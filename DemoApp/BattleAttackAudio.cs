@@ -217,6 +217,7 @@ public partial class BattleAttackAudio : Node
 
     public void PlayAttack(string unitId, int team, AttackPattern pattern, bool reaction, bool charged, bool barrage = false)
     {
+        if (unitId == "hagi" && charged) { PlayVariation(PhysicalChargeRelease,1); return; }
         if (charged && TryChargeSound(unitId, release: true, out string[] charge))
         {
             PlayChargeAccent(charge, 0.55);

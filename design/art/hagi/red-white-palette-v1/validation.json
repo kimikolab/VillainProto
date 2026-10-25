@@ -1,0 +1,33 @@
+{
+  "game_applied": false,
+  "images": [
+    {
+      "file": "hagi-standing-red-white-v1.png",
+      "size": [
+        1024,
+        1536
+      ],
+      "mode": "RGBA",
+      "alpha_range": [
+        0,
+        254
+      ],
+      "fully_transparent_pixels": 977646,
+      "transparent_background_verified": true
+    },
+    {
+      "file": "hagi-battle-idle-right-red-white-v1.png",
+      "size": [
+        1024,
+        1536
+      ],
+      "mode": "RGBA",
+      "alpha_range": [
+        0,
+        254
+      ],
+      "fully_transparent_pixels": 928699,
+      "transparent_background_verified": true
+    }
+  ]
+}

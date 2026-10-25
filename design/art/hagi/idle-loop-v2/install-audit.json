@@ -1,0 +1,298 @@
+{
+  "source_tag": "hagi_body_v2_s3033_final",
+  "frames": 48,
+  "fps": 16,
+  "period_seconds": 3,
+  "all_pixels_identical": true,
+  "total_png_bytes": 34447617,
+  "files": [
+    {
+      "source": "frame_000.png",
+      "installed": "hagi_idle_00.png",
+      "rgba_sha256": "36dc6df6d05ff184369cca1ca3fc4cb1e19f623ed3cbe62a59fb25035f9c21a7",
+      "bottom": 940
+    },
+    {
+      "source": "frame_001.png",
+      "installed": "hagi_idle_01.png",
+      "rgba_sha256": "09bdeafc7a7a887028c28f07d849c071202c8fa4ccfd72df790629cfd3cad8dc",
+      "bottom": 940
+    },
+    {
+      "source": "frame_002.png",
+      "installed": "hagi_idle_02.png",
+      "rgba_sha256": "1971ea01d5b6e640774eaa212bf347d8d4fc54cb0b2c0a3d45a5717f5ca68bdf",
+      "bottom": 940
+    },
+    {
+      "source": "frame_003.png",
+      "installed": "hagi_idle_03.png",
+      "rgba_sha256": "ed70f7487da651033545f5be70ce4fa4dd8103d303da07ca444fbb97d373e59e",
+      "bottom": 940
+    },
+    {
+      "source": "frame_004.png",
+      "installed": "hagi_idle_04.png",
+      "rgba_sha256": "64f58628710f95b5cc588c3087fe8a7ebd606e95710bb6bc6e1d0798e18a9a3f",
+      "bottom": 940
+    },
+    {
+      "source": "frame_005.png",
+      "installed": "hagi_idle_05.png",
+      "rgba_sha256": "730fc42183023e5848f62848360caf72e4fb89ac5bfe9168e18e120b73af679b",
+      "bottom": 940
+    },
+    {
+      "source": "frame_006.png",
+      "installed": "hagi_idle_06.png",
+      "rgba_sha256": "a9884b77cbba3a3db0cfebe45401b24729ef0a611aec35a62376bf8729abb7e1",
+      "bottom": 940
+    },
+    {
+      "source": "frame_007.png",
+      "installed": "hagi_idle_07.png",
+      "rgba_sha256": "7208b931801f34b2a6e761fa94310b4e9b61e8b0aa4de9f25efd35bfbe5e574c",
+      "bottom": 940
+    },
+    {
+      "source": "frame_008.png",
+      "installed": "hagi_idle_08.png",
+      "rgba_sha256": "c6178b2d8401c19d5ba6daf22d3858facbd0dac0091d62c800aec308e8eb1de6",
+      "bottom": 940
+    },
+    {
+      "source": "frame_009.png",
+      "installed": "hagi_idle_09.png",
+      "rgba_sha256": "889e18fb32879cd18c4bdb09f1855649552a183dd152e5bd77b25daca52ac67e",
+      "bottom": 940
+    },
+    {
+      "source": "frame_010.png",
+      "installed": "hagi_idle_10.png",
+      "rgba_sha256": "7e8886d8bca9d3137adaa60685448fe635095304c18b64dfc9c7a6fb40c1aae5",
+      "bottom": 940
+    },
+    {
+      "source": "frame_011.png",
+      "installed": "hagi_idle_11.png",
+      "rgba_sha256": "7169779c57f3a208fd91619a9343919463f4bc0a1e4c44d6699e6b166147c799",
+      "bottom": 940
+    },
+    {
+      "source": "frame_012.png",
+      "installed": "hagi_idle_12.png",
+      "rgba_sha256": "e43badaa9c6aa33960d0b82d7bf0db7f505da30f52a888e13f9f8803cb238e64",
+      "bottom": 940
+    },
+    {
+      "source": "frame_013.png",
+      "installed": "hagi_idle_13.png",
+      "rgba_sha256": "151d44dd11b1df1f9143e45a311318b8ba35ffeec1dbee1e5470147ae34a2b45",
+      "bottom": 940
+    },
+    {
+      "source": "frame_014.png",
+      "installed": "hagi_idle_14.png",
+      "rgba_sha256": "6bbc384c1aeee58665f43222bac4595d926c27a4c1c5dec81073192178bcf09b",
+      "bottom": 940
+    },
+    {
+      "source": "frame_015.png",
+      "installed": "hagi_idle_15.png",
+      "rgba_sha256": "6ab8a743dce7087ae33e019e43551890536cc73e87a12c2abb35656c69e9889c",
+      "bottom": 940
+    },
+    {
+      "source": "frame_016.png",
+      "installed": "hagi_idle_16.png",
+      "rgba_sha256": "c814c46ccde6bf4af5deb4092caffd8f025ef4342db2dc34e7e528423b5cca35",
+      "bottom": 940
+    },
+    {
+      "source": "frame_017.png",
+      "installed": "hagi_idle_17.png",
+      "rgba_sha256": "f72a155816f2caa0cd0b0b4382022ebf5f887b2bb93590c09bdd4ea5ac5236a4",
+      "bottom": 940
+    },
+    {
+      "source": "frame_018.png",
+      "installed": "hagi_idle_18.png",
+      "rgba_sha256": "0e7036fcb44bf74934d8103fa034ef6d7dc5d342e2f0b94ebdc15e884013d588",
+      "bottom": 940
+    },
+    {
+      "source": "frame_019.png",
+      "installed": "hagi_idle_19.png",
+      "rgba_sha256": "80d7cd9d40a87429c3174bccacf00187591ea535632345f1f435f6ff57a566d7",
+      "bottom": 940
+    },
+    {
+      "source": "frame_020.png",
+      "installed": "hagi_idle_20.png",
+      "rgba_sha256": "0e5f832c07cdc0fee7c9995df9c9a69d4e3a204099108637dbf906a09be65fab",
+      "bottom": 940
+    },
+    {
+      "source": "frame_021.png",
+      "installed": "hagi_idle_21.png",
+      "rgba_sha256": "47f45ba196888ae6e28c53154f49ddca8fb3ed6cd09c292a5846ff440c95f728",
+      "bottom": 940
+    },
+    {
+      "source": "frame_022.png",
+      "installed": "hagi_idle_22.png",
+      "rgba_sha256": "689fb0dcde9a7e102090a672de520a0809c3a33d20a56db3bc00bb1d0d1173ab",
+      "bottom": 940
+    },
+    {
+      "source": "frame_023.png",
+      "installed": "hagi_idle_23.png",
+      "rgba_sha256": "fe9b4bfa9f4ee25cabef597e1ee557710cbe34441c140d1b4d2b9bc56defcc95",
+      "bottom": 940
+    },
+    {
+      "source": "frame_024.png",
+      "installed": "hagi_idle_24.png",
+      "rgba_sha256": "146df83812f6d7e0c32407d8c2d9df89553b8744990489a3c44268a051548c0e",
+      "bottom": 940
+    },
+    {
+      "source": "frame_025.png",
+      "installed": "hagi_idle_25.png",
+      "rgba_sha256": "f08a9f4ab1dd01611a58ec4dbbebe321905e58d3b0093873de9c49259d38a55b",
+      "bottom": 940
+    },
+    {
+      "source": "frame_026.png",
+      "installed": "hagi_idle_26.png",
+      "rgba_sha256": "4267a4b60a5652a1c0a239a20d7217e9ac9af7825db9791d8b8547db8fa02584",
+      "bottom": 940
+    },
+    {
+      "source": "frame_027.png",
+      "installed": "hagi_idle_27.png",
+      "rgba_sha256": "85d70874786234dfde6910e5571010accb09b49a8622590a65fc9cb8e2a4967c",
+      "bottom": 940
+    },
+    {
+      "source": "frame_028.png",
+      "installed": "hagi_idle_28.png",
+      "rgba_sha256": "feca0d961f06bd39767966bd90443f71d9b6a91805c254d1a397391d8ff24fce",
+      "bottom": 940
+    },
+    {
+      "source": "frame_029.png",
+      "installed": "hagi_idle_29.png",
+      "rgba_sha256": "49c1c977a0904699ce80d732d530cd74cc3a0c36d0b013ec6b70b470f3ec8c05",
+      "bottom": 940
+    },
+    {
+      "source": "frame_030.png",
+      "installed": "hagi_idle_30.png",
+      "rgba_sha256": "ba00d47618cd090ea98f05b1fc2c7e44e857862a55ca7b77e2ac4c126522134c",
+      "bottom": 940
+    },
+    {
+      "source": "frame_031.png",
+      "installed": "hagi_idle_31.png",
+      "rgba_sha256": "a86c22de9fb972dbbe6131f0ede957e3beac94a4819f84eca86e97f60fb8444e",
+      "bottom": 940
+    },
+    {
+      "source": "frame_032.png",
+      "installed": "hagi_idle_32.png",
+      "rgba_sha256": "18394c173c9016844cd820df90bf2fa01c2048bc47a3fbbbc37db8723918764a",
+      "bottom": 940
+    },
+    {
+      "source": "frame_033.png",
+      "installed": "hagi_idle_33.png",
+      "rgba_sha256": "8273e4f6bb63fb9a1034ff5318cd4fd3213609b289b1fcd69c426fd2fef1d437",
+      "bottom": 940
+    },
+    {
+      "source": "frame_034.png",
+      "installed": "hagi_idle_34.png",
+      "rgba_sha256": "6190b40363169b5e507b2cd031d65c6b55095d3471ca946d035ff4a3a7a0022b",
+      "bottom": 940
+    },
+    {
+      "source": "frame_035.png",
+      "installed": "hagi_idle_35.png",
+      "rgba_sha256": "abc4b7dfe44acac910a3b5b2e917e1c90a74af3d529d2464cd7fb0f72e6578c4",
+      "bottom": 940
+    },
+    {
+      "source": "frame_036.png",
+      "installed": "hagi_idle_36.png",
+      "rgba_sha256": "fd04bc174681617846c962a05c56d0fcd56f9a7cbda5d1cd620a94bf07609864",
+      "bottom": 940
+    },
+    {
+      "source": "frame_037.png",
+      "installed": "hagi_idle_37.png",
+      "rgba_sha256": "7f4f0782a31b8d57f69393f44fa8629d3bd66c2f66b6589b4239e3c40c4c68ba",
+      "bottom": 940
+    },
+    {
+      "source": "frame_038.png",
+      "installed": "hagi_idle_38.png",
+      "rgba_sha256": "e1652fc8e551961638d09ccc6101923870f6eccfd595716dc9e6fb385b3916fb",
+      "bottom": 940
+    },
+    {
+      "source": "frame_039.png",
+      "installed": "hagi_idle_39.png",
+      "rgba_sha256": "7a727f136b79cd4abf0682c508a3f1624b78240cac3cdaa5c10120e0a0e64524",
+      "bottom": 940
+    },
+    {
+      "source": "frame_040.png",
+      "installed": "hagi_idle_40.png",
+      "rgba_sha256": "0c5b5ba329809dfeaec3429492ea0978f8c9dac95f468c59e6d669bf8853c134",
+      "bottom": 940
+    },
+    {
+      "source": "frame_041.png",
+      "installed": "hagi_idle_41.png",
+      "rgba_sha256": "48b6ef9036f91a181598297fb66ab9002478ff19de25492c359f9f889aea844a",
+      "bottom": 940
+    },
+    {
+      "source": "frame_042.png",
+      "installed": "hagi_idle_42.png",
+      "rgba_sha256": "5097c6ece5f1a2b93742606e5bf6578aca2a2f4081d0be3236eb2e76af7e82ee",
+      "bottom": 940
+    },
+    {
+      "source": "frame_043.png",
+      "installed": "hagi_idle_43.png",
+      "rgba_sha256": "3b8c3181179fcbfe75380854ac24d960f44728399ec0be91bc7902e8144312f8",
+      "bottom": 940
+    },
+    {
+      "source": "frame_044.png",
+      "installed": "hagi_idle_44.png",
+      "rgba_sha256": "6fdbc40e4b605cfe18a68ae457a12da196bce3987949d0b7b2620bb106ababe9",
+      "bottom": 940
+    },
+    {
+      "source": "frame_045.png",
+      "installed": "hagi_idle_45.png",
+      "rgba_sha256": "496b0aed31c2f83657094473d1b8aa5ad0c5010e5a2e3e83dbd96a5489bb300a",
+      "bottom": 940
+    },
+    {
+      "source": "frame_046.png",
+      "installed": "hagi_idle_46.png",
+      "rgba_sha256": "5b14cd75f1783f58f3309f6b134575ffa28e510732ea470cdabba1a27969361e",
+      "bottom": 940
+    },
+    {
+      "source": "frame_047.png",
+      "installed": "hagi_idle_47.png",
+      "rgba_sha256": "dbfc63d049308e67dd2a8ffda38122462da245b68f120b27404283b1ef757c2a",
+      "bottom": 940
+    }
+  ]
+}

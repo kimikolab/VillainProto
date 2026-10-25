@@ -1,0 +1,28 @@
+{
+  "applied_on": "2026-10-25",
+  "change": "Match battle scythe root to normal portrait: one large hole",
+  "normal_sha256": "0b3f6a08a01f3403d4a8a6e6261e7ef99b41325522c7d96d4d0182e737afcf76",
+  "normal_unchanged": true,
+  "source": "design\\art\\hagi\\scythe-unify-v1\\hagi-battle-idle-right-one-hole-v1.png",
+  "destination": "DemoApp\\assets\\portraits\\battle\\hagi_idle_right.png",
+  "source_sha256": "e357d00a20270443a334f1fce1a23400bc3b1cea13a0593f13a848586152ba46",
+  "destination_sha256": "e357d00a20270443a334f1fce1a23400bc3b1cea13a0593f13a848586152ba46",
+  "previous_battle_sha256": "1e68069b0851d65349a171aac192c62044ee95527212f10014c68d015c4c3420",
+  "size": [
+    1024,
+    1536
+  ],
+  "mode": "RGBA",
+  "alpha_bbox_128": [
+    27,
+    13,
+    1007,
+    1506
+  ],
+  "bottom_padding_pixels": 30,
+  "world_height": 2.25,
+  "large_hole_count_visually_verified": 1,
+  "upper_hole_alpha": 0,
+  "verification": "HAGI_SCYTHE_ONE_HOLE_GAME_CAPTURE_OK",
+  "foot_y": 0.04999997199047
+}

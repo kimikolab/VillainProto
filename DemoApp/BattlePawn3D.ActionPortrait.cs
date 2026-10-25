@@ -112,6 +112,8 @@ public partial class BattlePawn3D
             if (key == "gare_fire") height *= 1435f / 1330f;
             if (key == "gare_empty") height *= 1435f / 1497f;
             if (key == "susu_read") height *= 1480f / 1493f;
+            // 前傾突進の差分は1374px高。しゃがんだ胴を拡大せず、待機絵と画素スケールを揃える。
+            if (key == "hagi_step") height *= 1374f / 1536f;
         }
         if (_golmRocketPose && _unitId == "golm")
         {

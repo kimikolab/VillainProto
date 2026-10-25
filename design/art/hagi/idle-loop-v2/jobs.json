@@ -1,0 +1,14 @@
+[
+  {
+    "candidate": "A",
+    "prompt_id": "8a37e0c1-b1a6-4eed-8640-63dfb8cff8ff",
+    "tag": "hagi_body_v2_s5055",
+    "state": "queue_running"
+  },
+  {
+    "candidate": "B",
+    "prompt_id": "beadb53b-1e90-41d4-a35d-bc118403f739",
+    "tag": "hagi_body_v2_s3033",
+    "state": "queue_pending"
+  }
+]

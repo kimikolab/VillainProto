@@ -17,7 +17,7 @@ public sealed record FxCue(
     string? PresetName = null, int Stage = 0, int Seed = 0,
     Func<BattleEvent, bool>? Highlight = null,
     FxUnit? Subject = null, Func<Formation>? BuildFormation = null, double HoldSeconds = 0,
-    int? RicaLayers = null, string? RicaIdleVariant = null)
+    int? RicaLayers = null, string? RicaIdleVariant = null, int? PlaytestWave = null)
 {
     public bool Generated => Subject is not null;
 }
@@ -39,7 +39,7 @@ public static partial class FxCatalog
         new FxCue("live.mark", "標 守り型（実戦）", "台本（実戦）", new[] { "golm", "zan", "hisa" },
             FxCueKind.Live, PresetName: "試遊・標 守り型", Stage: 1, Seed: 0,
             Highlight: e => e.Kind is BattleEventKind.GolmArm or BattleEventKind.Swallow),
-    }.OfType<FxCue>().ToArray());
+    }.OfType<FxCue>().Concat(HagiCues()).ToArray());
 
     private static readonly Lazy<IReadOnlyList<FxCue>> AllCues = new(() =>
         Array.AsReadOnly(Registered.Concat(AllUnits()).ToArray()));

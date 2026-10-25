@@ -12,6 +12,7 @@ internal sealed class DeathPresentation
     private static readonly PropertyInfo Board = typeof(UnitState).GetProperty("Board", BindingFlags.Instance | BindingFlags.NonPublic)
         ?? throw new InvalidOperationException("死軸の観測先 Board が見つかりません");
     internal readonly SortedDictionary<int, List<State>> Frames = new();
+    internal readonly HagiPresentation Hagi = new();
     private readonly Dictionary<int, State> _last = new();
     private BattleContext? _context;
     internal void Observe(TraitId trait, UnitState owner, UnitState target, string key, int delta)
@@ -26,6 +27,7 @@ internal sealed class DeathPresentation
     }
     private void Capture(int index, IReadOnlyList<UnitState> units)
     {
+        if (_context is not null) Hagi.Capture(index, units, _context);
         foreach (var u in units)
         {
             var s = new State(u.InstanceId, u.RawCounter("necro"), u.RawCounter(VelSoulTrait.LivesKey),
@@ -41,7 +43,7 @@ internal sealed class DeathPresentation
         int seed, out BattleResult result)
     {
         var track = new DeathPresentation();
-        bool relevant = players.Concat(enemies).Any(u => u.Def.Id is "rica" or "vel" or "ere");
+        bool relevant = players.Concat(enemies).Any(u => u.Def.Id is "rica" or "vel" or "ere" or "hagi");
         result = BattleEngine.Run(players, enemies, seed, verbose: true, probe: relevant ? track.Observe : null);
         track.Finish(result.Events.Count);
         return track;

@@ -1,0 +1,394 @@
+{
+  "status": "candidate-awaiting-user-selection",
+  "tag": "hagi_s5055_final",
+  "fps": 16,
+  "crossfade_frames": 6,
+  "bottom_range": [
+    940,
+    940
+  ],
+  "maximum_border_pixels": 0,
+  "geometry_postprocessing": true,
+  "still": "DemoApp\\assets\\portraits\\battle\\hagi_idle_right.png",
+  "still_sha256": "e357d00a20270443a334f1fce1a23400bc3b1cea13a0593f13a848586152ba46",
+  "prompt": {
+    "still": "DemoApp/assets/portraits/battle/hagi_idle_right.png",
+    "pronoun": "she",
+    "char": "The agile young adult female reaper Hagi keeps the exact same right-facing three-quarter wide planted ready stance, confident level gaze and defiant half-smile. She has a short charcoal-black bob with a small thin crimson side braid, pale skin and warm gray eyes. Her costume stays black, muted crimson and gray with gold fittings: a high-neck cropped fitted top, detached loose sleeves, a fully opaque short front skirt, layered long asymmetric gray and crimson cloth tails, one black thigh-high stocking and black gold-trimmed ankle boots. She holds ONE enormous scythe diagonally in front of her body with BOTH hands: the lower hand at screen left closes firmly around the straight black shaft beside her hip, and the upper hand at screen right closes firmly around that same shaft at shoulder height. Each hand has four fingers curled around the shaft opposed by one thumb; both palms remain in contact with the shaft. The long clean silver crescent blade stays above and to screen right of her head. Its gold root has exactly ONE large oval open hole, three narrow dark engraved grooves, and the same dark filled outer-back decoration. ",
+    "motion": "Like a nimble confident fighting game scythe fighter waiting in guard, she repeats a steady rhythmic springy breathing cycle in place: her knees clearly bend and straighten within a shallow ready stance, her hips and torso sink and rise together, and her shoulders and both gripping forearms follow as one connected body. She keeps the original ready lean, chest lifted, chin level and eyes on the opponent. Her head and neck follow her torso naturally without nodding. Both hands maintain their exact grips and spacing, and the scythe rises and settles with her supported arms as one rigid object. Repeat the same compact ready-guard cycle several times without attacking, squatting deeply or changing stance. ",
+    "sway": "Her short bob tips, small crimson braid, detached sleeve ends and long gray and muted crimson cloth tails softly sway and settle after the body each cycle. Her opaque skirt keeps its length and coverage. The scythe shaft stays perfectly straight and rigid with constant length; its silver crescent blade and gold root stay one rigid piece of constant shape and size, retaining the single large oval hole. Fingers remain firmly wrapped around the shaft throughout. No weapon flourish, no scythe swing, no bells, no chains added, no blood, no fire, no flames, no smoke, no souls, no particles, no glow.",
+    "neg": "deep squatting, extreme bounce, jumping, foot sliding, widening stance, standing rigidly upright, leaning farther forward, hunched back, slouching, bowing head, nodding, tired expression, turning head toward camera, changing grip, open grip, floating hand, hand sliding along shaft, detached fingers, extra thumbs, rubber scythe, curved shaft, bent pole, split shaft, moving blade independently, twisting blade, shrinking blade, growing blade, extra blade holes, two oval holes, blood on blade, red blade, bells, dangling chains, attacking, scythe swing, spinning weapon, long hair, ponytail, shortening skirt, exposed underwear, costume changing color, purple magic",
+    "note": "2026-10-25 現行の死神少女・戦闘待機絵から作成。前傾突進や赤い刈り取り演出とは別の待機ループ。元の構えと両手の握り、大鎌の直線柄と根元の穴1つを維持し、膝・胴・腕のつながった呼吸と髪・裾の追従を狙う。seed 2022 / 5055 の比較候補を生成し、固有周期のGIFを見てユーザーが採用候補を選ぶ。未採用・ゲーム未適用。"
+  },
+  "loop_gif": {
+    "frames": 38,
+    "duration_ms": 2380,
+    "wrap_ratio": 0.8372410041348143,
+    "wrap_pair": [
+      37,
+      0
+    ]
+  },
+  "comparison_gif": {
+    "frames": 38,
+    "duration_ms": 2380,
+    "wrap_ratio": 0.8383920709609449,
+    "wrap_pair": [
+      37,
+      0
+    ]
+  },
+  "frames": [
+    {
+      "file": "B\\frames\\frame_000.png",
+      "sha256": "d0e475231929232046a4b82afdaa55b6f474e56da5810a852d2e379dbdcfb3c0"
+    },
+    {
+      "file": "B\\frames\\frame_001.png",
+      "sha256": "8be3f212dc1f10455e450805bf326bb018111b35b36f8979e5204a38d2581538"
+    },
+    {
+      "file": "B\\frames\\frame_002.png",
+      "sha256": "65a9fdd587746811f72f3936534196ad32e982a71a2dc19eeafc0a69e0ea0025"
+    },
+    {
+      "file": "B\\frames\\frame_003.png",
+      "sha256": "fe5d489fb1d868dcb1a10bfc2c438e85fcff50c847cfeff8723f877f1d91b97e"
+    },
+    {
+      "file": "B\\frames\\frame_004.png",
+      "sha256": "52d0858a32a9494e4f0cce2b021fd972b56587b0f21587ad193424297ba8e43e"
+    },
+    {
+      "file": "B\\frames\\frame_005.png",
+      "sha256": "cd3cdb383e340bdefb8652622eafdce44cd84f396e55b169d4ae671d95e6a651"
+    },
+    {
+      "file": "B\\frames\\frame_006.png",
+      "sha256": "119a069069651d9b3f0d1342a0bd75967246c4ac652ab0d9e9755f187d7b09d8"
+    },
+    {
+      "file": "B\\frames\\frame_007.png",
+      "sha256": "097f8f02a7d3033229c4a33ece0ef9fbff802105c9b428c5f2faeedccddeb107"
+    },
+    {
+      "file": "B\\frames\\frame_008.png",
+      "sha256": "e30ece3255805bce0d007fed7f9086df743defc465ba5a17f874077af913c838"
+    },
+    {
+      "file": "B\\frames\\frame_009.png",
+      "sha256": "9778c28d8b3745648ecc878652901961c6311ddff3d0e6886b561199c2183d35"
+    },
+    {
+      "file": "B\\frames\\frame_010.png",
+      "sha256": "2158b22e49b28d33bb1e0798a298078c1c7322b7f009e6970cf05feb4a049ef9"
+    },
+    {
+      "file": "B\\frames\\frame_011.png",
+      "sha256": "634ef243d1d7a4dc5a5ebaf1e18634f79baae9fe1fe5842c6d6b8e6283b1a5d2"
+    },
+    {
+      "file": "B\\frames\\frame_012.png",
+      "sha256": "235a88a2951da6da6c07b38d3d280daa59633a41f32f27e3e7d3e8d8b8c34557"
+    },
+    {
+      "file": "B\\frames\\frame_013.png",
+      "sha256": "f749477e885cbe7b78ba6730c031046bfb58e866b7b9fc638ccec27a400cacf2"
+    },
+    {
+      "file": "B\\frames\\frame_014.png",
+      "sha256": "6c7acb89a697d66994783a1b967460d463269d7a6c4e1f4cc02e8c024589daf7"
+    },
+    {
+      "file": "B\\frames\\frame_015.png",
+      "sha256": "4fb06bafd3fc157d9bd2ee7ef0d92134f148ec2e0bba1256cc295590ce094825"
+    },
+    {
+      "file": "B\\frames\\frame_016.png",
+      "sha256": "6781abf59aec023177869e0283f3051831312cac3ee48ba0706c271e143389cf"
+    },
+    {
+      "file": "B\\frames\\frame_017.png",
+      "sha256": "033424fa68ca4b19d73c2aeed1012df6932c632e844caaecb65bd4023b42a638"
+    },
+    {
+      "file": "B\\frames\\frame_018.png",
+      "sha256": "54075ae753dbe1bae8773db5868957e7a6768b0294a1d5b02e4b79f28eefdba6"
+    },
+    {
+      "file": "B\\frames\\frame_019.png",
+      "sha256": "c8733a1f9bf945f80f5d9c145219b4ad23d43776062f3f1ab650d37ef4aaeb48"
+    },
+    {
+      "file": "B\\frames\\frame_020.png",
+      "sha256": "e193b3e25404602c6d51f1b8b09197ebd9e2d3ee352321fd90b9d67224ca7a96"
+    },
+    {
+      "file": "B\\frames\\frame_021.png",
+      "sha256": "1d91086a3492a774b222b83cbd2d58f41c4c967e680713cc65dc08d626cf3df2"
+    },
+    {
+      "file": "B\\frames\\frame_022.png",
+      "sha256": "9a80d4f697334d452059b213347b60417bf3f70a59ee9fed363d4c29e9875757"
+    },
+    {
+      "file": "B\\frames\\frame_023.png",
+      "sha256": "0ca62f1f7a37f966aa5c8f8cf7866dc7da9e38f3fa8a5a570b22187ce878929b"
+    },
+    {
+      "file": "B\\frames\\frame_024.png",
+      "sha256": "18a92241f73237f48d4dbda99ab82b6d3cc2af678bad055050d20cd95b455e87"
+    },
+    {
+      "file": "B\\frames\\frame_025.png",
+      "sha256": "b86bd0d7fdb324292ee0af322af66a13fa065ffbbf17f9788fa656b105768e89"
+    },
+    {
+      "file": "B\\frames\\frame_026.png",
+      "sha256": "cb1a36002bd2fff22bf682efd5a6461d1b491155379e16fbb83d8dfc478b98c8"
+    },
+    {
+      "file": "B\\frames\\frame_027.png",
+      "sha256": "78e88ac134d155a346e235736b81b559d69862d9cf07f4f8e216e409421e8b75"
+    },
+    {
+      "file": "B\\frames\\frame_028.png",
+      "sha256": "df9985490a38947da4bc1404e514c388f81d08f5bbb5da326be893c89994ff49"
+    },
+    {
+      "file": "B\\frames\\frame_029.png",
+      "sha256": "ac709bf40da447a4f6baf7ed4be075f683e82397064b2f009e409afda81c6e75"
+    },
+    {
+      "file": "B\\frames\\frame_030.png",
+      "sha256": "de0f863ef73944581df721e609c95f87e13bd4abad6e1b7fa14877e4375f2ef6"
+    },
+    {
+      "file": "B\\frames\\frame_031.png",
+      "sha256": "3a93a00e8b1b637870027aba05c543ce4b02301935120e02be241d4bd39bbc31"
+    },
+    {
+      "file": "B\\frames\\frame_032.png",
+      "sha256": "2829fbb44be8c518091893c32839eaedbacd021b635471980201e029058adda5"
+    },
+    {
+      "file": "B\\frames\\frame_033.png",
+      "sha256": "a38fded8e6a504b1882d855af70e6dc8dfac924df4ad38c986f58807c82dd7fc"
+    },
+    {
+      "file": "B\\frames\\frame_034.png",
+      "sha256": "942521930b60e6b29d19ae8af812ec2ce844306f2a593dae0e015e1ac79f3ce6"
+    },
+    {
+      "file": "B\\frames\\frame_035.png",
+      "sha256": "9924158826edfee0aacea32abbd9a33d50abfb9ab298933f312b88bdc7587801"
+    },
+    {
+      "file": "B\\frames\\frame_036.png",
+      "sha256": "3d116fcfea0d83020e9939759e17cca5467926b6efb9cd8c3733212ca8a3129f"
+    },
+    {
+      "file": "B\\frames\\frame_037.png",
+      "sha256": "729f7e73ddda2700e80486e96612e14d6a30ef487d0e49c46d83b3ee27b17563"
+    }
+  ],
+  "foot_anchor": {
+    "method": "whole-frame integer vertical translation",
+    "scaling": false,
+    "warping": false,
+    "interpolation": false,
+    "target_bottom": 940,
+    "frames": [
+      {
+        "source": "f_00001_.png",
+        "original_bottom": 942,
+        "dy": -2
+      },
+      {
+        "source": "f_00002_.png",
+        "original_bottom": 942,
+        "dy": -2
+      },
+      {
+        "source": "f_00003_.png",
+        "original_bottom": 942,
+        "dy": -2
+      },
+      {
+        "source": "f_00004_.png",
+        "original_bottom": 942,
+        "dy": -2
+      },
+      {
+        "source": "f_00005_.png",
+        "original_bottom": 942,
+        "dy": -2
+      },
+      {
+        "source": "f_00006_.png",
+        "original_bottom": 942,
+        "dy": -2
+      },
+      {
+        "source": "f_00007_.png",
+        "original_bottom": 942,
+        "dy": -2
+      },
+      {
+        "source": "f_00008_.png",
+        "original_bottom": 943,
+        "dy": -3
+      },
+      {
+        "source": "f_00009_.png",
+        "original_bottom": 944,
+        "dy": -4
+      },
+      {
+        "source": "f_00010_.png",
+        "original_bottom": 945,
+        "dy": -5
+      },
+      {
+        "source": "f_00011_.png",
+        "original_bottom": 945,
+        "dy": -5
+      },
+      {
+        "source": "f_00012_.png",
+        "original_bottom": 945,
+        "dy": -5
+      },
+      {
+        "source": "f_00013_.png",
+        "original_bottom": 944,
+        "dy": -4
+      },
+      {
+        "source": "f_00014_.png",
+        "original_bottom": 943,
+        "dy": -3
+      },
+      {
+        "source": "f_00015_.png",
+        "original_bottom": 942,
+        "dy": -2
+      },
+      {
+        "source": "f_00016_.png",
+        "original_bottom": 941,
+        "dy": -1
+      },
+      {
+        "source": "f_00017_.png",
+        "original_bottom": 942,
+        "dy": -2
+      },
+      {
+        "source": "f_00018_.png",
+        "original_bottom": 942,
+        "dy": -2
+      },
+      {
+        "source": "f_00019_.png",
+        "original_bottom": 942,
+        "dy": -2
+      },
+      {
+        "source": "f_00020_.png",
+        "original_bottom": 942,
+        "dy": -2
+      },
+      {
+        "source": "f_00021_.png",
+        "original_bottom": 942,
+        "dy": -2
+      },
+      {
+        "source": "f_00022_.png",
+        "original_bottom": 942,
+        "dy": -2
+      },
+      {
+        "source": "f_00023_.png",
+        "original_bottom": 943,
+        "dy": -3
+      },
+      {
+        "source": "f_00024_.png",
+        "original_bottom": 943,
+        "dy": -3
+      },
+      {
+        "source": "f_00025_.png",
+        "original_bottom": 944,
+        "dy": -4
+      },
+      {
+        "source": "f_00026_.png",
+        "original_bottom": 945,
+        "dy": -5
+      },
+      {
+        "source": "f_00027_.png",
+        "original_bottom": 945,
+        "dy": -5
+      },
+      {
+        "source": "f_00028_.png",
+        "original_bottom": 945,
+        "dy": -5
+      },
+      {
+        "source": "f_00029_.png",
+        "original_bottom": 945,
+        "dy": -5
+      },
+      {
+        "source": "f_00030_.png",
+        "original_bottom": 945,
+        "dy": -5
+      },
+      {
+        "source": "f_00031_.png",
+        "original_bottom": 945,
+        "dy": -5
+      },
+      {
+        "source": "f_00032_.png",
+        "original_bottom": 945,
+        "dy": -5
+      },
+      {
+        "source": "f_00033_.png",
+        "original_bottom": 944,
+        "dy": -4
+      },
+      {
+        "source": "f_00034_.png",
+        "original_bottom": 944,
+        "dy": -4
+      },
+      {
+        "source": "f_00035_.png",
+        "original_bottom": 943,
+        "dy": -3
+      },
+      {
+        "source": "f_00036_.png",
+        "original_bottom": 942,
+        "dy": -2
+      },
+      {
+        "source": "f_00037_.png",
+        "original_bottom": 942,
+        "dy": -2
+      },
+      {
+        "source": "f_00038_.png",
+        "original_bottom": 942,
+        "dy": -2
+      }
+    ]
+  }
+}

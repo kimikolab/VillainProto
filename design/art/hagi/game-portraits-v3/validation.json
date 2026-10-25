@@ -1,0 +1,14 @@
+{
+  "file": "hagi-standing-v3.png",
+  "size": [
+    1024,
+    1536
+  ],
+  "mode": "RGBA",
+  "alpha_range": [
+    0,
+    254
+  ],
+  "fully_transparent_pixels": 959485,
+  "game_applied": false
+}

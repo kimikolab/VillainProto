@@ -1,0 +1,236 @@
+{
+  "status": "adopted-and-installed",
+  "tag": "hagi_body_v2_s3033_final",
+  "fps": 16,
+  "crossfade_frames": 6,
+  "bottom_range": [
+    940,
+    940
+  ],
+  "maximum_border_pixels": 0,
+  "geometry_postprocessing": false,
+  "still": "DemoApp\\assets\\portraits\\battle\\hagi_idle_right.png",
+  "still_sha256": "e357d00a20270443a334f1fce1a23400bc3b1cea13a0593f13a848586152ba46",
+  "prompt": {
+    "still": "DemoApp/assets/portraits/battle/hagi_idle_right.png",
+    "pronoun": "she",
+    "char": "The agile young adult female reaper Hagi is SILENTLY waiting in a fighting game guard stance, facing right at the same three-quarter angle. Her body actively bobs through the knees; she is not a still mannequin with moving clothes. Her original confident half-smile stays unchanged: lips and jaw keep exactly the same shape and the same small opening throughout, no speech or mouth animation. She has a short charcoal-black bob and a thin crimson side braid. Preserve the exact black, muted crimson, gray and gold costume, opaque short skirt with long asymmetric cloth tails, one black thigh-high stocking and black gold-trimmed boots. BOTH hands keep firmly closed around ONE straight black scythe shaft in front of her: lower hand at screen left beside her hip, upper hand at screen right beside her shoulder, thumbs opposed to curled fingers. The huge clean silver crescent blade remains above and to screen right, with exactly ONE large oval hole in the gold root and three narrow dark engraved grooves. ",
+    "motion": "A clearly visible FULL-BODY springy fighting game idle animation. Repeat two or three distinct rhythmic guard bounces: BOTH knees visibly flex deeper, the PELVIS and WAIST lower by about a palm width, the CHEST, SHOULDERS and HEAD travel downward together with the pelvis, then her legs extend back to the original ready stance and the entire connected body rises again. The highest position is the original stance; each bounce sinks below it, never rising above it. The body movement is unmistakable even if the loose cloth were hidden. Her neck follows her torso and her chin stays level, not nodding. Both soles remain planted in their exact original positions while the knees bend; never translate a stiff whole body or float the feet. Her back stays straight, chest lifted and gaze forward. Both gripping arms and the rigid scythe rise and fall WITH her moving shoulders and pelvis, maintaining the same grip spacing. Keep the same confident half-smile and unchanged lips through every bounce. ",
+    "sway": "Short bob tips, crimson braid, loose sleeve ends and long cloth tails make restrained secondary follow-through AFTER the moving body, then settle on each beat; no independent continuous wind. The torso, pelvis and knees are the primary movement, never only fluttering clothes. The opaque skirt keeps the same length and coverage. Scythe shaft and blade remain perfectly rigid, constant in length and shape with the single large oval hole. Fingers stay firmly wrapped around the shaft. No speaking, no lip sync, no chewing, no mouth opening and closing, no weapon flourish, no attack, no bells, no added chains, no blood, no fire, no smoke, no souls, no particles, no glow.",
+    "neg": "talking, speaking, lip sync, lip movement, mouth opening and closing, chewing, singing, shouting, changing smile, jaw movement, still torso, frozen pelvis, stationary shoulders, mannequin pose, only clothes moving, only hair moving, wind animation, shallow imperceptible breathing, whole image translation, floating feet, deep squatting, jumping, hopping, stepping, foot sliding, widening stance, standing upright, hunched back, slouching, looking down, nodding, turning toward camera, changing grip, open grip, floating hand, sliding hands, detached fingers, extra thumbs, curved shaft, bent pole, split shaft, rubber scythe, flexible blade, independently moving blade, shrinking blade, extra blade holes, two oval holes, red blade, blood, bells, dangling chains, scythe swing, spinning weapon, long hair, ponytail, shortening skirt, exposed underwear, costume recoloring, purple magic",
+    "note": "2026-10-25 待機v1のBをユーザーが選好。ただし『動くのが服だけに見える・体も動かしたい・口パク不要』との修正依頼で未採用。v2は同じ元絵から膝→腰→胴→肩→頭の明瞭な全身の上下を主動作とし、服は二次動作へ抑える。口は元の半笑いの形と開きのまま維持。prefix hagi_body_v2、seed 5055 / 3033で再生成し、身体と口元を動画で比較確認。ゲーム未適用。"
+  },
+  "loop_gif": {
+    "frames": 48,
+    "duration_ms": 3000,
+    "wrap_ratio": 0.35619754582780017,
+    "wrap_pair": [
+      47,
+      0
+    ]
+  },
+  "comparison_gif": {
+    "frames": 48,
+    "duration_ms": 3000,
+    "wrap_ratio": 0.3377481868562161,
+    "wrap_pair": [
+      47,
+      0
+    ]
+  },
+  "frames": [
+    {
+      "file": "B\\frames\\frame_000.png",
+      "sha256": "41e15b70074c3182edaa564c5db050a5ea8ab4ddde14e952a0d837e1983dcbd6"
+    },
+    {
+      "file": "B\\frames\\frame_001.png",
+      "sha256": "4c5e4dae9935ee76877f4be21a06f29c81fde3b1969ecd515359eff619be5ada"
+    },
+    {
+      "file": "B\\frames\\frame_002.png",
+      "sha256": "1cc489a82cbb7708843eadda1a848fdae1efa1e31a8593d52ccb3d949b9753af"
+    },
+    {
+      "file": "B\\frames\\frame_003.png",
+      "sha256": "9eb75b2d83e5407d36c09ee36283b60a3b4f26139d3f689351c09acccd5a8e95"
+    },
+    {
+      "file": "B\\frames\\frame_004.png",
+      "sha256": "80adcc4b7e239e105709a419c2abe0f9a78b813556dd86fd5286fc24b0011352"
+    },
+    {
+      "file": "B\\frames\\frame_005.png",
+      "sha256": "748cc650c48ea93297f386d5517d91a0ea5e342ac9f7d583f7ec3546766df543"
+    },
+    {
+      "file": "B\\frames\\frame_006.png",
+      "sha256": "0a6f3f44cabab0d1a8819fa069e088cec84659b7893ca1fd7eed5a883a793f43"
+    },
+    {
+      "file": "B\\frames\\frame_007.png",
+      "sha256": "f93e4e2c3c6ae4ed88101624ea3b093b88e054efe75d2684bab76dc555cf8921"
+    },
+    {
+      "file": "B\\frames\\frame_008.png",
+      "sha256": "91e59c0232c5c451aae5f3267fc4d0e39e3937d99822a149ffdad982a55ea937"
+    },
+    {
+      "file": "B\\frames\\frame_009.png",
+      "sha256": "11492c4bc6b143349d35ee407af92d20d08bbd678d6aedc35004e26f3857900c"
+    },
+    {
+      "file": "B\\frames\\frame_010.png",
+      "sha256": "5d91bb79c7cd2006d96e410b95c8930f1ce41eddf74b1049d194ddf07be54b48"
+    },
+    {
+      "file": "B\\frames\\frame_011.png",
+      "sha256": "e749a221525923ea7de999a96608ae60552f4a97cbcec2bc0210c730c537bb58"
+    },
+    {
+      "file": "B\\frames\\frame_012.png",
+      "sha256": "4a9dacb733715f01e6809514b93d08eb660de672061cdc42aa0131a7074895c8"
+    },
+    {
+      "file": "B\\frames\\frame_013.png",
+      "sha256": "45975f87a6ea9f628d0487694eaaeb4dc4c94027256b4115aeed86201eea7683"
+    },
+    {
+      "file": "B\\frames\\frame_014.png",
+      "sha256": "d11ac1f1051c9e72054f77447f5985b9b5e1ebfc8104e846ce1cc40690ea88e6"
+    },
+    {
+      "file": "B\\frames\\frame_015.png",
+      "sha256": "f9a4d651496b8d3a75832cd4305ab1b128280b81eb4193ce6b8a7c7a5627e231"
+    },
+    {
+      "file": "B\\frames\\frame_016.png",
+      "sha256": "8eef3d1b11a13e0b2534715a66bd3c5f6c3f691f1e058e22ef2fe57a8ffdd74e"
+    },
+    {
+      "file": "B\\frames\\frame_017.png",
+      "sha256": "c82f9f9447b3014f74c741fc5520d86b752098ae4e3f999fe4d5b52c67003cb7"
+    },
+    {
+      "file": "B\\frames\\frame_018.png",
+      "sha256": "b84a8cd62d275a55f08f342f32d44b1e8350e83c98f94a1dc66d28a40ba27e20"
+    },
+    {
+      "file": "B\\frames\\frame_019.png",
+      "sha256": "7165eeb962d64ab81dfeab6387d629fa11bd0662c5c64f0476b1729658cdb3c7"
+    },
+    {
+      "file": "B\\frames\\frame_020.png",
+      "sha256": "ddba080043538855f95b2369257481998292944d5446f613ec4df7f18f0b8ba9"
+    },
+    {
+      "file": "B\\frames\\frame_021.png",
+      "sha256": "9f3994414b6c3348735377d03658fb5745dafcf5d212dd589bf114f3b71c1a12"
+    },
+    {
+      "file": "B\\frames\\frame_022.png",
+      "sha256": "bbb26862201f1a79f696128c517553a22fb3ca104e6f5482d235f9237826d3a9"
+    },
+    {
+      "file": "B\\frames\\frame_023.png",
+      "sha256": "6ef71c69cfeff0c1c91fc8d1abbf933c4c1bcebc5987be0286c26d0fdc4185e0"
+    },
+    {
+      "file": "B\\frames\\frame_024.png",
+      "sha256": "369ae8ec8610eca3a0aa981872f9ecb9e71cb6e7be25117ca1785a0bdae6d57e"
+    },
+    {
+      "file": "B\\frames\\frame_025.png",
+      "sha256": "a9acdee90677ad59ecb91201be8f63fee0f42b71e1c83d21680e67493e902ca1"
+    },
+    {
+      "file": "B\\frames\\frame_026.png",
+      "sha256": "7a544d3fe002fd69212c47a7b67b183dd5e3e43dc8ddb2fa7a595cd401652bd2"
+    },
+    {
+      "file": "B\\frames\\frame_027.png",
+      "sha256": "9e10948e2104babdf87848abeb50906eeec9942a7716b85a3d8fbf1085529a5d"
+    },
+    {
+      "file": "B\\frames\\frame_028.png",
+      "sha256": "50cc0a17a9b729dc6ea9f4423fa87272d1e93dd7cb066836f478d7480c3c6859"
+    },
+    {
+      "file": "B\\frames\\frame_029.png",
+      "sha256": "2cd3146f59714ce43900158f1526c905b0b889506dd01769791c0257cbce4f1f"
+    },
+    {
+      "file": "B\\frames\\frame_030.png",
+      "sha256": "8e6d086faeb66b0c2dee0c0bc2555d8af08b6c1720aff27fa45b6ad36169b5f0"
+    },
+    {
+      "file": "B\\frames\\frame_031.png",
+      "sha256": "b61c9cdb1e30b9d3dacd8f140b44c539a39c42272c61244dcb5b7574c6d43d9a"
+    },
+    {
+      "file": "B\\frames\\frame_032.png",
+      "sha256": "0409797ef47dae5eade7c8dd1472953a1d8b7379137d5a919afc978e65b1d9d1"
+    },
+    {
+      "file": "B\\frames\\frame_033.png",
+      "sha256": "fac924c4a94910ffd484d4af0e6b8783c9bcb457c7af6726a4a6a3424d55d75a"
+    },
+    {
+      "file": "B\\frames\\frame_034.png",
+      "sha256": "94e7313cae9cf380bce7fa0eea65f89bd55d42d4399326bdc7547b03fdd07c1d"
+    },
+    {
+      "file": "B\\frames\\frame_035.png",
+      "sha256": "686f50394f2f47bb23d7392867f808d89c1fb04344c9ee444606ec11eca202c9"
+    },
+    {
+      "file": "B\\frames\\frame_036.png",
+      "sha256": "f5bc0503c88a30456af2a440ae402bfb224caff653db63082f35698194c744dd"
+    },
+    {
+      "file": "B\\frames\\frame_037.png",
+      "sha256": "88b01b504e455256bcbfde945ccd0fc61968ff88238e745af94fa779d4ece64c"
+    },
+    {
+      "file": "B\\frames\\frame_038.png",
+      "sha256": "e8b64a2f534f4bc4ba566a7260856df35a1adb09e627a233fea92b3ac5f095fb"
+    },
+    {
+      "file": "B\\frames\\frame_039.png",
+      "sha256": "4a2a25d0e3c59ae0df6f3709be0b6dc11f71469f47bb1ee60faa972f53f6f0a4"
+    },
+    {
+      "file": "B\\frames\\frame_040.png",
+      "sha256": "0fdeacd979d7a9e36534335853b3177da32219211d1c968cc7db7ac091be2a7e"
+    },
+    {
+      "file": "B\\frames\\frame_041.png",
+      "sha256": "2e44cc8a7d36515be0c5b0374e160b94197a75f162296cb916d3876fb486e3f3"
+    },
+    {
+      "file": "B\\frames\\frame_042.png",
+      "sha256": "9c09216d52dcb8c382ef5967a4641bdf5f4181f8b8aac9966a3e755f1b721b68"
+    },
+    {
+      "file": "B\\frames\\frame_043.png",
+      "sha256": "08a13b1c0a5a26f1b70245df73a1d517253a2cd8da47cb6974186daaf1cd7899"
+    },
+    {
+      "file": "B\\frames\\frame_044.png",
+      "sha256": "36492b66629ee7feab815a799fea2c2a689561b64eb3542e0347775feb3bbd9a"
+    },
+    {
+      "file": "B\\frames\\frame_045.png",
+      "sha256": "98723cfcc5911ca8de991050037e2ca82fccb24aa5c18eb7037bd7d6ef856d00"
+    },
+    {
+      "file": "B\\frames\\frame_046.png",
+      "sha256": "5073f98641ed1f9b66e18f885ac506d5e0b41973259910b1c2594a5578ad1812"
+    },
+    {
+      "file": "B\\frames\\frame_047.png",
+      "sha256": "9e8d780bab799548661f6149b2b4e73286d8deca2ba4693873ec8208223b40c6"
+    }
+  ],
+  "installed_directory": "DemoApp/assets/portraits/battle/idle_loop/hagi"
+}
