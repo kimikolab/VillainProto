@@ -2,6 +2,8 @@
 
 2026-10-24。ユーザー承認済みの段階別の構えと攻撃構成を、DemoApp本編とFxViewerへ接続する。
 
+他の駒へ応用するときの制作順序と検品の観点は[全身原画から作る攻撃モーションの制作手順](../../../ATTACK_CEL_ANIMATION_GUIDE.md)。
+
 最新の演出は[v14の三連撃・待機絵に合わせた体格と頭の寸法](../proportions-v14/README.md)。
 [4段階の連続比較・30fps](rica-four-stage-flow-comparison-proportions-v14.mp4)。
 二連撃の発光は[v13](../white-slash-v13/README.md)を継続する。
