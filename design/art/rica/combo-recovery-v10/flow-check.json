@@ -1,0 +1,39 @@
+[
+  {
+    "stage": 0,
+    "link_frames": 0,
+    "links": [],
+    "recovery_trail_visible": false,
+    "attacks": 1,
+    "returned": 164
+  },
+  {
+    "stage": 1,
+    "link_frames": 0,
+    "links": [],
+    "recovery_trail_visible": false,
+    "attacks": 1,
+    "returned": 151
+  },
+  {
+    "stage": 2,
+    "link_frames": 10,
+    "links": [
+      "rica_link_rise_return"
+    ],
+    "recovery_trail_visible": false,
+    "attacks": 2,
+    "returned": 143
+  },
+  {
+    "stage": 3,
+    "link_frames": 20,
+    "links": [
+      "rica_link_sweep_descend",
+      "rica_link_thrust_sweep"
+    ],
+    "recovery_trail_visible": false,
+    "attacks": 3,
+    "returned": 107
+  }
+]

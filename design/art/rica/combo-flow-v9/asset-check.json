@@ -1,0 +1,102 @@
+{
+  "clips": [
+    {
+      "key": "rica_shovel",
+      "link": false,
+      "frames": 31,
+      "contact": 15,
+      "min_margin": 117
+    },
+    {
+      "key": "rica_crescent",
+      "link": false,
+      "frames": 44,
+      "contact": 27,
+      "min_margin": 120
+    },
+    {
+      "key": "rica_rise",
+      "link": false,
+      "frames": 13,
+      "contact": 9,
+      "min_margin": 118
+    },
+    {
+      "key": "rica_return",
+      "link": false,
+      "frames": 16,
+      "contact": 8,
+      "min_margin": 121
+    },
+    {
+      "key": "rica_thrust",
+      "link": false,
+      "frames": 12,
+      "contact": 6,
+      "min_margin": 99
+    },
+    {
+      "key": "rica_sweep",
+      "link": false,
+      "frames": 13,
+      "contact": 4,
+      "min_margin": 41
+    },
+    {
+      "key": "rica_descend",
+      "link": false,
+      "frames": 28,
+      "contact": 16,
+      "min_margin": 84
+    },
+    {
+      "key": "rica_link_rise_return",
+      "link": true,
+      "frames": 9,
+      "contact": 8,
+      "min_margin": 123
+    },
+    {
+      "key": "rica_link_thrust_sweep",
+      "link": true,
+      "frames": 9,
+      "contact": 8,
+      "min_margin": 119
+    },
+    {
+      "key": "rica_link_sweep_descend",
+      "link": true,
+      "frames": 9,
+      "contact": 8,
+      "min_margin": 84
+    }
+  ],
+  "handoffs": [
+    {
+      "previous": "rise",
+      "link": "link_rise_return",
+      "next": "return",
+      "matching_whole_cells": true
+    },
+    {
+      "previous": "thrust",
+      "link": "link_thrust_sweep",
+      "next": "sweep",
+      "matching_whole_cells": true
+    },
+    {
+      "previous": "sweep",
+      "link": "link_sweep_descend",
+      "next": "descend",
+      "matching_whole_cells": true
+    }
+  ],
+  "unchanged": [
+    "shovel",
+    "crescent",
+    "all 7 contact indices",
+    "4 approach sources"
+  ],
+  "actual_frames": 157,
+  "link_frames": 27
+}

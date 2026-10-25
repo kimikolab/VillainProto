@@ -1,0 +1,7 @@
+{
+  "mode": "built-in image_gen",
+  "file": "double-c.png",
+  "native_source": "C:/Users/Pon/.codex/generated_images/01a16bc5-e3bf-7170-9b0e-cd60c92ccc3f/exec-c2526278-4a45-4efd-97e4-38e63e3d24c1.png",
+  "prompt": "Use case: precise-object-edit / identity-preserve. Edit this transparent eight-pose Rica atlas with ONLY this correction: add her missing SINGLE silver braid to the final TWO figures, BOTTOM ROW COLUMN3 and BOTTOM ROW COLUMN4. In each, a single braid emerges naturally from behind her ear/back of silver bob and lies over the front of cloak near the chest, as in the character's other poses. It must be one braid total, same silver thickness and small tan tie. Do not add a second braid to anyone.\nKeep every figure's exact full-body pose, face, shovel, weapon orientation, scale, colors and exact position UNCHANGED. Do not enlarge or move those two figures: keep their entire steel spades and boots inside the same generous gaps, without touching each other.\nDo not alter any of the first SIX cels. Same 2x4 layout and transparent RGBA. No text, labels, backdrop, shadows, new limbs, aura, energy or glow.",
+  "selection": "double-b.pngを基準に、double-c.pngの全身セル0・6・7を採用。他のセルは差し替えない。"
+}

@@ -41,9 +41,17 @@ public partial class FxViewer : Control
             Filter();
             await PrepareHighlights();
             if (_smoke) await Smoke();
+            else if (OS.GetCmdlineUserArgs().Contains("--fx-rica-verify")) await VerifyRicaViewer();
+            else if (OS.GetCmdlineUserArgs().Contains("--fx-rica-flow-capture")) await CaptureRicaFlow();
+            else if (OS.GetCmdlineUserArgs().Contains("--fx-rica-idle-capture")) await CaptureRicaViewer(idle: true);
+            else if (OS.GetCmdlineUserArgs().Contains("--fx-rica-capture")) await CaptureRicaViewer();
             else if (OS.GetCmdlineUserArgs().Contains("--fx-generated-capture")) await CaptureGenerated();
             else if (OS.GetCmdlineUserArgs().Contains("--fx-capture")) await CaptureAll();
-            else if (_cues.Count > 0) await LoadCue(_cues[0]);
+            else if (_cues.Count > 0)
+            {
+                string? id = OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--fx-cue="))?["--fx-cue=".Length..];
+                await LoadCue(id is null ? _cues[0] : _cues.First(c => c.Id == id));
+            }
             else _status.Text = "再生できる Cue がありません";
         }
         catch (Exception e) { Report(e); }
@@ -127,7 +135,8 @@ public partial class FxViewer : Control
             _main.ViewerFastPlayback = _smoke;
             _main.ViewerHoldSeconds = cue.HoldSeconds;
             if (cue.Kind == FxCueKind.Scripted)
-                _main.EnterScripted(FxCatalog.GetOpenings(cue.Id, _mirror.ButtonPressed), cue.Events!(), cue.Title, cue.Stage);
+                _main.EnterScripted(FxCatalog.GetOpenings(cue.Id, _mirror.ButtonPressed), cue.Events!(), cue.Title, cue.Stage,
+                    cue.RicaLayers, cue.RicaIdleVariant);
             else _main.EnterViewerLive(GetLive(cue), cue);
             SelectCurrentCue();
         }

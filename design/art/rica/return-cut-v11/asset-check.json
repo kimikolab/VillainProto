@@ -1,0 +1,45 @@
+{
+  "clips": [
+    {
+      "name": "rica_return",
+      "frames": 16,
+      "contact": 8,
+      "min_margin": 108
+    },
+    {
+      "name": "rica_link_rise_return",
+      "frames": 9,
+      "contact": 8,
+      "min_margin": 16
+    }
+  ],
+  "unchanged_clips": [
+    "shovel",
+    "crescent",
+    "rise",
+    "thrust",
+    "sweep",
+    "descend",
+    "link_thrust_sweep",
+    "link_sweep_descend"
+  ],
+  "physical_blade_angles_degrees": [
+    88.40886752183813,
+    88.40886752183813,
+    45.51614190273972,
+    35.18072557650759,
+    35.18072557650759,
+    7.305758599382174,
+    7.305758599382174,
+    7.305758599382174,
+    -19.95380252937665,
+    -26.952177267945082,
+    -39.472503047612975,
+    -39.472503047612975,
+    -52.193493844786715,
+    -52.193493844786715,
+    -52.193493844786715,
+    -52.193493844786715
+  ],
+  "link_handoff_identical": true
+}

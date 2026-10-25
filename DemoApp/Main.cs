@@ -1154,7 +1154,8 @@ public partial class Main : Control
             .Select(u => new PendingOpening(u, u.Slot, u.Hp, u.MaxHp, u.CurrentAttack, u.CurrentPattern))
             .ToList();
 
-        _result = BattleEngine.Run(players, enemies, seed, verbose: true);
+        _death = DeathPresentation.Record(players, enemies, seed, out var deathResult);
+        _result = deathResult;
         _battleOpening = pending.Select(x => new DemoOpening(
             x.Unit.InstanceId,
             x.Unit.TeamId,
@@ -1216,6 +1217,7 @@ public partial class Main : Control
         _field.Visible = false;
         _battleField.Visible = true;
         _battleField.BeginBattle(_battleOpening, title, stageIndex);
+        ApplyViewerRicaStage();
         if (ViewerMode) _battleField.SetSubline("Space：一時停止／再開   1–4：再生速度   Alt／カーソル：詳細   一覧から選択して再生");
         _battleField.SetHushLimits(_result.Events);
         if (_quitAfterPlayback) PrintSeats("start");
@@ -1270,7 +1272,10 @@ public partial class Main : Control
         _beniGiftGains.Clear();
         _playing = true;
         _paused = false;
+        _battleField.SetDeathClock(false, _speed);
         _pause.Text = "一時停止";
+        if (ViewerMode && ViewerLeadInSeconds > 0) await HoldViewerLeadIn(token);
+        if (token != _playToken || !_battleMode) return;
         if (ViewerMode && _result.Events.Count == 0)
             await HoldViewerIdle(token);
         else
@@ -1314,7 +1319,8 @@ public partial class Main : Control
             _zanFastEvent = false;
             foreach (var combo in _comboEnds.Where(pair => _eventIndex >= pair.Value).ToArray())
             {
-                combo.Key.ReturnFromAttack();
+                if (combo.Key.UnitId == "rica") _battleField.FinishComboMotion(combo.Key);
+                else combo.Key.ReturnFromAttack();
                 _comboEnds.Remove(combo.Key);
                 await Delay(0.255);
             }
@@ -1325,6 +1331,9 @@ public partial class Main : Control
 
         if (token != _playToken || !_battleMode) return;
         CompleteViewerSeek();
+        ApplyDeathFrames(_result.Events.Count);
+        await _battleField.FinishRicaMotions();
+        if (token != _playToken || !_battleMode) return;
         _playing = false;
         if (ViewerMode) return;
         _battleField.EndGolmPresentation();
@@ -1422,6 +1431,7 @@ public partial class Main : Control
         BattlePawn3D? target = _battleField.FindPawn(e.TargetId);
         if (actor is not null) actor.AnimationSpeed = Math.Max(0.1, _speed);
         if (target is not null) target.AnimationSpeed = Math.Max(0.1, _speed);
+        if (await PlayDeathAxis(e, eventIndex, actor, target)) return;
         // 第125期 段2: 拍の境目でだけ画面を変える。**ここでは待たない**（間は下の switch の中だけ）。
         ObserveSomEvent(e, eventIndex);
         EnterBeat(eventIndex, e);
@@ -1837,7 +1847,9 @@ public partial class Main : Control
                         (e.Team ?? BattleContext.PlayerTeam) == BattleContext.PlayerTeam ? _playerShape : FormationShape.X);
                     _openingById[summonId] = opening;
                     _battleField.AddSummon(opening);
-                    if (e.ActorId is not null)
+                    if (_battleField.FindPawn(summonId) is { } summoned && summoned.UnitId is "wight" or "spore")
+                        _battleField.ShowDeathSummon(actor, summoned);
+                    else if (e.ActorId is not null)
                         _battleField.Link(actor, _battleField.FindPawn(summonId), UiKit.Violet, "呼んだ");
                 }
                 AppendLog($"  [color=#{UiKit.Violet.ToHtml(false)}]{e.Text ?? "召喚体"} が出現[/color]"
@@ -1853,7 +1865,8 @@ public partial class Main : Control
                     _battleField.MovePawn(target, e.Slot);
                     _battleField.RevivePawn(target);
                     _battleField.SealPawnRevived(target);
-                    if (e.ActorId is not null) _battleField.Link(actor, target, UiKit.Heal, "繋ぎ直した");
+                    if (e.Text == BattleContext.SoulRiseText) _battleField.ShowSoulRise(target);
+                    else if (e.ActorId is not null) _battleField.Link(actor, target, UiKit.Heal, "繋ぎ直した");
                 }
                 AppendLog($"  [color=#{UiKit.Heal.ToHtml(false)}]{NameOf(e.TargetId)} が復帰[/color]"
                           + $"{WriterSuffix(e.ActorId, e.TargetId)}");
@@ -2595,6 +2608,7 @@ public partial class Main : Control
         _battleField.SetGolmClock(_paused, _speed);
         _battleField.SetGatherClock(_paused, _speed);
         _battleField.SetPoisonClock(_paused, _speed);
+        _battleField.SetDeathClock(_paused, _speed);
         _pause.Text = _paused ? "再開" : "一時停止";
         Notice(_paused ? "一時停止中" : "再生中", _paused ? UiKit.Gold : UiKit.Player);
     }
@@ -2608,6 +2622,7 @@ public partial class Main : Control
         _battleField.SetGolmClock(_paused, _speed);
         _battleField.SetGatherClock(_paused, _speed);
         _battleField.SetPoisonClock(_paused, _speed);
+        _battleField.SetDeathClock(_paused, _speed);
         _speedPicker.Selected = index;
         Notice($"再生速度 ×{_speed:0.#}", UiKit.Player);
     }
@@ -2626,6 +2641,7 @@ public partial class Main : Control
         _battleLog.Clear();
         SetBattleLogVisible(false);
         _battleField.BeginBattle(_battleOpening, _battleTitle, _battleStageIndex);
+        ApplyViewerRicaStage();
         if (ViewerMode) _battleField.SetSubline("Space：一時停止／再開   1–4：再生速度   Alt／カーソル：詳細   一覧から選択して再生");
         _battleField.SetHushLimits(_result.Events);
         _battleMusic.PlayWave(_battleStageIndex);

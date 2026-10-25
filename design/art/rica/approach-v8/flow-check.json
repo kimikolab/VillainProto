@@ -1,0 +1,30 @@
+[
+  {
+    "stage": 0,
+    "approach_frames": 10,
+    "first": 85,
+    "last": 94,
+    "returned": 164
+  },
+  {
+    "stage": 1,
+    "approach_frames": 10,
+    "first": 85,
+    "last": 94,
+    "returned": 151
+  },
+  {
+    "stage": 2,
+    "approach_frames": 10,
+    "first": 85,
+    "last": 94,
+    "returned": 143
+  },
+  {
+    "stage": 3,
+    "approach_frames": 10,
+    "first": 85,
+    "last": 94,
+    "returned": 107
+  }
+]

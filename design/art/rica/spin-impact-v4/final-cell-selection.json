@@ -1,0 +1,21 @@
+{
+  "mode": "built-in image_gen",
+  "sourceSheet": "spin-sheet.png",
+  "wholeCellOverride": {
+    "cell": 4,
+    "source": "spin-sheet-c.png",
+    "rect": [
+      0,
+      460,
+      460,
+      427
+    ],
+    "reason": "Keep the single streaming braid in the left-facing whole-body pose."
+  },
+  "selectedAtlas": "spin-sheet-selected.png",
+  "thirdPass": {
+    "source": "C:/Users/Pon/.codex/generated_images/01a16bc5-e3bf-7170-9b0e-cd60c92ccc3f/exec-11b51462-7a00-4be6-aa62-fe7e9e111a9c.png",
+    "prompt": "Use case: precise-object-edit. Edit target is this exact eight-pose transparent sprite sheet. Make a tiny identity correction ONLY to figure FIVE, bottom-left. She currently has two braids: a short vertical braid on the front of her chest AND a long horizontal braid trailing behind her head toward screen right. Remove ONLY the short vertical chest braid. Keep ONLY the single long braid streaming behind toward screen right. Restore the dark teal collar and apron beneath the removed chest braid naturally. Keep her LEFT-FACING face, nose, ears, whole body, shovel, hands, arms, feet and leftward shovel direction unchanged. All other seven figures must remain exactly unchanged. Preserve sheet size, 2x4 layout, all positions, sizes, colors, true alpha transparency and crisp rendering. No additional effects, text, shadows or background."
+  },
+  "notes": "Seven complete cels from the second pass, one complete cel from the third pass. Selected by the Godot cel exporter without repainting or body-part compositing."
+}

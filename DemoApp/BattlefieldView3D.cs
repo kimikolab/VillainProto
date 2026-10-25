@@ -90,7 +90,7 @@ public partial class BattlefieldView3D : Control
         BuildOverlay();
         _attackAudio = new BattleAttackAudio();
         AddChild(_attackAudio);
-        VisibilityChanged += () => { if (!IsVisibleInTree()) { _attackAudio.StopAll(); ResetLiliRite(); ResetFire(); EndShockMarkPresentation(); EndGolmPresentation(); ResetGaldSwordPresentation(); ResetPoisonPresentation(); } };
+        VisibilityChanged += () => { if (!IsVisibleInTree()) { _attackAudio.StopAll(); ResetLiliRite(); ResetFire(); EndShockMarkPresentation(); EndGolmPresentation(); ResetGaldSwordPresentation(); ResetPoisonPresentation(); ResetDeathPresentation(); } };
     }
 
     private void BuildWorld()
@@ -290,6 +290,7 @@ public partial class BattlefieldView3D : Control
     public void BeginBattle(IReadOnlyList<DemoOpening> openings, string stageName, int stageIndex)
     {
         ResetPoisonPresentation();
+        ResetDeathPresentation();
         ResetGatherPresentation();
         ResetGolmPresentation();
         ResetFire();
@@ -354,6 +355,7 @@ public partial class BattlefieldView3D : Control
             pawn.Configure(opening, _atlas);
             pawn.SetHome(PawnPosition(opening.Team, opening.Slot));
             _actorRoot.AddChild(pawn);
+            pawn.EnsureRicaMotion(_camera, () => (_deathPaused, _deathSpeed));
             if (pawn.MisaFeathers is { } feathers)
             {
                 Vector3 left = PawnPosition(0, 3), right = PawnPosition(1, 4);
@@ -634,9 +636,14 @@ public partial class BattlefieldView3D : Control
 
         // Advances は表示専用。踏み込む駒だけが標的の手前まで移動し、
         // 到着後に攻撃エフェクトを出してから元の席へ戻る。
-        if (from.UnitId == "vio") { if (!await from.PoisonPounce(to.RestPosition)) return; }
+        if (from.UnitId == "rica" && from.AttackClipPlaying) await from.AttackClipFinished;
+        if (attackGeneration != _specialGeneration || !IsInstanceValid(from) || !from.DeathActive && from.UnitId == "rica") return;
+        if (from.UnitId=="rica")
+        { if(!await from.PounceRicaTo(to.RestPosition,advance||reaction,link=>RicaLinksPlayed.Add(link)))return; }
+        else if(from.UnitId=="vio") { if(!await from.PoisonPounce(to.RestPosition))return; }
         else if (advance && from.UnitId is not ("sero" or "shiga")) await from.AdvanceToAttack(to.RestPosition);
-        if (attackGeneration != _specialGeneration || !IsInstanceValid(from) || !IsInstanceValid(to)) return;
+        if (attackGeneration != _specialGeneration || !IsInstanceValid(from) || !IsInstanceValid(to))
+        { if(IsInstanceValid(from))from.EndRicaApproach(); return; }
         if (holdPosition) from.HoldComboPosition();
         if (from.UnitId == "tou") BeginPowderAttack(from);
         if (from.UnitId == "shiga") from.ShowMovementPortrait("shiga_interrupt", 1.1);
@@ -669,6 +676,7 @@ public partial class BattlefieldView3D : Control
             if (!await PlayGaldSwordClipToContact(from) || attackGeneration != _specialGeneration
                 || !IsInstanceValid(to) || !to.IsInsideTree()) return;
         }
+        if (from.UnitId == "rica" && !await PlayRicaClipToContact(from, advance || reaction, attackGeneration, holdPosition)) return;
         bool charged = !reaction && from.IsCharging;
         bool hushSlap = from.UnitId == "husher" && from.HushShattered;
         if (!reaction) from.ReleaseCharge();
@@ -676,7 +684,8 @@ public partial class BattlefieldView3D : Control
         bool stagedThrust = thrustCharge is not null && pattern == AttackPattern.Pierce && shieldImpact is null;
         if (!stagedThrust)
         {
-            if (thrustCharge is int soundCharge) _attackAudio.PlayThrust(from.UnitId, from.Team, soundCharge);
+            if (from.UnitId == "rica" && from.GraveStage == 0) _attackAudio.PlayRicaShovelHit();
+            else if (thrustCharge is int soundCharge) _attackAudio.PlayThrust(from.UnitId, from.Team, soundCharge);
             else if (!hushSlap && from.UnitId != "tou" && !(from.UnitId == "shiga" && (from.HasShockAura || from.InterruptWhip))
                 && (movementCue?.Kind != BattleEventKind.Blast || shieldImpact is not null))
                 _attackAudio.PlayAttack(from.UnitId, from.Team, pattern, reaction, charged,
@@ -689,6 +698,7 @@ public partial class BattlefieldView3D : Control
         if (shieldImpact is not null) await shieldImpact();
         else if (hushSlap) await ShowHushSlap(from, hits);
         else if (from.UnitId == "rau") ShowRauContact(from, hits);
+        else if (from.UnitId == "rica") ShowGraveSlash(from, hits);
         else if (from.UnitId == "yomi") { } // 居合の剣閃は上で1回だけ出す。
         else if (thrustCharge is int stacks && pattern == AttackPattern.Pierce)
             await ShowThrust(from, hits, stacks, thrustImpact);

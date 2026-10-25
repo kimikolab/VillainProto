@@ -255,6 +255,8 @@ public partial class BattleAttackAudio : Node
         PlayVariation(change > 0 ? AttackUp : AttackDown);
     }
     public void PlayKadoHit() => PlayVariation(KadoHit);
+    // シャベルの鋼部で殴る一打。接触コマで一度だけ金属叩きの素材を鳴らす。
+    internal void PlayRicaShovelHit() => PlayVariation(KadoHit,2);
     public void PlayHeal(string? sourceUnitId, bool selfHeal)
     {
         bool dedicatedHealer = !selfHeal && sourceUnitId is

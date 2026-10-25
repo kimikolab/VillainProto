@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 public partial class BattlePawn3D
 {
     internal sealed record AttackClip(Texture2D[] Frames, double Fps, int Contact, Vector2 Anchor, Vector2 IdleAnchor, float Scale,
-        float[] Forward, string? ReferencePortrait);
+        float[] Forward, string? ReferencePortrait, float[] Vertical);
 
     private static readonly Dictionary<string, AttackClip?> AttackClipCache = new(StringComparer.Ordinal);
     private static bool _animationCacheHooked, _animationCacheClosing;
@@ -25,9 +25,11 @@ public partial class BattlePawn3D
             // ImageTextureをCLRの終了処理まで残すと、RenderingServer破棄後に解放される。
             _animationCacheClosing = true;
             var textures = AttackClipCache.Values.Where(c => c is not null).SelectMany(c => c!.Frames)
-                .Concat(IdleLoopCache.Values.SelectMany(f => f)).Distinct().ToArray();
+                .Concat(IdleLoopCache.Values.SelectMany(f => f))
+                .Concat(RicaApproaches.Values.Where(p=>p is not null).Select(p=>p!.Texture)).Distinct().ToArray();
             AttackClipCache.Clear();
             IdleLoopCache.Clear();
+            RicaApproaches.Clear();
             foreach (var texture in textures)
                 if (IsInstanceValid(texture)) texture.Dispose();
         };
@@ -45,6 +47,7 @@ public partial class BattlePawn3D
     internal bool CanPlayAttackClip => _alive && !_victory;
     internal Task AttackClipFinished => _attackClipDone?.Task ?? Task.CompletedTask;
     internal float AttackClipForward { get; private set; }
+    internal float AttackClipVertical { get; private set; }
     internal int AttackClipFrame => _attackClipFrame;
 
     internal static AttackClip? AttackClipOf(string name)
@@ -66,10 +69,12 @@ public partial class BattlePawn3D
                 .ToArray();
             float[] forward = root.TryGetProperty("forward", out var fw)
                 ? fw.EnumerateArray().Select(v => v.GetSingle()).ToArray() : new float[frames.Length];
+            float[] vertical = root.TryGetProperty("vertical", out var vy)
+                ? vy.EnumerateArray().Select(v => v.GetSingle()).ToArray() : new float[frames.Length];
             if (frames.Length > 0)
                 clip = new AttackClip(frames, root.GetProperty("fps").GetDouble(), root.GetProperty("contact").GetInt32(),
                     Vec("anchor"), Vec("idleAnchor"), root.GetProperty("scale").GetSingle(), forward,
-                    root.TryGetProperty("referencePortrait", out var reference) ? reference.GetString() : null);
+                    root.TryGetProperty("referencePortrait", out var reference) ? reference.GetString() : null, vertical);
         }
         AttackClipCache[name] = clip;
         return clip;
@@ -103,6 +108,7 @@ public partial class BattlePawn3D
 
     internal void ProcessAttackClip(double delta)
     {
+        if (_unitId == "rica" && _ricaMotionPaused) return;
         if (_attackClip is null) return;
         if (_victory || !_alive) { FinishAttackClip(restore: !_victory); return; }
         _attackClipTime += delta * Math.Max(0.1, AnimationSpeed);
@@ -114,14 +120,15 @@ public partial class BattlePawn3D
         AttackClip clip = _attackClip!;
         int frame = (int)(_attackClipTime * clip.Fps);
         int last = clip.Frames.Length - 1;
+        bool completed = false;
         float forward;
         if (frame > last)
         {
             double after = _attackClipTime - clip.Frames.Length / clip.Fps;
-            if (after >= _attackClipHold) { FinishAttackClip(restore: true); return; }
+            completed = after >= _attackClipHold;
             frame = last;
             // 振り切った姿勢のまま、踏み込んだ位置から元の位置へ戻る。
-            float t = (float)(after / Math.Max(0.001, _attackClipHold));
+            float t = Math.Clamp((float)(after / Math.Max(0.001, _attackClipHold)),0,1);
             forward = Forward(clip, last) * (1 - t * t * (3 - 2 * t));
         }
         else forward = Forward(clip, frame);
@@ -145,28 +152,34 @@ public partial class BattlePawn3D
         _portraitBaseY = PortraitGroundY + _portraitGroundDistance;
         // 開始したフレームから足元を合わせる。次の親_Processを待つと一瞬だけ待機絵の中心位置が残る。
         _sprite.Position = new Vector3(_portraitOffsetX, _portraitBaseY, 0);
+        AttackClipVertical = frame < clip.Vertical.Length ? clip.Vertical[frame] : 0;
+        _sprite.Position += Vector3.Up * AttackClipVertical;
         if (_sprite.Texture != texture)
         {
             _sprite.Texture = texture;
             _portraitMaterial.SetShaderParameter("portrait_texture", texture);
         }
         _sprite.PixelSize = clipPixel;
+        // 倍速や描画負荷で最終コマを飛び越しても、保持する絵・武器・高さを最後の姿勢へ揃える。
+        if (completed) FinishAttackClip(restore: true, completed: true);
     }
 
     private static float Forward(AttackClip clip, int frame) => frame < clip.Forward.Length ? clip.Forward[frame] : 0;
 
-    private void FinishAttackClip(bool restore)
+    private void FinishAttackClip(bool restore, bool completed = false)
     {
         if (_attackClip is null) return;
         TaskCompletionSource? done = _attackClipDone;
         Action? contact = _attackClipContact;
+        bool heldRica = HoldRicaLastFrame(restore && completed);
         _attackClip = null;
         _attackClipFrame = -1;
         AttackClipForward = 0;
+        if (!heldRica) AttackClipVertical = 0;
         _attackClipContact = null;
         _attackClipDone = null;
         contact?.Invoke(); // 当たる前に途切れても、待っている側を止めない
-        if (restore) RefreshBattlePortrait(); // 待機ループもここで再開する
+        if (restore && !heldRica) RefreshBattlePortrait(); // 連撃のリィカは振り切りを次の一打まで保持する。
         done?.TrySetResult();
     }
 }

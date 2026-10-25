@@ -1,0 +1,721 @@
+{
+  "version": 1,
+  "kind": "animation_source_keys",
+  "notFrameSequence": true,
+  "referenceHeight": 2.1,
+  "coordinates": "正規化UV（左上0,0・右下1,1）。静止画で目視した基準点。動画化後は各フレームで追跡する。",
+  "sourceSizes": {
+    "idle": [
+      1024,
+      1536
+    ],
+    "action": [
+      1254,
+      1254
+    ]
+  },
+  "stages": [
+    {
+      "stage": 0,
+      "layers": [
+        0,
+        2
+      ],
+      "name": "通常",
+      "color": "#c7edff",
+      "bodyStrength": 0,
+      "weaponShape": "none",
+      "length": 1,
+      "width": 1,
+      "sequence": [
+        "idle",
+        "windup",
+        "hit",
+        "finish"
+      ]
+    },
+    {
+      "stage": 1,
+      "layers": [
+        3,
+        5
+      ],
+      "name": "霊刃",
+      "color": "#b7e8ff",
+      "bodyStrength": 0.65,
+      "weaponShape": "crescent",
+      "length": 1.65,
+      "width": 0.95,
+      "sequence": [
+        "idle",
+        "windup",
+        "hit",
+        "finish"
+      ]
+    },
+    {
+      "stage": 2,
+      "layers": [
+        6,
+        8
+      ],
+      "name": "大剣",
+      "color": "#9294ff",
+      "bodyStrength": 1.05,
+      "weaponShape": "greatsword",
+      "length": 3.4,
+      "width": 1,
+      "sequence": [
+        "idle",
+        "windup",
+        "rise",
+        "return",
+        "finish"
+      ]
+    },
+    {
+      "stage": 3,
+      "layers": [
+        9,
+        null
+      ],
+      "name": "覚醒",
+      "color": "#a05bf3",
+      "bodyStrength": 1.55,
+      "weaponShape": "lance",
+      "length": 4.2,
+      "width": 0.65,
+      "sequence": [
+        "idle",
+        "windup",
+        "thrust",
+        "sweep",
+        "air_raise",
+        "descend",
+        "land"
+      ]
+    }
+  ],
+  "poses": [
+    {
+      "stage": 0,
+      "key": "idle",
+      "role": "idle",
+      "file": "stage0/idle.png",
+      "weaponSocket": [
+        0.77,
+        0.64
+      ],
+      "weaponTip": [
+        0.99,
+        0.77
+      ],
+      "rearHand": [
+        0.3,
+        0.35
+      ],
+      "frontHand": [
+        0.62,
+        0.53
+      ],
+      "groundAnchor": [
+        0.5,
+        0.965
+      ],
+      "eyeAnchor": [
+        0.57,
+        0.16
+      ],
+      "weaponShape": "none"
+    },
+    {
+      "stage": 0,
+      "key": "windup",
+      "role": "anticipation",
+      "file": "stage0/windup.png",
+      "weaponSocket": [
+        0.78,
+        0.27
+      ],
+      "weaponTip": [
+        0.94,
+        0.4
+      ],
+      "rearHand": [
+        0.46,
+        0.18
+      ],
+      "frontHand": [
+        0.45,
+        0.37
+      ],
+      "groundAnchor": [
+        0.53,
+        0.955
+      ],
+      "eyeAnchor": [
+        0.65,
+        0.24
+      ],
+      "weaponShape": "none"
+    },
+    {
+      "stage": 0,
+      "key": "hit",
+      "role": "contact",
+      "file": "stage0/hit.png",
+      "weaponSocket": [
+        0.79,
+        0.69
+      ],
+      "weaponTip": [
+        0.97,
+        0.82
+      ],
+      "rearHand": [
+        0.43,
+        0.4
+      ],
+      "frontHand": [
+        0.72,
+        0.64
+      ],
+      "groundAnchor": [
+        0.5,
+        0.93
+      ],
+      "eyeAnchor": [
+        0.64,
+        0.2
+      ],
+      "weaponShape": "none"
+    },
+    {
+      "stage": 0,
+      "key": "finish",
+      "role": "recovery",
+      "file": "stage0/finish.png",
+      "weaponSocket": [
+        0.79,
+        0.73
+      ],
+      "weaponTip": [
+        0.97,
+        0.88
+      ],
+      "rearHand": [
+        0.41,
+        0.4
+      ],
+      "frontHand": [
+        0.72,
+        0.65
+      ],
+      "groundAnchor": [
+        0.5,
+        0.945
+      ],
+      "eyeAnchor": [
+        0.65,
+        0.2
+      ],
+      "weaponShape": "none"
+    },
+    {
+      "stage": 1,
+      "key": "idle",
+      "role": "idle",
+      "file": "stage1/idle.png",
+      "weaponSocket": [
+        0.76,
+        0.47
+      ],
+      "weaponTip": [
+        0.995,
+        0.505
+      ],
+      "rearHand": [
+        0.175,
+        0.405
+      ],
+      "frontHand": [
+        0.635,
+        0.455
+      ],
+      "groundAnchor": [
+        0.51,
+        0.88
+      ],
+      "eyeAnchor": [
+        0.64,
+        0.23
+      ],
+      "weaponShape": "crescent"
+    },
+    {
+      "stage": 1,
+      "key": "windup",
+      "role": "anticipation",
+      "file": "stage1/windup.png",
+      "weaponSocket": [
+        0.24,
+        0.375
+      ],
+      "weaponTip": [
+        0.03,
+        0.375
+      ],
+      "rearHand": [
+        0.66,
+        0.4
+      ],
+      "frontHand": [
+        0.55,
+        0.405
+      ],
+      "groundAnchor": [
+        0.52,
+        0.925
+      ],
+      "eyeAnchor": [
+        0.69,
+        0.23
+      ],
+      "weaponShape": "crescent"
+    },
+    {
+      "stage": 1,
+      "key": "hit",
+      "role": "contact",
+      "file": "stage1/hit.png",
+      "weaponSocket": [
+        0.8,
+        0.46
+      ],
+      "weaponTip": [
+        0.995,
+        0.516
+      ],
+      "rearHand": [
+        0.33,
+        0.34
+      ],
+      "frontHand": [
+        0.68,
+        0.43
+      ],
+      "groundAnchor": [
+        0.51,
+        0.94
+      ],
+      "eyeAnchor": [
+        0.59,
+        0.18
+      ],
+      "weaponShape": "crescent"
+    },
+    {
+      "stage": 1,
+      "key": "finish",
+      "role": "recovery",
+      "file": "stage1/finish.png",
+      "weaponSocket": [
+        0.78,
+        0.42
+      ],
+      "weaponTip": [
+        0.97,
+        0.47
+      ],
+      "rearHand": [
+        0.37,
+        0.34
+      ],
+      "frontHand": [
+        0.66,
+        0.405
+      ],
+      "groundAnchor": [
+        0.51,
+        0.93
+      ],
+      "eyeAnchor": [
+        0.63,
+        0.2
+      ],
+      "weaponShape": "crescent"
+    },
+    {
+      "stage": 2,
+      "key": "idle",
+      "role": "idle",
+      "file": "stage2/idle.png",
+      "weaponSocket": [
+        0.7,
+        0.13
+      ],
+      "weaponTip": [
+        0.95,
+        0.014
+      ],
+      "rearHand": [
+        0.35,
+        0.28
+      ],
+      "frontHand": [
+        0.425,
+        0.25
+      ],
+      "groundAnchor": [
+        0.51,
+        0.98
+      ],
+      "eyeAnchor": [
+        0.64,
+        0.233
+      ],
+      "weaponShape": "greatsword"
+    },
+    {
+      "stage": 2,
+      "key": "windup",
+      "role": "anticipation",
+      "file": "stage2/windup.png",
+      "weaponSocket": [
+        0.25,
+        0.73
+      ],
+      "weaponTip": [
+        0.04,
+        0.85
+      ],
+      "rearHand": [
+        0.76,
+        0.37
+      ],
+      "frontHand": [
+        0.61,
+        0.53
+      ],
+      "groundAnchor": [
+        0.53,
+        0.95
+      ],
+      "eyeAnchor": [
+        0.65,
+        0.21
+      ],
+      "weaponShape": "greatsword"
+    },
+    {
+      "stage": 2,
+      "key": "rise",
+      "role": "contact_1",
+      "file": "stage2/rise.png",
+      "weaponSocket": [
+        0.826,
+        0.14
+      ],
+      "weaponTip": [
+        0.984,
+        0.012
+      ],
+      "rearHand": [
+        0.66,
+        0.265
+      ],
+      "frontHand": [
+        0.72,
+        0.215
+      ],
+      "groundAnchor": [
+        0.52,
+        0.985
+      ],
+      "eyeAnchor": [
+        0.515,
+        0.3
+      ],
+      "weaponShape": "greatsword"
+    },
+    {
+      "stage": 2,
+      "key": "return",
+      "role": "contact_2",
+      "file": "stage2/return.png",
+      "weaponSocket": [
+        0.79,
+        0.68
+      ],
+      "weaponTip": [
+        0.98,
+        0.82
+      ],
+      "rearHand": [
+        0.42,
+        0.4
+      ],
+      "frontHand": [
+        0.72,
+        0.61
+      ],
+      "groundAnchor": [
+        0.51,
+        0.92
+      ],
+      "eyeAnchor": [
+        0.64,
+        0.2
+      ],
+      "weaponShape": "greatsword"
+    },
+    {
+      "stage": 2,
+      "key": "finish",
+      "role": "recovery",
+      "file": "stage2/finish.png",
+      "weaponSocket": [
+        0.78,
+        0.68
+      ],
+      "weaponTip": [
+        0.97,
+        0.82
+      ],
+      "rearHand": [
+        0.34,
+        0.41
+      ],
+      "frontHand": [
+        0.68,
+        0.6
+      ],
+      "groundAnchor": [
+        0.51,
+        0.94
+      ],
+      "eyeAnchor": [
+        0.61,
+        0.16
+      ],
+      "weaponShape": "greatsword"
+    },
+    {
+      "stage": 3,
+      "key": "idle",
+      "role": "idle",
+      "file": "stage3/idle.png",
+      "weaponSocket": [
+        0.34,
+        0.19
+      ],
+      "weaponTip": [
+        0.277,
+        0.006
+      ],
+      "rearHand": [
+        0.375,
+        0.265
+      ],
+      "frontHand": [
+        0.44,
+        0.43
+      ],
+      "groundAnchor": [
+        0.61,
+        0.98
+      ],
+      "eyeAnchor": [
+        0.56,
+        0.16
+      ],
+      "weaponShape": "lance"
+    },
+    {
+      "stage": 3,
+      "key": "windup",
+      "role": "anticipation",
+      "file": "stage3/windup.png",
+      "weaponSocket": [
+        0.76,
+        0.44
+      ],
+      "weaponTip": [
+        0.985,
+        0.5
+      ],
+      "rearHand": [
+        0.38,
+        0.4
+      ],
+      "frontHand": [
+        0.66,
+        0.435
+      ],
+      "groundAnchor": [
+        0.52,
+        0.86
+      ],
+      "eyeAnchor": [
+        0.63,
+        0.31
+      ],
+      "weaponShape": "lance"
+    },
+    {
+      "stage": 3,
+      "key": "thrust",
+      "role": "contact_1",
+      "file": "stage3/thrust.png",
+      "weaponSocket": [
+        0.8,
+        0.49
+      ],
+      "weaponTip": [
+        0.99,
+        0.55
+      ],
+      "rearHand": [
+        0.34,
+        0.415
+      ],
+      "frontHand": [
+        0.76,
+        0.49
+      ],
+      "groundAnchor": [
+        0.52,
+        0.88
+      ],
+      "eyeAnchor": [
+        0.64,
+        0.31
+      ],
+      "weaponShape": "lance"
+    },
+    {
+      "stage": 3,
+      "key": "sweep",
+      "role": "contact_2",
+      "file": "stage3/sweep.png",
+      "weaponSocket": [
+        0.77,
+        0.37
+      ],
+      "weaponTip": [
+        0.96,
+        0.55
+      ],
+      "rearHand": [
+        0.43,
+        0.285
+      ],
+      "frontHand": [
+        0.695,
+        0.37
+      ],
+      "groundAnchor": [
+        0.57,
+        0.96
+      ],
+      "eyeAnchor": [
+        0.655,
+        0.18
+      ],
+      "weaponShape": "greatsword"
+    },
+    {
+      "stage": 3,
+      "key": "air_raise",
+      "role": "anticipation_3",
+      "file": "stage3/air_raise.png",
+      "weaponSocket": [
+        0.8,
+        0.27
+      ],
+      "weaponTip": [
+        0.985,
+        0.36
+      ],
+      "rearHand": [
+        0.46,
+        0.08
+      ],
+      "frontHand": [
+        0.72,
+        0.185
+      ],
+      "groundAnchor": [
+        0.61,
+        0.98
+      ],
+      "eyeAnchor": [
+        0.61,
+        0.28
+      ],
+      "weaponShape": "greatsword"
+    },
+    {
+      "stage": 3,
+      "key": "descend",
+      "role": "contact_3",
+      "file": "stage3/descend.png",
+      "weaponSocket": [
+        0.77,
+        0.77
+      ],
+      "weaponTip": [
+        0.95,
+        0.93
+      ],
+      "rearHand": [
+        0.38,
+        0.1
+      ],
+      "frontHand": [
+        0.64,
+        0.56
+      ],
+      "groundAnchor": [
+        0.52,
+        0.975
+      ],
+      "eyeAnchor": [
+        0.6,
+        0.25
+      ],
+      "weaponShape": "greatsword"
+    },
+    {
+      "stage": 3,
+      "key": "land",
+      "role": "recovery",
+      "file": "stage3/land.png",
+      "weaponSocket": [
+        0.79,
+        0.71
+      ],
+      "weaponTip": [
+        0.96,
+        0.81
+      ],
+      "rearHand": [
+        0.41,
+        0.44
+      ],
+      "frontHand": [
+        0.68,
+        0.61
+      ],
+      "groundAnchor": [
+        0.53,
+        0.88
+      ],
+      "eyeAnchor": [
+        0.63,
+        0.28
+      ],
+      "weaponShape": "greatsword"
+    }
+  ]
+}

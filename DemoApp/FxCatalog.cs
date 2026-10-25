@@ -16,23 +16,27 @@ public sealed record FxCue(
     Func<DemoOpening[]>? Openings = null, Func<BattleEvent[]>? Events = null,
     string? PresetName = null, int Stage = 0, int Seed = 0,
     Func<BattleEvent, bool>? Highlight = null,
-    FxUnit? Subject = null, Func<Formation>? BuildFormation = null, double HoldSeconds = 0)
+    FxUnit? Subject = null, Func<Formation>? BuildFormation = null, double HoldSeconds = 0,
+    int? RicaLayers = null, string? RicaIdleVariant = null)
 {
     public bool Generated => Subject is not null;
 }
 
 public static partial class FxCatalog
 {
-    public static IReadOnlyList<FxCue> Registered { get; } = Array.AsReadOnly(new[]
+    public static IReadOnlyList<FxCue> Registered { get; } = Array.AsReadOnly(new FxCue?[]
     {
         Thunder(), Storm(), Poison(), Swallow(), Dropkick(),
+        RicaMotion(0, false), RicaMotion(1, false), RicaMotion(2, false), RicaMotion(3, false),
+        RicaMotion(0, true), RicaMotion(1, true), RicaMotion(2, true), RicaMotion(3, true),
+        RicaIdleAlternative(1), RicaIdleAlternative(2), RicaIdleAlternative(3),
         new FxCue("live.thunder", "感電 雷の型（実戦）", "台本（実戦）", new[] { "kata", "tou", "shiga" },
             FxCueKind.Live, PresetName: "試遊・感電 雷の型", Stage: 4, Seed: 0,
             Highlight: e => e.Kind is BattleEventKind.Thunder or BattleEventKind.Discharge),
         new FxCue("live.mark", "標 守り型（実戦）", "台本（実戦）", new[] { "golm", "zan", "hisa" },
             FxCueKind.Live, PresetName: "試遊・標 守り型", Stage: 1, Seed: 0,
             Highlight: e => e.Kind is BattleEventKind.GolmArm or BattleEventKind.Swallow),
-    });
+    }.OfType<FxCue>().ToArray());
 
     private static readonly Lazy<IReadOnlyList<FxCue>> AllCues = new(() =>
         Array.AsReadOnly(Registered.Concat(AllUnits()).ToArray()));

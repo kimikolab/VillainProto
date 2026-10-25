@@ -6,6 +6,7 @@ using System.Linq;
 // 見せ場の件数と再生に同じ実台本を使う。駒の個体IDは Materialize 後の写しから引く。
 internal sealed record FxLivePlayback(IReadOnlyList<DemoOpening> Openings, BattleResult Result)
 {
+    internal DeathPresentation? Death { get; init; }
     internal static FxLivePlayback Create(FxCue cue)
     {
         if (!FxCatalog.TryGetPreset(cue, out var formation))
@@ -16,11 +17,11 @@ internal sealed record FxLivePlayback(IReadOnlyList<DemoOpening> Openings, Battl
         var pending = players.Concat(enemies).Select(u => new {
             Unit = u, u.Slot, u.Hp, u.MaxHp, Attack = u.CurrentAttack, Pattern = u.CurrentPattern,
         }).ToArray();
-        var result = BattleEngine.Run(players, enemies, cue.Seed, verbose: true);
+        var death = DeathPresentation.Record(players, enemies, cue.Seed, out var result);
         var openings = pending.Select(x => new DemoOpening(
             x.Unit.InstanceId, x.Unit.TeamId, x.Unit.Def.Id, x.Unit.Def.Name, x.Slot, x.Hp, x.MaxHp,
             x.Attack, x.Pattern, x.Unit.Def.Advances, x.Unit.Def.Traits, x.Unit.Shape)).ToArray();
-        return new(openings, result);
+        return new(openings, result) { Death = death };
     }
 
     internal int[] Highlights(FxCue cue)

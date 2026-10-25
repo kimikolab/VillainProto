@@ -39,6 +39,7 @@ public partial class BattlePawn3D
     private void RefreshBattlePortrait()
     {
         if (_sprite is null || _victory) return;
+        if (ApplyRicaApproachPortrait()) return;
         string key = _unitId;
         float height = _portraitHeight;
         float padding = UiKit.BattlePortraitBottomPaddingRatio(key);
@@ -126,6 +127,7 @@ public partial class BattlePawn3D
             // 破砕後も立ち続ける差分。通常時の身長を保ち、足元だけ合わせる。
             padding = key == "husher_shatter_burst" ? .0195f : .0234f;
         }
+        ApplyRicaIdlePortrait(ref key, ref height, ref padding);
         Texture2D portrait = UiKit.BattlePortrait(_atlas, key, _burning);
         _portraitGroundDistance = height * (0.5f - padding);
         _portraitBaseY = PortraitGroundY + _portraitGroundDistance;

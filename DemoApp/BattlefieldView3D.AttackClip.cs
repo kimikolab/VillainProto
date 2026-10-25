@@ -22,7 +22,8 @@ public partial class BattlefieldView3D
         // 振り切り中に次の斬り返しへ切り替わった場合も、その連番が終わるまで戻さない。
         while (IsInstanceValid(pawn) && pawn.IsInsideTree() && pawn.AttackClipPlaying)
             await pawn.AttackClipFinished;
-        if (IsInstanceValid(pawn) && pawn.IsInsideTree()) pawn.ReturnFromAttack();
+        if (IsInstanceValid(pawn) && pawn.IsInsideTree())
+        { if (pawn.UnitId == "rica") pawn.ReleaseRicaPose(); pawn.ReturnFromAttack(); }
     }
 
     internal int BorgAttackClipPlays { get; private set; }

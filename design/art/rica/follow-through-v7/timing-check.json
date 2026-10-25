@@ -1,0 +1,11 @@
+{
+  "contact": 27,
+  "old_contact_hold": 3,
+  "new_contact_hold": 1,
+  "pre_hit_degrees_per_frame": 25.0,
+  "old_post_hit_degrees_per_frame": 8.333300000000008,
+  "new_post_hit_degrees_per_frame": 24.0,
+  "old_follow_through": 36.0,
+  "new_follow_through": 155.5,
+  "trail_alpha_at_end": 0
+}

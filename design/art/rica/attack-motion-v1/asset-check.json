@@ -1,0 +1,65 @@
+[
+  {
+    "clip": "rica_crescent",
+    "frames": 33,
+    "size": [
+      1152,
+      896
+    ],
+    "minimumMargin": 124
+  },
+  {
+    "clip": "rica_descend",
+    "frames": 28,
+    "size": [
+      1152,
+      896
+    ],
+    "minimumMargin": 84
+  },
+  {
+    "clip": "rica_return",
+    "frames": 16,
+    "size": [
+      1152,
+      896
+    ],
+    "minimumMargin": 127
+  },
+  {
+    "clip": "rica_rise",
+    "frames": 17,
+    "size": [
+      1152,
+      896
+    ],
+    "minimumMargin": 126
+  },
+  {
+    "clip": "rica_shovel",
+    "frames": 25,
+    "size": [
+      1152,
+      896
+    ],
+    "minimumMargin": 127
+  },
+  {
+    "clip": "rica_sweep",
+    "frames": 13,
+    "size": [
+      1152,
+      896
+    ],
+    "minimumMargin": 41
+  },
+  {
+    "clip": "rica_thrust",
+    "frames": 15,
+    "size": [
+      1152,
+      896
+    ],
+    "minimumMargin": 99
+  }
+]

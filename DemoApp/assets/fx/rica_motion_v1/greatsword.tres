@@ -1,0 +1,11 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+
+[ext_resource type="Shader" path="res://assets/fx/rica_motion_v1/weapon_aura.gdshader" id="1"]
+
+[resource]
+shader = ExtResource("1")
+shader_parameter/shape = 2
+shader_parameter/tint = Color(0.572549, 0.580392, 1.000000, 1)
+shader_parameter/phase = 0.0
+shader_parameter/power = 1.0
+shader_parameter/reveal = 1.0

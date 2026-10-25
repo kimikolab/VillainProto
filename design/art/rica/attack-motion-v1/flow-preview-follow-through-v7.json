@@ -1,0 +1,57 @@
+{
+  "fps": 30,
+  "frames": 300,
+  "seconds": 10,
+  "continuous": true,
+  "leadSeconds": 2,
+  "crop": [
+    560,
+    550
+  ],
+  "tracking": "projected ground point; equal pixel scale",
+  "stages": [
+    {
+      "stage": 0,
+      "attacks": 1,
+      "first_attack": 95,
+      "first_returned": 136,
+      "returned_frames": 164,
+      "returned_idle_frames": 39,
+      "final_distance": 0
+    },
+    {
+      "stage": 1,
+      "attacks": 1,
+      "first_attack": 95,
+      "first_returned": 149,
+      "returned_frames": 151,
+      "returned_idle_frames": 62,
+      "final_distance": 0
+    },
+    {
+      "stage": 2,
+      "attacks": 2,
+      "first_attack": 95,
+      "first_returned": 157,
+      "returned_frames": 143,
+      "returned_idle_frames": 25,
+      "final_distance": 0
+    },
+    {
+      "stage": 3,
+      "attacks": 3,
+      "first_attack": 95,
+      "first_returned": 193,
+      "returned_frames": 107,
+      "returned_idle_frames": 43,
+      "final_distance": 0
+    }
+  ],
+  "audio": {
+    "source": "DemoApp/assets/audio/se/kado_hit.mp3",
+    "panel": "top-left shovel only",
+    "gain_db": -8,
+    "offset_seconds": 3.6666666666666665,
+    "sample_rate": 44100
+  }
+}

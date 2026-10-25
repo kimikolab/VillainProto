@@ -1,0 +1,31 @@
+{
+  "sources": [
+    "rica-four-stage-flow-comparison-approach-v8.mp4",
+    "rica-four-stage-flow-comparison-combo-flow-v9.mp4"
+  ],
+  "frames": 420,
+  "fps": 30,
+  "seconds": 14.0,
+  "size": [
+    1120,
+    1280
+  ],
+  "source_frames": [
+    84,
+    224
+  ],
+  "columns": [
+    "v8",
+    "v9"
+  ],
+  "rows": [
+    "6–8層・二連撃",
+    "9層以上・三連撃"
+  ],
+  "speed": [
+    1,
+    0.5
+  ],
+  "audio": false,
+  "processing": "actual rendered video crop and layout only; no optical flow or animation interpolation"
+}

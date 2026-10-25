@@ -1,0 +1,109 @@
+{
+  "continuous": true,
+  "stages": [
+    {
+      "stage": 0,
+      "frames": 300,
+      "fps": 30,
+      "clips_in_order": [
+        "rica_shovel"
+      ],
+      "actual_attacks": 1,
+      "first_attack": 95,
+      "first_returned": 136,
+      "returned_frames": 164,
+      "approach_frames": 10,
+      "links": {},
+      "final_distance": 0
+    },
+    {
+      "stage": 1,
+      "frames": 300,
+      "fps": 30,
+      "clips_in_order": [
+        "rica_crescent"
+      ],
+      "actual_attacks": 1,
+      "first_attack": 95,
+      "first_returned": 149,
+      "returned_frames": 151,
+      "approach_frames": 10,
+      "links": {},
+      "final_distance": 0
+    },
+    {
+      "stage": 2,
+      "frames": 300,
+      "fps": 30,
+      "clips_in_order": [
+        "rica_rise",
+        "rica_link_rise_return",
+        "rica_return"
+      ],
+      "actual_attacks": 2,
+      "first_attack": 95,
+      "first_returned": 157,
+      "returned_frames": 143,
+      "approach_frames": 10,
+      "links": {
+        "rica_link_rise_return": [
+          118,
+          119,
+          120,
+          121,
+          122,
+          123,
+          124,
+          125,
+          126,
+          127
+        ]
+      },
+      "final_distance": 0
+    },
+    {
+      "stage": 3,
+      "frames": 300,
+      "fps": 30,
+      "clips_in_order": [
+        "rica_thrust",
+        "rica_link_thrust_sweep",
+        "rica_sweep",
+        "rica_link_sweep_descend",
+        "rica_descend"
+      ],
+      "actual_attacks": 3,
+      "first_attack": 95,
+      "first_returned": 193,
+      "returned_frames": 107,
+      "approach_frames": 10,
+      "links": {
+        "rica_link_thrust_sweep": [
+          116,
+          117,
+          118,
+          119,
+          120,
+          121,
+          122,
+          123,
+          124,
+          125
+        ],
+        "rica_link_sweep_descend": [
+          144,
+          145,
+          146,
+          147,
+          148,
+          149,
+          150,
+          151,
+          152,
+          153
+        ]
+      },
+      "final_distance": 0
+    }
+  ]
+}

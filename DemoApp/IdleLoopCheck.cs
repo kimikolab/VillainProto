@@ -99,6 +99,24 @@ public partial class IdleLoopCheck : Node3D
             rica.AnimateRevive();
             Require(rica.IdleLoopPlaying && ricaFrames.Contains(SpriteOf(rica).Texture), "リィカも蘇生で再開");
             Require(SpriteOf(ricaEnemy).FlipH && ricaEnemy.IdleLoopPlaying, "敵側のリィカも反転して回る");
+            foreach (int stage in new[] { 1, 2, 3 })
+            foreach (string? candidate in new string?[] { null, "B" })
+            {
+                rica.SetDeathState(stage * 3, 0, 0);
+                rica.SetRicaIdleVariant(candidate);
+                string name = $"rica_stage{stage}" + (candidate == "B" ? "_b" : "");
+                var stageFrames = BattlePawn3D.IdleLoopFramesOf(name);
+                Require(stageFrames.Length > 0 || candidate is not null || !OS.GetCmdlineUserArgs().Contains("--rica-idles-required"),
+                    "指定された覚醒待機が全て存在 " + name);
+                if (stageFrames.Length == 0) continue;
+                Require(stageFrames.Length > 8 && rica.IdleLoopPlaying && stageFrames.Contains(SpriteOf(rica).Texture),
+                    "覚醒待機の候補が開戦と同じ窓口で再生 " + name);
+                Require(BattlePawn3D.RicaTrackOf(name).Length == stageFrames.Length, "待機の全コマに武器の追跡点 " + name);
+                Require(CountDistinct(rica, 0.4) >= 5, "覚醒待機も時刻に従って進む " + name);
+            }
+            rica.SetRicaIdleVariant(null);
+            rica.SetDeathState(0, 0, 0);
+            Require(rica.IdleLoopFrameCount == 39, "層が戻ると採用済み通常39コマへ戻る");
             Require(CountDistinct(gald, 0.6) >= 6, "ガルドの連番も進む");
             gald.AnimateDeath();
             var galdDead = SpriteOf(gald).Texture;

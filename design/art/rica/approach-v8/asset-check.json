@@ -1,0 +1,38 @@
+[
+  {
+    "stage": 0,
+    "size": [
+      1152,
+      896
+    ],
+    "min_margin": 126,
+    "shape": 0
+  },
+  {
+    "stage": 1,
+    "size": [
+      1152,
+      896
+    ],
+    "min_margin": 124,
+    "shape": 1
+  },
+  {
+    "stage": 2,
+    "size": [
+      1152,
+      896
+    ],
+    "min_margin": 125,
+    "shape": 2
+  },
+  {
+    "stage": 3,
+    "size": [
+      1152,
+      896
+    ],
+    "min_margin": 126,
+    "shape": 2
+  }
+]

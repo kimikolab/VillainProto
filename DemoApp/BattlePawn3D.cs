@@ -20,7 +20,7 @@ public partial class BattlePawn3D : Node3D
     public PawnHud2D Hud { get; private set; } = null!;
     /// <summary>札を置く高さ（駒の原点から上へ）。立ち絵の頭のすぐ上。</summary>
     private float _hudY = 1.88f;
-    public Vector3 HudAnchor => GlobalPosition + new Vector3(0, _hudY, 0);
+    public Vector3 HudAnchor => GlobalPosition + new Vector3(0, _hudY + AttackClipVertical, 0);
     /// <summary>火勢などの 3D の札を積む基準（旧 HP 行の高さ）。</summary>
     private Vector3 _headLabelBase;
     private string _seatText = "";
@@ -83,7 +83,10 @@ public partial class BattlePawn3D : Node3D
         _motion?.Kill();
         ClearWindCarry();
         ClearAllyBounce();
-        return _motion = CreateTween();
+        if (_unitId == "rica") _ricaMotionTweenSpeed = AnimationSpeed;
+        _motion = CreateTween();
+        if (_unitId == "rica" && _ricaMotionPaused) _motion.Pause();
+        return _motion;
     }
 
     public void SetBurning(bool burning)
@@ -237,6 +240,9 @@ uniform float powder_burn_heat = 0.0;
 uniform float powder_burn_char = 0.0;
 uniform float golm_gray = 0.0;
 uniform float golm_crumble = 0.0;
+uniform float grave_heat = 0.0;
+uniform vec2 grave_eye = vec2(0.561,0.152);
+uniform vec4 grave_tint : source_color = vec4(0.7,0.85,1.0,1.0);
 void fragment() {
     vec4 c = texture(portrait_texture, UV);
     vec4 top_left = texture(portrait_texture, vec2(0.02, 0.02));
@@ -287,6 +293,10 @@ void fragment() {
     float gray = dot(ALBEDO,vec3(0.299,0.587,0.114));
     ALBEDO = mix(ALBEDO,vec3(gray)*0.65+vec3(0.10),golm_gray);
     EMISSION *= 1.0-golm_gray;
+    // 元絵・待機連番の目だけを発光させる。敵側の反転も Sprite3D の UV に従う。
+    float grave_eyes = exp(-dot((UV-grave_eye)*vec2(170.0,240.0),(UV-grave_eye)*vec2(170.0,240.0)));
+    ALBEDO = mix(ALBEDO,grave_tint.rgb,clamp(grave_eyes*grave_heat*3.0,0.0,1.0));
+    EMISSION += grave_tint.rgb*grave_eyes*grave_heat*4.0;
     ALPHA = alpha;
 }"
         };
@@ -474,6 +484,7 @@ void fragment() {
 
     public void AnimateDeath()
     {
+        StopDeathVisual();
         SetDirgeSinging(false);
         ClearTouPowder();
         SetDecoyShown(false);
@@ -531,6 +542,7 @@ void fragment() {
 
     public void AnimateRevive()
     {
+        ResumeDeathVisual();
         SetDirgeSinging(false);
         SetDecoyShown(false);
         ClearMovementPortrait();
@@ -576,6 +588,7 @@ void fragment() {
 
     public void AnimateVictory()
     {
+        StopDeathVisual();
         if (!_alive || Team != BattleContext.PlayerTeam) return;
         SetDirgeSinging(false);
         SetDecoyShown(false);
@@ -642,6 +655,7 @@ void fragment() {
 
     public override void _Process(double delta)
     {
+        if (_unitId == "rica" && _ricaMotionPaused) return;
         _phase += (float)delta * 2.1f;
         UpdateKataStakes();
         if (!_alive || _victory) return;
@@ -667,7 +681,7 @@ void fragment() {
         _sprite.Scale = new Vector3(1.0f - breath * 0.18f + fall * 0.05f, scaleY - fall * 0.08f, 1.0f);
         _sprite.Position = new Vector3(
             _portraitOffsetX + fallSign * fall * 0.22f,
-            PortraitGroundY + _portraitGroundDistance * scaleY - fall * 0.30f,
+            PortraitGroundY + _portraitGroundDistance * scaleY - fall * 0.30f + AttackClipVertical,
             0);
         UpdateRapierGlow();
         UpdateSpecialEffects(animationDelta);

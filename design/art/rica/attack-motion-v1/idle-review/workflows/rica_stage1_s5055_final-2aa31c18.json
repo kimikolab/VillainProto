@@ -1,0 +1,100 @@
+{
+  "1": {
+    "class_type": "LoadVideo",
+    "inputs": {
+      "file": "vp_rica_stage1_s5055_raw.mp4"
+    }
+  },
+  "2": {
+    "class_type": "GetVideoComponents",
+    "inputs": {
+      "video": [
+        "1",
+        0
+      ]
+    }
+  },
+  "40": {
+    "class_type": "VPIdleLoopFind",
+    "inputs": {
+      "images": [
+        "2",
+        0
+      ],
+      "min_length": 16,
+      "max_length": 64,
+      "skip_head": 8,
+      "min_motion": 3.0,
+      "compare_size": 192,
+      "min_step": 2.5,
+      "crossfade": 6
+    }
+  },
+  "45": {
+    "class_type": "PreviewAny",
+    "inputs": {
+      "source": [
+        "40",
+        4
+      ]
+    }
+  },
+  "41": {
+    "class_type": "BiRefNetRMBG",
+    "inputs": {
+      "image": [
+        "40",
+        0
+      ],
+      "model": "BiRefNet_toonout",
+      "sensitivity": 1.0,
+      "mask_blur": 0,
+      "mask_offset": 0,
+      "invert_output": false,
+      "refine_foreground": false,
+      "background": "Alpha",
+      "background_color": "#222222"
+    }
+  },
+  "42": {
+    "class_type": "VPGreenKeyAlpha",
+    "inputs": {
+      "images": [
+        "40",
+        0
+      ],
+      "mask": [
+        "41",
+        1
+      ],
+      "key_low": 25.0,
+      "key_high": 75.0,
+      "despill": true,
+      "edge_width": 12
+    }
+  },
+  "43": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "42",
+        0
+      ],
+      "filename_prefix": "VillainProto/idle_loop/rica_stage1_s5055_final_rgba/f"
+    }
+  },
+  "44": {
+    "class_type": "SaveAnimatedWEBP",
+    "inputs": {
+      "images": [
+        "42",
+        0
+      ],
+      "filename_prefix": "VillainProto/idle_loop/rica_stage1_s5055_final_loop",
+      "fps": 16.0,
+      "lossless": false,
+      "quality": 90,
+      "method": "default"
+    }
+  }
+}

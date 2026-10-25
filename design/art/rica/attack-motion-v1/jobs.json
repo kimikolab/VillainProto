@@ -1,0 +1,530 @@
+{
+  "rica_shovel_v1_s2022": {
+    "stage": 0,
+    "from": "windup",
+    "to": "finish",
+    "positive": "A single petite adult elf woman Rica with silver bob hair, one chest braid, charcoal hooded cape worn down, dark teal dress, worn tan apron, brown gloves and boots. She holds ONE physical shovel: rigid straight brown shaft, one small D grip and one steel pointed spade, unchanged length and shape. Both hands stay on its shaft. One short heavy overhead diagonal shovel blow down toward the lower right. Push from the rear leg, rotate hips then shoulders, swing both arms down, and hold the low follow-through. No flourish.Continuous natural articulated fighting-game motion between the two poses. Knees, hips, shoulders, elbows and wrists move together. Keep the same face and clothes, same body size, fixed three-quarter side camera facing right, no zoom, entire body and entire shovel visible, empty flat solid green background. No aura, no energy weapon, no glow, no flames, no trails, no effects, no enemy, no ground shadow. ",
+    "negative": "static pose, frozen, crossfade, dissolve, double exposure, morphing, extra arms, extra legs, extra shovel, duplicate blade, bent shaft, flexible weapon, missing shovel, sword, spear, energy blade, aura, glow, magic, fire, changing costume, changing face, camera movement, zoom, cuts, cropped feet, cropped shovel, scenery, shadow on background, text, watermark",
+    "seed": 2022,
+    "size": [
+      896,
+      768
+    ],
+    "length": 25,
+    "startAnchors": {
+      "weaponSocket": [
+        580.592,
+        274.728
+      ],
+      "weaponTip": [
+        680.8159999999999,
+        356.16
+      ],
+      "rearHand": [
+        380.144,
+        218.35199999999998
+      ],
+      "frontHand": [
+        373.88000000000005,
+        337.368
+      ],
+      "groundAnchor": [
+        423.992,
+        703.812
+      ],
+      "eyeAnchor": [
+        499.1600000000001,
+        255.93599999999998
+      ]
+    },
+    "endAnchors": {
+      "weaponSocket": [
+        598.464,
+        574.368
+      ],
+      "weaponTip": [
+        706.752,
+        664.608
+      ],
+      "rearHand": [
+        369.856,
+        375.84000000000003
+      ],
+      "frontHand": [
+        556.352,
+        526.24
+      ],
+      "groundAnchor": [
+        424.0,
+        703.712
+      ],
+      "eyeAnchor": [
+        514.2399999999999,
+        255.51999999999998
+      ]
+    },
+    "prompt_id": "34bc13ea-5282-4beb-a07f-f7b1cf0d3e98"
+  },
+  "rica_crescent_v1_s2022": {
+    "stage": 1,
+    "from": "windup",
+    "to": "finish",
+    "positive": "A single petite adult elf woman Rica with silver bob hair, one chest braid, charcoal hooded cape worn down, dark teal dress, worn tan apron, brown gloves and boots. She holds ONE physical shovel: rigid straight brown shaft, one small D grip and one steel pointed spade, unchanged length and shape. Both hands stay on its shaft. One broad horizontal two-handed shovel sweep from the left across the waist toward the right. Turn the hips and shoulders, then allow the cape to follow through. Keep the shovel level during the middle of the sweep.Continuous natural articulated fighting-game motion between the two poses. Knees, hips, shoulders, elbows and wrists move together. Keep the same face and clothes, same body size, fixed three-quarter side camera facing right, no zoom, entire body and entire shovel visible, empty flat solid green background. No aura, no energy weapon, no glow, no flames, no trails, no effects, no enemy, no ground shadow. ",
+    "negative": "static pose, frozen, crossfade, dissolve, double exposure, morphing, extra arms, extra legs, extra shovel, duplicate blade, bent shaft, flexible weapon, missing shovel, sword, spear, energy blade, aura, glow, magic, fire, changing costume, changing face, camera movement, zoom, cuts, cropped feet, cropped shovel, scenery, shadow on background, text, watermark",
+    "seed": 2022,
+    "size": [
+      896,
+      768
+    ],
+    "length": 25,
+    "startAnchors": {
+      "weaponSocket": [
+        243.552,
+        349.0
+      ],
+      "weaponTip": [
+        108.144,
+        349.0
+      ],
+      "rearHand": [
+        514.368,
+        365.12
+      ],
+      "frontHand": [
+        443.43999999999994,
+        368.344
+      ],
+      "groundAnchor": [
+        424.096,
+        703.64
+      ],
+      "eyeAnchor": [
+        533.712,
+        255.504
+      ]
+    },
+    "endAnchors": {
+      "weaponSocket": [
+        589.808,
+        391.312
+      ],
+      "weaponTip": [
+        706.392,
+        421.992
+      ],
+      "rearHand": [
+        338.232,
+        342.22400000000005
+      ],
+      "frontHand": [
+        516.176,
+        382.10800000000006
+      ],
+      "groundAnchor": [
+        424.1360000000001,
+        704.248
+      ],
+      "eyeAnchor": [
+        497.76800000000003,
+        256.32
+      ]
+    },
+    "prompt_id": "386aba50-0039-4e40-887e-3f9a4cdaa345"
+  },
+  "rica_rise_v1_s2022": {
+    "stage": 2,
+    "from": "windup",
+    "to": "rise",
+    "positive": "A single petite adult elf woman Rica with silver bob hair, one chest braid, charcoal hooded cape worn down, dark teal dress, worn tan apron, brown gloves and boots. She holds ONE physical shovel: rigid straight brown shaft, one small D grip and one steel pointed spade, unchanged length and shape. Both hands stay on its shaft. One elegant rising two-handed cut: pull the shovel low on the left, extend the front knee and rotate hips, drive the spade diagonally upward to the right, finishing in the high follow-through shown.Continuous natural articulated fighting-game motion between the two poses. Knees, hips, shoulders, elbows and wrists move together. Keep the same face and clothes, same body size, fixed three-quarter side camera facing right, no zoom, entire body and entire shovel visible, empty flat solid green background. No aura, no energy weapon, no glow, no flames, no trails, no effects, no enemy, no ground shadow. ",
+    "negative": "static pose, frozen, crossfade, dissolve, double exposure, morphing, extra arms, extra legs, extra shovel, duplicate blade, bent shaft, flexible weapon, missing shovel, sword, spear, energy blade, aura, glow, magic, fire, changing costume, changing face, camera movement, zoom, cuts, cropped feet, cropped shovel, scenery, shadow on background, text, watermark",
+    "seed": 2022,
+    "size": [
+      896,
+      768
+    ],
+    "length": 25,
+    "startAnchors": {
+      "weaponSocket": [
+        254.6,
+        570.888
+      ],
+      "weaponTip": [
+        127.424,
+        643.56
+      ],
+      "rearHand": [
+        563.4560000000001,
+        352.872
+      ],
+      "frontHand": [
+        472.61599999999993,
+        449.76800000000003
+      ],
+      "groundAnchor": [
+        424.168,
+        704.12
+      ],
+      "eyeAnchor": [
+        496.8399999999999,
+        255.97600000000003
+      ]
+    },
+    "endAnchors": {
+      "weaponSocket": [
+        624.5344,
+        150.816
+      ],
+      "weaponTip": [
+        727.9296,
+        67.0528
+      ],
+      "rearHand": [
+        515.904,
+        232.61599999999999
+      ],
+      "frontHand": [
+        555.1679999999999,
+        199.89600000000002
+      ],
+      "groundAnchor": [
+        424.288,
+        703.784
+      ],
+      "eyeAnchor": [
+        421.01599999999996,
+        255.51999999999998
+      ]
+    },
+    "prompt_id": "2e0abfdb-b58d-4de9-8a21-9a0778ae402c"
+  },
+  "rica_return_v1_s2022": {
+    "stage": 2,
+    "from": "rise",
+    "to": "finish",
+    "positive": "A single petite adult elf woman Rica with silver bob hair, one chest braid, charcoal hooded cape worn down, dark teal dress, worn tan apron, brown gloves and boots. She holds ONE physical shovel: rigid straight brown shaft, one small D grip and one steel pointed spade, unchanged length and shape. Both hands stay on its shaft. One quick reverse diagonal cut from the high right follow-through down across the body to the low right finish. Both hands guide the shaft, torso twists with the cut, cape counter-rotates.Continuous natural articulated fighting-game motion between the two poses. Knees, hips, shoulders, elbows and wrists move together. Keep the same face and clothes, same body size, fixed three-quarter side camera facing right, no zoom, entire body and entire shovel visible, empty flat solid green background. No aura, no energy weapon, no glow, no flames, no trails, no effects, no enemy, no ground shadow. ",
+    "negative": "static pose, frozen, crossfade, dissolve, double exposure, morphing, extra arms, extra legs, extra shovel, duplicate blade, bent shaft, flexible weapon, missing shovel, sword, spear, energy blade, aura, glow, magic, fire, changing costume, changing face, camera movement, zoom, cuts, cropped feet, cropped shovel, scenery, shadow on background, text, watermark",
+    "seed": 2022,
+    "size": [
+      896,
+      768
+    ],
+    "length": 25,
+    "startAnchors": {
+      "weaponSocket": [
+        624.5344,
+        150.816
+      ],
+      "weaponTip": [
+        727.9296,
+        67.0528
+      ],
+      "rearHand": [
+        515.904,
+        232.61599999999999
+      ],
+      "frontHand": [
+        555.1679999999999,
+        199.89600000000002
+      ],
+      "groundAnchor": [
+        424.288,
+        703.784
+      ],
+      "eyeAnchor": [
+        421.01599999999996,
+        255.51999999999998
+      ]
+    },
+    "endAnchors": {
+      "weaponSocket": [
+        579.232,
+        554.5920000000001
+      ],
+      "weaponTip": [
+        688.368,
+        635.0079999999999
+      ],
+      "rearHand": [
+        326.49600000000004,
+        399.50399999999996
+      ],
+      "frontHand": [
+        521.792,
+        508.64
+      ],
+      "groundAnchor": [
+        424.144,
+        703.9359999999999
+      ],
+      "eyeAnchor": [
+        481.58400000000006,
+        255.904
+      ]
+    },
+    "prompt_id": "6f6379c8-7045-4067-86c5-bed890ab5220"
+  },
+  "rica_thrust_v1_s2022": {
+    "stage": 3,
+    "from": "windup",
+    "to": "thrust",
+    "positive": "A single petite adult elf woman Rica with silver bob hair, one chest braid, charcoal hooded cape worn down, dark teal dress, worn tan apron, brown gloves and boots. She holds ONE physical shovel: rigid straight brown shaft, one small D grip and one steel pointed spade, unchanged length and shape. Both hands stay on its shaft. One direct precise straight thrust to the right. Sink into the front leg and extend both arms, the physical shovel remains a straight rigid spear-like tool, then hold full extension. No slash.Continuous natural articulated fighting-game motion between the two poses. Knees, hips, shoulders, elbows and wrists move together. Keep the same face and clothes, same body size, fixed three-quarter side camera facing right, no zoom, entire body and entire shovel visible, empty flat solid green background. No aura, no energy weapon, no glow, no flames, no trails, no effects, no enemy, no ground shadow. ",
+    "negative": "static pose, frozen, crossfade, dissolve, double exposure, morphing, extra arms, extra legs, extra shovel, duplicate blade, bent shaft, flexible weapon, missing shovel, sword, spear, energy blade, aura, glow, magic, fire, changing costume, changing face, camera movement, zoom, cuts, cropped feet, cropped shovel, scenery, shadow on background, text, watermark",
+    "seed": 2022,
+    "size": [
+      896,
+      768
+    ],
+    "length": 25,
+    "startAnchors": {
+      "weaponSocket": [
+        619.744,
+        362.336
+      ],
+      "weaponTip": [
+        802.984,
+        411.2
+      ],
+      "rearHand": [
+        310.272,
+        329.76000000000005
+      ],
+      "frontHand": [
+        538.304,
+        358.264
+      ],
+      "groundAnchor": [
+        424.288,
+        704.384
+      ],
+      "eyeAnchor": [
+        513.872,
+        256.464
+      ]
+    },
+    "endAnchors": {
+      "weaponSocket": [
+        643.68,
+        397.74399999999997
+      ],
+      "weaponTip": [
+        792.944,
+        444.88000000000005
+      ],
+      "rearHand": [
+        282.30400000000003,
+        338.82399999999996
+      ],
+      "frontHand": [
+        612.2560000000001,
+        397.74399999999997
+      ],
+      "groundAnchor": [
+        423.71200000000005,
+        704.128
+      ],
+      "eyeAnchor": [
+        517.984,
+        256.336
+      ]
+    },
+    "prompt_id": "78de1ab5-48c5-48c0-b3ec-94a696a6f66b"
+  },
+  "rica_sweep_v1_s2022": {
+    "stage": 3,
+    "from": "thrust",
+    "to": "sweep",
+    "positive": "A single petite adult elf woman Rica with silver bob hair, one chest braid, charcoal hooded cape worn down, dark teal dress, worn tan apron, brown gloves and boots. She holds ONE physical shovel: rigid straight brown shaft, one small D grip and one steel pointed spade, unchanged length and shape. Both hands stay on its shaft. Retract the extended shovel and rotate the whole torso through one fast stylish sweeping cut to the right. Pivot on one boot, lift the other knee as shown at the end, cape and apron follow the spin. One continuous full-body motion.Continuous natural articulated fighting-game motion between the two poses. Knees, hips, shoulders, elbows and wrists move together. Keep the same face and clothes, same body size, fixed three-quarter side camera facing right, no zoom, entire body and entire shovel visible, empty flat solid green background. No aura, no energy weapon, no glow, no flames, no trails, no effects, no enemy, no ground shadow. ",
+    "negative": "static pose, frozen, crossfade, dissolve, double exposure, morphing, extra arms, extra legs, extra shovel, duplicate blade, bent shaft, flexible weapon, missing shovel, sword, spear, energy blade, aura, glow, magic, fire, changing costume, changing face, camera movement, zoom, cuts, cropped feet, cropped shovel, scenery, shadow on background, text, watermark",
+    "seed": 2022,
+    "size": [
+      896,
+      768
+    ],
+    "length": 25,
+    "startAnchors": {
+      "weaponSocket": [
+        643.68,
+        397.74399999999997
+      ],
+      "weaponTip": [
+        792.944,
+        444.88000000000005
+      ],
+      "rearHand": [
+        282.30400000000003,
+        338.82399999999996
+      ],
+      "frontHand": [
+        612.2560000000001,
+        397.74399999999997
+      ],
+      "groundAnchor": [
+        423.71200000000005,
+        704.128
+      ],
+      "eyeAnchor": [
+        517.984,
+        256.336
+      ]
+    },
+    "endAnchors": {
+      "weaponSocket": [
+        539.0880000000001,
+        365.32800000000003
+      ],
+      "weaponTip": [
+        648.224,
+        468.7200000000001
+      ],
+      "rearHand": [
+        343.79200000000003,
+        316.50399999999996
+      ],
+      "frontHand": [
+        496.008,
+        365.32800000000003
+      ],
+      "groundAnchor": [
+        424.20799999999997,
+        704.224
+      ],
+      "eyeAnchor": [
+        473.032,
+        256.192
+      ]
+    },
+    "prompt_id": "4757e15e-4109-47f3-9a6c-d2aa383c1b09"
+  },
+  "rica_descend_v1_s2022": {
+    "stage": 3,
+    "from": "air_raise",
+    "to": "land",
+    "positive": "A single petite adult elf woman Rica with silver bob hair, one chest braid, charcoal hooded cape worn down, dark teal dress, worn tan apron, brown gloves and boots. She holds ONE physical shovel: rigid straight brown shaft, one small D grip and one steel pointed spade, unchanged length and shape. Both hands stay on its shaft. From the airborne raised-shovel pose, drive both arms and the straight shovel diagonally down toward the lower right while dropping into a deep planted landing. One strong downward finishing cut, front knee absorbs the landing, cape settles behind. No second jump.Continuous natural articulated fighting-game motion between the two poses. Knees, hips, shoulders, elbows and wrists move together. Keep the same face and clothes, same body size, fixed three-quarter side camera facing right, no zoom, entire body and entire shovel visible, empty flat solid green background. No aura, no energy weapon, no glow, no flames, no trails, no effects, no enemy, no ground shadow. ",
+    "negative": "static pose, frozen, crossfade, dissolve, double exposure, morphing, extra arms, extra legs, extra shovel, duplicate blade, bent shaft, flexible weapon, missing shovel, sword, spear, energy blade, aura, glow, magic, fire, changing costume, changing face, camera movement, zoom, cuts, cropped feet, cropped shovel, scenery, shadow on background, text, watermark",
+    "seed": 2022,
+    "size": [
+      896,
+      768
+    ],
+    "length": 25,
+    "startAnchors": {
+      "weaponSocket": [
+        545.6,
+        249.6
+      ],
+      "weaponTip": [
+        664.0,
+        307.2
+      ],
+      "rearHand": [
+        328.0,
+        128.0
+      ],
+      "frontHand": [
+        494.4,
+        195.2
+      ],
+      "groundAnchor": [
+        424.0,
+        704.0
+      ],
+      "eyeAnchor": [
+        424.0,
+        256.0
+      ]
+    },
+    "endAnchors": {
+      "weaponSocket": [
+        618.4560000000001,
+        577.144
+      ],
+      "weaponTip": [
+        745.3439999999999,
+        651.784
+      ],
+      "rearHand": [
+        334.824,
+        375.616
+      ],
+      "frontHand": [
+        536.352,
+        502.50399999999996
+      ],
+      "groundAnchor": [
+        424.39200000000005,
+        704.0319999999999
+      ],
+      "eyeAnchor": [
+        499.032,
+        256.192
+      ]
+    },
+    "prompt_id": "7f601281-acd2-4d9e-9000-984b4dfcb817"
+  },
+  "rica_crescent_v1_s5055": {
+    "stage": 1,
+    "from": "windup",
+    "to": "finish",
+    "positive": "A single petite adult elf woman Rica with silver bob hair, one chest braid, charcoal hooded cape worn down, dark teal dress, worn tan apron, brown gloves and boots. She holds ONE physical shovel: rigid straight brown shaft, one small D grip and one steel pointed spade, unchanged length and shape. Both hands stay on its shaft. One broad horizontal two-handed shovel sweep from the left across the waist toward the right. Turn the hips and shoulders, then allow the cape to follow through. Keep the shovel level during the middle of the sweep.Continuous natural articulated fighting-game motion between the two poses. Knees, hips, shoulders, elbows and wrists move together. Keep the same face and clothes, same body size, fixed three-quarter side camera facing right, no zoom, entire body and entire shovel visible, empty flat solid green background. No aura, no energy weapon, no glow, no flames, no trails, no effects, no enemy, no ground shadow. ",
+    "negative": "static pose, frozen, crossfade, dissolve, double exposure, morphing, extra arms, extra legs, extra shovel, duplicate blade, bent shaft, flexible weapon, missing shovel, sword, spear, energy blade, aura, glow, magic, fire, changing costume, changing face, camera movement, zoom, cuts, cropped feet, cropped shovel, scenery, shadow on background, text, watermark",
+    "seed": 5055,
+    "size": [
+      896,
+      768
+    ],
+    "length": 25,
+    "startAnchors": {
+      "weaponSocket": [
+        243.552,
+        349.0
+      ],
+      "weaponTip": [
+        108.144,
+        349.0
+      ],
+      "rearHand": [
+        514.368,
+        365.12
+      ],
+      "frontHand": [
+        443.43999999999994,
+        368.344
+      ],
+      "groundAnchor": [
+        424.096,
+        703.64
+      ],
+      "eyeAnchor": [
+        533.712,
+        255.504
+      ]
+    },
+    "endAnchors": {
+      "weaponSocket": [
+        589.808,
+        391.312
+      ],
+      "weaponTip": [
+        706.392,
+        421.992
+      ],
+      "rearHand": [
+        338.232,
+        342.22400000000005
+      ],
+      "frontHand": [
+        516.176,
+        382.10800000000006
+      ],
+      "groundAnchor": [
+        424.1360000000001,
+        704.248
+      ],
+      "eyeAnchor": [
+        497.76800000000003,
+        256.32
+      ]
+    },
+    "prompt_id": "81be6e90-be2f-48ac-baf6-e4137e96ca5e"
+  }
+}

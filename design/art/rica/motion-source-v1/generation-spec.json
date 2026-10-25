@@ -1,0 +1,142 @@
+{
+  "mode": "built-in image_gen",
+  "common": "Use case: stylized-concept. Production asset for a 2.5D fantasy game and future image-to-video animation. Render ONE full-body isolated character on a REAL TRANSPARENT alpha background, not a character sheet.\nImage 1 is the exact original Rica character identity and physical shovel reference. Image 2 is an approved pose/choreography concept reference ONLY; it is NOT an edit target and its labels, paper, effects and multiple characters must NOT appear. If supplied, image 3 is the same stage's final clean idle model reference and should guide consistent anatomy/costume.\nRica is a petite ADULT elf woman, silver-white bob hair and ONE braid hanging over her chest, pointed elf ears, serious composed face. Keep the exact charcoal hooded cape worn DOWN, dark teal dress, tan worn work apron, belt with old keys and rope, fitted brown gloves and sturdy brown ankle boots of image 1. Fully clothed modest adult, consistent adult anatomy and head/body proportions. Faithful clean anime game illustration matching the original character, detailed but readable at game scale, clean sharp alpha edges.\nONE intact physical shovel: small metal D-shaped handle at one end, ONE long rigid straight brown wooden shaft, ONE socket and worn pointed steel spade at the other end. Keep identical shaft length and metal spade shape across all images. Hands grip the wood naturally; no flexible/bent shaft, no added blade, no second shovel. Left/right hands and forearms anatomically clear with correct number of limbs.\nCRITICAL SEPARATION FOR ANIMATION: render ONLY Rica plus the PHYSICAL SHOVEL. DO NOT draw ANY energy blade, glow, particles, aura, flames, weapon afterimage, speed lines, ground shadow or detached element. The magical weapon shell and body aura will be separate animated Godot layers. Do not imitate the glowing weapon in reference image 2. The bare shovel must remain fully visible so its socket and tip can be tracked in animation.\nCamera: fixed three-quarter right-facing battle view, entire character from head to soles and ENTIRE shovel with a generous transparent safety margin. No scenery, platform, UI, inset, words, numbers, watermark or border. Transparent areas must be truly transparent rather than checkerboard pixels. Hair, cape, apron and boots retain same colors in all stages; stages change posture/expression, not costume.\n",
+  "stages": [
+    {
+      "stage": 0,
+      "range": "0–2",
+      "rough": "01-normal-0-2.png",
+      "idle": "Grounded ordinary gravekeeper ready stance. Both knees slightly bent, weight shared by two planted boots, BOTH hands widely spaced on the shovel, shovel across body with metal spade held low to her right. Quiet determined expression, shoulders subtly bear the tool's weight. Cape hangs down naturally. Very close in identity and scale to original reference."
+    },
+    {
+      "stage": 1,
+      "range": "3–5",
+      "rough": "02-crescent-3-5.png",
+      "idle": "First awakened ready stance. Distinct HALF-TURNED torso and low stable wide foot placement, both hands hold the shovel at her RIGHT HIP with shaft diagonally crossing her body, spade pointed diagonally out-right ready for a broad horizontal sweep. Eyes focused and alert but WITHOUT rendered glow. Cape slightly opens behind her shoulders. Different posture from ordinary stage."
+    },
+    {
+      "stage": 2,
+      "range": "6–8",
+      "rough": "03-greatsword-6-8.png",
+      "idle": "Confident second-awakening IDLE: straighter back, lifted chest and chin, calm sharp gaze. Both hands on bare shovel shaft, hold it diagonally across side so spade is low-right and can support a future body-length energy greatsword. Relaxed economical grip despite power, feet firmly and elegantly planted. Cape hem lifted slightly away from legs and braid gently lifted, implying inner pressure but no visible magic. Same physical bare shovel as original, NO sword."
+    },
+    {
+      "stage": 3,
+      "range": "9+",
+      "rough": "04-lance-combo-9-plus.png",
+      "idle": "Fully mastered awake IDLE, clearly taller composed posture with back straight and shoulders relaxed, sharp calm expression. Both hands casually control a diagonal forward-facing bare shovel at waist level, spade pointing out-right. NOT the low attack crouch: this is the calm upright waiting pose before dropping into a low lance guard. Cape fans and lifts subtly behind shoulders, braid and some hair tufts lightly lifted by internal power, no rendered glow/aura. Both boot soles planted. Same intact shovel as original, no spear blade."
+    }
+  ],
+  "actions": [
+    {
+      "stage": 0,
+      "key": "windup",
+      "role": "anticipation",
+      "pose": "Ordinary attack anticipation: feet planted widely, knees bent, torso winds left while both hands pull the bare shovel back near the left shoulder. Physical spade behind/above shoulder prepared for a short heavy downward-diagonal shovel blow. Whole tool visible, no physical changes."
+    },
+    {
+      "stage": 0,
+      "key": "hit",
+      "role": "contact",
+      "pose": "Ordinary blunt shovel strike CONTACT key: forward rightward step, hips and shoulders rotating, two hands driving the FLAT FACE of the real metal spade diagonally down-forward. Shovel spade at chest/waist target height to her right, front knee bent, back foot pushes. Grounded heavy tool swing, no slash arc or particles."
+    },
+    {
+      "stage": 0,
+      "key": "finish",
+      "role": "recovery",
+      "pose": "Ordinary strike FOLLOW-THROUGH / RECOVERY: weight over rightward front foot, physical shovel swung through and held low on her far right with the metal spade just above ground height; both hands keep grip, cape follows motion. Full planted boots visible, no dirt."
+    },
+    {
+      "stage": 1,
+      "key": "windup",
+      "role": "anticipation",
+      "pose": "Awakened horizontal sweep anticipation: very clear low wide stance, torso twisted back, BOTH hands load the shovel near the rear hip, wooden shaft nearly horizontal, metal spade trailing on the left behind her. She looks right. Strong silhouette ready for a horizontal waist-high glaive swing. No energy shell."
+    },
+    {
+      "stage": 1,
+      "key": "hit",
+      "role": "contact",
+      "pose": "Awakened HORIZONTAL SWEEP CONTACT: hips pivot toward right, both hands spread on bare wooden shaft, shaft almost horizontal at waist/chest height, metal spade extends clearly to the right. Cape flares with rotation. ONE broad flowing swing action in body posture but NO painted trails/glow. Full body and entire shovel in frame."
+    },
+    {
+      "stage": 1,
+      "key": "finish",
+      "role": "recovery",
+      "pose": "Awakened horizontal sweep finish: pivot completed, torso half-turned, shovel remains extended across the far side of her body at waist height, both hands holding. Balanced feet near ground, composed expression, cape and braid follow rotation then settle. Physically distinct from the contact frame."
+    },
+    {
+      "stage": 2,
+      "key": "windup",
+      "role": "anticipation",
+      "pose": "Two-hit greatsword-stage anticipation with only PHYSICAL bare shovel drawn: elegantly loaded low guard, torso turned, both hands holding shaft low behind her left hip, shovel spade extends toward low-left, knees flexed for a rising diagonal cut. Focused assured face."
+    },
+    {
+      "stage": 2,
+      "key": "rise",
+      "role": "contact_1",
+      "pose": "First hit of two-hit stage, RISING DIAGONAL CUT CONTACT: both hands drive bare shovel from low-left toward high-right, physical spade fully visible high-right above her head, two-handed arms raised diagonally, front knee forward, torso opens with ascending cut, cape swirls. Shovel remains rigid ordinary tool with same length. No spectral blade."
+    },
+    {
+      "stage": 2,
+      "key": "return",
+      "role": "contact_2",
+      "pose": "Second hit of two-hit stage, RETURN DIAGONAL CUT CONTACT: she pivots with a distinct lateral rightward step, BOTH hands bring bare shovel from high-left toward low-right in the opposite diagonal to rising attack. Metal spade at low-right at target knee/waist height. Forward lean comes from hips not hunched neck, cape in graceful S-curve, clearly different pose from first rising hit. No spectral blade."
+    },
+    {
+      "stage": 2,
+      "key": "finish",
+      "role": "recovery",
+      "pose": "Two-hit stage final controlled follow-through: wide but relaxed balanced planted stance, shovel held diagonally out-right low after return cut, back straightens, composed face, cape and braid drifting to rest. The posture suggests mastery and economical movement, hands on physical wood."
+    },
+    {
+      "stage": 3,
+      "key": "windup",
+      "role": "anticipation",
+      "pose": "Final-stage low LANCE-ATTACK GUARD: drop into a deep elegant low crouch, one front knee bent and rear leg loaded, torso streamlined facing right, BOTH hands at hip level hold bare shovel nearly horizontally pointing toward right. The steel spade leads; future long lance is NOT drawn. Tight tension before launch, cape pulled back."
+    },
+    {
+      "stage": 3,
+      "key": "thrust",
+      "role": "contact_1",
+      "pose": "First hit of three-hit stage, LOW DASHING THRUST CONTACT: very long athletic lunge to right, forward knee deeply bent, back leg extended with boot visible, torso streamlined and chin forward, both hands driving the same bare shovel straight and nearly horizontally rightward. Real steel spade is frontmost, clear socket and tip. Cloak streams backward. No energy lance or trails, not a martial punch."
+    },
+    {
+      "stage": 3,
+      "key": "sweep",
+      "role": "contact_2",
+      "pose": "Second hit, ELEGANT SPINNING CUT CONTACT: light airborne pivot / graceful turn with one bent knee lifted and the other leg extended toward the ground, both hands holding shovel shaft across body, physical metal spade sweeps toward right at waist/chest height. Strong broad rotating silhouette, cape and single braid flare around turn. No energy sword/trails. Entire body and all bare shovel visible."
+    },
+    {
+      "stage": 3,
+      "key": "air_raise",
+      "role": "anticipation_3",
+      "pose": "Third hit ANTICIPATION in the air: stylish compact airborne pose with one knee drawn up, other boot extended down, both arms lift bare shovel overhead in preparation for a descending diagonal cut. Shaft and D handle overhead and real spade held up/back, whole tool inside image. Face looks down-right toward target, cape spreads behind shoulders, modest full clothing. No energy."
+    },
+    {
+      "stage": 3,
+      "key": "descend",
+      "role": "contact_3",
+      "pose": "Third hit DESCENDING DIAGONAL CUT CONTACT: airborne downward-right slash, body angled diagonally, both hands on wooden shaft guide the REAL METAL SHOVEL SPADE down-right. Rear hand high by head, forward hand on mid shaft, shovel shaft rigid and not through the face. Both legs and boots fully visible, one knee lifted and one leg lengthens into landing. Cape flares up/back. No aura, no energy blade, no dust."
+    },
+    {
+      "stage": 3,
+      "key": "land",
+      "role": "recovery",
+      "pose": "Final stage LANDING / RECOVERY: graceful controlled soft landing after three-hit combo, front knee bends low and rear foot grounds, both hands hold bare shovel extended diagonally low-right and spade just above ground. Face calm rather than exhausted, back straightening, cloak and braid floating upward from braking. Entire real shovel and feet inside frame; no impact FX or floor."
+    }
+  ],
+  "idleRevisions": [
+    {
+      "stage": 1,
+      "pose": "Change the ENTIRE BODY POSE radically. She faces right in a LOW HALF-TURNED martial polearm guard, front/right knee deeply bent, rear leg spread to left. BOTH hands hold the wooden shaft HORIZONTALLY across her WAIST, steel shovel blade extends horizontally toward RIGHT at WAIST HEIGHT, D handle behind toward left. Body crouches at least a head lower than original. Upper body turns three-quarter toward camera, cape opens behind. This is a horizontal-sweep stance, NOT the reference's upright diagonal shovel-down stance."
+    },
+    {
+      "stage": 2,
+      "pose": "Change the ENTIRE BODY POSE radically. Confident elegant TWO-HANDED HIGH GUARD: same physical shovel shaft is braced diagonally OVER HER RIGHT SHOULDER, hands together near upper chest, steel spade fully visible up-right ABOVE her head. Both arms bent and raised. Back straight, chin lifted, weight shared by both planted boots, cape hem lifted subtly. This shoulder-loaded guard supports a future enormous spectral greatsword around the spade. DO NOT keep the original pose with a shovel pointed at the ground. No magic weapon drawn."
+    },
+    {
+      "stage": 3,
+      "pose": "Change the ENTIRE BODY POSE radically. Fully mastered calm tall IDLE: she stands very upright and composed, one boot slightly forward, holds the BARE SHOVEL ALMOST VERTICALLY beside her RIGHT SHOULDER, steel spade pointing UP with entire spade above head, lower D grip near hip/thigh, both hands casually controlling the bare wood at hip and chest. Long physical shovel stays same length as original, not a staff or ordinary spear. Cape lifted slightly on BOTH sides, braid lifted slightly, sharpened calm gaze. NOT a crouch and NOT original diagonal shovel-down pose. Entire shovel top and both boot soles have transparent margins. No glow."
+    }
+  ]
+}

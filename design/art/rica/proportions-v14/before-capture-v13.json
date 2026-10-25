@@ -1,0 +1,4810 @@
+{
+  "fps": 30,
+  "frames": 300,
+  "leadSeconds": 2,
+  "stage": 3,
+  "expected": 3,
+  "returned": 107,
+  "records": [
+    {
+      "frame": 0,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 13,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 1,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 14,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 2,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 14,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 3,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 15,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 4,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 15,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 5,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 16,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 6,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 16,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 7,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 17,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 8,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 17,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 9,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 18,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 10,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 19,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 11,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 19,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 12,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 20,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 13,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 20,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 14,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 21,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 15,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 21,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 16,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 22,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 17,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 22,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 18,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 23,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 19,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 23,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 20,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 24,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 21,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 24,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 22,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 25,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 23,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 25,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 24,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 26,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 25,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 27,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 26,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 27,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 27,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 28,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 28,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 28,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 29,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 29,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 30,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 29,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 31,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 30,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 32,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 30,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 33,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 31,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 34,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 31,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 35,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 32,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 36,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 32,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 37,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 33,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 38,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 33,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 39,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 34,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 40,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 35,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 41,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 35,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 42,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 36,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 43,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 36,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 44,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 37,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 45,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 37,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 46,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 38,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 47,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 38,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 48,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 39,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 49,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 39,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 50,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 40,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 51,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 40,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 52,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 41,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 53,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 41,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 54,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 42,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 55,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 0,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 56,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 0,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 57,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 1,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 58,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 1,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 59,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 2,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 60,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 2,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 61,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 3,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 62,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 3,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 63,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 4,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 64,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 4,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 65,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 5,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 66,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 5,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 67,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 6,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 68,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 6,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 69,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 7,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 70,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 8,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 71,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 8,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 72,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 9,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 73,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 9,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 74,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 10,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 75,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 10,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 76,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 11,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 77,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 11,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 78,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 12,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 79,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 12,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 80,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 13,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 81,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 13,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 82,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 14,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 83,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 14,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 84,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 15,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 85,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "idle",
+      "approach": true,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 16,
+      "distance": 0,
+      "plays": 0
+    },
+    {
+      "frame": 86,
+      "ground": [
+        704.14667,
+        475.60086
+      ],
+      "phase": "approach",
+      "approach": true,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 16,
+      "distance": 0.28145507,
+      "plays": 0
+    },
+    {
+      "frame": 87,
+      "ground": [
+        722.61255,
+        458.50497
+      ],
+      "phase": "approach",
+      "approach": true,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 16,
+      "distance": 0.6435131,
+      "plays": 0
+    },
+    {
+      "frame": 88,
+      "ground": [
+        750.01685,
+        442.7877
+      ],
+      "phase": "approach",
+      "approach": true,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 16,
+      "distance": 1.090276,
+      "plays": 0
+    },
+    {
+      "frame": 89,
+      "ground": [
+        782.54553,
+        430.5179
+      ],
+      "phase": "approach",
+      "approach": true,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 16,
+      "distance": 1.5904225,
+      "plays": 0
+    },
+    {
+      "frame": 90,
+      "ground": [
+        816.4115,
+        423.07532
+      ],
+      "phase": "approach",
+      "approach": true,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 16,
+      "distance": 2.1031013,
+      "plays": 0
+    },
+    {
+      "frame": 91,
+      "ground": [
+        848.0386,
+        421.07962
+      ],
+      "phase": "approach",
+      "approach": true,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 16,
+      "distance": 2.5848954,
+      "plays": 0
+    },
+    {
+      "frame": 92,
+      "ground": [
+        874.1702,
+        424.46088
+      ],
+      "phase": "approach",
+      "approach": true,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 16,
+      "distance": 2.990501,
+      "plays": 0
+    },
+    {
+      "frame": 93,
+      "ground": [
+        891.8726,
+        432.63947
+      ],
+      "phase": "approach",
+      "approach": true,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 16,
+      "distance": 3.2718866,
+      "plays": 0
+    },
+    {
+      "frame": 94,
+      "ground": [
+        898.4221,
+        444.76404
+      ],
+      "phase": "approach",
+      "approach": true,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 16,
+      "distance": 3.3776472,
+      "plays": 0
+    },
+    {
+      "frame": 95,
+      "ground": [
+        898.4221,
+        444.76404
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": "rica_thrust",
+      "clipFrame": 1,
+      "idleFrame": 16,
+      "distance": 3.3776472,
+      "plays": 1
+    },
+    {
+      "frame": 96,
+      "ground": [
+        898.4221,
+        444.76404
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_thrust",
+      "clipFrame": 2,
+      "idleFrame": 16,
+      "distance": 3.3776472,
+      "plays": 1
+    },
+    {
+      "frame": 97,
+      "ground": [
+        898.4221,
+        444.76404
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_thrust",
+      "clipFrame": 3,
+      "idleFrame": 16,
+      "distance": 3.3776472,
+      "plays": 1
+    },
+    {
+      "frame": 98,
+      "ground": [
+        898.4221,
+        444.76404
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_thrust",
+      "clipFrame": 4,
+      "idleFrame": 16,
+      "distance": 3.3776472,
+      "plays": 1
+    },
+    {
+      "frame": 99,
+      "ground": [
+        898.4221,
+        444.76404
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_thrust",
+      "clipFrame": 5,
+      "idleFrame": 16,
+      "distance": 3.3776472,
+      "plays": 1
+    },
+    {
+      "frame": 100,
+      "ground": [
+        898.4221,
+        444.76404
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_thrust",
+      "clipFrame": 5,
+      "idleFrame": 16,
+      "distance": 3.3776472,
+      "plays": 1
+    },
+    {
+      "frame": 101,
+      "ground": [
+        898.4221,
+        444.76404
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_thrust",
+      "clipFrame": 6,
+      "idleFrame": 16,
+      "distance": 3.3776472,
+      "plays": 1
+    },
+    {
+      "frame": 102,
+      "ground": [
+        897.94006,
+        445.29968
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_thrust",
+      "clipFrame": 8,
+      "idleFrame": 16,
+      "distance": 3.3776472,
+      "plays": 1
+    },
+    {
+      "frame": 103,
+      "ground": [
+        897.4402,
+        445.85278
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_thrust",
+      "clipFrame": 9,
+      "idleFrame": 16,
+      "distance": 3.3776472,
+      "plays": 1
+    },
+    {
+      "frame": 104,
+      "ground": [
+        897.2063,
+        446.14316
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_thrust",
+      "clipFrame": 10,
+      "idleFrame": 16,
+      "distance": 3.3776472,
+      "plays": 1
+    },
+    {
+      "frame": 105,
+      "ground": [
+        897.5637,
+        445.82648
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_thrust",
+      "clipFrame": 11,
+      "idleFrame": 16,
+      "distance": 3.3776472,
+      "plays": 1
+    },
+    {
+      "frame": 106,
+      "ground": [
+        897.834,
+        445.56552
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_thrust",
+      "clipFrame": 11,
+      "idleFrame": 16,
+      "distance": 3.3776472,
+      "plays": 1
+    },
+    {
+      "frame": 107,
+      "ground": [
+        898.0339,
+        445.34988
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_thrust",
+      "clipFrame": 11,
+      "idleFrame": 16,
+      "distance": 3.3776472,
+      "plays": 1
+    },
+    {
+      "frame": 108,
+      "ground": [
+        898.17896,
+        445.1697
+      ],
+      "phase": "link",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_thrust",
+      "clipFrame": -1,
+      "idleFrame": 16,
+      "distance": 3.3776472,
+      "plays": 1
+    },
+    {
+      "frame": 109,
+      "ground": [
+        898.2838,
+        445.01578
+      ],
+      "phase": "link",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_thrust",
+      "clipFrame": -1,
+      "idleFrame": 16,
+      "distance": 3.3776472,
+      "plays": 1
+    },
+    {
+      "frame": 110,
+      "ground": [
+        898.3625,
+        444.8792
+      ],
+      "phase": "link",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_thrust",
+      "clipFrame": -1,
+      "idleFrame": 16,
+      "distance": 3.3776472,
+      "plays": 1
+    },
+    {
+      "frame": 111,
+      "ground": [
+        898.4221,
+        444.76404
+      ],
+      "phase": "link",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_thrust",
+      "clipFrame": -1,
+      "idleFrame": 16,
+      "distance": 3.3776472,
+      "plays": 1
+    },
+    {
+      "frame": 112,
+      "ground": [
+        898.4221,
+        444.76404
+      ],
+      "phase": "link",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": "rica_thrust",
+      "clipFrame": -1,
+      "idleFrame": 16,
+      "distance": 3.3776472,
+      "plays": 1
+    },
+    {
+      "frame": 113,
+      "ground": [
+        898.4221,
+        444.76404
+      ],
+      "phase": "link",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": "rica_thrust",
+      "clipFrame": -1,
+      "idleFrame": 16,
+      "distance": 3.3776472,
+      "plays": 1
+    },
+    {
+      "frame": 114,
+      "ground": [
+        898.4221,
+        444.76404
+      ],
+      "phase": "link",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": "rica_thrust",
+      "clipFrame": -1,
+      "idleFrame": 16,
+      "distance": 3.3776472,
+      "plays": 1
+    },
+    {
+      "frame": 115,
+      "ground": [
+        898.4221,
+        444.76404
+      ],
+      "phase": "link",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": "rica_thrust",
+      "clipFrame": -1,
+      "idleFrame": 16,
+      "distance": 3.3776472,
+      "plays": 1
+    },
+    {
+      "frame": 116,
+      "ground": [
+        898.4221,
+        444.76404
+      ],
+      "phase": "link",
+      "approach": false,
+      "link": true,
+      "weaponTrail": false,
+      "clip": "rica_link_thrust_sweep",
+      "clipFrame": 0,
+      "idleFrame": 16,
+      "distance": 3.3776472,
+      "plays": 1
+    },
+    {
+      "frame": 117,
+      "ground": [
+        902.2694,
+        431.96268
+      ],
+      "phase": "link",
+      "approach": false,
+      "link": true,
+      "weaponTrail": false,
+      "clip": "rica_link_thrust_sweep",
+      "clipFrame": 1,
+      "idleFrame": 16,
+      "distance": 3.4344406,
+      "plays": 1
+    },
+    {
+      "frame": 118,
+      "ground": [
+        912.8464,
+        421.97842
+      ],
+      "phase": "link",
+      "approach": false,
+      "link": true,
+      "weaponTrail": false,
+      "clip": "rica_link_thrust_sweep",
+      "clipFrame": 2,
+      "idleFrame": 16,
+      "distance": 3.5874887,
+      "plays": 1
+    },
+    {
+      "frame": 119,
+      "ground": [
+        928.4289,
+        415.9598
+      ],
+      "phase": "link",
+      "approach": false,
+      "link": true,
+      "weaponTrail": false,
+      "clip": "rica_link_thrust_sweep",
+      "clipFrame": 3,
+      "idleFrame": 16,
+      "distance": 3.8074975,
+      "plays": 1
+    },
+    {
+      "frame": 120,
+      "ground": [
+        947.171,
+        414.74786
+      ],
+      "phase": "link",
+      "approach": false,
+      "link": true,
+      "weaponTrail": false,
+      "clip": "rica_link_thrust_sweep",
+      "clipFrame": 4,
+      "idleFrame": 16,
+      "distance": 4.06364,
+      "plays": 1
+    },
+    {
+      "frame": 121,
+      "ground": [
+        967.08105,
+        418.67032
+      ],
+      "phase": "link",
+      "approach": false,
+      "link": true,
+      "weaponTrail": false,
+      "clip": "rica_link_thrust_sweep",
+      "clipFrame": 5,
+      "idleFrame": 16,
+      "distance": 4.327219,
+      "plays": 1
+    },
+    {
+      "frame": 122,
+      "ground": [
+        986.0519,
+        427.3994
+      ],
+      "phase": "link",
+      "approach": false,
+      "link": true,
+      "weaponTrail": false,
+      "clip": "rica_link_thrust_sweep",
+      "clipFrame": 5,
+      "idleFrame": 16,
+      "distance": 4.573038,
+      "plays": 1
+    },
+    {
+      "frame": 123,
+      "ground": [
+        1001.93207,
+        439.91647
+      ],
+      "phase": "link",
+      "approach": false,
+      "link": true,
+      "weaponTrail": false,
+      "clip": "rica_link_thrust_sweep",
+      "clipFrame": 6,
+      "idleFrame": 16,
+      "distance": 4.77825,
+      "plays": 1
+    },
+    {
+      "frame": 124,
+      "ground": [
+        1012.6125,
+        454.5977
+      ],
+      "phase": "link",
+      "approach": false,
+      "link": true,
+      "weaponTrail": false,
+      "clip": "rica_link_thrust_sweep",
+      "clipFrame": 8,
+      "idleFrame": 16,
+      "distance": 4.9199862,
+      "plays": 1
+    },
+    {
+      "frame": 125,
+      "ground": [
+        1016.1028,
+        469.40353
+      ],
+      "phase": "link",
+      "approach": false,
+      "link": true,
+      "weaponTrail": false,
+      "clip": "rica_link_thrust_sweep",
+      "clipFrame": -1,
+      "idleFrame": 16,
+      "distance": 4.973257,
+      "plays": 1
+    },
+    {
+      "frame": 126,
+      "ground": [
+        1016.1028,
+        469.40353
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": "rica_sweep",
+      "clipFrame": 1,
+      "idleFrame": 16,
+      "distance": 4.973257,
+      "plays": 2
+    },
+    {
+      "frame": 127,
+      "ground": [
+        1016.1028,
+        469.40353
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": "rica_sweep",
+      "clipFrame": 2,
+      "idleFrame": 16,
+      "distance": 4.973257,
+      "plays": 2
+    },
+    {
+      "frame": 128,
+      "ground": [
+        1016.1028,
+        469.40353
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": "rica_sweep",
+      "clipFrame": 3,
+      "idleFrame": 16,
+      "distance": 4.973257,
+      "plays": 2
+    },
+    {
+      "frame": 129,
+      "ground": [
+        1016.1028,
+        469.40353
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": "rica_sweep",
+      "clipFrame": 4,
+      "idleFrame": 16,
+      "distance": 4.973257,
+      "plays": 2
+    },
+    {
+      "frame": 130,
+      "ground": [
+        1017.2313,
+        470.13876
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": "rica_sweep",
+      "clipFrame": 5,
+      "idleFrame": 16,
+      "distance": 4.973257,
+      "plays": 2
+    },
+    {
+      "frame": 131,
+      "ground": [
+        1018.3836,
+        470.89413
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": "rica_sweep",
+      "clipFrame": 5,
+      "idleFrame": 16,
+      "distance": 4.973257,
+      "plays": 2
+    },
+    {
+      "frame": 132,
+      "ground": [
+        1019.17413,
+        471.34232
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": "rica_sweep",
+      "clipFrame": 6,
+      "idleFrame": 16,
+      "distance": 4.973257,
+      "plays": 2
+    },
+    {
+      "frame": 133,
+      "ground": [
+        1018.97864,
+        471.03885
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": "rica_sweep",
+      "clipFrame": 8,
+      "idleFrame": 16,
+      "distance": 4.973257,
+      "plays": 2
+    },
+    {
+      "frame": 134,
+      "ground": [
+        1018.66034,
+        470.74512
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": "rica_sweep",
+      "clipFrame": 9,
+      "idleFrame": 16,
+      "distance": 4.973257,
+      "plays": 2
+    },
+    {
+      "frame": 135,
+      "ground": [
+        1018.24414,
+        470.45972
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": "rica_sweep",
+      "clipFrame": 10,
+      "idleFrame": 16,
+      "distance": 4.973257,
+      "plays": 2
+    },
+    {
+      "frame": 136,
+      "ground": [
+        1017.75305,
+        470.18146
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": "rica_sweep",
+      "clipFrame": 11,
+      "idleFrame": 16,
+      "distance": 4.973257,
+      "plays": 2
+    },
+    {
+      "frame": 137,
+      "ground": [
+        1017.20886,
+        469.90903
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": "rica_sweep",
+      "clipFrame": 11,
+      "idleFrame": 16,
+      "distance": 4.973257,
+      "plays": 2
+    },
+    {
+      "frame": 138,
+      "ground": [
+        1016.63245,
+        469.6414
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": "rica_sweep",
+      "clipFrame": 12,
+      "idleFrame": 16,
+      "distance": 4.973257,
+      "plays": 2
+    },
+    {
+      "frame": 139,
+      "ground": [
+        1016.1028,
+        469.40353
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": "rica_sweep",
+      "clipFrame": 12,
+      "idleFrame": 16,
+      "distance": 4.973257,
+      "plays": 2
+    },
+    {
+      "frame": 140,
+      "ground": [
+        1016.1028,
+        469.40353
+      ],
+      "phase": "link",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": "rica_sweep",
+      "clipFrame": -1,
+      "idleFrame": 16,
+      "distance": 4.973257,
+      "plays": 2
+    },
+    {
+      "frame": 141,
+      "ground": [
+        1016.1028,
+        469.40353
+      ],
+      "phase": "link",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": "rica_sweep",
+      "clipFrame": -1,
+      "idleFrame": 16,
+      "distance": 4.973257,
+      "plays": 2
+    },
+    {
+      "frame": 142,
+      "ground": [
+        1016.1028,
+        469.40353
+      ],
+      "phase": "link",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": "rica_sweep",
+      "clipFrame": -1,
+      "idleFrame": 16,
+      "distance": 4.973257,
+      "plays": 2
+    },
+    {
+      "frame": 143,
+      "ground": [
+        1016.1028,
+        469.40353
+      ],
+      "phase": "link",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": "rica_sweep",
+      "clipFrame": -1,
+      "idleFrame": 16,
+      "distance": 4.973257,
+      "plays": 2
+    },
+    {
+      "frame": 144,
+      "ground": [
+        1016.1028,
+        469.40353
+      ],
+      "phase": "link",
+      "approach": false,
+      "link": true,
+      "weaponTrail": false,
+      "clip": "rica_link_sweep_descend",
+      "clipFrame": 0,
+      "idleFrame": 16,
+      "distance": 4.973257,
+      "plays": 2
+    },
+    {
+      "frame": 145,
+      "ground": [
+        1021.9128,
+        457.40442
+      ],
+      "phase": "link",
+      "approach": false,
+      "link": true,
+      "weaponTrail": false,
+      "clip": "rica_link_sweep_descend",
+      "clipFrame": 1,
+      "idleFrame": 16,
+      "distance": 5.0468564,
+      "plays": 2
+    },
+    {
+      "frame": 146,
+      "ground": [
+        1036.4651,
+        450.1619
+      ],
+      "phase": "link",
+      "approach": false,
+      "link": true,
+      "weaponTrail": false,
+      "clip": "rica_link_sweep_descend",
+      "clipFrame": 2,
+      "idleFrame": 16,
+      "distance": 5.2467437,
+      "plays": 2
+    },
+    {
+      "frame": 147,
+      "ground": [
+        1057.6167,
+        448.38095
+      ],
+      "phase": "link",
+      "approach": false,
+      "link": true,
+      "weaponTrail": false,
+      "clip": "rica_link_sweep_descend",
+      "clipFrame": 3,
+      "idleFrame": 16,
+      "distance": 5.539854,
+      "plays": 2
+    },
+    {
+      "frame": 148,
+      "ground": [
+        1083.0593,
+        452.50687
+      ],
+      "phase": "link",
+      "approach": false,
+      "link": true,
+      "weaponTrail": false,
+      "clip": "rica_link_sweep_descend",
+      "clipFrame": 4,
+      "idleFrame": 16,
+      "distance": 5.8904047,
+      "plays": 2
+    },
+    {
+      "frame": 149,
+      "ground": [
+        1110.2063,
+        462.45367
+      ],
+      "phase": "link",
+      "approach": false,
+      "link": true,
+      "weaponTrail": false,
+      "clip": "rica_link_sweep_descend",
+      "clipFrame": 5,
+      "idleFrame": 16,
+      "distance": 6.261287,
+      "plays": 2
+    },
+    {
+      "frame": 150,
+      "ground": [
+        1136.1816,
+        477.39117
+      ],
+      "phase": "link",
+      "approach": false,
+      "link": true,
+      "weaponTrail": false,
+      "clip": "rica_link_sweep_descend",
+      "clipFrame": 5,
+      "idleFrame": 16,
+      "distance": 6.615406,
+      "plays": 2
+    },
+    {
+      "frame": 151,
+      "ground": [
+        1157.9067,
+        495.64963
+      ],
+      "phase": "link",
+      "approach": false,
+      "link": true,
+      "weaponTrail": false,
+      "clip": "rica_link_sweep_descend",
+      "clipFrame": 6,
+      "idleFrame": 16,
+      "distance": 6.915764,
+      "plays": 2
+    },
+    {
+      "frame": 152,
+      "ground": [
+        1172.2671,
+        514.7877
+      ],
+      "phase": "link",
+      "approach": false,
+      "link": true,
+      "weaponTrail": false,
+      "clip": "rica_link_sweep_descend",
+      "clipFrame": 8,
+      "idleFrame": 16,
+      "distance": 7.124696,
+      "plays": 2
+    },
+    {
+      "frame": 153,
+      "ground": [
+        1176.3228,
+        531.82825
+      ],
+      "phase": "link",
+      "approach": false,
+      "link": true,
+      "weaponTrail": false,
+      "clip": "rica_link_sweep_descend",
+      "clipFrame": -1,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 2
+    },
+    {
+      "frame": 154,
+      "ground": [
+        1176.3228,
+        531.82825
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": "rica_descend",
+      "clipFrame": 1,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 3
+    },
+    {
+      "frame": 155,
+      "ground": [
+        1176.3228,
+        531.82825
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_descend",
+      "clipFrame": 2,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 3
+    },
+    {
+      "frame": 156,
+      "ground": [
+        1176.3228,
+        531.82825
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_descend",
+      "clipFrame": 3,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 3
+    },
+    {
+      "frame": 157,
+      "ground": [
+        1176.3228,
+        531.82825
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_descend",
+      "clipFrame": 4,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 3
+    },
+    {
+      "frame": 158,
+      "ground": [
+        1176.3228,
+        531.82825
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_descend",
+      "clipFrame": 5,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 3
+    },
+    {
+      "frame": 159,
+      "ground": [
+        1176.3228,
+        531.82825
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_descend",
+      "clipFrame": 5,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 3
+    },
+    {
+      "frame": 160,
+      "ground": [
+        1176.3228,
+        531.82825
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_descend",
+      "clipFrame": 6,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 3
+    },
+    {
+      "frame": 161,
+      "ground": [
+        1176.3228,
+        531.82825
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_descend",
+      "clipFrame": 8,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 3
+    },
+    {
+      "frame": 162,
+      "ground": [
+        1176.3228,
+        531.82825
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_descend",
+      "clipFrame": 9,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 3
+    },
+    {
+      "frame": 163,
+      "ground": [
+        1176.3228,
+        531.82825
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_descend",
+      "clipFrame": 10,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 3
+    },
+    {
+      "frame": 164,
+      "ground": [
+        1176.3228,
+        531.82825
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_descend",
+      "clipFrame": 11,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 3
+    },
+    {
+      "frame": 165,
+      "ground": [
+        1176.3228,
+        531.82825
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_descend",
+      "clipFrame": 11,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 3
+    },
+    {
+      "frame": 166,
+      "ground": [
+        1176.3228,
+        531.82825
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_descend",
+      "clipFrame": 12,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 3
+    },
+    {
+      "frame": 167,
+      "ground": [
+        1176.3228,
+        531.82825
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_descend",
+      "clipFrame": 13,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 3
+    },
+    {
+      "frame": 168,
+      "ground": [
+        1176.3228,
+        531.82825
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_descend",
+      "clipFrame": 14,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 3
+    },
+    {
+      "frame": 169,
+      "ground": [
+        1176.3228,
+        531.82825
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_descend",
+      "clipFrame": 16,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 3
+    },
+    {
+      "frame": 170,
+      "ground": [
+        1179.6436,
+        533.3675
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_descend",
+      "clipFrame": 17,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 3
+    },
+    {
+      "frame": 171,
+      "ground": [
+        1183.0447,
+        534.9469
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_descend",
+      "clipFrame": 18,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 3
+    },
+    {
+      "frame": 172,
+      "ground": [
+        1185.2297,
+        535.9178
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_descend",
+      "clipFrame": 19,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 3
+    },
+    {
+      "frame": 173,
+      "ground": [
+        1184.282,
+        535.3681
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_descend",
+      "clipFrame": 20,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 3
+    },
+    {
+      "frame": 174,
+      "ground": [
+        1183.1626,
+        534.79517
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_descend",
+      "clipFrame": 21,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 3
+    },
+    {
+      "frame": 175,
+      "ground": [
+        1181.9078,
+        534.2046
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_descend",
+      "clipFrame": 22,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 3
+    },
+    {
+      "frame": 176,
+      "ground": [
+        1180.5508,
+        533.60175
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_descend",
+      "clipFrame": 23,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 3
+    },
+    {
+      "frame": 177,
+      "ground": [
+        1179.123,
+        532.9914
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_descend",
+      "clipFrame": 23,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 3
+    },
+    {
+      "frame": 178,
+      "ground": [
+        1177.6545,
+        532.3784
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_descend",
+      "clipFrame": 24,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 3
+    },
+    {
+      "frame": 179,
+      "ground": [
+        1176.3228,
+        531.82825
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": "rica_descend",
+      "clipFrame": 25,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 3
+    },
+    {
+      "frame": 180,
+      "ground": [
+        1176.3228,
+        531.82825
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": "rica_descend",
+      "clipFrame": 26,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 3
+    },
+    {
+      "frame": 181,
+      "ground": [
+        1176.3228,
+        531.82825
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": "rica_descend",
+      "clipFrame": 27,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 3
+    },
+    {
+      "frame": 182,
+      "ground": [
+        1176.3228,
+        531.82825
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_descend",
+      "clipFrame": 27,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 3
+    },
+    {
+      "frame": 183,
+      "ground": [
+        1176.3228,
+        531.82825
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_descend",
+      "clipFrame": 27,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 3
+    },
+    {
+      "frame": 184,
+      "ground": [
+        1176.3228,
+        531.82825
+      ],
+      "phase": "attack",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_descend",
+      "clipFrame": 27,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 3
+    },
+    {
+      "frame": 185,
+      "ground": [
+        1176.3228,
+        531.82825
+      ],
+      "phase": "link",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": "rica_descend",
+      "clipFrame": -1,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 3
+    },
+    {
+      "frame": 186,
+      "ground": [
+        1176.3228,
+        531.82825
+      ],
+      "phase": "return",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 16,
+      "distance": 7.203205,
+      "plays": 3
+    },
+    {
+      "frame": 187,
+      "ground": [
+        1050.3613,
+        521.2093
+      ],
+      "phase": "return",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 17,
+      "distance": 5.380746,
+      "plays": 3
+    },
+    {
+      "frame": 188,
+      "ground": [
+        806.2105,
+        500.62668
+      ],
+      "phase": "return",
+      "approach": false,
+      "link": false,
+      "weaponTrail": true,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 17,
+      "distance": 1.6965833,
+      "plays": 3
+    },
+    {
+      "frame": 189,
+      "ground": [
+        688.51953,
+        490.70502
+      ],
+      "phase": "return",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 18,
+      "distance": 0.15492617,
+      "plays": 3
+    },
+    {
+      "frame": 190,
+      "ground": [
+        653.58997,
+        487.76035
+      ],
+      "phase": "return",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 18,
+      "distance": 0.7143406,
+      "plays": 3
+    },
+    {
+      "frame": 191,
+      "ground": [
+        665.55383,
+        488.76892
+      ],
+      "phase": "return",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 19,
+      "distance": 0.52221537,
+      "plays": 3
+    },
+    {
+      "frame": 192,
+      "ground": [
+        690.76587,
+        490.8944
+      ],
+      "phase": "return",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 19,
+      "distance": 0.11910629,
+      "plays": 3
+    },
+    {
+      "frame": 193,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 20,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 194,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 20,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 195,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 21,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 196,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 21,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 197,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 22,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 198,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 22,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 199,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 23,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 200,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 24,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 201,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 24,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 202,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 25,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 203,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 25,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 204,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 26,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 205,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 26,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 206,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 27,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 207,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 27,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 208,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 28,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 209,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 28,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 210,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 29,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 211,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 29,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 212,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 30,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 213,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 30,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 214,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 31,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 215,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 32,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 216,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 32,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 217,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 33,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 218,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 33,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 219,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 34,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 220,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 34,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 221,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 35,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 222,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 35,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 223,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 36,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 224,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 36,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 225,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 37,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 226,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 37,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 227,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 38,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 228,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 38,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 229,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 39,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 230,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 40,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 231,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 40,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 232,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 41,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 233,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 41,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 234,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 42,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 235,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 42,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 236,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 0,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 237,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 0,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 238,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 1,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 239,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 1,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 240,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 2,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 241,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 2,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 242,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 3,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 243,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 3,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 244,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 4,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 245,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 5,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 246,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 5,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 247,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 6,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 248,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 6,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 249,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 7,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 250,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 7,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 251,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 8,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 252,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 8,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 253,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 9,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 254,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 9,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 255,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 10,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 256,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 10,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 257,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 11,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 258,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 11,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 259,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 12,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 260,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 13,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 261,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 13,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 262,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 14,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 263,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 14,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 264,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 15,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 265,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 15,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 266,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 16,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 267,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 16,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 268,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 17,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 269,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 17,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 270,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 18,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 271,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 18,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 272,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 19,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 273,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 19,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 274,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 20,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 275,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 21,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 276,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 21,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 277,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 22,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 278,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 22,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 279,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 23,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 280,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 23,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 281,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 24,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 282,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 24,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 283,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 25,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 284,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 25,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 285,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 26,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 286,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 26,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 287,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 27,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 288,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 27,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 289,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 28,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 290,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 29,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 291,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 29,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 292,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 30,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 293,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 30,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 294,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 31,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 295,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 31,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 296,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 32,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 297,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 32,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 298,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 33,
+      "distance": 0,
+      "plays": 3
+    },
+    {
+      "frame": 299,
+      "ground": [
+        698.244,
+        491.5248
+      ],
+      "phase": "returned",
+      "approach": false,
+      "link": false,
+      "weaponTrail": false,
+      "clip": null,
+      "clipFrame": -1,
+      "idleFrame": 33,
+      "distance": 0,
+      "plays": 3
+    }
+  ]
+}

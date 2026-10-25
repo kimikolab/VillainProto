@@ -1,0 +1,41 @@
+{
+  "stages": [
+    {
+      "stage": 0,
+      "attacks": 1,
+      "returned_frames": 164,
+      "first_returned": 136,
+      "last_distance": 0
+    },
+    {
+      "stage": 1,
+      "attacks": 1,
+      "returned_frames": 151,
+      "first_returned": 149,
+      "last_distance": 0
+    },
+    {
+      "stage": 2,
+      "attacks": 2,
+      "returned_frames": 143,
+      "first_returned": 157,
+      "last_distance": 0
+    },
+    {
+      "stage": 3,
+      "attacks": 3,
+      "returned_frames": 107,
+      "first_returned": 193,
+      "last_distance": 0
+    }
+  ],
+  "double_event_timing_unchanged": true,
+  "compared_double_frames": 300,
+  "tempo": {
+    "release_frame": 131,
+    "contact_frame": 135,
+    "full_followthrough_frame": 137,
+    "pre_hit_seconds": 0.13333333333333333,
+    "full_swing_seconds": 0.2
+  }
+}

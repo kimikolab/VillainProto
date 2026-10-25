@@ -1,0 +1,35 @@
+{
+  "source": "rica-adult-proportions-v14",
+  "frames": 12,
+  "size": [
+    1152,
+    896
+  ],
+  "fps": 30,
+  "contact": 6,
+  "anchor": [
+    552,
+    768
+  ],
+  "idleAnchor": [
+    512,
+    1496
+  ],
+  "scale": 2.8,
+  "referencePortrait": "rica",
+  "forward": [
+    0,
+    3.1058285,
+    6,
+    8.485281,
+    10.392305,
+    11.59111,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12
+  ],
+  "motion": "全身原画のセルアニメーション。部位ワープ・クロスフェード・逆再生なし"
+}

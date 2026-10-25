@@ -1,0 +1,35 @@
+[
+  {
+    "file": "design\\art\\rica\\spin-trail-v6\\rica-spin-before-after-v6.mp4",
+    "frames": 261,
+    "fps": 30,
+    "size": [
+      1120,
+      660
+    ],
+    "audio": false,
+    "peak": null
+  },
+  {
+    "file": "design\\art\\rica\\attack-motion-v1\\rica-four-stage-flow-comparison-orbit-v6.mp4",
+    "frames": 300,
+    "fps": 30,
+    "size": [
+      1120,
+      1280
+    ],
+    "audio": true,
+    "peak": 0.4109884798526764
+  },
+  {
+    "file": "design\\art\\rica\\attack-motion-v1\\rica-four-stage-flow-full-board-orbit-v6.mp4",
+    "frames": 300,
+    "fps": 30,
+    "size": [
+      2104,
+      1392
+    ],
+    "audio": true,
+    "peak": 0.4109884798526764
+  }
+]

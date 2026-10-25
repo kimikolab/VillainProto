@@ -1,0 +1,22 @@
+[
+  {
+    "file": "rica-double-white-slash-before-after-v13.mp4",
+    "frames": 330,
+    "fps": 30.0,
+    "size": [
+      1400,
+      860
+    ],
+    "audio_peak": null
+  },
+  {
+    "file": "rica-four-stage-flow-comparison-white-v13.mp4",
+    "frames": 300,
+    "fps": 30.0,
+    "size": [
+      1120,
+      1280
+    ],
+    "audio_peak": 0.4109884798526764
+  }
+]

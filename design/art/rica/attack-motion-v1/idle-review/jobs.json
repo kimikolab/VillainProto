@@ -1,0 +1,389 @@
+[
+  {
+    "tag": "rica_stage1_s2022",
+    "prompt_id": "6bca29b5-a014-4ef8-8b4b-e5be07563c20",
+    "workflow": "rica_stage1_s2022-6bca29b5.json",
+    "completed": true,
+    "messages": [
+      [
+        "execution_start",
+        {
+          "prompt_id": "6bca29b5-a014-4ef8-8b4b-e5be07563c20",
+          "timestamp": 1792821077152
+        }
+      ],
+      [
+        "execution_cached",
+        {
+          "nodes": [
+            "3",
+            "4"
+          ],
+          "prompt_id": "6bca29b5-a014-4ef8-8b4b-e5be07563c20",
+          "timestamp": 1792821077168
+        }
+      ],
+      [
+        "execution_success",
+        {
+          "prompt_id": "6bca29b5-a014-4ef8-8b4b-e5be07563c20",
+          "timestamp": 1792821976808
+        }
+      ]
+    ]
+  },
+  {
+    "tag": "rica_stage1_s5055",
+    "prompt_id": "24e851d9-f3f5-4280-88bd-ca857da28ca5",
+    "workflow": "rica_stage1_s5055-24e851d9.json",
+    "completed": true,
+    "messages": [
+      [
+        "execution_start",
+        {
+          "prompt_id": "24e851d9-f3f5-4280-88bd-ca857da28ca5",
+          "timestamp": 1792821978893
+        }
+      ],
+      [
+        "execution_cached",
+        {
+          "nodes": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "30",
+            "31",
+            "32",
+            "19",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10"
+          ],
+          "prompt_id": "24e851d9-f3f5-4280-88bd-ca857da28ca5",
+          "timestamp": 1792821978913
+        }
+      ],
+      [
+        "execution_success",
+        {
+          "prompt_id": "24e851d9-f3f5-4280-88bd-ca857da28ca5",
+          "timestamp": 1792822709544
+        }
+      ]
+    ]
+  },
+  {
+    "tag": "rica_stage1_s2022_final",
+    "prompt_id": "20c42509-4313-486c-9b75-260ee7a48953",
+    "workflow": "rica_stage1_s2022_final-20c42509.json",
+    "completed": true,
+    "messages": [
+      [
+        "execution_start",
+        {
+          "prompt_id": "20c42509-4313-486c-9b75-260ee7a48953",
+          "timestamp": 1792822709911
+        }
+      ],
+      [
+        "execution_cached",
+        {
+          "nodes": [],
+          "prompt_id": "20c42509-4313-486c-9b75-260ee7a48953",
+          "timestamp": 1792822709915
+        }
+      ],
+      [
+        "execution_success",
+        {
+          "prompt_id": "20c42509-4313-486c-9b75-260ee7a48953",
+          "timestamp": 1792822718623
+        }
+      ]
+    ]
+  },
+  {
+    "tag": "rica_stage2_s2022",
+    "prompt_id": "9b9c42a7-9146-495e-a0d3-bdb59fd303c5",
+    "workflow": "rica_stage2_s2022-9b9c42a7.json",
+    "completed": true,
+    "messages": [
+      [
+        "execution_start",
+        {
+          "prompt_id": "9b9c42a7-9146-495e-a0d3-bdb59fd303c5",
+          "timestamp": 1792822718624
+        }
+      ],
+      [
+        "execution_cached",
+        {
+          "nodes": [],
+          "prompt_id": "9b9c42a7-9146-495e-a0d3-bdb59fd303c5",
+          "timestamp": 1792822718634
+        }
+      ],
+      [
+        "execution_success",
+        {
+          "prompt_id": "9b9c42a7-9146-495e-a0d3-bdb59fd303c5",
+          "timestamp": 1792823498322
+        }
+      ]
+    ]
+  },
+  {
+    "tag": "rica_stage1_s2022_final",
+    "prompt_id": "1a91da83-3b3e-4e5c-91fc-c1f64122a684",
+    "workflow": "rica_stage1_s2022_final-1a91da83.json",
+    "completed": true,
+    "messages": [
+      [
+        "execution_start",
+        {
+          "prompt_id": "1a91da83-3b3e-4e5c-91fc-c1f64122a684",
+          "timestamp": 1792823498715
+        }
+      ],
+      [
+        "execution_cached",
+        {
+          "nodes": [],
+          "prompt_id": "1a91da83-3b3e-4e5c-91fc-c1f64122a684",
+          "timestamp": 1792823498717
+        }
+      ],
+      [
+        "execution_success",
+        {
+          "prompt_id": "1a91da83-3b3e-4e5c-91fc-c1f64122a684",
+          "timestamp": 1792823510047
+        }
+      ]
+    ]
+  },
+  {
+    "tag": "rica_stage1_s5055_final",
+    "prompt_id": "2aa31c18-4e42-44b4-8b07-413850dc4af9",
+    "workflow": "rica_stage1_s5055_final-2aa31c18.json",
+    "completed": true,
+    "messages": [
+      [
+        "execution_start",
+        {
+          "prompt_id": "2aa31c18-4e42-44b4-8b07-413850dc4af9",
+          "timestamp": 1792823510962
+        }
+      ],
+      [
+        "execution_cached",
+        {
+          "nodes": [],
+          "prompt_id": "2aa31c18-4e42-44b4-8b07-413850dc4af9",
+          "timestamp": 1792823510969
+        }
+      ],
+      [
+        "execution_success",
+        {
+          "prompt_id": "2aa31c18-4e42-44b4-8b07-413850dc4af9",
+          "timestamp": 1792823545733
+        }
+      ]
+    ]
+  },
+  {
+    "tag": "rica_stage2_s5055",
+    "prompt_id": "4fba2dda-2318-418a-936d-3e84de5d50bf",
+    "workflow": "rica_stage2_s5055-4fba2dda.json",
+    "completed": true,
+    "messages": [
+      [
+        "execution_start",
+        {
+          "prompt_id": "4fba2dda-2318-418a-936d-3e84de5d50bf",
+          "timestamp": 1792823546520
+        }
+      ],
+      [
+        "execution_cached",
+        {
+          "nodes": [],
+          "prompt_id": "4fba2dda-2318-418a-936d-3e84de5d50bf",
+          "timestamp": 1792823546529
+        }
+      ],
+      [
+        "execution_success",
+        {
+          "prompt_id": "4fba2dda-2318-418a-936d-3e84de5d50bf",
+          "timestamp": 1792824281443
+        }
+      ]
+    ]
+  },
+  {
+    "tag": "rica_stage2_s2022_final",
+    "prompt_id": "e2eb6533-1a6c-4056-80f9-05d2a8e504f8",
+    "workflow": "rica_stage2_s2022_final-e2eb6533.json",
+    "completed": true,
+    "messages": [
+      [
+        "execution_start",
+        {
+          "prompt_id": "e2eb6533-1a6c-4056-80f9-05d2a8e504f8",
+          "timestamp": 1792824282200
+        }
+      ],
+      [
+        "execution_cached",
+        {
+          "nodes": [],
+          "prompt_id": "e2eb6533-1a6c-4056-80f9-05d2a8e504f8",
+          "timestamp": 1792824282202
+        }
+      ],
+      [
+        "execution_success",
+        {
+          "prompt_id": "e2eb6533-1a6c-4056-80f9-05d2a8e504f8",
+          "timestamp": 1792824304481
+        }
+      ]
+    ]
+  },
+  {
+    "tag": "rica_stage3_s2022",
+    "prompt_id": "17c27fcd-8f61-489a-a476-1e7d09f81f9d",
+    "workflow": "rica_stage3_s2022-17c27fcd.json",
+    "completed": true,
+    "messages": [
+      [
+        "execution_start",
+        {
+          "prompt_id": "17c27fcd-8f61-489a-a476-1e7d09f81f9d",
+          "timestamp": 1792824304832
+        }
+      ],
+      [
+        "execution_cached",
+        {
+          "nodes": [],
+          "prompt_id": "17c27fcd-8f61-489a-a476-1e7d09f81f9d",
+          "timestamp": 1792824304842
+        }
+      ],
+      [
+        "execution_success",
+        {
+          "prompt_id": "17c27fcd-8f61-489a-a476-1e7d09f81f9d",
+          "timestamp": 1792825053330
+        }
+      ]
+    ]
+  },
+  {
+    "tag": "rica_stage2_s3033",
+    "prompt_id": "bc3ac543-61c1-415e-a553-97e736d30239",
+    "workflow": "rica_stage2_s3033-bc3ac543.json",
+    "completed": true,
+    "messages": [
+      [
+        "execution_start",
+        {
+          "prompt_id": "bc3ac543-61c1-415e-a553-97e736d30239",
+          "timestamp": 1792825053933
+        }
+      ],
+      [
+        "execution_cached",
+        {
+          "nodes": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "30",
+            "7",
+            "8",
+            "9"
+          ],
+          "prompt_id": "bc3ac543-61c1-415e-a553-97e736d30239",
+          "timestamp": 1792825053949
+        }
+      ],
+      [
+        "execution_success",
+        {
+          "prompt_id": "bc3ac543-61c1-415e-a553-97e736d30239",
+          "timestamp": 1792825785833
+        }
+      ]
+    ]
+  },
+  {
+    "tag": "rica_stage3_s2022_final",
+    "prompt_id": "a0051990-9cf9-4e32-aa67-3237f7db6adc",
+    "workflow": "rica_stage3_s2022_final-a0051990.json",
+    "completed": true,
+    "messages": [
+      [
+        "execution_start",
+        {
+          "prompt_id": "a0051990-9cf9-4e32-aa67-3237f7db6adc",
+          "timestamp": 1792825786212
+        }
+      ],
+      [
+        "execution_cached",
+        {
+          "nodes": [],
+          "prompt_id": "a0051990-9cf9-4e32-aa67-3237f7db6adc",
+          "timestamp": 1792825786214
+        }
+      ],
+      [
+        "execution_success",
+        {
+          "prompt_id": "a0051990-9cf9-4e32-aa67-3237f7db6adc",
+          "timestamp": 1792825799661
+        }
+      ]
+    ]
+  },
+  {
+    "tag": "rica_stage3_s5055",
+    "prompt_id": "b57b2850-d015-4437-bf15-4052c802c6a2",
+    "workflow": "rica_stage3_s5055-b57b2850.json",
+    "completed": true,
+    "messages": [
+      [
+        "execution_start",
+        {
+          "prompt_id": "b57b2850-d015-4437-bf15-4052c802c6a2",
+          "timestamp": 1792825800000
+        }
+      ],
+      [
+        "execution_cached",
+        {
+          "nodes": [],
+          "prompt_id": "b57b2850-d015-4437-bf15-4052c802c6a2",
+          "timestamp": 1792825800006
+        }
+      ],
+      [
+        "execution_success",
+        {
+          "prompt_id": "b57b2850-d015-4437-bf15-4052c802c6a2",
+          "timestamp": 1792826529581
+        }
+      ]
+    ]
+  }
+]

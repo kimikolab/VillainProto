@@ -48,8 +48,9 @@ public static class UiKit
         string path = BattlePortraitPathOf(key);
         // 待機の構え差分を優先し、従来の立ち絵も素材として残す。
         string ready = $"res://assets/portraits/battle/{key}_ready_right.png";
+        string vector = $"res://assets/portraits/battle/{key}_idle_right.svg";
         string? found = Godot.FileAccess.FileExists(ready) ? ready
-            : Godot.FileAccess.FileExists(path) ? path : null;
+            : Godot.FileAccess.FileExists(path) ? path : Godot.FileAccess.FileExists(vector) ? vector : null;
         BattlePortraitPathCache[key] = found;
         return found;
     }

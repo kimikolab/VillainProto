@@ -1,0 +1,9 @@
+{
+  "wholeBodyPoses": 20,
+  "headGuideTargetPixels": 73.60848442667351,
+  "exportedHeadGuideMin": 73.60844609224512,
+  "exportedHeadGuideMax": 73.60853153042237,
+  "sameWorldScaleAsIdle": true,
+  "unchangedOtherStageFiles": 132,
+  "unchangedTimingsContactsJumpTurnShapes": true
+}

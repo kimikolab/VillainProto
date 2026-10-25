@@ -53,9 +53,10 @@ public partial class BattlePawn3D
         if (!_idleLoopWarmed && hasBurningVariant) _ = IdleLoopFramesOf(_unitId + "_burning");
         _idleLoopWarmed = true;
         bool burningVariant = _burning && hasBurningVariant;
-        _idleLoopFrames = IdleLoopFramesOf(burningVariant ? _unitId + "_burning" : _unitId);
+        bool ricaStage = _unitId == "rica" && GraveStage > 0 && key == RicaIdleKey;
+        _idleLoopFrames = IdleLoopFramesOf(ricaStage ? RicaIdleLoopKey : burningVariant ? _unitId + "_burning" : _unitId);
         // 攻撃の連番（BattlePawn3D.AttackClip.cs）の再生中は待機ループを止める。
-        bool active = key == _unitId && _alive && !_victory && _idleLoopFrames.Length > 0 && _attackClip is null;
+        bool active = (key == _unitId || ricaStage) && _alive && !_victory && _idleLoopFrames.Length > 0 && _attackClip is null;
         _idleLoopActive = active;
         _idleLoopFrame = -1;
         if (!active) return;
@@ -78,6 +79,7 @@ public partial class BattlePawn3D
 
     internal void ProcessIdleLoop(double delta)
     {
+        if (_unitId == "rica" && _ricaMotionPaused) return;
         if (!_idleLoopActive) return;
         // 勝利絵・倒れた駒は連番で上書きしない（勝利・死亡の演出は RefreshBattlePortrait を通らない）。
         if (_victory || !_alive) { _idleLoopActive = false; return; }

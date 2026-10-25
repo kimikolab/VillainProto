@@ -1,0 +1,44 @@
+[
+  {
+    "clip": "rica_crescent",
+    "frames": 40,
+    "contact": 27,
+    "min_margin": 121
+  },
+  {
+    "clip": "rica_descend",
+    "frames": 28,
+    "contact": 16,
+    "min_margin": 85
+  },
+  {
+    "clip": "rica_return",
+    "frames": 16,
+    "contact": 8,
+    "min_margin": 128
+  },
+  {
+    "clip": "rica_rise",
+    "frames": 17,
+    "contact": 9,
+    "min_margin": 127
+  },
+  {
+    "clip": "rica_shovel",
+    "frames": 31,
+    "contact": 15,
+    "min_margin": 118
+  },
+  {
+    "clip": "rica_sweep",
+    "frames": 13,
+    "contact": 4,
+    "min_margin": 42
+  },
+  {
+    "clip": "rica_thrust",
+    "frames": 15,
+    "contact": 6,
+    "min_margin": 100
+  }
+]

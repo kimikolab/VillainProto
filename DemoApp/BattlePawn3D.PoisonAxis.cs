@@ -91,6 +91,7 @@ public partial class BattlePawn3D
     }
     internal void ClearPoisonAxis()
     {
+        if(_unitId=="rica")EndRicaApproach();
         _poisonJumpCompletion?.TrySetResult(false); _poisonJumpCompletion = null;
         _poisonJumpAge = _poisonJumpSeconds;
         _poisonSipAge = 1;
