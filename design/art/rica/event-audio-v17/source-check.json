@@ -1,0 +1,22 @@
+{
+  "rica_awaken_3.wav": {
+    "source": "DSGNSynth_BUFF-Plus Damage_HY_PC-001.wav",
+    "sha256": "7373f16a795b9c153338501fc5871ffa27da0391ba56ac172a7b42ca5b6ae1a0"
+  },
+  "rica_awaken_6.wav": {
+    "source": "DSGNSynth_BUFF-Plus Damage_HY_PC-003.wav",
+    "sha256": "48e40301dacb02f80f68c21571b95bb31ac43f941aa8d9613a89b092d8882d35"
+  },
+  "rica_awaken_9.wav": {
+    "source": "DSGNSynth_BUFF-Plus Damage_HY_PC-006.wav",
+    "sha256": "c5c2016492175e446fd0052ad61fc43a3f3c92686b3ce3bc8f56936657a86daa"
+  },
+  "rica_landing.wav": {
+    "source": "DSGNImpt_EXPLOSION-Mecha Limb Explosion_HY_PC-001.wav",
+    "sha256": "8a2a170e4ba00bff642aa04032494f5239e8399433fffd669851a5fe5e8a0505"
+  },
+  "rica_absorb.wav": {
+    "source": "MAGAngl_BUFF-Effect Success_HY_PC-001.wav",
+    "sha256": "77a89ddda1ddd673b4d228832399b27f177b56f31f0bbeff50b1dfc6a019fb73"
+  }
+}

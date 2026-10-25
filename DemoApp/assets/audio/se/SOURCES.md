@@ -24,6 +24,50 @@
 音量は -10 dB、最大4音、再生速度によるピッチ変更なし。
 配布・利用条件の原本は素材パックのライセンスを参照する。
 
+## リィカの覚醒攻撃（2026-10-25）
+
+ユーザー指定の同じ Helton Yan's Pixel Combat - Single Files より、以下を無加工でコピー。
+
+| アプリ内ファイル | 元ファイル | 対象 |
+|---|---|---|
+| rica_sword_critical_001.wav | DSGNTonl_MELEE-Sword Critical_HY_PC-001.wav | 3–5層・回転薙ぎ |
+| rica_sword_critical_002.wav | DSGNTonl_MELEE-Sword Critical_HY_PC-002.wav | 6–8層・二連撃の各打 |
+| rica_sword_critical_003.wav | DSGNTonl_MELEE-Sword Critical_HY_PC-003.wav | 9層以上・三連撃の各打 |
+
+本編とFxViewer共通の実接触コマで、1打につき1音。-10 dB・ピッチ1・通常SEの4音枠を使用する。
+0–2層のシャベルは従来の `kado_hit.mp3`（金属叩き・+2 dB）を継続する。
+購入音源本体とインポート情報はGit管理から除外し、別環境では冒頭の原本フォルダから上記名で配置する。
+未配置の段は従来の共通斬撃音へ戻る。
+
+2026-10-25 追加指定：効果音ラボ `D:/Assets/SE/効果音ラボ/戦闘/` から以下を無加工でコピーし、同じ接触コマでSword Criticalへ重ねる。
+
+| アプリ内ファイル | 元ファイル | 重ねる段 |
+|---|---|---|
+| rica_sword_hit_5.mp3 | 刀で斬る5.mp3 | 3–5層：Critical 001と同時 |
+| rica_sword_hit_4.mp3 | 刀で斬る4.mp3 | 6–8層：Critical 002と各打で同時 |
+| rica_sword_hit_1.mp3 | 刀で斬る1.mp3 | 9層以上：Critical 003と各打で同時 |
+
+Sword Criticalは-10 dB、「刀で斬る」は-8 dB（刀音だけ+2 dB）、ピッチ1。2音を同期ストリームにまとめ、1打で通常SEの1枠を使う。
+追加音が元の剣音を途中で押し出さず、停止・再戦で両方とも止まる。追加音が未配置ならSword Criticalのみ。
+今回の3本とインポート情報もGitから除外し、上表の原本から配置する。
+
+## リィカの覚醒・着地・光の吸収（2026-10-25）
+
+Helton Yan's Pixel Combat - Single Files の指定音源を無加工でコピーする。
+
+| アプリ内ファイル | 元ファイル | 再生位置・音量 |
+|---|---|---|
+| rica_awaken_3.wav | DSGNSynth_BUFF-Plus Damage_HY_PC-001.wav | 3層の段へ上がった瞬間・-8 dB |
+| rica_awaken_6.wav | DSGNSynth_BUFF-Plus Damage_HY_PC-003.wav | 6層の段へ上がった瞬間・-8 dB |
+| rica_awaken_9.wav | DSGNSynth_BUFF-Plus Damage_HY_PC-006.wav | 9層の段へ上がった瞬間・-8 dB |
+| rica_landing.wav | DSGNImpt_EXPLOSION-Mecha Limb Explosion_HY_PC-001.wav | 三連撃の落下斬りが接地した接触コマ・-6 dB（初版-12 dBから+6 dB） |
+| rica_absorb.wav | MAGAngl_BUFF-Effect Success_HY_PC-001.wav | 生きている味方リィカへ光が流れる瞬間・-16 dB |
+
+覚醒は実層の写しから段が上がった場合だけ。18層など9層以上で積み増す際は再生しない。
+落下斬りの着地は命中先の人数によらず1打で1音。吸収は複数の仲間・リィカがいても180ms以内の連続を1音にまとめる。
+斬撃とは独立した3枠（覚醒・着地・吸収）を使い、ピッチは速度によらず1。一時停止に追従し、非表示・再戦時に停止する。
+購入音源本体とインポート情報はGitから除外する。未配置の専用音は省略する。
+
 ## 死亡音
 
 ユーザー指定の D:/Assets/SE/Springin より無加工でコピー。

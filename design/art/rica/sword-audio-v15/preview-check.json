@@ -1,0 +1,75 @@
+{
+  "fps": 30,
+  "frames": 780,
+  "seconds": 26.0,
+  "audioPeakBeforeEncoding": 0.4132276475429535,
+  "stages": [
+    {
+      "stage": 0,
+      "file": "kado_hit.mp3",
+      "gainDb": -8,
+      "hits": [
+        {
+          "clip": "rica_shovel",
+          "captureFrame": 110,
+          "previewSeconds": 1.6666666666666667
+        }
+      ],
+      "sha256": "ff61d5f015676265cea7fb4453f5a503876ec443df4f726d2ec622b92ce4ef99"
+    },
+    {
+      "stage": 1,
+      "file": "rica_sword_critical_001.wav",
+      "gainDb": -10,
+      "hits": [
+        {
+          "clip": "rica_crescent",
+          "captureFrame": 122,
+          "previewSeconds": 8.566666666666666
+        }
+      ],
+      "sha256": "f4f986ef10180784cfa69f7be7afd5c2802636e8b45fb5a553f32f380bf5a66a"
+    },
+    {
+      "stage": 2,
+      "file": "rica_sword_critical_002.wav",
+      "gainDb": -10,
+      "hits": [
+        {
+          "clip": "rica_rise",
+          "captureFrame": 103,
+          "previewSeconds": 14.433333333333334
+        },
+        {
+          "clip": "rica_return",
+          "captureFrame": 135,
+          "previewSeconds": 15.5
+        }
+      ],
+      "sha256": "fc5b1d947a4e2185bdb06805d64772f1354cb853b4a9e2df0a43d1758620dc9c"
+    },
+    {
+      "stage": 3,
+      "file": "rica_sword_critical_003.wav",
+      "gainDb": -10,
+      "hits": [
+        {
+          "clip": "rica_thrust",
+          "captureFrame": 101,
+          "previewSeconds": 20.866666666666667
+        },
+        {
+          "clip": "rica_sweep",
+          "captureFrame": 129,
+          "previewSeconds": 21.8
+        },
+        {
+          "clip": "rica_descend",
+          "captureFrame": 169,
+          "previewSeconds": 23.133333333333333
+        }
+      ],
+      "sha256": "71f281a6f0214d3220b62ac90554d02b13fdfa64fa34d9cf527ca0c2694bb8ad"
+    }
+  ]
+}

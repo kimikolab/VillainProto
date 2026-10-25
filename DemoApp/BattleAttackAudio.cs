@@ -64,6 +64,18 @@ public partial class BattleAttackAudio : Node
         "res://assets/audio/se/shiga_attack_3.mp3",
     };
     private static readonly string[] KadoHit = { "res://assets/audio/se/kado_hit.mp3" };
+    private static readonly string[][] RicaSwordCritical =
+    {
+        new[] { "res://assets/audio/se/rica_sword_critical_001.wav" },
+        new[] { "res://assets/audio/se/rica_sword_critical_002.wav" },
+        new[] { "res://assets/audio/se/rica_sword_critical_003.wav" },
+    };
+    private static readonly string[] RicaSwordHit =
+    {
+        "res://assets/audio/se/rica_sword_hit_5.mp3",
+        "res://assets/audio/se/rica_sword_hit_4.mp3",
+        "res://assets/audio/se/rica_sword_hit_1.mp3",
+    };
     private static readonly string[] SoraThrustMedium = { "res://assets/audio/se/sora_thrust_2_3.mp3" };
     private static readonly string[] SoraThrustFull = { "res://assets/audio/se/sora_thrust_4.mp3" };
     private static readonly string[] Heal = { "res://assets/audio/se/heal_magic_1.mp3" };
@@ -257,6 +269,29 @@ public partial class BattleAttackAudio : Node
     public void PlayKadoHit() => PlayVariation(KadoHit);
     // シャベルの鋼部で殴る一打。接触コマで一度だけ金属叩きの素材を鳴らす。
     internal void PlayRicaShovelHit() => PlayVariation(KadoHit,2);
+    internal void PlayRicaHit(int stage)
+    {
+        if (stage <= 0) { PlayRicaShovelHit(); return; }
+        int tier = System.Math.Clamp(stage - 1, 0, RicaSwordCritical.Length - 1);
+        string[] paths = RicaSwordCritical[tier];
+        string hit = RicaSwordHit[tier];
+        bool Available(string path) => ResourceLoader.Exists(path) || FileAccess.FileExists(path);
+        // 購入音源を配置していない環境は、従来の共通斬撃音で再生する。
+        if (!Available(hit)) { PlayVariation(Available(paths[0]) ? paths : Common); return; }
+        string critical = Available(paths[0]) ? paths[0] : PickVariation(Common);
+        string key = critical + "|" + hit;
+        if (!_streams.TryGetValue(key, out var stream))
+        {
+            // 2音を1発分の再生枠へまとめる。三連撃でも追加音が元の剣音を押し出さない。
+            var pair = new AudioStreamSynchronized { StreamCount = 2 };
+            pair.SetSyncStream(0, LoadSound(critical));
+            pair.SetSyncStream(1, LoadSound(hit));
+            pair.SetSyncStreamVolume(0, 0);
+            pair.SetSyncStreamVolume(1, 2); // 刀の命中音だけ+2 dB（実再生は-8 dB）。
+            _streams[key] = stream = pair;
+        }
+        PlayStream(stream);
+    }
     public void PlayHeal(string? sourceUnitId, bool selfHeal)
     {
         bool dedicatedHealer = !selfHeal && sourceUnitId is
@@ -318,15 +353,17 @@ public partial class BattleAttackAudio : Node
     }
 
     private void PlayVariation(string[] paths, float boostDb = 0)
+        => PlayStream(LoadSound(PickVariation(paths)), boostDb);
+
+    private void PlayStream(AudioStream stream, float boostDb = 0)
     {
-        string path = PickVariation(paths);
         // 攻撃・受け流しを合わせて最大4音。再生速度でピッチを変えない。
         int index = _nextVoice++ % _voices.Length;
         var voice = _voices[index];
         voice.Stop();
         voice.VolumeDb += boostDb - _voiceBoosts[index];
         _voiceBoosts[index] = boostDb;
-        voice.Stream = LoadSound(path);
+        voice.Stream = stream;
         voice.PitchScale = 1f;
         voice.Play();
     }
@@ -383,6 +420,7 @@ public partial class BattleAttackAudio : Node
 
     public void StopAll()
     {
+        StopRicaEvents();
         StopPowderBurn();
         StopDustCrackle();
         StopSomSounds();

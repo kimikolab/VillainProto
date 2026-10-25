@@ -17,6 +17,10 @@ public partial class RicaMotionCheck : Control
     {
         try
         {
+            if(OS.GetCmdlineUserArgs().Contains("--rica-event-audio-capture"))
+            {
+                await CaptureRicaEventAudio();return;
+            }
             if(OS.GetCmdlineUserArgs().Contains("--idle-capture"))
             {
                 _field=new BattlefieldView3D();_field.SetAnchorsPreset(LayoutPreset.FullRect);AddChild(_field);

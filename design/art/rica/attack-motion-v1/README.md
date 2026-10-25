@@ -5,6 +5,9 @@
 最新の演出は[v14の三連撃・待機絵に合わせた体格と頭の寸法](../proportions-v14/README.md)。
 [4段階の連続比較・30fps](rica-four-stage-flow-comparison-proportions-v14.mp4)。
 二連撃の発光は[v13](../white-slash-v13/README.md)を継続する。
+攻撃SEは[v15のSword Critical](../sword-audio-v15/README.md)へ、[v16の段別の命中音](../sword-hit-v16/README.md)を重ねる。
+覚醒・光の吸収・落下斬りの接地は[v17の指定SE](../event-audio-v17/README.md)を使用する。
+着地音は[v18で-6 dBに増量](../landing-audio-v18/README.md)した。
 v5の原画を基礎に、v6で立体の回転軌跡、v7で振り抜き、v8で移動中の構え、v9で連撃の全身原画20枚と打の間の動きを追加した。
 以下の過去の動画・検証数は各時点の履歴として残す。
 

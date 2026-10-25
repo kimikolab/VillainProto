@@ -1,0 +1,21 @@
+{
+  "frames": 420,
+  "fps": 30.0,
+  "seconds": 14.0,
+  "audioPeak": 0.5328008532524109,
+  "landingComponent": [
+    {
+      "version": "before",
+      "landingAudioStart": 16.140020833333335,
+      "estimatedLandingDbInMix": -11.693655393320084,
+      "sourceCorrelation": 0.4783632462408471
+    },
+    {
+      "version": "after",
+      "landingAudioStart": 16.140020833333335,
+      "estimatedLandingDbInMix": -5.840461090990987,
+      "sourceCorrelation": 0.7301394664499161
+    }
+  ],
+  "audio": "actual Godot mixes, before then after; no added sounds"
+}

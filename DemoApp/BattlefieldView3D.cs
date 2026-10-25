@@ -684,7 +684,7 @@ public partial class BattlefieldView3D : Control
         bool stagedThrust = thrustCharge is not null && pattern == AttackPattern.Pierce && shieldImpact is null;
         if (!stagedThrust)
         {
-            if (from.UnitId == "rica" && from.GraveStage == 0) _attackAudio.PlayRicaShovelHit();
+            if (from.UnitId == "rica") _attackAudio.PlayRicaHit(from.GraveStage);
             else if (thrustCharge is int soundCharge) _attackAudio.PlayThrust(from.UnitId, from.Team, soundCharge);
             else if (!hushSlap && from.UnitId != "tou" && !(from.UnitId == "shiga" && (from.HasShockAura || from.InterruptWhip))
                 && (movementCue?.Kind != BattleEventKind.Blast || shieldImpact is not null))

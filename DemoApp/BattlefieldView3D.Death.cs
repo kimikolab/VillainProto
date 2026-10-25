@@ -14,10 +14,12 @@ public partial class BattlefieldView3D
     internal void SetDeathClock(bool paused, double speed)
     {
         _deathPaused = paused; _deathSpeed = Math.Max(0.1, speed);
+        _attackAudio?.PauseRicaEvents(paused);
         foreach (var pawn in _pawns.Values) pawn.SetRicaMotionClock(paused,_deathSpeed);
     }
     private void ResetDeathPresentation()
     {
+        _attackAudio?.StopRicaEvents();
         foreach (var pawn in _pawns.Values)
         {
             pawn.StopDeathVisual();
@@ -51,6 +53,7 @@ public partial class BattlefieldView3D
         if (awake)
         {
             GraveAwakenings++;
+            if (IsVisibleInTree()) _attackAudio.PlayRicaAwakening(pawn.GraveStage);
             DeathFlow(pawn.FxPoint - Vector3.Up * 0.6f, pawn.FxPoint, GraveColor(state.Layers), DeathFx3D.Shape.Burst, 1 + pawn.GraveStage * 0.28f);
         }
         if (state.Lives > oldLives)
@@ -63,11 +66,14 @@ public partial class BattlefieldView3D
     internal void ShowDeathOffering(BattlePawn3D dead)
     {
         _lastDeathPlace = dead.FxPoint;
+        bool absorbs = false;
         foreach (var rica in _pawns.Values.Where(p => p.UnitId == "rica" && p != dead && p.Team == dead.Team && p.Hp > 0))
         {
             GraveOfferings++;
+            absorbs |= rica.DeathActive;
             DeathFlow(dead.FxPoint, rica.FxPoint, GraveColor(rica.GraveLayers));
         }
+        if (absorbs && IsVisibleInTree()) _attackAudio.PlayRicaAbsorption();
         if (dead.UnitId is "spore" or "wight" or "vel")
             DeathFlow(dead.FxPoint, dead.FxPoint, dead.UnitId == "spore" ? new Color("b1bd78") : new Color("d1e3f2"), DeathFx3D.Shape.Burst);
     }
@@ -108,6 +114,8 @@ public partial class BattlefieldView3D
     {
         GraveSlashes++;
         int stage = from.GraveStage;
+        if (stage >= 3 && from.RicaClipName == "rica_descend" && from.AttackClipVertical == 0)
+            _attackAudio.PlayRicaLanding();
         if (stage == 0)
         {
             foreach (var hit in hits)

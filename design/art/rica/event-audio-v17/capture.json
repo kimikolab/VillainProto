@@ -1,0 +1,33 @@
+{
+  "fps": 30,
+  "frames": 660,
+  "records": [
+    {
+      "frame": 30,
+      "engineFrame": 29,
+      "cue": "awaken3"
+    },
+    {
+      "frame": 126,
+      "engineFrame": 125,
+      "cue": "awaken6"
+    },
+    {
+      "frame": 222,
+      "engineFrame": 221,
+      "cue": "awaken9"
+    },
+    {
+      "frame": 318,
+      "engineFrame": 317,
+      "cue": "absorb"
+    },
+    {
+      "frame": 485,
+      "engineFrame": 484,
+      "cue": "landing"
+    }
+  ],
+  "attacks": 3,
+  "offerings": 3
+}

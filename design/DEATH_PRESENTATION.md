@@ -4,6 +4,7 @@
 
 リィカの最新の攻撃・構え・分離したエネルギー武器・FxViewerへの接続は
 [`art/rica/attack-motion-v1/README.md`](art/rica/attack-motion-v1/README.md)。
+覚醒・光の吸収・落下斬りの接地SEは[`v17の制作・検証記録`](art/rica/event-audio-v17/README.md)。
 以下の斬撃の記述は初期実装の記録で、現在は7種類のセルアニメーションと一枚の接触剣閃へ更新している。
 
 ## 表現
