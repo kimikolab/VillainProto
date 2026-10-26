@@ -2515,6 +2515,13 @@ public sealed class UnitTally
     public long R390AimSwitch, R390AimMark, R390ColumnEarly, R390ColumnEarlyUnits, R390ColumnStops, R390ReapKills, R390LinesCrossed, R390LinesRepeat;
     /// <summary>第391期（ハギの追撃の刈り取り P1 ／ P1w ／ P1h・**計数のみ**）: 追撃の刈り取り（回 ／ HP ／ 2 連の2発目で ／ 倒した数）・追撃の列ごと（振り ／ 体 ／ HP）。</summary>
     public long R391ChaseReaps, R391ChaseReapHp, R391ChaseReapSecond, R391ChaseReapKills, R391ChaseColumn, R391ChaseColumnUnits, R391ChaseColumnHp;
+    /// <summary>
+    /// 第401期（ハギの版 H1 ／ H3 ／ H123 ／ H123L・**計数のみ**）。ハギの側: 与ダメの内訳（斬撃 ／ 薙ぎ ／ 追撃 ／ 手番の刈り取り ／ 追撃の刈り取り・敵に入った量）と、そのうちの名目の足し分
+    /// （H1 の印の足し分と回数 ／ H3 の倍率で増えた攻撃力と回数・どちらも守りを通る前の量）・敵に入った一撃の最大 ／ 倍率を掛けた攻撃力の最大・再行動の前の振り（刈り取り ／ ふつうの斬撃 ／ 薙ぎ）・
+    /// 最初の撃破（ターン ／ 一撃の種類 1〜5・0 は種類の外 ／ そのときの魂 ／ 倒れた敵の印）。最初の撃破は1戦の値（足し合わせると合計になる）。
+    /// </summary>
+    public long R401DmgStrike, R401DmgSweep, R401DmgPursuit, R401DmgReap, R401DmgChase, R401MarkAdd, R401MarkHits, R401MulAdd, R401MulHits, R401HitMax, R401MulAtkMax;
+    public long R401EncoreReap, R401EncoreStrike, R401FirstKillTurn, R401FirstKillKind, R401FirstKillSoul, R401FirstKillMarks;
     /// <summary>第393期（トモの版 T1 ／ T2 ／ T3・**計数のみ**）。トモの側: 灯に乗せて運んだ力（量 ／ 回数）・休み番を起こして振らせた回数 ／ そのうち消した `IdleTurn` ／ そのうち号令の持ち主がいた回数（号令が買えたはずの手番）・号令の +8 を受けた回数。</summary>
     public long R393Carried, R393CarryLights, R393Wakes, R393WakeClearedIdle, R393WakeAteRally, R393RallyToLamp;
     /// <summary>第394期（ドルガの版 D1 ／ D2・**計数のみ**）。壁の側: 代わりに受けた回数 ／ 量（半分にした後）／ ドルガの側の軽減と重なった回数・ターンごとの量。守られた側: 代わりに受けてもらった回数。</summary>
@@ -3874,6 +3881,9 @@ public sealed class UnitTally
         R390ReapKills += o.R390ReapKills; R390LinesCrossed += o.R390LinesCrossed; R390LinesRepeat += o.R390LinesRepeat;   // 第390期
         R391ChaseReaps += o.R391ChaseReaps; R391ChaseReapHp += o.R391ChaseReapHp; R391ChaseReapSecond += o.R391ChaseReapSecond; R391ChaseReapKills += o.R391ChaseReapKills;
         R391ChaseColumn += o.R391ChaseColumn; R391ChaseColumnUnits += o.R391ChaseColumnUnits; R391ChaseColumnHp += o.R391ChaseColumnHp;   // 第391期
+        R401DmgStrike += o.R401DmgStrike; R401DmgSweep += o.R401DmgSweep; R401DmgPursuit += o.R401DmgPursuit; R401DmgReap += o.R401DmgReap; R401DmgChase += o.R401DmgChase;   // 第401期
+        R401MarkAdd += o.R401MarkAdd; R401MarkHits += o.R401MarkHits; R401MulAdd += o.R401MulAdd; R401MulHits += o.R401MulHits; R401HitMax = Math.Max(R401HitMax, o.R401HitMax); R401MulAtkMax = Math.Max(R401MulAtkMax, o.R401MulAtkMax);
+        R401EncoreReap += o.R401EncoreReap; R401EncoreStrike += o.R401EncoreStrike; R401FirstKillTurn += o.R401FirstKillTurn; R401FirstKillKind += o.R401FirstKillKind; R401FirstKillSoul += o.R401FirstKillSoul; R401FirstKillMarks += o.R401FirstKillMarks;
         R394WallHits += o.R394WallHits; R394WallAmt += o.R394WallAmt; R394WallMitigated += o.R394WallMitigated; R394WalledFor += o.R394WalledFor; R394WallByTurn = AddArr(R394WallByTurn, o.R394WallByTurn);   // 第394期
         R395WallRetreats += o.R395WallRetreats; R395RetreatByTurn = AddArr(R395RetreatByTurn, o.R395RetreatByTurn);   // 第395期
         R396WrapHits += o.R396WrapHits; R396WrapAmt += o.R396WrapAmt; R396WrapHp += o.R396WrapHp; R396WrappedFor += o.R396WrappedFor; R396StoreMax = Math.Max(R396StoreMax, o.R396StoreMax);   // 第396期

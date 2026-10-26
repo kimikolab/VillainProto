@@ -9738,6 +9738,8 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.HagiAimLine)) _aimLive390 = true;       // 第390期（V1 狙いを刈れる敵に）
         if (u.HasTrait(TraitId.HagiLineEvery)) _everyLive390 = true;   // 第390期（V3 線を割るたび数える）
         if (u.HasTrait(TraitId.HagiPursuitReap) || u.HasTrait(TraitId.HagiPursuitHeavy)) _chaseLive391 = true;   // 第391期（P1 〜 追撃の刈り取り ／ 2 割）
+        if (u.HasTrait(TraitId.HagiMarkWeight)) _markWeightLive401 = true;   // 第401期（H1 〜 印が重い）
+        if (u.HasTrait(TraitId.HagiStageMul)) _stageMulLive401 = true;       // 第401期（H3 〜 段で倍率）
         if (u.HasTrait(TraitId.DolgaWall) && !_dolgaWalls.Contains(u)) _dolgaWalls.Add(u);   // 第394期（休む巨兵は壁）
         if (u.HasTrait(TraitId.SlimeWrap) && !_slimeWraps.Contains(u)) _slimeWraps.Add(u);   // 第396期（包むセッキ）
         if (u.HasTrait(TraitId.SlimeHaven)) _slimeHavenLive = true;                           // 第397期（R 避難所・包まれた味方は次の手番を失う）
@@ -12967,6 +12969,7 @@ public sealed class BattleContext
             ? actor.CurrentAttack
             : actor.CurrentAttack * attackPercent / 100;
         if (golmBonus > 0) atk += golmBonus;   // 第345期（攻 ＋ 腹の 1 割）
+        if (_stageMulLive401 && !hagiReap && actor.HasTrait(TraitId.HagiStageMul)) atk = StageMul401(actor, atk);   // 第401期（H3: 今の攻撃力 × 段の倍率・追撃の上乗せはこの後に足す・刈り取りには掛けない）
         if (hagiBonus > 0) atk += hagiBonus;   // 第388期（追撃: 攻 ＋ 敵が失った HP の 1 割・萎縮 ／ 痺れ毒 ／ 軛などはこの後ろで今までどおり）
         if (thornsW > 0) atk = thornsW;        // 第362期（KD-r: 攻撃力 × 2 ＋ 傷・萎縮 ／ 痺れ毒 ／ §1 の +50% などはこの後ろで今までどおり）
 
@@ -13309,6 +13312,9 @@ public sealed class BattleContext
         if (wakeAdd > 0) { first += wakeAdd; TallyOf(actor).R399StackAdd += wakeAdd; }
         if (_verbose && focusN > 0) EmitWall(WallLabels.Focus, actor, target, focusN, 0);   // 第400期・表示専用
         if (heavy) { int hv = HeavyAdd397(actor, target); first += hv; if (_verbose) EmitWall(WallLabels.Heavy, actor, target, hv, 0); }   // 第400期: 表示専用の札を足した（量は今どおり）
+        // 第401期（H1・印が重い）: 主目標に刻んだ印 × その敵の最大 HP の 3%（段の倍率の後・刈り取りの一撃には足さない）。**保持者がいなければ真偽1つで抜ける。乱数を引かない。**
+        bool markW = _markWeightLive401 && !hagiReap && actor.HasTrait(TraitId.HagiMarkWeight);
+        if (markW) first += MarkWeight401(actor, target);
         if (whip is not null) first = WhipAmount(whip, target, first);   // 第217期（当てる前の2倍）
         UnitState firstRecv = shield is null ? target : ShieldRecv(shield, target, ref first);
         if (_fireLvLive) NoteFireContact(actor, firstRecv);   // 第242期（燃え広がりの控え・当てる前）
@@ -13337,6 +13343,7 @@ public sealed class BattleContext
             if (wakeMul != 1) { int s0w = share; share *= wakeMul; TallyOf(actor).R399DoubleAdd += share - s0w; }   // 第399期（X1）
             if (wakeAdd > 0) { share += wakeAdd; TallyOf(actor).R399StackAdd += wakeAdd; }                          // 第399期（X2）
             if (heavy) share += HeavyAdd397(actor, extra);            // 第397期（G2）
+            if (markW) share += MarkWeight401(actor, extra);          // 第401期（H1・巻き込みの敵にもその敵の印のぶんを丸ごと）
             if (whip is not null) share = WhipAmount(whip, extra, share);   // 第217期（当てる前の2倍・当たる駒ごと）
             UnitState recv = shield is null ? extra : ShieldRecv(shield, extra, ref share);
             if (_fireLvLive) NoteFireContact(actor, recv);   // 第242期
@@ -14843,6 +14850,7 @@ public sealed class BattleContext
             else
             {
                 st.DamageToEnemy += amount;
+                if (_hagiKindActor401 == source) NoteHagiDmg401(st, amount);   // 第401期・計数のみ（ハギの一撃の種類ごと）
                 // 第117期。**ターンごとの与ダメ**（前半3T / 後半3T は戦ごとに切り出すので、
                 // 集計の側では復元できない）。既定では `BossCensus` が偽で1本も確保しない。
                 if (BossCensus)
@@ -17601,7 +17609,7 @@ public sealed class BattleContext
         // 第102期。**純粋な記録で、誰も読んで分岐しない**（盤面は1ビットも動かない）。
         // 会戦の境界の蘇生が「最後に倒れた駒」を選ぶためだけにある。
         dead.LastDeathTurn = _turn;
-        if (killer is not null && killer.TeamId != dead.TeamId) TallyOf(killer).Kills++;
+        if (killer is not null && killer.TeamId != dead.TeamId) { TallyOf(killer).Kills++; if (_reapLive) NoteHagiKill401(killer, dead); }   // 第401期・計数のみ（ハギの最初の撃破）
 
         Log($"    {dead.Name} は倒れた", LogKind.Death);
         Emit(new BattleEvent
@@ -18444,8 +18452,66 @@ public sealed class BattleContext
     /// <summary>その敵に対する刈り取りの線（‰）。刈りの印の札があれば、印1つにつき +5%（合わせて最大 6 割）。</summary>
     int ReapLineFor389(UnitState h, UnitState e, int line)
         => _markLive389 && h.HasTrait(TraitId.HagiReapMark)
-            ? Math.Min(HagiDepthTrait.MarkLineMaxPermil, line + HagiDepthTrait.MarkStepPermil * e.RawCounter(HagiDepthTrait.MarkKey))
+            ? Math.Min(HagiDepthTrait.MarkLineMax(h), line + HagiDepthTrait.MarkStepPermil * e.RawCounter(HagiDepthTrait.MarkKey))   // 第401期: H123L（`HagiLineLow`）は上限 5 割
             : line;
+
+    // ---- 第401期: 自分で削って自分で刈る（ハギの版 H1 ／ H3 ／ H123 ／ H123L）。指示書 design/PHASE401_HAGI_CARRY_SPEC.md §2。 ----
+    // 一撃の量を足すのは `PerformAttackBody` の2か所（H3 は攻撃力を作った直後・H1 は主目標 ／ 巻き込みの量を決めた後）。**保持者がいなければ真偽1つで抜ける。乱数を引かない。**
+    // 下の `_hagiKind401` ／ `_hagiKindActor401` は**計数のみ**（ハギのいま振っている一撃の種類・与ダメの内訳と最初の撃破の別に使う）。盤面からは誰も読まない。
+    bool _markWeightLive401, _stageMulLive401;
+    /// <summary>計数のみ: いま振っている一撃の種類（1 斬撃 ／ 2 薙ぎ ／ 3 追撃 ／ 4 手番の刈り取り ／ 5 追撃の刈り取り）と打ち手。入れ子に備えて呼び出し側が退避して戻す。</summary>
+    int _hagiKind401;
+    UnitState? _hagiKindActor401;
+
+    /// <summary>H3: 今の攻撃力 × 魂の段の倍率（段 0 ／ 3 ／ 6 ／ 9 で × 1 ／ 2 ／ 3 ／ 5）。増えた分は計数のみ帳簿へ。</summary>
+    int StageMul401(UnitState h, int atk)
+    {
+        int st = HagiDepthTrait.Stage(HagiDepthTrait.Soul(h)), mul = HagiDepthTrait.StageMul[st];
+        if (mul == 1) return atk;
+        int to = atk * mul;
+        UnitTally t = TallyOf(h);   // 計数のみ
+        t.R401MulAdd += to - atk; t.R401MulHits++;
+        if (to > t.R401MulAtkMax) t.R401MulAtkMax = to;
+        Log($"    {h.Name} の鎌が魂の重みを乗せる（段 {st}・× {mul}・{atk} → {to}）", LogKind.Trigger);
+        return to;
+    }
+
+    /// <summary>H1: その敵に刻んだ刈りの印 × その敵の最大 HP の 3%（切り捨て）。計数のみ帳簿へ。</summary>
+    int MarkWeight401(UnitState h, UnitState e)
+    {
+        int m = e.RawCounter(HagiDepthTrait.MarkKey);
+        if (m <= 0 || e.TeamId == h.TeamId) return 0;
+        int add = m * (e.MaxHp * HagiDepthTrait.MarkWeightPercent / 100);
+        UnitTally t = TallyOf(h);   // 計数のみ
+        t.R401MarkAdd += add; t.R401MarkHits++;
+        return add;
+    }
+
+    /// <summary>計数のみ: ハギの一撃が敵に入った量を、いま振っている一撃の種類に振り分ける（`ApplyDamageBody` ／ `ReapBody388` の与ダメの行から）。</summary>
+    void NoteHagiDmg401(UnitTally st, int amount)
+    {
+        switch (_hagiKind401)
+        {
+            case 1: st.R401DmgStrike += amount; break;
+            case 2: st.R401DmgSweep += amount; break;
+            case 3: st.R401DmgPursuit += amount; break;
+            case 4: st.R401DmgReap += amount; break;
+            case 5: st.R401DmgChase += amount; break;
+        }
+        if (amount > st.R401HitMax) st.R401HitMax = amount;
+    }
+
+    /// <summary>計数のみ: ハギ（刈り取りの札の保持者）の最初の撃破（ターン ／ 一撃の種類 ／ そのときの魂 ／ 倒れた敵の印）。</summary>
+    void NoteHagiKill401(UnitState killer, UnitState dead)
+    {
+        if (!killer.HasTrait(TraitId.HagiReap)) return;
+        UnitTally t = TallyOf(killer);
+        if (t.R401FirstKillTurn != 0) return;
+        t.R401FirstKillTurn = Math.Max(1, _turn);
+        t.R401FirstKillKind = _hagiKindActor401 == killer ? _hagiKind401 : 0;
+        t.R401FirstKillSoul = HagiDepthTrait.Soul(killer);
+        t.R401FirstKillMarks = dead.RawCounter(HagiDepthTrait.MarkKey);
+    }
 
     /// <summary>
     /// 第389期（魂の深さ）: 敵の HP が 8割 ／ 5割 ／ 2割を上から下へ割った（`ApplyDamageBody` の HP を引いた後・生きている駒だけ）。線ごとに1つの駒に1ターンに1回
@@ -18533,6 +18599,9 @@ public sealed class BattleContext
     void ReapTurn388(UnitState h)
     {
         UnitTally t = TallyOf(h);
+        int kind0 = _hagiKind401; UnitState? kindActor0 = _hagiKindActor401;   // 第401期・計数のみ（入れ子に備えて退避）
+        try {
+        bool prevReap = false;   // 第401期・計数のみ（再行動の前の振りが刈り取りだったか）
         for (int swing = 0; ; swing++)
         {
             if (!h.IsAlive || !TeamAlive(Opponent(h.TeamId))) return;
@@ -18546,7 +18615,9 @@ public sealed class BattleContext
             if (reap && line > baseLine && (long)aim.Hp * 1000 > (long)aim.MaxHp * baseLine) t.R389MarkReaps++;   // 計数のみ（印で深くなった線で刈った）
             int spill = SpillAmount388(h);
             long kills0 = t.Kills - t.R388PursuitKills;   // 追撃での撃破は手番の撃破に数えない
-            if (swing > 0) { t.R388Encores++; Log($"  {h.Name} は倒した勢いのまま、もう一度大鎌を振る", LogKind.Trigger); }
+            if (swing > 0) { t.R388Encores++; if (prevReap) t.R401EncoreReap++; else t.R401EncoreStrike++; Log($"  {h.Name} は倒した勢いのまま、もう一度大鎌を振る", LogKind.Trigger); }
+            prevReap = reap;
+            _hagiKindActor401 = h; _hagiKind401 = reap ? 4 : h.CurrentPattern == AttackPattern.Sweep ? 2 : 1;   // 第401期・計数のみ
             if (reap)
             {
                 t.R388Reaps++;
@@ -18602,6 +18673,7 @@ public sealed class BattleContext
             if (t.Kills - t.R388PursuitKills == kills0 || swing >= HagiReaperTrait.MaxEncores) return;
             if (colStop) { t.R390ColumnStops++; return; }   // 第390期（V2）
         }
+        } finally { _hagiKind401 = kind0; _hagiKindActor401 = kindActor0; }
     }
 
     /// <summary>
@@ -18635,6 +18707,7 @@ public sealed class BattleContext
             else
             {
                 st.DamageToEnemy += amount;
+                if (_hagiKindActor401 == source) NoteHagiDmg401(st, amount);   // 第401期・計数のみ
                 if (BossCensus)
                 {
                     int[] by = st.BossDmgByTurn ??= new int[BattleEngine.MaxTurns + 2];
@@ -18721,6 +18794,9 @@ public sealed class BattleContext
         else Log($"    {h.Name} が半分を割った {target.Name} に斬りかかる（失った命 {lost} の {pct / 10} 割 +{bonus}）", LogKind.Trigger);
         _hagiHitActor388 = h; _hagiHitBonus388 = reap ? 0 : bonus; _hagiHitReap388 = reap;
         _forcedTarget = target;
+        int kind0 = _hagiKind401; UnitState? kindActor0 = _hagiKindActor401;   // 第401期・計数のみ（入れ子に備えて退避）
+        _hagiKindActor401 = h; _hagiKind401 = reap ? 5 : 3;
+        try {
         try { PerformAttack(h, "    ", patternOverride: AttackPattern.Single); }
         finally { _forcedTarget = null; _forcedLane = -1; _hagiHitActor388 = null; _hagiHitReap388 = false; }
         if (col is { Count: > 0 } && h.IsAlive)
@@ -18737,6 +18813,7 @@ public sealed class BattleContext
             }
             if (nc > 0) { t.R391ChaseColumn++; t.R391ChaseColumnUnits += nc; }   // 第391期・計数のみ
         }
+        } finally { _hagiKind401 = kind0; _hagiKindActor401 = kindActor0; }
         if (reap) t.R391ChaseReapKills += t.R390ReapKills - rk0;   // 第391期・計数のみ（追撃の刈り取りで倒した数・列ごとを含む）
         long dealt = t.DamageToEnemy - d0;   // この一撃の中で入れ子に起きた追撃の分も含む（入れ子の分は上書きで二重に数えない）
         t.R388PursuitDmg = pd0 + dealt;

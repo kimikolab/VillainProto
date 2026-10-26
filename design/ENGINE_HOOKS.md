@@ -1680,3 +1680,12 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
   - `Lamp`（トモ）: 灯す（`TaillightTrait.OnTurnStart`・`Whet` の後）／ 消える（`Douse`・理由を引数で渡す）／ 譲る（`Yield`・きっかけを引数で渡す・`TakeTurn` の前）。
 - ガンの開戦の +4 ／ 号令の +8（`Whet`・経路 `RallyOpening` ／ `RallyTurn`）と叩き起こし（`Reveille`）は前から台本に出ているので、足していない。
 - 窓口: `BattleContext.EmitSlime` ／ `EmitWall` ／ `EmitLamp`（`internal`・verbose でなければ何もしない）。
+
+## 第401期 —— 自分で削って自分で刈る（ハギの版 H1 ／ H2 ／ H3 ／ H123 ／ H123L・規定は変えない）
+
+- **印が重い（`HagiMarkWeight`・H1）**: `PerformAttackBody` の主目標の量を決めた後（G2 の足し分の後・鞭の前）と、巻き込みの1体ごと（G2 の後）に、その敵の刈りの印 × 最大 HP の 3%（切り捨て）を足す（`MarkWeight401`）。刈り取りの一撃（`hagiReap`）には足さない。巻き込みの敵には 6 割に割らずにその敵の印のぶんを丸ごと。
+- **段で倍率（`HagiStageMul`・H3）**: `PerformAttackBody` で攻撃力を作った直後（ゴルムの上乗せの後・追撃の上乗せの前）に、今の攻撃力を魂の段で × 1 ／ 2 ／ 3 ／ 5（`StageMul401`・表は `HagiDepthTrait.StageMul`）。萎縮 ／ 痺れ毒 ／ 軛などはこの後ろで今どおり。刈り取りには掛けない。
+- **線を下げる（`HagiLineLow`・H123L）**: `HagiDepthTrait.LinePermil` の表（1 ／ 2 ／ 3 ／ 4 割）と、`ReapLineFor389` の印込みの上限（`HagiDepthTrait.MarkLineMax`・5 割）。
+- 保持者がいない戦は `_markWeightLive401` ／ `_stageMulLive401` の真偽1つで抜ける。乱数を引かない。
+- **H2 は札を足していない**: 規定の再行動（`ReapTurn388` の終わりの「この振りで撃破が増えたか」）は第388期から、ふつうの斬撃 ／ 薙ぎ ／ 刈り取りを問わず自分の手番の一撃で倒せば立っていた。
+- 計数のみ: `_hagiKind401` ／ `_hagiKindActor401`（いま振っている一撃の種類・`ReapTurn388` ／ `PursuitStrike388` が退避して戻す）→ `NoteHagiDmg401`（`ApplyDamageBody` ／ `ReapBody388` の与ダメの行から `R401DmgStrike` ／ `Sweep` ／ `Pursuit` ／ `Reap` ／ `Chase`・`R401HitMax`）・`NoteHagiKill401`（`HandleDeath` の `Kills++` の行・`R401FirstKill*`）・`R401EncoreReap` ／ `R401EncoreStrike`・`R401MarkAdd` ／ `MulAdd`（名目の足し分）。

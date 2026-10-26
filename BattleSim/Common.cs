@@ -785,8 +785,11 @@ public static (string Name, Formation F)[] VersionsH397()
 /// <summary>第399期: 「版・耐える セッキ」を外し（規定のセッキ ＝ K1 で「試遊・手番 芯4枚」と同じ）、末尾に「版・目覚め ドルガ」を足した。第398期の一覧はそれを戻した写し（セッキは旧）。</summary>
 public static readonly string[] VersionRows399 = { "版・目覚め ドルガ" };
 /// <summary>第400期: 「版・目覚め ドルガ」を外した（X1 を採らない）。第399期の一覧はそれを戻した写し（トモは旧）。</summary>
+/// <summary>第401期: 第400期の試遊の一覧（「版・死神 キャリー」を足す前）。規定は動かしていないので固定の口は要らない。</summary>
+public static (string Name, Formation F)[] VersionsH400() => Presets.Versions.Where(r => !VersionRows401.Contains(r.Name)).ToArray();
+public static readonly string[] VersionRows401 = { "版・死神 キャリー" };
 public static (string Name, Formation F)[] VersionsH399() =>
-    Presets.Versions.Select(r => (r.Name, Pin399(r.F)))
+    VersionsH400().Select(r => (r.Name, Pin399(r.F)))   /* 第401期: 第400期の一覧から */
         .Append(("版・目覚め ドルガ", Presets.FourCore397(dolga: UnitCatalog.DolgaX1, tomo: UnitCatalog.TomoL1))).ToArray();
 public static (string Name, Formation F)[] VersionsH398()
 {

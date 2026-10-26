@@ -2943,6 +2943,28 @@ public static class UnitCatalog
     /// 名前と二つ名は据え置き。第388〜391期の版の駒は旧の札の並び（`HagiTraits390`）から作ったまま。
     /// </summary>
     public static readonly UnitDef Hagi = HagiOn391(new[] { TraitId.HagiPursuitReap, TraitId.HagiPursuitHeavy }, "。斬りかかりは、失った命の 2 割を乗せる");
+
+    // ---- 第401期: 自分で削って自分で刈る（ハギの版 H1 ／ H2 ／ H3 ／ H123 ／ H123L・指示書 design/PHASE401_HAGI_CARRY_SPEC.md §2・`All` に入れない）----
+    // 土台は規定のハギ（<see cref="Hagi"/>・P1h）。版の札は固定の巻き込みの前に足す。文面は叩き台（指示書 §2）を規定の文面の末尾に。
+    // **H2（倒せば動く）は規定と同じ札**——規定の再行動は第388期から「自分の手番の一撃で倒せば」（ふつうの斬撃 ／ 薙ぎ ／ 刈り取りを問わない）で、刈り取りに限っていなかった（報告の頭に訂正）。
+    const string HagiH1Text401 = "。斬るたび印を刻み、印が増えるほど鎌は深く食い込む（印1つにつき、その敵の最大 HP の 3% を一撃に足す）";
+    const string HagiH3Text401 = "。魂が溜まるほど、鎌の一撃は重くなる（魂 3 で × 2 ／ 6 で × 3 ／ 9 で × 5）";
+    static UnitDef HagiOn401(TraitId[] plus, string text, bool low = false)
+    {
+        string pt = Hagi.PlusText;
+        if (low) pt = pt.Replace("（2 割 → 最大 5 割）", "（1 割 → 最大 4 割）").Replace("（印1つ +5%・合わせて最大 6 割）", "（印1つ +5%・合わせて最大 5 割）");
+        return HagiOn388(Hagi.Traits.SkipLast(1).Concat(plus).Append(TraitId.HagiSpillFixed).ToArray(), pt + text, Hagi.MinusText);
+    }
+    /// <summary>ハギの版 H1（第401期・印が重い）: 規定 ＋ 斬撃 ／ 薙ぎ ／ 追撃の一撃に、その敵の印 × 最大 HP の 3% を足す。</summary>
+    public static readonly UnitDef HagiCarryH1 = HagiOn401(new[] { TraitId.HagiMarkWeight }, HagiH1Text401);
+    /// <summary>ハギの版 H2（第401期・倒せば動く）: **規定と同じ札・文面の別の定義**（規定の再行動がすでに「自分の手番の一撃で倒せば」だった）。</summary>
+    public static readonly UnitDef HagiCarryH2 = HagiOn401(Array.Empty<TraitId>(), "");
+    /// <summary>ハギの版 H3（第401期・段で倍率）: 規定 ＋ 斬撃 ／ 薙ぎ ／ 追撃の攻撃力を魂の段で × 1 ／ 2 ／ 3 ／ 5。</summary>
+    public static readonly UnitDef HagiCarryH3 = HagiOn401(new[] { TraitId.HagiStageMul }, HagiH3Text401);
+    /// <summary>ハギの版 H123（第401期）: H1 ＋ H2 ＋ H3（H1 の足し分は倍率の後）。</summary>
+    public static readonly UnitDef HagiCarryH123 = HagiOn401(new[] { TraitId.HagiMarkWeight, TraitId.HagiStageMul }, HagiH1Text401 + HagiH3Text401);
+    /// <summary>ハギの版 H123L（第401期）: H123 ＋ 線を下げる（魂の段の線 1 ／ 2 ／ 3 ／ 4 割・印込みの上限 5 割）。</summary>
+    public static readonly UnitDef HagiCarryH123L = HagiOn401(new[] { TraitId.HagiMarkWeight, TraitId.HagiStageMul, TraitId.HagiLineLow }, HagiH1Text401 + HagiH3Text401, low: true);
     /// <summary>ハギの版 VA（第390期）: V1 ＋ V2 ＋ V3。</summary>
     public static readonly UnitDef HagiVA = HagiOn390(new[] { TraitId.HagiAimLine, TraitId.HagiColumnEarly, TraitId.HagiLineEvery }, HagiV1Text + HagiV2Text + HagiV3Text);
 

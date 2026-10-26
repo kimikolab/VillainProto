@@ -8,6 +8,8 @@ description: 第259期に `CLAUDE.md` の「現状値」節を**逐語で**移�
 
 ## 現状値
 
+**第401期は軽い期で、規定を1つも変えず、ハギの版 5 つ（H1 印が重い ／ H2 倒せば動く ／ H3 段で倍率 ／ H123 ／ H123L 線を下げる）を測った**（指示書は design/PHASE401_HAGI_CARRY_SPEC.md・報告は design/PHASE401_HAGI_CARRY.md）。版のハギは `UnitCatalog.HagiCarryH1` ／ `H2` ／ `H3` ／ `H123` ／ `H123L`（`All` の外・札は `HagiMarkWeight` ／ `HagiStageMul` ／ `HagiLineLow`）。**H2 は規定と同じ札**（規定の再行動は第388期から、ふつうの斬撃で倒しても立っていた）。`compare` は規定で 0 セル（版はハギのいる 5 行で +0.2pt まで）。試遊の台に「版・死神 キャリー」（スィド ／ ボルグ ／ ベニ ／ ハギ H123 ／ トウ）を足した。過去の器具の一覧は `Common.VersionsH400()`（`VersionsH399()` はそこから作る）。
+
 **第400期は、段0 でトモの L1 を規定にし（旧は `UnitCatalog.TomoH399`（T3））、本体で手番の軸の演出のための出来事を 3 種類足した（`BattleEventKind.Slime` ／ `Wall` ／ `Lamp`・表示専用・盤面は変えない）**（指示書は design/PHASE400_TEMPO_SETTLE_SPEC.md・報告は design/PHASE400_TEMPO_SETTLE.md）。過去の器具の固定は `Common.PinT399` ／ `Pin399` ／ `VersionsH399`（`PinT393` は H399 も旧へ）。`compare` は 0 セル（全66行 100 / 98.1 / 99.2 / 98.5 / 98.1・主判定19行 100 / 98.6 / 99.9 / 99.9 / 97.1・情報セル 29 / 10 のまま）。試遊の台「版・目覚め ドルガ」を外した。Codex 向けの台本の説明は `design/PHASE291_CODEX_MEMO.md` §67。
 
 **第399期は、段0 でセッキ K1 を規定にし（旧は `UnitCatalog.SekkiH398`（B））、本体で放つターンに 3,000 を出す版（トモ L1 ／ ドルガ X1 ／ X2 と L1+X1 ／ L1+X2）を測った——本体の版はどれも規定にしない**（指示書は design/PHASE399_TEMPO_BURST_SPEC.md・報告は design/PHASE399_TEMPO_BURST.md）。過去の器具の固定は `Common.PinS398` ／ `Pin398` ／ `VersionsH398`（`PinX397` ／ `PinK396` ／ `PinSekki397` は H398 も旧へ）。版の駒は `UnitCatalog.TomoL1` ／ `DolgaX1` ／ `DolgaX2`（`All` の外・札 `TaillightIdleYield` ／ `DolgaWakeDouble` ／ `DolgaWakeStack`・保持者 0 枚）。`compare` は 2 行 2 セル（第398期の K1 の列と同じ）・全66行 100 / 98.1 / 99.2 / 98.5 / 98.1・主判定19行 100 / 98.6 / 99.9 / 99.9 / 97.1・情報セル 29 / 10。試遊の台「版・耐える セッキ」を外し、「版・目覚め ドルガ」を足した。
