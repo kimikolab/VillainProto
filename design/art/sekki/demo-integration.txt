@@ -1,0 +1,120 @@
+包みのセッキ — スライム立ち絵のDemoApp適用（2026-10-26）
+
+作業範囲
+AGENTS.md / CLAUDE.md / CONTRIBUTING.mdを読み、委譲規則を適用。
+再委譲・コミット・push・PRなし。
+BattleCore / BattleSim / docs / PrototypeApp / GodotAppのソースは編集していない。
+既存のCLAUDE.md / CONTRIBUTING.md / セッキの指示書・コンセプトは変更していない。
+購入素材: GodotApp/ASSET_RESEARCH_AND_PLAN.mdとDemoApp/PolyBlocks実配置を確認。NatureBlocksは背景・植生、EffectBlocksは汎用演出で、個別キャラクター立ち絵に適合する素材はないため不採用。
+
+生成
+内蔵image_genを使用できた。CLI/API・手描きSVG・手続き描画の代用品は使用していない。
+全生成はtransparent_background=true。原本の画像編集はimage_genで行い、採用PNGは加工せずゲームへコピー。
+通常用は既存コンセプトをidentity-preserve参照。右向きは通常用sekki-front-v1.pngを参照し、3/4へ回転。左右反転ではない。
+背景・旅人・アーチ・攻撃・影・文字は外し、単体の緑のゼリー、半目、小さな口、体内の金の粒を残した。
+初回はアーチ状の折り重なりが強かったため再生成し、その後通常用の余白を調整。
+全プロンプト: sekki-production-v1-prompts.txt。
+生成ツールのファイル保存先から、以下の原本をこのフォルダーへコピーした。
+
+画像一覧（すべて1254x1254、8bit RGBA）
+- sekki-front-v1.png: コンセプトから作成した通常用の原本。右向き生成の参照。
+- sekki-front-v1-final.png: 通常用の余白調整後の採用原本。
+- sekki-idle-right-v1.png: 右向き戦闘用の採用原本。
+- sekki-idle-right-v1-final.png: 右向き余白調整の検討版。左下alpha=1のため不採用。
+
+適用ファイル
+- DemoApp/assets/portraits/sekki.png: sekki-front-v1-final.pngとSHA-256一致。
+- DemoApp/assets/portraits/sekki.png.import: Godot生成。
+- DemoApp/assets/portraits/battle/sekki_idle_right.png: sekki-idle-right-v1.pngとSHA-256一致。
+- DemoApp/assets/portraits/battle/sekki_idle_right.png.import: Godot生成。
+- DemoApp/UiKit.cs: sekkiの行を2行だけ追加。画像を引く既存規約をそのまま利用。
+- design/art/sekki/sekki-production-v1-prompts.txt: 生成・調整の全プロンプト。
+- design/art/sekki/demo-integration.txt: この記録。
+- design/art/sekki/capture-integration.gd: 原本・RGBA・四隅・本番Sprite3D・実画面の確認。
+- design/art/sekki/validate-build.ps1: このサンドボックス向けの既存SDK参照による検証。作業用Junctionを非再帰で消し、SDK原本には触らない。
+- design/art/sekki/selection-game-check.png / battle-game-check.png: 各1440x900、実際の第五波で撮影。
+- design/art/sekki/assets-validation.log / build-validation.log / import-validation.log: 画像・ビルド・インポートの出力。
+- design/art/sekki/smoke-validation.log / smoke-stage4-validation.log: 指定コマンドと実際の第五波の出力。
+- design/art/sekki/capture-validation.log / capture-engine.log: 撮影と本番Sprite3D照合の出力。
+- design/art/sekki/scope-validation.txt: 開始時との差分を照合した記録。
+
+表示
+PortraitWorldHeight("sekki") = 3.40f。
+BattlePortraitBottomPaddingRatio("sekki") = 147f / 1254f = 約0.11722488。
+右向き画像で既存の戦闘シェーダーのdiscard閾値（alpha<0.02）を越える本体の下端はy=1106。
+キャンバス下端との間に147pxの余白があるため、その分を補正する。
+alpha<=5/255の点は戦闘描画で除かれるため接地の測定には含めない。
+描画される本体は幅約1212px / 高さ約903px（比約1.34:1）。3.40はキャンバス込み、本体の高さは約2.45ワールド単位。
+ドルガと同じ編成で実画面を確認し、幅が巨大さを示しつつ隣の味方を大きく隠さない値として採用。
+本番Sprite3Dでheight=3.40000003 / flip_h=falseを確認。通常用は編成のスロット内に収まり、右向き待機用は地面付近に広い裾がつき、半目の顔が右を向く。
+
+受け入れ条件1 — ビルド
+指定コマンド:
+dotnet build DemoApp/DemoApp.csproj --no-restore -v minimal
+そのままではエラー2件。サンドボックスがC:/Users/Pon/AppData/Roaming/NuGet/NuGet.Configを読めず、Godot.NET.Sdk/4.7.2の解決がMSB4236で停止した。
+権限の拡大は行っていない。
+既存のC:/Users/Pon/.nuget/packages/godot.net.sdk/4.7.2と.NET 9.0.304のSDKを作業ディレクトリのJunctionから参照して回避:
+powershell -NoProfile -ExecutionPolicy Bypass -File design/art/sekki/validate-build.ps1
+内部コマンドは同じbuildに-p:NetCoreRoot=C:/Program Files/dotnet/を付加。MSBuildSDKsPathとMSBuildEnableWorkloadResolverをプロセス内だけで設定。
+結果: ビルド成功、エラー0、最終の再現実行はMSB4241警告1件、終了コード0。
+MSB4241はバージョン名を持たないJunctionのSDK解決による。リンク先は指定の4.7.2。
+初回のコンパイルには既存BattleCoreのCS0162 / CS8602も各1件あった。
+通常コマンド単独での成功という条件はこのサンドボックスでは未達。代替環境設定付きでは検証済み。
+
+受け入れ条件2 — 寸法・RGBA・四隅
+Godot Image.FORMAT_RGBA8とSystem.Drawing.Format32bppArgbで確認。
+通常用: 1254x1254、四隅alpha=[0,0,0,0]。
+右向き: 1254x1254、四隅alpha=[0,0,0,0]。
+原本のSHA-256も一致。SEKKI_IMAGE_OKが2行、SEKKI_ASSETS_CHECK_OK。
+重要な残件: 生成画像には本体外にalpha=1〜5/255の微小な点が残る。
+四隅の条件は満たすが、「背景全域が厳密にalpha=0」は未達。通常用のalpha>0の境界は(0,71)-(1213,1253)、右向きは(0,33)-(1237,1158)。
+alpha>5の本体境界は通常用(61,240)-(1195,1057)、右向き(22,204)-(1233,1106)。
+戦闘では既存のシェーダーがalpha<0.02を除去し、実画面では外側の点は視認できなかった。編成画面でも目視で背景の矩形や影は見えない。
+画像を手続き加工して完全透過にしたとは報告しない。
+
+受け入れ条件3 — Godot読み込み
+& 'C:/tools/Godot_v4.7.2-stable_mono_win64/Godot_console.exe' --path DemoApp --headless --editor --import --quit
+対象2枚の.importが生成された。本番画面と頭なしスクリプトで読み込み成功。
+エディターのユーザー設定・キャッシュのAppData保存先へのアクセス不可と証明書ストアのエラーがあり、全体の終了コードは1。
+今回のGodotインポートが範囲外へ新規生成した445個の.import/.uidは、開始時のDemoApp全ファイル状態と生成時刻2026-10-26 13:23を照合して除去。開始前の未追跡ファイルは削除していない。
+既存キャッシュ等のGit対象外のGodot生成物は通常の検証に伴い更新される。
+
+受け入れ条件4 — 頭なし単発再生
+& 'C:/tools/Godot_v4.7.2-stable_mono_win64/Godot_console.exe' --path DemoApp --headless --quit-after 120000 -- --demo-autoplay --demo-quit --demo-fast '--demo-preset=試遊・手番 包み' --demo-stage=5 --demo-seed=0
+DEMO_PRESET index=118 name=試遊・手番 包み。
+DEMO_SMOKE_COMPLETE events=188 turns=3 won=True。完走、終了コード1。
+注意: 現在の--demo-stageは0始まりで0〜4。指定の5は範囲外で無視され、第一波が選ばれる。
+そのため同じコマンドの--demo-stage=4で実際の第五波も追加検証:
+DEMO_SMOKE_COMPLETE events=337 turns=3 won=True。完走、終了コード1。
+両方にuser://ログ保存・証明書ストアのアクセスエラーと終了時のRID/CanvasItem/ObjectDB等の解放診断が残る。合否は指示どおりDEMO_SMOKE_COMPLETEで判断。
+戦闘ルール・配置の台本は変更していない。
+
+受け入れ条件5 — 実画面
+& 'C:/tools/Godot_v4.7.2-stable_mono_win64/Godot_console.exe' --path DemoApp --windowed --resolution 1440x900 --script C:/works/VillainProto/design/art/sekki/capture-integration.gd --audio-driver Dummy --log-file C:/works/VillainProto/design/art/sekki/capture-engine.log -- '--demo-preset=試遊・手番 包み' --demo-stage=4 --demo-seed=0
+Vulkan Forward+ / RTX 5090で実画面を撮影。
+SEKKI_SPRITE_OK height=3.40000003064051 position=(0.0,1.349085,0.0) flip_h=false。
+SEKKI_ART_CAPTURE_OK originals alpha height=3.40 actual-preset。
+selection-game-check.png / battle-game-check.pngを目視確認。
+編成画面で正面寄りの絵が表示され、戦闘では3/4右向き、顔の識別・裾の接地・ドルガとの体格差を確認。
+user://シェーダーキャッシュ保存不可・証明書ストア・終了時解放診断により終了コード1だが、撮影と照合は完了。
+
+受け入れ条件6 — 差分空白
+git diff --check -- DemoApp/UiKit.cs
+終了コード0。
+
+受け入れ条件7 — 変更範囲
+開始時から存在したCLAUDE.md / CONTRIBUTING.mdの変更、329個のDemoApp未追跡項目を保持。
+今回のソース編集はUiKit.csの2行だけ。追加はセッキの2枚+2.importとdesign/art/sekki/以下。
+開始後にDemoApp/FireUltimateFx.Lance.cs / FireUltimateFx.cs / Main.csにも変更が現れたが、こちらでは編集・差し戻ししていない。
+したがって作業ツリー全体が指定ファイルだけという条件は既存・並行変更のため満たせない。担当差分は指定範囲内。
+詳しい最終状態はscope-validation.txt。
+
+残件・制約
+- 指定ビルドの標準コマンド単独はNuGet.Configへのアクセス制限で失敗。既存SDK参照の回避付きではエラー0。
+- 背景全域の厳密なalpha=0は未達（alpha=1〜5の微小点）。四隅alpha=0、RGBA、同寸法、実画面表示は確認済み。
+- --demo-stage=5は第五波にならない。指定コマンドと実際の第五波の両方を完走確認。
+- 範囲外の並行変更は保持。依頼元で差分の由来を分けてレビューすること。
+
+コミット時の整理（2026-10-26・ポンの判断）
+- この v1 の絵は同じ日に v2（人の上半身を持つスライム・demo-integration-v2.txt）へ差し替えた。ここは v1 の記録として残す。
+- 検証用の残骸 validate-build.ps1 / scope-validation.txt は外した。上の本文の参照は作業当時の記録。

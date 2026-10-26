@@ -530,6 +530,7 @@ void fragment() {
     {
         StopDeathVisual();
         SetDirgeSinging(false);
+        SetSekkiWrapping(false);
         ClearTouPowder();
         SetDecoyShown(false);
         ClearMovementPortrait();
@@ -593,6 +594,7 @@ void fragment() {
         _portraitMaterial.SetShaderParameter("hagi_dissolve", 0f);
         ResumeDeathVisual();
         SetDirgeSinging(false);
+        SetSekkiWrapping(false);
         SetDecoyShown(false);
         ClearMovementPortrait();
         ResetBowPortrait();
@@ -640,6 +642,7 @@ void fragment() {
         StopDeathVisual();
         if (!_alive || Team != BattleContext.PlayerTeam) return;
         SetDirgeSinging(false);
+        SetSekkiWrapping(false);
         SetDecoyShown(false);
         ClearMovementPortrait();
         ResetBowPortrait();

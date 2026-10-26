@@ -213,6 +213,7 @@ public static class UiKit
         "sero" => 2.15f,
         "golm" => 3.35f,
         "dolga" => 3.30f,
+        "sekki" => 3.10f, // 人型の上半身と液だまり。人より大きく、ドルガより低い表示高。
         "sasa" => 1.90f,
         "tome" => 2.45f,
         "sora" => 2.65f,
@@ -301,6 +302,7 @@ public static class UiKit
         "golm" => 0.0871f,
         "golm_rocket" => 149f / 1515f,
         "dolga" => 0.0699f,
+        "sekki" => 162f / 1536f, // v2右向き絵の液だまり下端を足元の輪へ合わせる。
         "sasa" => 0.0267f,
         "tome" => 0.02083f, // 右向き待機絵。1536px の下端に32px。
         "tome_attack" => 0.05859f, // 攻撃絵の足元は1446px。

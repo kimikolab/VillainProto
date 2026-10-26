@@ -1251,6 +1251,7 @@ public partial class Main : Control
         _movement = new MovementPresentation(_result.Events);
         _firePresentation = new FirePresentation(_result.Events);
         IndexFireHits(_result.Events);
+        ResetSekkiPlayback(_result.Events);
         _fireFastEvent = false;
         _misaFastEvent = false;
         _golmFastEvent = false;
@@ -1337,6 +1338,7 @@ public partial class Main : Control
         ApplyDeathFrames(_result.Events.Count);
         await _battleField.FinishRicaMotions();
         if (token != _playToken || !_battleMode) return;
+        FinishSekkiPlayback();
         _playing = false;
         if (ViewerMode) return;
         _battleField.EndGolmPresentation();
@@ -1428,6 +1430,7 @@ public partial class Main : Control
 
     private async Task ApplyEvent(BattleEvent e, int eventIndex)
     {
+        ObserveSekkiEvent(e, eventIndex);
         StartDustBurst(eventIndex);
         _dohaFastEvent = _dohaShares.FastEvents.Contains(eventIndex);
         BattlePawn3D? actor = _battleField.FindPawn(e.ActorId);
@@ -2100,6 +2103,7 @@ public partial class Main : Control
     private void ShowDamage(int eventIndex, BattleEvent e, BattlePawn3D? actor, BattlePawn3D? target,
                             bool withSource = true)
     {
+        ShowSekkiWrapDamage(eventIndex);
         if (ShowHagiDamage(eventIndex, e, actor, target)) return;
         // 範囲攻撃は着弾を前へ寄せるので、直前の軛も同じ拍へ寄せる。
         if (_result is not null)
@@ -2665,6 +2669,7 @@ public partial class Main : Control
     private void ReturnToFormation()
     {
         if (!_battleMode) return;
+        EndSekkiWraps();
         ++_playToken;
         _battleMode = false;
         _playing = false;

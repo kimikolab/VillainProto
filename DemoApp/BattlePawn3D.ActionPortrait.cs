@@ -66,6 +66,7 @@ public partial class BattlePawn3D
             key = "ere_singing";
             padding = UiKit.BattlePortraitBottomPaddingRatio(key);
         }
+        if (key == "sekki" && SekkiWrapping && _alive) key = "sekki_wrap";
         if (key == "susu" && _alive)
         {
             if (_ashReleasing)

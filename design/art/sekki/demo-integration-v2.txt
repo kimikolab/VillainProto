@@ -1,0 +1,127 @@
+包みのセッキ v2 — A案の通常姿とC案の「包む」差分（2026-10-26）
+
+結果
+通常・戦闘待機を人型上半身のA案へ差し替え、包む瞬間だけ同じセッキの後ろ側の腕を膜にした差分を表示した。
+画像生成は内蔵image_genで3回、すべて採用、没案0回。通常→右向き→膜の順。
+全プロンプト・参照・生成原本の出力先・後処理はsekki-production-v2-prompts.txt。
+AGENTS.md / CLAUDE.md / CONTRIBUTING.mdと委譲節を読み、再委譲・コミット・push・PRなし。
+購入済みNatureBlocks / EffectBlocksの記録とDemoApp/PolyBlocksの実配置を確認した。
+背景・汎用演出の素材で個別キャラクターの姿には適合しないため、指定どおりimage_genを使用した。
+BattleCore / BattleSim / docs / GodotApp / PrototypeAppのソース、既存の指示書・v1記録・コンセプトは編集していない。
+
+配置と寸法
+全画像1024x1536、8bit RGBA。
+- DemoApp/assets/portraits/sekki.png ← sekki-front-v2.png（通常）。上書き。
+- DemoApp/assets/portraits/battle/sekki_idle_right.png ← sekki-idle-right-v2.png（右向き待機）。上書き。
+- DemoApp/assets/portraits/battle/sekki_wrap_idle_right.png ← sekki-wrap-right-v2.png（包む）。新規1枚だけ。
+対応するGodot .importも保持。採用原本とDemoApp側はSHA-256一致。
+通常用を参照し、頭・胴・肩・腕を3/4右へ回した生成なので単純な左右反転ではない。
+膜は右向き採用絵を同一性、C案を膜の形だけの参照として作成した。
+丸い頭と半目のみの顔、肩の広い滑らかな胴、裾へ溶ける腕、翠のゼリーと金の粒を継承。
+人体の性的造形、骨や取り込み、グロ、比較用人物、地面、影の楕円、文字はない。
+生成原本*-generated.pngと採用原本*.pngの両方を残した。v1を削除していない。
+
+表示と接地
+UiKit.csのsekkiの2行だけを変更:
+  PortraitWorldHeight = 3.10f
+  BattlePortraitBottomPaddingRatio = 162f / 1536f（0.10546875）
+キャンバス込みの3.10で、人の駒よりやや大きく、ドルガ3.30 / ゴルム3.35より低い設定。
+待機本体のalpha>5の境界は(23,122)-(1001,1373)、本体高1252px相当、約2.53ワールド単位。
+下端1373からキャンバス最終行1535まで162pxあるため、その余白を補正した。
+包むの下端は1374（待機との差1px）で、同じ表示高・余白を引き継ぐ。
+実画面でドルガ・ボルグ・ベニ・トモと並べて確認。顔の半目、体格、裾を識別できた。
+capture-integration-v2.gdは本番テクスチャの画素を照合し、Sprite3D表示高3.0999999 / flip_h=falseを確認。
+カメラへの投影で裾の中央線上の下端と足元の輪の中心の高さ差を測定:
+  foot=(397.3427,370.4463), ring=(397.3073,370.2350), distancePx=0.214188
+裾が浮かず輪の中心の高さに接することを画像と数値で確認した。ground-v2-engine.log参照。
+
+差分実装
+- BattlePawn3D.SekkiWrap.cs: SetSekkiWrapping。sekki本人・生存中・勝利前のみ有効。
+- BattlePawn3D.ActionPortrait.cs: sekkiの分岐1行。sekki_wrapへ変更し、待機の表示高と接地補正を維持。
+- Main.Sekki.cs: Wrapの索引・同じ一振りの畳み込み・0.50秒の保持と解除。
+  ActorIdで駒を選び、(一振りの索引, ActorId)で重複を防ぐ。盤面を判定しない。
+  Wrapに続く本来のDamageへ差分だけを紐づけ、既存の同時着弾ShowDamageで画像も同じ拍へ寄せる。
+  台本のWrap自体も元の順で観測する。イベント件数と順序、HP・戦闘計算には変更なし。
+  elapsed += processDelta * playbackSpeed。一時停止中は時計を止め、途中の速度変更に追従する。
+  再生tokenと駒ごとの連番で、古い非同期の復帰が新しい戦闘・次の差分を消すのを防ぐ。
+  Swell/Burst/Idleからは差分を発火しない（Burstは連続する一振りを区切る索引だけに使用）。
+- Main.cs: 初期化・終了・Wrap観測・同時着弾・編成へ戻る際の解除、計5行だけ追加。
+  既存の空白→タブの変更を保持。git diff --ignore-all-spaceでは5行の追加だけ。
+- BattlePawn3D.cs: 死亡・蘇生・勝利で解除する3呼び出しだけ追加。
+- Main.SekkiCheck.cs: 撮影スクリプトから呼ぶ確認用partial。本番の台本・Sprite3D・シェーダーを照合。
+中断・再戦・戦闘終了でも解除。膜の伸縮アニメーションは追加していない。
+
+受け入れ条件1: ビルド — 回避付き合格、標準コマンド単独は制約あり
+  dotnet build DemoApp/DemoApp.csproj --no-restore -v minimal
+NuGet.Config（C:/Users/Pon/AppData/Roaming/NuGet/NuGet.Config）が読めず、標準ではMSB4236を含むエラー2件。
+権限は拡大していない。前回と同じ導入済みGodot.NET.Sdk/4.7.2と.NET SDK/9.0.304をJunction経由で解決。
+既存validate-build.ps1を読み、実行前にrepoをC:/works/VillainProto、作業用supportを.tmp/sekki-v2-build-supportへ文字列置換してメモリー上で実行した。
+プロセス内のMSBuildSDKsPath / MSBuildEnableWorkloadResolver、-p:NetCoreRoot=C:/Program Files/dotnet/を使用。
+作業用Junctionは既存スクリプトのfinallyで非再帰削除。新しい回避スクリプトはリポジトリに残していない。
+最終結果: ビルド成功、エラー0。MSB4241の回避由来警告と、既存BattleCoreのCS0162 / CS8602が各1件、計3警告。
+build-v2-validation.log参照。
+
+受け入れ条件2: RGBA・透過 — 合格
+  powershell -NoProfile -ExecutionPolicy Bypass -File design/art/sekki/validate-assets-v2.ps1
+本体マスクは生成原本のalpha>5の最大8近傍連結成分＋縁2pxとして採取し、.mask.pngに保存。
+輪郭外の低alpha点を除き、本体内部と半透明の縁は保持した。外側のRGBも0にして色のフリンジを残さない。
+全3枚: 1024x1536 RGBA32、四隅alpha=0,0,0,0、マスク外alpha>0の画素数=0。
+半透明画素（0<alpha<255）は通常706454 / 右向き677773 / 包む753838。
+SEKKI_V2_ALPHA_COMPLETE outsideMaskNonzero=0 all=3 sourceSHA256=match。
+assets-v2-validation.log参照。prepare-assets-v2.ps1で後処理を再現できる。
+
+受け入れ条件3: 頭なし単発再生 — 合格
+  & 'C:/tools/Godot_v4.7.2-stable_mono_win64/Godot_console.exe' --path DemoApp --headless --quit-after 120000 -- --demo-autoplay --demo-quit --demo-fast '--demo-preset=試遊・手番 包み' --demo-stage=4 --demo-seed=0
+  SEKKI_WRAP_COMPLETE script=16 events=16 beats=5 plays=5 active=0
+  DEMO_SMOKE_COMPLETE events=337 turns=3 won=True attackPlays=11
+終了コード1だが、指定どおりCOMPLETEで判定。smoke-v2-stage4-validation.log参照。
+
+受け入れ条件4: 件数と状態 — 合格
+同じ実台本337件のWrap=16件、範囲攻撃5拍に対して差分表示5回。全16件にDamageの紐づけあり。
+  Attack索引67（貫き）: 3 Wrap
+  Attack索引78（全体）: 4 Wrap
+  Attack索引137（薙ぎ）: 2 Wrap
+  Attack索引224（貫き）: 3 Wrap
+  Attack索引246（全体）: 4 Wrap
+Main.SekkiCheck.csが通常再生の実台本を最後まで再生し、countsと本番テクスチャを確認。
+  SEKKI_V2_ACTUAL_SCRIPT events=337 wraps=16 damageLinks=16 beats=5 plays=5
+  SEKKI_V2_CLOCK pause=ok speed=2 returnMs=382
+  SEKKI_V2_STATE_COMPLETE pause speed replay interrupt death revive victory otherSlime=ok
+0.65秒の一時停止中は膜を保持、2倍で再開すると待機へ復帰。再戦中の古い予約、中断、死亡、蘇生、勝利の残留なし。
+Swell/Burst/Idleだけの実通知列では表示0回。
+生の実台本はreplay-v2-stage4.json。独立集計は以下:
+  python design/art/sekki/analyze-replay-v2.py
+  SEKKI_V2_REPLAY_COMPLETE wraps=16 rangeBeats=5
+capture-v2-validation.log / replay-v2-validation.log参照。
+
+受け入れ条件5: 実画面 — 合格
+  & 'C:/tools/Godot_v4.7.2-stable_mono_win64/Godot_console.exe' --path DemoApp --windowed --resolution 1440x900 --script C:/works/VillainProto/design/art/sekki/capture-integration-v2.gd --audio-driver Dummy --log-file C:/works/VillainProto/design/art/sekki/capture-v2-engine.log -- '--demo-preset=試遊・手番 包み' --demo-stage=4 --demo-seed=0 --sekki-v2-check
+Vulkan Forward+ / RTX 5090で撮影。以下は全て1440x900:
+  selection-v2-game-check.png（編成・通常）
+  battle-idle-v2-game-check.png（第五波・待機）
+  battle-wrap-v2-game-check.png（同じ台本の最初の範囲攻撃・膜）
+膜と顔を見分けられ、待機との本体の大きさ・接地がつながることを目視確認。
+--sekki-v2-checkを省くと編成・待機・接地測定だけを撮影して終了する。
+
+受け入れ条件6: 空白 — 合格
+  git diff --check -- DemoApp/UiKit.cs DemoApp/BattlePawn3D.ActionPortrait.cs DemoApp/BattlePawn3D.cs DemoApp/BattlePawn3D.SekkiWrap.cs DemoApp/Main.cs DemoApp/Main.Sekki.cs DemoApp/Main.SekkiCheck.cs
+終了コード0。新規.cs3本の末尾空白も別途検査しNEW_CS_WHITESPACE_OK。
+
+受け入れ条件7: 変更範囲 — 担当範囲は合格、全ツリー未追跡の完全照合は未検証
+DemoApp開始時337行→終了時347行。開始時のstatus行は全て保持、追加10行は許可範囲のみ。
+design/art/sekkiの既存ファイルも保持。担当外の新規Godotメタデータ445件はインポート直前の完全一覧と照合して除去。
+全ツリーの開始時--untracked-files=allは6,167行でツール出力が途中省略され、それ以外の全未追跡ファイルの完全自動照合は未検証。
+担当外の既存・並行変更の一覧と照合の詳細はscope-validation-v2.txt。終了時全体のstatusはstatus-v2-final.txt。
+終了時に残る担当外tracked変更はCONTRIBUTING.md / DemoApp/FireUltimateFx.cs / DemoApp/FireUltimateFx.Lance.csで、すべて触っていない。
+作業中に第404期の並行変更が246c6163へコミットされた。こちらではBattleCore/BattleSim/docs/designのその変更に触れていない。
+
+環境上の制約
+標準ビルド単独はNuGet.Configのアクセス制限により通らない。回避付きはエラー0。
+Godotはuser://ログ・シェーダーキャッシュ・エディター設定への保存、証明書ストアの読み取りにエラーを出す。
+終了時のRID/CanvasItem/ObjectDBの既存の解放診断も残る。受け入れは各COMPLETEと画像保存の成否で判定した。
+全ツリー未追跡の完全照合以外に、今回の指定機能の未検証項目はない。
+
+コミット時の整理（2026-10-26・ポンの判断）
+検証用の残骸は外した: *-generated.png / *.mask.png / replay-v2-stage4.json / import-v2-extra-metadata.txt / status-v2-final.txt /
+scope-validation-v2.txt / analyze-replay-v2.py / prepare-assets-v2.ps1 / validate-assets-v2.ps1 / *.log。
+上の本文でこれらを参照している箇所は作業当時の記録として残す。replay-v2-stage4.json は --sekki-v2-check を回すと Main.SekkiCheck.cs が書き直す。

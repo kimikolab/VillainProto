@@ -1,0 +1,48 @@
+日付: 2026-10-26
+方式: 内蔵 image_gen、identity-preserve、transparent_background=true。
+工程: A案を参照して通常 → 通常を参照して右向き → 右向きの同一性とC案の膜を参照して包む。
+参照1: design/art/sekki/sekki-concept-v2a-silhouette.png
+通常・生成1 プロンプト全文:
+Use case: identity-preserve.
+Asset type: final production 2D RPG character portrait, Sekki, normal formation portrait.
+Input image 1 is the EXACT CHARACTER IDENTITY reference: design A. Preserve the same rounded bald head, calm dark olive half-lidded eyes only (no mouth, nose, ears), broad smooth unsculpted shoulders and cylindrical upper torso, long heavy relaxed arms merging continuously into the lower puddle, the same pale jade/spring-green translucent jelly, muted olive thickness, creamy specular glints, internal bubbles and suspended sparse ivory-gold light motes. The subject is a single genderless living slime with an approximate human upper body and a low spreading scalloped liquid base, no legs or feet.
+Primary request: turn the reference into a clean transparent-background full-body near-front slightly three-quarter production sprite. Preserve identity, illustration style and proportions, but create generous empty transparent margins. Quiet motionless idle stance, arms hanging and melting into puddle; no attack, anger or unfolded membrane.
+Canvas/framing: exactly 1024 x 1536 portrait RGBA PNG. Entire figure and puddle inside frame. Place puddle bottom at y=1440 with ~95 pixels empty below; head approximately y=250, body centered around x=535. Leave generous upper and left margins so a later variant can unfurl a membrane without changing this body's size or anchor. Do not enlarge the body to fill the canvas. All corners and all pixels outside the character outline MUST have alpha 0. Preserve softly translucent jelly edges and negative spaces between arms and torso as real transparency. No backdrop color, parchment texture, floor, cast shadow, ellipse or green halo.
+Style: polished hand-illustrated Japanese fantasy RPG character art, expressive fine contour, layered cel shading with restrained painted texture. Soft living jelly, not glass, crystal, armor or water splash.
+Avoid: secondary character or scale comparison, props, landscape, text, watermark, panels. No sexual anatomy, breasts, narrow waist, hips, muscles, hair, seductive slime girl, bones, swallowed objects, organs, gore or predatory expression. Do not add separate shield, clothing, wings or magic circle. Exactly one character.
+右向き・生成2 参照: design/art/sekki/sekki-front-v2.png（生成1のalpha掃除後）
+プロンプト全文:
+Use case: identity-preserve.
+Asset type: final transparent RIGHT-FACING battle idle portrait of Sekki for a 2D Japanese fantasy RPG.
+Image 1 is the approved NORMAL PORTRAIT and exact identity reference. Reconstruct the SAME character with its head, shoulders, torso, arms and puddle rotated together about 40 degrees to the character's left so its FACE AND CHEST POINT TO SCREEN RIGHT toward enemies. This is a real three-quarter rotation, NOT a horizontal flip and not merely moving the eyes. The near arm/shoulder is prominent, the far arm foreshortened, both calm half-lidded eyes sit on the turned facial plane and look right.
+Preserve the rounded head with two tiny dark olive half-lidded eyes only; no nose, ears or mouth. Preserve the broad smooth genderless mannequin-like upper body, long relaxed arms whose ends melt into the broad scalloped liquid base, pale jade/spring-green translucent gelatin, muted olive thickness, soft cream reflected glints, internal bubbles and sparse ivory-gold suspended light particles. No legs or feet. Same finely drawn layered cel-shaded illustration style. Quiet motionless idle, no attack, no angry pose, no membrane.
+Exactly 1024x1536 RGBA canvas. Keep the entire body inside generous transparent margins. Keep the SAME body height and grounded bottom position as Image 1: head at about y=145, puddle bottom y=1394, body centered around x=535. Do not crop anything or change total character scale. Leave empty air above and behind (screen left).
+All background and corners must be alpha 0. Remove any outer glow or halo entirely, use crisp antialiased contour with natural translucent edge only, no colored fringe, no shadow, floor, parchment, black or colored background. Spaces between torso and arms are transparent. No figures, scenery, props, shield, weapon, clothing, text or watermark. No breasts, narrow waist, sexual anatomy, hair, bones, swallowed objects, gore, horror, muscles or separate wing. One character only.
+包む・生成3 参照1（同一性・編集対象）: design/art/sekki/sekki-idle-right-v2.png
+参照2（膜の形だけ）: design/art/sekki/sekki-concept-v2c-unfolding.png
+プロンプト全文:
+Use case: identity-preserve.
+Asset type: one final transparent battle portrait VARIANT, Sekki briefly wrapping allies.
+Image 1 is the EDIT TARGET AND EXACT IDENTITY reference: the approved right-facing Sekki idle sprite. Image 2 is ONLY a membrane-shape reference, NOT the body, face, orientation, size, background or mouth.
+Change ONLY the rear arm on the SCREEN LEFT side of image 1: stretch it upwards and backwards toward SCREEN LEFT into one large thin continuous soft JELLY MEMBRANE which curves above empty air behind the body, about to shelter allies. The arm's thick root at the left shoulder seamlessly becomes a translucent thin curved sheet with a softly rolled scalloped rim as in image 2, mirrored in composition to extend screen left. No separate shield, wing, feather, cloth, water splash, detached magical dome. The space beneath is empty air, no people. No additional motion streaks or particles outside the body.
+Strict invariants: preserve image 1's exact calm half-lidded dark olive eyes only (NO MOUTH, NO NOSE), round head silhouette, turned head orientation facing SCREEN RIGHT, broad smooth unsculpted torso, pale jade/spring green translucent gelatin with muted olive depth and cream highlights and suspended gold light motes, fine contour and layered illustration style. Preserve the other hanging arm, and the entire puddle base with the same contact position. Body and head must retain the SAME SIZE AND POSITION. The membrane can extend only above and screen-left into existing transparent space. No full-body repositioning or shrinking, do not copy the narrower body or mouth in image 2.
+Canvas exactly 1024x1536, same as image 1. Body head around x=575 y=124, puddle lowest edge y=1374. Keep all membrane edges inside the frame with empty margins of at least 24 pixels. Membrane occupies upper-left air, curves from shoulder up toward x=300 y=35 and then down-left toward x=50 y=450; do not cover or alter the face. If needed make a broad shallow arch across the upper left without changing the head.
+Genuine transparent RGBA with alpha 0 everywhere outside the contour and in all corners. No exterior glow, halo, background color, floor, shadow ellipse, parchment, texture outside silhouette, text or watermark.
+One genderless living slime, no human anatomy details, breasts, hips, waist, muscles, hair, slime girl, sexuality, bones, swallowed objects, gore, horror, anger, clothing, armor or weapon. Exactly ONE sprite and ONE membrane variant.
+生成結果（3回、没案0回）:
+1: C:/Users/Pon/.codex/generated_images/01a176a2-e847-7df1-b1c3-0fc179ac010e/exec-7deed669-6922-469d-aef3-cd7e986b11cb.png
+   保存: sekki-front-v2-generated.png → alpha掃除後 sekki-front-v2.png。
+2: C:/Users/Pon/.codex/generated_images/01a176a2-e847-7df1-b1c3-0fc179ac010e/exec-ccf505d6-5951-4844-b7b5-0054e487ce25.png
+   保存: sekki-idle-right-v2-generated.png → alpha掃除後 sekki-idle-right-v2.png。
+3: C:/Users/Pon/.codex/generated_images/01a176a2-e847-7df1-b1c3-0fc179ac010e/exec-f2e88921-b1c6-4228-ae09-cdbd30437419.png
+   保存: sekki-wrap-right-v2-generated.png → alpha掃除後 sekki-wrap-right-v2.png。
+全て1024x1536 RGBA。CLI/APIの代替生成は使っていない。
+すべて採用。背景に見えた発光の大部分はalpha=0のRGBで、輪郭外の低alpha微小点もあったため掃除した。
+
+後処理（ユーザーが指定したalpha掃除と接地位置調整だけ、形の代用品は描いていない）:
+prepare-assets-v2.ps1。生成時のalpha>5の最大8近傍連結成分を本体マスクとし、輪郭の半透明な縁を守るため2px拡張。
+その外側はRGBA=(0,0,0,0)。本体内部のalpha/色は保持。対応する.mask.pngを保存して検査に使用。
+通常・右向きは縦位置を20px上へ移動。包むは生成時点で右向き採用絵の位置に合っているため移動0px。
+スケール変更なし、左右反転なし、最終キャンバス1024x1536。膜と待機の最下端の差は1px。
+除去したalpha>0: 通常6166px / 右向き5189px / 包む5474px。
+各-final相当の名前はsekki-*-v2.png、生成原本は*-generated.pngとして両方保持。
