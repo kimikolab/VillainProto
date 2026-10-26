@@ -17,9 +17,21 @@ public partial class HagiCelExport : Node
     private static void Export()
     {
         string repo = Path.GetFullPath(ProjectSettings.GlobalizePath("res://.."));
-        string source = Path.Combine(repo, "design/art/hagi/attack-acrobatics-v1");
+        string art = OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--hagi-art=", StringComparison.Ordinal))
+            ?["--hagi-art=".Length..] ?? "attack-acrobatics-v1";
+        if (art != Path.GetFileName(art)) throw new InvalidOperationException("原画フォルダ名だけを指定してください");
+        string source = Path.Combine(repo, "design/art/hagi", art);
         using var spec = JsonDocument.Parse(File.ReadAllText(Path.Combine(source, "cel-animation.json")));
-        const int width = 1920, height = 960, groundX = 880, groundY = 940;
+        string sourceId = spec.RootElement.TryGetProperty("sourceId", out var sid) ? sid.GetString()! : "hagi-acrobatics-v1";
+        string motion = spec.RootElement.TryGetProperty("motion", out var description) ? description.GetString()!
+            : "全身原画。水平の回転斬りと空中ひねり。部位ワープ・逆再生・クロスフェードなし";
+        bool customCanvas = spec.RootElement.TryGetProperty("canvas", out var canvasSize);
+        bool customAnchor = spec.RootElement.TryGetProperty("anchor", out var canvasAnchor);
+        int width = customCanvas ? canvasSize[0].GetInt32() : 1920;
+        int height = customCanvas ? canvasSize[1].GetInt32() : 960;
+        int groundX = customAnchor ? canvasAnchor[0].GetInt32() : 880;
+        int groundY = customAnchor ? canvasAnchor[1].GetInt32() : 940;
+        int cellsPerSheet = spec.RootElement.TryGetProperty("cellsPerSheet", out var cellCount) ? cellCount.GetInt32() : 4;
         var poses = new Dictionary<string, (Image Image, object Track)>();
         Directory.CreateDirectory(Path.Combine(source, "poses"));
         foreach (var group in spec.RootElement.GetProperty("poses").EnumerateArray().GroupBy(p => p.GetProperty("sheet").GetString()!))
@@ -42,7 +54,8 @@ public partial class HagiCelExport : Node
                 if (last > 3000) found.Add(new(label, left, top, right - left + 1, bottom - top + 1));
             }
             var cells = found.OrderBy(c => Math.Clamp((c.Y + c.Height / 2) * 2 / h, 0, 1)).ThenBy(c => c.X + c.Width / 2).ToArray();
-            if (cells.Length != 4) throw new InvalidOperationException($"{group.Key}: 全身セルが4枚ではありません ({cells.Length})");
+            if (cells.Length != cellsPerSheet)
+                throw new InvalidOperationException($"{group.Key}: 全身セルが指定の{cellsPerSheet}枚ではありません ({cells.Length})");
             foreach (var pose in group)
             {
                 string key = pose.GetProperty("key").GetString()!;
@@ -53,6 +66,15 @@ public partial class HagiCelExport : Node
                 Vector2 ground = Point(pose.GetProperty("ground"));
                 int x0 = Math.Max(0, cell.X - 3), y0 = Math.Max(0, cell.Y - 3);
                 int cw = Math.Min(w - x0, cell.Width + 6), ch = Math.Min(h - y0, cell.Height + 6);
+                // 衣装の色修正では元の切り出し範囲を保ち、丸めによる配置・追跡点の移動を防ぐ。
+                if (pose.TryGetProperty("crop", out var fixedCrop))
+                {
+                    x0 = fixedCrop[0].GetInt32(); y0 = fixedCrop[1].GetInt32();
+                    cw = fixedCrop[2].GetInt32(); ch = fixedCrop[3].GetInt32();
+                    if (x0 < 0 || y0 < 0 || x0 + cw > w || y0 + ch > h
+                        || cell.X < x0 || cell.Y < y0 || cell.X + cell.Width > x0 + cw || cell.Y + cell.Height > y0 + ch)
+                        throw new InvalidOperationException($"{key}: 固定切り出し範囲から全身が切れます");
+                }
                 var rgba = new byte[cw * ch * 4];
                 for (int cy = 0; cy < ch; cy++) for (int cx = 0; cx < cw; cx++)
                 {
@@ -84,7 +106,16 @@ public partial class HagiCelExport : Node
             if (vertical.Length != keys.Length) throw new InvalidOperationException($"{key}: 跳躍曲線のコマ数不一致");
             int contact = clip.GetProperty("contact").GetInt32();
             string dest = Path.Combine(repo, "DemoApp/assets/portraits/battle/attack_clip", name); Directory.CreateDirectory(dest);
-            if (Directory.GetFiles(dest, "*.png").Length > 0) throw new InvalidOperationException($"{name}: 既存の連番は上書きしません。別の版名を使ってください");
+            if (Directory.GetFiles(dest, "*.png").Length > 0)
+            {
+                if (!OS.GetCmdlineUserArgs().Contains("--hagi-reexport"))
+                    throw new InvalidOperationException($"{name}: 既存の連番は上書きしません。別の版名を使ってください");
+                using var previous = JsonDocument.Parse(File.ReadAllText(Path.Combine(dest, "clip.json")));
+                if (sourceId is not ("hagi-scythe-return-v2" or "hagi-rotational-sweep-v3" or "hagi-aerial-reap-v4" or "hagi-aerial-reap-v5" or "hagi-aerial-reap-v6")
+                    || previous.RootElement.GetProperty("source").GetString() != sourceId)
+                    throw new InvalidOperationException("今回制作中の原画と同じ生成元だけを再書き出しできます");
+                foreach (string png in Directory.GetFiles(dest, "*.png")) File.Delete(png);
+            }
             var tracks = new List<object>();
             for (int i = 0; i < keys.Length; i++)
             {
@@ -92,12 +123,12 @@ public partial class HagiCelExport : Node
                 tracks.Add(new { pose = keys[i], geometry = pose.Track, trail = i >= contact - 2 && i <= contact + 3 });
             }
             File.WriteAllText(Path.Combine(dest, "clip.json"), JsonSerializer.Serialize(new {
-                source = "hagi-acrobatics-v1", frames = keys.Length, size = new[] { width, height }, fps = 30,
+                source = sourceId, frames = keys.Length, size = new[] { width, height }, fps = 30,
                 contact, anchor = new[] { groundX, groundY }, idleAnchor = new[] { 512, 1506 }, scale = 1.6,
                 referencePortrait = "hagi", forward = new float[keys.Length], vertical,
-                motion = "全身原画。水平の回転斬りと空中ひねり。部位ワープ・逆再生・クロスフェードなし"
+                motion
             }, options) + "\n");
-            File.WriteAllText(Path.Combine(dest, "motion.json"), JsonSerializer.Serialize(new { source = "hagi-acrobatics-v1", frames = tracks }, options) + "\n");
+            File.WriteAllText(Path.Combine(dest, "motion.json"), JsonSerializer.Serialize(new { source = sourceId, frames = tracks }, options) + "\n");
             GD.Print($"HAGI_CEL_CLIP {name} frames={keys.Length} contact={contact}");
         }
         foreach (var pose in poses.Values) pose.Image.Dispose();

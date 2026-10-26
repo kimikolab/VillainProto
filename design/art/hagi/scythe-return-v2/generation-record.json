@@ -1,0 +1,65 @@
+{
+  "tool": "built-in image_gen",
+  "transparent_background": true,
+  "original_directory": "C:/Users/Pon/.codex/generated_images/01a16ee4-957d-7073-aa2e-d3e415aca3ce",
+  "references": [
+    {
+      "path": "DemoApp/assets/portraits/battle/hagi_idle_right.png",
+      "role": "人物・衣装・武器の基準"
+    },
+    {
+      "path": "design/art/hagi/attack-acrobatics-v1/source-ground.png",
+      "role": "既存原画の画風"
+    }
+  ],
+  "sheets": [
+    {
+      "file": "source-out.png",
+      "original": "exec-c00fbdf5-eb9e-407c-8043-7dfac3d84dda.png",
+      "sha256": "19c05492236e3ef8d29d45869b7ca10056dc8d7d1621cfdd63e19d2488596dcc",
+      "prompt": "prompt-out.txt",
+      "adopted_cells": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "reference_paths": [
+        "DemoApp/assets/portraits/battle/hagi_idle_right.png",
+        "design/art/hagi/attack-acrobatics-v1/source-ground.png"
+      ]
+    },
+    {
+      "file": "source-rise.png",
+      "original": "exec-8d58a1de-b51c-405f-bb98-fdf8722ec046.png",
+      "sha256": "b8780a51cf25cac11c623180195b8d6113cdf5bfdcb889b3571cdf6b2b84aed5",
+      "prompt": "prompt-in.txt",
+      "adopted_cells": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "reference_paths": [
+        "DemoApp/assets/portraits/battle/hagi_idle_right.png",
+        "design/art/hagi/scythe-return-v2/source-out.png"
+      ]
+    },
+    {
+      "file": "source-hook.png",
+      "original": "exec-2da58014-66b9-4765-a084-e2eab255e3eb.png",
+      "sha256": "96be15516639f0a28a5fd6993f31e8ba5571e6822bfdfa01f89ad17d212fc65d",
+      "prompt": "prompt-hook.txt",
+      "adopted_cells": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "reference_paths": [
+        "DemoApp/assets/portraits/battle/hagi_idle_right.png",
+        "design/art/hagi/scythe-return-v2/source-out.png"
+      ]
+    }
+  ]
+}

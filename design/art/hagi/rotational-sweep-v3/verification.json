@@ -1,0 +1,213 @@
+{
+  "build": "0 warnings / 0 errors",
+  "full_body_poses": 12,
+  "clips": [
+    {
+      "name": "hagi_orbit_out_hold_v3",
+      "frames": 12,
+      "contact": 6,
+      "fps": 30
+    },
+    {
+      "name": "hagi_orbit_out_v3",
+      "frames": 16,
+      "contact": 6,
+      "fps": 30
+    },
+    {
+      "name": "hagi_orbit_back_hold_v3",
+      "frames": 10,
+      "contact": 2,
+      "fps": 30
+    },
+    {
+      "name": "hagi_orbit_back_v3",
+      "frames": 11,
+      "contact": 2,
+      "fps": 30
+    }
+  ],
+  "shared_cel_joins": [
+    {
+      "outgoing": "orbit_out_hold",
+      "following": "orbit_back_hold",
+      "shared_full_body_sha256": "ff31710d90f4dab4aec7c7271f168aebd5f0fc79e9e9403af5f3b7b64f08a13f"
+    },
+    {
+      "outgoing": "orbit_back_hold",
+      "following": "orbit_out_hold",
+      "shared_full_body_sha256": "7ba16c887122221e880fe944a99d8c76cad9ae8252547bb8b363cc53a304cab6"
+    }
+  ],
+  "runtime_png_count": 49,
+  "hagi_presentation_check": "OK / 15 scripts / hit counts, HP, pause, speed, mirror, cancel, reset, replay, seek",
+  "render": "Godot Vulkan Forward+ / RTX 5090 / 60 fps / Main.EnterViewerLive",
+  "videos": [
+    {
+      "file": "after-hit-return-1x.mp4",
+      "bytes": 1479561,
+      "frames": 121,
+      "width": 1440,
+      "height": 764,
+      "last_frame_seconds": 2.0,
+      "audio_streams": 1
+    },
+    {
+      "file": "after-hit-return-motion-1x.gif",
+      "bytes": 13755302,
+      "frames": 61,
+      "width": 1100,
+      "height": 941,
+      "last_frame_seconds": 2.0,
+      "audio_streams": 0
+    },
+    {
+      "file": "after-hit-return-motion-1x.mp4",
+      "bytes": 1262511,
+      "frames": 121,
+      "width": 800,
+      "height": 684,
+      "last_frame_seconds": 2.0,
+      "audio_streams": 0
+    },
+    {
+      "file": "after-hit-return-motion-half.gif",
+      "bytes": 19785853,
+      "frames": 96,
+      "width": 1100,
+      "height": 941,
+      "last_frame_seconds": 3.96,
+      "audio_streams": 0
+    },
+    {
+      "file": "after-hit-return-motion-half.mp4",
+      "bytes": 1781905,
+      "frames": 241,
+      "width": 800,
+      "height": 684,
+      "last_frame_seconds": 4.0,
+      "audio_streams": 0
+    },
+    {
+      "file": "after-hit-return-quarter.mp4",
+      "bytes": 3301079,
+      "frames": 483,
+      "width": 1440,
+      "height": 764,
+      "last_frame_seconds": 8.033,
+      "audio_streams": 0
+    },
+    {
+      "file": "carry-chain-1x.mp4",
+      "bytes": 3000926,
+      "frames": 204,
+      "width": 1440,
+      "height": 764,
+      "last_frame_seconds": 3.383,
+      "audio_streams": 1
+    },
+    {
+      "file": "carry-chain-quarter.mp4",
+      "bytes": 6892282,
+      "frames": 815,
+      "width": 1440,
+      "height": 764,
+      "last_frame_seconds": 13.567,
+      "audio_streams": 0
+    },
+    {
+      "file": "hagi-orbit-motion-v3.mp4",
+      "bytes": 19419510,
+      "frames": 2232,
+      "width": 1440,
+      "height": 764,
+      "last_frame_seconds": 37.204,
+      "audio_streams": 0
+    },
+    {
+      "file": "isolated-twin-1x.mp4",
+      "bytes": 1526529,
+      "frames": 122,
+      "width": 1440,
+      "height": 764,
+      "last_frame_seconds": 2.017,
+      "audio_streams": 1
+    },
+    {
+      "file": "isolated-twin-motion-1x.gif",
+      "bytes": 13602012,
+      "frames": 61,
+      "width": 1100,
+      "height": 941,
+      "last_frame_seconds": 2.0,
+      "audio_streams": 0
+    },
+    {
+      "file": "isolated-twin-motion-1x.mp4",
+      "bytes": 1167878,
+      "frames": 122,
+      "width": 800,
+      "height": 684,
+      "last_frame_seconds": 2.017,
+      "audio_streams": 0
+    },
+    {
+      "file": "isolated-twin-motion-half.gif",
+      "bytes": 18369523,
+      "frames": 97,
+      "width": 1100,
+      "height": 941,
+      "last_frame_seconds": 4.0,
+      "audio_streams": 0
+    },
+    {
+      "file": "isolated-twin-motion-half.mp4",
+      "bytes": 1604526,
+      "frames": 243,
+      "width": 800,
+      "height": 684,
+      "last_frame_seconds": 4.033,
+      "audio_streams": 0
+    },
+    {
+      "file": "isolated-twin-quarter.mp4",
+      "bytes": 3380324,
+      "frames": 487,
+      "width": 1440,
+      "height": 764,
+      "last_frame_seconds": 8.1,
+      "audio_streams": 0
+    }
+  ],
+  "exit_diagnostics": "Existing exit-only Texture/Font/CanvasItem/ObjectDB release warnings; checks and both GPU captures exit 0",
+  "stocking_fix": {
+    "tool": "built-in image_gen",
+    "source": "source-out.png",
+    "edited_source": "source-out-stocking-fix.png",
+    "original": "exec-83445bfd-1e43-40ac-be90-e75925684538.png",
+    "prompt": "prompt-stocking-fix-corrected_prompt.txt",
+    "adopted_cell": 3,
+    "screen_left_leg": "bare skin",
+    "screen_right_leg": "black stocking; overlapping cape preserved",
+    "crop": [
+      488,
+      785,
+      527,
+      696
+    ],
+    "changed_runtime_pngs": [
+      "DemoApp\\assets\\portraits\\battle\\attack_clip\\hagi_orbit_out_hold_v3\\hagi_orbit_out_hold_v3_006.png",
+      "DemoApp\\assets\\portraits\\battle\\attack_clip\\hagi_orbit_out_hold_v3\\hagi_orbit_out_hold_v3_007.png",
+      "DemoApp\\assets\\portraits\\battle\\attack_clip\\hagi_orbit_out_v3\\hagi_orbit_out_v3_006.png",
+      "DemoApp\\assets\\portraits\\battle\\attack_clip\\hagi_orbit_out_v3\\hagi_orbit_out_v3_007.png"
+    ],
+    "unchanged_runtime_png_count": 45,
+    "all_clip_and_motion_json_unchanged": true,
+    "changed_image_sha256": "005a8bd2566c981dd1ba6acec77efb40b9f86d8ceae1357bea1da52b1e6c939d",
+    "rejected_attempt": {
+      "original": "exec-91a0168b-d44a-4780-a6cb-8c823105cd7e.png",
+      "prompt": "prompt-stocking-fix-prompt.txt",
+      "reason": "ユーザーがタイツの左右反転を指摘。ゲーム素材には未使用"
+    }
+  }
+}

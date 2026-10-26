@@ -1,0 +1,101 @@
+{
+  "build": "0 warnings / 0 errors (final incremental build)",
+  "render": "Vulkan Forward+ / RTX 5090 / 60 fps",
+  "production_changes": false,
+  "checks": "recorded swing and return counts match real script",
+  "files": [
+    {
+      "file": "after-hit-return-1x.mp4",
+      "bytes": 1238341,
+      "width": 1440,
+      "height": 764,
+      "frames": 97,
+      "seconds": 1.6,
+      "audio_streams": 1
+    },
+    {
+      "file": "after-hit-return-quarter.gif",
+      "bytes": 8401538,
+      "width": 1040,
+      "height": 764,
+      "frames": 90,
+      "seconds": 3.71,
+      "audio_streams": 0
+    },
+    {
+      "file": "after-hit-return-quarter.mp4",
+      "bytes": 2733534,
+      "width": 1440,
+      "height": 764,
+      "frames": 387,
+      "seconds": 6.433,
+      "audio_streams": 0
+    },
+    {
+      "file": "carry-chain-1x.mp4",
+      "bytes": 1878545,
+      "width": 1440,
+      "height": 764,
+      "frames": 116,
+      "seconds": 1.917,
+      "audio_streams": 1
+    },
+    {
+      "file": "carry-chain-quarter.mp4",
+      "bytes": 3970922,
+      "width": 1440,
+      "height": 764,
+      "frames": 463,
+      "seconds": 7.7,
+      "audio_streams": 0
+    },
+    {
+      "file": "hagi-return-preview.mp4",
+      "bytes": 13685719,
+      "width": 1440,
+      "height": 764,
+      "frames": 1552,
+      "seconds": 25.871,
+      "audio_streams": 0
+    },
+    {
+      "file": "isolated-twin-1x.mp4",
+      "bytes": 1232278,
+      "width": 1440,
+      "height": 764,
+      "frames": 98,
+      "seconds": 1.617,
+      "audio_streams": 1
+    },
+    {
+      "file": "isolated-twin-quarter.mp4",
+      "bytes": 2746196,
+      "width": 1440,
+      "height": 764,
+      "frames": 391,
+      "seconds": 6.5,
+      "audio_streams": 0
+    }
+  ],
+  "segments": [
+    {
+      "name": "after-hit-return",
+      "swings": 1,
+      "returns": 1,
+      "reaps": 1
+    },
+    {
+      "name": "isolated-twin",
+      "swings": 2,
+      "returns": 0,
+      "reaps": 0
+    },
+    {
+      "name": "carry-chain",
+      "swings": 2,
+      "returns": 3,
+      "reaps": 3
+    }
+  ],
+  "exit_diagnostics": "pre-existing exit-only FontAdvanced RID / CanvasItem / ObjectDB leak warnings; process exit 0, capture completed"
+}

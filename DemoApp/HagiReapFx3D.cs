@@ -4,14 +4,15 @@ using System;
 // 一振りに一つの時計。予兆から斬光・光片の余韻まで、停止と速度変更を同じ時計で扱う。
 public partial class HagiReapFx3D : Node3D
 {
-    private static Shader? _arcShader, _glowShader, _auraShader;
+    private static Shader? _arcShader, _glowShader, _auraShader, _crescentShader;
     private Func<(bool Paused, double Speed)> _clock = () => (false, 1);
     private Func<Vector3> _blade = () => Vector3.Zero;
     private Func<Vector3> _orbit = () => Vector3.Zero;
     private Camera3D _camera = null!;
     private Vector3 _center, _strikeCenter;
-    private float _radius, _power;
-    private bool _reverse;
+    private float _radius, _power, _tilt, _pitch;
+    private bool _reverse, _crescent;
+    private double _reinforcedAt = -1;
     private ShaderMaterial _main = null!, _echo = null!, _flash = null!, _shade = null!, _shards = null!;
     private MeshInstance3D _arcMesh = null!, _echoMesh = null!, _flashMesh = null!, _shadeMesh = null!;
     private ShaderMaterial _aura = null!;
@@ -23,6 +24,8 @@ public partial class HagiReapFx3D : Node3D
     internal bool Released { get; private set; }
     internal bool Heavy { get; private set; }
     internal bool Reverse => _reverse;
+    internal bool Crescent => _crescent;
+    internal int Reinforcements { get; private set; }
     internal Vector3 SweepCenter => _strikeCenter;
     internal float SweepRadius => _radius;
     internal Vector3 SweepPoint(float phase)
@@ -33,22 +36,33 @@ public partial class HagiReapFx3D : Node3D
 
     internal void Start(Vector3 center, float width, bool reverse, Camera3D camera,
         Func<Vector3> blade, Func<Vector3> orbit, Func<(bool Paused, double Speed)> clock, bool heavy = true,
-        float powerScale = 1, int echoes = 0)
+        float powerScale = 1, int echoes = 0, float tiltDegrees = 0, float radiusScale = 1, float pitchDegrees = 0,
+        bool crescent = false)
     {
         _center = center; _radius = Math.Clamp(width * .5f, 1.65f, 2.8f) * (powerScale > 1 ? 1.16f : 1);
+        _radius *= radiusScale; _tilt = Mathf.DegToRad(tiltDegrees);
+        _pitch = Mathf.DegToRad(pitchDegrees);
+        _crescent = crescent;
         _reverse = reverse; _camera = camera; _blade = blade; _orbit = orbit; _clock = clock;
         Heavy = heavy; _power = (heavy ? 1f : .48f) * powerScale;
         _arcShader ??= new Shader { Code = Godot.FileAccess.GetFileAsString("res://assets/fx/hagi_reap_arc.gdshader") };
         _glowShader ??= new Shader { Code = Godot.FileAccess.GetFileAsString("res://assets/fx/hagi_reap_glow.gdshader") };
         _auraShader ??= new Shader { Code = Godot.FileAccess.GetFileAsString("res://assets/fx/hagi_reap_aura.gdshader") };
-        _main = Material(_arcShader, 12); _echo = Material(_arcShader, 10); _echo.SetShaderParameter("echo",1f);
+        _crescentShader ??= new Shader { Code = Godot.FileAccess.GetFileAsString("res://assets/fx/hagi_air_crescent.gdshader") };
+        _main = Material(crescent ? _crescentShader : _arcShader, 12);
+        _echo = Material(_arcShader, 10); _echo.SetShaderParameter("echo",1f);
         _flash = Material(_glowShader, 14);
         _shade = Material(_glowShader, -12); _shade.SetShaderParameter("layer",1);
         _shards = Material(_glowShader, 15); _shards.SetShaderParameter("layer",2);
-        _arcMesh = Ribbon(_main, .60f);
-        _aura = Material(_auraShader, 11);
-        _aura.SetShaderParameter("slash_width", _radius * Mathf.Tau);
-        _auraMesh = Ribbon(_aura, .90f);
+        _arcMesh = Ribbon(_main, crescent ? 1.25f : .60f);
+        _aura = Material(crescent ? _crescentShader : _auraShader, 11);
+        if (crescent)
+        {
+            _aura.SetShaderParameter("aura", 1f);
+            _aura.SetShaderParameter("radial_width", 1.4f);
+        }
+        else _aura.SetShaderParameter("slash_width", _radius * Mathf.Tau);
+        _auraMesh = Ribbon(_aura, crescent ? 1.4f : .90f);
         _echoMesh = Ribbon(_echo, .60f);
         _flashMesh = Quad(_flash,new(width+1f,1.4f));
         _shadeMesh = Quad(_shade,new(_radius*2.3f,2.5f));
@@ -68,7 +82,13 @@ public partial class HagiReapFx3D : Node3D
         _strikeCenter = _orbit();
         Released = true; Age = 0; Draw();
     }
-    // 地面と平行な円弧。人物の手前と奥を通り、命中した位置に余韻を残す。
+    // 次の命中では同じ刃を強く光らせる。円弧の追加・縮小・描き直しはしない。
+    internal void Reinforce()
+    {
+        if (!Released) { Release(); return; }
+        Reinforcements++; _reinforcedAt = Age; Draw();
+    }
+    // 横薙ぎは水平、空中斬りは横軸まわりに面を起こす。同じ赤い三日月を使う。
     private MeshInstance3D Ribbon(ShaderMaterial material, float width)
     {
         var mesh = new ImmediateMesh(); mesh.SurfaceBegin(Mesh.PrimitiveType.TriangleStrip);
@@ -88,7 +108,9 @@ public partial class HagiReapFx3D : Node3D
             CastShadow=GeometryInstance3D.ShadowCastingSetting.Off };
         AddChild(node); return node;
     }
-    private static float SweepAngle(float u) => -Mathf.Pi*.94f + u*Mathf.Tau*.94f;
+    private float SweepAngle(float u) => _crescent
+        ? Mathf.Lerp(-Mathf.Pi * .60f, Mathf.Pi * .60f, u)
+        : -Mathf.Pi*.94f + u*Mathf.Tau*.94f;
     private static ShaderMaterial Material(Shader shader, int priority) => new() { Shader=shader, RenderPriority=priority };
     private MeshInstance3D Quad(ShaderMaterial mat, Vector2 size)
     {
@@ -117,17 +139,28 @@ public partial class HagiReapFx3D : Node3D
         Vector3 x=basis.X*(_reverse?-1:1), y=basis.Y, z=basis.Z;
         Vector3 center=_center+z*.06f;
         Vector3 right=new Vector3(basis.X.X,0,basis.X.Z).Normalized()*(_reverse?-1:1);
+        right = right * Mathf.Cos(_tilt) + Vector3.Up * Mathf.Sin(_tilt);
         Vector3 near=new Vector3(basis.Z.X,0,basis.Z.Z).Normalized();
+        // 正のpitchは手前側を足元へ倒す。uの進行が頭上→前方→足元となる。
+        near = near.Rotated(right, _pitch);
         Vector3 orbit=Released?_strikeCenter:_orbit();
-        var plane=new Basis(right*_radius,near*_radius,Vector3.Up);
+        var plane=new Basis(right*_radius,near*_radius,right.Cross(near).Normalized());
         _arcMesh.GlobalTransform=new Transform3D(plane,orbit);
         _auraMesh.GlobalTransform=new Transform3D(plane,orbit-Vector3.Up*.004f);
         _echoMesh.GlobalTransform=new Transform3D(plane.Scaled(new Vector3(.965f,.965f,1)),orbit-Vector3.Up*.008f);
         _flashMesh.GlobalTransform=new Transform3D(basis,center+z*.02f);
         _shadeMesh.GlobalTransform=new Transform3D(basis,orbit-z*.02f);
         foreach(var mat in new[]{_main,_echo,_flash,_shade,_shards,_aura}) mat.SetShaderParameter("age",t);
+        if (_reinforcedAt >= 0)
+        {
+            float boostAge = (float)(Age - _reinforcedAt);
+            float power = _power * (1 + 1.5f * Mathf.Exp(-boostAge * 16));
+            _main.SetShaderParameter("power", power); _aura.SetShaderParameter("power", power);
+            _flash.SetShaderParameter("age", boostAge);
+        }
         foreach(var mat in new[]{_flash,_shade,_shards}) mat.SetShaderParameter("release",Released?1f:0f);
         _arcMesh.Visible=_echoMesh.Visible=_flashMesh.Visible=_auraMesh.Visible=Released;
+        if (_crescent) _echoMesh.Visible = false;
         Vector3 blade=Released?center:_blade();
         float star=Released?Mathf.Exp(-t*25)*.85f:Mathf.SmoothStep(0,1,Mathf.Min(1,t/.1f))*.8f;
         _star.GlobalPosition=blade+z*.08f;

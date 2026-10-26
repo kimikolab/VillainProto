@@ -9,7 +9,9 @@ public partial class BattlefieldView3D
 {
     internal static readonly Color HagiSilver = new("edf1f8");
     private int _hagiGeneration;
+    private readonly Dictionary<int, HagiReapFx3D> _hagiAirCuts = new();
     internal int HagiSwings, HagiReaps, HagiPursuits, HagiLinks, HagiColumns, HagiGrazes, HagiSoulFlows, HagiReturns;
+    internal int HagiAirOpeners, HagiAirFinishers, HagiAirFollows, HagiLandings;
     internal System.Collections.Generic.IEnumerable<HagiReapFx3D> HagiSweepEffects
         => _fxRoot.GetChildren().OfType<HagiReapFx3D>().Where(f => IsInstanceValid(f) && !f.IsQueuedForDeletion());
     internal System.Collections.Generic.IEnumerable<HagiReapFx3D> HagiReapEffects => HagiSweepEffects.Where(f => f.Heavy);
@@ -17,6 +19,7 @@ public partial class BattlefieldView3D
     private void ResetHagiPresentation()
     {
         _hagiGeneration++;
+        _hagiAirCuts.Clear();
         foreach (var pawn in _pawns.Values) pawn.ResetHagiVisual();
         if (_fxRoot is not null)
         {
@@ -24,6 +27,7 @@ public partial class BattlefieldView3D
             foreach (var fx in HagiSweepEffects.ToArray()) { fx.Hide(); fx.QueueFree(); }
         }
         HagiSwings = HagiReaps = HagiPursuits = HagiLinks = HagiColumns = HagiGrazes = HagiSoulFlows = HagiReturns = 0;
+        HagiAirOpeners = HagiAirFinishers = HagiAirFollows = HagiLandings = 0;
     }
     internal void ApplyHagiState(HagiPresentation.State state)
     {
@@ -81,8 +85,14 @@ public partial class BattlefieldView3D
         Vector3 center = targets.Aggregate(Vector3.Zero, (p, target) => p + target.FxPoint) / targets.Count;
         Vector3 direction = (center - actor.FxPoint); direction.Y = 0;
         Vector3 destination = actor.Position + direction * Math.Min(.78f, Math.Max(0, direction.Length() - 1.35f) / Math.Max(.01f, direction.Length()));
+        bool air = cue.Air != HagiPresentation.AirKind.None, airRoot = air && !cue.AirFollow;
+        if (cue.AirFollow || (!airRoot && (cue.Return || cue.Reverse))) destination = start;
         bool flip = (center - actor.FxPoint).Dot(_camera.GlobalBasis.X) < 0;
-        bool reverse = flip ^ cue.Reverse;
+        bool rotational = !air && (cue.Return || cue.Reverse || !cue.Reap);
+        bool backStroke = cue.Return || cue.Reverse;
+        if (rotational && actor.HagiClipName is { } held && held.StartsWith("hagi_orbit_", StringComparison.Ordinal))
+            backStroke = held.StartsWith("hagi_orbit_out", StringComparison.Ordinal);
+        bool reverse = flip ^ (!air && (rotational ? backStroke : cue.Reverse));
         Vector3 side = _camera.GlobalBasis.X.Normalized();
         float approachSide = cue.Pursuit && partner is not null
             ? Math.Clamp((partner.FxPoint - actor.FxPoint).Dot(side), -.35f, .35f) : 0;
@@ -98,42 +108,70 @@ public partial class BattlefieldView3D
             shadow.Ghost(actor.DeathSprite, HagiClock, .32f);
         }
         HagiReapFx3D? reaping = null;
+        bool sharedAirCut = cue.AirFollow && _hagiAirCuts.Remove(actor.InstanceId, out reaping)
+            && IsInstanceValid(reaping) && !reaping!.IsQueuedForDeletion() && reaping.Visible && reaping.Released;
+        if (!sharedAirCut) reaping = null;
         float span = targets.Max(p => p.FxPoint.Dot(side)) - targets.Min(p => p.FxPoint.Dot(side));
-        Vector3 Blade() => actor.MovementPortraitPoint((actor.CurrentHagiAnchors?.Tip ?? new Vector2(.60f,.035f))
-            * actor.DeathSprite.Texture.GetSize(), _camera);
-        Vector3 Orbit() => actor.GlobalPosition + Vector3.Up * (.95f + actor.AttackClipVertical);
-        if (cue.Reap)
+        Vector3 Blade() => actor.HagiBladePoint(actor.CurrentHagiAnchors?.Tip ?? new Vector2(.60f,.035f));
+        // 空中斬りは頭上から足元へ抜ける縦の面。直後の刈るも同方向で重ねる。
+        // 斬撃の中心を地面基準にして、体の下降で弧が沈んだり持ち上がったりしない。
+        Vector3 Orbit() => actor.GlobalPosition + (air ? side * (flip ? -.45f : .45f) : Vector3.Zero)
+            + Vector3.Up * (air ? Math.Max(1.85f, (reaping?.SweepRadius ?? 2.1f) * .98f + .18f)
+                : .95f + actor.AttackClipVertical);
+        if (!sharedAirCut && (cue.Reap || airRoot))
         {
             reaping = new HagiReapFx3D(); _fxRoot.AddChild(reaping);
             reaping.Start(center+Vector3.Up*.12f,span+4.2f,reverse,_camera,
-                Blade,Orbit,HagiClock, powerScale: cue.Weighted ? 1.2f : 1, echoes: cue.Encore);
+                Blade,Orbit,HagiClock, powerScale: cue.Weighted ? 1.2f : 1, echoes: cue.Encore,
+                tiltDegrees: air ? 0 : cue.Return ? 15 : cue.Reverse ? 40 : 0,
+                radiusScale: air ? .82f : cue.Return ? .70f : 1,
+                pitchDegrees: air ? (flip ? -78 : 78) : 0, crescent: air);
         }
-        string clip = cue.Return || cue.Reverse ? "hagi_reap_return_v1" : !cue.Reap ? "hagi_spin_v1" : cue.Link ? "hagi_reap_return_v1"
+        if (airRoot && cue.Keep && cue.NextReturn && reaping is not null)
+            _hagiAirCuts[actor.InstanceId] = reaping;
+        string airKey = cue.Air == HagiPresentation.AirKind.Finisher ? "air_finish" : "air_reap";
+        string clip = cue.AirFollow
+                ? cue.Keep ? "hagi_air_after_hold_v6"
+                    : cue.Air == HagiPresentation.AirKind.Finisher ? "hagi_air_after_finish_v6" : "hagi_air_after_v6"
+            : airRoot ? "hagi_" + airKey + (cue.Keep ? cue.NextReturn ? "_cut_hold_v6" : "_hold_v6" : "_v6")
+            : rotational ? backStroke
+                ? cue.Keep ? "hagi_orbit_back_hold_v3" : "hagi_orbit_back_v3"
+                : cue.Keep ? "hagi_orbit_out_hold_v3" : "hagi_orbit_out_v3"
+            : cue.Link ? "hagi_reap_return_v1"
             : cue.Keep ? "hagi_reap_chain_v1" : "hagi_reap_spin_v1";
         bool contacted = false;
-        var contactDone = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         // 命中は全身セルのcontactで一度だけ通知する。中断時に旧台本の接触を発生させない。
         var animation = actor.PlayHagiClip(clip, () => {
             if (!Live() || !actor.AttackClipPlaying) return;
             contacted = true;
             if (cue.Return) HagiReturns++; else HagiSwings++;
+            if (cue.AirFollow) HagiAirFollows++;
+            else if (cue.Air == HagiPresentation.AirKind.Opener) HagiAirOpeners++;
+            else if (cue.Air == HagiPresentation.AirKind.Finisher) HagiAirFinishers++;
             if (cue.Link) HagiLinks++;
             if (cue.Reap && targets.Count > 1) HagiColumns++;
-            if (reaping is not null) reaping.Release();
+            if (reaping is not null)
+            {
+                if (sharedAirCut) reaping.Reinforce(); else reaping.Release();
+            }
             else
             {
                 var arc = new HagiReapFx3D(); _fxRoot.AddChild(arc);
                 arc.Start(center+Vector3.Up*.12f,span+2.8f,reverse,_camera,Blade,Orbit,HagiClock,
-                    heavy:false,powerScale:cue.Weighted ? 1.35f : 1,echoes:cue.Encore);
+                    heavy:false,powerScale:cue.Weighted ? 1.35f : 1,echoes:cue.Encore,
+                    tiltDegrees: cue.Reverse ? 40 : 0);
                 arc.Release();
             }
             _attackAudio.PlayAttack("hagi", actor.Team, targets.Count > 1 ? AttackPattern.Sweep : AttackPattern.Single,
-                cue.Pursuit, cue.Reap);
+                cue.Pursuit, cue.Reap || airRoot);
             foreach (var hit in targets) NotifyAttackContact(hit);
-            contact(); contactDone.TrySetResult();
-        }, cue.Keep, cue.Return || cue.Reverse || cue.Pursuit);
+            contact();
+        }, cue.Keep, air ? () => {
+            if (!Live()) return;
+            HagiLandings++; _attackAudio.PlayMovementSound(MovementSound.Landing);
+        } : null);
         int ghosts = 0, ghostCount = cue.Encore > 0 ? cue.Encore + 1 : cue.Pursuit ? 1 : 0;
-        await HagiWait(cue.Link || cue.Return ? .025 : cue.Pursuit ? .065 : .13, generation,
+        await HagiWait(airRoot ? .32 : cue.Return ? .16 : cue.Link ? .025 : cue.Pursuit ? .065 : .13, generation,
             t => {
                 if (!Live() || !actor.AttackClipPlaying) return;
                 while (ghosts < ghostCount && t >= (ghosts + 1f) / (ghostCount + 1))
@@ -146,11 +184,11 @@ public partial class BattlefieldView3D
                 }
                 actor.Position = Approach(t);
             });
-        // 続く出来事は接触の直後へ渡す。振り切りの途中で返し刃・次の振りへ切り替えられる。
-        if (cue.Keep) await Task.WhenAny(animation, contactDone.Task);
-        else await animation;
+        // 振り抜きと刃を運び直す姿勢まで見せ、保持した最終姿勢から次の刃へ渡す。
+        await animation;
         if (!Live() || !contacted)
         {
+            _hagiAirCuts.Remove(actor.InstanceId);
             if (IsInstanceValid(reaping)) { reaping!.Hide(); reaping.QueueFree(); }
             if (Live()) actor.Position = actor.Home;
             return;

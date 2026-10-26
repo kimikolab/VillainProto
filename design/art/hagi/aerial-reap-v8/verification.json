@@ -1,0 +1,76 @@
+{
+  "build": "Not rerun: shader-only change; validated by GPU shader compilation and actual playback",
+  "source_cels": "../aerial-reap-v6/cel-animation.json",
+  "new_images": 0,
+  "render": "Godot GPU / Main.EnterViewerLive / 60fps",
+  "tests": "Three actual battle scenarios; GPU shader compilation; single-crescent silhouette inspected; full video decode. Existing motion and C# lifecycle unchanged.",
+  "files": [
+    {
+      "path": "DemoApp/HagiReapFx3D.cs",
+      "sha256": "5bebcbb3fef33a6f4dae96f5d16a111cd8824f6af8483cff9d3ce90e7aa6346f"
+    },
+    {
+      "path": "DemoApp/BattlefieldView3D.Hagi.cs",
+      "sha256": "881cd0927280e6cb9f7be57813d1e609877892ab2aae561dd1968ab2395e1453"
+    },
+    {
+      "path": "DemoApp/assets/fx/hagi_air_crescent.gdshader",
+      "sha256": "b4a7f37186b9fefce197ebdf4d0a849b73225c57db6b0774873624b8d3930221"
+    },
+    {
+      "path": "DemoApp/HagiPresentationCheck.Aerial.cs",
+      "sha256": "cfaa3ecc928c3b40f0c97d3c18d0723a674ada32bf3020ba1758da7fc9bec7e0"
+    }
+  ],
+  "videos": [
+    {
+      "file": "air-boss-finish-1x.mp4",
+      "frames": 168,
+      "width": 1440,
+      "height": 760,
+      "duration_last_frame": 2.783,
+      "audio_streams": 1
+    },
+    {
+      "file": "air-boss-finish-fx-half.gif",
+      "frames": 134,
+      "width": 1080,
+      "height": 570,
+      "duration_last_frame": 5.54,
+      "audio_streams": 0
+    },
+    {
+      "file": "air-boss-finish-fx-half.mp4",
+      "frames": 335,
+      "width": 1440,
+      "height": 760,
+      "duration_last_frame": 5.567,
+      "audio_streams": 0
+    },
+    {
+      "file": "air-chain-finish-1x.mp4",
+      "frames": 249,
+      "width": 1440,
+      "height": 760,
+      "duration_last_frame": 4.133,
+      "audio_streams": 1
+    },
+    {
+      "file": "air-opener-1x.mp4",
+      "frames": 162,
+      "width": 1440,
+      "height": 760,
+      "duration_last_frame": 2.683,
+      "audio_streams": 1
+    },
+    {
+      "file": "hagi-aerial-reap-v8.mp4",
+      "frames": 579,
+      "width": 1440,
+      "height": 760,
+      "duration_last_frame": 9.654,
+      "audio_streams": 0
+    }
+  ],
+  "exit_diagnostics": "Existing Font/CanvasItem/ObjectDB exit-only release warnings; capture exit 0"
+}

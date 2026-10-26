@@ -1,0 +1,104 @@
+{
+  "tool": "built-in image_gen",
+  "transparent_background": true,
+  "original_directory": "C:/Users/Pon/.codex/generated_images/01a16ee4-957d-7073-aa2e-d3e415aca3ce",
+  "references": [
+    {
+      "path": "DemoApp/assets/portraits/battle/hagi_idle_right.png",
+      "role": "人物・衣装・武器の基準"
+    },
+    {
+      "path": "source-out.png / source-back-initial.png",
+      "role": "動作の接続と人物の一貫性"
+    }
+  ],
+  "sheets": [
+    {
+      "file": "source-out.png",
+      "original": "exec-e159f061-5d93-4b92-bd2b-cdd2baed61aa.png",
+      "sha256": "5010c4f1b5ff6ae6d9ecc0db7d1a19c0d53d984fa83242dfb4ec5ec2083ed834",
+      "prompt": "prompt-out.txt",
+      "adopted_cells": [
+        0,
+        1,
+        2
+      ],
+      "reference_paths": [
+        "DemoApp/assets/portraits/battle/hagi_idle_right.png"
+      ]
+    },
+    {
+      "file": "source-back.png",
+      "original": "exec-5e2deb26-93c8-4200-a718-8cd6fbf08013.png",
+      "sha256": "88ba7def1d070b7ad56f04cd8f2485f63781218fae081310326c440a055c63be",
+      "prompt": "prompt-back.txt",
+      "adopted_cells": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "reference_paths": [
+        "source-back-initial.png"
+      ]
+    },
+    {
+      "file": "source-link.png",
+      "original": "exec-6953fb18-fad4-468c-a34c-e62f5396bb0d.png",
+      "sha256": "8f8087c03cb49381b2302bf1bfbcfb0d294dd24abe8edf5a5c5a2769111bf629",
+      "prompt": "prompt-link.txt",
+      "adopted_cells": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "reference_paths": [
+        "DemoApp/assets/portraits/battle/hagi_idle_right.png",
+        "source-back-initial.png"
+      ]
+    }
+  ],
+  "layout_edit": {
+    "file": "source-back.png",
+    "prompt": "prompt-back-layout.txt",
+    "reference": "source-back-initial.png"
+  },
+  "rejected": [
+    {
+      "file": "source-back-initial.png",
+      "original": "exec-1cb2f57f-0127-4200-9d43-79bf1c585db4.png",
+      "reason": "下段2セルが接触して連結3枚になったため、組み込みimage_genで配置を修正"
+    }
+  ],
+  "stocking_fix": {
+    "tool": "built-in image_gen",
+    "source": "source-out.png",
+    "edited_source": "source-out-stocking-fix.png",
+    "original": "exec-83445bfd-1e43-40ac-be90-e75925684538.png",
+    "prompt": "prompt-stocking-fix-corrected_prompt.txt",
+    "adopted_cell": 3,
+    "screen_left_leg": "bare skin",
+    "screen_right_leg": "black stocking; overlapping cape preserved",
+    "crop": [
+      488,
+      785,
+      527,
+      696
+    ],
+    "changed_runtime_pngs": [
+      "DemoApp\\assets\\portraits\\battle\\attack_clip\\hagi_orbit_out_hold_v3\\hagi_orbit_out_hold_v3_006.png",
+      "DemoApp\\assets\\portraits\\battle\\attack_clip\\hagi_orbit_out_hold_v3\\hagi_orbit_out_hold_v3_007.png",
+      "DemoApp\\assets\\portraits\\battle\\attack_clip\\hagi_orbit_out_v3\\hagi_orbit_out_v3_006.png",
+      "DemoApp\\assets\\portraits\\battle\\attack_clip\\hagi_orbit_out_v3\\hagi_orbit_out_v3_007.png"
+    ],
+    "unchanged_runtime_png_count": 45,
+    "all_clip_and_motion_json_unchanged": true,
+    "changed_image_sha256": "005a8bd2566c981dd1ba6acec77efb40b9f86d8ceae1357bea1da52b1e6c939d",
+    "rejected_attempt": {
+      "original": "exec-91a0168b-d44a-4780-a6cb-8c823105cd7e.png",
+      "prompt": "prompt-stocking-fix-prompt.txt",
+      "reason": "ユーザーがタイツの左右反転を指摘。ゲーム素材には未使用"
+    }
+  }
+}

@@ -1,0 +1,253 @@
+{
+  "build": "0 warnings / 0 errors (incremental build)",
+  "new_whole_body_poses": 0,
+  "reused_whole_body_poses": 8,
+  "canvas": [
+    2304,
+    1664
+  ],
+  "clips": [
+    {
+      "name": "hagi_air_reap_v6",
+      "frames": 27,
+      "contact": 18,
+      "fps": 30
+    },
+    {
+      "name": "hagi_air_reap_cut_hold_v6",
+      "frames": 21,
+      "contact": 18,
+      "fps": 30
+    },
+    {
+      "name": "hagi_air_reap_hold_v6",
+      "frames": 24,
+      "contact": 18,
+      "fps": 30
+    },
+    {
+      "name": "hagi_air_finish_v6",
+      "frames": 32,
+      "contact": 21,
+      "fps": 30
+    },
+    {
+      "name": "hagi_air_finish_cut_hold_v6",
+      "frames": 24,
+      "contact": 21,
+      "fps": 30
+    },
+    {
+      "name": "hagi_air_finish_hold_v6",
+      "frames": 27,
+      "contact": 21,
+      "fps": 30
+    },
+    {
+      "name": "hagi_air_after_v6",
+      "frames": 8,
+      "contact": 1,
+      "fps": 30
+    },
+    {
+      "name": "hagi_air_after_hold_v6",
+      "frames": 5,
+      "contact": 1,
+      "fps": 30
+    },
+    {
+      "name": "hagi_air_after_finish_v6",
+      "frames": 10,
+      "contact": 1,
+      "fps": 30
+    }
+  ],
+  "runtime_png_count": 178,
+  "shared_joins": [
+    {
+      "outgoing": "air_reap_cut_hold_v6",
+      "following": "air_after_v6",
+      "shared_cel_sha256": "e07d4c05f95b4f525abfaffdf55770bd711c5fb8384271220629a09de1cf2508"
+    },
+    {
+      "outgoing": "air_reap_cut_hold_v6",
+      "following": "air_after_hold_v6",
+      "shared_cel_sha256": "e07d4c05f95b4f525abfaffdf55770bd711c5fb8384271220629a09de1cf2508"
+    },
+    {
+      "outgoing": "air_reap_cut_hold_v6",
+      "following": "air_after_finish_v6",
+      "shared_cel_sha256": "e07d4c05f95b4f525abfaffdf55770bd711c5fb8384271220629a09de1cf2508"
+    },
+    {
+      "outgoing": "air_finish_cut_hold_v6",
+      "following": "air_after_v6",
+      "shared_cel_sha256": "e07d4c05f95b4f525abfaffdf55770bd711c5fb8384271220629a09de1cf2508"
+    },
+    {
+      "outgoing": "air_finish_cut_hold_v6",
+      "following": "air_after_hold_v6",
+      "shared_cel_sha256": "e07d4c05f95b4f525abfaffdf55770bd711c5fb8384271220629a09de1cf2508"
+    },
+    {
+      "outgoing": "air_finish_cut_hold_v6",
+      "following": "air_after_finish_v6",
+      "shared_cel_sha256": "e07d4c05f95b4f525abfaffdf55770bd711c5fb8384271220629a09de1cf2508"
+    }
+  ],
+  "script_check": "15 actual scripts: event parity",
+  "visual_check": "pause at apex, 2x, airborne contact before landing, shared contact, vertical root/follow/mirror arcs, ground clearance, one landing, death/cancel",
+  "peak_height": {
+    "previous": 1.48,
+    "current": 1.48
+  },
+  "weapon_review": "Single master: continuous asymmetric crescent, one oval opening, one trio of grooves, straight shaft, inner-curve socket. Projected proportions still vary with painted perspective.",
+  "render": "Godot GPU / 60fps / Main.EnterViewerLive",
+  "videos": [
+    {
+      "file": "air-boss-finish-1x.mp4",
+      "frames": 168,
+      "width": 1440,
+      "height": 760,
+      "duration_last_frame": 2.783,
+      "audio_streams": 1
+    },
+    {
+      "file": "air-boss-finish-fx-half.gif",
+      "frames": 134,
+      "width": 1080,
+      "height": 570,
+      "duration_last_frame": 5.54,
+      "audio_streams": 0
+    },
+    {
+      "file": "air-boss-finish-fx-half.mp4",
+      "frames": 335,
+      "width": 1440,
+      "height": 760,
+      "duration_last_frame": 5.567,
+      "audio_streams": 0
+    },
+    {
+      "file": "air-boss-finish-motion-1x.gif",
+      "frames": 67,
+      "width": 900,
+      "height": 555,
+      "duration_last_frame": 2.75,
+      "audio_streams": 0
+    },
+    {
+      "file": "air-boss-finish-motion-1x.mp4",
+      "frames": 168,
+      "width": 1200,
+      "height": 740,
+      "duration_last_frame": 2.783,
+      "audio_streams": 0
+    },
+    {
+      "file": "air-boss-finish-motion-half.gif",
+      "frames": 134,
+      "width": 900,
+      "height": 555,
+      "duration_last_frame": 5.54,
+      "audio_streams": 0
+    },
+    {
+      "file": "air-boss-finish-motion-half.mp4",
+      "frames": 335,
+      "width": 1200,
+      "height": 740,
+      "duration_last_frame": 5.567,
+      "audio_streams": 0
+    },
+    {
+      "file": "air-chain-finish-1x.mp4",
+      "frames": 249,
+      "width": 1440,
+      "height": 760,
+      "duration_last_frame": 4.133,
+      "audio_streams": 1
+    },
+    {
+      "file": "air-chain-finish-motion-1x.gif",
+      "frames": 100,
+      "width": 900,
+      "height": 555,
+      "duration_last_frame": 4.13,
+      "audio_streams": 0
+    },
+    {
+      "file": "air-chain-finish-motion-1x.mp4",
+      "frames": 249,
+      "width": 1200,
+      "height": 740,
+      "duration_last_frame": 4.133,
+      "audio_streams": 0
+    },
+    {
+      "file": "air-chain-finish-motion-half.gif",
+      "frames": 199,
+      "width": 900,
+      "height": 555,
+      "duration_last_frame": 8.25,
+      "audio_streams": 0
+    },
+    {
+      "file": "air-chain-finish-motion-half.mp4",
+      "frames": 497,
+      "width": 1200,
+      "height": 740,
+      "duration_last_frame": 8.267,
+      "audio_streams": 0
+    },
+    {
+      "file": "air-opener-1x.mp4",
+      "frames": 162,
+      "width": 1440,
+      "height": 760,
+      "duration_last_frame": 2.683,
+      "audio_streams": 1
+    },
+    {
+      "file": "air-opener-motion-1x.gif",
+      "frames": 65,
+      "width": 900,
+      "height": 555,
+      "duration_last_frame": 2.67,
+      "audio_streams": 0
+    },
+    {
+      "file": "air-opener-motion-1x.mp4",
+      "frames": 162,
+      "width": 1200,
+      "height": 740,
+      "duration_last_frame": 2.683,
+      "audio_streams": 0
+    },
+    {
+      "file": "air-opener-motion-half.gif",
+      "frames": 129,
+      "width": 900,
+      "height": 555,
+      "duration_last_frame": 5.33,
+      "audio_streams": 0
+    },
+    {
+      "file": "air-opener-motion-half.mp4",
+      "frames": 323,
+      "width": 1200,
+      "height": 740,
+      "duration_last_frame": 5.367,
+      "audio_streams": 0
+    },
+    {
+      "file": "hagi-aerial-reap-v6.mp4",
+      "frames": 579,
+      "width": 1440,
+      "height": 760,
+      "duration_last_frame": 9.654,
+      "audio_streams": 0
+    }
+  ],
+  "exit_diagnostics": "Existing Font/CanvasItem/ObjectDB exit-only release warnings; captures/check exit 0"
+}

@@ -120,6 +120,10 @@ public partial class BattlePawn3D
     {
         AttackClip clip = _attackClip!;
         int frame = (int)(_attackClipTime * clip.Fps);
+        // 倍速で接触コマを飛び越しても、着地より先に接触姿勢を一度描く。
+        // 時計は戻さず、次の描画で経過時間へ追いつく。
+        if (_unitId == "hagi" && _attackClipContact is not null && frame > clip.Contact)
+            frame = clip.Contact;
         int last = clip.Frames.Length - 1;
         bool completed = false;
         float forward;
@@ -135,11 +139,7 @@ public partial class BattlePawn3D
         else forward = Forward(clip, frame);
         AttackClipForward = forward;
         _attackClipFrame = frame;
-        if (frame >= clip.Contact && _attackClipContact is { } contact)
-        {
-            _attackClipContact = null;
-            contact();
-        }
+        if (_unitId != "hagi") NotifyClipContact(frame, clip.Contact);
         // 毎フレーム当て直す（再生中に RefreshBattlePortrait が呼ばれても連番へ戻す）。
         Texture2D idle = UiKit.BattlePortrait(_atlas, clip.ReferencePortrait ?? _unitId);
         float idlePixel = _portraitHeight / Math.Max(1, idle.GetHeight());
@@ -161,15 +161,25 @@ public partial class BattlePawn3D
             _portraitMaterial.SetShaderParameter("portrait_texture", texture);
         }
         _sprite.PixelSize = clipPixel;
+        // 落下斬りの命中点は、直前の空中コマでなく今回の接触セルの刃と高さで通知する。
+        if (_unitId == "hagi") NotifyClipContact(frame, clip.Contact);
+        ProcessHagiCelPhase(frame);
         // 倍速や描画負荷で最終コマを飛び越しても、保持する絵・武器・高さを最後の姿勢へ揃える。
         if (completed) FinishAttackClip(restore: true, completed: true);
     }
 
     private static float Forward(AttackClip clip, int frame) => frame < clip.Forward.Length ? clip.Forward[frame] : 0;
 
+    private void NotifyClipContact(int frame, int at)
+    {
+        if (frame < at || _attackClipContact is not { } contact) return;
+        _attackClipContact = null; contact();
+    }
+
     private void FinishAttackClip(bool restore, bool completed = false)
     {
         if (_attackClip is null) return;
+        _hagiLanding = null;
         TaskCompletionSource? done = _attackClipDone;
         Action? contact = _attackClipContact;
         bool held = HoldRicaLastFrame(restore && completed) || HoldHagiLastFrame(restore && completed);

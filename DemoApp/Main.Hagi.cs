@@ -41,8 +41,10 @@ public partial class Main
         if (targets.Count == 0 && primary is not null) targets.Add(primary);
         await _battleField.PlayHagiSwing(actor, targets, cue, () => {
             if (token != _playToken || !_battleMode) return;
-            // この刃の刈り取りだけを接触へ寄せる。返し刃は Reap の位置で1体ずつ再生する。
-            foreach (int hit in cue.Damage.Where(_hagi.Reaps.Contains))
+            // 通常の命中も接触へ合わせる。巻き込みの途中の返し刃より先のHPは先取りしない。
+            int first = cue.Damage.DefaultIfEmpty(int.MaxValue).Min();
+            int nextReturn = _hagi.Returns.Keys.Where(i => i > first).DefaultIfEmpty(int.MaxValue).Min();
+            foreach (int hit in cue.Damage.Where(i => i < nextReturn))
             {
                 if (!CanPreviewViewerEvent(hit) || !_batchedDamageIndices.Add(hit)) continue;
                 var damage = _result!.Events[hit];

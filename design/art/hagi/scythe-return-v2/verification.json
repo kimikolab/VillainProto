@@ -1,0 +1,192 @@
+{
+  "build": "0 warnings / 0 errors",
+  "full_body_poses": 12,
+  "clips": [
+    {
+      "name": "hagi_double_out_v2",
+      "frames": 11,
+      "contact": 3,
+      "fps": 30
+    },
+    {
+      "name": "hagi_double_rise_v2",
+      "frames": 12,
+      "contact": 2,
+      "fps": 30
+    },
+    {
+      "name": "hagi_hook_out_v2",
+      "frames": 9,
+      "contact": 3,
+      "fps": 30
+    },
+    {
+      "name": "hagi_hook_pull_v2",
+      "frames": 9,
+      "contact": 2,
+      "fps": 30
+    },
+    {
+      "name": "hagi_hook_pull_hold_v2",
+      "frames": 7,
+      "contact": 2,
+      "fps": 30
+    },
+    {
+      "name": "hagi_sweep_v2",
+      "frames": 9,
+      "contact": 3,
+      "fps": 30
+    },
+    {
+      "name": "hagi_double_rise_hook_v2",
+      "frames": 10,
+      "contact": 2,
+      "fps": 30
+    },
+    {
+      "name": "hagi_hook_repeat_hold_v2",
+      "frames": 12,
+      "contact": 7,
+      "fps": 30
+    },
+    {
+      "name": "hagi_hook_repeat_v2",
+      "frames": 14,
+      "contact": 7,
+      "fps": 30
+    }
+  ],
+  "shared_cel_joins": [
+    {
+      "outgoing": "double_out",
+      "following": "double_rise",
+      "shared_full_body_sha256": "53871522459f30720401bd77c786c7ed4cf36f16470beeab9925f4f78bea398d"
+    },
+    {
+      "outgoing": "hook_out",
+      "following": "hook_pull",
+      "shared_full_body_sha256": "5b5fa5449ec789791adcc82d7fa0172acdf9edf265c44a26efab2bf035876e02"
+    },
+    {
+      "outgoing": "hook_pull_hold",
+      "following": "hook_repeat_hold",
+      "shared_full_body_sha256": "ebedcfebf8919b5810992d22d423b9823a821fb5d11c1c2f91e33c77630802a1"
+    },
+    {
+      "outgoing": "double_rise_hook",
+      "following": "hook_pull",
+      "shared_full_body_sha256": "5b5fa5449ec789791adcc82d7fa0172acdf9edf265c44a26efab2bf035876e02"
+    },
+    {
+      "outgoing": "hook_repeat_hold",
+      "following": "hook_repeat",
+      "shared_full_body_sha256": "ebedcfebf8919b5810992d22d423b9823a821fb5d11c1c2f91e33c77630802a1"
+    }
+  ],
+  "runtime_png_count": 93,
+  "hagi_presentation_check": "OK / 15 scripts / hit counts, HP, pause, speed, mirror, cancel, reset, replay, seek",
+  "render": "Godot Vulkan Forward+ / RTX 5090 / 60 fps / Main.EnterViewerLive",
+  "videos": [
+    {
+      "file": "after-hit-return-1x.mp4",
+      "bytes": 1362447,
+      "frames": 111,
+      "width": 1440,
+      "height": 764,
+      "last_frame_seconds": 1.833,
+      "audio_streams": 1
+    },
+    {
+      "file": "after-hit-return-motion-half.gif",
+      "bytes": 21033166,
+      "frames": 88,
+      "width": 1100,
+      "height": 941,
+      "last_frame_seconds": 3.63,
+      "audio_streams": 0
+    },
+    {
+      "file": "after-hit-return-motion-half.mp4",
+      "bytes": 1735972,
+      "frames": 221,
+      "width": 800,
+      "height": 684,
+      "last_frame_seconds": 3.667,
+      "audio_streams": 0
+    },
+    {
+      "file": "after-hit-return-quarter.mp4",
+      "bytes": 3078121,
+      "frames": 443,
+      "width": 1440,
+      "height": 764,
+      "last_frame_seconds": 7.367,
+      "audio_streams": 0
+    },
+    {
+      "file": "carry-chain-1x.mp4",
+      "bytes": 2650848,
+      "frames": 176,
+      "width": 1440,
+      "height": 764,
+      "last_frame_seconds": 2.917,
+      "audio_streams": 1
+    },
+    {
+      "file": "carry-chain-quarter.mp4",
+      "bytes": 5996980,
+      "frames": 703,
+      "width": 1440,
+      "height": 764,
+      "last_frame_seconds": 11.7,
+      "audio_streams": 0
+    },
+    {
+      "file": "hagi-scythe-motion-v2.mp4",
+      "bytes": 17862125,
+      "frames": 2042,
+      "width": 1440,
+      "height": 764,
+      "last_frame_seconds": 34.038,
+      "audio_streams": 0
+    },
+    {
+      "file": "isolated-twin-1x.mp4",
+      "bytes": 1522988,
+      "frames": 122,
+      "width": 1440,
+      "height": 764,
+      "last_frame_seconds": 2.017,
+      "audio_streams": 1
+    },
+    {
+      "file": "isolated-twin-motion-half.gif",
+      "bytes": 19500325,
+      "frames": 97,
+      "width": 1100,
+      "height": 941,
+      "last_frame_seconds": 4.0,
+      "audio_streams": 0
+    },
+    {
+      "file": "isolated-twin-motion-half.mp4",
+      "bytes": 1644104,
+      "frames": 243,
+      "width": 800,
+      "height": 684,
+      "last_frame_seconds": 4.033,
+      "audio_streams": 0
+    },
+    {
+      "file": "isolated-twin-quarter.mp4",
+      "bytes": 3398549,
+      "frames": 487,
+      "width": 1440,
+      "height": 764,
+      "last_frame_seconds": 8.1,
+      "audio_streams": 0
+    }
+  ],
+  "exit_diagnostics": "Existing exit-only Texture/Font/CanvasItem/ObjectDB release warnings; checks and both GPU captures exit 0"
+}

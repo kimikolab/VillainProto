@@ -1,0 +1,47 @@
+{
+  "source": "hagi-rotational-sweep-v3",
+  "frames": 11,
+  "size": [
+    1920,
+    1280
+  ],
+  "fps": 30,
+  "contact": 2,
+  "anchor": [
+    880,
+    1160
+  ],
+  "idleAnchor": [
+    512,
+    1506
+  ],
+  "scale": 1.6,
+  "referencePortrait": "hagi",
+  "forward": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "vertical": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "motion": "全身の回転で鎌を奥・手前・反対側へ振り抜く。押し引き・逆再生・部位ワープなし。"
+}

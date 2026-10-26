@@ -1,0 +1,120 @@
+{
+  "tool": "built-in image_gen",
+  "transparent_background": true,
+  "original_directory": "C:/Users/Pon/.codex/generated_images/01a16ee4-957d-7073-aa2e-d3e415aca3ce",
+  "sources": [
+    {
+      "file": "scythe-master.png",
+      "original": "exec-0ef834c8-4266-4c78-b417-b13b4256ee5f.png",
+      "prompt": "prompt-scythe-master.txt",
+      "references": [
+        "DemoApp/assets/portraits/battle/hagi_idle_right.png"
+      ],
+      "sha256": "3cfd2a56bc6bfb17b92760db2a56ff807eaa97524bbd6d3110788e1de5abdfa7"
+    },
+    {
+      "file": "source-load.png",
+      "original": "exec-bc0cbeab-1cea-46a0-a470-3370e31703d1.png",
+      "prompt": "prompt-load.txt",
+      "references": [
+        "scythe-master.png",
+        "DemoApp/assets/portraits/battle/hagi_idle_right.png",
+        "source-peak.png"
+      ],
+      "sha256": "12a20d9b88d9c5ad2ab0afed909481a65430f01823a7b09001bdb0af46b9ca10"
+    },
+    {
+      "file": "source-launch.png",
+      "original": "exec-7d193977-8bfd-4ffd-9118-0852214d0d98.png",
+      "prompt": "prompt-launch.txt",
+      "references": [
+        "scythe-master.png",
+        "DemoApp/assets/portraits/battle/hagi_idle_right.png",
+        "source-peak.png"
+      ],
+      "sha256": "e120d0fa423751ac74913729c91fcd174782a02fc7e8a25a3be399653493bfef"
+    },
+    {
+      "file": "source-twist.png",
+      "original": "exec-2f6d104e-99a1-40dd-a984-75e898bc579f.png",
+      "prompt": "prompt-twist.txt",
+      "references": [
+        "scythe-master.png",
+        "DemoApp/assets/portraits/battle/hagi_idle_right.png",
+        "source-peak.png"
+      ],
+      "sha256": "a7b97bab5d43ddeecc57f53ab5d2efeb54eb3c74cfb8bba5b6e4b7471ccec8e0"
+    },
+    {
+      "file": "source-peak.png",
+      "original": "exec-eb197ab8-c425-4034-86a3-51337c65039a.png",
+      "prompt": "prompt-peak.txt",
+      "references": [
+        "scythe-master.png",
+        "DemoApp/assets/portraits/battle/hagi_idle_right.png",
+        "C:/Users/Pon/AppData/Local/Temp/codex-clipboard-963ae91d-7171-408a-a68c-328a3683b61e.png (pose only)"
+      ],
+      "sha256": "2661817b78969f108f44f8a7820621cbfccbc16e24037cddb57d63db827f4ad3"
+    },
+    {
+      "file": "source-drop.png",
+      "original": "exec-f9b231be-7956-4356-8498-a1396e8711a9.png",
+      "prompt": "prompt-drop.txt",
+      "references": [
+        "scythe-master.png",
+        "DemoApp/assets/portraits/battle/hagi_idle_right.png",
+        "source-peak.png"
+      ],
+      "sha256": "858f752386ed67c5747c8bf4a62c30cc7e2de56cac69fac67934e4549a52ce45"
+    },
+    {
+      "file": "source-impact.png",
+      "original": "exec-1cff20db-9f09-4b2a-9214-75f86f42cb9b.png",
+      "prompt": "prompt-impact.txt",
+      "references": [
+        "scythe-master.png",
+        "DemoApp/assets/portraits/battle/hagi_idle_right.png",
+        "source-peak.png"
+      ],
+      "sha256": "876f001c7ed32dc6524eb6eb4baa303799abdcbe8d1a3c513d7c8921579b9644"
+    },
+    {
+      "file": "source-land.png",
+      "original": "exec-c525ce76-cf24-41a2-9946-3f4144742344.png",
+      "prompt": "prompt-land-horizontal.txt",
+      "references": [
+        "scythe-master.png",
+        "DemoApp/assets/portraits/battle/hagi_idle_right.png",
+        "source-peak.png"
+      ],
+      "sha256": "b99c38304b7b8699e5e9d4ad177b86f55c601fd849ec3f33fbc4ef266da20a91"
+    }
+  ],
+  "rejected": [
+    {
+      "file": "rejected-rise-sheet.png",
+      "original": "exec-ba342b4e-2ad1-4a14-916f-74d6c4e82a59.png",
+      "prompt": "prompt-rise-sheet.txt",
+      "reason": "Scythe shrinks and changes between cells."
+    },
+    {
+      "file": "rejected-land-curved.png",
+      "original": "exec-e7995d43-ab9b-469b-b231-370c4b125391.png",
+      "prompt": "prompt-land.txt",
+      "reason": "Diagonal staff bends between grips."
+    },
+    {
+      "file": "rejected-land-fix.png",
+      "original": "exec-ced02052-9bf6-44af-a4bb-5aaaabc5940b.png",
+      "prompt": "prompt-land-fix.txt",
+      "references": [
+        "rejected-land-curved.png",
+        "scythe-master.png"
+      ],
+      "reason": "Staff still bends; replaced with newly generated horizontal hold."
+    }
+  ],
+  "reused_guard": "DemoApp/assets/portraits/battle/hagi_idle_right.png (copied to source-guard.png)",
+  "exporter": "Godot HagiCelExport: connected whole-body alpha, uniform scale; no part warp/reverse/crossfade",
+  "specification": "cel-animation.json / prepare_spec.py"
+}

@@ -7,11 +7,13 @@ using System.Threading.Tasks;
 
 public partial class BattlePawn3D
 {
-    internal sealed record HagiAnchors(Vector2 Socket, Vector2 Tip, Vector2[] Contour, bool Trail);
+    internal sealed record HagiAnchors(Vector2 Socket, Vector2 Tip, Vector2[] Contour, bool Trail, string Pose);
     private static readonly Dictionary<string, HagiAnchors[]> HagiTracks = new(StringComparer.Ordinal);
     private string? _hagiClipName, _hagiHeldName;
     private int _hagiHeldFrame;
     private bool _hagiKeepPose;
+    private Action? _hagiLanding;
+    private int _hagiLandingFrame;
     internal string? HagiClipName => _unitId == "hagi" ? AttackClipPlaying ? _hagiClipName : _hagiHeldName : null;
     internal HagiAnchors? CurrentHagiAnchors
     {
@@ -26,25 +28,31 @@ public partial class BattlePawn3D
                 track = doc.RootElement.GetProperty("frames").EnumerateArray().Select(f => {
                     var g = f.GetProperty("geometry");
                     return new HagiAnchors(V(g.GetProperty("socket")), V(g.GetProperty("tip")),
-                        g.GetProperty("contour").EnumerateArray().Select(V).ToArray(), f.GetProperty("trail").GetBoolean());
+                        g.GetProperty("contour").EnumerateArray().Select(V).ToArray(), f.GetProperty("trail").GetBoolean(),
+                        f.GetProperty("pose").GetString()!);
                 }).ToArray();
                 HagiTracks[name] = track;
             }
             return track[Math.Clamp(AttackClipPlaying ? AttackClipFrame : _hagiHeldFrame, 0, track.Length - 1)];
         }
     }
-    internal Task PlayHagiClip(string name, Action contact, bool keepPose, bool quickReturn = false)
+    internal Task PlayHagiClip(string name, Action contact, bool keepPose, Action? landing = null)
     {
         _hagiHeldName = null; _hagiKeepPose = keepPose; _hagiClipName = name;
-        var done = PlayAttackClip(name, contact, keepPose ? 1.0 / 30 : .04);
-        if (quickReturn && _attackClip is { } clip)
+        // 刃を返す姿勢から始める専用セルを使う。命中直前への飛ばし再生はしない。
+        var task = PlayAttackClip(name, contact, keepPose ? 1.0 / 30 : .04);
+        if (AttackClipPlaying && landing is not null)
         {
-            // 返し刃は既存の帰りのセルを使い、接触2コマ前から。長い溜めを挟まない。
-            _attackClip = clip with { Fps = clip.Fps * 1.5 };
-            _attackClipTime = Math.Max(0, clip.Contact - 2) / _attackClip.Fps;
-            ApplyAttackClipFrame();
+            _ = CurrentHagiAnchors;
+            _hagiLandingFrame = Array.FindIndex(HagiTracks[name], f => f.Pose == "land");
+            if (_hagiLandingFrame >= 0) _hagiLanding = landing;
         }
-        return done;
+        return task;
+    }
+    private void ProcessHagiCelPhase(int frame)
+    {
+        if (_unitId != "hagi" || frame < _hagiLandingFrame || _hagiLanding is not { } landing) return;
+        _hagiLanding = null; landing();
     }
     private bool HoldHagiLastFrame(bool completed)
     {
@@ -61,6 +69,7 @@ public partial class BattlePawn3D
     {
         if (_unitId != "hagi") return;
         _hagiKeepPose = false; _hagiHeldName = null; _hagiClipName = null;
+        _hagiLanding = null;
         CancelAttackClip();
     }
 }

@@ -1,0 +1,857 @@
+{
+  "fps": 60,
+  "speed": 1,
+  "renderer": "Godot GPU / Main.EnterViewerLive",
+  "segments": [
+    {
+      "name": "air-opener",
+      "cue": "hagi.live.4.1",
+      "Title": "\u8A66\u904A\u30FB\u30CF\u30AE \u54C0\u6B4C \uFF0F \u7CBE\u92ED\u30FB\u8FD1\u885B",
+      "startFrame": 409,
+      "endFrame": 567,
+      "eventStart": 211,
+      "eventEnd": 243,
+      "swings": 2,
+      "returns": 1,
+      "reaps": 1,
+      "steps": [
+        {
+          "eventIndex": 211,
+          "Return": false,
+          "Reverse": false,
+          "Reap": false,
+          "air": "Opener",
+          "AirFollow": false,
+          "Damage": [
+            214
+          ]
+        },
+        {
+          "eventIndex": 215,
+          "Return": true,
+          "Reverse": true,
+          "Reap": true,
+          "air": "Opener",
+          "AirFollow": true,
+          "Damage": [
+            217
+          ]
+        },
+        {
+          "eventIndex": 238,
+          "Return": false,
+          "Reverse": false,
+          "Reap": false,
+          "air": "None",
+          "AirFollow": false,
+          "Damage": [
+            240,
+            242
+          ]
+        }
+      ]
+    },
+    {
+      "name": "air-boss-finish",
+      "cue": "hagi.live.4.0",
+      "Title": "\u8A66\u904A\u30FB\u30CF\u30AE \u54C0\u6B4C \uFF0F \u30DC\u30B9\u30FB\u52C7\u8005\uFF08\u898F\u5B9A\u5F62\uFF09",
+      "startFrame": 849,
+      "endFrame": 1013,
+      "eventStart": 116,
+      "eventEnd": 128,
+      "swings": 2,
+      "returns": 1,
+      "reaps": 1,
+      "steps": [
+        {
+          "eventIndex": 116,
+          "Return": false,
+          "Reverse": false,
+          "Reap": false,
+          "air": "None",
+          "AirFollow": false,
+          "Damage": [
+            119
+          ]
+        },
+        {
+          "eventIndex": 121,
+          "Return": false,
+          "Reverse": true,
+          "Reap": false,
+          "air": "Finisher",
+          "AirFollow": false,
+          "Damage": [
+            123
+          ]
+        },
+        {
+          "eventIndex": 125,
+          "Return": true,
+          "Reverse": false,
+          "Reap": true,
+          "air": "Finisher",
+          "AirFollow": true,
+          "Damage": [
+            127
+          ]
+        }
+      ]
+    },
+    {
+      "name": "air-chain-finish",
+      "cue": "hagi.live.3.1",
+      "Title": "\u8A66\u904A\u30FB\u30CF\u30AE \u30AD\u30E3\u30EA\u30FC \uFF0F \u7CBE\u92ED\u30FB\u8FD1\u885B",
+      "startFrame": 1197,
+      "endFrame": 1442,
+      "eventStart": 353,
+      "eventEnd": 401,
+      "swings": 3,
+      "returns": 3,
+      "reaps": 4,
+      "steps": [
+        {
+          "eventIndex": 353,
+          "Return": false,
+          "Reverse": false,
+          "Reap": true,
+          "air": "None",
+          "AirFollow": false,
+          "Damage": [
+            355
+          ]
+        },
+        {
+          "eventIndex": 361,
+          "Return": true,
+          "Reverse": true,
+          "Reap": true,
+          "air": "None",
+          "AirFollow": false,
+          "Damage": [
+            363
+          ]
+        },
+        {
+          "eventIndex": 371,
+          "Return": false,
+          "Reverse": false,
+          "Reap": false,
+          "air": "None",
+          "AirFollow": false,
+          "Damage": [
+            373,
+            378
+          ]
+        },
+        {
+          "eventIndex": 382,
+          "Return": true,
+          "Reverse": true,
+          "Reap": true,
+          "air": "None",
+          "AirFollow": false,
+          "Damage": [
+            384
+          ]
+        },
+        {
+          "eventIndex": 392,
+          "Return": false,
+          "Reverse": false,
+          "Reap": false,
+          "air": "Finisher",
+          "AirFollow": false,
+          "Damage": [
+            395
+          ]
+        },
+        {
+          "eventIndex": 398,
+          "Return": true,
+          "Reverse": true,
+          "Reap": true,
+          "air": "Finisher",
+          "AirFollow": true,
+          "Damage": [
+            400
+          ]
+        }
+      ]
+    }
+  ],
+  "observations": [
+    {
+      "shot": "air-opener",
+      "frame": 468,
+      "eventIndex": 212,
+      "swings": 1,
+      "returns": 0,
+      "clip": "hagi_air_reap_cut_hold_v4",
+      "cel": 17,
+      "hp": [
+        {
+          "InstanceId": 0,
+          "UnitId": "sora",
+          "Hp": 74
+        },
+        {
+          "InstanceId": 1,
+          "UnitId": "gald",
+          "Hp": 4
+        },
+        {
+          "InstanceId": 2,
+          "UnitId": "ere",
+          "Hp": 40
+        },
+        {
+          "InstanceId": 3,
+          "UnitId": "hagi",
+          "Hp": 62
+        },
+        {
+          "InstanceId": 4,
+          "UnitId": "hisa",
+          "Hp": 44
+        },
+        {
+          "InstanceId": 5,
+          "UnitId": "recruit",
+          "Hp": 441
+        },
+        {
+          "InstanceId": 6,
+          "UnitId": "recruit",
+          "Hp": 92
+        },
+        {
+          "InstanceId": 7,
+          "UnitId": "recruit",
+          "Hp": 433
+        },
+        {
+          "InstanceId": 8,
+          "UnitId": "recruit",
+          "Hp": 401
+        },
+        {
+          "InstanceId": 9,
+          "UnitId": "recruit",
+          "Hp": 393
+        }
+      ]
+    },
+    {
+      "shot": "air-opener",
+      "frame": 476,
+      "eventIndex": 216,
+      "swings": 1,
+      "returns": 1,
+      "clip": "hagi_air_after_hold_v4",
+      "cel": 1,
+      "hp": [
+        {
+          "InstanceId": 0,
+          "UnitId": "sora",
+          "Hp": 74
+        },
+        {
+          "InstanceId": 1,
+          "UnitId": "gald",
+          "Hp": 4
+        },
+        {
+          "InstanceId": 2,
+          "UnitId": "ere",
+          "Hp": 40
+        },
+        {
+          "InstanceId": 3,
+          "UnitId": "hagi",
+          "Hp": 62
+        },
+        {
+          "InstanceId": 4,
+          "UnitId": "hisa",
+          "Hp": 44
+        },
+        {
+          "InstanceId": 5,
+          "UnitId": "recruit",
+          "Hp": 441
+        },
+        {
+          "InstanceId": 6,
+          "UnitId": "recruit",
+          "Hp": 0
+        },
+        {
+          "InstanceId": 7,
+          "UnitId": "recruit",
+          "Hp": 433
+        },
+        {
+          "InstanceId": 8,
+          "UnitId": "recruit",
+          "Hp": 401
+        },
+        {
+          "InstanceId": 9,
+          "UnitId": "recruit",
+          "Hp": 393
+        }
+      ]
+    },
+    {
+      "shot": "air-opener",
+      "frame": 500,
+      "eventIndex": 239,
+      "swings": 2,
+      "returns": 1,
+      "clip": "hagi_orbit_out_v3",
+      "cel": 6,
+      "hp": [
+        {
+          "InstanceId": 0,
+          "UnitId": "sora",
+          "Hp": 72
+        },
+        {
+          "InstanceId": 1,
+          "UnitId": "gald",
+          "Hp": 2
+        },
+        {
+          "InstanceId": 2,
+          "UnitId": "ere",
+          "Hp": 38
+        },
+        {
+          "InstanceId": 3,
+          "UnitId": "hagi",
+          "Hp": 62
+        },
+        {
+          "InstanceId": 4,
+          "UnitId": "hisa",
+          "Hp": 42
+        },
+        {
+          "InstanceId": 5,
+          "UnitId": "recruit",
+          "Hp": 393
+        },
+        {
+          "InstanceId": 6,
+          "UnitId": "recruit",
+          "Hp": 0
+        },
+        {
+          "InstanceId": 7,
+          "UnitId": "recruit",
+          "Hp": 405
+        },
+        {
+          "InstanceId": 8,
+          "UnitId": "recruit",
+          "Hp": 401
+        },
+        {
+          "InstanceId": 9,
+          "UnitId": "recruit",
+          "Hp": 393
+        }
+      ]
+    },
+    {
+      "shot": "air-boss-finish",
+      "frame": 887,
+      "eventIndex": 117,
+      "swings": 1,
+      "returns": 0,
+      "clip": "hagi_orbit_out_hold_v3",
+      "cel": 6,
+      "hp": [
+        {
+          "InstanceId": 0,
+          "UnitId": "sora",
+          "Hp": 62
+        },
+        {
+          "InstanceId": 1,
+          "UnitId": "gald",
+          "Hp": 96
+        },
+        {
+          "InstanceId": 2,
+          "UnitId": "ere",
+          "Hp": 18
+        },
+        {
+          "InstanceId": 3,
+          "UnitId": "hagi",
+          "Hp": 44
+        },
+        {
+          "InstanceId": 4,
+          "UnitId": "hisa",
+          "Hp": 22
+        },
+        {
+          "InstanceId": 5,
+          "UnitId": "boss_regular",
+          "Hp": 1704
+        }
+      ]
+    },
+    {
+      "shot": "air-boss-finish",
+      "frame": 941,
+      "eventIndex": 122,
+      "swings": 2,
+      "returns": 0,
+      "clip": "hagi_air_finish_cut_hold_v4",
+      "cel": 20,
+      "hp": [
+        {
+          "InstanceId": 0,
+          "UnitId": "sora",
+          "Hp": 62
+        },
+        {
+          "InstanceId": 1,
+          "UnitId": "gald",
+          "Hp": 96
+        },
+        {
+          "InstanceId": 2,
+          "UnitId": "ere",
+          "Hp": 18
+        },
+        {
+          "InstanceId": 3,
+          "UnitId": "hagi",
+          "Hp": 44
+        },
+        {
+          "InstanceId": 4,
+          "UnitId": "hisa",
+          "Hp": 22
+        },
+        {
+          "InstanceId": 5,
+          "UnitId": "boss_regular",
+          "Hp": 1005
+        }
+      ]
+    },
+    {
+      "shot": "air-boss-finish",
+      "frame": 949,
+      "eventIndex": 126,
+      "swings": 2,
+      "returns": 1,
+      "clip": "hagi_air_after_finish_v4",
+      "cel": 1,
+      "hp": [
+        {
+          "InstanceId": 0,
+          "UnitId": "sora",
+          "Hp": 62
+        },
+        {
+          "InstanceId": 1,
+          "UnitId": "gald",
+          "Hp": 96
+        },
+        {
+          "InstanceId": 2,
+          "UnitId": "ere",
+          "Hp": 18
+        },
+        {
+          "InstanceId": 3,
+          "UnitId": "hagi",
+          "Hp": 44
+        },
+        {
+          "InstanceId": 4,
+          "UnitId": "hisa",
+          "Hp": 22
+        },
+        {
+          "InstanceId": 5,
+          "UnitId": "boss_regular",
+          "Hp": 0
+        }
+      ]
+    },
+    {
+      "shot": "air-chain-finish",
+      "frame": 1245,
+      "eventIndex": 354,
+      "swings": 1,
+      "returns": 0,
+      "clip": "hagi_reap_chain_v1",
+      "cel": 11,
+      "hp": [
+        {
+          "InstanceId": 0,
+          "UnitId": "sid",
+          "Hp": 84
+        },
+        {
+          "InstanceId": 1,
+          "UnitId": "borg",
+          "Hp": 100
+        },
+        {
+          "InstanceId": 2,
+          "UnitId": "beni",
+          "Hp": 64
+        },
+        {
+          "InstanceId": 3,
+          "UnitId": "hagi",
+          "Hp": 62
+        },
+        {
+          "InstanceId": 4,
+          "UnitId": "tou",
+          "Hp": 46
+        },
+        {
+          "InstanceId": 5,
+          "UnitId": "recruit",
+          "Hp": 149
+        },
+        {
+          "InstanceId": 6,
+          "UnitId": "recruit",
+          "Hp": 0
+        },
+        {
+          "InstanceId": 7,
+          "UnitId": "recruit",
+          "Hp": 0
+        },
+        {
+          "InstanceId": 8,
+          "UnitId": "recruit",
+          "Hp": 280
+        },
+        {
+          "InstanceId": 9,
+          "UnitId": "recruit",
+          "Hp": 300
+        }
+      ]
+    },
+    {
+      "shot": "air-chain-finish",
+      "frame": 1261,
+      "eventIndex": 362,
+      "swings": 1,
+      "returns": 1,
+      "clip": "hagi_orbit_back_hold_v3",
+      "cel": 2,
+      "hp": [
+        {
+          "InstanceId": 0,
+          "UnitId": "sid",
+          "Hp": 82
+        },
+        {
+          "InstanceId": 1,
+          "UnitId": "borg",
+          "Hp": 100
+        },
+        {
+          "InstanceId": 2,
+          "UnitId": "beni",
+          "Hp": 64
+        },
+        {
+          "InstanceId": 3,
+          "UnitId": "hagi",
+          "Hp": 62
+        },
+        {
+          "InstanceId": 4,
+          "UnitId": "tou",
+          "Hp": 46
+        },
+        {
+          "InstanceId": 5,
+          "UnitId": "recruit",
+          "Hp": 0
+        },
+        {
+          "InstanceId": 6,
+          "UnitId": "recruit",
+          "Hp": 0
+        },
+        {
+          "InstanceId": 7,
+          "UnitId": "recruit",
+          "Hp": 0
+        },
+        {
+          "InstanceId": 8,
+          "UnitId": "recruit",
+          "Hp": 280
+        },
+        {
+          "InstanceId": 9,
+          "UnitId": "recruit",
+          "Hp": 300
+        }
+      ]
+    },
+    {
+      "shot": "air-chain-finish",
+      "frame": 1293,
+      "eventIndex": 372,
+      "swings": 2,
+      "returns": 1,
+      "clip": "hagi_orbit_out_hold_v3",
+      "cel": 6,
+      "hp": [
+        {
+          "InstanceId": 0,
+          "UnitId": "sid",
+          "Hp": 80
+        },
+        {
+          "InstanceId": 1,
+          "UnitId": "borg",
+          "Hp": 100
+        },
+        {
+          "InstanceId": 2,
+          "UnitId": "beni",
+          "Hp": 64
+        },
+        {
+          "InstanceId": 3,
+          "UnitId": "hagi",
+          "Hp": 62
+        },
+        {
+          "InstanceId": 4,
+          "UnitId": "tou",
+          "Hp": 46
+        },
+        {
+          "InstanceId": 5,
+          "UnitId": "recruit",
+          "Hp": 0
+        },
+        {
+          "InstanceId": 6,
+          "UnitId": "recruit",
+          "Hp": 0
+        },
+        {
+          "InstanceId": 7,
+          "UnitId": "recruit",
+          "Hp": 0
+        },
+        {
+          "InstanceId": 8,
+          "UnitId": "recruit",
+          "Hp": 180
+        },
+        {
+          "InstanceId": 9,
+          "UnitId": "recruit",
+          "Hp": 240
+        }
+      ]
+    },
+    {
+      "shot": "air-chain-finish",
+      "frame": 1311,
+      "eventIndex": 383,
+      "swings": 2,
+      "returns": 2,
+      "clip": "hagi_orbit_back_hold_v3",
+      "cel": 2,
+      "hp": [
+        {
+          "InstanceId": 0,
+          "UnitId": "sid",
+          "Hp": 80
+        },
+        {
+          "InstanceId": 1,
+          "UnitId": "borg",
+          "Hp": 100
+        },
+        {
+          "InstanceId": 2,
+          "UnitId": "beni",
+          "Hp": 64
+        },
+        {
+          "InstanceId": 3,
+          "UnitId": "hagi",
+          "Hp": 62
+        },
+        {
+          "InstanceId": 4,
+          "UnitId": "tou",
+          "Hp": 46
+        },
+        {
+          "InstanceId": 5,
+          "UnitId": "recruit",
+          "Hp": 0
+        },
+        {
+          "InstanceId": 6,
+          "UnitId": "recruit",
+          "Hp": 0
+        },
+        {
+          "InstanceId": 7,
+          "UnitId": "recruit",
+          "Hp": 0
+        },
+        {
+          "InstanceId": 8,
+          "UnitId": "recruit",
+          "Hp": 0
+        },
+        {
+          "InstanceId": 9,
+          "UnitId": "recruit",
+          "Hp": 232
+        }
+      ]
+    },
+    {
+      "shot": "air-chain-finish",
+      "frame": 1370,
+      "eventIndex": 393,
+      "swings": 3,
+      "returns": 2,
+      "clip": "hagi_air_finish_cut_hold_v4",
+      "cel": 20,
+      "hp": [
+        {
+          "InstanceId": 0,
+          "UnitId": "sid",
+          "Hp": 78
+        },
+        {
+          "InstanceId": 1,
+          "UnitId": "borg",
+          "Hp": 100
+        },
+        {
+          "InstanceId": 2,
+          "UnitId": "beni",
+          "Hp": 64
+        },
+        {
+          "InstanceId": 3,
+          "UnitId": "hagi",
+          "Hp": 62
+        },
+        {
+          "InstanceId": 4,
+          "UnitId": "tou",
+          "Hp": 46
+        },
+        {
+          "InstanceId": 5,
+          "UnitId": "recruit",
+          "Hp": 0
+        },
+        {
+          "InstanceId": 6,
+          "UnitId": "recruit",
+          "Hp": 0
+        },
+        {
+          "InstanceId": 7,
+          "UnitId": "recruit",
+          "Hp": 0
+        },
+        {
+          "InstanceId": 8,
+          "UnitId": "recruit",
+          "Hp": 0
+        },
+        {
+          "InstanceId": 9,
+          "UnitId": "recruit",
+          "Hp": 115
+        }
+      ]
+    },
+    {
+      "shot": "air-chain-finish",
+      "frame": 1378,
+      "eventIndex": 399,
+      "swings": 3,
+      "returns": 3,
+      "clip": "hagi_air_after_finish_v4",
+      "cel": 1,
+      "hp": [
+        {
+          "InstanceId": 0,
+          "UnitId": "sid",
+          "Hp": 78
+        },
+        {
+          "InstanceId": 1,
+          "UnitId": "borg",
+          "Hp": 100
+        },
+        {
+          "InstanceId": 2,
+          "UnitId": "beni",
+          "Hp": 64
+        },
+        {
+          "InstanceId": 3,
+          "UnitId": "hagi",
+          "Hp": 62
+        },
+        {
+          "InstanceId": 4,
+          "UnitId": "tou",
+          "Hp": 46
+        },
+        {
+          "InstanceId": 5,
+          "UnitId": "recruit",
+          "Hp": 0
+        },
+        {
+          "InstanceId": 6,
+          "UnitId": "recruit",
+          "Hp": 0
+        },
+        {
+          "InstanceId": 7,
+          "UnitId": "recruit",
+          "Hp": 0
+        },
+        {
+          "InstanceId": 8,
+          "UnitId": "recruit",
+          "Hp": 0
+        },
+        {
+          "InstanceId": 9,
+          "UnitId": "recruit",
+          "Hp": 0
+        }
+      ]
+    }
+  ]
+}

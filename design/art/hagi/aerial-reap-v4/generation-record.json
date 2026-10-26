@@ -1,0 +1,57 @@
+{
+  "tool": "built-in image_gen",
+  "transparent_background": true,
+  "original_directory": "C:/Users/Pon/.codex/generated_images/01a16ee4-957d-7073-aa2e-d3e415aca3ce",
+  "references": [
+    {
+      "path": "DemoApp/assets/portraits/battle/hagi_idle_right.png",
+      "role": "Hagi identity/costume/weapon"
+    },
+    {
+      "path": "C:/Users/Pon/AppData/Local/Temp/codex-clipboard-963ae91d-7171-408a-a68c-328a3683b61e.png",
+      "role": "Airborne wind-up pose only; no character, costume, hood or style copying"
+    }
+  ],
+  "sheets": [
+    {
+      "file": "source-rise.png",
+      "original": "exec-1e3f20d1-873d-4b47-a372-7736f21905ac.png",
+      "prompt": "prompt-rise.txt",
+      "adopted_cells": [
+        0,
+        1,
+        2
+      ],
+      "sha256": "3baf382a25e662d2bbd036058cf79b2d2ef32925f24b4f02073aa9f1bd0c9131"
+    },
+    {
+      "file": "source-fall.png",
+      "original": "exec-4e698658-51c4-41b2-9f22-7e2fefd8a4a7.png",
+      "prompt": "prompt-fall-layout.txt",
+      "edit_target": "source-fall-initial.png",
+      "initial_prompt": "prompt-fall.txt",
+      "adopted_cells": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "sha256": "1968d9114e30b487507e33657b73ec7b0ed58202e130a290c2630970ac266f56"
+    }
+  ],
+  "rejected": [
+    {
+      "file": "source-rise.png",
+      "cell": 3,
+      "reason": "The two hands are not collinear on the rigid pole."
+    },
+    {
+      "file": "source-fall-initial.png",
+      "original": "exec-c9f673d0-455a-4968-93b6-7a6a28ad166d.png",
+      "reason": "The two lower silhouettes touched; repaired layout using built-in image_gen."
+    }
+  ],
+  "reused_guard": "../rotational-sweep-v3/source-link.png cell 3",
+  "exporter": "Godot HagiCelExport: connected whole-body alpha cells, uniform scale only; no warp/reverse/crossfade",
+  "specification": "cel-animation.json / prepare_spec.py"
+}

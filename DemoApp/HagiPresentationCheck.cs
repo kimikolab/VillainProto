@@ -14,7 +14,10 @@ public partial class HagiPresentationCheck : Control
         try
         {
             CheckReapContract();
+            CheckAirContract();
             var fixtures = CheckScripts();
+            if (OS.GetCmdlineUserArgs().Contains("--script-only"))
+            { GD.Print("HAGI_SCRIPT_AND_AIR_CHECK_OK parity=15"); GetTree().Quit(); return; }
             if (OS.GetCmdlineUserArgs().Contains("--real-2x"))
             {
                 foreach (int i in new[] { 11, 12, 3 })
@@ -106,14 +109,20 @@ public partial class HagiPresentationCheck : Control
             Require(_field.HagiSweepEffects.Single(f => !f.Heavy).SweepRadius > normalRadius * 1.1f,
                 "重みの一撃は単体でも弧の半径を一回り大きくする");
             await weightedSwing;
-            // 通常斬撃を振り切る途中で返し刃へ移る。停止中は返し刃の接触も起こさない。
+            // 刃を返す姿勢を経て引き刈りへ移る。停止中は途中コマも接触も進まない。
             int returnContacts = 0;
-            await _field.PlayHagiSwing(hagi, new[] { enemy }, new(1, Array.Empty<int>(), false, false, false, Keep: true), () => { });
+            await _field.PlayHagiSwing(hagi, new[] { enemy }, new(1, Array.Empty<int>(), false, false, false, Keep: true, NextReturn: true), () => { });
+            Require(hagi.HagiClipName == "hagi_orbit_out_hold_v3" && !hagi.IdleLoopPlaying,
+                "通常斬撃を回転で振り抜いた背面姿勢を保持する");
+            var join = hagi.CurrentHagiAnchors!;
             bool outward = _field.HagiSweepEffects.Last().Reverse;
             var returnSwing = _field.PlayHagiSwing(hagi, new[] { enemy },
                 new(1, Array.Empty<int>(), true, false, true, Return: true, Reverse: true, Kind: ReapLabels.KindAfter), () => returnContacts++);
             _field.SetDeathClock(true, 1); await Wait(.08);
-            Require(returnContacts == 0 && !returnSwing.IsCompleted, "返し刃の溜めも停止");
+            Require(returnContacts == 0 && !returnSwing.IsCompleted && hagi.AttackClipFrame == 0,
+                "返し刃は専用姿勢の先頭から始まり、停止中は命中直前へ飛ばさない");
+            Require(hagi.CurrentHagiAnchors!.Socket == join.Socket && hagi.CurrentHagiAnchors.Tip == join.Tip,
+                "通常斬撃の終点と引き刈りの始点は同じ全身セル");
             _field.SetDeathClock(false, 2);
             if (OS.GetCmdlineUserArgs().Contains("--capture"))
             {
@@ -123,6 +132,18 @@ public partial class HagiPresentationCheck : Control
             await returnSwing;
             Require(returnContacts == 1 && _field.HagiReturns == 1 && _field.HagiReapEffects.Last().Reverse != outward,
                 "同じ振りの返し刃を逆向きに一度だけ接触");
+            Require(_field.HagiReapEffects.Last().SweepRadius < normalRadius,
+                "引き刈りの弧は腰へ引き込む小さな半径");
+            int twinContacts = 0;
+            await _field.PlayHagiSwing(hagi, new[] { enemy }, new(1, Array.Empty<int>(), false, false, false, Keep: true), () => twinContacts++);
+            Require(hagi.HagiClipName == "hagi_orbit_out_hold_v3", "二度斬りの一振り目を背面まで振り抜く");
+            join = hagi.CurrentHagiAnchors!;
+            var rising = _field.PlayHagiSwing(hagi, new[] { enemy }, new(1, Array.Empty<int>(), false, false, true, Reverse: true), () => twinContacts++);
+            Require(hagi.HagiClipName == "hagi_orbit_back_v3" && hagi.AttackClipFrame == 0
+                && hagi.CurrentHagiAnchors!.Socket == join.Socket && hagi.CurrentHagiAnchors.Tip == join.Tip,
+                "二撃目は背面姿勢を共有し、そこから専用の回転斬りを始める");
+            await rising;
+            Require(twinContacts == 2 && hagi.IdleLoopPlaying, "八の字の二振りが各一度命中して待機へ戻る");
             _field.BeginBattle(openings, "", 0); hagi = _field.FindPawn(1)!; enemy = _field.FindPawn(3)!;
             Require(!_field.HagiSweepEffects.Any(),"再戦で通常攻撃と刈り取りの残光を破棄");
             _field.ApplyHagiState(new(1, 9, 0, 0, Stage: 3));
@@ -164,6 +185,7 @@ public partial class HagiPresentationCheck : Control
                 && _field.HagiSweepEffects.All(f=>f.Released), "死亡時は全身セルと未発動の斬撃を破棄");
             hagi.SetHp(hagi.MaxHp); hagi.AnimateRevive();
             Require(hagi.HagiClipName is null && hagi.IdleLoopPlaying, "復活は待機から再開");
+            await CheckAirVisual(openings);
             _field.QueueFree(); await Wait(.03);
             if (OS.GetCmdlineUserArgs().Contains("--visual-only"))
             { GD.Print("HAGI_VISUAL_CHECK_OK ok=True"); GetTree().Quit(); return; }
@@ -267,7 +289,8 @@ public partial class HagiPresentationCheck : Control
         parsed = HagiPresentation.Build(events, openings, null);
         Require(parsed.Returns.Keys.SequenceEqual(new[] { 3, 6 }) && parsed.Returns[3].Damage.SequenceEqual(new[] { 4 })
             && parsed.Returns[6].Damage.SequenceEqual(new[] { 7 }), "巻き込んだ敵は当たった順の返し刃へ一件ずつ接続");
-        Require(parsed.Swings[1].Keep && parsed.Returns[3].Keep && parsed.Returns[6].Keep
+        Require(parsed.Swings[1].Keep && parsed.Swings[1].NextReturn && parsed.Returns[3].Keep
+            && parsed.Returns[3].NextReturn && parsed.Returns[6].Keep && !parsed.Returns[6].NextReturn
             && parsed.Returns.Values.All(s => s.Encore == 1) && parsed.Swings[9].Encore == 2,
             "複数の刈り取りから再行動へ途切れずつなぎ、残像の濃さも引き継ぐ");
         events = new() {

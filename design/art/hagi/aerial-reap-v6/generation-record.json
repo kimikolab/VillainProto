@@ -1,0 +1,40 @@
+{
+  "tool": "No new image generation; reuse accepted v5 whole-body images",
+  "original_generation_record": "../aerial-reap-v5/generation-record.json",
+  "sources": [
+    {
+      "file": "../aerial-reap-v5/source-guard.png",
+      "sha256": "e357d00a20270443a334f1fce1a23400bc3b1cea13a0593f13a848586152ba46"
+    },
+    {
+      "file": "../aerial-reap-v5/source-load.png",
+      "sha256": "12a20d9b88d9c5ad2ab0afed909481a65430f01823a7b09001bdb0af46b9ca10"
+    },
+    {
+      "file": "../aerial-reap-v5/source-launch.png",
+      "sha256": "e120d0fa423751ac74913729c91fcd174782a02fc7e8a25a3be399653493bfef"
+    },
+    {
+      "file": "../aerial-reap-v5/source-twist.png",
+      "sha256": "a7b97bab5d43ddeecc57f53ab5d2efeb54eb3c74cfb8bba5b6e4b7471ccec8e0"
+    },
+    {
+      "file": "../aerial-reap-v5/source-peak.png",
+      "sha256": "2661817b78969f108f44f8a7820621cbfccbc16e24037cddb57d63db827f4ad3"
+    },
+    {
+      "file": "../aerial-reap-v5/source-drop.png",
+      "sha256": "858f752386ed67c5747c8bf4a62c30cc7e2de56cac69fac67934e4549a52ce45"
+    },
+    {
+      "file": "../aerial-reap-v5/source-impact.png",
+      "sha256": "876f001c7ed32dc6524eb6eb4baa303799abdcbe8d1a3c513d7c8921579b9644"
+    },
+    {
+      "file": "../aerial-reap-v5/source-land.png",
+      "sha256": "b99c38304b7b8699e5e9d4ad177b86f55c601fd849ec3f33fbc4ef266da20a91"
+    }
+  ],
+  "changes": "Drop pose 3 to 2 frames; strike at height 0.70 before landing; follow at 0.12 before landing; red arc plane pitched 78 degrees about horizontal axis.",
+  "specification": "cel-animation.json / prepare_spec.py"
+}

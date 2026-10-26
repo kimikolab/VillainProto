@@ -1,0 +1,30 @@
+{
+  "tool": "built-in image_gen",
+  "source": "source-out.png",
+  "edited_source": "source-out-stocking-fix.png",
+  "original": "exec-83445bfd-1e43-40ac-be90-e75925684538.png",
+  "prompt": "prompt-stocking-fix-corrected_prompt.txt",
+  "adopted_cell": 3,
+  "screen_left_leg": "bare skin",
+  "screen_right_leg": "black stocking; overlapping cape preserved",
+  "crop": [
+    488,
+    785,
+    527,
+    696
+  ],
+  "changed_runtime_pngs": [
+    "DemoApp\\assets\\portraits\\battle\\attack_clip\\hagi_orbit_out_hold_v3\\hagi_orbit_out_hold_v3_006.png",
+    "DemoApp\\assets\\portraits\\battle\\attack_clip\\hagi_orbit_out_hold_v3\\hagi_orbit_out_hold_v3_007.png",
+    "DemoApp\\assets\\portraits\\battle\\attack_clip\\hagi_orbit_out_v3\\hagi_orbit_out_v3_006.png",
+    "DemoApp\\assets\\portraits\\battle\\attack_clip\\hagi_orbit_out_v3\\hagi_orbit_out_v3_007.png"
+  ],
+  "unchanged_runtime_png_count": 45,
+  "all_clip_and_motion_json_unchanged": true,
+  "changed_image_sha256": "005a8bd2566c981dd1ba6acec77efb40b9f86d8ceae1357bea1da52b1e6c939d",
+  "rejected_attempt": {
+    "original": "exec-91a0168b-d44a-4780-a6cb-8c823105cd7e.png",
+    "prompt": "prompt-stocking-fix-prompt.txt",
+    "reason": "ユーザーがタイツの左右反転を指摘。ゲーム素材には未使用"
+  }
+}

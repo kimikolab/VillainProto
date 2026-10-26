@@ -4,11 +4,13 @@ using System.Collections.Generic;
 using System.Linq;
 
 // 確定済みの台本だけを読む。線・魂・段・刈れる相手を戦闘の規則から求め直さない。
-internal sealed class HagiPresentation
+internal sealed partial class HagiPresentation
 {
+    internal enum AirKind { None, Opener, Finisher }
     internal readonly record struct State(int Id, int Souls, int Marks, int LinePermil, int Stage = 0, int BaseLinePermil = 0);
     internal sealed record Swing(int Actor, int[] Damage, bool Reap, bool Pursuit, bool Link, bool Keep = false,
-        bool Return = false, bool Reverse = false, int Encore = 0, bool Weighted = false, int Kind = 0, int? Partner = null);
+        bool Return = false, bool Reverse = false, int Encore = 0, bool Weighted = false, int Kind = 0, int? Partner = null,
+        bool NextReturn = false, bool FromReturn = false, AirKind Air = AirKind.None, bool AirFollow = false);
     internal readonly SortedDictionary<int, List<State>> Frames = new();
     internal readonly Dictionary<int, Swing> Swings = new();
     internal readonly Dictionary<int, Swing> Returns = new();
@@ -147,13 +149,15 @@ internal sealed class HagiPresentation
                     || e.Kind == BattleEventKind.Death && e.TargetId == cue.Actor);
                 if (following.Actor == cue.Actor && following.Link && !boundary)
                 {
-                    cue = cue with { Keep = true };
+                    cue = cue with { Keep = true, NextReturn = following.Return };
+                    cues[next] = following with { FromReturn = cue.Return };
                     for (int k = i; k < next; k++) result.FastEvents.Add(k);
                 }
             }
             if (cue.Return) result.Returns[i] = cue;
             else result.Swings[i] = cue;
         }
+        result.MarkAirCues(events, openings);
         return result;
     }
 }
