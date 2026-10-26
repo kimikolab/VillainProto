@@ -102,7 +102,7 @@ static partial class Sh390Diag
                         var a = I.Raw(ColBoard(b, hagi), w, sd, verbose: true).R; var z = I.Raw(ColBoard(b, r5m), w, sd, verbose: true).R;
                         if (!SameFull(a, z)) diff++;
                     }
-            var rows = CompareBuilds().Where(r => Has(r.F, "hagi")).ToArray();
+            var rows = CompareBuilds().Where(r => Has(r.F, "hagi")).Select(r => (r.Name, F: Pin391(r.F))).ToArray();   // 第403期: 第390期の規定（R5m ＝ `HagiH391`）に固定（第392〜402期は今の規定のまま比べていて、20 seed でたまたま一致していた）
             var gA = CGrid(rows, 20); var gB = CGrid(rows.Select(r => (r.Name, I.Swap(r.F, "hagi", r5m))).ToArray(), 20);
             int cd = 0; for (int ri = 0; ri < rows.Length; ri++) for (int w = 0; w < gA.GetLength(1); w++) if (gA[ri, w] != gB[ri, w]) cd++;
             Expect("規定のハギは第389期の R5m と同じ動き（3 台 × ボス ／ 近衛 ／ 大隊 ／ 第5波 × seed 0..4 の勝敗 ／ T ／ 生存数 ／ 出来事の並び ／ ログの数・`compare` のハギの 5 行 × 5 波 × seed 0..19）",
