@@ -175,6 +175,15 @@ static class RosterDiag
     // 枠の値段**を測っている（R266）。ここに出ている駒にだけ値が入る。
     // =================================================================================
 
+    // 第406期: 部C は過去の報告なので書き換えない。改名した駒は旧名の行でも引く（辞書には足さない——「n 枚ぶん」の数が動くため）。
+    static string SeatPriceOf(Dictionary<string, string> price, string name)
+    {
+        if (price.TryGetValue(name, out var v)) return v;
+        foreach (var (was, now) in Common.UnitRenames)
+            if (now == name && price.TryGetValue(was, out v)) return v;
+        return "";
+    }
+
     static Dictionary<string, string> ReadSeatPrice(string root, out string path)
     {
         path = Path.Combine(root, "design", "PHASE172_REFORM.md");
@@ -276,7 +285,7 @@ static class RosterDiag
                 + $"| {(c?.ColRange is { } cr2 ? cr2.ToString("F1") : "—")} "
                 + $"| {(string.IsNullOrEmpty(c?.Group) ? "—" : c!.Group)} "
                 + $"| {quad} "
-                + $"| {price.GetValueOrDefault(d.Name, "")} "
+                + $"| {SeatPriceOf(price, d.Name)} "
                 + $"| {(d.Traits.Count == 0 ? "—" : string.Join(" / ", d.Traits))} |");
         }
         Console.WriteLine();

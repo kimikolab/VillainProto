@@ -1295,7 +1295,19 @@ public static (string Name, Formation F)[] CompareBuilds() => Presets.Compare;
 public static readonly (string Was, string Now)[] UnitRenames =
 {
     ("止めのトメ", "見境なしのミサ"),   // 第285期
+    ("追い打ちのハギ", "彼岸花のハギ"),   // 第406期
+    ("包みのセッキ", "人呑みのセッキ"),   // 第406期
 };
+/// <summary>第406期: 2つの名前が同じ駒の名前か（どちらかが <see cref="UnitRenames"/> の旧名なら新名に読み替えて比べる）。規定と旧 ／ 版の名前を比べる自己検査が使う。</summary>
+public static bool SameUnitName(string a, string b)
+{
+    static string Now(string n) { foreach (var (was, now) in UnitRenames) if (n == was) return now; return n; }
+    return Now(a) == Now(b);
+}
+/// <summary>第406期: `docs/units.md` の駒の行（`| **名前** |` で始まる行）を、旧名 ／ 新名のどちらで書かれていても引く。無ければ空文字列。</summary>
+public static string UnitRowOf(string doc, string name)
+    => doc.Split('\n').Select(l => l.TrimEnd('\r')).FirstOrDefault(l => l.StartsWith("| **", StringComparison.Ordinal)
+        && l.IndexOf("** |", 4, StringComparison.Ordinal) is int e and > 4 && SameUnitName(l[4..e], name)) ?? "";
 // 第282期: 旧トメ（止め・`UnitCatalog.TomeT0`）に固定した器具が読む `compare` の行。規定のトメ（第282期から T1）を T0 に差し替えた写し
 // ——第281期までの行と中身が同じになる（finisher ／ survive ／ escale が使う。出力が規定化の前後で一致するのが門）。
 public static readonly (string Name, Formation F)[] CompareT0 =

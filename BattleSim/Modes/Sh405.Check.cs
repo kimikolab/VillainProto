@@ -28,7 +28,7 @@ static partial class Sh405Diag
         // ---- 段0 ----
         {
             bool cards = hagi.Traits.SequenceEqual(r50.Traits) && hagi.PlusText == r50.PlusText && hagi.MinusText == r50.MinusText && hagi != r50 && UnitCatalog.All.Contains(hagi) && hagi.Id == "hagi"
-                && hagi.Name == old.Name && hagi.MaxHp == old.MaxHp && hagi.Attack == old.Attack && hagi.Speed == old.Speed
+                && SameUnitName(hagi.Name, old.Name) && hagi.MaxHp == old.MaxHp && hagi.Attack == old.Attack && hagi.Speed == old.Speed
                 && hagi.Traits.Contains(TraitId.HagiLineCap50) && hagi.Traits.Contains(TraitId.HagiReapAfterHit) && hagi.Traits[^1] == TraitId.HagiSpillFixed
                 && hagi.PlusText.StartsWith("大鎌で斬り、線を切った敵はその一振りで刈り取る", StringComparison.Ordinal) && hagi.PlusText.Contains("合わせて最大 5 割", StringComparison.Ordinal);
             bool oldOk = old.Traits.SequenceEqual(UnitCatalog.HagiSingleT1.Traits) && old.PlusText == UnitCatalog.HagiSingleT1.PlusText && !UnitCatalog.Everyone.Contains(old) && !UnitCatalog.Everyone.Contains(r50);

@@ -653,8 +653,8 @@ public static void Run(string[] args, int stageIndex)
             + $"| W1 {m1.Per(m1.Switches):F2} → W2 **{m2.Per(m2.Switches):F2}** 回/戦 "
             + $"| {(m2.Switches > m1.Switches ? "増" : "増えない")} |");
         LtStat h0 = LtSum(cell, 3, LtW0, true), h1 = LtSum(cell, 3, LtW1, true);
-        double hagi0 = h0.LitBy.TryGetValue(UnitCatalog.Hagi.Name, out int x0) ? x0 * 100.0 / Math.Max(1, h0.LitBy.Values.Sum()) : 0;
-        double hagi1 = h1.LitBy.TryGetValue(UnitCatalog.Hagi.Name, out int x1) ? x1 * 100.0 / Math.Max(1, h1.LitBy.Values.Sum()) : 0;
+        double hagi0 = h0.LitBy.Where(kv => SameUnitName(kv.Key, UnitCatalog.Hagi.Name)).Sum(kv => kv.Value) is int x0 and > 0 ? x0 * 100.0 / Math.Max(1, h0.LitBy.Values.Sum()) : 0;
+        double hagi1 = h1.LitBy.Where(kv => SameUnitName(kv.Key, UnitCatalog.Hagi.Name)).Sum(kv => kv.Value) is int x1 and > 0 ? x1 * 100.0 / Math.Max(1, h1.LitBy.Values.Sum()) : 0;
         Console.WriteLine($"| Q4 | ハギ台で灯の対象がハギ自身でなくなるか | W1 で 0% "
             + $"| W0 {hagi0:F1}% → W1 **{hagi1:F1}%** | {(hagi1 == 0.0 ? "○" : "**×**")} |");
         Console.WriteLine($"| Q5 | トモを含まない 60 行が ±0.0 | 1 セルでも動けば事故 | 動いたセル **{moved} 件** "

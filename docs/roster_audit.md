@@ -45,7 +45,7 @@
 | 18 | 澱みのミオ | +1.17 | -0.16 | 転生 | 6 | 1 | 17.0 | 化ける | 左下（送り先を選べば働く） |  | Concentrate / ConcentrateLeak / MireSlam / MireConduct / MireDull / MireCarry / MireHandoff / MireBurstStack |
 | 19 | 礫のガレ | +1.38 | -3.82 | 転生 | 1 | 0 | 3.0 | どこでも同じ | 右下（選んでも働かない） |  | PebbleGather / ScatterGather |
 | 20 | 逃亡兵セロ | +1.47 | +1.42 | 転生 | 12 | 0 | 8.0 | どこでも同じ | 右下（選んでも働かない） | +0.3pt | Evade / EvadeSwap / EvadeQuick / EvadeDrift / LastDodge / Decoy / EvadeMoveShot |
-| 21 | 追い打ちのハギ | +1.48 | -33.36 | 転生 | 5 | 0 | 32.0 | 化ける | 左下（送り先を選べば働く） | −5.3pt | HagiReap / HagiHalfPursuit / HagiDepthSoul / HagiSoulMoves / HagiReapMark / HagiPursuitReap / HagiPursuitHeavy / HagiMarkWeight / HagiStageMul / HagiAllySoul / HagiTwinIsolated / HagiLineCap50 / HagiReapAfterHit / HagiSpillFixed |
+| 21 | 彼岸花のハギ | +1.48 | -33.36 | 転生 | 5 | 0 | 32.0 | 化ける | 左下（送り先を選べば働く） | −5.3pt | HagiReap / HagiHalfPursuit / HagiDepthSoul / HagiSoulMoves / HagiReapMark / HagiPursuitReap / HagiPursuitHeavy / HagiMarkWeight / HagiStageMul / HagiAllySoul / HagiTwinIsolated / HagiLineCap50 / HagiReapAfterHit / HagiSpillFixed |
 | 22 | 軋みのヨミ | +1.54 | +10.38 | 残す | 3 | 0 | 10.0 | どこでも同じ | 上（単独で強い） |  | Displaced / CreakSweep / KillImpact / ImpactTailwind |
 | 23 | 廃棄聖騎士ガルド | +1.57 | +15.59 | 残す | 37 | 0 | 6.0 | どこでも同じ | 上（単独で強い） |  | Guardian / Stoic / Parry / LastStandHold |
 | 24 | 瘴気袋のグザ | +1.59 | +21.36 | 残す | 8 | 0 | 12.0 | ノイズ | 上（単独で強い） |  | Miasma / ScatterGather / MiasmaVent / MiasmaSplash / SplashUncapped / PoisonProof |
@@ -73,7 +73,7 @@
 | 46 | 逸らしのソラ | +18.10 | +1.62 | 残す | 6 | 0 | 9.0 | どこでも同じ | 上（単独で強い） |  | Divert / Deflect / Thrust / DivertPressure / DivertKeepBeckon |
 | 47 | 継ぎ接ぎのヴェル | +19.12 | +10.99 | 残す | 15 | 0 | 8.0 | どこでも同じ | 上（単独で強い） |  | SoulSplitHalf / SoulSew |
 | 48 | 逆しまのウツ | +25.60 | +3.89 | 残す | 5 | 0 | 27.0 | 化ける | 上（単独で強い） |  | Perverse / PerverseOver |
-| 49 | 包みのセッキ | +25.62 | — | — | 3 | 0 | 35.0 | 化ける | — |  | SlimeWrap / SlimeOverflow / SlimeDeep / SlimeSwell / SlimeMelt |
+| 49 | 人呑みのセッキ | +25.62 | — | — | 3 | 0 | 35.0 | 化ける | — |  | SlimeWrap / SlimeOverflow / SlimeDeep / SlimeSwell / SlimeMelt |
 | 50 | 墓守リィカ | +31.76 | +9.81 | 残す | 12 | 0 | 2.0 | どこでも同じ | 上（単独で強い） |  | Necro / Sacrifice / RicaRaiseDeadStack / RicaAwakenRaise / RicaLayerFlurry / UncapRaise |
 | 51 | 呪詛官ネル | +32.48 | +17.08 | 残す | 6 | 0 | 14.0 | どこでも同じ | 上（単独で強い） |  | Curse / Hexer / HexLeak / CurseScar |
 | 52 | 血詠みのアカ | — | — | — | 0 | 0 | — | — | — |  | BloodRead / ScatterGather |
@@ -84,4 +84,4 @@
 - `checkup ideal` が値を返した駒: 51 / 52 （返さないのは `CompareBuilds()` に在席 0 枠の駒だけ）
 - `stage catalog` が引けた駒: 51 / 52
 
-所要 469.2 秒（うち `stage catalog` が 446.3 秒）。
+所要 657.1 秒（うち `stage catalog` が 632.4 秒）。

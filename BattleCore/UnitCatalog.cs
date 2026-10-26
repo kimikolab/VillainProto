@@ -2871,11 +2871,11 @@ public static class UnitCatalog
     const string HagiPursuitText = "。敵が半分まで弱ると、手番を待たずに斬りかかる（失った命が深いほど重く）";
     const string HagiSoulText = "。敵の死と、半分を割った敵の数だけ魂が溜まり、鎌は重く、広く、深くなる";
     const string HagiSpillText = "大鎌の振りは、隣にいる仲間も巻き込む";
-    static UnitDef HagiOn388(TraitId[] traits, string plus, string minus) => new()
+    static UnitDef HagiOn388(TraitId[] traits, string plus, string minus, string? name = null, string? flavor = null) => new()
     {
-        Id = HagiH389.Id, Name = HagiH389.Name, MaxHp = HagiH389.MaxHp, Attack = HagiH389.Attack, Speed = HagiH389.Speed,   // 第390期: 規定のハギが版の側へ移ったので、体は旧の規定から引く（同じ値）
+        Id = HagiH389.Id, Name = name ?? HagiH389.Name, MaxHp = HagiH389.MaxHp, Attack = HagiH389.Attack, Speed = HagiH389.Speed,   // 第390期: 規定のハギが版の側へ移ったので、体は旧の規定から引く（同じ値）
         Traits = traits, Pattern = AttackPattern.Single, PlusText = plus, MinusText = minus,
-        Flavor = "死神の大鎌は、弱った命から順に刈り取っていく。刈るほどに、刃は重くなる。",
+        Flavor = flavor ?? "死神の大鎌は、弱った命から順に刈り取っていく。刈るほどに、刃は重くなる。",
     };
     /// <summary>ハギの版 H1（第388期）: 刈り取り（手番・2 割以下を一振りで倒す・倒せばもう一度・2 回まで）＋ 大鎌の巻き込み。</summary>
     public static readonly UnitDef HagiH1 = HagiOn388(new[] { TraitId.HagiReap, TraitId.HagiScytheSpill }, HagiReapText, HagiSpillText);
@@ -3019,11 +3019,11 @@ public static class UnitCatalog
 
     // ---- 第404期: 斬った直後に刈る ＋ 線の上限を下げる（ハギの版 L45 ／ R50 ／ R45・指示書 design/PHASE404_HAGI_AFTER_REAP_SPEC.md §3・`All` に入れない）----
     // 土台は第404期の規定のハギ（<see cref="HagiH404"/>・H123 ＋ B ＋ T1）。版の札は固定の巻き込みの前に足す。文面は線の数字を替え、R は頭の句を替える。
-    static UnitDef HagiOn404(TraitId[] plus, string cap, bool after, string extra = "")
+    static UnitDef HagiOn404(TraitId[] plus, string cap, bool after, string extra = "", string? name = null, string? flavor = null)
     {
         string pt = HagiH404.PlusText.Replace("（2 割 → 最大 5 割）", $"（2 割 → 最大 {cap}）").Replace("（印1つ +5%・合わせて最大 6 割）", $"（印1つ +5%・合わせて最大 {cap}）");
         if (after) pt = pt.Replace("大鎌で、弱った敵を刈り取る（HP が線を切った敵は一振りで倒す）", "大鎌で斬り、線を切った敵はその一振りで刈り取る（振る前に線を切っていれば、一振りで倒す）");
-        return HagiOn388(HagiH404.Traits.SkipLast(1).Concat(plus).Append(TraitId.HagiSpillFixed).ToArray(), pt + extra, HagiH404.MinusText);
+        return HagiOn388(HagiH404.Traits.SkipLast(1).Concat(plus).Append(TraitId.HagiSpillFixed).ToArray(), pt + extra, HagiH404.MinusText, name, flavor);
     }
     /// <summary>ハギの版 L45（第404期・基準）: 規定 ＋ 線の上限 45%（魂の段の線 ＋ 印の合計を 45% で止める）。刈り取りは振る前だけ。</summary>
     public static readonly UnitDef HagiReapL45 = HagiOn404(new[] { TraitId.HagiLineCap45 }, "45%", after: false);
@@ -3035,9 +3035,12 @@ public static class UnitCatalog
     public static readonly UnitDef HagiBigA404 = HagiOn388(HagiH404.Traits.SkipLast(1).Append(TraitId.HagiBigSoul).Append(TraitId.HagiSpillFixed).ToArray(), HagiH404.PlusText + HagiAText402, HagiH404.MinusText);
     /// <summary>
     /// 追い打ちのハギ（第405期の規定 ＝ 第404期の R50）: 第404期の規定（<see cref="HagiH404"/>・H123 ＋ B ＋ T1）＋ 線の上限 5 割 ＋ 斬撃 ／ 薙ぎ ／ 追撃が当たった後に線以下ならその一振りのうちに刈る。
-    /// 札と文面は <see cref="HagiReapR50"/> と同じ（別の定義）。名前と二つ名は据え置き。ハギの立て直し（第388〜405期）はここで一区切り（design/PHASE405_HAGI_SETTLE.md）。
+    /// 札と文面は <see cref="HagiReapR50"/> と同じ（別の定義）。ハギの立て直し（第388〜405期）はここで一区切り（design/PHASE405_HAGI_SETTLE.md）。
+    /// <b>第406期に改名した</b>（追い打ちのハギ → 彼岸花のハギ・規則は1ビットも変えない）。萩はお彼岸のころに咲く花——赤い大鎌と彼岸花の赤、刈った命を向こう岸へ送る死神。
+    /// 名前とフレーバーを上書きするのは規定のこの定義だけ（旧 ／ 版の駒は「追い打ちのハギ」のまま・過去の器具の出力を変えないため）。
     /// </summary>
-    public static readonly UnitDef Hagi = HagiOn404(new[] { TraitId.HagiLineCap50, TraitId.HagiReapAfterHit }, "5 割", after: true);
+    public static readonly UnitDef Hagi = HagiOn404(new[] { TraitId.HagiLineCap50, TraitId.HagiReapAfterHit }, "5 割", after: true,
+        name: "彼岸花のハギ", flavor: "彼岸花の咲くころ、大鎌は赤く染まる。刈り取った命は、迷わず向こう岸へ送られる。");
     /// <summary>第405期: 「版・大物 ハギ」に置く A の版（第405期の規定 ＋ A）。第404期の台は <see cref="HagiBigA404"/>。</summary>
     public static readonly UnitDef HagiBigA405 = HagiOn388(Hagi.Traits.SkipLast(1).Append(TraitId.HagiBigSoul).Append(TraitId.HagiSpillFixed).ToArray(), Hagi.PlusText + HagiAText402, Hagi.MinusText);
     /// <summary>ハギの版 VA（第390期）: V1 ＋ V2 ＋ V3。</summary>
@@ -3078,10 +3081,10 @@ public static class UnitCatalog
     /// 札と文面は <see cref="SekkiS2h"/> と同じ（別の定義）。旧は <see cref="SekkiH396"/>（後備え ＋ 憤怒）。名前は仮（ポンが決める）。
     /// </summary>
     // ---- 第397期: 包みのセッキの版（規定の S2h の上に・`All` に入れない）----
-    static UnitDef SekkiOn397(TraitId[] traits, string plusText, string minusText) => new()
+    static UnitDef SekkiOn397(TraitId[] traits, string plusText, string minusText, string? name = null, string? flavor = null) => new()
     {
-        Id = SekkiH396.Id, Name = "包みのセッキ", MaxHp = SekkiH396.MaxHp, Attack = SekkiH396.Attack, Speed = SekkiH396.Speed, Advances = SekkiH396.Advances,
-        Traits = traits, PlusText = plusText, MinusText = minusText, Flavor = "何を食べてここまで大きくなったのか、誰も知らない。殴っても手応えがない。",
+        Id = SekkiH396.Id, Name = name ?? "包みのセッキ", MaxHp = SekkiH396.MaxHp, Attack = SekkiH396.Attack, Speed = SekkiH396.Speed, Advances = SekkiH396.Advances,
+        Traits = traits, PlusText = plusText, MinusText = minusText, Flavor = flavor ?? "何を食べてここまで大きくなったのか、誰も知らない。殴っても手応えがない。",
     };
     const string SlimeMinus397 = "単体の攻撃は包まない。自分の手番はぷるぷるしているだけで動かない";
     /// <summary>セッキの版 B（第397期）: 規定（S2h）＋ 膨らむ（吸った量の 2 割だけ最大 HP と HP が増える・溢れの線は素の 70 のまま）。</summary>
@@ -3113,9 +3116,12 @@ public static class UnitCatalog
     /// <summary>
     /// 包みのセッキ（第399期の規定 ＝ 第398期の K1）: B ＋ ゼリーが消す（包むとき HP で受けるのは吸った量の 2 割）。札と文面は <see cref="SekkiK1"/> と同じ（別の定義）。
     /// 旧は <see cref="SekkiH398"/>（B）／ その前は <see cref="SekkiH397"/>（S2h）。
+    /// <b>第406期に改名した</b>（包みのセッキ → 人呑みのセッキ・規則は1ビットも変えない）。字面は人を餌食にする化け物だが、実際は範囲の一撃の瞬間に仲間を呑み込んで守っている——という誤解の名。
+    /// 名前とフレーバーを上書きするのは規定のこの定義だけ（旧 ／ 版の駒は「包みのセッキ」のまま）。
     /// </summary>
     public static readonly UnitDef Sekki = SekkiOn397(new[] { TraitId.SlimeWrap, TraitId.SlimeOverflow, TraitId.SlimeDeep, TraitId.SlimeSwell, TraitId.SlimeMelt },
-        (SlimePlus396 + SlimeOverflowText396).Replace("3 割", "5 割").Replace("衝撃の 5 割を吸い取る", "衝撃の 5 割を吸い取る（ほとんどはゼリーに溶けて消える）") + "。吸うほど体が膨らむ", SlimeMinus397);
+        (SlimePlus396 + SlimeOverflowText396).Replace("3 割", "5 割").Replace("衝撃の 5 割を吸い取る", "衝撃の 5 割を吸い取る（ほとんどはゼリーに溶けて消える）") + "。吸うほど体が膨らむ", SlimeMinus397,
+        name: "人呑みのセッキ", flavor: "人を呑む化け物と恐れられ、追われてきた。呑まれた者は、みな無傷で吐き出されていたというのに。");
     public static readonly UnitDef SekkiK12 = SekkiOn397(new[] { TraitId.SlimeWrap, TraitId.SlimeOverflow, TraitId.SlimeDeep, TraitId.SlimeSwell, TraitId.SlimeMelt, TraitId.SlimeHarden },
         (SlimePlus396 + SlimeOverflowText396).Replace("3 割", "5 割").Replace("衝撃の 5 割を吸い取る", "衝撃の 5 割を吸い取る（ほとんどはゼリーに溶けて消える）") + "。吸うほど体が膨らむ。溜めた衝撃でゼリーが固まり、自分への攻撃が軽くなる。弾き返すと柔らかく戻る", SlimeMinus397);
 

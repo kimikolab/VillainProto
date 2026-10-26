@@ -196,7 +196,7 @@ static partial class Sh388Diag
         // ---- 規定のハギ ／ ハギのいない compare の行 ----
         {
             string head = Git($"{HeadSha}:docs/units.md"), now = Git("0d48cccb:docs/units.md");   // 第390期: 規定のハギを替えたので、第389期の HEAD の表と比べる（第388 ／ 389期にハギの行が動いていないこと）
-            string Row(string doc) => doc.Split('\n').FirstOrDefault(l => l.StartsWith($"| **{UnitCatalog.Hagi.Name}** |", StringComparison.Ordinal))?.TrimEnd('\r') ?? "";
+            string Row(string doc) => UnitRowOf(doc, UnitCatalog.Hagi.Name);   // 第406期: 改名（彼岸花のハギ）の前後どちらの表でも引く
             var bal = File.Exists("docs/balance.md") ? File.ReadAllLines("docs/balance.md") : Array.Empty<string>();
             var map = new Dictionary<string, string[]>();
             foreach (var l in bal) { var cc = l.Split('|').Select(x => x.Trim()).ToArray(); if (cc.Length >= 8 && cc[2].EndsWith('%')) map[cc[1]] = cc.Skip(2).Take(5).ToArray(); }

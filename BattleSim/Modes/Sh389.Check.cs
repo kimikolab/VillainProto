@@ -60,7 +60,7 @@ static partial class Sh389Diag
         // ---- 版の札と文面 ----
         {
             var h2 = UnitCatalog.HagiH2;
-            bool body = new[] { r5, r4, r5n }.All(d => d.Id == "hagi" && d.Name == UnitCatalog.Hagi.Name && d.MaxHp == 62 && d.Attack == 16 && d.Speed == 7 && d.Pattern == AttackPattern.Single && d.Actions is null
+            bool body = new[] { r5, r4, r5n }.All(d => d.Id == "hagi" && SameUnitName(d.Name, UnitCatalog.Hagi.Name) && d.MaxHp == 62 && d.Attack == 16 && d.Speed == 7 && d.Pattern == AttackPattern.Single && d.Actions is null
                 && d.Traits.Take(2).SequenceEqual(new[] { TraitId.HagiReap, TraitId.HagiHalfPursuit }) && d.Traits.Contains(TraitId.HagiDepthSoul) && d.Traits[^1] == TraitId.HagiSpillFixed
                 && !d.Traits.Contains(TraitId.HagiSoul) && !d.Traits.Contains(TraitId.HagiScytheSpill) && !UnitCatalog.Everyone.Contains(d));
             bool cards = r5.Traits.Contains(TraitId.HagiSoulMoves) && !r5.Traits.Contains(TraitId.HagiDepthShallow) && r4.Traits.Contains(TraitId.HagiDepthShallow) && r4.Traits.Contains(TraitId.HagiSoulMoves)
@@ -235,7 +235,7 @@ static partial class Sh389Diag
         // ---- 規定のハギ ／ ハギのいない compare の行 ----
         {
             string head = Git($"{HeadSha}:docs/units.md"), now = Git("0d48cccb:docs/units.md");   // 第390期: 規定のハギを替えたので、第389期の HEAD の表と比べる
-            string Row(string doc) => doc.Split('\n').FirstOrDefault(l => l.StartsWith($"| **{UnitCatalog.Hagi.Name}** |", StringComparison.Ordinal))?.TrimEnd('\r') ?? "";
+            string Row(string doc) => UnitRowOf(doc, UnitCatalog.Hagi.Name);   // 第406期: 改名（彼岸花のハギ）の前後どちらの表でも引く
             var bal = File.Exists("docs/balance.md") ? File.ReadAllLines("docs/balance.md") : Array.Empty<string>();
             var map = new Dictionary<string, string[]>();
             foreach (var l in bal) { var cc = l.Split('|').Select(x => x.Trim()).ToArray(); if (cc.Length >= 8 && cc[2].EndsWith('%')) map[cc[1]] = cc.Skip(2).Take(5).ToArray(); }

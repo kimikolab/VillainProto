@@ -221,7 +221,7 @@ static partial class Sh390Diag
                 for (int w = 0; w < 5; w++) if (c[w].TrimEnd('%') != F1(g[ri, w])) diff++;
             }
             string units = File.Exists("docs/units.md") ? File.ReadAllText("docs/units.md") : "";
-            string row = units.Split('\n').FirstOrDefault(l => l.StartsWith($"| **{hagi.Name}** |", StringComparison.Ordinal)) ?? "";
+            string row = UnitRowOf(units, hagi.Name);   // 第406期: 規定は「彼岸花のハギ」に改名した（`hagi` は旧名の `HagiH391`）
             bool urow = row.Contains("斬るたび、その敵の命に印を刻み", StringComparison.Ordinal);
             Expect("`docs/` は規定のハギで再生成した（`compare` 全行 × 5 波 × seed 0..199 が `docs/balance.md` と一致・`docs/units.md` のハギの行が規定の文面）", diff == 0 && miss == 0 && urow, $"{rows.Length} 行・ずれ {diff}・表に無い行 {miss}・units の行 {(urow ? "規定" : "×")}");
         }

@@ -48,7 +48,7 @@ static partial class Sh399Diag
 
         // ---- 段0 ----
         {
-            bool cards = k.Traits.SequenceEqual(k1.Traits) && k.PlusText == k1.PlusText && k.MinusText == k1.MinusText && k.Name == k1.Name && k.Id == "sekki" && k.MaxHp == k1.MaxHp && k.Attack == k1.Attack && k.Speed == k1.Speed && k.Flavor == k1.Flavor
+            bool cards = k.Traits.SequenceEqual(k1.Traits) && k.PlusText == k1.PlusText && k.MinusText == k1.MinusText && SameUnitName(k.Name, k1.Name) && k.Id == "sekki" && k.MaxHp == k1.MaxHp && k.Attack == k1.Attack && k.Speed == k1.Speed && (k.Flavor == k1.Flavor || k.Name != k1.Name)   /* 第406期: 改名で名前とフレーバーだけが替わった */
                 && !ReferenceEquals(k, k1) && k.PlusText.Contains("（ほとんどはゼリーに溶けて消える）", StringComparison.Ordinal);
             bool old = kh.Traits.SequenceEqual(kb.Traits) && kh.PlusText == kb.PlusText && kh.MinusText == kb.MinusText
                 && UnitCatalog.All.Contains(k) && !UnitCatalog.Everyone.Contains(kh)
