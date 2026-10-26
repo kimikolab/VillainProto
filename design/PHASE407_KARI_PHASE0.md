@@ -234,4 +234,4 @@
 
 - 規則に触っていないので `compare` は 0 セル（`docs/` は再生成していない）・`audit` ずれ 0・`CLAUDE.md` の門は通る。
 - `sweep fast`: **合格**（異常終了 0 本・上限 0 本）。`Presets` ／ 規定に触っていないので、nightly で拾えるものは無い。
-- 器具を足しただけなので `digest_cache.ps1` の照合はしていない。期の最後に `promote` した。
+- 器具を足しただけなので `digest_cache.ps1` の照合はしていない。期の最後は `promote` の代わりに HEAD（159cee4f）で `save` を回した（全 218 本・light を本コミットの前に回し忘れたため、`promote` の土台 074ea71a と BattleSim が食い違って断られた・R422）。
