@@ -1043,10 +1043,17 @@ public static class Presets
         // 第402期: ボスで魂を溜める版（A 大物の魂 ／ D 印が魂に ／ AD ／ B 味方の死）のうち、キャリー ／ 止め役の台でボスにいちばん勝ったのは
         //   「版・移動 ハギ」のハギを A に（ボス 37 → 59%・AD も同じ値なので札の少ない A）。採否はポン。
         ("版・大物 ハギ", HagiBig402()),
+        // 第403期: 「版・大物 ハギ」は規定 ＋ A（`HagiBigA403`）になった（第402期の旧の A は `Common.VersionsH402` が戻す）。
+        // 第403期: 単体の敵を削る版（T1 孤立した敵は二度斬る ／ T2 印を深く刻む ／ T12 ／ T12A）のうち、火力の無い支えの台でボスにいちばん勝ったのは T12A（3 台の平均 91%）。
+        //   そのうち 4 波の平均が高い「哀歌」の台（ソラ ／ ガルド ／ エレ ／ ハギ ／ ヒサ・ボス 0 → 100%・4.0T）に置いた。採否はポン。
+        ("版・二度斬り ハギ", HagiTwin403()),
     };
 
-    /// <summary>第402期: 「版・大物 ハギ」の並び（「版・移動 ハギ」と同じ: 前1 セロ ／ 前3 ハギ ／ 中央 シオ ／ 後1 ヨミ ／ 後3 バサ）。既定はハギの版 A。</summary>
-    public static Formation HagiBig402(UnitDef? hagi = null) => HagiMove390(hagi ?? UnitCatalog.HagiSoulA);
+    /// <summary>第403期: 「版・二度斬り ハギ」の並び（キャリーの手組み「哀歌」: 前1 ソラ ／ 前3 ガルド ／ 中央 エレ ／ 後1 ハギ ／ 後3 ヒサ・火力の無い支えで固めた台）。既定はハギの版 T12A。</summary>
+    public static Formation HagiTwin403(UnitDef? hagi = null) => Formation.Build(front1: UnitCatalog.Sora, front3: UnitCatalog.Gald, center: UnitCatalog.Ere, back1: hagi ?? UnitCatalog.HagiSingleT12A, back3: UnitCatalog.Hisa);
+
+    /// <summary>第402期: 「版・大物 ハギ」の並び（「版・移動 ハギ」と同じ: 前1 セロ ／ 前3 ハギ ／ 中央 シオ ／ 後1 ヨミ ／ 後3 バサ）。既定はハギの版 A（第403期から規定 ＋ A の `HagiBigA403`・第402期は `HagiSoulA`）。</summary>
+    public static Formation HagiBig402(UnitDef? hagi = null) => HagiMove390(hagi ?? UnitCatalog.HagiBigA403);
 
     /// <summary>第401期: 「版・死神 キャリー」の並び（`sh401 search H123` の 2 位: 前1 スィド ／ 前3 ボルグ ／ 中央 ベニ ／ 後1 ハギ ／ 後3 トウ）。第402期から「試遊・ハギ キャリー」・既定は規定のハギ（第401期は版の H123）。</summary>
     public static Formation HagiCarry401(UnitDef? hagi = null) => Formation.Build(front1: UnitCatalog.Sid, front3: UnitCatalog.Borg, center: UnitCatalog.Beni, back1: hagi ?? UnitCatalog.Hagi, back3: UnitCatalog.Tou);

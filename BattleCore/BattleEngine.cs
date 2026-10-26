@@ -9740,6 +9740,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.HagiPursuitReap) || u.HasTrait(TraitId.HagiPursuitHeavy)) _chaseLive391 = true;   // 第391期（P1 〜 追撃の刈り取り ／ 2 割）
         if (u.HasTrait(TraitId.HagiMarkWeight)) _markWeightLive401 = true;   // 第401期（H1 〜 印が重い）
         if (u.HasTrait(TraitId.HagiStageMul)) _stageMulLive401 = true;       // 第401期（H3 〜 段で倍率）
+        if (u.HasTrait(TraitId.HagiTwinIsolated)) _twinLive403 = true;       // 第403期（T1 〜 孤立した敵は二度斬る）
         if (u.HasTrait(TraitId.DolgaWall) && !_dolgaWalls.Contains(u)) _dolgaWalls.Add(u);   // 第394期（休む巨兵は壁）
         if (u.HasTrait(TraitId.SlimeWrap) && !_slimeWraps.Contains(u)) _slimeWraps.Add(u);   // 第396期（包むセッキ）
         if (u.HasTrait(TraitId.SlimeHaven)) _slimeHavenLive = true;                           // 第397期（R 避難所・包まれた味方は次の手番を失う）
@@ -18442,10 +18443,12 @@ public sealed class BattleContext
     {
         int m = target.RawCounter(HagiDepthTrait.MarkKey);
         UnitTally tt = TallyOf(target);
-        if (_turn >= 0 && _turn <= BattleEngine.MaxTurns) (tt.R389MarkByTurn ??= new long[BattleEngine.MaxTurns + 2])[_turn] = Math.Min(HagiDepthTrait.MarkCap, m + 1);   // 計数のみ（そのターンの終わりの印の数）
-        if (m >= HagiDepthTrait.MarkCap) return;
+        int cap = HagiDepthTrait.MarkCapOf(h);   // 第403期（T2）: 深く刻むなら 9（札が無ければ 5）
+        if (_turn >= 0 && _turn <= BattleEngine.MaxTurns) (tt.R389MarkByTurn ??= new long[BattleEngine.MaxTurns + 2])[_turn] = Math.Min(cap, m + 1);   // 計数のみ（そのターンの終わりの印の数）
+        if (m >= cap) return;
         target.SetCounter(HagiDepthTrait.MarkKey, m + 1);
         TallyOf(h).R389MarksPlaced++;   // 計数のみ
+        { UnitTally ht = TallyOf(h); if (m + 1 > ht.R403MarkMax) ht.R403MarkMax = m + 1; if (_turn >= 0 && _turn <= BattleEngine.MaxTurns) { var a = ht.R403MarkMaxByTurn ??= new long[BattleEngine.MaxTurns + 2]; if (m + 1 > a[_turn]) a[_turn] = m + 1; } }   // 第403期・計数のみ（刻んだ印の最大 ／ ターンごとの最大）
         Log($"    {target.Name} に刈りの印が刻まれた（{m + 1}）", LogKind.Status);
         // 第402期（D・`HagiMarkSoul`）: 印が上限に届いたら 1 に戻して魂 +3（何度でも・A の 3 倍の対象にしない）。**札が無ければ比較1つで抜ける。乱数を引かない。**
         if (m + 1 >= HagiDepthTrait.MarkCap && h.IsAlive && h.HasTrait(TraitId.HagiMarkSoul))
@@ -18471,6 +18474,60 @@ public sealed class BattleContext
     /// <summary>計数のみ: いま振っている一撃の種類（1 斬撃 ／ 2 薙ぎ ／ 3 追撃 ／ 4 手番の刈り取り ／ 5 追撃の刈り取り）と打ち手。入れ子に備えて呼び出し側が退避して戻す。</summary>
     int _hagiKind401;
     UnitState? _hagiKindActor401;
+
+    // ---- 第403期: 単体の敵を削る（ハギの版 T1 ／ T2 ／ T12 ／ T12A）。指示書 design/PHASE403_HAGI_SINGLE_SPEC.md §3。 ----
+    /// <summary>T1（`HagiTwinIsolated`）の保持者がいる戦。いなければ `ReapTurn388` は真偽1つで抜ける。</summary>
+    bool _twinLive403;
+
+    /// <summary>T1: 敵の陣営の隣接表で、その敵の隣に生きている敵がいないか（1体だけ残った敵は孤立）。乱数を引かない。ボスの名前 ／ 種類では分岐しない。</summary>
+    bool Isolated403(UnitState aim)
+    {
+        foreach (UnitState e in LivingMembers(aim.TeamId))
+            if (e != aim && e.IsAlive && FormationRules.AreAdjacent(aim, e)) return false;
+        return true;
+    }
+
+    /// <summary>
+    /// T1: 孤立した敵への 2 発目（手番の最初の一振りの後・同じ的に固定）。振る前にもう一度刈り取りの判定をし、線以下なら刈り取りの一撃（的 1 体だけ・列ごとは付けない）、
+    /// 上なら今の型（斬撃 ／ 薙ぎ）でもう一振り（H1 の印の足し分 ／ H3 の倍率は今どおり乗る）。巻き込みも 1 回ぶん。再行動の判定は呼び出し側（この一振りの撃破も数える）。
+    /// </summary>
+    void TwinSwing403(UnitState h, UnitState aim, int spill)
+    {
+        UnitTally t = TallyOf(h);   // 計数のみ
+        t.R403Twins++;
+        (t.R403TwinFoes ??= new long[10])[Math.Min(9, LivingMembers(aim.TeamId).Count)]++;
+        int line = ReapLineFor389(h, aim, HagiReaperTrait.ReapLinePermil(h));
+        bool reap = (long)aim.Hp * 1000 <= (long)aim.MaxHp * line;
+        long k0 = t.Kills;
+        Log($"    {h.Name} は孤立した {aim.Name} へ、もう一度大鎌を振るう{(reap ? "（刈り取り）" : "")}", LogKind.Trigger);
+        int kind0 = _hagiKind401; UnitState? actor0 = _hagiKindActor401;
+        _hagiKindActor401 = h;
+        try
+        {
+            if (reap)
+            {
+                t.R403TwinReaps++; t.R388Reaps++;
+                int hp = aim.Hp;
+                _hagiKind401 = 4;
+                _hagiHitActor388 = h; _hagiHitBonus388 = 0; _hagiHitReap388 = true;
+                _forcedTarget = aim;
+                try { PerformAttack(h, patternOverride: AttackPattern.Single); }
+                finally { _forcedTarget = null; _forcedLane = -1; _hagiHitActor388 = null; _hagiHitReap388 = false; }
+                if (!aim.IsAlive) t.R388ReapHp += hp;
+            }
+            else
+            {
+                t.R388Strikes++;
+                _hagiKind401 = h.CurrentPattern == AttackPattern.Sweep ? 2 : 1;
+                _forcedTarget = aim;
+                try { PerformAttack(h); }
+                finally { _forcedTarget = null; _forcedLane = -1; }
+            }
+        }
+        finally { _hagiKind401 = kind0; _hagiKindActor401 = actor0; }
+        if (t.Kills > k0) t.R403TwinKills++;
+        ScytheSpill388(h, spill);
+    }
 
     /// <summary>H3: 今の攻撃力 × 魂の段の倍率（段 0 ／ 3 ／ 6 ／ 9 で × 1 ／ 2 ／ 3 ／ 5）。増えた分は計数のみ帳簿へ。</summary>
     int StageMul401(UnitState h, int atk)
@@ -18674,9 +18731,12 @@ public sealed class BattleContext
             {
                 t.R388Strikes++;
                 if (_depthLive389 && h.CurrentPattern == AttackPattern.Sweep) t.R389Sweeps++;   // 第389期・計数のみ
+                // 第403期（T1・`HagiTwinIsolated`）: 手番の最初の一振りの主目標の隣に生きている敵がいなければ、同じ的にもう一振り（振る前の盤面で決める）。**札が無ければ真偽1つで抜ける。**
+                bool twin = swing == 0 && _twinLive403 && h.HasTrait(TraitId.HagiTwinIsolated) && Isolated403(aim);
                 _forcedTarget = aim;
                 try { PerformAttack(h); }
                 finally { _forcedTarget = null; _forcedLane = -1; }
+                if (twin && h.IsAlive && aim.IsAlive) TwinSwing403(h, aim, spill);
             }
             ScytheSpill388(h, spill);
             if (t.Kills - t.R388PursuitKills == kills0 || swing >= HagiReaperTrait.MaxEncores) return;

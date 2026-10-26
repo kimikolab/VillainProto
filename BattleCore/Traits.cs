@@ -1041,6 +1041,8 @@ public enum TraitId
     HagiBigSoul,          // 大物の魂（第402期・ハギの版 A ／ AD）: 最大 HP 1,000 以上の敵が倒れる ／ その敵が線を割ると、入る魂を 3 倍（+2 → +6 ／ +1 → +3）。上限 9 ／ 薄れるは今どおり（`HagiDepthTrait.BigExtra`・札そのものは印）
     HagiMarkSoul,         // 印が魂に（第402期・ハギの版 D ／ AD）: ハギの一撃で敵の刈りの印が上限（5）に届くと、その敵の印を 1 に戻して魂 +3（何度でも・A の 3 倍の対象にしない）（**判定は engine の `ReapMark389`**・札そのものは印）
     HagiAllySoul,         // 味方の死でも魂（第402期・ハギの版 B）: 味方（召喚 ／ 胞子 ／ 亡者を含む・ハギ自身は除く）が倒れるたび魂 +1（`HagiDepthTrait.OnAnyDeath`・札そのものは印）
+    HagiTwinIsolated,     // 孤立した敵は二度斬る（第403期・ハギの版 T1 ／ T12 ／ T12A）: 手番の最初の一振り（斬撃 ／ 薙ぎ）の主目標の隣（敵の陣営の隣接表）に生きている敵がいなければ、同じ的にもう一振り（2 発目の前に刈り取りの判定・再行動 ／ 追撃は 1 発のまま）（**判定は engine の `ReapTurn388`**・札そのものは印）
+    HagiDeepMark,         // 印を深く刻む（第403期・ハギの版 T2 ／ T12 ／ T12A）: 刈りの印の上限 5 → 9（線の上乗せの上限 6 割は今どおり）（`HagiDepthTrait.MarkCapOf`・札そのものは印）
     HagiLineLow,          // 線を下げる（H123L）: 魂の深さの線を 2 ／ 3 ／ 4 ／ 5 割 → 1 ／ 2 ／ 3 ／ 4 割・刈りの印を足した線の上限を 6 割 → 5 割にする（**札そのものは挙動を持たない**・`HagiDepthTrait.LinePermil` ／ engine の `ReapLineFor389` が読む）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -10511,6 +10513,10 @@ public sealed class HagiDepthTrait : Trait
     public const int PursuitHeavyPercent = 20;
     /// <summary>刈りの印（R5m）: 1つの敵の印の上限 ／ 印1つで深くなる線（‰）／ 印を足した線の上限（‰）。印は敵の側の私有キー <see cref="MarkKey"/>。</summary>
     public const int MarkCap = 5, MarkStepPermil = 50, MarkLineMaxPermil = 600;
+    /// <summary>第403期（T2・<see cref="TraitId.HagiDeepMark"/>）: 深く刻む印の上限。</summary>
+    public const int DeepMarkCap = 9;
+    /// <summary>その打ち手が刻める印の上限（T2 なら 9・ほかは 5）。</summary>
+    public static int MarkCapOf(UnitState h) => h.HasTrait(TraitId.HagiDeepMark) ? DeepMarkCap : MarkCap;
     public const string MarkKey = "hagiReapMark389";
     /// <summary>魂を溜める線（最大HPの %・上から順）。</summary>
     public static readonly int[] Lines = { 80, 50, 20 };
@@ -19997,6 +20003,8 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.HagiBigSoul),                      // 第402期（大物の魂 A ／ AD・印・判定は HagiDepthTrait）
         new MarkOnlyTrait(TraitId.HagiMarkSoul),                     // 第402期（印が魂に D ／ AD・印・判定は engine）
         new MarkOnlyTrait(TraitId.HagiAllySoul),                     // 第402期（味方の死でも魂 B・印・判定は HagiDepthTrait）
+        new MarkOnlyTrait(TraitId.HagiTwinIsolated),                 // 第403期（孤立した敵は二度斬る T1 〜・印・判定は engine）
+        new MarkOnlyTrait(TraitId.HagiDeepMark),                     // 第403期（印を深く刻む T2 〜・印・判定は HagiDepthTrait.MarkCapOf）
         new MarkOnlyTrait(TraitId.HagiLineLow),                      // 第401期（線を下げる H123L・印・判定は HagiDepthTrait.LinePermil ／ engine）
         new EruptTrait(),      // 第180期
         new SmearTrait(),      // 第180期

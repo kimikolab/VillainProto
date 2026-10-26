@@ -63,7 +63,7 @@ static partial class Sh402Diag
     // ---------------------------------------------------------------------------------
     internal static readonly (string Name, UnitDef? D)[] Vers =
     {
-        ("規定", UnitCatalog.Hagi), ("A", UnitCatalog.HagiSoulA), ("D", UnitCatalog.HagiSoulD), ("AD", UnitCatalog.HagiSoulAD), ("B", UnitCatalog.HagiSoulB),
+        ("規定", UnitCatalog.HagiH402), ("A", UnitCatalog.HagiSoulA), ("D", UnitCatalog.HagiSoulD), ("AD", UnitCatalog.HagiSoulAD), ("B", UnitCatalog.HagiSoulB),
     };
     static readonly (string Name, I.W[] Ws)[] W8 = S377.VerWaves;   // ボス ／ 近衛 ／ 大隊 ／ 本編 第2 ／ 4 ／ 5波 ／ 九体 ／ 強 第2〜5波
     static readonly int[] W4 = { 0, 1, 2, 5 };
@@ -80,7 +80,7 @@ static partial class Sh402Diag
     /// <summary>§4-1 の 3: B の死の台。試遊・死の連鎖にハギを入れた最良の席は前1（ゾト・第401期 `sh401 swap`）で、それは「試遊・死神と墓守」と同じ台なので、2 台目に試遊・死 エレのスィドの席（第389〜391期の台）を置いた。</summary>
     internal static S388.Board[] DeathBoards()
     {
-        var de = Presets.Versions.First(r => r.Name == "試遊・死 エレ").F;
+        var de = VersionsH402().First(r => r.Name == "試遊・死 エレ").F;   // 第403期: 第402期の一覧
         return new[] { S401.StopBoards()[1], new S388.Board("試遊・死 エレ（スィドの席）", de, de.Occupied().First(o => o.Def.Id == "sid").Slot, "スィド") };
     }
 
@@ -106,7 +106,7 @@ static partial class Sh402Diag
     // ---------------------------------------------------------------------------------
     // 1戦の計数（第401期の `Sh401Diag.Extra` ＋ 魂の出どころ ／ 刻み切り ／ 勇者の HP ／ 線）
     // ---------------------------------------------------------------------------------
-    static Action<BattleResult, List<UnitState>, List<UnitState>, S377.B> Extra(bool boss, string label)
+    internal static Action<BattleResult, List<UnitState>, List<UnitState>, S377.B> Extra(bool boss, string label)
     {
         var baseX = S401.Extra(boss, label);
         return (r, p, e, b) =>
@@ -157,7 +157,7 @@ static partial class Sh402Diag
         var sw = System.Diagnostics.Stopwatch.StartNew();
         Console.WriteLine($"# {Tag} §2 段0 —— ハギの H123 を規定に（旧は `UnitCatalog.HagiH401`・P1h）");
         Console.WriteLine();
-        var rows = CompareBuilds();
+        var rows = CompareBuilds().Select(r => (r.Name, F: Pin402(r.F))).ToArray();   // 第403期: ハギは第402期の規定に
         var now = CGrid(rows, CompareSeeds);
         var old = CGrid(rows.Select(r => (r.Name, Pin401(r.F))).ToArray(), CompareSeeds);
         var h123 = CGrid(rows.Select(r => (r.Name, I.Swap(Pin401(r.F), "hagi", UnitCatalog.HagiCarryH123))).ToArray(), CompareSeeds);
@@ -182,7 +182,7 @@ static partial class Sh402Diag
         Console.WriteLine("| 台 | 列 | ボス | 近衛 | 大隊 | 本編 第5波 | 強 第2〜5波 |");
         Console.WriteLine("|---|---|---|---|---|---|---|");
         foreach (var b in StopBoards())
-            foreach (var (cn, d) in new[] { ("規定（第402期）", UnitCatalog.Hagi), ("第401期（旧）", UnitCatalog.HagiH401) })
+            foreach (var (cn, d) in new[] { ("規定（第402期）", UnitCatalog.HagiH402), ("第401期（旧）", UnitCatalog.HagiH401) })
             {
                 var m = M5(ColBoard(b, d), $"zero:{b.Name}:{cn}");
                 Console.WriteLine($"| {(cn.StartsWith("規定") ? b.Name : "")} | {cn} | {string.Join(" | ", new[] { WBoss, WGuard, WBat, 5, WStrong }.Select(w => m[w].Cell))} |");
@@ -205,7 +205,7 @@ static partial class Sh402Diag
         Console.WriteLine("|---|--:|---|---|--:|--:|--:|--:|");
         foreach (var b in StopBoards().Concat(CarryHand()))
         {
-            var x = S377.Measure(ColBoard(b, UnitCatalog.Hagi), W8[WBoss].Ws, Seeds, Extra(true, $"p0:{b.Name}"));
+            var x = S377.Measure(ColBoard(b, UnitCatalog.HagiH402), W8[WBoss].Ws, Seeds, Extra(true, $"p0:{b.Name}"));
             string hh = string.Join(" ", Enumerable.Range(1, TT - 1).Select(t => X(x, $"heroHeadN{t}") == 0 ? "—" : F0((double)X(x, $"heroHead{t}") / X(x, $"heroHeadN{t}"))));
             string sl = string.Join(" ", Enumerable.Range(1, TT - 1).Select(t => X(x, $"halive{t}") == 0 ? "—" : F1((double)X(x, $"soul{t}") / X(x, $"halive{t}"))));
             Console.WriteLine($"| {b.Name} | {F1(x.Win)} | {hh} | {sl} | {Per(X(x, "srcDeath"), x.N)} | {Per(X(x, "src80"), x.N)} | {Per(X(x, "src50"), x.N)} | {Per(X(x, "src20"), x.N)} |");
@@ -239,7 +239,7 @@ static partial class Sh402Diag
         {
             Console.WriteLine($"## {title}");
             Console.WriteLine();
-            Console.WriteLine("台: " + string.Join("・", boards.Select(b => $"{b.Name}（{S307.Seats(ColBoard(b, UnitCatalog.Hagi))}・ハギは {b.Slot switch { 0 => "前1", 1 => "前3", 2 => "中央", 3 => "後1", _ => "後3" }}）")) + "。");
+            Console.WriteLine("台: " + string.Join("・", boards.Select(b => $"{b.Name}（{S307.Seats(ColBoard(b, UnitCatalog.HagiH402))}・ハギは {b.Slot switch { 0 => "前1", 1 => "前3", 2 => "中央", 3 => "後1", _ => "後3" }}）")) + "。");
             Console.WriteLine();
             var g = new S377.B[boards.Length, Vers.Length][];
             for (int bi = 0; bi < boards.Length; bi++) for (int vi = 0; vi < Vers.Length; vi++) g[bi, vi] = M8(ColBoard(boards[bi], Vers[vi].D), $"{boards[bi].Name}|{Vers[vi].Name}");
@@ -377,7 +377,7 @@ static partial class Sh402Diag
     static void Cmp()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = CompareBuilds().Where(r => Has(r.F, "hagi")).ToArray();
+        var rows = CompareBuilds().Where(r => Has(r.F, "hagi")).Select(r => (r.Name, F: Pin402(r.F))).ToArray();   // 第403期
         int nw = EnemyCatalog.Stages.Count;
         var grids = Vers.Select(c => CGrid(rows.Select(r => (r.Name, I.Swap(r.F, "hagi", c.D!))).ToArray(), CompareSeeds)).ToArray();
         Console.WriteLine($"# {Tag} §4-1 の 4 `compare` のハギの行 —— {rows.Length} 行 × 版（第1〜5波・seed 0..{CompareSeeds - 1}・ハギだけ替える）");

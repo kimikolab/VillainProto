@@ -2524,6 +2524,9 @@ public sealed class UnitTally
     public long R401EncoreReap, R401EncoreStrike, R401FirstKillTurn, R401FirstKillKind, R401FirstKillSoul, R401FirstKillMarks;
     /// <summary>第402期（ハギの版 A ／ D ／ AD ／ B・**計数のみ**）: 魂の出どころ（A の上乗せ ／ D の印を刻み切った ／ B の味方の死・上限の前の量）・刻み切った回数 ／ そのとき戻した印 4 本ぶんの H1 の名目の足し分。</summary>
     public long R402SoulBig, R402SoulMark, R402SoulAlly, R402MarkSouls, R402MarkSoulLostAdd;
+    /// <summary>第403期（ハギの版 T1 ／ T2・**計数のみ**）: 孤立の二度斬り（回 ／ うち 2 発目で刈った ／ 倒した・そのときの敵の生きている数の分け）・刻んだ印の最大 ／ ターンごとの最大。</summary>
+    public long R403Twins, R403TwinReaps, R403TwinKills, R403MarkMax;
+    public long[]? R403TwinFoes, R403MarkMaxByTurn;
     /// <summary>第393期（トモの版 T1 ／ T2 ／ T3・**計数のみ**）。トモの側: 灯に乗せて運んだ力（量 ／ 回数）・休み番を起こして振らせた回数 ／ そのうち消した `IdleTurn` ／ そのうち号令の持ち主がいた回数（号令が買えたはずの手番）・号令の +8 を受けた回数。</summary>
     public long R393Carried, R393CarryLights, R393Wakes, R393WakeClearedIdle, R393WakeAteRally, R393RallyToLamp;
     /// <summary>第394期（ドルガの版 D1 ／ D2・**計数のみ**）。壁の側: 代わりに受けた回数 ／ 量（半分にした後）／ ドルガの側の軽減と重なった回数・ターンごとの量。守られた側: 代わりに受けてもらった回数。</summary>
@@ -3885,6 +3888,7 @@ public sealed class UnitTally
         R391ChaseColumn += o.R391ChaseColumn; R391ChaseColumnUnits += o.R391ChaseColumnUnits; R391ChaseColumnHp += o.R391ChaseColumnHp;   // 第391期
         R401DmgStrike += o.R401DmgStrike; R401DmgSweep += o.R401DmgSweep; R401DmgPursuit += o.R401DmgPursuit; R401DmgReap += o.R401DmgReap; R401DmgChase += o.R401DmgChase;   // 第401期
         R401MarkAdd += o.R401MarkAdd; R401MarkHits += o.R401MarkHits; R401MulAdd += o.R401MulAdd; R401MulHits += o.R401MulHits; R401HitMax = Math.Max(R401HitMax, o.R401HitMax); R401MulAtkMax = Math.Max(R401MulAtkMax, o.R401MulAtkMax);
+        R403Twins += o.R403Twins; R403TwinReaps += o.R403TwinReaps; R403TwinKills += o.R403TwinKills; R403MarkMax = Math.Max(R403MarkMax, o.R403MarkMax); R403TwinFoes = AddArr(R403TwinFoes, o.R403TwinFoes); R403MarkMaxByTurn = AddArr(R403MarkMaxByTurn, o.R403MarkMaxByTurn);   // 第403期
         R402SoulBig += o.R402SoulBig; R402SoulMark += o.R402SoulMark; R402SoulAlly += o.R402SoulAlly; R402MarkSouls += o.R402MarkSouls; R402MarkSoulLostAdd += o.R402MarkSoulLostAdd;   // 第402期
         R401EncoreReap += o.R401EncoreReap; R401EncoreStrike += o.R401EncoreStrike; R401FirstKillTurn += o.R401FirstKillTurn; R401FirstKillKind += o.R401FirstKillKind; R401FirstKillSoul += o.R401FirstKillSoul; R401FirstKillMarks += o.R401FirstKillMarks;
         R394WallHits += o.R394WallHits; R394WallAmt += o.R394WallAmt; R394WallMitigated += o.R394WallMitigated; R394WalledFor += o.R394WalledFor; R394WallByTurn = AddArr(R394WallByTurn, o.R394WallByTurn);   // 第394期

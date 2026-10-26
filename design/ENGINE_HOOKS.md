@@ -1697,3 +1697,11 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **印が魂に（`HagiMarkSoul`・D）**: engine の `ReapMark389` の終わり——印を足して上限に届いたら 1 に戻して `Gain(…, MarkSoul, SrcMark)`（A の上乗せは付けない）。
 - **味方の死でも魂（`HagiAllySoul`・B）**: `HagiDepthTrait.OnAnyDeath` の同じ陣営の枝（ハギ自身は除く）。
 - 札が無ければ `HasTrait` の比較1つで抜ける（新しい真偽の札は足していない）。乱数を引かない。計数のみ `R402SoulBig` ／ `R402SoulMark` ／ `R402SoulAlly` ／ `R402MarkSouls` ／ `R402MarkSoulLostAdd`。
+
+## 第403期 —— ハギの B を規定に ／ 単体の敵を削る（ハギの版 T1 ／ T2 ／ T12 ／ T12A）
+
+- **段0**: 規定のハギが `HagiAllySoul` を持つようになった——第402期の口（`HagiDepthTrait.OnAnyDeath` の同じ陣営の枝）が**規定の戦で走る**。窓口は足していない。
+- **孤立した敵は二度斬る（`HagiTwinIsolated`・T1）**: engine の `ReapTurn388` の最初の振り（`swing == 0`）が斬撃 ／ 薙ぎで、主目標の隣（`FormationRules.AreAdjacent`・敵の陣営の隣接表）に生きている敵がいなければ（振る前の盤面で決める・`Isolated403`）、同じ的に `TwinSwing403`——2 発目の前に刈り取りの判定（線以下なら的 1 体だけの刈り取り・上なら今の型でもう一振り）。巻き込みも 1 回ぶん。再行動の判定はこの一振りの撃破も数える。
+  - **`Trait.ModifyHitCount` は通さない**: ハギの手番は `SwingTurnBody` で `ReapTurn388` へ分かれて `SwingTurnHits`（あの窓口を問う唯一の場所）に届かず、窓口は的（主目標の隣）を受け取れない（太刀の数も同じ理由で窓口を通さない・`BattleEngine.cs` の太刀の段の注）。
+- **印を深く刻む（`HagiDeepMark`・T2）**: 印の上限は `HagiDepthTrait.MarkCapOf`（9 ／ 5）。読むのは `ReapMark389` の上限だけ。線の上乗せの上限（`MarkLineMax`）と D の刻み切り（5）は今どおり。
+- 保持者がいない戦は `_twinLive403` の真偽1つ ／ `HasTrait` の比較1つで抜ける。乱数を引かない。計数のみ `R403Twins` ／ `R403TwinReaps` ／ `R403TwinKills` ／ `R403TwinFoes`（そのときの敵の生きている数）／ `R403MarkMax` ／ `R403MarkMaxByTurn`。
