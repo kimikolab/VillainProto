@@ -1496,6 +1496,12 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sh401 cmp                # 第401期 §3-2 の 5: ハギのいる `compare` の行 × 版（第1〜5波・seed 0..199）
     dotnet run --project BattleSim -c Release 0 sh401 log <台の頭> <列> <物差し 0..7> <seed>   # 第401期: 1戦のログ
     dotnet run --project BattleSim -c Release 0 sh401 check              # 第401期 自己検査（版の札と文面・H1 ／ H2 ／ H3 ／ H123 ／ H123L の規則・規定のハギと `compare` 全行・試遊の台 ／ `VersionsH400`・`checkup`・verbose・H2 ＝ 規定・PickOne ／ Roll）
+    dotnet run --project BattleSim -c Release 0 sh402 zero               # 第402期 §2 段0: `compare` の動き（第401期の HEAD の表と ／ 第401期の H123 の列と）＋ 試遊の 4 台 × 規定 ／ 旧 × 5 物差し
+    dotnet run --project BattleSim -c Release 0 sh402 p0                 # 第402期 前提の確かめ: ボスの勇者の HP ／ 魂 ／ 魂の出どころ（T1〜T8）・波ごとの最大 HP 1,000 以上の敵
+    dotnet run --project BattleSim -c Release 0 sh402 boards             # 第402期 §4-1 の 1〜3: キャリーの手組み 3 ／ 止め役 ／ キャリーの 4 ／ 死の台 2 × 列（規定 ／ A ／ D ／ AD ／ B）× 8 物差し——魂の推移と出どころ ／ 魂 9 の T ／ 勇者 ／ D の刻み切り ／ B の味方の死 ／ 誰が何Tに倒れたか ／ 壊れの兆し
+    dotnet run --project BattleSim -c Release 0 sh402 cmp                # 第402期 §4-1 の 4: ハギのいる `compare` の行 × 版（seed 0..199）＋ (G2)
+    dotnet run --project BattleSim -c Release 0 sh402 log <台の頭> <列> <物差し 0..7> <seed>   # 第402期: 1戦のログ
+    dotnet run --project BattleSim -c Release 0 sh402 check              # 第402期 自己検査（段0 の規定のハギ ／ 旧 ／ 固定の口 ／ H123 と同じ動き・A ／ D ／ AD ／ B の規則・ボスで分岐していない・規定の `compare`・試遊の台 ／ `VersionsH401`・`checkup`・verbose・PickOne ／ Roll）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

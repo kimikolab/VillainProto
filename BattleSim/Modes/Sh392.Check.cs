@@ -26,12 +26,12 @@ static partial class Sh392Diag
         Console.WriteLine();
         Console.WriteLine("| 項目 | 判定 | 備考 |");
         Console.WriteLine("|---|---|---|");
-        UnitDef hagi = UnitCatalog.Hagi, old = UnitCatalog.HagiH391, p1h = UnitCatalog.HagiP1h;
+        UnitDef hagi = UnitCatalog.HagiH401, old = UnitCatalog.HagiH391,   /* 第402期: 第392〜401期の規定（`HagiH401`）で読む */ p1h = UnitCatalog.HagiP1h;
 
         // ---- 段0: 規定のハギ ／ 旧 ／ 固定の口 ／ 試遊の台 ----
         {
             bool def = hagi.Id == "hagi" && hagi.Name == "追い打ちのハギ" && hagi.Traits.SequenceEqual(p1h.Traits) && hagi.PlusText == p1h.PlusText && hagi.MinusText == p1h.MinusText
-                && hagi.MaxHp == 62 && hagi.Attack == 16 && hagi.Speed == 7 && hagi.Pattern == AttackPattern.Single && UnitCatalog.All.Contains(hagi) && !ReferenceEquals(hagi, p1h);
+                && hagi.MaxHp == 62 && hagi.Attack == 16 && hagi.Speed == 7 && hagi.Pattern == AttackPattern.Single && UnitCatalog.All.Contains(UnitCatalog.Hagi) && !ReferenceEquals(hagi, p1h);   // 第402期: 旧の規定は `All` の外
             bool o = old.Traits.SequenceEqual(UnitCatalog.HagiR5m.Traits) && !UnitCatalog.Everyone.Contains(old) && old.PlusText.Contains("（失った命が深いほど重く）", StringComparison.Ordinal);
             bool pins = PinH391(hagi) == old && PinH391(old) == old && PinH389(hagi) == UnitCatalog.HagiH389 && PinH389(old) == UnitCatalog.HagiH389 && PinV381(hagi) == UnitCatalog.HagiH389
                 && Pin391(Presets.HagiPlay389(hagi))[3] == old;
@@ -48,7 +48,7 @@ static partial class Sh392Diag
         // ---- 段0: 規定のハギは第391期の P1h と同じ動き ----
         {
             long cells = 0, diff = 0;
-            var boards = new (Formation F, int Slot)[] { (Presets.HagiPlay389(hagi), 3), (Presets.HagiDeath389(hagi), 0), (Presets.HagiMove390(), 1) };
+            var boards = new (Formation F, int Slot)[] { (Presets.HagiPlay389(hagi), 3), (Presets.HagiDeath389(hagi), 0), (Presets.HagiMove390(hagi), 1) };
             foreach (var (f, slot) in boards)
                 foreach (var w in new[] { I.Boss, I.Guard, I.Bat, I.M5 })
                     for (int sd = 0; sd < 5; sd++)
@@ -56,7 +56,7 @@ static partial class Sh392Diag
                         cells++;
                         if (!SameFull(I.Raw(f, w, sd, verbose: true).R, I.Raw(Put(f, slot, p1h), w, sd, verbose: true).R)) diff++;
                     }
-            var rowsH = CompareBuilds().Where(r => Has(r.F, "hagi")).ToArray();
+            var rowsH = CompareBuilds().Where(r => Has(r.F, "hagi")).Select(r => (r.Name, F: Pin401(r.F))).ToArray();   // 第402期: ハギは第392〜401期の規定に
             int cd = 0;
             foreach (var r in rowsH)
                 for (int wi = 0; wi < EnemyCatalog.Stages.Count; wi++)

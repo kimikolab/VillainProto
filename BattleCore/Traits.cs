@@ -1038,6 +1038,9 @@ public enum TraitId
     // --- 第401期で足した札（指示書 design/PHASE401_HAGI_CARRY_SPEC.md §2）。自分で削って自分で刈る（ハギの版 H1 ／ H3 ／ H123 ／ H123L・`All` の外）。保持者 0 枚 ---
     HagiMarkWeight,       // 印が重い（H1 ／ H123 ／ H123L）: ハギの斬撃 ／ 薙ぎ ／ 追撃の一撃に、その敵に刻んだ刈りの印の数 × その敵の最大 HP の 3%（切り捨て）を1体ごとに足す（段の倍率の後・刈り取りの一撃には足さない・`AtkBonus` は動かない）（**判定は engine の `PerformAttackBody`**・札そのものは印）
     HagiStageMul,         // 段で倍率（H3 ／ H123 ／ H123L）: ハギの斬撃 ／ 薙ぎ ／ 追撃の攻撃力（外から積まれた力を含む今の攻撃力）を魂の段で × 1 ／ 2 ／ 3 ／ 5（魂 0〜2 ／ 3〜5 ／ 6〜8 ／ 9）にする。追撃の上乗せ（失った HP の割合）と刈り取りの一撃には掛けない（**判定は engine の `PerformAttackBody`**・札そのものは印）
+    HagiBigSoul,          // 大物の魂（第402期・ハギの版 A ／ AD）: 最大 HP 1,000 以上の敵が倒れる ／ その敵が線を割ると、入る魂を 3 倍（+2 → +6 ／ +1 → +3）。上限 9 ／ 薄れるは今どおり（`HagiDepthTrait.BigExtra`・札そのものは印）
+    HagiMarkSoul,         // 印が魂に（第402期・ハギの版 D ／ AD）: ハギの一撃で敵の刈りの印が上限（5）に届くと、その敵の印を 1 に戻して魂 +3（何度でも・A の 3 倍の対象にしない）（**判定は engine の `ReapMark389`**・札そのものは印）
+    HagiAllySoul,         // 味方の死でも魂（第402期・ハギの版 B）: 味方（召喚 ／ 胞子 ／ 亡者を含む・ハギ自身は除く）が倒れるたび魂 +1（`HagiDepthTrait.OnAnyDeath`・札そのものは印）
     HagiLineLow,          // 線を下げる（H123L）: 魂の深さの線を 2 ／ 3 ／ 4 ／ 5 割 → 1 ／ 2 ／ 3 ／ 4 割・刈りの印を足した線の上限を 6 割 → 5 割にする（**札そのものは挙動を持たない**・`HagiDepthTrait.LinePermil` ／ engine の `ReapLineFor389` が読む）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -10519,6 +10522,10 @@ public sealed class HagiDepthTrait : Trait
     public const int MarkWeightPercent = 3;
     /// <summary>第401期（H3・<see cref="TraitId.HagiStageMul"/>）: 段 0〜3 の倍率（ホタの段と同じく段ごとに決まった値・積み重ならない）。</summary>
     public static readonly int[] StageMul = { 1, 2, 3, 5 };
+    /// <summary>第402期（A ／ D ／ B）: 大物の線（最大 HP）と倍率・印を刻み切ったときの魂・味方の死の魂。</summary>
+    public const int BigHp = 1000, BigMul = 3, MarkSoul = 3, AllySoul = 1;
+    /// <summary>第402期（A・<see cref="TraitId.HagiBigSoul"/>）: その敵（倒れた ／ 線を割った）の最大 HP が <see cref="BigHp"/> 以上なら、魂の増え <paramref name="n"/> に足す分（3 倍 − 1 倍）。札が無ければ 0。ボスの名前 ／ 種類では分岐しない。</summary>
+    public static int BigExtra(UnitState h, UnitState e, int n) => h.HasTrait(TraitId.HagiBigSoul) && e.MaxHp >= BigHp ? n * (BigMul - 1) : 0;
     /// <summary>第401期: その敵に対する刈りの印込みの線の上限（‰）。</summary>
     public static int MarkLineMax(UnitState h) => h.HasTrait(TraitId.HagiLineLow) ? MarkLineMaxLowPermil : MarkLineMaxPermil;
     /// <summary>魂 ／ 最後に魂が動いた（敵の死 ／ 線を割った）ターン（ハギの私有キー）。</summary>
@@ -10555,27 +10562,35 @@ public sealed class HagiDepthTrait : Trait
 
     public override void OnAnyDeath(BattleContext ctx, UnitState self, UnitState dead)
     {
-        if (_id != TraitId.HagiDepthSoul || dead.TeamId == self.TeamId || !self.IsAlive) return;
-        Gain(ctx, self, PerDeath, 0);
+        if (_id != TraitId.HagiDepthSoul || !self.IsAlive) return;
+        if (dead.TeamId == self.TeamId)
+        {
+            if (dead != self && self.HasTrait(TraitId.HagiAllySoul)) Gain(ctx, self, AllySoul, SrcAlly);   // 第402期（B）
+            return;
+        }
+        Gain(ctx, self, PerDeath, 0, BigExtra(self, dead, PerDeath));   // 第402期（A）: 大物なら 3 倍（札が無ければ足す分 0）
     }
+    /// <summary>第402期: 魂の出どころの札（<see cref="Gain"/> の src）。0 ＝ 敵の死 ／ 80 ／ 50 ／ 20 ＝ 線 ／ 1 ＝ 印を刻み切った（D）／ 2 ＝ 味方の死（B）。</summary>
+    public const int SrcMark = 1, SrcAlly = 2;
 
     public override AttackPattern ModifyPattern(UnitState self, AttackPattern p)
         => _id == TraitId.HagiSoulMoves && Soul(self) >= SweepAt ? AttackPattern.Sweep : p;
 
     /// <summary>魂を足す（<paramref name="src"/>: 0 ＝ 敵の死 ／ 80 ／ 50 ／ 20 ＝ その線を割った）。上限 9 で止めても「魂が動いたターン」は進める（連鎖は繋がっている）。</summary>
-    public static void Gain(BattleContext ctx, UnitState self, int n, int src)
+    public static void Gain(BattleContext ctx, UnitState self, int n, int src, int bigExtra = 0)
     {
         self.SetCounter(TurnKey, ctx.Turn);
-        int before = Soul(self), s = Math.Min(Cap, before + n);
+        int before = Soul(self), s = Math.Min(Cap, before + n + bigExtra);
         self.SetCounter(SoulKey, s);
-        UnitTally t = ctx.TallyOf(self);   // 計数のみ（出どころは上限の前の量）
-        switch (src) { case 0: t.R389SoulDeath += n; break; case 80: t.R389Cross80 += n; break; case 50: t.R389Cross50 += n; break; default: t.R389Cross20 += n; break; }
+        UnitTally t = ctx.TallyOf(self);   // 計数のみ（出どころは上限の前の量・第402期: A の上乗せは別に・D ／ B は別の出どころ）
+        switch (src) { case 0: t.R389SoulDeath += n; break; case 80: t.R389Cross80 += n; break; case 50: t.R389Cross50 += n; break; case SrcMark: t.R402SoulMark += n; break; case SrcAlly: t.R402SoulAlly += n; break; default: t.R389Cross20 += n; break; }
+        t.R402SoulBig += bigExtra;
         if (s > t.R389SoulPeak) t.R389SoulPeak = s;
         if (s >= SweepAt && t.R389Soul3Turn == 0) t.R389Soul3Turn = Math.Max(1, ctx.Turn);
         if (s >= TwinAt && t.R389Soul6Turn == 0) t.R389Soul6Turn = Math.Max(1, ctx.Turn);
         if (s >= ColumnAt && t.R389Soul9Turn == 0) t.R389Soul9Turn = Math.Max(1, ctx.Turn);
         if (s == before) return;
-        ctx.Log($"    {self.Name} の大鎌に魂が宿る（{(src == 0 ? "敵の死" : $"{src}% を割った敵")}・魂 {s}・刈り取りの線 {LinePermil(self) / 10.0:0.#}%）", LogKind.Trigger);
+        ctx.Log($"    {self.Name} の大鎌に魂が宿る（{(src == 0 ? "敵の死" : src == SrcMark ? "印を刻み切った" : src == SrcAlly ? "仲間の死" : $"{src}% を割った敵")}{(bigExtra > 0 ? "・大きな命" : "")}・魂 {s}・刈り取りの線 {LinePermil(self) / 10.0:0.#}%）", LogKind.Trigger);
         if (Stage(before) < Stage(s))
             ctx.Log($"    ★ {self.Name} の鎌が深く届くようになった（魂 {s}・刈り取りの線 {LinePermil(self) / 10.0:0.#}%{StageText(self, Stage(s))}）", LogKind.Highlight, self);
     }
@@ -19979,6 +19994,9 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.HagiPursuitHeavy),                 // 第391期（追撃 2 割 P1h・印・判定は engine）
         new MarkOnlyTrait(TraitId.HagiMarkWeight),                   // 第401期（印が重い H1 〜・印・判定は engine）
         new MarkOnlyTrait(TraitId.HagiStageMul),                     // 第401期（段で倍率 H3 〜・印・判定は engine）
+        new MarkOnlyTrait(TraitId.HagiBigSoul),                      // 第402期（大物の魂 A ／ AD・印・判定は HagiDepthTrait）
+        new MarkOnlyTrait(TraitId.HagiMarkSoul),                     // 第402期（印が魂に D ／ AD・印・判定は engine）
+        new MarkOnlyTrait(TraitId.HagiAllySoul),                     // 第402期（味方の死でも魂 B・印・判定は HagiDepthTrait）
         new MarkOnlyTrait(TraitId.HagiLineLow),                      // 第401期（線を下げる H123L・印・判定は HagiDepthTrait.LinePermil ／ engine）
         new EruptTrait(),      // 第180期
         new SmearTrait(),      // 第180期

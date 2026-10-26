@@ -18447,6 +18447,15 @@ public sealed class BattleContext
         target.SetCounter(HagiDepthTrait.MarkKey, m + 1);
         TallyOf(h).R389MarksPlaced++;   // 計数のみ
         Log($"    {target.Name} に刈りの印が刻まれた（{m + 1}）", LogKind.Status);
+        // 第402期（D・`HagiMarkSoul`）: 印が上限に届いたら 1 に戻して魂 +3（何度でも・A の 3 倍の対象にしない）。**札が無ければ比較1つで抜ける。乱数を引かない。**
+        if (m + 1 >= HagiDepthTrait.MarkCap && h.IsAlive && h.HasTrait(TraitId.HagiMarkSoul))
+        {
+            target.SetCounter(HagiDepthTrait.MarkKey, 1);
+            UnitTally mt = TallyOf(h);   // 計数のみ（刻み切った回数 ／ 印 4 本ぶんの H1 の名目の足し分＝刻み切った直後の一撃で減る量）
+            mt.R402MarkSouls++; mt.R402MarkSoulLostAdd += (HagiDepthTrait.MarkCap - 1) * (target.MaxHp * HagiDepthTrait.MarkWeightPercent / 100);
+            Log($"    ★ {h.Name} が {target.Name} の印を刻み切り、魂を刈り取った（印 → 1）", LogKind.Trigger);
+            HagiDepthTrait.Gain(this, h, HagiDepthTrait.MarkSoul, HagiDepthTrait.SrcMark);
+        }
     }
 
     /// <summary>その敵に対する刈り取りの線（‰）。刈りの印の札があれば、印1つにつき +5%（合わせて最大 6 割）。</summary>
@@ -18533,7 +18542,7 @@ public sealed class BattleContext
             target.SetCounter(key, _turn + 1);
             if (source is not null) { UnitTally st = TallyOf(source); st.R390LinesCrossed++; if (gated) st.R390LinesRepeat++; }   // 第390期・計数のみ（割った一撃の主 ／ 門を外して数えた分）
             foreach (UnitState h in _reapHolders.ToList())
-                if (h.IsAlive && h.TeamId != target.TeamId && h.HasTrait(TraitId.HagiDepthSoul) && (!gated || h.HasTrait(TraitId.HagiLineEvery))) HagiDepthTrait.Gain(this, h, HagiDepthTrait.PerLine, line);
+                if (h.IsAlive && h.TeamId != target.TeamId && h.HasTrait(TraitId.HagiDepthSoul) && (!gated || h.HasTrait(TraitId.HagiLineEvery))) HagiDepthTrait.Gain(this, h, HagiDepthTrait.PerLine, line, HagiDepthTrait.BigExtra(h, target, HagiDepthTrait.PerLine));   // 第402期（A）: 大物なら 3 倍
         }
     }
     readonly List<UnitState> _reapHolders = new();

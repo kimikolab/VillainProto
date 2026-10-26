@@ -56,7 +56,7 @@ static partial class Sh401Diag
         Console.WriteLine();
         Console.WriteLine("| 項目 | 判定 | 備考 |");
         Console.WriteLine("|---|---|---|");
-        UnitDef hagi = UnitCatalog.Hagi, h1 = UnitCatalog.HagiCarryH1, h2 = UnitCatalog.HagiCarryH2, h3 = UnitCatalog.HagiCarryH3, h123 = UnitCatalog.HagiCarryH123, h123l = UnitCatalog.HagiCarryH123L;
+        UnitDef hagi = UnitCatalog.HagiH401, h1 = UnitCatalog.HagiCarryH1, h2 = UnitCatalog.HagiCarryH2, h3 = UnitCatalog.HagiCarryH3, h123 = UnitCatalog.HagiCarryH123, h123l = UnitCatalog.HagiCarryH123L;
         var vers = new[] { h1, h2, h3, h123, h123l };
 
         // ---- 版の札と文面 ----
@@ -74,7 +74,7 @@ static partial class Sh401Diag
                 && h123.PlusText == h1.PlusText + h3.PlusText[hagi.PlusText.Length..]
                 && h123l.PlusText.Contains("（1 割 → 最大 4 割）", StringComparison.Ordinal) && h123l.PlusText.Contains("合わせて最大 5 割", StringComparison.Ordinal) && !h123l.PlusText.Contains("最大 6 割", StringComparison.Ordinal)
                 && hagi.PlusText.Contains("倒せば、もう一度振る", StringComparison.Ordinal)
-                && !UnitCatalog.Everyone.Any(d => d.Traits.Any(cards.Contains));
+                && !UnitCatalog.Everyone.Where(d => d != UnitCatalog.Hagi).Any(d => d.Traits.Any(cards.Contains));   // 第402期: 規定のハギ（H123）は除いて数える
             Expect("版の札と文面: H1 ＋ 印が重い ／ H2 ＝ 規定と同じ札と文面 ／ H3 ＋ 段で倍率 ／ H123 ＋ 両方 ／ H123L ＋ 線を下げる（文面の線を 1 → 最大 4 割・上限 5 割）・固定の巻き込みが末尾・`All` ／ `Retired` の外・札の保持者 0 枚", ok,
                 string.Join(" ／ ", new[] { ("H1", h1), ("H2", h2), ("H3", h3), ("H123", h123), ("H123L", h123l) }.Select(x => $"{x.Item1} {string.Join("・", x.Item2.Traits.Skip(hagi.Traits.Count - 1).SkipLast(1).DefaultIfEmpty(TraitId.HagiSpillFixed).Select(t => t == TraitId.HagiSpillFixed ? "（足さない）" : t.ToString()))}")));
         }
@@ -172,8 +172,8 @@ static partial class Sh401Diag
 
         // ---- 規定のハギ ／ compare ----
         {
-            var map = S390.BalanceMap(File.Exists("docs/balance.md") ? File.ReadAllText("docs/balance.md") : "");
-            var rows = CompareBuilds(); var g = CGrid(rows, CompareSeeds);
+            var map = S390.BalanceMap(S390.GitShow("c8871366:docs/balance.md"));   // 第402期: 第401期の表と、ハギを旧に固定した行で比べる
+            var rows = CompareBuilds().Select(r => (r.Name, F: Pin401(r.F))).ToArray(); var g = CGrid(rows, CompareSeeds);
             int diff = 0, miss = 0, noHagi = 0;
             for (int ri = 0; ri < rows.Length; ri++)
             {
@@ -181,14 +181,14 @@ static partial class Sh401Diag
                 if (!Has(rows[ri].F, "hagi")) noHagi++;
                 for (int w = 0; w < 5; w++) if (c[w].TrimEnd('%') != F1(g[ri, w])) diff++;
             }
-            bool def = hagi.Traits.SequenceEqual(UnitCatalog.HagiP1h.Traits) && hagi.PlusText == UnitCatalog.HagiP1h.PlusText && hagi.Id == "hagi" && UnitCatalog.All.Contains(hagi);
+            bool def = hagi.Traits.SequenceEqual(UnitCatalog.HagiP1h.Traits) && hagi.PlusText == UnitCatalog.HagiP1h.PlusText && hagi.Id == "hagi" && !UnitCatalog.All.Contains(hagi) && UnitCatalog.All.Contains(UnitCatalog.Hagi);   // 第402期: 旧の規定（`All` の外）
             Expect("規定のハギは今どおり（札と文面 ＝ 第391期の P1h）・規定の `compare` 全行 × 5 波 × seed 0..199 が `docs/balance.md` と一致（ハギのいない行も）", def && diff == 0 && miss == 0,
                 $"{rows.Length} 行（うちハギのいない行 {noHagi}）・ずれ {diff}・表に無い行 {miss}");
         }
 
         // ---- 試遊の台 ／ 替えた台は器具の中だけ ----
         {
-            var vrows = Presets.Versions;
+            var vrows = VersionsH401();   // 第402期: 第401期の一覧
             var hold = vrows.Where(r => r.F.Occupied().Any(o => vers.Contains(o.Def))).Select(r => r.Name).ToList();
             bool last = vrows[^1].Name == PlayName && hold.SequenceEqual(new[] { PlayName }) && vrows[^1].F.Occupied().Count(o => o.Def == PlayVersion) == 1
                 && S307Seats(vrows[^1].F) == S307Seats(PlayBoard());
@@ -201,7 +201,7 @@ static partial class Sh401Diag
         {
             string src = File.ReadAllText("BattleSim/Modes/Checkup.cs");
             var cards = new[] { TraitId.HagiMarkWeight, TraitId.HagiStageMul, TraitId.HagiLineLow };
-            var miss = cards.Where(t => !System.Text.RegularExpressions.Regex.IsMatch(src, $@"\[TraitId\.{t}\]\s*=\s*\(HcPlusL,\s*""[^""]*第401期[^""]*保持者 0 枚""")).ToList();
+            var miss = cards.Where(t => !System.Text.RegularExpressions.Regex.IsMatch(src, $@"\[TraitId\.{t}\]\s*=\s*\(HcPlusL,\s*""[^""]*第401期[^""]*(保持者 0 枚|第402期から規定（ハギ）)""")).ToList();
             Expect("`checkup` の札の分類表に第401期の札 3 枚（印が重い ／ 段で倍率 ／ 線を下げる）がある（ソースを読んで確かめる）", miss.Count == 0, miss.Count == 0 ? "" : "無い: " + string.Join("・", miss));
         }
 

@@ -8,6 +8,8 @@ description: 第259期に `CLAUDE.md` の「現状値」節を**逐語で**移�
 
 ## 現状値
 
+**第402期は軽い期で、段0 にハギの H123（第401期の版・印が重い ＋ 段で倍率）を規定にし（旧は `UnitCatalog.HagiH401`（P1h））、本体でボスで魂を溜める版 4 つ（A 大物の魂 ／ D 印が魂に ／ AD ／ B 味方の死）を測った——本体の版は規定にしない**（指示書は design/PHASE402_HAGI_SOUL_SPEC.md・報告は design/PHASE402_HAGI_SOUL.md）。`compare` は 2 行 2 セル（反撃改3 第2波 73.5 → 77.0・追撃×据え 第5波 86.5 → 87.5）で、全 66 行は 100 / 98.2 / 99.2 / 98.5 / 98.1・主判定 19 行は 100 / 98.6 / 99.9 / 99.9 / 97.2・情報セル 29 / 10 のまま。版のハギは `UnitCatalog.HagiSoulA` ／ `D` ／ `AD` ／ `B`（札は `HagiBigSoul` ／ `HagiMarkSoul` ／ `HagiAllySoul`）。試遊の台「版・死神 キャリー」を「試遊・ハギ キャリー」に改め、「版・大物 ハギ」を足した。過去の器具の固定は `Common.PinH401` ／ `Pin401` ／ `VersionsH401()`（`PinT399` の終端からも通る）。
+
 **第401期は軽い期で、規定を1つも変えず、ハギの版 5 つ（H1 印が重い ／ H2 倒せば動く ／ H3 段で倍率 ／ H123 ／ H123L 線を下げる）を測った**（指示書は design/PHASE401_HAGI_CARRY_SPEC.md・報告は design/PHASE401_HAGI_CARRY.md）。版のハギは `UnitCatalog.HagiCarryH1` ／ `H2` ／ `H3` ／ `H123` ／ `H123L`（`All` の外・札は `HagiMarkWeight` ／ `HagiStageMul` ／ `HagiLineLow`）。**H2 は規定と同じ札**（規定の再行動は第388期から、ふつうの斬撃で倒しても立っていた）。`compare` は規定で 0 セル（版はハギのいる 5 行で +0.2pt まで）。試遊の台に「版・死神 キャリー」（スィド ／ ボルグ ／ ベニ ／ ハギ H123 ／ トウ）を足した。過去の器具の一覧は `Common.VersionsH400()`（`VersionsH399()` はそこから作る）。
 
 **第400期は、段0 でトモの L1 を規定にし（旧は `UnitCatalog.TomoH399`（T3））、本体で手番の軸の演出のための出来事を 3 種類足した（`BattleEventKind.Slime` ／ `Wall` ／ `Lamp`・表示専用・盤面は変えない）**（指示書は design/PHASE400_TEMPO_SETTLE_SPEC.md・報告は design/PHASE400_TEMPO_SETTLE.md）。過去の器具の固定は `Common.PinT399` ／ `Pin399` ／ `VersionsH399`（`PinT393` は H399 も旧へ）。`compare` は 0 セル（全66行 100 / 98.1 / 99.2 / 98.5 / 98.1・主判定19行 100 / 98.6 / 99.9 / 99.9 / 97.1・情報セル 29 / 10 のまま）。試遊の台「版・目覚め ドルガ」を外した。Codex 向けの台本の説明は `design/PHASE291_CODEX_MEMO.md` §67。

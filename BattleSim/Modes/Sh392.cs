@@ -236,10 +236,10 @@ static partial class Sh392Diag
         Console.WriteLine("|---|---|" + string.Concat(w5.Select(_ => "---|")) + "--:|");
         var boards = new (string Name, Formation F, int Slot)[]
         {
-            ("試遊・ハギ 台B", Presets.HagiPlay389(UnitCatalog.Hagi), 3), ("試遊・死神と墓守", Presets.HagiDeath389(UnitCatalog.Hagi), 0), ("版・移動 ハギ", Presets.HagiMove390(), 1),
+            ("試遊・ハギ 台B", Presets.HagiPlay389(UnitCatalog.HagiH401), 3), ("試遊・死神と墓守", Presets.HagiDeath389(UnitCatalog.HagiH401), 0), ("版・移動 ハギ", Presets.HagiMove390(UnitCatalog.HagiH401), 1),
         };
         foreach (var bd in boards)
-            foreach (var (cn, d) in new[] { ("規定", UnitCatalog.Hagi), ("旧", UnitCatalog.HagiH391) })
+            foreach (var (cn, d) in new[] { ("規定", UnitCatalog.HagiH401), ("旧", UnitCatalog.HagiH391) })
             {
                 var f = Put(bd.F, bd.Slot, d);
                 var m = new S377.B[W8.Length];

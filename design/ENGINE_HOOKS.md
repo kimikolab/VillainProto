@@ -1689,3 +1689,11 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - 保持者がいない戦は `_markWeightLive401` ／ `_stageMulLive401` の真偽1つで抜ける。乱数を引かない。
 - **H2 は札を足していない**: 規定の再行動（`ReapTurn388` の終わりの「この振りで撃破が増えたか」）は第388期から、ふつうの斬撃 ／ 薙ぎ ／ 刈り取りを問わず自分の手番の一撃で倒せば立っていた。
 - 計数のみ: `_hagiKind401` ／ `_hagiKindActor401`（いま振っている一撃の種類・`ReapTurn388` ／ `PursuitStrike388` が退避して戻す）→ `NoteHagiDmg401`（`ApplyDamageBody` ／ `ReapBody388` の与ダメの行から `R401DmgStrike` ／ `Sweep` ／ `Pursuit` ／ `Reap` ／ `Chase`・`R401HitMax`）・`NoteHagiKill401`（`HandleDeath` の `Kills++` の行・`R401FirstKill*`）・`R401EncoreReap` ／ `R401EncoreStrike`・`R401MarkAdd` ／ `MulAdd`（名目の足し分）。
+
+## 第402期 —— ハギの H123 を規定に ／ ボスで魂を溜める（ハギの版 A ／ D ／ AD ／ B）
+
+- **段0**: 規定のハギが `HagiMarkWeight` ／ `HagiStageMul` を持つようになった——第401期の口（`PerformAttackBody` の `MarkWeight401` ／ `StageMul401`）が**規定の戦で走る**。窓口は足していない。
+- **大物の魂（`HagiBigSoul`・A）**: `HagiDepthTrait.Gain` に `bigExtra` の引数（既定 0）。足す量は `HagiDepthTrait.BigExtra`（その敵の最大 HP ≥ 1,000 なら増え × 2 を上乗せ）で、呼ぶのは `HagiDepthTrait.OnAnyDeath`（敵の死）と engine の `DepthCross389`（線を割る）の2か所。ボスの名前 ／ 種類では分岐しない。
+- **印が魂に（`HagiMarkSoul`・D）**: engine の `ReapMark389` の終わり——印を足して上限に届いたら 1 に戻して `Gain(…, MarkSoul, SrcMark)`（A の上乗せは付けない）。
+- **味方の死でも魂（`HagiAllySoul`・B）**: `HagiDepthTrait.OnAnyDeath` の同じ陣営の枝（ハギ自身は除く）。
+- 札が無ければ `HasTrait` の比較1つで抜ける（新しい真偽の札は足していない）。乱数を引かない。計数のみ `R402SoulBig` ／ `R402SoulMark` ／ `R402SoulAlly` ／ `R402MarkSouls` ／ `R402MarkSoulLostAdd`。

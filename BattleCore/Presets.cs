@@ -1038,11 +1038,18 @@ public static class Presets
         // 第400期: L1 をトモの規定にし、X1 は採らないので「版・目覚め ドルガ」を外した（過去の器具は `Common.VersionsH399`）。
         // 第401期: 自分で削って自分で刈るハギ（版 H123 ＝ 印が重い ＋ 段で倍率）を試遊で触る台。`sh401 search H123`（ハギ ＋ 4 枚の席の探索）の上位はどれも 4 波 100% で、
         //   そのうちハギの与ダメがどの波でも隊の過半（56〜78%）なのが 2 位（スィド ／ ボルグ ／ ベニ ／ ハギ ／ トウ・ボスの倒しT 規定 6.4 → 5.7）なので、その台にした。採否はポン。
-        ("版・死神 キャリー", HagiCarry401()),
+        // 第402期: H123 をハギの規定にしたので「版・死神 キャリー」を「試遊・ハギ キャリー」に改めた（置くのは規定のハギ・第401期の名前と版の H123 は `Common.VersionsH401` が戻す）。
+        ("試遊・ハギ キャリー", HagiCarry401()),
+        // 第402期: ボスで魂を溜める版（A 大物の魂 ／ D 印が魂に ／ AD ／ B 味方の死）のうち、キャリー ／ 止め役の台でボスにいちばん勝ったのは
+        //   「版・移動 ハギ」のハギを A に（ボス 37 → 59%・AD も同じ値なので札の少ない A）。採否はポン。
+        ("版・大物 ハギ", HagiBig402()),
     };
 
-    /// <summary>第401期: 「版・死神 キャリー」の並び（`sh401 search H123` の 2 位: 前1 スィド ／ 前3 ボルグ ／ 中央 ベニ ／ 後1 ハギ ／ 後3 トウ）。既定はハギの版 H123。</summary>
-    public static Formation HagiCarry401(UnitDef? hagi = null) => Formation.Build(front1: UnitCatalog.Sid, front3: UnitCatalog.Borg, center: UnitCatalog.Beni, back1: hagi ?? UnitCatalog.HagiCarryH123, back3: UnitCatalog.Tou);
+    /// <summary>第402期: 「版・大物 ハギ」の並び（「版・移動 ハギ」と同じ: 前1 セロ ／ 前3 ハギ ／ 中央 シオ ／ 後1 ヨミ ／ 後3 バサ）。既定はハギの版 A。</summary>
+    public static Formation HagiBig402(UnitDef? hagi = null) => HagiMove390(hagi ?? UnitCatalog.HagiSoulA);
+
+    /// <summary>第401期: 「版・死神 キャリー」の並び（`sh401 search H123` の 2 位: 前1 スィド ／ 前3 ボルグ ／ 中央 ベニ ／ 後1 ハギ ／ 後3 トウ）。第402期から「試遊・ハギ キャリー」・既定は規定のハギ（第401期は版の H123）。</summary>
+    public static Formation HagiCarry401(UnitDef? hagi = null) => Formation.Build(front1: UnitCatalog.Sid, front3: UnitCatalog.Borg, center: UnitCatalog.Beni, back1: hagi ?? UnitCatalog.Hagi, back3: UnitCatalog.Tou);
 
     /// <summary>第397期: 「版・必殺 ドルガ」の並び（第396期の芯 4 枚 ＋ 1枠の探索の1位: 前1 ガン ／ 前3 トモ ／ 中央 ドルガ ／ 後1 セッキ ／ 後3 シオ）。既定は規定のドルガ ／ セッキ。第398期から「試遊・手番 芯4枚」・「版・耐える セッキ」はセッキを K1 に（第399期に「版・耐える セッキ」を外した）。第399期の「版・目覚め ドルガ」はトモを L1・ドルガを X1 に。</summary>
     public static Formation FourCore397(UnitDef? dolga = null, UnitDef? sekki = null, UnitDef? tomo = null) => Formation.Build(front1: UnitCatalog.Gan, front3: tomo ?? UnitCatalog.Tomo, center: dolga ?? UnitCatalog.Dolga, back1: sekki ?? UnitCatalog.Sekki, back3: UnitCatalog.Shio);

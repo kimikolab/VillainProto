@@ -65,7 +65,7 @@ static partial class Sh401Diag
     // ---------------------------------------------------------------------------------
     internal static readonly (string Name, UnitDef D)[] Vers =
     {
-        ("規定", UnitCatalog.Hagi), ("H1", UnitCatalog.HagiCarryH1), ("H2", UnitCatalog.HagiCarryH2), ("H3", UnitCatalog.HagiCarryH3),
+        ("規定", UnitCatalog.HagiH401), ("H1", UnitCatalog.HagiCarryH1), ("H2", UnitCatalog.HagiCarryH2), ("H3", UnitCatalog.HagiCarryH3),
         ("H123", UnitCatalog.HagiCarryH123), ("H123L", UnitCatalog.HagiCarryH123L),
     };
     /// <summary>重い測定の版（H2 は規定と同じ札なので外す）。</summary>
@@ -94,16 +94,16 @@ static partial class Sh401Diag
     /// </summary>
     internal static S388.Board[] CarryBoards() => new[]
     {
-        new S388.Board("キャリー・灯と号令", Formation.Build(front1: UnitCatalog.Sora, front3: UnitCatalog.Ban, center: UnitCatalog.Gan, back1: UnitCatalog.Hagi, back3: UnitCatalog.Tomo), 3, "ハギ"),
-        new S388.Board("キャリー・移り木", Formation.Build(front1: UnitCatalog.Hagi, front3: UnitCatalog.Gald, center: UnitCatalog.Shio, back1: UnitCatalog.Hisa, back3: UnitCatalog.Gan), 0, "ハギ"),
-        new S388.Board("キャリー・哀歌", Formation.Build(front1: UnitCatalog.Sora, front3: UnitCatalog.Gald, center: UnitCatalog.Ere, back1: UnitCatalog.Hagi, back3: UnitCatalog.Hisa), 3, "ハギ"),
+        new S388.Board("キャリー・灯と号令", Formation.Build(front1: UnitCatalog.Sora, front3: UnitCatalog.Ban, center: UnitCatalog.Gan, back1: UnitCatalog.HagiH401, back3: UnitCatalog.Tomo), 3, "ハギ"),
+        new S388.Board("キャリー・移り木", Formation.Build(front1: UnitCatalog.HagiH401, front3: UnitCatalog.Gald, center: UnitCatalog.Shio, back1: UnitCatalog.Hisa, back3: UnitCatalog.Gan), 0, "ハギ"),
+        new S388.Board("キャリー・哀歌", Formation.Build(front1: UnitCatalog.Sora, front3: UnitCatalog.Gald, center: UnitCatalog.Ere, back1: UnitCatalog.HagiH401, back3: UnitCatalog.Hisa), 3, "ハギ"),
     };
 
     // ---- §5 試遊の台（「版・死神 キャリー」・§3-2 の 1〜2 でいちばん良かった版と台）----
     internal const string PlayName = "版・死神 キャリー";
     internal static UnitDef PlayVersion => UnitCatalog.HagiCarryH123;
     internal const string PlayVersionName = "H123";
-    internal static Formation PlayBoard() => Presets.HagiCarry401();
+    internal static Formation PlayBoard() => Presets.HagiCarry401(UnitCatalog.HagiCarryH123);   // 第402期: 既定が規定のハギになったので版を明示
 
     static bool Has(Formation f, string id) => f.Occupied().Any(o => o.Def.Id == id);
     static Formation Put(Formation f, int slot, UnitDef d) { var g = f.Clone(); g[slot] = d; return g; }
@@ -131,16 +131,16 @@ static partial class Sh401Diag
     // ---------------------------------------------------------------------------------
     // 1戦の計数（`Sh377Diag.One` の `extra`）
     // ---------------------------------------------------------------------------------
-    static void Add(S377.B b, string k, long v) { if (v != 0) b.X[k] = b.X.GetValueOrDefault(k) + v; }
-    static long X(S377.B b, string k) => b.X.GetValueOrDefault(k);
+    internal static void Add(S377.B b, string k, long v) { if (v != 0) b.X[k] = b.X.GetValueOrDefault(k) + v; }
+    internal static long X(S377.B b, string k) => b.X.GetValueOrDefault(k);
     /// <summary>最大の値（`B.X` は足し合わせるので、最大は別に持つ）。鍵は「測った場所の名前 ＋ 量の名前」。</summary>
     static readonly ConcurrentDictionary<string, long> Max = new();
     static void NoteMax(string k, long v) => Max.AddOrUpdate(k, v, (_, o) => Math.Max(o, v));
-    static long Mx(string k) => Max.GetValueOrDefault(k);
+    internal static long Mx(string k) => Max.GetValueOrDefault(k);
     internal static readonly string[] KindNames = { "種類の外", "斬撃", "薙ぎ", "追撃", "手番の刈り取り", "追撃の刈り取り" };
 
     /// <summary>ハギの帳簿（与ダメの内訳 ／ 足し分 ／ 再行動 ／ 最初の撃破 ／ 魂）／ 隊の与ダメ ／ 勇者（止め ／ ハギが1ターンに勇者へ与えた量）／ トモの灯。</summary>
-    static Action<BattleResult, List<UnitState>, List<UnitState>, S377.B> Extra(bool boss, string label) => (r, p, e, b) =>
+    internal static Action<BattleResult, List<UnitState>, List<UnitState>, S377.B> Extra(bool boss, string label) => (r, p, e, b) =>
     {
         var form = p.ToDictionary(u => u.InstanceId);
         var foe = e.ToDictionary(u => u.InstanceId);
@@ -253,14 +253,14 @@ static partial class Sh401Diag
         Console.WriteLine();
         Console.WriteLine("## 1. トモの灯はハギに付くか");
         Console.WriteLine();
-        bool atk = TaillightTrait.AttacksInOwnTurn(UnitCatalog.Hagi);
-        var never = UnitCatalog.Hagi.Traits.Where(t => TraitCatalog.Get(t).NeverAttacksOwnTurn).ToList();
-        Console.WriteLine($"- 規定のハギの札: {string.Join("・", UnitCatalog.Hagi.Traits)}。`NeverAttacksOwnTurn` の札: {(never.Count == 0 ? "無し" : string.Join("・", never))}。旧の追い打ち `Pursuer` は {(UnitCatalog.Hagi.Traits.Contains(TraitId.Pursuer) ? "**残っている**" : "残っていない")}。");
+        bool atk = TaillightTrait.AttacksInOwnTurn(UnitCatalog.HagiH401);
+        var never = UnitCatalog.HagiH401.Traits.Where(t => TraitCatalog.Get(t).NeverAttacksOwnTurn).ToList();
+        Console.WriteLine($"- 規定のハギの札: {string.Join("・", UnitCatalog.HagiH401.Traits)}。`NeverAttacksOwnTurn` の札: {(never.Count == 0 ? "無し" : string.Join("・", never))}。旧の追い打ち `Pursuer` は {(UnitCatalog.HagiH401.Traits.Contains(TraitId.Pursuer) ? "**残っている**" : "残っていない")}。");
         Console.WriteLine($"- `TaillightTrait.AttacksInOwnTurn(規定のハギ)` ＝ {atk}（偽なら W1 で飛ばされる）。旧（第389期までの `HagiH389`・追い打ち）＝ {TaillightTrait.AttacksInOwnTurn(UnitCatalog.HagiH389)}。");
         Console.WriteLine();
         Console.WriteLine("| 台 | 物差し | 灯がハギに（1戦）| 灯がほかの味方に | 譲られた手番（ハギ）| ハギに積まれた力（1戦）|");
         Console.WriteLine("|---|---|--:|--:|--:|--:|");
-        var lampBoards = CarryBoards().Take(1).Select(b => (b.Name, b.F)).Concat(Presets.Versions.Concat(Presets.Playtest).Where(r => Has(r.F, "tomo") && Has(r.F, "hagi")).Select(r => (r.Name, r.F))).DistinctBy(x => x.Name).ToList();
+        var lampBoards = CarryBoards().Take(1).Select(b => (b.Name, b.F)).Concat(VersionsH401().Concat(Presets.Playtest.Select(r => (r.Name, F: Pin401(r.F)))).Where(r => Has(r.F, "tomo") && Has(r.F, "hagi")).Select(r => (r.Name, r.F))).DistinctBy(x => x.Name).ToList();
         foreach (var (name, f) in lampBoards)
             foreach (int w in new[] { WBoss, WGuard, WBat })
             {
@@ -276,14 +276,14 @@ static partial class Sh401Diag
         foreach (var b in boards)
             foreach (int w in new[] { WBoss, WGuard, WBat })
             {
-                var x = S377.Measure(ColBoard(b, UnitCatalog.Hagi), W8[w].Ws, Seeds, Extra(w == WBoss, "p0dmg"));
+                var x = S377.Measure(ColBoard(b, UnitCatalog.HagiH401), W8[w].Ws, Seeds, Extra(w == WBoss, "p0dmg"));
                 Console.WriteLine($"| {b.Name} | {W8[w].Name} | {F1(x.Win)} | {Per(X(x, "dAll"), x.N)} | {DmgCells(x)} | {Pc(X(x, "hagiEv"), X(x, "teamDmg"))}% | {Per(X(x, "encR"), x.N)} ／ {Per(X(x, "encS"), x.N)} |");
             }
         Console.WriteLine();
         Console.WriteLine($"所要 {sw.Elapsed.TotalSeconds:F0} 秒。");
     }
 
-    static string DmgCells(S377.B x)
+    internal static string DmgCells(S377.B x)
     {
         long all = X(x, "dAll"), parts = X(x, "dS") + X(x, "dW") + X(x, "dP") + X(x, "dR") + X(x, "dC");
         string C(long v) => $"{Per(v, x.N)}（{Pc(v, all)}%）";
@@ -551,7 +551,7 @@ static partial class Sh401Diag
             Console.WriteLine("| # | 残りの枠 | 並び（前1 ／ 前3 ／ 中央 ／ 後1 ／ 後3）| 列 | " + string.Join(" | ", W8.Select(w => w.Name)) + " | 4 波 | ハギの与ダメの割合（ボス ／ 近衛 ／ 大隊 ／ 第5波 ／ 強）| ボスの倒しT |");
             Console.WriteLine("|--:|---|---|---|" + string.Concat(W8.Select(_ => "---|")) + "--:|---|--:|");
             var top5 = res.Take(5).ToList();
-            var cmpCols = new (string Name, UnitDef? D)[] { (v.Name, v.D), ("規定", UnitCatalog.Hagi), ("素体", S388.PlainHagi) };
+            var cmpCols = new (string Name, UnitDef? D)[] { (v.Name, v.D), ("規定", UnitCatalog.HagiH401), ("素体", S388.PlainHagi) };
             var grid = new S377.B[top5.Count, cmpCols.Length][];
             var labels = new string[top5.Count * cmpCols.Length];
             for (int i = 0; i < top5.Count; i++)
@@ -657,7 +657,7 @@ static partial class Sh401Diag
     static void Cmp()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = CompareBuilds().Where(r => Has(r.F, "hagi")).ToArray();
+        var rows = CompareBuilds().Where(r => Has(r.F, "hagi")).Select(r => (r.Name, F: Pin401(r.F))).ToArray();   // 第402期: ハギは旧に
         int nw = EnemyCatalog.Stages.Count;
         var grids = HeavyVers.Select(c => CGrid(rows.Select(r => (r.Name, I.Swap(r.F, "hagi", c.D))).ToArray(), CompareSeeds)).ToArray();
         Console.WriteLine($"# {Tag} §3-2 の 5 `compare` のハギの行 —— {rows.Length} 行 × 版（第1〜5波・seed 0..{CompareSeeds - 1}・ハギだけ替える・H2 は規定と同じ札なので外した）");
@@ -689,7 +689,7 @@ static partial class Sh401Diag
         string cn = args.Length > 4 ? args[4] : "H123";
         int wi = args.Length > 5 && int.TryParse(args[5], out int w0) ? Math.Clamp(w0, 0, W8.Length - 1) : 0, seed = args.Length > 6 && int.TryParse(args[6], out int s0) ? s0 : 0;
         var all = StopBoards().Concat(CarryBoards()).ToList();
-        foreach (var r in Presets.Versions.Where(r => r.Name.StartsWith("版・死神", StringComparison.Ordinal)))
+        foreach (var r in VersionsH401().Where(r => r.Name.StartsWith("版・死神", StringComparison.Ordinal)))
             all.Add(new S388.Board(r.Name, r.F, r.F.Occupied().First(o => o.Def.Id == "hagi").Slot, "ハギ"));
         var b = all.FirstOrDefault(x => x.Name.StartsWith(bn, StringComparison.Ordinal)) ?? all[0];
         var c = StopCols.FirstOrDefault(x => x.Name == cn) is { Name: not null } cc ? cc : StopCols[2];
