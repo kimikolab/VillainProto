@@ -1705,3 +1705,12 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
   - **`Trait.ModifyHitCount` は通さない**: ハギの手番は `SwingTurnBody` で `ReapTurn388` へ分かれて `SwingTurnHits`（あの窓口を問う唯一の場所）に届かず、窓口は的（主目標の隣）を受け取れない（太刀の数も同じ理由で窓口を通さない・`BattleEngine.cs` の太刀の段の注）。
 - **印を深く刻む（`HagiDeepMark`・T2）**: 印の上限は `HagiDepthTrait.MarkCapOf`（9 ／ 5）。読むのは `ReapMark389` の上限だけ。線の上乗せの上限（`MarkLineMax`）と D の刻み切り（5）は今どおり。
 - 保持者がいない戦は `_twinLive403` の真偽1つ ／ `HasTrait` の比較1つで抜ける。乱数を引かない。計数のみ `R403Twins` ／ `R403TwinReaps` ／ `R403TwinKills` ／ `R403TwinFoes`（そのときの敵の生きている数）／ `R403MarkMax` ／ `R403MarkMaxByTurn`。
+
+## 第404期 —— ハギの T1 を規定に ／ 斬った直後に刈る ＋ 線の上限を下げる（ハギの版 L45 ／ R50 ／ R45）
+
+- **段0**: 規定のハギが `HagiTwinIsolated` を持つようになった——第403期の口（`ReapTurn388` の最初の振りの `Isolated403` ／ `TwinSwing403`）が**規定の戦で走る**。窓口は足していない。
+- **線の上限（`HagiLineCap45` ／ `HagiLineCap50`）**: `ReapLineFor389` の最後に `HagiDepthTrait.LineCapOf`（450 ／ 500‰・札が無ければ上限なし）で合計を止める。線を読むのは今どおり `ReapLineFor389` の1か所（手番 ／ 追撃 ／ 列ごと ／ V1 の狙い ／ 当たった後）。
+- **斬った直後に刈る（`HagiReapAfterHit`・R50 ／ R45）**: ハギの一撃（`ReapTurn388` の斬撃 ／ 薙ぎ・`TwinSwing403` の 2 発目・`PursuitStrike388` のふつうの追撃）を `SwingCollect404` で包み、`ApplyDamageBody` の与ダメの行が当てた敵を控える（`_hitList404` ／ `_hitActor404`・打ち手が違えば積まない・入れ子は退避して戻す）。
+  - 一撃の後に `AfterHitReap404`: 当てた敵（巻き込みも・当たった順）のうち生きていて線以下の敵を、`_reapNext388` ＋ `ApplyDamage` で刈る（`ReapBody388`・守りを通さない）。手番の刈り取りで倒せば `ReapTurn388` の終わりの撃破の数えで再行動、追撃では再行動しない（今どおり）。
+  - 二度斬りは 1 発目の後に判定するので、1 発目で刈れば的が倒れて 2 発目は振らない。
+- 保持者がいない戦は `_afterLive404` の真偽1つ ／ `HasTrait` の比較1つで抜ける。乱数を引かない。計数のみ `R404AfterReaps` ／ `AfterReapKills` ／ `AfterReapHp` ／ `AfterReapsChase` ／ `AfterReapKillsChase` ／ `DmgAfter` ／ `DmgAfterChase`（一撃の種類 6 ／ 7）／ `R404TurnKills`（ハギの1手番に倒した数の分け）／ `TurnKillMax`。

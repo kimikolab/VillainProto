@@ -59,7 +59,7 @@ static partial class Sh403Diag
 
     internal static readonly (string Name, UnitDef D)[] Vers =
     {
-        ("規定", UnitCatalog.Hagi), ("T1", UnitCatalog.HagiSingleT1), ("T2", UnitCatalog.HagiSingleT2), ("T12", UnitCatalog.HagiSingleT12), ("T12A", UnitCatalog.HagiSingleT12A),
+        ("規定", UnitCatalog.HagiH403), ("T1", UnitCatalog.HagiSingleT1), ("T2", UnitCatalog.HagiSingleT2), ("T12", UnitCatalog.HagiSingleT12), ("T12A", UnitCatalog.HagiSingleT12A),
     };
     static readonly (string Name, I.W[] Ws)[] W8 = S377.VerWaves;
     static readonly int[] W4 = { 0, 1, 2, 5 };
@@ -87,7 +87,7 @@ static partial class Sh403Diag
     }
 
     /// <summary>第402期の計数 ＋ ハギ → 勇者のターンごとの量 ／ 勇者が 8 割を割った最初の T ／ ハギの1ターンの与ダメの最大 ／ 二度斬り ／ 印の最大。</summary>
-    static Action<BattleResult, List<UnitState>, List<UnitState>, S377.B> Extra(bool boss, string label)
+    internal static Action<BattleResult, List<UnitState>, List<UnitState>, S377.B> Extra(bool boss, string label)
     {
         var baseX = S402.Extra(boss, label);
         return (r, p, e, b) =>
@@ -135,7 +135,7 @@ static partial class Sh403Diag
     }
     static readonly System.Collections.Concurrent.ConcurrentDictionary<string, long> Max = new();
     static void S401Max(string k, long v) => Max.AddOrUpdate(k, v, (_, o) => Math.Max(o, v));
-    static long Mx(string k) => Max.GetValueOrDefault(k);
+    internal static long Mx(string k) => Max.GetValueOrDefault(k);
 
     static S377.B[] M8(Formation f, string label)
     {
@@ -160,7 +160,7 @@ static partial class Sh403Diag
         var sw = System.Diagnostics.Stopwatch.StartNew();
         Console.WriteLine($"# {Tag} §2 段0 —— ハギの B（味方の死でも魂）を規定に（旧は `UnitCatalog.HagiH402`・H123）");
         Console.WriteLine();
-        var rows = CompareBuilds();
+        var rows = CompareBuilds().Select(r => (r.Name, F: Pin403(r.F))).ToArray();   // 第404期: ハギは第403期の規定に
         var now = CGrid(rows, CompareSeeds);
         var old = CGrid(rows.Select(r => (r.Name, F: Pin402(r.F))).ToArray(), CompareSeeds);
         var bcol = CGrid(rows.Select(r => (r.Name, F: I.Swap(Pin402(r.F), "hagi", UnitCatalog.HagiSoulB))).ToArray(), CompareSeeds);
@@ -184,7 +184,7 @@ static partial class Sh403Diag
         Console.WriteLine("| 台 | 列 | ボス | 近衛 | 大隊 | 本編 第5波 | 強 第2〜5波 |");
         Console.WriteLine("|---|---|---|---|---|---|---|");
         foreach (var b in StopBoards())
-            foreach (var (cn, d) in new[] { ("規定（第403期）", UnitCatalog.Hagi), ("第402期（旧）", UnitCatalog.HagiH402) })
+            foreach (var (cn, d) in new[] { ("規定（第403期）", UnitCatalog.HagiH403), ("第402期（旧）", UnitCatalog.HagiH402) })
             {
                 var m = M5(ColBoard(b, d), $"zero:{b.Name}:{cn}");
                 Console.WriteLine($"| {(cn.StartsWith("規定") ? b.Name : "")} | {cn} | {string.Join(" | ", new[] { WBoss, WGuard, WBat, 5, WStrong }.Select(w => m[w].Cell))} |");
@@ -205,7 +205,7 @@ static partial class Sh403Diag
         {
             Console.WriteLine($"## {title}");
             Console.WriteLine();
-            Console.WriteLine("台: " + string.Join("・", boards.Select(b => $"{b.Name}（{S307.Seats(ColBoard(b, UnitCatalog.Hagi))}）")) + "。");
+            Console.WriteLine("台: " + string.Join("・", boards.Select(b => $"{b.Name}（{S307.Seats(ColBoard(b, UnitCatalog.HagiH403))}）")) + "。");
             Console.WriteLine();
             var g = new S377.B[boards.Length, Vers.Length][];
             for (int bi = 0; bi < boards.Length; bi++) for (int vi = 0; vi < Vers.Length; vi++) g[bi, vi] = M8(ColBoard(boards[bi], Vers[vi].D), $"{boards[bi].Name}|{Vers[vi].Name}");
@@ -337,7 +337,7 @@ static partial class Sh403Diag
     static void Cmp()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = CompareBuilds().Where(r => Has(r.F, "hagi")).ToArray();
+        var rows = CompareBuilds().Where(r => Has(r.F, "hagi")).Select(r => (r.Name, F: Pin403(r.F))).ToArray();   // 第404期
         int nw = EnemyCatalog.Stages.Count;
         var grids = Vers.Select(c => CGrid(rows.Select(r => (r.Name, I.Swap(r.F, "hagi", c.D))).ToArray(), CompareSeeds)).ToArray();
         Console.WriteLine($"# {Tag} §4-1 の 3 `compare` のハギの行 —— {rows.Length} 行 × 版（第1〜5波・seed 0..{CompareSeeds - 1}・ハギだけ替える）");

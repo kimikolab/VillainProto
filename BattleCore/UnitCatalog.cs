@@ -2987,20 +2987,21 @@ public static class UnitCatalog
     /// <summary>ハギの版 B（第402期・味方の死でも魂）: 規定 ＋ 味方（召喚を含む・ハギ自身は除く）が倒れるたび魂 +1。第403期の規定（<see cref="Hagi"/>）と同じ札と文面（別の定義）。</summary>
     public static readonly UnitDef HagiSoulB = HagiOn402(new[] { TraitId.HagiAllySoul }, HagiBText402);
     /// <summary>
-    /// 追い打ちのハギ（第403期の規定 ＝ 第402期の B）: 第402期の規定（<see cref="HagiH402"/>・H123）＋ 味方の死でも魂。札と文面は <see cref="HagiSoulB"/> と同じ（別の定義）。名前と二つ名は据え置き。
+    /// 追い打ちのハギ（第403期の規定 ＝ 第402期の B）: 第402期の規定（<see cref="HagiH402"/>・H123）＋ 味方の死でも魂。札と文面は <see cref="HagiSoulB"/> と同じ（別の定義）。
+    /// <b>第404期に規定を第403期の T1（<see cref="Hagi"/>）へ替えた</b>ので明示の定義として残す。過去の器具は `Common.PinH403` ／ `Pin403` で固定する。第403期の版の駒はこれから作ったまま。
     /// </summary>
-    public static readonly UnitDef Hagi = HagiOn402(new[] { TraitId.HagiAllySoul }, HagiBText402);
+    public static readonly UnitDef HagiH403 = HagiOn402(new[] { TraitId.HagiAllySoul }, HagiBText402);
 
     // ---- 第403期: 単体の敵を削る（ハギの版 T1 ／ T2 ／ T12 ／ T12A・指示書 design/PHASE403_HAGI_SINGLE_SPEC.md §3・`All` に入れない）----
-    // 土台は第403期の規定のハギ（<see cref="Hagi"/>・H123 ＋ B）。版の札は固定の巻き込みの前に足す。T2 は H1 の句（印が重い）の括弧に「印は 9 つまで刻む」を足す。
+    // 土台は第403期の規定のハギ（<see cref="HagiH403"/>・H123 ＋ B）。版の札は固定の巻き込みの前に足す。T2 は H1 の句（印が重い）の括弧に「印は 9 つまで刻む」を足す。
     const string HagiT1Text403 = "。孤立した敵には、鎌を二度振るう（主目標の隣に敵がいなければ、手番の一振りが 2 回）";
     static UnitDef HagiOn403(TraitId[] plus, string text, bool deep = false)
     {
-        string pt = Hagi.PlusText;
+        string pt = HagiH403.PlusText;
         if (deep) pt = pt.Replace("（印1つにつき、その敵の最大 HP の 3% を一撃に足す）", "（印1つにつき、その敵の最大 HP の 3% を一撃に足す・印は 9 つまで刻む）");
-        return HagiOn388(Hagi.Traits.SkipLast(1).Concat(plus).Append(TraitId.HagiSpillFixed).ToArray(), pt + text, Hagi.MinusText);
+        return HagiOn388(HagiH403.Traits.SkipLast(1).Concat(plus).Append(TraitId.HagiSpillFixed).ToArray(), pt + text, HagiH403.MinusText);
     }
-    /// <summary>ハギの版 T1（第403期・孤立した敵は二度斬る）: 規定 ＋ 手番の最初の一振り（斬撃 ／ 薙ぎ）の主目標の隣に生きている敵がいなければ 2 回振る（2 発目の前に刈り取りの判定）。</summary>
+    /// <summary>ハギの版 T1（第403期・孤立した敵は二度斬る）: 規定 ＋ 手番の最初の一振り（斬撃 ／ 薙ぎ）の主目標の隣に生きている敵がいなければ 2 回振る（2 発目の前に刈り取りの判定）。第404期の規定（<see cref="Hagi"/>）と同じ札と文面（別の定義）。</summary>
     public static readonly UnitDef HagiSingleT1 = HagiOn403(new[] { TraitId.HagiTwinIsolated }, HagiT1Text403);
     /// <summary>ハギの版 T2（第403期・印を深く刻む）: 規定 ＋ 刈りの印の上限 5 → 9（線の上乗せの上限 6 割は今どおり）。</summary>
     public static readonly UnitDef HagiSingleT2 = HagiOn403(new[] { TraitId.HagiDeepMark }, "", deep: true);
@@ -3010,6 +3011,27 @@ public static class UnitCatalog
     public static readonly UnitDef HagiSingleT12A = HagiOn403(new[] { TraitId.HagiTwinIsolated, TraitId.HagiDeepMark, TraitId.HagiBigSoul }, HagiT1Text403 + HagiAText402, deep: true);
     /// <summary>第403期: 「版・大物 ハギ」に置く A の版（第403期の規定 ＋ A）。第402期の台は旧の A（<see cref="HagiSoulA"/>）。</summary>
     public static readonly UnitDef HagiBigA403 = HagiOn403(new[] { TraitId.HagiBigSoul }, HagiAText402);
+    /// <summary>
+    /// 追い打ちのハギ（第404期の規定 ＝ 第403期の T1）: 第403期の規定（<see cref="HagiH403"/>・H123 ＋ B）＋ 孤立した敵は二度斬る。札と文面は <see cref="HagiSingleT1"/> と同じ（別の定義）。名前と二つ名は据え置き。
+    /// </summary>
+    public static readonly UnitDef Hagi = HagiOn403(new[] { TraitId.HagiTwinIsolated }, HagiT1Text403);
+
+    // ---- 第404期: 斬った直後に刈る ＋ 線の上限を下げる（ハギの版 L45 ／ R50 ／ R45・指示書 design/PHASE404_HAGI_AFTER_REAP_SPEC.md §3・`All` に入れない）----
+    // 土台は第404期の規定のハギ（<see cref="Hagi"/>・H123 ＋ B ＋ T1）。版の札は固定の巻き込みの前に足す。文面は線の数字を替え、R は頭の句を替える。
+    static UnitDef HagiOn404(TraitId[] plus, string cap, bool after, string extra = "")
+    {
+        string pt = Hagi.PlusText.Replace("（2 割 → 最大 5 割）", $"（2 割 → 最大 {cap}）").Replace("（印1つ +5%・合わせて最大 6 割）", $"（印1つ +5%・合わせて最大 {cap}）");
+        if (after) pt = pt.Replace("大鎌で、弱った敵を刈り取る（HP が線を切った敵は一振りで倒す）", "大鎌で斬り、線を切った敵はその一振りで刈り取る（振る前に線を切っていれば、一振りで倒す）");
+        return HagiOn388(Hagi.Traits.SkipLast(1).Concat(plus).Append(TraitId.HagiSpillFixed).ToArray(), pt + extra, Hagi.MinusText);
+    }
+    /// <summary>ハギの版 L45（第404期・基準）: 規定 ＋ 線の上限 45%（魂の段の線 ＋ 印の合計を 45% で止める）。刈り取りは振る前だけ。</summary>
+    public static readonly UnitDef HagiReapL45 = HagiOn404(new[] { TraitId.HagiLineCap45 }, "45%", after: false);
+    /// <summary>ハギの版 R50（第404期・斬った直後に刈る）: 規定 ＋ 線の上限 5 割 ＋ 斬撃 ／ 薙ぎ ／ 追撃が当たった後に線以下ならその一振りのうちに刈る。</summary>
+    public static readonly UnitDef HagiReapR50 = HagiOn404(new[] { TraitId.HagiLineCap50, TraitId.HagiReapAfterHit }, "5 割", after: true);
+    /// <summary>ハギの版 R45（第404期）: R50 の線の上限を 45% に。</summary>
+    public static readonly UnitDef HagiReapR45 = HagiOn404(new[] { TraitId.HagiLineCap45, TraitId.HagiReapAfterHit }, "45%", after: true);
+    /// <summary>第404期: 「版・大物 ハギ」に置く A の版（第404期の規定 ＋ A）。第403期の台は `HagiBigA403`。</summary>
+    public static readonly UnitDef HagiBigA404 = HagiOn388(Hagi.Traits.SkipLast(1).Append(TraitId.HagiBigSoul).Append(TraitId.HagiSpillFixed).ToArray(), Hagi.PlusText + HagiAText402, Hagi.MinusText);
     /// <summary>ハギの版 VA（第390期）: V1 ＋ V2 ＋ V3。</summary>
     public static readonly UnitDef HagiVA = HagiOn390(new[] { TraitId.HagiAimLine, TraitId.HagiColumnEarly, TraitId.HagiLineEvery }, HagiV1Text + HagiV2Text + HagiV3Text);
 

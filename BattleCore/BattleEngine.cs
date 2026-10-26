@@ -9741,6 +9741,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.HagiMarkWeight)) _markWeightLive401 = true;   // 第401期（H1 〜 印が重い）
         if (u.HasTrait(TraitId.HagiStageMul)) _stageMulLive401 = true;       // 第401期（H3 〜 段で倍率）
         if (u.HasTrait(TraitId.HagiTwinIsolated)) _twinLive403 = true;       // 第403期（T1 〜 孤立した敵は二度斬る）
+        if (u.HasTrait(TraitId.HagiReapAfterHit)) _afterLive404 = true;      // 第404期（R50 ／ R45 斬った直後に刈る）
         if (u.HasTrait(TraitId.DolgaWall) && !_dolgaWalls.Contains(u)) _dolgaWalls.Add(u);   // 第394期（休む巨兵は壁）
         if (u.HasTrait(TraitId.SlimeWrap) && !_slimeWraps.Contains(u)) _slimeWraps.Add(u);   // 第396期（包むセッキ）
         if (u.HasTrait(TraitId.SlimeHaven)) _slimeHavenLive = true;                           // 第397期（R 避難所・包まれた味方は次の手番を失う）
@@ -14852,6 +14853,7 @@ public sealed class BattleContext
             {
                 st.DamageToEnemy += amount;
                 if (_hagiKindActor401 == source) NoteHagiDmg401(st, amount);   // 第401期・計数のみ（ハギの一撃の種類ごと）
+                if (_hitList404 is not null && source == _hitActor404 && !_hitList404.Contains(target)) _hitList404.Add(target);   // 第404期（R50 ／ R45）: 一撃が当てた敵を控える（判定は一撃の後）
                 // 第117期。**ターンごとの与ダメ**（前半3T / 後半3T は戦ごとに切り出すので、
                 // 集計の側では復元できない）。既定では `BossCensus` が偽で1本も確保しない。
                 if (BossCensus)
@@ -18463,9 +18465,60 @@ public sealed class BattleContext
 
     /// <summary>その敵に対する刈り取りの線（‰）。刈りの印の札があれば、印1つにつき +5%（合わせて最大 6 割）。</summary>
     int ReapLineFor389(UnitState h, UnitState e, int line)
-        => _markLive389 && h.HasTrait(TraitId.HagiReapMark)
+        => Math.Min(HagiDepthTrait.LineCapOf(h),   // 第404期（L45 ／ R50 ／ R45）: 合計の上限（札が無ければ上限なし）
+            _markLive389 && h.HasTrait(TraitId.HagiReapMark)
             ? Math.Min(HagiDepthTrait.MarkLineMax(h), line + HagiDepthTrait.MarkStepPermil * e.RawCounter(HagiDepthTrait.MarkKey))   // 第401期: H123L（`HagiLineLow`）は上限 5 割
-            : line;
+            : line);
+
+    // ---- 第404期: 斬った直後に刈る（ハギの版 R50 ／ R45）。指示書 design/PHASE404_HAGI_AFTER_REAP_SPEC.md §3。 ----
+    /// <summary>R50 ／ R45（`HagiReapAfterHit`）の保持者がいる戦。いなければ一撃の前後は真偽1つで抜ける。</summary>
+    bool _afterLive404;
+    /// <summary>いま振っている一撃が当てた敵（`ApplyDamageBody` の与ダメの行が積む・打ち手が違えば積まない）。呼び出し側が退避して戻す。盤面からは読まない（刈り取りの判定は一撃の後に呼び出し側がする）。</summary>
+    List<UnitState>? _hitList404;
+    UnitState? _hitActor404;
+
+    /// <summary>R50 ／ R45: 一撃（`PerformAttack` 1回）を振り、当てた敵の一覧を返す。札が無ければ一覧は null（振るだけ）。</summary>
+    List<UnitState>? SwingCollect404(UnitState h, Action swing)
+    {
+        if (!(_afterLive404 && h.HasTrait(TraitId.HagiReapAfterHit))) { swing(); return null; }
+        var prevList = _hitList404; var prevActor = _hitActor404;
+        var hits = new List<UnitState>();
+        _hitList404 = hits; _hitActor404 = h;
+        try { swing(); }
+        finally { _hitList404 = prevList; _hitActor404 = prevActor; }
+        return hits;
+    }
+
+    /// <summary>
+    /// R50 ／ R45: 一撃の後、当てた敵（巻き込みも・当たった順）のうち、生きていて HP が線（魂の段 ＋ 刈りの印・上限つき）以下の敵を、その一振りのうちに刈り取る
+    /// （刈り取りの一撃と同じ——`ReapBody388` が守りを通さず残りの HP を引く）。<paramref name="pursuit"/> は追撃の一振り（再行動しないのは呼び出し側の数え方のまま）。乱数を引かない。
+    /// </summary>
+    void AfterHitReap404(UnitState h, List<UnitState>? hits, bool pursuit)
+    {
+        if (hits is null || hits.Count == 0 || !h.IsAlive) return;
+        UnitTally t = TallyOf(h);   // 計数のみ
+        int baseLine = HagiReaperTrait.ReapLinePermil(h);
+        int kind0 = _hagiKind401; UnitState? actor0 = _hagiKindActor401;
+        _hagiKindActor401 = h; _hagiKind401 = pursuit ? 7 : 6;
+        try
+        {
+            foreach (UnitState x in hits)
+            {
+                if (!x.IsAlive || !h.IsAlive || x.TeamId == h.TeamId) continue;
+                int line = ReapLineFor389(h, x, baseLine);
+                if ((long)x.Hp * 1000 > (long)x.MaxHp * line) continue;
+                int xh = x.Hp;
+                t.R404AfterReaps++; if (pursuit) t.R404AfterReapsChase++;
+                t.R389LastReapLine = line; t.R389LastReapHp = xh;
+                Log($"    {h.Name} の大鎌が、線を切った {x.Name} をその一振りで刈り取りにかかる（線 {line / 10.0:0.#}%）", LogKind.Trigger);
+                _reapNext388 = true;
+                try { ApplyDamage(x, xh, h, pattern: AttackPattern.Single); }
+                finally { _reapNext388 = false; }
+                if (!x.IsAlive) { t.R404AfterReapKills++; t.R404AfterReapHp += xh; if (pursuit) t.R404AfterReapKillsChase++; }
+            }
+        }
+        finally { _hagiKind401 = kind0; _hagiKindActor401 = actor0; }
+    }
 
     // ---- 第401期: 自分で削って自分で刈る（ハギの版 H1 ／ H3 ／ H123 ／ H123L）。指示書 design/PHASE401_HAGI_CARRY_SPEC.md §2。 ----
     // 一撃の量を足すのは `PerformAttackBody` の2か所（H3 は攻撃力を作った直後・H1 は主目標 ／ 巻き込みの量を決めた後）。**保持者がいなければ真偽1つで抜ける。乱数を引かない。**
@@ -18520,8 +18573,12 @@ public sealed class BattleContext
                 t.R388Strikes++;
                 _hagiKind401 = h.CurrentPattern == AttackPattern.Sweep ? 2 : 1;
                 _forcedTarget = aim;
-                try { PerformAttack(h); }
-                finally { _forcedTarget = null; _forcedLane = -1; }
+                var hits404 = SwingCollect404(h, () =>
+                {
+                    try { PerformAttack(h); }
+                    finally { _forcedTarget = null; _forcedLane = -1; }
+                });
+                AfterHitReap404(h, hits404, pursuit: false);   // 第404期（R50 ／ R45）
             }
         }
         finally { _hagiKind401 = kind0; _hagiKindActor401 = actor0; }
@@ -18563,6 +18620,8 @@ public sealed class BattleContext
             case 3: st.R401DmgPursuit += amount; break;
             case 4: st.R401DmgReap += amount; break;
             case 5: st.R401DmgChase += amount; break;
+            case 6: st.R404DmgAfter += amount; break;        // 第404期（当たった後の刈り取り・手番）
+            case 7: st.R404DmgAfterChase += amount; break;   // 第404期（当たった後の刈り取り・追撃）
         }
         if (amount > st.R401HitMax) st.R401HitMax = amount;
     }
@@ -18666,6 +18725,7 @@ public sealed class BattleContext
     {
         UnitTally t = TallyOf(h);
         int kind0 = _hagiKind401; UnitState? kindActor0 = _hagiKindActor401;   // 第401期・計数のみ（入れ子に備えて退避）
+        long turnKills0 = t.Kills - t.R388PursuitKills;   // 第404期・計数のみ（この手番に倒した数）
         try {
         bool prevReap = false;   // 第401期・計数のみ（再行動の前の振りが刈り取りだったか）
         for (int swing = 0; ; swing++)
@@ -18734,15 +18794,25 @@ public sealed class BattleContext
                 // 第403期（T1・`HagiTwinIsolated`）: 手番の最初の一振りの主目標の隣に生きている敵がいなければ、同じ的にもう一振り（振る前の盤面で決める）。**札が無ければ真偽1つで抜ける。**
                 bool twin = swing == 0 && _twinLive403 && h.HasTrait(TraitId.HagiTwinIsolated) && Isolated403(aim);
                 _forcedTarget = aim;
-                try { PerformAttack(h); }
-                finally { _forcedTarget = null; _forcedLane = -1; }
+                var hits404 = SwingCollect404(h, () =>
+                {
+                    try { PerformAttack(h); }
+                    finally { _forcedTarget = null; _forcedLane = -1; }
+                });
+                AfterHitReap404(h, hits404, pursuit: false);   // 第404期（R50 ／ R45）: 斬った直後に線以下なら刈る（札が無ければ何もしない）
                 if (twin && h.IsAlive && aim.IsAlive) TwinSwing403(h, aim, spill);
             }
             ScytheSpill388(h, spill);
             if (t.Kills - t.R388PursuitKills == kills0 || swing >= HagiReaperTrait.MaxEncores) return;
             if (colStop) { t.R390ColumnStops++; return; }   // 第390期（V2）
         }
-        } finally { _hagiKind401 = kind0; _hagiKindActor401 = kindActor0; }
+        } finally
+        {
+            _hagiKind401 = kind0; _hagiKindActor401 = kindActor0;
+            long tk = t.Kills - t.R388PursuitKills - turnKills0;   // 第404期・計数のみ
+            (t.R404TurnKills ??= new long[10])[(int)Math.Clamp(tk, 0, 9)]++;
+            if (tk > t.R404TurnKillMax) t.R404TurnKillMax = tk;
+        }
     }
 
     /// <summary>
@@ -18866,8 +18936,12 @@ public sealed class BattleContext
         int kind0 = _hagiKind401; UnitState? kindActor0 = _hagiKindActor401;   // 第401期・計数のみ（入れ子に備えて退避）
         _hagiKindActor401 = h; _hagiKind401 = reap ? 5 : 3;
         try {
-        try { PerformAttack(h, "    ", patternOverride: AttackPattern.Single); }
-        finally { _forcedTarget = null; _forcedLane = -1; _hagiHitActor388 = null; _hagiHitReap388 = false; }
+        var hits404 = SwingCollect404(h, () =>
+        {
+            try { PerformAttack(h, "    ", patternOverride: AttackPattern.Single); }
+            finally { _forcedTarget = null; _forcedLane = -1; _hagiHitActor388 = null; _hagiHitReap388 = false; }
+        });
+        if (!reap) AfterHitReap404(h, hits404, pursuit: true);   // 第404期（R50 ／ R45）: 追撃の一撃の後に線以下なら刈る（再行動はしない）
         if (col is { Count: > 0 } && h.IsAlive)
         {
             int nc = 0;

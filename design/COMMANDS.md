@@ -1507,6 +1507,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sh403 cmp                # 第403期 §4-1 の 3: ハギのいる `compare` の行 × 版（seed 0..199）＋ (G2)
     dotnet run --project BattleSim -c Release 0 sh403 log <台の頭> <列> <物差し 0..7> <seed>   # 第403期: 1戦のログ
     dotnet run --project BattleSim -c Release 0 sh403 check              # 第403期 自己検査（段0 の規定のハギ ／ 旧 ／ 固定の口 ／ B と同じ動き・T1 ／ T2 ／ T12A の規則・ボスで分岐していない・規定の `compare`・試遊の台 ／ `VersionsH402`・`checkup`・verbose・PickOne ／ Roll）
+    dotnet run --project BattleSim -c Release 0 sh404 zero               # 第404期 §2 段0: `compare` の動き（第403期の HEAD の表と ／ 第403期の T1 の列と）＋ 試遊の 5 台 × 規定 ／ 旧 × 5 物差し
+    dotnet run --project BattleSim -c Release 0 sh404 boards             # 第404期 §4-1: 試遊の 5 台 ／ キャリーの手組み 2 × 列（規定 ／ L45 ／ R50 ／ R45）× 8 物差し——1手番の撃破数 ／ 当たった後の刈り取り ／ ボス（倒しT ／ 刈った種類と線）／ 刈り取りの割合 ／ 誰が何Tに倒れたか ／ 壊れの兆し
+    dotnet run --project BattleSim -c Release 0 sh404 cmp                # 第404期 §4-1 の 4: ハギのいる `compare` の行 × 版（seed 0..199）＋ (G2)
+    dotnet run --project BattleSim -c Release 0 sh404 log <台の頭> <列> <物差し 0..7> <seed>   # 第404期: 1戦のログ
+    dotnet run --project BattleSim -c Release 0 sh404 check              # 第404期 自己検査（段0 の規定のハギ ／ 旧 ／ 固定の口 ／ T1 と同じ動き・L45 ／ R50 ／ R45 の規則・ボスで分岐していない・規定の `compare`・試遊の台 ／ `VersionsH403`・`checkup`・verbose・PickOne ／ Roll）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

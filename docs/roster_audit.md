@@ -28,7 +28,7 @@
 | 1 | 駆り立てのカリ | -8.50 | +1.94 | 残す | 2 | 0 | 35.0 | ノイズ | 上（単独で強い） |  | Goad |
 | 2 | 爆ぜるゾト | -1.45 | +13.04 | 残す | 8 | 0 | 44.0 | ノイズ | 上（単独で強い） |  | Bomber |
 | 3 | のろまの巨兵ドルガ | -1.02 | -11.99 | 別扱い | 24 | 0 | 29.0 | 化ける | 左下（送り先を選べば働く） |  | Sluggish / GradeStep / SluggishShift / DolgaWall / DolgaWallRetreat / DolgaFocus / DolgaHeavy |
-| 4 | 追い打ちのハギ | -0.45 | -33.36 | 転生 | 5 | 0 | 31.0 | 化ける | 左下（送り先を選べば働く） | −5.3pt | HagiReap / HagiHalfPursuit / HagiDepthSoul / HagiSoulMoves / HagiReapMark / HagiPursuitReap / HagiPursuitHeavy / HagiMarkWeight / HagiStageMul / HagiAllySoul / HagiSpillFixed |
+| 4 | 追い打ちのハギ | -0.45 | -33.36 | 転生 | 5 | 0 | 31.0 | 化ける | 左下（送り先を選べば働く） | −5.3pt | HagiReap / HagiHalfPursuit / HagiDepthSoul / HagiSoulMoves / HagiReapMark / HagiPursuitReap / HagiPursuitHeavy / HagiMarkWeight / HagiStageMul / HagiAllySoul / HagiTwinIsolated / HagiSpillFixed |
 | 5 | 哀歌のエレ | +0.00 | — | — | 2 | 0 | 28.0 | 化ける | — |  | DirgeSoundG1 / DirgeEchoAlways |
 | 6 | 尾灯のトモ | +0.00 | +17.75 | 残す | 1 | 0 | 19.0 | 化ける | 上（単独で強い） |  | Taillight / TaillightKeep / TaillightWake / TaillightCarry / TaillightIdleYield |
 | 7 | 泥人形ムド | +0.00 | +16.35 | 残す | 9 | 0 | 20.0 | 化ける | 上（単独で強い） |  | Erupt / Smear / Hex / MudoCurseRage / MudoCurseHeavy |
@@ -84,4 +84,4 @@
 - `checkup ideal` が値を返した駒: 51 / 52 （返さないのは `CompareBuilds()` に在席 0 枠の駒だけ）
 - `stage catalog` が引けた駒: 51 / 52
 
-所要 470.3 秒（うち `stage catalog` が 447.3 秒）。
+所要 475.1 秒（うち `stage catalog` が 452.3 秒）。

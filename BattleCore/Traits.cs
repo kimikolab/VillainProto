@@ -1043,6 +1043,9 @@ public enum TraitId
     HagiAllySoul,         // 味方の死でも魂（第402期・ハギの版 B）: 味方（召喚 ／ 胞子 ／ 亡者を含む・ハギ自身は除く）が倒れるたび魂 +1（`HagiDepthTrait.OnAnyDeath`・札そのものは印）
     HagiTwinIsolated,     // 孤立した敵は二度斬る（第403期・ハギの版 T1 ／ T12 ／ T12A）: 手番の最初の一振り（斬撃 ／ 薙ぎ）の主目標の隣（敵の陣営の隣接表）に生きている敵がいなければ、同じ的にもう一振り（2 発目の前に刈り取りの判定・再行動 ／ 追撃は 1 発のまま）（**判定は engine の `ReapTurn388`**・札そのものは印）
     HagiDeepMark,         // 印を深く刻む（第403期・ハギの版 T2 ／ T12 ／ T12A）: 刈りの印の上限 5 → 9（線の上乗せの上限 6 割は今どおり）（`HagiDepthTrait.MarkCapOf`・札そのものは印）
+    HagiLineCap45,        // 線の上限 45%（第404期・ハギの版 L45 ／ R45）: 刈り取りの線（魂の段の線 ＋ 刈りの印）の合計を 45% で止める（段 9 の 5 割も 45%）（`HagiDepthTrait.LineCapOf`・札そのものは印）
+    HagiLineCap50,        // 線の上限 5 割（第404期・ハギの版 R50）: 刈り取りの線の合計を 5 割で止める（`HagiDepthTrait.LineCapOf`・札そのものは印）
+    HagiReapAfterHit,     // 斬った直後に刈る（第404期・ハギの版 R50 ／ R45）: ハギの斬撃 ／ 薙ぎ ／ 追撃が当たった後、当たった敵（巻き込みも）が生きていて HP が線以下なら、その一振りのうちに刈り取る（守りを通さず残りの HP）。手番の刈り取りで倒せば再行動・追撃では再行動しない（**判定は engine の `AfterHitReap404`**・札そのものは印）
     HagiLineLow,          // 線を下げる（H123L）: 魂の深さの線を 2 ／ 3 ／ 4 ／ 5 割 → 1 ／ 2 ／ 3 ／ 4 割・刈りの印を足した線の上限を 6 割 → 5 割にする（**札そのものは挙動を持たない**・`HagiDepthTrait.LinePermil` ／ engine の `ReapLineFor389` が読む）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -10532,6 +10535,8 @@ public sealed class HagiDepthTrait : Trait
     public const int BigHp = 1000, BigMul = 3, MarkSoul = 3, AllySoul = 1;
     /// <summary>第402期（A・<see cref="TraitId.HagiBigSoul"/>）: その敵（倒れた ／ 線を割った）の最大 HP が <see cref="BigHp"/> 以上なら、魂の増え <paramref name="n"/> に足す分（3 倍 − 1 倍）。札が無ければ 0。ボスの名前 ／ 種類では分岐しない。</summary>
     public static int BigExtra(UnitState h, UnitState e, int n) => h.HasTrait(TraitId.HagiBigSoul) && e.MaxHp >= BigHp ? n * (BigMul - 1) : 0;
+    /// <summary>第404期（L45 ／ R50 ／ R45）: 刈り取りの線（魂の段 ＋ 印）の合計の上限（‰）。札が無ければ上限なし。</summary>
+    public static int LineCapOf(UnitState h) => h.HasTrait(TraitId.HagiLineCap45) ? 450 : h.HasTrait(TraitId.HagiLineCap50) ? 500 : int.MaxValue;
     /// <summary>第401期: その敵に対する刈りの印込みの線の上限（‰）。</summary>
     public static int MarkLineMax(UnitState h) => h.HasTrait(TraitId.HagiLineLow) ? MarkLineMaxLowPermil : MarkLineMaxPermil;
     /// <summary>魂 ／ 最後に魂が動いた（敵の死 ／ 線を割った）ターン（ハギの私有キー）。</summary>
@@ -20005,6 +20010,9 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.HagiAllySoul),                     // 第402期（味方の死でも魂 B・印・判定は HagiDepthTrait）
         new MarkOnlyTrait(TraitId.HagiTwinIsolated),                 // 第403期（孤立した敵は二度斬る T1 〜・印・判定は engine）
         new MarkOnlyTrait(TraitId.HagiDeepMark),                     // 第403期（印を深く刻む T2 〜・印・判定は HagiDepthTrait.MarkCapOf）
+        new MarkOnlyTrait(TraitId.HagiLineCap45),                    // 第404期（線の上限 45% L45 ／ R45・印・判定は HagiDepthTrait.LineCapOf）
+        new MarkOnlyTrait(TraitId.HagiLineCap50),                    // 第404期（線の上限 5 割 R50・印・判定は HagiDepthTrait.LineCapOf）
+        new MarkOnlyTrait(TraitId.HagiReapAfterHit),                 // 第404期（斬った直後に刈る R50 ／ R45・印・判定は engine）
         new MarkOnlyTrait(TraitId.HagiLineLow),                      // 第401期（線を下げる H123L・印・判定は HagiDepthTrait.LinePermil ／ engine）
         new EruptTrait(),      // 第180期
         new SmearTrait(),      // 第180期
