@@ -81,11 +81,11 @@ static class Kari408Diag
     // ---------------------------------------------------------------------------------
     // 1戦の計数（verbose・台本と帳簿を読む・盤面は動かさない）
     // ---------------------------------------------------------------------------------
-    sealed class Fx
+    internal sealed class Fx
     {
         public long N, Wins, WinT, Fell, Turns;
         public long TailN, TailTurns, TailDirect, TailStart;          // 尻尾（生きた敵が1体になった次のターンから・ボスは開戦から）
-        public long Carves, CarveHits, CumRead, CarveDealt, Plain, FedFromKari, PickedKari, Drags, DragAimed, Deepened;
+        public long Carves, CarveHits, CumRead, CarveDealt, Plain, FedFromKari, PickedKari, Drags, DragAimed, Deepened, Redrags, Marks;
         public long KariTaken, KariDied, KariDeathT, KariDealt;
         public long BackN, BackDied, BackDeathT, WataEarly, WataN, MudoEarly, MudoN;
         public readonly long[] TKariD = new long[TT + 1], TKariN = new long[TT + 1];
@@ -94,7 +94,7 @@ static class Kari408Diag
             N += o.N; Wins += o.Wins; WinT += o.WinT; Fell += o.Fell; Turns += o.Turns;
             TailN += o.TailN; TailTurns += o.TailTurns; TailDirect += o.TailDirect; TailStart += o.TailStart;
             Carves += o.Carves; CarveHits += o.CarveHits; CumRead += o.CumRead; CarveDealt += o.CarveDealt; Plain += o.Plain; FedFromKari += o.FedFromKari; PickedKari += o.PickedKari;
-            Drags += o.Drags; DragAimed += o.DragAimed; Deepened += o.Deepened;
+            Drags += o.Drags; DragAimed += o.DragAimed; Deepened += o.Deepened; Redrags += o.Redrags; Marks += o.Marks;
             KariTaken += o.KariTaken; KariDied += o.KariDied; KariDeathT += o.KariDeathT; KariDealt += o.KariDealt;
             BackN += o.BackN; BackDied += o.BackDied; BackDeathT += o.BackDeathT; WataEarly += o.WataEarly; WataN += o.WataN; MudoEarly += o.MudoEarly; MudoN += o.MudoN;
             for (int t = 0; t <= TT; t++) { TKariD[t] += o.TKariD[t]; TKariN[t] += o.TKariN[t]; }
@@ -104,7 +104,7 @@ static class Kari408Diag
         public string WT => $"{F1(Win)}・{WinTs}T";
     }
 
-    static Fx One(Formation f, I.W w, int seed)
+    internal static Fx One(Formation f, I.W w, int seed)
     {
         var (r, p, e) = I.Raw(f, w, seed, verbose: true);
         var a = new Fx { N = 1, Turns = r.Turns };
@@ -138,7 +138,7 @@ static class Kari408Diag
         if (kari is not null && r.TallyByUnit.TryGetValue(kari.Def.Id, out var tk))
         {
             a.Carves = tk.K408Carves; a.CarveHits = tk.K408CarveHits; a.CumRead = tk.K408CumRead; a.CarveDealt = tk.K408CarveDealt; a.Plain = tk.K408Plain;
-            a.Drags = tk.K408Drags; a.DragAimed = tk.K408DragAimed; a.Deepened = tk.K408Deepened;
+            a.Drags = tk.K408Drags; a.DragAimed = tk.K408DragAimed; a.Deepened = tk.K408Deepened; a.Redrags = tk.K409Redrags; a.Marks = tk.K409Marks;
             a.KariTaken = tk.DamageTaken; a.KariDealt = tk.DamageToEnemy;
             if (kari.LastDeathTurn > 0) { a.KariDied = 1; a.KariDeathT = kari.LastDeathTurn; }
         }
@@ -149,7 +149,7 @@ static class Kari408Diag
         return a;
     }
 
-    static Fx Measure(Formation f, I.W w, int n = Seeds)
+    internal static Fx Measure(Formation f, I.W w, int n = Seeds)
     {
         var parts = new Fx[n];
         Parallel.For(0, n, s => parts[s] = One(f, w, s));
@@ -158,7 +158,7 @@ static class Kari408Diag
         return all;
     }
 
-    static string Tail(Fx a) => a.TailTurns == 0 ? "—" : $"{Per(a.TailDirect, a.TailTurns)} ／ {Per(a.TailTurns, a.TailN)}T";
+    internal static string Tail(Fx a) => a.TailTurns == 0 ? "—" : $"{Per(a.TailDirect, a.TailTurns)} ／ {Per(a.TailTurns, a.TailN)}T";
 
     // ---------------------------------------------------------------------------------
     // §3-2 5 並び
@@ -356,7 +356,7 @@ static class Kari408Diag
         Expect("第408期の口に `PickOne` ／ `Roll(` が無い（決定的に選ぶ）", body.Length > 0 && !body.Contains("PickOne") && !body.Contains("Roll("), $"{body.Length} 文字");
         // 試遊の台
         bool rows = Presets.Versions.Any(r => r.Name == "版・K-k 呪い" && r.F.Occupied().Any(o => o.Def == kk))
-                 && Presets.Versions.Any(r => r.Name == "版・K-d 呪い" && r.F.Occupied().Any(o => o.Def == kd));
+                 && Presets.Versions.Any(r => r.Name == "版・K-d 呪い" && r.F.Occupied().Any(o => o.Def == kd || o.Def == UnitCatalog.KariKd0));   // 第409期に K-d0 へ入れ替えた
         Expect("試遊の台「版・K-k 呪い」「版・K-d 呪い」が `Presets.Versions` にある", rows);
         Console.WriteLine();
         Console.WriteLine(_fail == 0 ? "**すべて OK**" : $"**NG {_fail} 件**");

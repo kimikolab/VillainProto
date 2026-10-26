@@ -713,6 +713,8 @@
 | `HagiReapAfterHit` | 彼岸花のハギ |
 | `KariCarve` | - |
 | `KariDrag` | - |
+| `KariDragOnce` | - |
+| `KariMarkDeepen` | - |
 | `HagiLineLow` | - |
 | `Inversion` | - |
 | `Drought` | - |

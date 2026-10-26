@@ -7329,6 +7329,26 @@ public static class UnitCatalog
         MinusText = "刻むたび刃がこぼれる（攻撃力 -1）。呪われた敵が届かなければふつうに殴る",
         Flavor = Kari.Flavor,
     };
+    /// <summary>第409期 K-d1 往復止め: K-d ＋ 同じ敵を二度は引きずり出さない（<see cref="TraitId.KariDragOnce"/>）。</summary>
+    public static readonly UnitDef KariKd1 = new()
+    {
+        Id = Kari.Id, Name = "駆り立てのカリ", MaxHp = Kari.MaxHp, Attack = Kari.Attack, Speed = Kari.Speed, Advances = Kari.Advances, Pattern = Kari.Pattern,
+        Traits = new[] { TraitId.KariDrag, TraitId.KariDragOnce },
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "前へ駆り立てる") },
+        PlusText = "手番で、呪われた敵のうち最も後ろの1体を前へ引きずり出す（同じ敵は一度だけ）。引きずり出された敵は殴るたび呪いが深まる（攻撃力 -4）",
+        MinusText = "引きずり出された敵はカリを狙う（カリが倒れるまで）",
+        Flavor = Kari.Flavor,
+    };
+    /// <summary>第409期 K-d0 呪いを深める: 引きずり出さず、累計の大きい呪われた敵に「殴るたび −4」を付けていく（<see cref="TraitId.KariMarkDeepen"/>・攻 4）。</summary>
+    public static readonly UnitDef KariKd0 = new()
+    {
+        Id = Kari.Id, Name = "駆り立てのカリ", MaxHp = Kari.MaxHp, Attack = Kari.Attack, Speed = Kari.Speed, Advances = Kari.Advances, Pattern = Kari.Pattern,
+        Traits = new[] { TraitId.KariMarkDeepen },
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "呪いを深める") },
+        PlusText = "手番で、呪われた敵のうち呪いがいちばん深い1体に呪いを刻みつける。刻まれた敵は殴るたび呪いが深まる（攻撃力 -4・カリが倒れるまで）",
+        MinusText = "呪いを刻むのに手一杯で殴れない（刻める敵が残っている間はカリ自身は攻撃しない）",
+        Flavor = Kari.Flavor,
+    };
     /// <summary>第408期 K-d 駆り立てる: 呪われた後列の敵を前へ引きずり出す（<see cref="TraitId.KariDrag"/>・攻 4）。</summary>
     public static readonly UnitDef KariKd = new()
     {

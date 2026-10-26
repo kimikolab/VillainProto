@@ -1049,6 +1049,9 @@ public enum TraitId
     // --- 第408期で足した札（指示書 design/PHASE408_KARI_VERSIONS_SPEC.md §2）。カリの転生の版（K-k ／ K-d・`All` の外）。保持者 0 枚 ---
     KariCarve,            // 刻む（K-k）: 手番で、呪われた敵（ふつうの単体の攻撃が届く敵）のうち弱体の累計が最も大きい1体（同じなら席番号）を、累計 ÷ 4 発（切り捨て・最低 1・上限 8）で刻む（1発ずつ別の攻撃・鎖にも乗る）。刻むたび自分の攻撃力 −1（`Dull`）。呪われた敵が届かなければふつうに殴る（**判定は engine の `KariCarve408`**）
     KariDrag,             // 駆り立てる（K-d）: 手番で、呪われた敵のうち最も後ろの列の1体（同じなら席番号）を前列へ引きずり出す（前列の空き席 ／ なければ前列で HP が最も低い敵と入れ替え）。引きずり出された敵は攻撃するたび攻撃力 −4（`Dull`・書き手はカリ）・単体の的がカリに固定される（カリが届く間・カリが倒れるまで）。引きずり出せる敵がいなければふつうに殴る（**判定は engine の `KariDrag408`**）
+    // --- 第409期で足した札（指示書 design/PHASE409_KARI_KD_SPEC.md §1）。K-d の絞り込み（K-d1 ／ K-d0・`All` の外）。保持者 0 枚 ---
+    KariDragOnce,         // 往復止め（K-d1・`KariDrag` と組む）: 同じ敵を二度は引きずり出さない（敵1体につき一度・引きずり出せる敵が尽きたらふつうに殴る）（**判定は engine の `KariDrag408`**・札そのものは印）
+    KariMarkDeepen,       // 呪いを深める（K-d0）: 手番で、呪われた敵のうち弱体の累計が最も大きい1体（まだ付けていない敵・同じなら席番号）に「攻撃するたび攻撃力 −4」を付ける（`Dull`・書き手はカリ・カリが倒れるまで）。席は動かさない・的の固定は無い。全員に付いていればふつうに殴る（**判定は engine の `KariMark409`**）
     HagiLineLow,          // 線を下げる（H123L）: 魂の深さの線を 2 ／ 3 ／ 4 ／ 5 割 → 1 ／ 2 ／ 3 ／ 4 割・刈りの印を足した線の上限を 6 割 → 5 割にする（**札そのものは挙動を持たない**・`HagiDepthTrait.LinePermil` ／ engine の `ReapLineFor389` が読む）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -4381,6 +4384,17 @@ public sealed class KariDragTrait : Trait
     public const int Deepen = 4;
     public override TraitId Id => TraitId.KariDrag;
     public override void OnAction(BattleContext ctx, UnitState self, UnitAction action) => ctx.KariDrag408(self);
+}
+
+/// <summary>
+/// 呪いを深める（第409期・カリの版 K-d0）。K-d の「引きずり出された敵は殴るたび −4」だけを残し、引きずり出し ／ 的の固定を外した対照。
+/// 手番で、呪われた敵のうち弱体の累計（<see cref="BattleContext.DullReceived353"/>）が最も大きい1体（まだ付けていない敵・同じなら席番号）に −4 の印を付ける。
+/// 判定は engine の <c>KariMark409</c>（乱数を引かない）。
+/// </summary>
+public sealed class KariMarkDeepenTrait : Trait
+{
+    public override TraitId Id => TraitId.KariMarkDeepen;
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action) => ctx.KariMark409(self);
 }
 
 public sealed class PlunderCumTrait : Trait
@@ -20052,6 +20066,8 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.HagiLineLow),                      // 第401期（線を下げる H123L・印・判定は HagiDepthTrait.LinePermil ／ engine）
         new KariCarveTrait(),                                        // 第408期（刻む K-k・判定は engine の KariCarve408）
         new KariDragTrait(),                                         // 第408期（駆り立てる K-d・判定は engine の KariDrag408）
+        new MarkOnlyTrait(TraitId.KariDragOnce),                     // 第409期（往復止め K-d1・印・判定は engine の KariDrag408）
+        new KariMarkDeepenTrait(),                                   // 第409期（呪いを深める K-d0・判定は engine の KariMark409）
         new EruptTrait(),      // 第180期
         new SmearTrait(),      // 第180期
         new SpitTrait(),       // 第180期

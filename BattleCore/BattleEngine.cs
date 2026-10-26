@@ -9772,6 +9772,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.PlunderCum)) _plunderCumLive = true;     // 第353期（UK-c・弱体の累計を数える）
         if (u.HasTrait(TraitId.KariCarve)) { _kariCarveLive = true; _plunderCumLive = true; }   // 第408期（K-k・同じ累計の表を読む）
         if (u.HasTrait(TraitId.KariDrag)) _kariDragLive = true;         // 第408期（K-d）
+        if (u.HasTrait(TraitId.KariMarkDeepen)) { _kariDragLive = true; _plunderCumLive = true; }   // 第409期（K-d0・−4 の口と累計の表を使う）
         if (u.HasTrait(TraitId.MudoCurseRage) || u.HasTrait(TraitId.MudoCurseHeavy)) _mudoCurseLive = true;
         if (u.HasTrait(TraitId.CurseScar)) { _scar355Live = true; _curseScarPct355[u.TeamId] = 100; }                                                       // 第355期（N-100）
         else if (u.HasTrait(TraitId.CurseScarHalf)) { _scar355Live = true; _curseScarPct355[u.TeamId] = Math.Max(_curseScarPct355[u.TeamId], 50); }     // 第355期（N-50）
@@ -18250,6 +18251,10 @@ public sealed class BattleContext
     bool _kariCarveLive, _kariDragLive;
     /// <summary>K-d: 引きずり出された敵の InstanceId → 引きずり出したカリ（戦ごとに作り直される盤面の私有の表）。</summary>
     readonly Dictionary<int, UnitState> _kariDrag408 = new();
+    /// <summary>第409期 K-d0: −4 の印を付けた敵の InstanceId → 付けたカリ（的の固定は無い）。</summary>
+    readonly Dictionary<int, UnitState> _kariMark409 = new();
+    /// <summary>第409期: 一度でも引きずり出した敵の InstanceId（往復の計数 ／ K-d1 の往復止め）。</summary>
+    readonly HashSet<int> _kariDragEver409 = new();
 
     /// <summary>K-k の手番。届く呪われた敵のうち累計が最も大きい1体（同じなら席番号）を累計 ÷ 4 発で刻む。相手がいなければふつうに殴る。</summary>
     public void KariCarve408(UnitState self)
@@ -18288,7 +18293,8 @@ public sealed class BattleContext
     {
         UnitTally t = TallyOf(self);
         var foes = LivingMembers(Opponent(self.TeamId));
-        UnitState? victim = foes.Where(f => f.RawCounter(StatusKeys.Curse) > 0 && f.Row != Row.Front)
+        bool once = self.HasTrait(TraitId.KariDragOnce);   // 第409期 K-d1: 同じ敵を二度は引きずり出さない
+        UnitState? victim = foes.Where(f => f.RawCounter(StatusKeys.Curse) > 0 && f.Row != Row.Front && !(once && _kariDragEver409.Contains(f.InstanceId)))
             .OrderByDescending(f => (int)f.Row).ThenBy(f => f.Slot).FirstOrDefault();
         int dest = -1;
         if (victim is not null)
@@ -18301,7 +18307,25 @@ public sealed class BattleContext
         Log($"  {self.Name} が {victim.Name} を前へ引きずり出す", LogKind.Action);
         if (!SwapSlots(victim, dest, self)) { t.K408Plain++; return; }
         t.K408Drags++;
+        if (!_kariDragEver409.Add(victim.InstanceId)) t.K409Redrags++;   // 第409期（計数のみ）
         _kariDrag408[victim.InstanceId] = self;
+    }
+
+    /// <summary>第409期 K-d0 の手番。呪われた敵のうち、まだ印の無い敵で累計が最も大きい1体（同じなら席番号）に −4 の印を付ける。付ける相手がいなければふつうに殴る。</summary>
+    public void KariMark409(UnitState self)
+    {
+        UnitTally t = TallyOf(self);
+        UnitState? aim = null; int best = -1;
+        foreach (UnitState f in LivingMembers(Opponent(self.TeamId)))
+        {
+            if (f.RawCounter(StatusKeys.Curse) <= 0 || _kariMark409.ContainsKey(f.InstanceId)) continue;
+            int c = DullReceived353(f);
+            if (c > best || (c == best && aim is not null && f.Slot < aim.Slot)) { aim = f; best = c; }
+        }
+        if (aim is null) { t.K408Plain++; PerformAttack(self); return; }
+        _kariMark409[aim.InstanceId] = self;
+        t.K409Marks++;
+        Log($"  {self.Name} が {aim.Name} の呪いを深く刻みつけた（殴るたび攻撃 -{KariDragTrait.Deepen}）", LogKind.Action);
     }
 
     /// <summary>K-d: 引きずり出された敵の単体の的（カリが pool にいて生きていれば）。</summary>
@@ -18315,7 +18339,7 @@ public sealed class BattleContext
     /// <summary>K-d: 引きずり出された敵が攻撃し終えたら攻撃力 −4（書き手はカリ・カリが倒れていれば何もしない）。</summary>
     void KariDeepen408(UnitState actor)
     {
-        if (!_kariDrag408.TryGetValue(actor.InstanceId, out UnitState? k) || !k.IsAlive || !actor.IsAlive) return;
+        if ((!_kariDrag408.TryGetValue(actor.InstanceId, out UnitState? k) && !_kariMark409.TryGetValue(actor.InstanceId, out k)) || !k.IsAlive || !actor.IsAlive) return;
         TallyOf(k).K408Deepened += KariDragTrait.Deepen;
         Dull(actor, KariDragTrait.Deepen, DullRoute.Other, k);
         Log($"    {k.Name} に駆り立てられた {actor.Name} の呪いが深まる（攻撃 -{KariDragTrait.Deepen}）", LogKind.Trigger);

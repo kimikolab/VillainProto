@@ -1055,7 +1055,8 @@ public static class Presets
         //   「版・大物 ハギ」は規定 ＋ A（`HagiBigA405`）になった（第404期の A は `Common.VersionsH404` が戻す）。
         // 第408期: カリの版の台（`kari408 seats` の最良の席・どちらも「試遊・呪い」のワタをカリに替えた並び・前1 カリ ／ 前3 ムド ／ 中央 ネル ／ 後1 クビ ／ 後3 ウツ）。採否はポン（「版・」の台は末尾に置く・第366期から）。
         ("版・K-k 呪い", Formation.Build(front1: UnitCatalog.KariKk, front3: UnitCatalog.Mudo, center: UnitCatalog.Nel, back1: UnitCatalog.Kubi, back3: UnitCatalog.Utsu)),
-        ("版・K-d 呪い", Formation.Build(front1: UnitCatalog.KariKd, front3: UnitCatalog.Mudo, center: UnitCatalog.Nel, back1: UnitCatalog.Kubi, back3: UnitCatalog.Utsu)),
+        // 第409期: 「版・K-d 呪い」を `kari409 seats` の最良（K-d0 呪いを深める・並びは同じ）に入れ替えた（第408期の K-d は `UnitCatalog.KariKd` のまま残る・強4 62 → 68）。
+        ("版・K-d 呪い", Formation.Build(front1: UnitCatalog.KariKd0, front3: UnitCatalog.Mudo, center: UnitCatalog.Nel, back1: UnitCatalog.Kubi, back3: UnitCatalog.Utsu)),
     };
 
     /// <summary>第404期: 「版・刈り続け ハギ」の並び（「試遊・ハギ キャリー」と同じ: 前1 スィド ／ 前3 ボルグ ／ 中央 ベニ ／ 後1 ハギ ／ 後3 トウ）。既定はハギの版 R45。第405期に試遊の台から外した（過去の器具 `Common.VersionsH404` だけが使う）。</summary>
