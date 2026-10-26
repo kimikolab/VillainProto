@@ -1053,6 +1053,9 @@ public static class Presets
         //   （大隊でハギの手番の 69% が 3 体以上を倒す・当たった後の刈り取り 1戦 7.5 回・近衛 3.3 → 2.4T）。採否はポン。
         // 第405期: R50 をハギの規定にし R45 は採らないので「版・刈り続け ハギ」を外した（「試遊・ハギ キャリー」が規定の R50 の台・過去の器具は `Common.VersionsH404` が足し戻す）。
         //   「版・大物 ハギ」は規定 ＋ A（`HagiBigA405`）になった（第404期の A は `Common.VersionsH404` が戻す）。
+        // 第408期: カリの版の台（`kari408 seats` の最良の席・どちらも「試遊・呪い」のワタをカリに替えた並び・前1 カリ ／ 前3 ムド ／ 中央 ネル ／ 後1 クビ ／ 後3 ウツ）。採否はポン（「版・」の台は末尾に置く・第366期から）。
+        ("版・K-k 呪い", Formation.Build(front1: UnitCatalog.KariKk, front3: UnitCatalog.Mudo, center: UnitCatalog.Nel, back1: UnitCatalog.Kubi, back3: UnitCatalog.Utsu)),
+        ("版・K-d 呪い", Formation.Build(front1: UnitCatalog.KariKd, front3: UnitCatalog.Mudo, center: UnitCatalog.Nel, back1: UnitCatalog.Kubi, back3: UnitCatalog.Utsu)),
     };
 
     /// <summary>第404期: 「版・刈り続け ハギ」の並び（「試遊・ハギ キャリー」と同じ: 前1 スィド ／ 前3 ボルグ ／ 中央 ベニ ／ 後1 ハギ ／ 後3 トウ）。既定はハギの版 R45。第405期に試遊の台から外した（過去の器具 `Common.VersionsH404` だけが使う）。</summary>

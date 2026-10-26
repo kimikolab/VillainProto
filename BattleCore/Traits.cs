@@ -1046,6 +1046,9 @@ public enum TraitId
     HagiLineCap45,        // 線の上限 45%（第404期・ハギの版 L45 ／ R45）: 刈り取りの線（魂の段の線 ＋ 刈りの印）の合計を 45% で止める（段 9 の 5 割も 45%）（`HagiDepthTrait.LineCapOf`・札そのものは印）
     HagiLineCap50,        // 線の上限 5 割（第404期・ハギの版 R50）: 刈り取りの線の合計を 5 割で止める（`HagiDepthTrait.LineCapOf`・札そのものは印）
     HagiReapAfterHit,     // 斬った直後に刈る（第404期・ハギの版 R50 ／ R45）: ハギの斬撃 ／ 薙ぎ ／ 追撃が当たった後、当たった敵（巻き込みも）が生きていて HP が線以下なら、その一振りのうちに刈り取る（守りを通さず残りの HP）。手番の刈り取りで倒せば再行動・追撃では再行動しない（**判定は engine の `AfterHitReap404`**・札そのものは印）
+    // --- 第408期で足した札（指示書 design/PHASE408_KARI_VERSIONS_SPEC.md §2）。カリの転生の版（K-k ／ K-d・`All` の外）。保持者 0 枚 ---
+    KariCarve,            // 刻む（K-k）: 手番で、呪われた敵（ふつうの単体の攻撃が届く敵）のうち弱体の累計が最も大きい1体（同じなら席番号）を、累計 ÷ 4 発（切り捨て・最低 1・上限 8）で刻む（1発ずつ別の攻撃・鎖にも乗る）。刻むたび自分の攻撃力 −1（`Dull`）。呪われた敵が届かなければふつうに殴る（**判定は engine の `KariCarve408`**）
+    KariDrag,             // 駆り立てる（K-d）: 手番で、呪われた敵のうち最も後ろの列の1体（同じなら席番号）を前列へ引きずり出す（前列の空き席 ／ なければ前列で HP が最も低い敵と入れ替え）。引きずり出された敵は攻撃するたび攻撃力 −4（`Dull`・書き手はカリ）・単体の的がカリに固定される（カリが届く間・カリが倒れるまで）。引きずり出せる敵がいなければふつうに殴る（**判定は engine の `KariDrag408`**）
     HagiLineLow,          // 線を下げる（H123L）: 魂の深さの線を 2 ／ 3 ／ 4 ／ 5 割 → 1 ／ 2 ／ 3 ／ 4 割・刈りの印を足した線の上限を 6 割 → 5 割にする（**札そのものは挙動を持たない**・`HagiDepthTrait.LinePermil` ／ engine の `ReapLineFor389` が読む）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -4353,6 +4356,33 @@ public sealed class PerverseOverTrait : Trait
 /// 累計 0 の敵を殴ると自分に <c>Dull</c> 1（UK-r と同じ・隣のワタが拾うことがある）。累計はあるが奪える分が 1 以下なら何も起きない。</para>
 /// <para>攻撃1回につき1度・主目標に対してだけ（<c>OnAfterAttack</c>）。乱数を引かない。記憶は盤面（<see cref="BattleContext"/>）の私有の表で、戦ごとに作り直される。</para>
 /// </summary>
+/// <summary>
+/// 刻む（第408期・カリの版 K-k）。<b>余った呪いを発の数に変える</b>——敵に積まれた弱体の累計（<see cref="BattleContext.DullReceived353"/>・UK-c と同じ表）を読み、
+/// 累計 ÷ <see cref="Per"/> 発（切り捨て・最低 1・上限 <see cref="MaxHits"/>）で同じ1体を刻む。敵の弱体は減らさない（奪わない・読むだけ）。
+/// <para>刻むたび自分に <c>Dull</c> <see cref="SelfDull"/>（隣のワタが拾ってウツへ回すことがある）。判定は engine の <c>KariCarve408</c>（乱数を引かない）。</para>
+/// </summary>
+public sealed class KariCarveTrait : Trait
+{
+    /// <summary>累計いくつで1発か（第408期 段0 から: 強4 の尻尾の累計 25〜27 → 6 発・ボスの T5 の累計 34 → 8 発）。</summary>
+    public const int Per = 4;
+    public const int MaxHits = 8;
+    public const int SelfDull = 1;
+    public override TraitId Id => TraitId.KariCarve;
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action) => ctx.KariCarve408(self);
+}
+
+/// <summary>
+/// 駆り立てる（第408期・カリの版 K-d）。旧の「前に押し出す」を敵に向ける——呪われた敵のうち最も後ろの列の1体を前列へ引きずり出す。
+/// 引きずり出された敵は攻撃するたび攻撃力 −<see cref="Deepen"/>（<c>Dull</c>・書き手はカリ）、単体の的はカリに固定される（攻撃者側の選好の段・pool の内側）。
+/// 記憶は盤面の私有の表（戦ごとに作り直す）。判定は engine の <c>KariDrag408</c>（乱数を引かない）。
+/// </summary>
+public sealed class KariDragTrait : Trait
+{
+    public const int Deepen = 4;
+    public override TraitId Id => TraitId.KariDrag;
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action) => ctx.KariDrag408(self);
+}
+
 public sealed class PlunderCumTrait : Trait
 {
     public const int Divisor = PlunderTrait.Divisor;
@@ -20020,6 +20050,8 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.HagiLineCap50),                    // 第404期（線の上限 5 割 R50・印・判定は HagiDepthTrait.LineCapOf）
         new MarkOnlyTrait(TraitId.HagiReapAfterHit),                 // 第404期（斬った直後に刈る R50 ／ R45・印・判定は engine）
         new MarkOnlyTrait(TraitId.HagiLineLow),                      // 第401期（線を下げる H123L・印・判定は HagiDepthTrait.LinePermil ／ engine）
+        new KariCarveTrait(),                                        // 第408期（刻む K-k・判定は engine の KariCarve408）
+        new KariDragTrait(),                                         // 第408期（駆り立てる K-d・判定は engine の KariDrag408）
         new EruptTrait(),      // 第180期
         new SmearTrait(),      // 第180期
         new SpitTrait(),       // 第180期

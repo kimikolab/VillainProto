@@ -2413,6 +2413,9 @@ public sealed class UnitTally
     public long Db353PlunderGain, Db353PlunderHits, Db353PlunderDry, Db353PlunderMiss, Db353PlunderBoss;
     /// <summary>第354期（<b>計数のみ</b>・ムド）: 呪いで溜まった怒り（M1）／ 渡しが拾ったうちムド（暴発の札の持ち主）から拾った量 ／ 渡しがムドへ回した量（配り）／ 暴発の発が軛に切られた発数 ／ 切られた量。誰も読んで分岐しない。</summary>
     public long Db354CurseRage, Db354PickedMudo, Db354FedMudo, Db354BurstYokeCut, Db354BurstYokeLost;
+    /// <summary>第408期（<b>計数のみ</b>・カリの版）: K-k 刻んだ手番 ／ 発 ／ 読んだ累計の和 ／ 刻みの与ダメ ／ ふつうに殴った手番・渡しが拾ったうちカリから ／ そのうちウツへ回した量（渡し手の側）・
+    /// K-d 引きずり出した回数 ／ 引きずり出された敵の単体の的がカリに固定された回数 ／ 深めた呪い（カリの側）。誰も読んで分岐しない。</summary>
+    public long K408Carves, K408CarveHits, K408CumRead, K408CarveDealt, K408Plain, K408PickedKari, K408FedFromKari, K408Drags, K408DragAimed, K408Deepened;
     /// <summary>第355期（<b>計数のみ</b>・呪われた傷 ／ ウツの爪痕）: その駒の一撃で削れた最大HP（出どころの側・刻みなど出どころの無い分は受け手の <c>Cs355ScarTakenNoSource</c>）／ 削られた最大HP（受け手の側）。誰も読んで分岐しない。</summary>
     public long Cs355ScarDealt, Cs355ScarTaken, Cs355ScarTakenNoSource;
     /// <summary>第358期（<b>計数のみ</b>・破片軸の版）。ヒビ（HB-r）: 配った手番 ／ 配った量 ／ 返した回数 ／ 返した量（名目）／ 実際に減らした HP ／ 返しで倒した数 ／
@@ -3915,6 +3918,8 @@ public sealed class UnitTally
         Pw368ProofErased += o.Pw368ProofErased; Pw368ProofTicks += o.Pw368ProofTicks; Pw368CloakSaved += o.Pw368CloakSaved; Pw368CloakSelf += o.Pw368CloakSelf; Pw368DrawnCloak += o.Pw368DrawnCloak; Pw368DrawnOther += o.Pw368DrawnOther;   // 第368期
         Yoke367TickCut = AddArr(Yoke367TickCut, o.Yoke367TickCut); Yoke367TickLost = AddArr(Yoke367TickLost, o.Yoke367TickLost); Yoke367TickSpared = AddArr(Yoke367TickSpared, o.Yoke367TickSpared); Yoke367TickOver = AddArr(Yoke367TickOver, o.Yoke367TickOver);
         Db354CurseRage += o.Db354CurseRage; Db354PickedMudo += o.Db354PickedMudo; Db354FedMudo += o.Db354FedMudo; Db354BurstYokeCut += o.Db354BurstYokeCut; Db354BurstYokeLost += o.Db354BurstYokeLost;   // 第354期
+        K408Carves += o.K408Carves; K408CarveHits += o.K408CarveHits; K408CumRead += o.K408CumRead; K408CarveDealt += o.K408CarveDealt; K408Plain += o.K408Plain;   // 第408期
+        K408PickedKari += o.K408PickedKari; K408FedFromKari += o.K408FedFromKari; K408Drags += o.K408Drags; K408DragAimed += o.K408DragAimed; K408Deepened += o.K408Deepened;
         Db353PlunderGain += o.Db353PlunderGain; Db353PlunderHits += o.Db353PlunderHits; Db353PlunderDry += o.Db353PlunderDry; Db353PlunderMiss += o.Db353PlunderMiss; Db353PlunderBoss += o.Db353PlunderBoss;   // 第353期
         Fg339Spray = AddArr(Fg339Spray, o.Fg339Spray); Fg339AllyHits = AddArr(Fg339AllyHits, o.Fg339AllyHits); Fg339AllyDmg = AddArr(Fg339AllyDmg, o.Fg339AllyDmg);
         SharedAway += o.SharedAway; ShareTakenHits += o.ShareTakenHits; ShareGives += o.ShareGives; ShareGiven += o.ShareGiven; ShareGiftAccrued += o.ShareGiftAccrued;   // 第297期

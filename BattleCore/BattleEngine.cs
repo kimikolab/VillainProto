@@ -9770,6 +9770,8 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.BurnHitNoMend)) _burnHitNoMend = true;   // 第349期（BN-a・被弾の燃焼では癒えない・両陣営）
         if (u.HasTrait(TraitId.RelayWide)) _relayWideLive = true;       // 第351期（WT-a・渡しが味方全員から拾う）
         if (u.HasTrait(TraitId.PlunderCum)) _plunderCumLive = true;     // 第353期（UK-c・弱体の累計を数える）
+        if (u.HasTrait(TraitId.KariCarve)) { _kariCarveLive = true; _plunderCumLive = true; }   // 第408期（K-k・同じ累計の表を読む）
+        if (u.HasTrait(TraitId.KariDrag)) _kariDragLive = true;         // 第408期（K-d）
         if (u.HasTrait(TraitId.MudoCurseRage) || u.HasTrait(TraitId.MudoCurseHeavy)) _mudoCurseLive = true;
         if (u.HasTrait(TraitId.CurseScar)) { _scar355Live = true; _curseScarPct355[u.TeamId] = 100; }                                                       // 第355期（N-100）
         else if (u.HasTrait(TraitId.CurseScarHalf)) { _scar355Live = true; _curseScarPct355[u.TeamId] = Math.Max(_curseScarPct355[u.TeamId], 50); }     // 第355期（N-50）
@@ -10986,12 +10988,16 @@ public sealed class BattleContext
         // 挑発（第226期・回避盾のセロ）: **主目標の段の最後**（攻撃者側の選好の後・`pool[Roll]` の代わり）。pool は1体も足さない・引かない
         // （前列の規則の内側）。**以下の介入（標・後備え・庇う・殉教・棘守り）はすべてこの後ろなので挑発より優先。**
         // 単体の一撃だけ。効いた一撃は `pool[Roll]` を引かない。**保持者がいなければ比較1つで抜ける。**
-        UnitState? decoy = _decoyLive && fixated is null && severed is null && shamed is null && pattern == AttackPattern.Single
+        // 第408期（K-d）: カリに引きずり出された敵の単体の一撃はカリへ（攻撃者側の選好の段・pool は1体も足さず引かない・効いた一撃は Roll を引かない）。**保持者がいなければ比較1つで抜ける。**
+        UnitState? dragAim = _kariDragLive && fixated is null && severed is null && shamed is null && pattern == AttackPattern.Single
+            ? KariDragAim408(attacker, pool)
+            : null;
+        UnitState? decoy = dragAim is null && _decoyLive && fixated is null && severed is null && shamed is null && pattern == AttackPattern.Single
             ? DecoyTrait.Pick(this, attacker, pool)
             : null;
         _decoyPicked = decoy;
 
-        UnitState target = fixated ?? severed ?? shamed ?? decoy ?? pool[Roll(pool.Count)];
+        UnitState target = fixated ?? severed ?? shamed ?? dragAim ?? decoy ?? pool[Roll(pool.Count)];
         if (_aimLive) _aimPre = target;   // 第315期: 主目標（以下の介入の鎖の前）
 
         // 第229期（転倒の穴）: 転倒した列が立っていれば狙えなかった駒を選んだ（計数 ＋ 表示専用の出来事）。**規則が偽なら比較1つで抜ける。**
@@ -11407,9 +11413,11 @@ public sealed class BattleContext
         {
             try { PerformAttackImpact(actor, prefix, attackPercent, patternOverride); }
             finally { CloseBurnHitScope(); }
+            if (_kariDragLive) KariDeepen408(actor);
             return;
         }
         PerformAttackImpact(actor, prefix, attackPercent, patternOverride);
+        if (_kariDragLive) KariDeepen408(actor);   // 第408期（K-d）: 引きずり出された敵が殴るたび呪いが深まる。**保持者がいなければ比較1つで抜ける。**
     }
 
     void PerformAttackImpact(UnitState actor, string prefix, int attackPercent, AttackPattern? patternOverride)
@@ -18233,8 +18241,85 @@ public sealed class BattleContext
     /// <summary>第354期 配り: ムドの下げ幅をいくつまで回すか（ウツの手数が上限に届く下げ幅と同じ 12）。</summary>
     public const int MudoFeedCap354 = (PerverseTrait.MaxHits - 1) * PerverseTrait.HitsPerDull;
 
-    /// <summary>第353期 UK-c: 奪う・累計（<see cref="TraitId.PlunderCum"/>）の保持者がいる戦。偽なら累計を1本も数えない。</summary>
+    /// <summary>第353期 UK-c: 奪う・累計（<see cref="TraitId.PlunderCum"/>）の保持者がいる戦。偽なら累計を1本も数えない。第408期から K-k の保持者がいる戦でも立つ。</summary>
     bool _plunderCumLive;
+
+    // ---------------------------------------------------------------------------------
+    // 第408期 —— カリの版（指示書 design/PHASE408_KARI_VERSIONS_SPEC.md §2）。K-k 刻む ／ K-d 駆り立てる。**どちらも乱数を引かない・保持者がいなければ比較1つで抜ける。**
+    // ---------------------------------------------------------------------------------
+    bool _kariCarveLive, _kariDragLive;
+    /// <summary>K-d: 引きずり出された敵の InstanceId → 引きずり出したカリ（戦ごとに作り直される盤面の私有の表）。</summary>
+    readonly Dictionary<int, UnitState> _kariDrag408 = new();
+
+    /// <summary>K-k の手番。届く呪われた敵のうち累計が最も大きい1体（同じなら席番号）を累計 ÷ 4 発で刻む。相手がいなければふつうに殴る。</summary>
+    public void KariCarve408(UnitState self)
+    {
+        UnitTally t = TallyOf(self);
+        UnitState? aim = null; int best = -1;
+        foreach (UnitState f in TargetPool(self))
+        {
+            if (f.TeamId == self.TeamId || f.RawCounter(StatusKeys.Curse) <= 0) continue;
+            int c = DullReceived353(f);
+            if (c > best || (c == best && aim is not null && f.Slot < aim.Slot)) { aim = f; best = c; }
+        }
+        if (aim is null) { t.K408Plain++; PerformAttack(self); return; }
+        int hits = Math.Clamp(best / KariCarveTrait.Per, 1, KariCarveTrait.MaxHits);
+        t.K408Carves++; t.K408CarveHits += hits; t.K408CumRead += best;
+        Log($"  {self.Name} が {aim.Name} の呪い（累計 {best}）を {hits} 度刻む", LogKind.Action);
+        long d0 = t.DamageToEnemy;
+        for (int i = 0; i < hits; i++)
+        {
+            if (!self.IsAlive || !aim.IsAlive) break;
+            if (i > 0) t.ExtraSwings++;
+            _forcedTarget = aim;
+            try { PerformAttack(self, patternOverride: AttackPattern.Single); }
+            finally { _forcedTarget = null; _forcedLane = -1; }
+        }
+        t.K408CarveDealt += t.DamageToEnemy - d0;
+        if (self.IsAlive)
+        {
+            Dull(self, KariCarveTrait.SelfDull, DullRoute.Other, self);
+            Log($"    {self.Name} の刃がこぼれる（攻撃 -{KariCarveTrait.SelfDull}）", LogKind.FriendlyFire);
+        }
+    }
+
+    /// <summary>K-d の手番。呪われた敵のうち最も後ろの列の1体（同じなら席番号）を前列へ（空き席 ／ なければ前列で HP が最も低い敵と入れ替え）。相手がいなければふつうに殴る。</summary>
+    public void KariDrag408(UnitState self)
+    {
+        UnitTally t = TallyOf(self);
+        var foes = LivingMembers(Opponent(self.TeamId));
+        UnitState? victim = foes.Where(f => f.RawCounter(StatusKeys.Curse) > 0 && f.Row != Row.Front)
+            .OrderByDescending(f => (int)f.Row).ThenBy(f => f.Slot).FirstOrDefault();
+        int dest = -1;
+        if (victim is not null)
+        {
+            foreach (int s in FormationRules.PlayableSlotsOfRow(Row.Front))
+                if (foes.All(f => f.Slot != s)) { dest = s; break; }
+            if (dest < 0 && foes.Where(f => f.Row == Row.Front).OrderBy(f => f.Hp).ThenBy(f => f.Slot).FirstOrDefault() is { } seat) dest = seat.Slot;
+        }
+        if (victim is null || dest < 0) { t.K408Plain++; PerformAttack(self); return; }
+        Log($"  {self.Name} が {victim.Name} を前へ引きずり出す", LogKind.Action);
+        if (!SwapSlots(victim, dest, self)) { t.K408Plain++; return; }
+        t.K408Drags++;
+        _kariDrag408[victim.InstanceId] = self;
+    }
+
+    /// <summary>K-d: 引きずり出された敵の単体の的（カリが pool にいて生きていれば）。</summary>
+    UnitState? KariDragAim408(UnitState attacker, List<UnitState> pool)
+    {
+        if (!_kariDrag408.TryGetValue(attacker.InstanceId, out UnitState? k) || !k.IsAlive || !pool.Contains(k)) return null;
+        TallyOf(k).K408DragAimed++;
+        return k;
+    }
+
+    /// <summary>K-d: 引きずり出された敵が攻撃し終えたら攻撃力 −4（書き手はカリ・カリが倒れていれば何もしない）。</summary>
+    void KariDeepen408(UnitState actor)
+    {
+        if (!_kariDrag408.TryGetValue(actor.InstanceId, out UnitState? k) || !k.IsAlive || !actor.IsAlive) return;
+        TallyOf(k).K408Deepened += KariDragTrait.Deepen;
+        Dull(actor, KariDragTrait.Deepen, DullRoute.Other, k);
+        Log($"    {k.Name} に駆り立てられた {actor.Name} の呪いが深まる（攻撃 -{KariDragTrait.Deepen}）", LogKind.Trigger);
+    }
     /// <summary>第353期 UK-c: 駒ごとの「この戦で弱体の窓口から受けた量」の累計（InstanceId → 量・戦ごとに作り直される盤面の私有の表）。</summary>
     readonly Dictionary<int, int> _dullRecv353 = new();
     /// <summary>第353期 UK-c: 奪い手 × 敵ごとの「奪った累計」（その敵の累計のうち、もう使った分）。</summary>
@@ -19144,6 +19229,8 @@ public sealed class BattleContext
         rt.Db351Picked += amount;
         if (!FormationRules.AreAdjacent(relayer, target)) rt.Db351PickedFar += amount;
         if (target.HasTrait(TraitId.Erupt)) rt.Db354PickedMudo += amount;              // 第354期（計数のみ）
+        bool fromKari408 = _kariCarveLive && target.HasTrait(TraitId.KariCarve);         // 第408期（計数のみ）
+        if (fromKari408) rt.K408PickedKari += amount;
 
         int sent = amount * Relay.TransferPercent / 100;
         // 第351期 WT-u（ウツへ回す）: まず逆しまの手数が上限に届く下げ幅まで回し、余りを敵へ。逆しまがいなければ何もしない（WT-a と同じ）。
@@ -19155,6 +19242,7 @@ public sealed class BattleContext
             {
                 sent -= feed;
                 rt.Db351Fed += feed;
+                if (fromKari408) rt.K408FedFromKari += feed;   // 第408期（計数のみ）
                 EmitCursePass(CursePassLabels.Feed, relayer, utsu, target, feed);
                 Relaying(() => Dull(utsu, feed, DullRoute.Relay, relayer));
                 Log($"    {relayer.Name} が {target.Name} の重荷を {utsu.Name} へ回した（攻撃 -{feed}）", LogKind.Trigger);

@@ -10,6 +10,7 @@ using S307 = Som307Diag;
 //
 //     dotnet run --project BattleSim -c Release 0 kari407 all      # 確かめ ＋ Q1〜Q4（台は いまの「試遊・呪い」・4波 × seed 0..99）
 //     dotnet run --project BattleSim -c Release 0 kari407 check    # 確かめだけ（第357期 §2 の勝率・倒しT と同じか）
+//     dotnet run --project BattleSim -c Release 0 kari407 cum      # 第408期 段0: 敵ごとの弱体の累計（`Dull` が実際に下げた量の和）の推移と尻尾の1体の累計
 //
 // 1戦は `inv348` の `Raw`（verbose・計数の規則あり＝`db356 boards` ／ `s357` と同じ）。台本と帳簿を読むだけで盤面は動かさない。
 // =====================================================================================
@@ -30,6 +31,7 @@ static class Kari407Diag
     public static void Run(string[] args, int stageIndex)
     {
         string mode = args.Length > 2 ? args[2] : "check";
+        if (mode == "cum") { Cum408(); return; }
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var res = Waves.Select(w => Measure(Board, w)).ToArray();
         bool ok = Check(res);
@@ -434,5 +436,100 @@ static class Kari407Diag
             Console.WriteLine($"| {label} | " + string.Join(" | ", Waves.Select((w, i) => { var z = Measure(fp, w).All; return $"{z.WT}（{z.Win - res[i].All.Win:+0.0;-0.0;0.0}）"; })) + " |");
         }
         Console.WriteLine();
+    }
+
+    // ---------------------------------------------------------------------------------
+    // 第408期 段0: 敵ごとの弱体の累計（台本の弱体の StatusGain ＝ `Dull` が実際に攻撃力を下げた量・ボスの伸びは入らない）
+    // ---------------------------------------------------------------------------------
+    sealed class Cx
+    {
+        public long N;
+        // ターンの頭: 生きた敵の累計の最大（呪われた敵の中）／ 生きた敵の累計の平均の和 ／ 数
+        public readonly long[] TMaxCur = new long[TT + 1], TMeanSum100 = new long[TT + 1], TCnt = new long[TT + 1];
+        public long TailN, TailStartSum, TailCumAtStart, TailCumEnd, TailLen;
+        public readonly Dictionary<string, long> TailWho = new();
+        public void Add(Cx o)
+        {
+            N += o.N; for (int t = 0; t <= TT; t++) { TMaxCur[t] += o.TMaxCur[t]; TMeanSum100[t] += o.TMeanSum100[t]; TCnt[t] += o.TCnt[t]; }
+            TailN += o.TailN; TailStartSum += o.TailStartSum; TailCumAtStart += o.TailCumAtStart; TailCumEnd += o.TailCumEnd; TailLen += o.TailLen;
+            foreach (var (k, v) in o.TailWho) TailWho[k] = TailWho.GetValueOrDefault(k) + v;
+        }
+    }
+    static Cx CumOne(Formation f, I.W w, int seed)
+    {
+        var (r, p, e) = I.Raw(f, w, seed, verbose: true);
+        var a = new Cx { N = 1 };
+        var mine = p.Select(u => u.InstanceId).ToHashSet();
+        var foes = e.Select(u => u.InstanceId).ToHashSet();
+        foreach (var x in r.Events) if (x.Kind == BattleEventKind.Summon && x.TargetId is int sid) (x.Team == BattleContext.PlayerTeam ? mine : foes).Add(sid);
+        var names = e.ToDictionary(u => u.InstanceId, u => u.Def.Name);
+        int last = r.Events.Where(x => x.Kind == BattleEventKind.StatSnapshot && x.TargetId is int sn && mine.Contains(sn)).Select(x => x.Turn).DefaultIfEmpty(0).Max();
+        var cum = foes.ToDictionary(id => id, _ => 0L);
+        var cursed = new HashSet<int>(); var dead = new HashSet<int>();
+        int curT = 0; int tailStart = 0; int tailId = -1;
+        void Head(int t)
+        {
+            if (t < 1 || t > TT || t > last) return;
+            a.TCnt[t] = 1;
+            var live = foes.Where(id => !dead.Contains(id)).ToArray();
+            var lc = live.Where(cursed.Contains).ToArray();
+            a.TMaxCur[t] = lc.Length == 0 ? 0 : lc.Max(id => cum[id]);
+            a.TMeanSum100[t] = live.Length == 0 ? 0 : (long)(100.0 * live.Average(id => cum[id]));
+        }
+        foreach (var x in r.Events)
+        {
+            while (curT < x.Turn) { curT++; Head(curT); }
+            if (x.Kind == BattleEventKind.StatusGain && x.TargetId is int ti && foes.Contains(ti))
+            {
+                if (x.Text == BattleContext.DullKey) cum[ti] = cum.GetValueOrDefault(ti) + x.Amount;
+                if (x.Text == StatusKeys.Curse) cursed.Add(ti);
+            }
+            if (x.Kind == BattleEventKind.Death && x.TargetId is int di && foes.Contains(di))
+            {
+                dead.Add(di);
+                var live = foes.Where(id => !dead.Contains(id)).ToArray();
+                if (live.Length == 1 && tailId < 0) { tailId = live[0]; tailStart = x.Turn; a.TailCumAtStart = cum[tailId]; }
+            }
+            if (x.Kind == BattleEventKind.Revive && x.TargetId is int ri) dead.Remove(ri);
+        }
+        while (curT < TT) { curT++; Head(curT); }
+        if (tailId >= 0)
+        {
+            a.TailN = 1; a.TailStartSum = tailStart; a.TailCumEnd = cum[tailId]; a.TailLen = Math.Max(0, r.Turns - tailStart);
+            string k = names.GetValueOrDefault(tailId, "召喚"); a.TailWho[k] = 1;
+        }
+        else if (foes.Count == 1)
+        {
+            int only = foes.First();
+            a.TailN = 1; a.TailStartSum = 0; a.TailCumAtStart = 0; a.TailCumEnd = cum[only]; a.TailLen = r.Turns; a.TailWho[names.GetValueOrDefault(only, "?")] = 1;
+        }
+        return a;
+    }
+    static void Cum408()
+    {
+        Console.WriteLine($"# 第408期 段0 —— 敵ごとの弱体の累計（いまの「{D.PlayRow}」・seed 0..{Seeds - 1}）");
+        Console.WriteLine();
+        Console.WriteLine("累計 ＝ その戦でその敵の攻撃力を弱体の窓口 `Dull` が実際に下げた量の和（台本の弱体の StatusGain・書き手を問わない・ボスの伸びは入らない・第353期 UK-c と同じ定義）。"
+            + "頭の最大 ＝ ターンの頭に生きていて呪われた敵のうち累計が最も大きい1体の累計（K-k が読む量）。尻尾 ＝ 生きた敵が1体になった後（ボスは開戦から）。");
+        Console.WriteLine();
+        foreach (var w in Waves)
+        {
+            var parts = new Cx[Seeds];
+            Parallel.For(0, Seeds, s => parts[s] = CumOne(Board, w, s));
+            var a = new Cx(); foreach (var x in parts) a.Add(x);
+            Console.WriteLine($"## {w.Name}");
+            Console.WriteLine();
+            Console.WriteLine("| T | 続いた戦 | 頭の最大（呪われた敵） | 生きた敵の累計の平均 |");
+            Console.WriteLine("|--:|--:|--:|--:|");
+            for (int t = 1; t <= TT; t++)
+            {
+                if (a.TCnt[t] == 0) break;
+                Console.WriteLine($"| {t} | {a.TCnt[t]} | {Per(a.TMaxCur[t], a.TCnt[t])} | {F1(a.TMeanSum100[t] / 100.0 / a.TCnt[t])} |");
+            }
+            Console.WriteLine();
+            Console.WriteLine($"尻尾: {a.TailN} 戦・始まり T{Per(a.TailStartSum, a.TailN)}・長さ {Per(a.TailLen, a.TailN)}T・その1体の累計 始まり {Per(a.TailCumAtStart, a.TailN)} → 終わり {Per(a.TailCumEnd, a.TailN)}・その1体: "
+                + string.Join("、", a.TailWho.OrderByDescending(kv => kv.Value).Select(kv => $"{kv.Key} {kv.Value}")) + "。");
+            Console.WriteLine();
+        }
     }
 }

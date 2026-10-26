@@ -711,6 +711,8 @@
 | `HagiLineCap45` | - |
 | `HagiLineCap50` | 彼岸花のハギ |
 | `HagiReapAfterHit` | 彼岸花のハギ |
+| `KariCarve` | - |
+| `KariDrag` | - |
 | `HagiLineLow` | - |
 | `Inversion` | - |
 | `Drought` | - |

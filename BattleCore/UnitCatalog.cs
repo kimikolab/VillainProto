@@ -7317,6 +7317,30 @@ public static class UnitCatalog
         "呪いを受けた敵を殴るたび、その呪いの半分を自分の力にする（その戦の間・積み上がる・同じ呪いは二度奪えない）", "呪われていない敵を殴ると、腕が鈍る（攻撃力 -1）");
 
     // ---------------------------------------------------------------------------------
+    // 第408期【軽い期・版だけ】カリの転生（デバフ軸へ）（指示書 design/PHASE408_KARI_VERSIONS_SPEC.md §2）。版はカリの写し（Id は同じ・HP 62 ／ 速 9・旧の札 Goad は外す・`All` の外）。保持者 0 枚。
+    // ---------------------------------------------------------------------------------
+    /// <summary>第408期 K-k 刻む: 余った呪いを発の数に変える（<see cref="TraitId.KariCarve"/>・攻 6）。</summary>
+    public static readonly UnitDef KariKk = new()
+    {
+        Id = Kari.Id, Name = "刻みのカリ", MaxHp = Kari.MaxHp, Attack = 6, Speed = Kari.Speed, Advances = Kari.Advances, Pattern = Kari.Pattern,
+        Traits = new[] { TraitId.KariCarve },
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "呪いを刻む") },
+        PlusText = "手番で、呪われた敵のうち積まれた呪いがいちばん深い1体を、呪いの深さに応じて何度も刻む（4 につき 1 度・最大 8 度）",
+        MinusText = "刻むたび刃がこぼれる（攻撃力 -1）。呪われた敵が届かなければふつうに殴る",
+        Flavor = Kari.Flavor,
+    };
+    /// <summary>第408期 K-d 駆り立てる: 呪われた後列の敵を前へ引きずり出す（<see cref="TraitId.KariDrag"/>・攻 4）。</summary>
+    public static readonly UnitDef KariKd = new()
+    {
+        Id = Kari.Id, Name = "駆り立てのカリ", MaxHp = Kari.MaxHp, Attack = Kari.Attack, Speed = Kari.Speed, Advances = Kari.Advances, Pattern = Kari.Pattern,
+        Traits = new[] { TraitId.KariDrag },
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "前へ駆り立てる") },
+        PlusText = "手番で、呪われた敵のうち最も後ろの1体を前へ引きずり出す。引きずり出された敵は殴るたび呪いが深まる（攻撃力 -4）",
+        MinusText = "引きずり出された敵はカリを狙う（カリが倒れるまで）",
+        Flavor = Kari.Flavor,
+    };
+
+    // ---------------------------------------------------------------------------------
     // 第354期【軽い期】ムドを呪いで動く二人目の火力に（指示書 design/PHASE354_UTSU_MUDO_SPEC.md §4）。版はムド ／ ワタの写し（Id は同じ・規定の上）。保持者 0 枚。
     // ---------------------------------------------------------------------------------
     static string Must354(string s, string find, string with) => s.Contains(find) ? s.Replace(find, with) : throw new InvalidOperationException($"第354期: 文面に「{find}」が無い");
