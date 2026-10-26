@@ -127,4 +127,7 @@ Codex 向けの台本の説明は `design/PHASE291_CODEX_MEMO.md` §68。発注�
 
 ### 6-4. Codex への発注
 
-（§6-4 は末尾に追記）
+- 発注文は `.tmp/codex-bridge/request-405-hagi.txt`（1 回目）と `request-405-hagi-2.txt`（続き）。1 回目は見せ場 1〜3（`Reap` を読む土台・通常斬撃 → 返し刃の刈り取り・再行動 ／ 二度斬りの接続・魂の吸い寄せ元）と `HagiPresentationCheck` の作り替えまで進んだところで、モデルの容量切れ（`turn.failed`）で止まった。2 回目で残り（印の傷線と HP バーの鎌の印・段の刃の伸びと赤いオーラ・重い一撃・魂の色分け・追撃の滑り込み）を仕上げ、`design/DEMOAPP_HISTORY.md` に第405期の節を書いた（ログは `.tmp/codex-bridge/20261026-160725-0299d3be/` と `20261026-162914-1c4cbbaa/`）。
+- Codex の変更は **DemoApp の 17 ファイル ＋ `design/DEMOAPP_HISTORY.md`**（`HagiPresentation.cs` の `Highlight` → HP 0 の推定と `ReapLineFor389` の反射を外し、`Reap` の 10 札を読む）。`BattleCore` ／ `BattleSim` ／ `docs/` に差分なし。**コミットしていない**（ポンが見てから——`CODEX_BRIEF_HAGI_2.md` と同じく他の人の作業中ファイルとして残した）。
+- 私の側で確かめた: DemoApp ビルド 0 エラー・`HagiPresentationCheck`（parity 15・reap-events ほか）／ `NineWaveCheck` ／ `DischargeCheck` ／ `ScorePanelCheck` `ok=True`・map11 phase0 ／ 171 ／ 172 ／ 173 `ok=True`・ハギの 4 台 × ボス ／ 近衛 ／ 大隊 × seed 0 の単発の再生 12 本 `DEMO_SMOKE_COMPLETE`（哀歌 × 大隊は負け 6T で再生は完走）。Codex の報告の未検証は音の実聴だけ。
+- Codex も「列ごとの刈り取り（種類 5）と二度斬りの 2 発目の刈り取り（6）は規定の実戦の台では出ない」と確かめ、合成の台本と描画検査で接続だけ確認している。
