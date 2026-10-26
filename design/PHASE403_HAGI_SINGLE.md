@@ -191,4 +191,19 @@
 
 ### 6-2. 回帰 ／ 直した器具
 
-（照合の結果を待って追記する）
+- **自己検査**: `sh403 check` すべて ○。
+  - 段0（規定 ＝ B の札と文面・旧 `HagiH402`・固定の口・第402期の版の駒は旧から・規定は B と同じ動き 280 戦で差 0）。
+  - T1（孤立なら 16 ＋ 46 の 2 振り ／ 規定は 16・前1 と中央が隣なら 1 振り・2 発目の前に刈り取りの判定・再行動 ／ 追撃は 1 発）・T2（印 8 → 9・9 のまま・H1 の足し分 印 × 30・規定は 5 のまま・線の上限 6 割は今どおり）・T12A（最大 HP 1,000 の敵の死で魂 +6）。
+  - ボスの名前 ／ 種類で分岐していない・規定の `compare` 全 66 行が `docs/balance.md` と一致・ハギのいない行は第402期の表と同じ・試遊の台と `VersionsH402`・`checkup`・verbose ／ 再現（280 戦・差 0）・PickOne ／ Roll。
+- **過去の器具の検査**: `sh402` ／ `sh401` ／ `elite` ／ `boss283` ／ `checkup` の check は ○。`audit` はずれ 0（`CLAUDE.md` の門 OK）。
+- **`docs/`**: PowerShell から全部再生成した（`roster audit` も・`docs/rules.md` は `CLAUDE.md` を書いた後に最後）。14 ファイルが動いた（`balance.md` は 3 セル・`units.md` はハギの行と札の表）。`docs/rules.md` の差は器具の一覧の 1 行。
+- **`sweep fast`**: 異常終了 0 本・上限 0 本——**合格**（`.tmp/p403/sweep_fast.txt`）。`Presets` と規定の駒が動いたので、夜間の `sweep nightly` でも拾われる。組み立ては別のフォルダ（`.tmp/p403/bs`）。
+- **DemoApp**: ビルド 0 エラー。map11 の門（phase0 ／ 171 ／ 172 ／ 173）`ok=True`（関係の表に行は要らなかった）。`NineWaveCheck` ／ `DischargeCheck` ／ `ScorePanelCheck` `ok=True`。「版・二度斬り ハギ」の単発の再生（seed 0）: ボス 4T 勝ち ／ 近衛 12T 負け（89% の台の負ける seed）・どちらも `DEMO_SMOKE_COMPLETE`。
+- **直した器具**（規定のハギが変わったため）:
+  - `sh402`: 規定の列 ／ 台 ／ `compare` の行を旧（`HagiH402`・`Pin402`）に、試遊の台の一覧を `VersionsH402` に。検査の「規定のハギ ＝ H123」は旧で読み、`checkup` の札の表は「第403期から規定（ハギ）」も受ける。
+  - `sh390 check`（コミット 7121b552）: ハギのいる `compare` の行を今の規定のハギのまま R5m と比べていた——第392〜402期は 20 seed でたまたま一致していて、B の規定化で 3 セルずれて × になった。行を第390期の規定（`Pin391`）に固定し、第402期の保存と同じ出力に戻したことを確かめた。
+- **過去の器具の照合**（`light -Units hagi,rica,tomo,sekki`・コミットの後に、基準を第402期の保存（7790a7ba）に固定した写し `.tmp/p403/digest_pinned.ps1` で回した）:
+  - 1 回目（a1aa3f08）: 145 本のうち 一致 141 ／ 差 3（`burn349` ／ `sh400` の check ＝ 試遊の一覧の名前の 1 行・`sh390 check` ＝ 上の ×）／ 新しい 1。
+  - `sh390 check` を直して 7121b552 で回し直し: 一致 142 ／ 差 2（`burn349` ／ `sh400` の名前の 1 行・判定は ○ のまま）／ 新しい 1（`sh403 check`）。
+  - 期の最後に `tools/digest_cache.ps1 promote`（`.tmp/digest_cache/7121b552`・7790a7ba ＋ 145 本）。
+- コミットは自分の変更パスだけ（DemoApp ／ art ／ `design/CODEX_BRIEF_*.md` などの作業中のファイルは含めていない）。push の前に、ローカルの master に自分以外の未 push のコミットは無かった。
