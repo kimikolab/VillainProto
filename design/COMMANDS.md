@@ -1269,6 +1269,8 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 db356 log <台> <波> [seed]   # 第356期: 1戦のログ（台 play ／ now ／ wall ／ 並びの名前「ウツ・ワタ・ネル・ムド・ツギ」・play は第356期までの「試遊・呪い」・now は第357期からの「試遊・呪い」）
     dotnet run --project BattleSim -c Release 0 db356 s357              # 第357期: いまの「試遊・呪い」（ネル中央）× ボス ／ 近衛 ／ 大隊 ／ 強 第2〜5波・seed 0..99 が第356期 §5 の C の列と同じか（1 秒）
     dotnet run --project BattleSim -c Release 0 db356 check             # 第356期 自己検査（母集団・段0 の駒・器具の有無で勝敗が変わらない・試遊の台・PickOne）
+    dotnet run --project BattleSim -c Release 0 kari407 all             # 第407期: いまの「試遊・呪い」× ボス ／ 近衛 ／ 大隊 ／ 強 第4波・seed 0..99 の確かめ（第357期 §2）＋ Q1 鎖の実態（ターンごと・誰が鳴らしたか・ウツの発）／ Q2 強第4波の中身（死因・列ごとの敵・勝ち負け）／ Q3 カリの行（compare ／ elite・素体との差）／ Q4 ムド（札を1枚ずつ抜いた版）（2 秒）
+    dotnet run --project BattleSim -c Release 0 kari407 check           # 第407期: 確かめだけ（第357期 §2 と違えば exit 1）
     dotnet run --project BattleSim -c Release 0 sh358 p0                # 第358期 §2 Phase 0: 破片の流れ（書いた ／ 敵の一撃で割れた ／ 読んだ ／ 残った）・ツギの板の返し（1回 ／ 同じ主へ集まった塊）・ヒビの砕けと倒れた T・ボスの1ターンの与ダメ ／ 回復（規定・代表台 3 × 5 波・seed 0..99・1 秒）
     dotnet run --project BattleSim -c Release 0 sh358 seats [版]        # 第358期 §4: ヒビ ／ ガレ ＋ 6枚（ウロ ／ ツギ ／ ササ ／ ガルド ／ ドルガ ／ ゴルム）から3枚 × 席の全並び ＝ 2,400 並び × ボス（seed 0..4）／ 近衛 ／ 大隊（seed 0..19）・版（既定 hbgr）と規定の両方（16 秒）
     dotnet run --project BattleSim -c Release 0 sh358 flow [版,…]       # 第358期 §6 の 1・2: 破片の流れ ／ 返し ／ 礫 ／ ボスへの届き方（1ターンの与ダメを 欠片の返し ／ 礫 ／ 板の返し ／ ほか に分ける）× 版・代表台 4 × ボス ／ 大隊
