@@ -1,5 +1,39 @@
 # 作業手順
 
+## Claude Code から Codex に依頼する
+
+このプロジェクトの Claude Code で `/codex <依頼>` は読み取り専用の調査・レビュー、
+`/codex-work <依頼>` は実装・修正を行う。追加後は Claude Code の新しいセッションで使う。
+「Codex にレビューを依頼して」のような明示的な依頼でも同じ手順を使える。
+
+必要なのは Codex CLI と Python 3.10 以降。PATH 上の `codex` を優先し、Windows では
+見つからなければ `%LOCALAPPDATA%/OpenAI/Codex/bin/*/codex.exe`（デスクトップ同梱）も探す。
+`LOCALAPPDATA` が仮想化されている環境では、ユーザーホームの `AppData/Local` も確認する。
+未ログインなら検出した実行ファイルで `login` を実行する。モデルや認証は現在の Codex CLI 設定を使う。
+旧 `codex mcp-server` には依存しない。
+
+呼び出し元は依頼文を UTF-8 のファイルに保存し、リポジトリルートから実行する。
+
+```powershell
+python tools/codex_bridge.py --mode review --prompt-file .tmp/codex-bridge/request.txt
+python tools/codex_bridge.py --mode work --prompt-file .tmp/codex-bridge/request.txt
+```
+
+`tools/codex_bridge.py` は `codex exec` を前景実行する。レビューは `read-only`、
+修正は `workspace-write`。非対話実行のため承認ポリシーは `never` とし、
+権限が足りなければ制約を報告する。自動で権限を広げない。
+各回の依頼、イベント、最終回答は `.tmp/codex-bridge/<日時>-<識別子>/` の
+`prompt.txt`・`events.jsonl`・`result.txt` に残る。終了コードが非ゼロなら途中の差分も調べる。
+
+依頼は別の Codex CLI セッションで処理される。既存の Codex デスクトップの会話は引き継がないため、
+Claude Code は目的・対象・背景・受け入れ条件を依頼ファイルに含める。
+依頼を受けた Codex は次を守り、呼び出し元は完了後に差分と検証結果をレビューする。
+
+- 既存の変更を保持し、指定された担当範囲だけを扱う。依頼中、呼び出し元は同じ作業ツリーの編集・ビルドを止める。
+- 他のエージェントへの再委譲・呼び戻しをしない（相互呼び出しの循環を防ぐ）。
+- コミット・push・PR 作成は、ユーザーがその依頼で明示した場合だけ行う。
+- 調査・レビューではファイルを編集しない。修正では変更に応じたリポジトリ所定の検証を行い、未検証や制約も報告する。
+
 ## GodotApp / DemoApp の背景・演出開発
 
 **背景・攻撃・着弾・状態異常などの演出を追加・改修する際は、購入済み素材に使えるものがあるかを先に確認し、適合するものを活用する。** GodotAppとDemoAppの両方に適用する。
