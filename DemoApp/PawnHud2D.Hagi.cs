@@ -3,13 +3,14 @@ using Godot;
 public partial class PawnHud2D
 {
     private int _hagiLine;
-    internal void SetHagiLine(int permil) { if (_hagiLine == permil) return; _hagiLine = permil; QueueRedraw(); }
+    internal float HagiLineX => _barWidth * (-.5f + System.Math.Min(.5f, _hagiLine / 1000f * _maxHp / System.Math.Max(1, _openingMaxHp)));
+    internal void SetHagiLine(int permil) { if (_hagiLine == permil) return; _hagiLine = permil; Layout(); QueueRedraw(); }
     private void DrawHagiLine()
     {
         if (_hagiLine <= 0 || _hp <= 0) return;
-        float x = _barWidth * (-.5f + _hagiLine / 1000f * _maxHp / System.Math.Max(1, _openingMaxHp));
+        float x = HagiLineX;
         float y = -_barHeight - 3;
-        Color silver = new("eef2f8");
+        Color silver = new("ff8b80");
         DrawLine(new Vector2(x, y + 3), new Vector2(x, y - 10), new Color("141820"), 4, true);
         DrawLine(new Vector2(x, y + 3), new Vector2(x, y - 10), silver, 1.7f, true);
         var arc = new Vector2[13];

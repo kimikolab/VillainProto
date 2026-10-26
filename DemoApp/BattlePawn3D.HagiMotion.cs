@@ -33,10 +33,18 @@ public partial class BattlePawn3D
             return track[Math.Clamp(AttackClipPlaying ? AttackClipFrame : _hagiHeldFrame, 0, track.Length - 1)];
         }
     }
-    internal Task PlayHagiClip(string name, Action contact, bool keepPose)
+    internal Task PlayHagiClip(string name, Action contact, bool keepPose, bool quickReturn = false)
     {
         _hagiHeldName = null; _hagiKeepPose = keepPose; _hagiClipName = name;
-        return PlayAttackClip(name, contact, keepPose ? 1.0 / 30 : .04);
+        var done = PlayAttackClip(name, contact, keepPose ? 1.0 / 30 : .04);
+        if (quickReturn && _attackClip is { } clip)
+        {
+            // 返し刃は既存の帰りのセルを使い、接触2コマ前から。長い溜めを挟まない。
+            _attackClip = clip with { Fps = clip.Fps * 1.5 };
+            _attackClipTime = Math.Max(0, clip.Contact - 2) / _attackClip.Fps;
+            ApplyAttackClipFrame();
+        }
+        return done;
     }
     private bool HoldHagiLastFrame(bool completed)
     {

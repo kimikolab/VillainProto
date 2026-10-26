@@ -1,4 +1,5 @@
 using Godot;
+using BattleCore;
 using System;
 
 // 円弧はコードで描く。光粒は購入済み EffectBlocks の sparkle を共有し、自動ループのシーンは使わない。
@@ -14,10 +15,31 @@ public partial class HagiLight3D : Node3D
     private MeshInstance3D? _arc;
     private Sprite3D[] _particles = Array.Empty<Sprite3D>();
     private Vector3 _from, _to;
+    private Func<Vector3>? _destination;
+    private Color _particleTint = new(1, .72f, .57f);
     private bool _flow;
     private bool _large;
     private double _duration;
+    private Sprite3D? _ghost;
+    private float _ghostAlpha;
     internal double Age { get; private set; }
+    // 墓守の青白・紫と重ならない、敵の赤／傷の朱／味方の淡い金。
+    internal static Color SoulTint(int origin) => origin switch
+    {
+        ReapLabels.SoulAlly => new Color("ffe2aa"),
+        ReapLabels.SoulDeath => new Color("ff374b"),
+        ReapLabels.SoulMark => new Color("ffad7a"),
+        _ => new Color("ff7959"),
+    };
+
+    internal void Ghost(Sprite3D portrait, Func<(bool, double)> clock, float alpha, Vector3 offset = default)
+    {
+        _clock = clock; _duration = .30; _ghostAlpha = alpha;
+        _ghost = new Sprite3D { Texture = portrait.Texture, PixelSize = portrait.PixelSize, FlipH = portrait.FlipH,
+            Billboard = BaseMaterial3D.BillboardModeEnum.Enabled, Shaded = false, Modulate = new Color(1,.08f,.04f,alpha) };
+        AddChild(_ghost); _ghost.GlobalTransform = portrait.GlobalTransform;
+        _ghost.GlobalPosition += offset;
+    }
 
     internal void Arc(Vector3 center, float width, bool reap, bool reverse, Func<(bool, double)> clock, Camera3D camera)
     {
@@ -45,8 +67,10 @@ void fragment(){
         AddChild(_arc); _arc.GlobalBasis = camera.GlobalBasis;
         if (reverse) _arc.RotateObjectLocal(Vector3.Forward, Mathf.Pi);
     }
-    internal void Particles(Vector3 from, Vector3 to, bool flow, bool large, Func<(bool, double)> clock)
+    internal void Particles(Vector3 from, Vector3 to, bool flow, bool large, Func<(bool, double)> clock,
+        Color? tint = null, Func<Vector3>? destination = null)
     {
+        _particleTint = tint ?? new Color(1, .72f, .57f); _destination = destination;
         _from = from; _to = to; _flow = flow; _large = large; _clock = clock; _duration = flow ? .64 : large ? .78 : .48;
         _particles = new Sprite3D[large ? flow ? 24 : 28 : 8];
         for (int k = 0; k < _particles.Length; k++)
@@ -60,6 +84,7 @@ void fragment(){
     {
         var (paused, speed) = _clock(); if (paused) return;
         Age += delta * speed; float t = (float)Math.Min(1, Age / _duration);
+        if (_ghost is not null) _ghost.Modulate = new Color(1,.08f,.04f,_ghostAlpha*(1-t));
         _material?.SetShaderParameter("age", t);
         if (_arc is not null) _arc.Scale = new Vector3(.92f + t * .14f, 1, 1);
         for (int k = 0; k < _particles.Length; k++)
@@ -68,13 +93,13 @@ void fragment(){
             float seed = (k % 7 + 1) / 7f;
             Vector3 scatter = new(Mathf.Cos(angle) * .70f, (seed - .3f) * 1.3f, Mathf.Sin(angle) * .35f);
             var particle = _particles[k];
-            particle.GlobalPosition = _flow ? _from.Lerp(_to, t * t) + scatter * Mathf.Sin(t * Mathf.Pi)
+            particle.GlobalPosition = _flow ? _from.Lerp(_destination?.Invoke() ?? _to, t * t) + scatter * Mathf.Sin(t * Mathf.Pi)
                 : _large ? _from + new Vector3(Mathf.Cos(angle+t)*(.22f+t*.45f),
                     (seed-.45f)*1.2f+t*t*1.1f,Mathf.Sin(angle+t)*(.16f+t*.3f))
                 : _from + scatter * (.2f + t * 1.8f) + Vector3.Up * t * .6f;
             float scale = (.10f + seed * .09f) / Math.Max(.001f, Sparkle.GetWidth() * .001f);
             particle.Scale = Vector3.One * scale * (1 - t * .55f);
-            particle.Modulate = new Color(.95f, .97f, 1, Mathf.Sin(t * Mathf.Pi));
+            particle.Modulate = new Color(_particleTint, Mathf.Sin(t * Mathf.Pi));
         }
         if (Age >= _duration) QueueFree();
     }

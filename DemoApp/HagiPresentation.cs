@@ -2,78 +2,157 @@ using BattleCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 
-// 戦闘中に観測した実値と、確定済みイベントの索引だけを持つ。標的・ダメージ・魂を計算しない。
+// 確定済みの台本だけを読む。線・魂・段・刈れる相手を戦闘の規則から求め直さない。
 internal sealed class HagiPresentation
 {
-    internal readonly record struct State(int Id, int Souls, int Marks, int LinePermil);
-    internal sealed record Swing(int Actor, int[] Damage, bool Reap, bool Pursuit, bool Link, bool Keep = false);
+    internal readonly record struct State(int Id, int Souls, int Marks, int LinePermil, int Stage = 0, int BaseLinePermil = 0);
+    internal sealed record Swing(int Actor, int[] Damage, bool Reap, bool Pursuit, bool Link, bool Keep = false,
+        bool Return = false, bool Reverse = false, int Encore = 0, bool Weighted = false, int Kind = 0, int? Partner = null);
     internal readonly SortedDictionary<int, List<State>> Frames = new();
     internal readonly Dictionary<int, Swing> Swings = new();
+    internal readonly Dictionary<int, Swing> Returns = new();
     internal readonly HashSet<int> Reaps = new();
-    private readonly Dictionary<int, State> _last = new();
-    private static readonly MethodInfo Line = typeof(BattleContext).GetMethod("ReapLineFor389", BindingFlags.Instance | BindingFlags.NonPublic)
-        ?? throw new InvalidOperationException("刈り取り線の観測先が見つかりません");
+    internal readonly HashSet<int> HeavyHits = new();
+    internal readonly HashSet<int> FastEvents = new();
+    internal readonly Dictionary<int, int> ReapKinds = new();
 
-    internal void Capture(int index, IReadOnlyList<UnitState> units, BattleContext context)
-    {
-        var holders = units.Where(u => u.IsAlive && u.HasTrait(TraitId.HagiReap)).ToArray();
-        foreach (var unit in units)
-        {
-            int line = 0;
-            foreach (var holder in holders.Where(h => h.TeamId != unit.TeamId))
-                line = Math.Max(line, (int)Line.Invoke(context, new object[] { holder, unit, HagiReaperTrait.ReapLinePermil(holder) })!);
-            var state = new State(unit.InstanceId, unit.RawCounter(HagiDepthTrait.SoulKey), unit.RawCounter(HagiDepthTrait.MarkKey), line);
-            if (_last.TryGetValue(state.Id, out var old) && state == old) continue;
-            _last[state.Id] = state;
-            if (!Frames.TryGetValue(index, out var frame)) Frames[index] = frame = new();
-            frame.RemoveAll(s => s.Id == state.Id); frame.Add(state);
-        }
-    }
+    // DeathPresentation の既存の観測口との互換だけ残す。反射・カウンタの副台本は持たない。
+    internal void Capture(int index, IReadOnlyList<UnitState> units, BattleContext context) { }
 
     internal static HagiPresentation Build(IReadOnlyList<BattleEvent> events, IReadOnlyList<DemoOpening> openings, HagiPresentation? recorded)
     {
         var result = new HagiPresentation();
-        if (recorded is not null)
-            foreach (var frame in recorded.Frames) result.Frames[frame.Key] = frame.Value;
         var hagi = openings.Where(o => o.UnitId == "hagi").Select(o => o.InstanceId).ToHashSet();
-        // ReapBody388 は Highlight → Damage をこの順で出す。文言や残HPから必殺を推測しない。
-        for (int i = 1; i < events.Count; i++)
+        var states = openings.ToDictionary(o => o.InstanceId, o => new State(o.InstanceId, 0, 0, 0));
+        result.Frames[0] = states.Values.ToList();
+        void Save(int index, State state)
         {
-            var e = events[i]; var before = events[i - 1];
-            if (e.Kind == BattleEventKind.Damage && e.ActorId is int id && hagi.Contains(id)
-                && !e.FriendlyFire && e.HpAfter == 0 && before.Kind == BattleEventKind.Highlight && before.ActorId == id)
-                result.Reaps.Add(i);
+            states[state.Id] = state;
+            if (!result.Frames.TryGetValue(index, out var frame)) result.Frames[index] = frame = new();
+            frame.RemoveAll(s => s.Id == state.Id); frame.Add(state);
         }
-        var latest = new Dictionary<int, int>();
-        var damage = new Dictionary<int, List<int>>();
-        var linked = new HashSet<int>();
-        int? lastAttacker = null;
+        // 「刈る」と対応する Damage を結ぶ。間の Highlight や振る前の Attack は表示順のまま通す。
+        var pending = new Dictionary<(int Actor, int Target), (int Index, BattleEvent Event)>();
+        var reapAt = new Dictionary<int, (int Hit, BattleEvent Event)>();
         for (int i = 0; i < events.Count; i++)
         {
             var e = events[i];
-            if (e.Kind == BattleEventKind.TurnStart) { latest.Clear(); lastAttacker = null; }
+            if (e.Kind == BattleEventKind.TurnStart) pending.Clear();
+            if (e.Kind == BattleEventKind.Reap && e.ActorId is int id && hagi.Contains(id))
+            {
+                var state = states[id];
+                switch (e.Text)
+                {
+                    case ReapLabels.Soul when e.StatusRemaining is int souls && souls is >= 0 and <= 9:
+                        Save(i, state with { Souls = souls }); break;
+                    case ReapLabels.Stage when e.Amount is >= 0 and <= 3 && e.Slot is >= 0 and <= 1000
+                        && e.StatusRemaining is int souls && souls is >= 0 and <= 9:
+                        Save(i, state with { Stage = e.Amount, Souls = souls, BaseLinePermil = e.Slot }); break;
+                    case ReapLabels.Mark or ReapLabels.Line when e.TargetId is int target
+                        && e.Amount is >= 0 and <= 5 && e.StatusRemaining is int line && line is >= 0 and <= 1000:
+                        Save(i, states.GetValueOrDefault(target, new State(target, 0, 0, 0)) with { Marks = e.Amount, LinePermil = line }); break;
+                    case ReapLabels.Reap when e.TargetId is int target && e.Slot is >= ReapLabels.KindTurn and <= ReapLabels.KindTwin:
+                        pending[(id, target)] = (i, e); break;
+                }
+            }
+            if (e.Kind == BattleEventKind.Damage && e.ActorId is int actor && e.TargetId is int victim
+                && pending.Remove((actor, victim), out var reap) && !e.FriendlyFire && e.HpAfter == 0 && e.Amount == reap.Event.Amount)
+            {
+                result.Reaps.Add(i); result.ReapKinds[i] = reap.Event.Slot;
+                reapAt[reap.Index] = (i, reap.Event);
+            }
+        }
+        var latest = new Dictionary<int, int>();
+        var hits = new Dictionary<int, List<int>>();
+        var encore = new Dictionary<int, int>();
+        var twin = new HashSet<int>();
+        var pursuit = new Dictionary<int, int?>();
+        var weighted = new HashSet<int>();
+        var heavy = new HashSet<(int, int)>();
+        var beforeReap = new Dictionary<int, int>();
+        var cues = new SortedDictionary<int, Swing>();
+        for (int i = 0; i < events.Count; i++)
+        {
+            var e = events[i];
+            if (e.Kind == BattleEventKind.TurnStart)
+            { latest.Clear(); encore.Clear(); twin.Clear(); pursuit.Clear(); weighted.Clear(); heavy.Clear(); beforeReap.Clear(); }
+            if (e.ActorId is not int id || !hagi.Contains(id)) continue;
+            if (e.Kind == BattleEventKind.Reap)
+            {
+                switch (e.Text)
+                {
+                    case ReapLabels.Encore when e.Amount is 1 or 2: encore[id] = e.Amount; break;
+                    case ReapLabels.Twin when e.Amount is 0 or 1: twin.Add(id); break;
+                    case ReapLabels.Pursue when e.Slot is 0 or 1 && e.StatusRemaining is 0 or 1:
+                        pursuit[id] = e.PartnerId;
+                        // 仲間の命中後の待ちだけを詰める。別の攻撃や手番を越えて結ばない。
+                        if (e.PartnerId is int partner)
+                            for (int j = i - 1; j >= 0; j--)
+                            {
+                                var prior = events[j];
+                                if (prior.Kind is BattleEventKind.TurnStart or BattleEventKind.Attack) break;
+                                if (prior.Kind == BattleEventKind.Damage && prior.ActorId == partner && prior.TargetId == e.TargetId)
+                                { for (int k = j; k < i; k++) result.FastEvents.Add(k); break; }
+                            }
+                        break;
+                    case ReapLabels.Weight: weighted.Add(id); break;
+                    case ReapLabels.Heavy when e.TargetId is int target: heavy.Add((id, target)); break;
+                }
+                if (reapAt.TryGetValue(i, out var reap))
+                {
+                    int kind = reap.Event.Slot;
+                    if (kind is ReapLabels.KindAfter or ReapLabels.KindAfterChase or ReapLabels.KindColumn)
+                    {
+                        var prior = latest.TryGetValue(id, out int attack) ? cues[attack] : null;
+                        cues[i] = new(id, new[] { reap.Hit }, true, false, true, Return: true,
+                            Reverse: prior is null || !prior.Reverse, Encore: prior?.Encore ?? 0, Kind: kind);
+                    }
+                    else beforeReap[id] = kind;
+                }
+            }
             if (e.Kind == BattleEventKind.Attack)
             {
-                if (e.ActorId is int id && hagi.Contains(id))
-                {
-                    if (lastAttacker == id) linked.Add(i);
-                    latest[id] = i; damage[i] = new();
-                }
-                lastAttacker = e.ActorId;
+                int repeat = encore.GetValueOrDefault(id);
+                bool reverse = twin.Remove(id);
+                int kind = beforeReap.GetValueOrDefault(id); beforeReap.Remove(id);
+                bool chasing = pursuit.Remove(id, out int? partner);
+                cues[i] = new(id, Array.Empty<int>(), kind != 0, chasing, reverse || repeat > 0,
+                    Reverse: reverse, Encore: repeat, Weighted: weighted.Remove(id), Kind: kind, Partner: partner);
+                encore.Remove(id); latest[id] = i; hits[i] = new();
             }
-            if (e.Kind == BattleEventKind.Damage && !e.FriendlyFire && e.ActorId is int source
-                && hagi.Contains(source) && latest.TryGetValue(source, out int attack))
-                damage[attack].Add(i);
+            if (e.Kind == BattleEventKind.Damage && !e.FriendlyFire && e.TargetId is int victim)
+            {
+                if (heavy.Remove((id, victim))) result.HeavyHits.Add(i);
+                if (latest.TryGetValue(id, out int attack)
+                    && (!result.ReapKinds.TryGetValue(i, out int kind) || kind is not (ReapLabels.KindAfter or ReapLabels.KindAfterChase or ReapLabels.KindColumn)))
+                    hits[attack].Add(i);
+            }
         }
-        foreach (var (index, hits) in damage)
-            result.Swings[index] = new(events[index].ActorId!.Value, hits.ToArray(), hits.Any(result.Reaps.Contains), events[index].Reaction, linked.Contains(index));
-        foreach (int index in linked)
+        foreach (var (index, damage) in hits)
         {
-            int prior = result.Swings.Keys.Where(i => i < index).DefaultIfEmpty(-1).Max();
-            if (prior >= 0 && result.Swings[prior].Actor == result.Swings[index].Actor)
-                result.Swings[prior] = result.Swings[prior] with { Keep = true };
+            cues[index] = cues[index] with { Damage = damage.ToArray() };
+            if (cues[index].Weighted) result.HeavyHits.UnionWith(damage.Where(i => !result.Reaps.Contains(i)));
+            if (damage.Any(result.HeavyHits.Contains)) cues[index] = cues[index] with { Weighted = true };
+        }
+        var ordered = cues.Keys.ToArray();
+        for (int n = 0; n < ordered.Length; n++)
+        {
+            int i = ordered[n]; var cue = cues[i];
+            if (n + 1 < ordered.Length)
+            {
+                int next = ordered[n + 1]; var following = cues[next];
+                bool boundary = events.Skip(i + 1).Take(next - i - 1).Any(e => e.Kind == BattleEventKind.TurnStart
+                    || e.Kind == BattleEventKind.Attack && e.ActorId != cue.Actor
+                    || e.Kind == BattleEventKind.Death && e.TargetId == cue.Actor);
+                if (following.Actor == cue.Actor && following.Link && !boundary)
+                {
+                    cue = cue with { Keep = true };
+                    for (int k = i; k < next; k++) result.FastEvents.Add(k);
+                }
+            }
+            if (cue.Return) result.Returns[i] = cue;
+            else result.Swings[i] = cue;
         }
         return result;
     }

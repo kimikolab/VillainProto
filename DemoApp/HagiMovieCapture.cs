@@ -19,7 +19,7 @@ public partial class HagiMovieCapture : Control
             var cue = FxCatalog.Find("hagi.live.0.2");
             var playback = FxLivePlayback.Create(cue);
             var index = HagiPresentation.Build(playback.Result.Events, playback.Openings, playback.Death?.Hagi);
-            var swings = index.Swings.OrderBy(p => p.Key).ToArray();
+            var swings = index.Swings.Concat(index.Returns).OrderBy(p => p.Key).ToArray();
             foreach (var swing in swings)
                 GD.Print($"HAGI_MOVIE_CANDIDATE index={swing.Key} reap={swing.Value.Reap} pursuit={swing.Value.Pursuit} link={swing.Value.Link} keep={swing.Value.Keep} targets={string.Join(',',swing.Value.Damage.Select(i => playback.Result.Events[i].TargetId))}");
             var single = swings.First(p => p.Value.Reap && !p.Value.Pursuit);
@@ -42,7 +42,7 @@ public partial class HagiMovieCapture : Control
     }
     private async Task Record(string name, FxLivePlayback playback, HagiPresentation index, int attack, int count)
     {
-        var steps = index.Swings.Where(p => p.Key >= attack).OrderBy(p => p.Key).Take(count).ToArray();
+        var steps = index.Swings.Concat(index.Returns).Where(p => p.Key >= attack).OrderBy(p => p.Key).Take(count).ToArray();
         int actorId = steps[0].Value.Actor;
         var ids = steps.SelectMany(p => p.Value.Damage).Select(i => playback.Result.Events[i].TargetId!.Value).Append(actorId).ToHashSet();
         int HpBefore(int id)
@@ -55,7 +55,7 @@ public partial class HagiMovieCapture : Control
         field.BeginBattle(openings,"ハギの動作確認",0); field.SetCameraZoom(1.3f); field.SetDeathClock(false,1);
         void ApplySnapshot(int sourceIndex)
         {
-            foreach (var state in playback.Death!.Hagi.Frames.Where(p => p.Key <= sourceIndex).SelectMany(p => p.Value)
+            foreach (var state in index.Frames.Where(p => p.Key <= sourceIndex).SelectMany(p => p.Value)
                 .Where(s => ids.Contains(s.Id)).GroupBy(s => s.Id).Select(g => g.Last())) field.ApplyHagiState(state);
         }
         ApplySnapshot(attack); await Frames(12);
@@ -70,12 +70,12 @@ public partial class HagiMovieCapture : Control
                 {
                     var damage = playback.Result.Events[hit]; var pawn = field.FindPawn(damage.TargetId)!;
                     pawn.SetHp(damage.HpAfter); field.ShowHagiDamage(pawn,damage.Amount,index.Reaps.Contains(hit),false);
-                    if (damage.HpAfter == 0) { field.ShowHagiOffering(pawn); field.PlayDeath(pawn); }
+                    if (damage.HpAfter == 0) field.PlayDeath(pawn);
                 }
             });
             if (s+1 < steps.Length) { ApplySnapshot(steps[s+1].Key); await Frames(8); }
         }
-        if (field.HagiSwings != count) throw new Exception("録画した攻撃件数が実台本と違います");
+        if (field.HagiSwings + field.HagiReturns != count) throw new Exception("録画した刃の件数が実台本と違います");
         await Frames(66);
         int end = Engine.GetFramesDrawn();
         _segments.Add(new { name, startFrame = start, endFrame = end, attackEvent = attack, attacks = count, reaps = field.HagiReaps });

@@ -25,7 +25,7 @@ void fragment() {
     float taper = smoothstep(0.0, 0.045, u) * (1.0 - smoothstep(0.90, 1.0, u));
     float pulse = (1.0 - exp(-t * 150.0)) * exp(-t * (6.3 - echo));
     float brightness = mix(0.40, 1.0, front);
-    vec3 light = mix(vec3(1.0, 0.045, 0.035), vec3(1.0, 0.985, 0.94), clamp(blade * 0.94 + core, 0.0, 1.0));
+    vec3 light = mix(vec3(1.0, 0.012, 0.025), vec3(1.0, 0.79, 0.62), clamp(core * 0.60, 0.0, 1.0));
     ALBEDO = light;
     EMISSION = light * (1.8 + core * 3.8 + blade * 2.2);
     ALPHA = (core * 1.15 + blade * 1.25 + wake) * taper * reveal * pulse

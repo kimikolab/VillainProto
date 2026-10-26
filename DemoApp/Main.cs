@@ -1276,6 +1276,7 @@ public partial class Main : Control
         _beniGiftGains.Clear();
         _playing = true;
         _paused = false;
+        _hagiFastEvent = false;
         _battleField.SetDeathClock(false, _speed);
         _pause.Text = "一時停止";
         if (ViewerMode && ViewerLeadInSeconds > 0) await HoldViewerLeadIn(token);
@@ -1331,6 +1332,7 @@ public partial class Main : Control
             // 第125期 段3-e: 画面下の一覧を引き直す。**数字の出どころは盤面の駒だけ**で、
             // 台本からは数え直さない（同じ言葉の表を2つ作らない・第124期 §4）。
             _partyBar.Sync(_battleField, _shownOwner);
+            _hagiFastEvent = false;
         }
 
         if (token != _playToken || !_battleMode) return;
@@ -1437,7 +1439,7 @@ public partial class Main : Control
         BattlePawn3D? target = _battleField.FindPawn(e.TargetId);
         if (actor is not null) actor.AnimationSpeed = Math.Max(0.1, _speed);
         if (target is not null) target.AnimationSpeed = Math.Max(0.1, _speed);
-        ObserveHagiEvent(e, eventIndex, target);
+        if (await PlayHagiEvent(e, eventIndex, actor, target)) return;
         if (await PlayDeathAxis(e, eventIndex, actor, target)) return;
         // 第125期 段2: 拍の境目でだけ画面を変える。**ここでは待たない**（間は下の switch の中だけ）。
         ObserveSomEvent(e, eventIndex);
@@ -1618,9 +1620,10 @@ public partial class Main : Control
                 // 第124期 3-a: 「薙ぎやゾトの全体攻撃は一斉に入ったほうが爽快感ある」への直答。
                 // **範囲の巻き込みだけを同時着弾にする。単体は現状のまま**
                 // ——単体は1件しか無いので、まとめても絵が変わらない。
-                if (pattern != AttackPattern.Single && ApplyLinkedDamageAtOnce(eventIndex, e) > 0)
+                // ハギの薙ぎは各命中の間に返し刃が入る。後続の刈り取りを一括で先取りしない。
+                if (actor?.UnitId != "hagi" && pattern != AttackPattern.Single && ApplyLinkedDamageAtOnce(eventIndex, e) > 0)
                 {
-                    await Delay(actor?.UnitId == "hagi" ? 0.045 : 0.30);
+                    await Delay(0.30);
                     _battleField.EndGuards();
                 }
                 break;
@@ -2591,6 +2594,7 @@ public partial class Main : Control
 
     private async Task Delay(double seconds, bool raw = false)
     {
+        if (!raw && _hagiFastEvent) return;
         if (!raw && _dustChainFastEvent) return;
         if (!raw && _dohaFastEvent) seconds = Math.Min(seconds, 0.04);
         if (!raw && (_fireFastEvent || _misaFastEvent || _zanFastEvent || _golmFastEvent)) return;

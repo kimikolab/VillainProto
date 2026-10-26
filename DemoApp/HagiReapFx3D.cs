@@ -22,6 +22,7 @@ public partial class HagiReapFx3D : Node3D
     internal double Age { get; private set; }
     internal bool Released { get; private set; }
     internal bool Heavy { get; private set; }
+    internal bool Reverse => _reverse;
     internal Vector3 SweepCenter => _strikeCenter;
     internal float SweepRadius => _radius;
     internal Vector3 SweepPoint(float phase)
@@ -31,11 +32,12 @@ public partial class HagiReapFx3D : Node3D
     }
 
     internal void Start(Vector3 center, float width, bool reverse, Camera3D camera,
-        Func<Vector3> blade, Func<Vector3> orbit, Func<(bool Paused, double Speed)> clock, bool heavy = true)
+        Func<Vector3> blade, Func<Vector3> orbit, Func<(bool Paused, double Speed)> clock, bool heavy = true,
+        float powerScale = 1, int echoes = 0)
     {
-        _center = center; _radius = Math.Clamp(width * .5f, 1.65f, 2.8f);
+        _center = center; _radius = Math.Clamp(width * .5f, 1.65f, 2.8f) * (powerScale > 1 ? 1.16f : 1);
         _reverse = reverse; _camera = camera; _blade = blade; _orbit = orbit; _clock = clock;
-        Heavy = heavy; _power = heavy ? 1f : .48f;
+        Heavy = heavy; _power = (heavy ? 1f : .48f) * powerScale;
         _arcShader ??= new Shader { Code = Godot.FileAccess.GetFileAsString("res://assets/fx/hagi_reap_arc.gdshader") };
         _glowShader ??= new Shader { Code = Godot.FileAccess.GetFileAsString("res://assets/fx/hagi_reap_glow.gdshader") };
         _auraShader ??= new Shader { Code = Godot.FileAccess.GetFileAsString("res://assets/fx/hagi_reap_aura.gdshader") };
@@ -51,12 +53,13 @@ public partial class HagiReapFx3D : Node3D
         _flashMesh = Quad(_flash,new(width+1f,1.4f));
         _shadeMesh = Quad(_shade,new(_radius*2.3f,2.5f));
         _star = Sprite(HagiLight3D.Sparkle,15);
-        _sparks = new Sprite3D[heavy ? 26 : 12];
+        _sparks = new Sprite3D[(heavy ? 26 : 12) + echoes * 6];
         for (int i=0;i<_sparks.Length;i++) _sparks[i] = Sprite(HagiLight3D.Sparkle,14);
         _flakes = new MeshInstance3D[heavy ? 12 : 5];
         for (int i=0;i<_flakes.Length;i++) _flakes[i] = Quad(_shards,Vector2.One);
         foreach (var material in new[] { _main, _echo, _aura, _flash, _shade, _shards })
             material.SetShaderParameter("power", _power);
+        _echo.SetShaderParameter("power", _power * (1 + echoes * .8f));
         Draw();
     }
     internal void Release()

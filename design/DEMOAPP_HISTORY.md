@@ -350,3 +350,49 @@ HP・感電アイコン・移動後の席、シーク後の終端HP、Cue 切り
 
 終了時には既存の Thunder／Golm Check と同様、Godot の Texture／Font／CanvasItem の解放警告が出る。
 再生中の例外・子ノード追加エラーは解消し、合否は規約どおり各 `_OK` 行で確認した。
+
+## 第405期 —— ハギの演出を `Reap` を読む形へ（2026-10-26）
+
+第2版の発注メモ `CODEX_BRIEF_HAGI_2.md` に合わせ、前回中断時の17ファイルの変更を保持して仕上げた。
+戦闘の判定は変更せず、確定済みの `BattleEventKind.Reap` の欄を読む。
+`Highlight` と HP 0 の並びからの刈り取り推定、`ReapLineFor389` の反射とカウンタの副台本を外した。
+知らない札・種類は素通りし、魂から段や敵の線を求め直さない。
+
+- **斬る → 刈る → 次へ（依頼1〜3）**: 「刈る」の種類1〜6を実際の `Damage` へ結び、種類3／4は通常斬撃に続く短い返し刃、種類5も追加の刃として再生する。薙ぎの各敵を台本の命中順に刈り、次の刃まで姿勢を保持する。通常の範囲ダメージ一括表示にはハギを入れず、返し刃のHPを先に0にしない。「再行動」の1／2を振りと返し刃へ渡し、残像の数・濃さと残光を増す。
+- **二度斬り（4）**: 「二度斬る」を読み、往復で円弧の向きを変える。まれな2発目の刈り取り（種類6）も接続する。
+- **印と線（5）**: 「印」「線」の本数・‰をそのまま体の細い赤い傷1〜5本とHPバー上の鎌の印へ反映する。傷線は縮小時の画素幅に合わせ、HPが線以下の敵を赤く縁取る。HP回復でも縁取りを更新し、最大HPの傷があるバーでは実際のHP幅に位置を合わせる。
+- **魂と段（6）**: 「魂」の `TargetId` から欠片を吸い寄せる。敵の死は赤、線を割った敵は朱、味方の死は淡い金で、墓守の青白・紫と分ける。「段」の0〜3で刃に沿う帯と両端の伸びを変え、段3では本人の輪郭も赤くする。減衰・停止・倍速に従い、「段の重み」「印の重み」が付いた一撃は数字・命中光・円弧を一回り大きくする。単体攻撃でも半径の下限に拡大が埋もれないようにした。
+- **追撃と巻き込み（7〜8）**: 「追撃」の `PartnerId` の仲間の命中後の待ちを詰め、その側へ寄る軌道と短い踏み込み・赤い残像で滑り込む。刻み由来の null も通す。巻き込みは従来の小さな光と実ダメージ2のまま。新しい文字・血や切断・揺らめく炎は足していない。
+
+購入済み素材の一覧・導入済み EffectBlocks v4 の `impact_1.tscn` と `sparkle.png` を確認した。
+引き続き `DemoApp/PolyBlocks/EffectBlocks/source_files/textures/sparkle.png` を光粒に使う。
+自動反復する着弾シーンは停止・倍速・接触順を台本へ合わせるため使わず、円弧と傷線は既存の専用描画を改修した。
+購入原本・共有リソースは変更していない。
+
+変更ファイル（前回分を含む）:
+
+- 台本・接続: `DemoApp/HagiPresentation.cs`、`Main.Hagi.cs`、`Main.cs`、`FxCatalog.Hagi.cs`
+- 駒・HUD: `DemoApp/BattlePawn3D.Hagi.cs`、`BattlePawn3D.HagiMotion.cs`、`BattlePawn3D.cs`、`PawnHud2D.Hagi.cs`
+- 描画: `DemoApp/BattlefieldView3D.Hagi.cs`、`HagiLight3D.cs`、`HagiReapFx3D.cs`、`assets/fx/hagi_blade_empower.gdshader`、`hagi_reap_arc.gdshader`、`hagi_reap_aura.gdshader`
+- 検査・撮影: `DemoApp/HagiPresentationCheck.cs`、`HagiMovieCapture.cs`、`HagiEmpowerCapture.cs`
+- 経緯: この文書。BattleCore／BattleSim／docs は差分なし。他の人の変更を保持し、コミット・push はしていない。
+
+検証ログは `.tmp/hagi-v2-resume/`。Debugビルドは0エラー。
+map11の phase0／171／172／173、NineWaveCheck／DischargeCheck／ScorePanelCheck／HagiPresentationCheck はすべて `ok=True`。
+HagiPresentationCheck は実戦15本の台本不変・HP・刈り取りと巻き込みの件数、返し刃・印と線・重みの単体円弧、停止・速度変更・反転・死亡・中断・復活・再戦・シークを確認した。
+複数の返し刃の順序と再行動の回数、`PartnerId` の接続は合成台本でも確認し、哀歌×近衛では返し刃の直前にシークしてHPの先取りがないことを検査した。
+
+seed 0 の単発再生は以下12本すべて `DEMO_SMOKE_COMPLETE`（ボス・近衛8本が受け入れ条件、大隊4本は追加確認）。
+
+| 試遊の台 | ボス | 近衛 | 大隊 |
+|---|---|---|---|
+| ハギ キャリー | 勝ち・4T | 勝ち・2T | 勝ち・2T |
+| ハギ 哀歌 | 勝ち・3T | 勝ち・6T | 負け・6T（再生完了） |
+| ハギ 台B | 勝ち・3T | 勝ち・3T | 勝ち・4T |
+| 死神と墓守 | 勝ち・5T | 勝ち・5T | 勝ち・4T |
+
+描画ありの `--visual-only --capture` も `HAGI_VISUAL_CHECK_OK ok=True`。
+キャリー×大隊・哀歌×ボス・死神と墓守×ボスは描画あり・実時間2倍速でも完走し、`HAGI_REAL_2X_OK`。
+画像は `.tmp/hagi-v2/captures/`（傷・HPバーの印・赤い帯・返し刃と墓守の色分けを目視確認）。
+列の刈り取りと2発目の刈り取りは規定の実戦台では出ないので、合成台本・描画検査で確認した。
+音声出力機器・ルート証明書ストアの取得エラー、NuGetの脆弱性情報取得警告、終了時の既存のRID／Font等の解放警告は環境の制約として残る。音の実聴は未検証。設計だけ残した項目はない。

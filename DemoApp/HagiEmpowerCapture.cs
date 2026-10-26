@@ -33,7 +33,7 @@ public partial class HagiEmpowerCapture : Node3D
                 pawn.Position=new Vector3(-3.3f+i*2.2f,0,0);
                 pawn.Hud.Hide();
                 foreach(var floorMark in pawn.GetChildren().OfType<MeshInstance3D>())floorMark.Hide();
-                pawn.SetHagiState(new(i+1,i*3,0,0),()=>(false,1));
+                pawn.SetHagiState(new(i+1,i*3,0,0,Stage:i),()=>(false,1));
                 Vector2 screen=camera.UnprojectPosition(pawn.GlobalPosition+Vector3.Up*2.65f);
                 var label=new Label { Text=$"魂 {i*3}"+(i==0?"  未強化":$"  強化 {i}"),
                     Position=screen-new Vector2(135,0),Size=new Vector2(270,60),

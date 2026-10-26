@@ -13,12 +13,13 @@ public partial class HagiPresentationCheck : Control
     {
         try
         {
+            CheckReapContract();
             var fixtures = CheckScripts();
             if (OS.GetCmdlineUserArgs().Contains("--real-2x"))
             {
-                foreach (int i in new[] { 2, 5 })
+                foreach (int i in new[] { 11, 12, 3 })
                     await CaptureRealBattle(fixtures[i].Cue, fixtures[i].Playback);
-                GD.Print("HAGI_REAL_2X_OK hagi-battalion death-pair-battalion"); GetTree().Quit(); return;
+                GD.Print("HAGI_REAL_2X_OK carry-battalion elegy-boss death-pair-boss"); GetTree().Quit(); return;
             }
             _field = new BattlefieldView3D(); _field.SetAnchorsPreset(LayoutPreset.FullRect); AddChild(_field);
             var openings = new[] {
@@ -28,15 +29,27 @@ public partial class HagiPresentationCheck : Control
             var hagi = _field.FindPawn(1)!; var enemy = _field.FindPawn(3)!;
             foreach (int souls in new[] { 0, 3, 6, 9 })
             {
-                _field.ApplyHagiState(new(1, souls, 0, 0));
-                _field.ApplyHagiState(new(3, 0, souls / 2, souls == 0 ? 200 : 600));
+                _field.ApplyHagiState(new(1, souls, 0, 0, Stage: souls / 3));
+                _field.ApplyHagiState(new(3, 0, souls / 2, souls == 0 ? 200 : 500));
                 _field.ApplyDeathState(new(2, 9, 0, 0, _field.FindPawn(2)!.MaxHp));
                 enemy.SetHp(enemy.MaxHp / 2);
                 await Wait(.24); await Capture("souls-" + souls);
+                Require(enemy.HagiMarks == souls / 2 && enemy.HagiEligible == (souls > 0), "印の本数と線以下の縁取り");
+                Require(souls == 0 || Math.Abs(enemy.Hud.HagiLineX) < .001f, "5割の鎌の印はHPバーの中央");
                 var bladeAura=hagi.GetChildren().OfType<HagiAura3D>().Single();
                 Require(Math.Abs(bladeAura.BladeStage-souls/3f)<.03f,"強化の光は魂の実段階に一致");
-                Require(bladeAura.BladeVisible==(souls>0),"未強化では刃の炎を出さない");
+                Require(bladeAura.BladeVisible==(souls>0),"未強化では刃の赤い帯を出さない");
             }
+            _field.ApplyHagiState(new(3, 0, 5, 350));
+            float lowerLineX = enemy.Hud.HagiLineX;
+            Require(!enemy.HagiEligible, "HPが線より上なら縁取りを外す");
+            _field.ApplyHagiState(new(3, 0, 5, 500));
+            Require(enemy.HagiEligible && enemy.Hud.HagiLineX > lowerLineX, "Reap 線で印だけ右へ動かし傷5本は保持");
+            enemy.SetHp(enemy.MaxHp);
+            Require(!enemy.HagiEligible, "回復で線より上へ戻れば縁取りを外す");
+            enemy.SetHp(enemy.MaxHp / 2);
+            Require(HagiLight3D.SoulTint(ReapLabels.SoulDeath) != HagiLight3D.SoulTint(ReapLabels.SoulAlly)
+                && HagiLight3D.SoulTint(80) != HagiLight3D.SoulTint(ReapLabels.SoulDeath), "敵死・味方死・線を割った魂の色を区別");
             var aura = hagi.GetChildren().OfType<HagiAura3D>().Single();
             Vector3 bladeVertical=hagi.HagiBladePoint(new Vector2(.5f,0))-hagi.HagiBladePoint(new Vector2(.5f,1));
             Vector3 spriteVertical=hagi.DeathSprite.GlobalBasis.Y*hagi.DeathSprite.Texture.GetHeight()*hagi.DeathSprite.PixelSize;
@@ -86,10 +99,33 @@ public partial class HagiPresentationCheck : Control
             var normalFx=_field.HagiSweepEffects.Single(f=>!f.Heavy);
             Require(normalFx.Released && Math.Abs(normalFx.SweepPoint(.65f).Y-normalFx.SweepCenter.Y)<.001f,
                 "通常攻撃も同じ水平円弧を使う");
+            float normalRadius = normalFx.SweepRadius;
             await normalSwing;
+            var weightedSwing = _field.PlayHagiSwing(hagi, new[] { enemy }, new(1, Array.Empty<int>(), false, false, false, Weighted: true), () => { });
+            await Wait(.25);
+            Require(_field.HagiSweepEffects.Single(f => !f.Heavy).SweepRadius > normalRadius * 1.1f,
+                "重みの一撃は単体でも弧の半径を一回り大きくする");
+            await weightedSwing;
+            // 通常斬撃を振り切る途中で返し刃へ移る。停止中は返し刃の接触も起こさない。
+            int returnContacts = 0;
+            await _field.PlayHagiSwing(hagi, new[] { enemy }, new(1, Array.Empty<int>(), false, false, false, Keep: true), () => { });
+            bool outward = _field.HagiSweepEffects.Last().Reverse;
+            var returnSwing = _field.PlayHagiSwing(hagi, new[] { enemy },
+                new(1, Array.Empty<int>(), true, false, true, Return: true, Reverse: true, Kind: ReapLabels.KindAfter), () => returnContacts++);
+            _field.SetDeathClock(true, 1); await Wait(.08);
+            Require(returnContacts == 0 && !returnSwing.IsCompleted, "返し刃の溜めも停止");
+            _field.SetDeathClock(false, 2);
+            if (OS.GetCmdlineUserArgs().Contains("--capture"))
+            {
+                while (returnContacts == 0) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+                _field.SetDeathClock(true, 2); await Capture("return-contact"); _field.SetDeathClock(false, 2);
+            }
+            await returnSwing;
+            Require(returnContacts == 1 && _field.HagiReturns == 1 && _field.HagiReapEffects.Last().Reverse != outward,
+                "同じ振りの返し刃を逆向きに一度だけ接触");
             _field.BeginBattle(openings, "", 0); hagi = _field.FindPawn(1)!; enemy = _field.FindPawn(3)!;
             Require(!_field.HagiSweepEffects.Any(),"再戦で通常攻撃と刈り取りの残光を破棄");
-            _field.ApplyHagiState(new(1, 9, 0, 0));
+            _field.ApplyHagiState(new(1, 9, 0, 0, Stage: 3));
             aura = hagi.GetChildren().OfType<HagiAura3D>().Single();
             _field.ApplyDeathState(new(2, 9, 0, 0, _field.FindPawn(2)!.MaxHp));
             var task = _field.PlayHagiSwing(hagi, new[] { enemy, _field.FindPawn(4)!, _field.FindPawn(5)! }, new(1, Array.Empty<int>(), true, false, false), () => {
@@ -97,18 +133,19 @@ public partial class HagiPresentationCheck : Control
             });
             await Wait(.18); await Capture("windup"); await Wait(.20); await Capture("column-contact");
             await task; Require(_field.HagiColumns == 1 && _field.HagiReaps == 3, "列は一振り・実対象3体");
-            _field.ApplyHagiState(new(1, 8, 0, 0)); await Wait(.25); await Capture("soul-fade");
+            _field.ApplyHagiState(new(1, 8, 0, 0, Stage: 2)); await Wait(.25); await Capture("soul-fade");
             hagi.AnimateVictory(); await Wait(.03); Require(!aura.Visible, "勝利で魂を隠す");
             _field.BeginBattle(openings.Select(o => o with { Team = 1 - o.Team }).ToArray(), "", 0);
             hagi = _field.FindPawn(1)!; enemy = _field.FindPawn(3)!;
             Require(hagi.HagiSouls == 0 && _field.HagiReaps == 0, "再戦で破棄");
-            _field.ApplyHagiState(new(1, 6, 0, 0));
+            _field.ApplyHagiState(new(1, 6, 0, 0, Stage: 2));
             task = _field.PlayHagiSwing(hagi, new[] { enemy }, new(1, Array.Empty<int>(), true, true, false), () => { });
             await Wait(.025); Require(hagi.AttackClipPlaying && hagi.DeathSprite.FlipH, "敵側の全身セルも左右反転");
             await Wait(.135); await Capture("mirrored-pursuit"); await task;
             Require(hagi.DeathSprite.FlipH, "敵側の左右反転");
             int contacts = 0;
             await _field.PlayHagiSwing(hagi, new[] { enemy }, new(1, Array.Empty<int>(), true, false, false, Keep: true), () => contacts++);
+            await hagi.AttackClipFinished;
             Require(!hagi.AttackClipPlaying && !hagi.IdleLoopPlaying && hagi.HagiClipName == "hagi_reap_chain_v1", "連撃の間は着地姿勢を保持");
             var heldFx=_field.HagiReapEffects.Last(); Vector3 heldCenter=heldFx.SweepCenter;
             await Wait(.08); Require(heldFx.SweepCenter==heldCenter,"着地後の残光は命中位置に残す");
@@ -128,6 +165,8 @@ public partial class HagiPresentationCheck : Control
             hagi.SetHp(hagi.MaxHp); hagi.AnimateRevive();
             Require(hagi.HagiClipName is null && hagi.IdleLoopPlaying, "復活は待機から再開");
             _field.QueueFree(); await Wait(.03);
+            if (OS.GetCmdlineUserArgs().Contains("--visual-only"))
+            { GD.Print("HAGI_VISUAL_CHECK_OK ok=True"); GetTree().Quit(); return; }
             foreach (var fixture in fixtures)
             {
                 var main = new Main { ViewerMode = true }; main.SetAnchorsPreset(LayoutPreset.FullRect); AddChild(main);
@@ -146,7 +185,20 @@ public partial class HagiPresentationCheck : Control
                     if (fixture.Hp.TryGetValue(pawn.InstanceId, out int hp))
                         Require(pawn.Hp == hp, $"最終HP一致 {fixture.Cue.Id} {pawn.UnitId}/{pawn.InstanceId} actual={pawn.Hp} expected={hp}");
                 }
-                GD.Print($"HAGI_REPLAY_OK {fixture.Cue.Id} swings={main.ViewerField.HagiSwings} reaps={main.ViewerField.HagiReaps} pursuits={main.ViewerField.HagiPursuits} links={main.ViewerField.HagiLinks} columns={main.ViewerField.HagiColumns} graze={main.ViewerField.HagiGrazes}");
+                GD.Print($"HAGI_REPLAY_OK {fixture.Cue.Id} swings={main.ViewerField.HagiSwings} reaps={main.ViewerField.HagiReaps} pursuits={main.ViewerField.HagiPursuits} links={main.ViewerField.HagiLinks} columns={main.ViewerField.HagiColumns} returns={main.ViewerField.HagiReturns} graze={main.ViewerField.HagiGrazes}");
+                if (fixture.Cue.Id == "hagi.live.4.1")
+                {
+                    int beforeReturn = index.Returns.Keys.Min();
+                    int victim = fixture.Playback.Result.Events[beforeReturn].TargetId!.Value;
+                    int hpBeforeReturn = fixture.Playback.Result.Events.Take(beforeReturn)
+                        .Last(e => e.Kind == BattleEventKind.Damage && e.TargetId == victim).HpAfter;
+                    await main.SeekTo(beforeReturn);
+                    Require(hpBeforeReturn > 0 && main.ViewerField.FindPawn(victim)!.Hp == hpBeforeReturn
+                        && main.ViewerField.HagiReaps == index.Reaps.Count(i => i < beforeReturn), "薙ぎが後続の返し刃のHPを先取りしない");
+                    main.ResumePlayback();
+                    for (int frame = 0; frame < 5000 && main.IsPlaying; frame++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+                    Require(main.ViewerPlaybackError is null && main.ViewerField.HagiReaps == index.Reaps.Count, "返し刃の直前シーク後も全件を一度ずつ刈る");
+                }
                 if (fixture.Cue.Id == "hagi.live.0.2")
                 {
                     int firstHit = index.Reaps.Min();
@@ -160,10 +212,76 @@ public partial class HagiPresentationCheck : Control
                 }
                 await main.StopViewerPlayback(); main.QueueFree(); await Wait(.03);
             }
-            GD.Print("HAGI_PRESENTATION_CHECK_OK parity=9 actual-values reap-count acrobatic-cels head-scale ground horizontal-orbit actor-center fixed-radius normal-sweep blade-stage blade-idle-track blade-pause pause speed mirror combo cancel reset victory replay seek");
+            GD.Print("HAGI_PRESENTATION_CHECK_OK ok=True parity=15 reap-events actual-values reap-count acrobatic-cels head-scale ground horizontal-orbit actor-center fixed-radius normal-sweep blade-stage blade-idle-track blade-pause pause speed mirror combo cancel reset victory replay seek");
             GetTree().Quit();
         }
         catch (Exception error) { GD.PushError(error.ToString()); GetTree().Quit(1); }
+    }
+    private static void CheckReapContract()
+    {
+        var openings = new[] { Opening(1, UnitCatalog.Hagi, 0, 0), Opening(2, EnemyCatalog.Recruit, 1, 0) };
+        var events = new List<BattleEvent> {
+            new() { Turn = 1, Kind = BattleEventKind.Attack, ActorId = 1, TargetId = 2 },
+            new() { Turn = 1, Kind = BattleEventKind.Highlight, ActorId = 1 },
+            new() { Turn = 1, Kind = BattleEventKind.Damage, ActorId = 1, TargetId = 2, Amount = 40, HpAfter = 0 },
+            new() { Turn = 1, Kind = BattleEventKind.Reap, ActorId = 1, TargetId = 2, Text = "未知", Slot = 99 },
+        };
+        Require(HagiPresentation.Build(events, openings, null).Reaps.Count == 0, "Highlight と HP 0 から刈りを推定しない");
+        for (int kind = 1; kind <= 6; kind++)
+        {
+            events.Clear();
+            events.Add(new() { Turn = 1, Kind = BattleEventKind.Reap, ActorId = 1, TargetId = 2, Text = ReapLabels.Reap, Slot = kind, Amount = 40, StatusRemaining = 450 });
+            if (kind is 1 or 2 or 6) events.Add(new() { Turn = 1, Kind = BattleEventKind.Attack, ActorId = 1, TargetId = 2 });
+            events.Add(new() { Turn = 1, Kind = BattleEventKind.Highlight, ActorId = 1 });
+            events.Add(new() { Turn = 1, Kind = BattleEventKind.Damage, ActorId = 1, TargetId = 2, Amount = 40, HpAfter = 0 });
+            var index = HagiPresentation.Build(events, openings, null);
+            Require(index.Reaps.SetEquals(new[] { events.Count - 1 }) && index.ReapKinds[events.Count - 1] == kind,
+                "刈る 1〜6 と実 Damage の対応");
+        }
+        events = new() {
+            new() { Turn = 1, Kind = BattleEventKind.Reap, ActorId = 1, Text = ReapLabels.Soul, StatusRemaining = 9, Amount = 2, TargetId = 2 },
+            new() { Turn = 1, Kind = BattleEventKind.Reap, ActorId = 1, Text = ReapLabels.Stage, StatusRemaining = 9, Amount = 1, Slot = 321 },
+            new() { Turn = 1, Kind = BattleEventKind.Reap, ActorId = 1, TargetId = 2, Text = ReapLabels.Line, Amount = 4, StatusRemaining = 456 },
+            new() { Turn = 1, Kind = BattleEventKind.Reap, ActorId = 1, Text = ReapLabels.Twin, Amount = 1 },
+            new() { Turn = 1, Kind = BattleEventKind.Reap, ActorId = 1, TargetId = 2, Text = ReapLabels.Reap, Slot = 6, Amount = 40 },
+            new() { Turn = 1, Kind = BattleEventKind.Attack, ActorId = 1, TargetId = 2 },
+            new() { Turn = 1, Kind = BattleEventKind.Damage, ActorId = 1, TargetId = 2, Amount = 40, HpAfter = 0 },
+        };
+        var parsed = HagiPresentation.Build(events, openings, null);
+        Require(parsed.Frames[1].Single().Stage == 1 && parsed.Frames[1].Single().BaseLinePermil == 321
+            && parsed.Frames[2].Single().LinePermil == 456, "魂から段や線を再計算せず欄の値を読む");
+        Require(parsed.Swings[5].Reap && parsed.Swings[5].Reverse, "まれな二度斬りの刈り取り枝");
+        events = new() {
+            new() { Turn = 1, Kind = BattleEventKind.Reap, ActorId = 1, Text = ReapLabels.Encore, Amount = 1 },
+            new() { Turn = 1, Kind = BattleEventKind.Attack, ActorId = 1, TargetId = 2 },
+            new() { Turn = 1, Kind = BattleEventKind.Damage, ActorId = 1, TargetId = 2, HpAfter = 40 },
+            new() { Turn = 1, Kind = BattleEventKind.Reap, ActorId = 1, TargetId = 2, Text = ReapLabels.Reap, Slot = 3, Amount = 40 },
+            new() { Turn = 1, Kind = BattleEventKind.Damage, ActorId = 1, TargetId = 2, Amount = 40, HpAfter = 0 },
+            new() { Turn = 1, Kind = BattleEventKind.Damage, ActorId = 1, TargetId = 3, HpAfter = 30 },
+            new() { Turn = 1, Kind = BattleEventKind.Reap, ActorId = 1, TargetId = 3, Text = ReapLabels.Reap, Slot = 3, Amount = 30 },
+            new() { Turn = 1, Kind = BattleEventKind.Damage, ActorId = 1, TargetId = 3, Amount = 30, HpAfter = 0 },
+            new() { Turn = 1, Kind = BattleEventKind.Reap, ActorId = 1, Text = ReapLabels.Encore, Amount = 2 },
+            new() { Turn = 1, Kind = BattleEventKind.Attack, ActorId = 1, TargetId = 3 },
+            new() { Turn = 1, Kind = BattleEventKind.Damage, ActorId = 1, TargetId = 3, HpAfter = 20 },
+        };
+        parsed = HagiPresentation.Build(events, openings, null);
+        Require(parsed.Returns.Keys.SequenceEqual(new[] { 3, 6 }) && parsed.Returns[3].Damage.SequenceEqual(new[] { 4 })
+            && parsed.Returns[6].Damage.SequenceEqual(new[] { 7 }), "巻き込んだ敵は当たった順の返し刃へ一件ずつ接続");
+        Require(parsed.Swings[1].Keep && parsed.Returns[3].Keep && parsed.Returns[6].Keep
+            && parsed.Returns.Values.All(s => s.Encore == 1) && parsed.Swings[9].Encore == 2,
+            "複数の刈り取りから再行動へ途切れずつなぎ、残像の濃さも引き継ぐ");
+        events = new() {
+            new() { Turn = 1, Kind = BattleEventKind.Attack, ActorId = 3, TargetId = 2 },
+            new() { Turn = 1, Kind = BattleEventKind.Damage, ActorId = 3, TargetId = 2, HpAfter = 40 },
+            new() { Turn = 1, Kind = BattleEventKind.Reap, ActorId = 1, TargetId = 2, Text = ReapLabels.Pursue, PartnerId = 3, StatusRemaining = 0, Slot = 0 },
+            new() { Turn = 1, Kind = BattleEventKind.Attack, ActorId = 1, TargetId = 2 },
+            new() { Turn = 1, Kind = BattleEventKind.Damage, ActorId = 1, TargetId = 2, HpAfter = 20 },
+        };
+        parsed = HagiPresentation.Build(events, openings, null);
+        Require(parsed.Swings[3].Pursuit && parsed.Swings[3].Partner == 3 && parsed.FastEvents.SetEquals(new[] { 1 }), "PartnerIdの仲間の命中直後だけを詰めて追撃へ");
+        events[2] = new() { Turn = 1, Kind = BattleEventKind.Reap, ActorId = 1, TargetId = 2, Text = ReapLabels.Pursue, StatusRemaining = 0, Slot = 0 };
+        parsed = HagiPresentation.Build(events, openings, null);
+        Require(parsed.Swings[3].Pursuit && parsed.Swings[3].Partner is null && parsed.FastEvents.Count == 0, "刻みからの追撃も仲間を推定せず通す");
     }
     private static List<(FxCue Cue, FxLivePlayback Playback, Dictionary<int,int> Hp)> CheckScripts()
     {
@@ -180,12 +298,12 @@ public partial class HagiPresentationCheck : Control
                 && plain.PlayerWon == playback.Result.PlayerWon && plain.Turns == playback.Result.Turns, "観測で台本を変更しない");
             var tally = playback.Result.TallyByUnit["hagi"];
             Require(index.Reaps.Count == tally.R390ReapKills, $"刈り取り判別 {index.Reaps.Count}/{tally.R390ReapKills}");
-            Require(index.Swings.Values.Sum(s => s.Damage.Count(index.Reaps.Contains)) == index.Reaps.Count, "列の刈り取りもAttackに接続");
-            int peak = track.Frames.Values.SelectMany(f => f).Max(s => s.Souls);
+            Require(index.Swings.Values.Concat(index.Returns.Values).Sum(s => s.Damage.Count(index.Reaps.Contains)) == index.Reaps.Count, "列の刈り取りもAttackに接続");
+            int peak = index.Frames.Values.SelectMany(f => f).Max(s => s.Souls);
             Require(peak == tally.R389SoulPeak, $"魂の最大実値 {peak}/{tally.R389SoulPeak}");
-            Require(track.Frames.Values.SelectMany(f => f).Any(s => s.LinePermil > 0), "実値の刈り取り線");
+            Require(index.Frames.Values.SelectMany(f => f).Any(s => s.LinePermil > 0), "実値の刈り取り線");
             GD.Print($"HAGI_SCRIPT_OK {cue.Id} events={plain.Events.Count} reaps={index.Reaps.Count} marks={tally.R389MarksPlaced} soul={peak}");
-            var states = track.Frames.Values.SelectMany(f => f).GroupBy(s => s.Id).ToDictionary(g => g.Key, g => g.Last());
+            var states = index.Frames.Values.SelectMany(f => f).GroupBy(s => s.Id).ToDictionary(g => g.Key, g => g.Last());
             foreach (var unit in players.Concat(enemies))
                 if (states.TryGetValue(unit.InstanceId, out var state))
                     Require(state.Marks == unit.RawCounter(HagiDepthTrait.MarkKey) && state.Souls == unit.RawCounter(HagiDepthTrait.SoulKey), "印と魂の最後の実値が一致");
@@ -217,7 +335,7 @@ public partial class HagiPresentationCheck : Control
     {
         if (!OS.GetCmdlineUserArgs().Contains("--capture")) return;
         await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
-        string dir = ProjectSettings.GlobalizePath("res://../design/art/hagi/reaper-effects-v1/captures"); System.IO.Directory.CreateDirectory(dir);
+        string dir = ProjectSettings.GlobalizePath("res://../.tmp/hagi-v2/captures"); System.IO.Directory.CreateDirectory(dir);
         GetViewport().GetTexture().GetImage().SavePng(System.IO.Path.Combine(dir, name + ".png"));
     }
     private static void Require(bool condition, string message) { if (!condition) throw new Exception(message); }

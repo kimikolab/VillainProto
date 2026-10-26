@@ -250,6 +250,7 @@ uniform float golm_crumble = 0.0;
 uniform float grave_heat = 0.0;
 uniform float hagi_marks = 0.0;
 uniform float hagi_eligible = 0.0;
+uniform float hagi_aura = 0.0;
 uniform float hagi_dissolve = 0.0;
 uniform vec2 grave_eye = vec2(0.561,0.152);
 uniform vec4 grave_tint : source_color = vec4(0.7,0.85,1.0,1.0);
@@ -293,7 +294,7 @@ void fragment() {
     vec2 px = 2.5 / vec2(textureSize(portrait_texture,0));
     float near_alpha = max(max(texture(portrait_texture,UV+vec2(px.x,0.0)).a,texture(portrait_texture,UV-vec2(px.x,0.0)).a),max(texture(portrait_texture,UV+vec2(0.0,px.y)).a,texture(portrait_texture,UV-vec2(0.0,px.y)).a));
     float inner_alpha = min(min(texture(portrait_texture,UV+vec2(px.x,0.0)).a,texture(portrait_texture,UV-vec2(px.x,0.0)).a),min(texture(portrait_texture,UV+vec2(0.0,px.y)).a,texture(portrait_texture,UV-vec2(0.0,px.y)).a));
-    float silver_edge = max(0.0,near_alpha-inner_alpha)*hagi_eligible*mask;
+    float silver_edge = max(0.0,near_alpha-inner_alpha)*max(hagi_eligible,hagi_aura)*mask;
     alpha = max(alpha,silver_edge*portrait_tint.a);
     // 刈られた命は細かな銀の縁からほどける。ゴルムの四角い破片とは別の消え方にする。
     float dissolve_edge = 0.0, hagi_flash = 0.0;
@@ -333,11 +334,12 @@ void fragment() {
     float cuts = 0.0;
     for(int i=0;i<5;i++){
         float line_y=0.39+float(i)*0.045+(UV.x-0.5)*(0.42-float(i%2)*0.8);
-        cuts+=step(float(i)+0.5,hagi_marks)*exp(-abs(UV.y-line_y)*1000.0)*(1.0-smoothstep(0.08,0.18,abs(UV.x-0.5)));
+        float width=max(0.0008,fwidth(UV.y-line_y)*0.65);
+        cuts+=step(float(i)+0.5,hagi_marks)*(1.0-smoothstep(width*0.3,width*1.4,abs(UV.y-line_y)))*(1.0-smoothstep(0.08,0.18,abs(UV.x-0.5)));
     }
     float silver = clamp(cuts+silver_edge+dissolve_edge,0.0,1.0);
-    ALBEDO = mix(ALBEDO,vec3(0.95,0.97,1.0),silver);
-    EMISSION += vec3(0.92,0.95,1.0)*silver*1.2;
+    ALBEDO = mix(ALBEDO,vec3(1.0,0.12,0.07),silver);
+    EMISSION += vec3(1.0,0.09,0.04)*silver*1.2;
     ALBEDO = mix(ALBEDO,vec3(0.98,0.99,1.0),hagi_flash*0.88);
     EMISSION += vec3(0.94,0.97,1.0)*hagi_flash*2.8;
     ALPHA = alpha;

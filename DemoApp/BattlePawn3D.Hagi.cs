@@ -7,6 +7,8 @@ public partial class BattlePawn3D
     internal int HagiSouls { get; private set; }
     internal int HagiMarks { get; private set; }
     internal int HagiLine { get; private set; }
+    internal int HagiStage { get; private set; }
+    internal bool HagiEligible => HagiLine > 0 && Hp > 0 && (long)Hp * 1000 <= (long)MaxHp * HagiLine;
     internal bool HagiPaused;
     internal bool HagiReaped { get; private set; }
     private double _hagiDissolve;
@@ -14,7 +16,7 @@ public partial class BattlePawn3D
     internal void BeginHagiMotion() => _motion?.Kill();
     internal void SetHagiState(HagiPresentation.State state, Func<(bool, double)> clock)
     {
-        HagiSouls = state.Souls; HagiMarks = state.Marks; HagiLine = state.LinePermil;
+        HagiSouls = state.Souls; HagiMarks = state.Marks; HagiLine = state.LinePermil; HagiStage = state.Stage;
         Hud.SetHagiLine(state.LinePermil);
         _portraitMaterial.SetShaderParameter("hagi_marks", (float)state.Marks);
         RefreshHagiEligibility();
@@ -25,7 +27,7 @@ public partial class BattlePawn3D
     }
     private void RefreshHagiEligibility()
     {
-        _portraitMaterial?.SetShaderParameter("hagi_eligible", HagiLine > 0 && Hp > 0 && (long)Hp * 1000 <= (long)MaxHp * HagiLine ? 1f : 0f);
+        _portraitMaterial?.SetShaderParameter("hagi_eligible", HagiEligible ? 1f : 0f);
     }
     internal void SetHagiPose(string? pose, bool? flip = null)
     {
@@ -49,6 +51,7 @@ public partial class BattlePawn3D
         }
     }
     internal bool HagiActive => _alive && !_victory;
+    internal void SetHagiMantle(bool visible) => _portraitMaterial.SetShaderParameter("hagi_aura", visible ? 1f : 0f);
     internal Vector2[] HagiBladeContour => CurrentHagiAnchors?.Contour ?? HagiIdleBladeContour ?? (_movementPortrait switch
     {
         "hagi_follow" => new[] { new Vector2(.88f,.45f), new Vector2(.96f,.53f), new Vector2(.985f,.64f), new Vector2(.94f,.77f), new Vector2(.81f,.88f), new Vector2(.62f,.95f) },
@@ -58,12 +61,13 @@ public partial class BattlePawn3D
     internal void ResetHagiVisual()
     {
         CancelHagiMotion();
-        HagiSouls = HagiMarks = HagiLine = 0; HagiReaped = false; _hagiDissolve = 0; HagiPaused = false;
+        HagiSouls = HagiMarks = HagiLine = HagiStage = 0; HagiReaped = false; _hagiDissolve = 0; HagiPaused = false;
         _hagiAura?.Hide(); _hagiAura?.QueueFree(); _hagiAura = null;
         Hud?.SetHagiLine(0);
         _portraitMaterial?.SetShaderParameter("hagi_marks", 0f);
         _portraitMaterial?.SetShaderParameter("hagi_eligible", 0f);
         _portraitMaterial?.SetShaderParameter("hagi_dissolve", 0f);
+        _portraitMaterial?.SetShaderParameter("hagi_aura", 0f);
         SetHagiPose(null);
     }
 }
@@ -109,9 +113,10 @@ public partial class HagiAura3D : Node3D
     public override void _Process(double delta)
     {
         Visible = _owner.HagiActive;
+        _owner.SetHagiMantle(Visible && _owner.HagiStage == 3);
         var (paused, speed) = _clock(); if (paused || !Visible) return;
         Age += delta * speed;
-        int stage = HagiDepthTrait.Stage(_owner.HagiSouls);
+        int stage = _owner.HagiStage;
         _bladeStage = Mathf.MoveToward(_bladeStage, stage, (float)(delta * speed * 7));
         DrawBlade();
         for (int k = 0; k < 9; k++)
@@ -122,7 +127,7 @@ public partial class HagiAura3D : Node3D
                 Mathf.Sin(angle * 1.6f + k) * .28f - .10f, Mathf.Sin(angle) * .24f);
             float size = (.10f + stage * .028f) / Math.Max(.001f, HagiLight3D.Sparkle.GetWidth() * .001f);
             _shards[k].Scale = new Vector3(size * .65f, size * 1.5f, 1);
-            _shards[k].Modulate = new Color(.94f, .96f, 1, _alpha[k]);
+            _shards[k].Modulate = new Color(1, stage == 3 ? .18f : .72f, stage == 3 ? .10f : .57f, _alpha[k]);
         }
     }
     private void DrawBlade()
@@ -143,6 +148,13 @@ public partial class HagiAura3D : Node3D
             Vector2 a = points[Math.Max(0,k-1)], b = points[k], c = points[k+1], d = points[Math.Min(points.Length-1,k+2)];
             Vector2 p = .5f * ((2*b)+(-a+c)*fraction+(2*a-5*b+4*c-d)*fraction*fraction+(-a+3*b-3*c+d)*fraction*fraction*fraction);
             _edge[i]=_owner.HagiBladePoint(p)+normal*.012f;
+        }
+        // 刃に沿う帯の両端を段ごとに延ばす。炎の揺らぎや独立した浮く刃にはしない。
+        Vector3 startTip = (_edge[0] - _edge[1]).Normalized(), endTip = (_edge[segments] - _edge[segments - 1]).Normalized();
+        for (int i = 0; i <= segments; i++)
+        {
+            float u = i / (float)segments;
+            _edge[i] += (startTip * Math.Max(0, 1 - u / .12f) + endTip * Math.Max(0, 1 - (1 - u) / .12f)) * (_bladeStage * .12f);
         }
         Vector3 middleTangent=(_edge[49]-_edge[47]).Normalized();
         float sign=normal.Cross(middleTangent).Dot(_edge[48]-center)>=0?1:-1;
