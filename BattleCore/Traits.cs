@@ -10566,6 +10566,9 @@ public sealed class HagiDepthTrait : Trait
         {
             self.SetCounter(SoulKey, s - 1);
             ctx.Log($"    {self.Name} の魂が薄れた（魂 {s - 1}・刈り取りの線 {LinePermil(self) / 10.0:0.#}%）", LogKind.Status);
+            // 第405期・表示専用: 薄れた（段が下がれば「段」と敵ごとの「線」も）
+            ctx.EmitReap(ReapLabels.Soul, self, null, -1, ReapLabels.SoulFade, s - 1);
+            if (Stage(s) > Stage(s - 1)) { ctx.EmitReap(ReapLabels.Stage, self, null, Stage(s - 1), LinePermil(self), s - 1); ctx.EmitReapLines(self); }
         }
         UnitTally t = ctx.TallyOf(self);   // 計数のみ（ターンの頭の魂）
         if (ctx.Turn >= 0 && ctx.Turn <= BattleEngine.MaxTurns) (t.R389SoulByTurn ??= new long[BattleEngine.MaxTurns + 2])[ctx.Turn] += Soul(self);
@@ -10576,10 +10579,10 @@ public sealed class HagiDepthTrait : Trait
         if (_id != TraitId.HagiDepthSoul || !self.IsAlive) return;
         if (dead.TeamId == self.TeamId)
         {
-            if (dead != self && self.HasTrait(TraitId.HagiAllySoul)) Gain(ctx, self, AllySoul, SrcAlly);   // 第402期（B）
+            if (dead != self && self.HasTrait(TraitId.HagiAllySoul)) Gain(ctx, self, AllySoul, SrcAlly, from: dead);   // 第402期（B）
             return;
         }
-        Gain(ctx, self, PerDeath, 0, BigExtra(self, dead, PerDeath));   // 第402期（A）: 大物なら 3 倍（札が無ければ足す分 0）
+        Gain(ctx, self, PerDeath, 0, BigExtra(self, dead, PerDeath), from: dead);   // 第402期（A）: 大物なら 3 倍（札が無ければ足す分 0）
     }
     /// <summary>第402期: 魂の出どころの札（<see cref="Gain"/> の src）。0 ＝ 敵の死 ／ 80 ／ 50 ／ 20 ＝ 線 ／ 1 ＝ 印を刻み切った（D）／ 2 ＝ 味方の死（B）。</summary>
     public const int SrcMark = 1, SrcAlly = 2;
@@ -10587,8 +10590,8 @@ public sealed class HagiDepthTrait : Trait
     public override AttackPattern ModifyPattern(UnitState self, AttackPattern p)
         => _id == TraitId.HagiSoulMoves && Soul(self) >= SweepAt ? AttackPattern.Sweep : p;
 
-    /// <summary>魂を足す（<paramref name="src"/>: 0 ＝ 敵の死 ／ 80 ／ 50 ／ 20 ＝ その線を割った）。上限 9 で止めても「魂が動いたターン」は進める（連鎖は繋がっている）。</summary>
-    public static void Gain(BattleContext ctx, UnitState self, int n, int src, int bigExtra = 0)
+    /// <summary>魂を足す（<paramref name="src"/>: 0 ＝ 敵の死 ／ 80 ／ 50 ／ 20 ＝ その線を割った）。上限 9 で止めても「魂が動いたターン」は進める（連鎖は繋がっている）。<paramref name="from"/> は出どころの駒（第405期・表示専用の「魂」の <c>TargetId</c> だけに使う）。</summary>
+    public static void Gain(BattleContext ctx, UnitState self, int n, int src, int bigExtra = 0, UnitState? from = null)
     {
         self.SetCounter(TurnKey, ctx.Turn);
         int before = Soul(self), s = Math.Min(Cap, before + n + bigExtra);
@@ -10604,6 +10607,9 @@ public sealed class HagiDepthTrait : Trait
         ctx.Log($"    {self.Name} の大鎌に魂が宿る（{(src == 0 ? "敵の死" : src == SrcMark ? "印を刻み切った" : src == SrcAlly ? "仲間の死" : $"{src}% を割った敵")}{(bigExtra > 0 ? "・大きな命" : "")}・魂 {s}・刈り取りの線 {LinePermil(self) / 10.0:0.#}%）", LogKind.Trigger);
         if (Stage(before) < Stage(s))
             ctx.Log($"    ★ {self.Name} の鎌が深く届くようになった（魂 {s}・刈り取りの線 {LinePermil(self) / 10.0:0.#}%{StageText(self, Stage(s))}）", LogKind.Highlight, self);
+        // 第405期・表示専用: 魂（出どころ）→ 段が上がれば「段」と敵ごとの「線」
+        ctx.EmitReap(ReapLabels.Soul, self, from, s - before, src, s);
+        if (Stage(before) < Stage(s)) { ctx.EmitReap(ReapLabels.Stage, self, null, Stage(s), LinePermil(self), s); ctx.EmitReapLines(self); }
     }
 
     static string StageText(UnitState h, int st) => !h.HasTrait(TraitId.HagiSoulMoves) ? "" : st switch { 1 => "・薙ぐ", 2 => h.HasTrait(TraitId.HagiColumnEarly) ? "・薙ぐ ＋ 二度斬る ＋ 列ごと刈る" : "・薙ぐ ＋ 二度斬る", _ => "・列ごと刈る" };

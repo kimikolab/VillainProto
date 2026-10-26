@@ -18392,6 +18392,23 @@ public sealed class BattleContext
         Emit(new BattleEvent { Kind = BattleEventKind.Lamp, Turn = _turn, Text = label, ActorId = tomo.InstanceId, TargetId = target?.InstanceId, Amount = amount, Slot = slot, StatusRemaining = lit, Team = tomo.TeamId });
     }
 
+    /// <summary>第405期（表示専用）: ハギの出来事（`BattleEventKind.Reap`・欄の意味は <see cref="BattleEventKind.Reap"/> の注）。verbose でなければ何も作らない。盤面は読むだけ。</summary>
+    internal void EmitReap(string label, UnitState hagi, UnitState? target, int amount, int slot, int? remaining = null, UnitState? partner = null)
+    {
+        if (!_verbose) return;
+        Emit(new BattleEvent { Kind = BattleEventKind.Reap, Turn = _turn, Text = label, ActorId = hagi.InstanceId, TargetId = target?.InstanceId, PartnerId = partner?.InstanceId, Amount = amount, Slot = slot, StatusRemaining = remaining, Team = hagi.TeamId });
+    }
+    /// <summary>第405期（表示専用）: 魂の段が変わったとき、生きている敵ごとの今の線（魂の段 ＋ 印・上限つき）を「線」で並べる。</summary>
+    internal void EmitReapLines(UnitState hagi)
+    {
+        if (!_verbose || !hagi.HasTrait(TraitId.HagiReap)) return;
+        int baseLine = HagiReaperTrait.ReapLinePermil(hagi);
+        foreach (UnitState e in LivingMembers(Opponent(hagi.TeamId)))
+            EmitReap(ReapLabels.Line, hagi, e, e.RawCounter(HagiDepthTrait.MarkKey), 0, ReapLineFor389(hagi, e, baseLine));
+    }
+    /// <summary>第405期（表示専用）: 追撃のきっかけ（5 割を割らせた一撃の主）。`HalfCross388` が割り込みの前に置き、後で戻す。盤面からは誰も読まない。</summary>
+    UnitState? _crossSource405;
+
     /// <summary>第400期（表示専用）: 手番が潰れたとき。セッキ（包む札・譲られた手番でない）は「ぷるぷる」、のろまの休み番は「構える」。</summary>
     void EmitIdle400(UnitState actor)
     {
@@ -18452,6 +18469,7 @@ public sealed class BattleContext
         TallyOf(h).R389MarksPlaced++;   // 計数のみ
         { UnitTally ht = TallyOf(h); if (m + 1 > ht.R403MarkMax) ht.R403MarkMax = m + 1; if (_turn >= 0 && _turn <= BattleEngine.MaxTurns) { var a = ht.R403MarkMaxByTurn ??= new long[BattleEngine.MaxTurns + 2]; if (m + 1 > a[_turn]) a[_turn] = m + 1; } }   // 第403期・計数のみ（刻んだ印の最大 ／ ターンごとの最大）
         Log($"    {target.Name} に刈りの印が刻まれた（{m + 1}）", LogKind.Status);
+        if (_verbose) EmitReap(ReapLabels.Mark, h, target, m + 1, 0, ReapLineFor389(h, target, HagiReaperTrait.ReapLinePermil(h)));   // 第405期・表示専用（その敵の今の線）
         // 第402期（D・`HagiMarkSoul`）: 印が上限に届いたら 1 に戻して魂 +3（何度でも・A の 3 倍の対象にしない）。**札が無ければ比較1つで抜ける。乱数を引かない。**
         if (m + 1 >= HagiDepthTrait.MarkCap && h.IsAlive && h.HasTrait(TraitId.HagiMarkSoul))
         {
@@ -18459,7 +18477,7 @@ public sealed class BattleContext
             UnitTally mt = TallyOf(h);   // 計数のみ（刻み切った回数 ／ 印 4 本ぶんの H1 の名目の足し分＝刻み切った直後の一撃で減る量）
             mt.R402MarkSouls++; mt.R402MarkSoulLostAdd += (HagiDepthTrait.MarkCap - 1) * (target.MaxHp * HagiDepthTrait.MarkWeightPercent / 100);
             Log($"    ★ {h.Name} が {target.Name} の印を刻み切り、魂を刈り取った（印 → 1）", LogKind.Trigger);
-            HagiDepthTrait.Gain(this, h, HagiDepthTrait.MarkSoul, HagiDepthTrait.SrcMark);
+            HagiDepthTrait.Gain(this, h, HagiDepthTrait.MarkSoul, HagiDepthTrait.SrcMark, from: target);   // 第405期: 出どころの駒（表示専用）
         }
     }
 
@@ -18511,6 +18529,7 @@ public sealed class BattleContext
                 t.R404AfterReaps++; if (pursuit) t.R404AfterReapsChase++;
                 t.R389LastReapLine = line; t.R389LastReapHp = xh;
                 Log($"    {h.Name} の大鎌が、線を切った {x.Name} をその一振りで刈り取りにかかる（線 {line / 10.0:0.#}%）", LogKind.Trigger);
+                EmitReap(ReapLabels.Reap, h, x, xh, pursuit ? ReapLabels.KindAfterChase : ReapLabels.KindAfter, line);   // 第405期・表示専用
                 _reapNext388 = true;
                 try { ApplyDamage(x, xh, h, pattern: AttackPattern.Single); }
                 finally { _reapNext388 = false; }
@@ -18553,6 +18572,7 @@ public sealed class BattleContext
         bool reap = (long)aim.Hp * 1000 <= (long)aim.MaxHp * line;
         long k0 = t.Kills;
         Log($"    {h.Name} は孤立した {aim.Name} へ、もう一度大鎌を振るう{(reap ? "（刈り取り）" : "")}", LogKind.Trigger);
+        if (_verbose) EmitReap(ReapLabels.Twin, h, aim, reap ? 1 : 0, LivingMembers(aim.TeamId).Count);   // 第405期・表示専用
         int kind0 = _hagiKind401; UnitState? actor0 = _hagiKindActor401;
         _hagiKindActor401 = h;
         try
@@ -18561,6 +18581,7 @@ public sealed class BattleContext
             {
                 t.R403TwinReaps++; t.R388Reaps++;
                 int hp = aim.Hp;
+                EmitReap(ReapLabels.Reap, h, aim, hp, ReapLabels.KindTwin, line);   // 第405期・表示専用
                 _hagiKind401 = 4;
                 _hagiHitActor388 = h; _hagiHitBonus388 = 0; _hagiHitReap388 = true;
                 _forcedTarget = aim;
@@ -18596,6 +18617,7 @@ public sealed class BattleContext
         t.R401MulAdd += to - atk; t.R401MulHits++;
         if (to > t.R401MulAtkMax) t.R401MulAtkMax = to;
         Log($"    {h.Name} の鎌が魂の重みを乗せる（段 {st}・× {mul}・{atk} → {to}）", LogKind.Trigger);
+        EmitReap(ReapLabels.Weight, h, null, to - atk, mul, st);   // 第405期・表示専用
         return to;
     }
 
@@ -18607,6 +18629,7 @@ public sealed class BattleContext
         int add = m * (e.MaxHp * HagiDepthTrait.MarkWeightPercent / 100);
         UnitTally t = TallyOf(h);   // 計数のみ
         t.R401MarkAdd += add; t.R401MarkHits++;
+        if (add > 0) EmitReap(ReapLabels.Heavy, h, e, add, m);   // 第405期・表示専用
         return add;
     }
 
@@ -18658,7 +18681,7 @@ public sealed class BattleContext
             target.SetCounter(key, _turn + 1);
             if (source is not null) { UnitTally st = TallyOf(source); st.R390LinesCrossed++; if (gated) st.R390LinesRepeat++; }   // 第390期・計数のみ（割った一撃の主 ／ 門を外して数えた分）
             foreach (UnitState h in _reapHolders.ToList())
-                if (h.IsAlive && h.TeamId != target.TeamId && h.HasTrait(TraitId.HagiDepthSoul) && (!gated || h.HasTrait(TraitId.HagiLineEvery))) HagiDepthTrait.Gain(this, h, HagiDepthTrait.PerLine, line, HagiDepthTrait.BigExtra(h, target, HagiDepthTrait.PerLine));   // 第402期（A）: 大物なら 3 倍
+                if (h.IsAlive && h.TeamId != target.TeamId && h.HasTrait(TraitId.HagiDepthSoul) && (!gated || h.HasTrait(TraitId.HagiLineEvery))) HagiDepthTrait.Gain(this, h, HagiDepthTrait.PerLine, line, HagiDepthTrait.BigExtra(h, target, HagiDepthTrait.PerLine), from: target);   // 第402期（A）: 大物なら 3 倍・第405期: 出どころの駒（表示専用）
         }
     }
     readonly List<UnitState> _reapHolders = new();
@@ -18741,7 +18764,7 @@ public sealed class BattleContext
             if (reap && line > baseLine && (long)aim.Hp * 1000 > (long)aim.MaxHp * baseLine) t.R389MarkReaps++;   // 計数のみ（印で深くなった線で刈った）
             int spill = SpillAmount388(h);
             long kills0 = t.Kills - t.R388PursuitKills;   // 追撃での撃破は手番の撃破に数えない
-            if (swing > 0) { t.R388Encores++; if (prevReap) t.R401EncoreReap++; else t.R401EncoreStrike++; Log($"  {h.Name} は倒した勢いのまま、もう一度大鎌を振る", LogKind.Trigger); }
+            if (swing > 0) { t.R388Encores++; if (prevReap) t.R401EncoreReap++; else t.R401EncoreStrike++; Log($"  {h.Name} は倒した勢いのまま、もう一度大鎌を振る", LogKind.Trigger); EmitReap(ReapLabels.Encore, h, null, swing, prevReap ? 1 : 0); }   // 第405期・表示専用
             prevReap = reap;
             _hagiKindActor401 = h; _hagiKind401 = reap ? 4 : h.CurrentPattern == AttackPattern.Sweep ? 2 : 1;   // 第401期・計数のみ
             if (reap)
@@ -18754,6 +18777,7 @@ public sealed class BattleContext
                 List<UnitState>? col = _depthLive389 && HagiDepthTrait.Column(h)
                     ? LivingMembers(aim.TeamId).Where(e => e != aim && aim.Shape.SweepTargets(aim.Slot).Contains(e.Slot) && (long)e.Hp * 1000 <= (long)e.MaxHp * ReapLineFor389(h, e, baseLine)).ToList()
                     : null;
+                EmitReap(ReapLabels.Reap, h, aim, hp, ReapLabels.KindTurn, line);   // 第405期・表示専用
                 _hagiHitActor388 = h; _hagiHitBonus388 = 0; _hagiHitReap388 = true;
                 _forcedTarget = aim;
                 try { PerformAttack(h, patternOverride: AttackPattern.Single); }
@@ -18765,6 +18789,7 @@ public sealed class BattleContext
                     {
                         if (!x.IsAlive) continue;
                         int xh = x.Hp;
+                        if (_verbose) EmitReap(ReapLabels.Reap, h, x, xh, ReapLabels.KindColumn, ReapLineFor389(h, x, baseLine));   // 第405期・表示専用
                         _reapNext388 = true;
                         try { ApplyDamage(x, xh, h, pattern: AttackPattern.Sweep); }
                         finally { _reapNext388 = false; }
@@ -18897,7 +18922,9 @@ public sealed class BattleContext
             if (!CanActOutOfTurn(h, OutOfTurnRoute.Pursue)) continue;
             int n = HagiReaperTrait.PursuitHits(h);
             void Body() { for (int k = 0; k < n && target.IsAlive && h.IsAlive; k++) PursuitStrike388(h, target, k); }
-            if (InInterrupt) Body(); else Interrupt(Body);
+            UnitState? cross0 = _crossSource405; _crossSource405 = source;   // 第405期・表示専用（追撃のきっかけ）
+            try { if (InInterrupt) Body(); else Interrupt(Body); }
+            finally { _crossSource405 = cross0; }
         }
     }
 
@@ -18931,6 +18958,11 @@ public sealed class BattleContext
             Log($"    {h.Name} が線を切った {target.Name} に斬りかかり、そのまま刈り取りにかかる（線 {line / 10.0:0.#}%）", LogKind.Trigger);
         }
         else Log($"    {h.Name} が半分を割った {target.Name} に斬りかかる（失った命 {lost} の {pct / 10} 割 +{bonus}）", LogKind.Trigger);
+        if (_verbose)   // 第405期・表示専用（追撃 → 刈り取りなら「刈る」）
+        {
+            EmitReap(ReapLabels.Pursue, h, target, reap ? 0 : bonus, k, reap ? 1 : 0, _crossSource405);
+            if (reap) EmitReap(ReapLabels.Reap, h, target, target.Hp, ReapLabels.KindChase, line);
+        }
         _hagiHitActor388 = h; _hagiHitBonus388 = reap ? 0 : bonus; _hagiHitReap388 = reap;
         _forcedTarget = target;
         int kind0 = _hagiKind401; UnitState? kindActor0 = _hagiKindActor401;   // 第401期・計数のみ（入れ子に備えて退避）
@@ -18949,6 +18981,7 @@ public sealed class BattleContext
             {
                 if (!x.IsAlive) continue;
                 int xh = x.Hp;
+                if (_verbose) EmitReap(ReapLabels.Reap, h, x, xh, ReapLabels.KindColumn, ReapLineFor389(h, x, HagiReaperTrait.ReapLinePermil(h)));   // 第405期・表示専用
                 _reapNext388 = true;
                 try { ApplyDamage(x, xh, h, pattern: AttackPattern.Sweep); }
                 finally { _reapNext388 = false; }

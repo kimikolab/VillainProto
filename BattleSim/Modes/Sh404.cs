@@ -59,7 +59,7 @@ static partial class Sh404Diag
 
     internal static readonly (string Name, UnitDef D)[] Vers =
     {
-        ("規定", UnitCatalog.Hagi), ("L45", UnitCatalog.HagiReapL45), ("R50", UnitCatalog.HagiReapR50), ("R45", UnitCatalog.HagiReapR45),
+        ("規定", UnitCatalog.HagiH404), ("L45", UnitCatalog.HagiReapL45), ("R50", UnitCatalog.HagiReapR50), ("R45", UnitCatalog.HagiReapR45),   // 第405期: 規定の列は第404期の規定（旧 `HagiH404`）
     };
     static readonly (string Name, I.W[] Ws)[] W8 = S377.VerWaves;
     static readonly int[] W4 = { 0, 1, 2, 5 };
@@ -69,10 +69,11 @@ static partial class Sh404Diag
     internal static S388.Board[] StopBoards()
     {
         var b = S401.StopBoards();
-        return new[] { b[0], b[1], new S388.Board("試遊・ハギ キャリー", Presets.HagiCarry401(), 3, "ハギ"), new S388.Board("試遊・ハギ 哀歌", Presets.HagiTwin403(), 3, "ハギ"), b[2] };
+        return new[] { b[0], b[1], new S388.Board("試遊・ハギ キャリー", Presets.HagiCarry401(), 3, "ハギ"), new S388.Board("試遊・ハギ 哀歌", Presets.HagiTwin403(), 3, "ハギ"), b[2] }
+            .Select(x => new S388.Board(x.Name, Pin404(x.F), x.Slot, x.Who)).ToArray();   // 第405期: 台のハギは第404期の規定に
     }
     /// <summary>§4-1 の 2: キャリーの手組みのうち支えだけの 2 台（灯と号令 ／ 移り木）。</summary>
-    internal static S388.Board[] CarryHand() => S401.CarryBoards().Take(2).ToArray();
+    internal static S388.Board[] CarryHand() => S401.CarryBoards().Take(2).Select(x => new S388.Board(x.Name, Pin404(x.F), x.Slot, x.Who)).ToArray();   // 第405期: ハギは第404期の規定に
 
     static double[,] CGrid((string Name, Formation F)[] rows, int seeds)
     {
@@ -128,7 +129,7 @@ static partial class Sh404Diag
         var sw = System.Diagnostics.Stopwatch.StartNew();
         Console.WriteLine($"# {Tag} §2 段0 —— ハギの T1（孤立した敵は二度斬る）を規定に（旧は `UnitCatalog.HagiH403`・H123 ＋ B）");
         Console.WriteLine();
-        var rows = CompareBuilds();
+        var rows = CompareBuilds().Select(r => (r.Name, F: Pin404(r.F))).ToArray();   // 第405期: ハギは第404期の規定に
         var now = CGrid(rows, CompareSeeds);
         var old = CGrid(rows.Select(r => (r.Name, F: Pin403(r.F))).ToArray(), CompareSeeds);
         var tcol = CGrid(rows.Select(r => (r.Name, F: I.Swap(Pin403(r.F), "hagi", UnitCatalog.HagiSingleT1))).ToArray(), CompareSeeds);
@@ -152,7 +153,7 @@ static partial class Sh404Diag
         Console.WriteLine("| 台 | 列 | ボス | 近衛 | 大隊 | 本編 第5波 | 強 第2〜5波 |");
         Console.WriteLine("|---|---|---|---|---|---|---|");
         foreach (var b in StopBoards())
-            foreach (var (cn, d) in new[] { ("規定（第404期）", UnitCatalog.Hagi), ("第403期（旧）", UnitCatalog.HagiH403) })
+            foreach (var (cn, d) in new[] { ("規定（第404期）", UnitCatalog.HagiH404), ("第403期（旧）", UnitCatalog.HagiH403) })
             {
                 var m = M5(ColBoard(b, d), $"zero:{b.Name}:{cn}");
                 Console.WriteLine($"| {(cn.StartsWith("規定") ? b.Name : "")} | {cn} | {string.Join(" | ", new[] { WBoss, WGuard, WBat, 5, WStrong }.Select(w => m[w].Cell))} |");
@@ -173,7 +174,7 @@ static partial class Sh404Diag
         {
             Console.WriteLine($"## {title}");
             Console.WriteLine();
-            Console.WriteLine("台: " + string.Join("・", boards.Select(b => $"{b.Name}（{S307.Seats(ColBoard(b, UnitCatalog.Hagi))}）")) + "。");
+            Console.WriteLine("台: " + string.Join("・", boards.Select(b => $"{b.Name}（{S307.Seats(ColBoard(b, UnitCatalog.HagiH404))}）")) + "。");
             Console.WriteLine();
             var g = new S377.B[boards.Length, Vers.Length][];
             for (int bi = 0; bi < boards.Length; bi++) for (int vi = 0; vi < Vers.Length; vi++) g[bi, vi] = M8(ColBoard(boards[bi], Vers[vi].D), $"{boards[bi].Name}|{Vers[vi].Name}");
@@ -285,7 +286,7 @@ static partial class Sh404Diag
     static void Cmp()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = CompareBuilds().Where(r => Has(r.F, "hagi")).ToArray();
+        var rows = CompareBuilds().Where(r => Has(r.F, "hagi")).Select(r => (r.Name, F: Pin404(r.F))).ToArray();   // 第405期
         int nw = EnemyCatalog.Stages.Count;
         var grids = Vers.Select(c => CGrid(rows.Select(r => (r.Name, I.Swap(r.F, "hagi", c.D))).ToArray(), CompareSeeds)).ToArray();
         Console.WriteLine($"# {Tag} §4-1 の 4 `compare` のハギの行 —— {rows.Length} 行 × 版（第1〜5波・seed 0..{CompareSeeds - 1}・ハギだけ替える）");

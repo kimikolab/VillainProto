@@ -1714,3 +1714,13 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
   - 一撃の後に `AfterHitReap404`: 当てた敵（巻き込みも・当たった順）のうち生きていて線以下の敵を、`_reapNext388` ＋ `ApplyDamage` で刈る（`ReapBody388`・守りを通さない）。手番の刈り取りで倒せば `ReapTurn388` の終わりの撃破の数えで再行動、追撃では再行動しない（今どおり）。
   - 二度斬りは 1 発目の後に判定するので、1 発目で刈れば的が倒れて 2 発目は振らない。
 - 保持者がいない戦は `_afterLive404` の真偽1つ ／ `HasTrait` の比較1つで抜ける。乱数を引かない。計数のみ `R404AfterReaps` ／ `AfterReapKills` ／ `AfterReapHp` ／ `AfterReapsChase` ／ `AfterReapKillsChase` ／ `DmgAfter` ／ `DmgAfterChase`（一撃の種類 6 ／ 7）／ `R404TurnKills`（ハギの1手番に倒した数の分け）／ `TurnKillMax`。
+
+## 第405期 —— ハギの R50 を規定に ／ ハギの出来事（`BattleEventKind.Reap`・表示専用）
+
+- **段0**: 規定のハギが `HagiLineCap50` ／ `HagiReapAfterHit` を持つようになった——第404期の口（`ReapLineFor389` の上限・`SwingCollect404` ／ `AfterHitReap404`）が**規定の戦で走る**。窓口は足していない。
+- **出来事 `Reap`**（`Text` ＝ `ReapLabels`・欄の正の定義は `Models.cs` の `BattleEventKind.Reap` の注・Codex 向けは `PHASE291_CODEX_MEMO.md` §68）。積む口は `BattleContext.EmitReap`（verbose でなければ何も作らない）と `EmitReapLines`（段が変わったとき生きている敵ごとの線）の 2 本。**盤面は読むだけ**（`ReapLineFor389` ／ `LivingMembers` ／ カウンタの読み）——`compare` 0 件・verbose の有無で勝敗 ／ T ／ 生存数が同じ（`sh405 check`）。
+  - 「刈る」は刈り取りの一撃の**直前**に 7 か所から（`ReapTurn388` の手番の刈り取りと列ごと ／ `TwinSwing403` の 2 発目 ／ `PursuitStrike388` の追撃の刈り取りと列ごと ／ `AfterHitReap404` の当たった後）・`Slot` ＝ 種類 1〜6。
+  - 「二度斬る」は `TwinSwing403`・「再行動」は `ReapTurn388` の `swing > 0`・「追撃」は `PursuitStrike388` の頭（5 割を割らせた一撃の主は `HalfCross388` が `_crossSource405` に置いて `PartnerId` に載せる・表示専用の札）。
+  - 「印」は `ReapMark389`（刻んだ一撃の `Damage` の直前・`StatusRemaining` ＝ その敵の線）・「段の重み」は `StageMul401`・「印の重み」は `MarkWeight401`（巻き込みの敵にも）。
+  - 「魂」「段」「線」は `HagiDepthTrait.Gain`（`from` に出どころの駒を足した・表示だけに使う）と `OnTurnStart` の薄れ。上限 9 で止まって増えないときは出ない。
+- **規定（R50）では「振る前の刈り取り」（種類 1）はほぼ出ず、「二度斬りの 2 発目の刈り取り」（種類 6）は事実上出ない**——当たった後の刈り取りが同じ線で先に拾う。列ごと（5）も 6 台 × 4 波 × seed 0..19 で 0。

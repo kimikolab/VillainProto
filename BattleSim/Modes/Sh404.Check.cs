@@ -16,7 +16,7 @@ static partial class Sh404Diag
     internal const string PlayName = "版・刈り続け ハギ";
     internal static UnitDef PlayVersion => UnitCatalog.HagiReapR45;
     internal const string PlayVersionName = "R45";
-    internal static Formation PlayBoard() => Presets.HagiReap404();
+    internal static Formation PlayBoard() => Presets.HagiReap404(UnitCatalog.HagiReapR45);   // 第405期: 台を外したので版を明示
     static int _fail;
     static void Expect(string label, bool ok, string note = "")
     {
@@ -52,12 +52,12 @@ static partial class Sh404Diag
         Console.WriteLine();
         Console.WriteLine("| 項目 | 判定 | 備考 |");
         Console.WriteLine("|---|---|---|");
-        UnitDef hagi = UnitCatalog.Hagi, old = UnitCatalog.HagiH403, l45 = UnitCatalog.HagiReapL45, r50 = UnitCatalog.HagiReapR50, r45 = UnitCatalog.HagiReapR45;
+        UnitDef hagi = UnitCatalog.HagiH404, old = UnitCatalog.HagiH403, l45 = UnitCatalog.HagiReapL45, r50 = UnitCatalog.HagiReapR50, r45 = UnitCatalog.HagiReapR45;   // 第405期: 規定は旧 `HagiH404` で読む
         var vers = new[] { l45, r50, r45, UnitCatalog.HagiBigA404 };
 
         // ---- 段0 ----
         {
-            bool cards = hagi.Traits.SequenceEqual(UnitCatalog.HagiSingleT1.Traits) && hagi.PlusText == UnitCatalog.HagiSingleT1.PlusText && hagi != UnitCatalog.HagiSingleT1 && UnitCatalog.All.Contains(hagi) && hagi.Id == "hagi";
+            bool cards = hagi.Traits.SequenceEqual(UnitCatalog.HagiSingleT1.Traits) && hagi.PlusText == UnitCatalog.HagiSingleT1.PlusText && hagi != UnitCatalog.HagiSingleT1 && !UnitCatalog.All.Contains(hagi) && UnitCatalog.All.Contains(UnitCatalog.Hagi) && hagi.Id == "hagi";   // 第405期: 旧の規定（`All` の外）
             bool oldOk = old.Traits.SequenceEqual(UnitCatalog.HagiSoulB.Traits) && old.PlusText == UnitCatalog.HagiSoulB.PlusText && !UnitCatalog.Everyone.Contains(old);
             bool pins = PinH403(hagi) == old && PinH403(old) == old && PinH402(hagi) == UnitCatalog.HagiH402 && PinH402(old) == UnitCatalog.HagiH402 && PinH401(old) == UnitCatalog.HagiH401
                 && PinT399(hagi) == UnitCatalog.HagiH401 && PinH391(old) == UnitCatalog.HagiH391 && PinH389(old) == UnitCatalog.HagiH389 && Pin403(Presets.HagiTwin403())[3] == old;
@@ -87,7 +87,7 @@ static partial class Sh404Diag
                 && l45.PlusText.Contains("（2 割 → 最大 45%）", StringComparison.Ordinal) && l45.PlusText.Contains("合わせて最大 45%", StringComparison.Ordinal) && l45.PlusText.StartsWith("大鎌で、弱った敵を刈り取る", StringComparison.Ordinal)
                 && r50.PlusText.StartsWith("大鎌で斬り、線を切った敵はその一振りで刈り取る", StringComparison.Ordinal) && r50.PlusText.Contains("合わせて最大 5 割", StringComparison.Ordinal)
                 && r45.PlusText.StartsWith("大鎌で斬り、線を切った敵はその一振りで刈り取る", StringComparison.Ordinal) && r45.PlusText.Contains("合わせて最大 45%", StringComparison.Ordinal)
-                && !UnitCatalog.Everyone.Any(x => x.Traits.Contains(TraitId.HagiLineCap45) || x.Traits.Contains(TraitId.HagiLineCap50) || x.Traits.Contains(TraitId.HagiReapAfterHit));
+                && !UnitCatalog.Everyone.Where(x => x != UnitCatalog.Hagi).Any(x => x.Traits.Contains(TraitId.HagiLineCap45) || x.Traits.Contains(TraitId.HagiLineCap50) || x.Traits.Contains(TraitId.HagiReapAfterHit));   // 第405期: 規定のハギ（R50）は除いて数える
             Expect("版の札と文面: L45 ＋ 線の上限 45% ／ R50 ＋ 上限 5 割 ＋ 斬った直後に刈る ／ R45 ＋ 上限 45% ＋ 斬った直後に刈る・線の数字と R の頭の句を替えた・固定の巻き込みが末尾・`All` ／ `Retired` の外・札の保持者 0 枚", ok);
         }
 
@@ -156,9 +156,9 @@ static partial class Sh404Diag
 
         // ---- 規定の compare ----
         {
-            var map = S390.BalanceMap(File.Exists("docs/balance.md") ? File.ReadAllText("docs/balance.md") : "");
+            var map = S390.BalanceMap(S390.GitShow("27d71da6:docs/balance.md"));   // 第405期: 第404期の表と、ハギを旧に固定した行で比べる
             var head = S390.BalanceMap(S390.GitShow($"{HeadSha}:docs/balance.md"));
-            var rows = CompareBuilds(); var g = CGrid(rows, CompareSeeds);
+            var rows = CompareBuilds().Select(r => (r.Name, F: Pin404(r.F))).ToArray(); var g = CGrid(rows, CompareSeeds);
             int diff = 0, miss = 0, noHagiMoved = 0;
             for (int ri = 0; ri < rows.Length; ri++)
             {
@@ -174,7 +174,7 @@ static partial class Sh404Diag
 
         // ---- 試遊の台 ----
         {
-            var vrows = Presets.Versions;
+            var vrows = VersionsH404();   // 第405期: 第404期の一覧
             var hold = vrows.Where(r => r.F.Occupied().Any(o => vers.Contains(o.Def))).Select(r => r.Name).ToList();
             bool last = vrows[^1].Name == PlayName && vrows[^1].F.Occupied().Count(o => o.Def == PlayVersion) == 1 && Som307Diag.Seats(vrows[^1].F) == Som307Diag.Seats(PlayBoard())
                 && hold.SequenceEqual(new[] { "版・大物 ハギ", PlayName }) && vrows.First(r => r.Name == "版・大物 ハギ").F[1] == UnitCatalog.HagiBigA404
@@ -191,7 +191,7 @@ static partial class Sh404Diag
         {
             string src = File.ReadAllText("BattleSim/Modes/Checkup.cs");
             bool Row(TraitId t, string pat) => System.Text.RegularExpressions.Regex.IsMatch(src, $@"\[TraitId\.{t}\]\s*=\s*\(HcPlusL,\s*""[^""]*{pat}""");
-            var miss = new[] { TraitId.HagiLineCap45, TraitId.HagiLineCap50, TraitId.HagiReapAfterHit }.Where(t => !Row(t, "第404期[^\"]*保持者 0 枚")).Concat(new[] { TraitId.HagiTwinIsolated }.Where(t => !Row(t, "第403期[^\"]*第404期から規定（ハギ）"))).ToList();
+            var miss = new[] { TraitId.HagiLineCap45, TraitId.HagiLineCap50, TraitId.HagiReapAfterHit }.Where(t => !Row(t, "第404期[^\"]*(保持者 0 枚|第405期から規定（ハギ）)")).Concat(new[] { TraitId.HagiTwinIsolated }.Where(t => !Row(t, "第403期[^\"]*第404期から規定（ハギ）"))).ToList();   // 第405期: R50 の札は規定に
             Expect("`checkup` の札の分類表: 第404期の札 3 枚（保持者 0 枚）・規定になった T1（孤立した敵は二度斬る）は「第404期から規定（ハギ）」（ソースを読んで確かめる）", miss.Count == 0, miss.Count == 0 ? "" : "無い: " + string.Join("・", miss));
         }
 

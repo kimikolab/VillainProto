@@ -1051,17 +1051,18 @@ public static class Presets
         // 第404期: 「版・大物 ハギ」は規定 ＋ A（`HagiBigA404`）になった（第403期の A は `Common.VersionsH403` が戻す）。
         // 第404期: 斬った直後に刈る版（L45 ／ R50 ／ R45）のうち、連続で狩る絵がいちばん出たのは「試遊・ハギ キャリー」× R45
         //   （大隊でハギの手番の 69% が 3 体以上を倒す・当たった後の刈り取り 1戦 7.5 回・近衛 3.3 → 2.4T）。採否はポン。
-        ("版・刈り続け ハギ", HagiReap404()),
+        // 第405期: R50 をハギの規定にし R45 は採らないので「版・刈り続け ハギ」を外した（「試遊・ハギ キャリー」が規定の R50 の台・過去の器具は `Common.VersionsH404` が足し戻す）。
+        //   「版・大物 ハギ」は規定 ＋ A（`HagiBigA405`）になった（第404期の A は `Common.VersionsH404` が戻す）。
     };
 
-    /// <summary>第404期: 「版・刈り続け ハギ」の並び（「試遊・ハギ キャリー」と同じ: 前1 スィド ／ 前3 ボルグ ／ 中央 ベニ ／ 後1 ハギ ／ 後3 トウ）。既定はハギの版 R45。</summary>
+    /// <summary>第404期: 「版・刈り続け ハギ」の並び（「試遊・ハギ キャリー」と同じ: 前1 スィド ／ 前3 ボルグ ／ 中央 ベニ ／ 後1 ハギ ／ 後3 トウ）。既定はハギの版 R45。第405期に試遊の台から外した（過去の器具 `Common.VersionsH404` だけが使う）。</summary>
     public static Formation HagiReap404(UnitDef? hagi = null) => HagiCarry401(hagi ?? UnitCatalog.HagiReapR45);
 
     /// <summary>第403期: 「版・二度斬り ハギ」の並び（キャリーの手組み「哀歌」: 前1 ソラ ／ 前3 ガルド ／ 中央 エレ ／ 後1 ハギ ／ 後3 ヒサ・火力の無い支えで固めた台）。既定はハギの版 T12A。</summary>
     public static Formation HagiTwin403(UnitDef? hagi = null) => Formation.Build(front1: UnitCatalog.Sora, front3: UnitCatalog.Gald, center: UnitCatalog.Ere, back1: hagi ?? UnitCatalog.Hagi, back3: UnitCatalog.Hisa);   // 第404期: 既定は規定のハギ（第403期は版の T12A）
 
     /// <summary>第402期: 「版・大物 ハギ」の並び（「版・移動 ハギ」と同じ: 前1 セロ ／ 前3 ハギ ／ 中央 シオ ／ 後1 ヨミ ／ 後3 バサ）。既定はハギの版 A（第403期から規定 ＋ A の `HagiBigA403`・第402期は `HagiSoulA`）。</summary>
-    public static Formation HagiBig402(UnitDef? hagi = null) => HagiMove390(hagi ?? UnitCatalog.HagiBigA404);   // 第404期: 規定 ＋ A（第403期は `HagiBigA403`）
+    public static Formation HagiBig402(UnitDef? hagi = null) => HagiMove390(hagi ?? UnitCatalog.HagiBigA405);   // 第405期: 規定 ＋ A（第404期は `HagiBigA404`・第403期は `HagiBigA403`）
 
     /// <summary>第401期: 「版・死神 キャリー」の並び（`sh401 search H123` の 2 位: 前1 スィド ／ 前3 ボルグ ／ 中央 ベニ ／ 後1 ハギ ／ 後3 トウ）。第402期から「試遊・ハギ キャリー」・既定は規定のハギ（第401期は版の H123）。</summary>
     public static Formation HagiCarry401(UnitDef? hagi = null) => Formation.Build(front1: UnitCatalog.Sid, front3: UnitCatalog.Borg, center: UnitCatalog.Beni, back1: hagi ?? UnitCatalog.Hagi, back3: UnitCatalog.Tou);

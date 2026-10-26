@@ -4826,6 +4826,46 @@ public enum BattleEventKind
     ///   <c>Amount</c> ＝ 1 休み番を起こした ／ 0。直後に譲られた味方の手番（<c>Attack</c> など）が並ぶ。<b>どの規則も読まない。</b>
     /// </summary>
     Lamp,
+
+    /// <summary>
+    /// 追い打ちのハギ（第405期・<b>表示専用</b>）。<c>Text</c> ＝ <see cref="ReapLabels"/>・<c>ActorId</c> ＝ ハギ・<c>Team</c> ＝ ハギの陣営。盤面は1ビットも変えない。
+    /// <see cref="ReapLabels.Reap"/>（刈る・刈り取りの一撃の<b>直前</b>）: <c>TargetId</c> ＝ 刈る敵・<c>Amount</c> ＝ 刈る HP（その敵の残り）・<c>Slot</c> ＝ 種類（<see cref="ReapLabels.KindTurn"/> 手番の振る前 ／ <see cref="ReapLabels.KindChase"/> 追撃の振る前 ／
+    ///   <see cref="ReapLabels.KindAfter"/> 当たった後（手番）／ <see cref="ReapLabels.KindAfterChase"/> 当たった後（追撃）／ <see cref="ReapLabels.KindColumn"/> 列ごと（的と同じ列の巻き添え）／ <see cref="ReapLabels.KindTwin"/> 二度斬りの 2 発目の振る前）・
+    ///   <c>StatusRemaining</c> ＝ そのときの線（‰）。直後にその敵への <c>Damage</c>（<c>HpAfter</c> ＝ 0・刈り取りは守りを通らない）。当たった後の刈り取りは、ふつうの一撃の <c>Attack</c> → <c>Damage</c> の後に並ぶ。
+    /// <see cref="ReapLabels.Twin"/>（二度斬る・孤立した敵への 2 発目の<b>直前</b>）: <c>TargetId</c> ＝ 的・<c>Amount</c> ＝ 1 なら 2 発目は刈り取り（続けて「刈る」）／ 0 ならふつうの一振り（続けて <c>Attack</c>）・<c>Slot</c> ＝ そのとき生きている敵の数。
+    ///   1 発目で刈れていれば（当たった後の刈り取り）2 発目は無く、この出来事も出ない。
+    /// <see cref="ReapLabels.Encore"/>（再行動・倒した勢いのもう一振りの<b>直前</b>）: <c>Amount</c> ＝ 何回目（1 ／ 2）・<c>Slot</c> ＝ 1 前の振りが刈り取りで倒した ／ 0 ふつうの斬撃で倒した。
+    /// <see cref="ReapLabels.Pursue"/>（追撃・割り込みの一撃の<b>直前</b>）: <c>TargetId</c> ＝ 5 割を割った敵・<c>PartnerId</c> ＝ 5 割を割らせた一撃の主（仲間・engine の刻みなら null）・<c>Amount</c> ＝ 上乗せ（失った HP の 2 割・刈り取りなら 0）・
+    ///   <c>Slot</c> ＝ 2 連の何発目か（0 ／ 1）・<c>StatusRemaining</c> ＝ 1 なら振る前に線を切っていて刈り取る（続けて「刈る」）／ 0 ならふつうの一撃（続けて <c>Attack</c>・その後に線以下なら「刈る」）。
+    /// <see cref="ReapLabels.Mark"/>（印・刈りの印が増えた）: <c>TargetId</c> ＝ 刻まれた敵・<c>Amount</c> ＝ その敵の印の数（1〜5）・<c>StatusRemaining</c> ＝ その敵の今の線（‰・魂の段 ＋ 印・上限 5 割）。刻んだ一撃の <c>Damage</c> の<b>直前</b>に出る（並びは「段の重み」→「印の重み」→「印」→ <c>Damage</c>）。
+    /// <see cref="ReapLabels.Line"/>（線・魂の段が変わって敵ごとの線が動いた）: 生きている敵 1 体ごとに 1 つ。<c>TargetId</c> ＝ 敵・<c>Amount</c> ＝ その敵の印の数・<c>StatusRemaining</c> ＝ その敵の今の線（‰）。「段」の直後に並ぶ。
+    /// <see cref="ReapLabels.Soul"/>（魂・増えた ／ 薄れた）: <c>Amount</c> ＝ 増減（+1 ／ +2 ／ +3 ／ −1）・<c>StatusRemaining</c> ＝ その後の魂（0〜9）・<c>Slot</c> ＝ 出どころ（<see cref="ReapLabels.SoulDeath"/> 敵の死 ／ 80 ／ 50 ／ 20 ＝ その線を割った ／
+    ///   <see cref="ReapLabels.SoulMark"/> 印を刻み切った ／ <see cref="ReapLabels.SoulAlly"/> 仲間の死 ／ <see cref="ReapLabels.SoulFade"/> 薄れた）・<c>TargetId</c> ＝ 出どころの駒（倒れた駒 ／ 線を割った敵・薄れは null）。上限 9 で止まって増えないときは出ない。
+    /// <see cref="ReapLabels.Stage"/>（段・3 ／ 6 ／ 9 を跨いだ）: <c>Amount</c> ＝ 新しい段（0〜3）・<c>StatusRemaining</c> ＝ 魂・<c>Slot</c> ＝ その段の素の線（‰・印なし）。「魂」の直後。上がるときも薄れて下がるときも 1 つ。
+    /// <see cref="ReapLabels.Weight"/>（段の重み・一撃の攻撃力に段の倍率が乗った）: <c>Amount</c> ＝ 増えた分・<c>Slot</c> ＝ 倍率（2 ／ 3 ／ 5）・<c>StatusRemaining</c> ＝ 段。その一撃の <c>Attack</c> の前（倍率 1 のときは出ない）。
+    /// <see cref="ReapLabels.Heavy"/>（印の重み・その敵の印 × 最大 HP の 3% を一撃に足した）: <c>TargetId</c> ＝ 敵・<c>Amount</c> ＝ 足した量・<c>Slot</c> ＝ 印の数。その敵への <c>Damage</c> の前（巻き込みの敵にも 1 つずつ・印 0 のときは出ない）。
+    /// 巻き込み（隣の仲間への 2）は今どおりハギからの <c>Damage</c>（<c>FriendlyFire</c>）。<b>どの規則も読まない。</b>
+    /// </summary>
+    Reap,
+}
+
+/// <summary>`Reap`（第405期）の <c>Text</c> と、刈り取りの種類（<c>Slot</c>）／ 魂の出どころ（<c>Slot</c>）。</summary>
+public static class ReapLabels
+{
+    public const string Reap = "刈る";
+    public const string Twin = "二度斬る";
+    public const string Encore = "再行動";
+    public const string Pursue = "追撃";
+    public const string Mark = "印";
+    public const string Line = "線";
+    public const string Soul = "魂";
+    public const string Stage = "段";
+    public const string Weight = "段の重み";
+    public const string Heavy = "印の重み";
+    /// <summary>「刈る」の <c>Slot</c>: 刈り取りの種類。</summary>
+    public const int KindTurn = 1, KindChase = 2, KindAfter = 3, KindAfterChase = 4, KindColumn = 5, KindTwin = 6;
+    /// <summary>「魂」の <c>Slot</c>: 出どころ（線を割ったときは 80 ／ 50 ／ 20 がそのまま入る）。</summary>
+    public const int SoulDeath = 0, SoulMark = 1, SoulAlly = 2, SoulFade = -1;
 }
 
 /// <summary>`Slime`（第400期）の <c>Text</c> と、弾き返しのきっかけ（<c>Slot</c>）。</summary>

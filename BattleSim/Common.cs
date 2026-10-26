@@ -719,7 +719,7 @@ public static (string Name, Formation F)[] VersionsH388() =>
         .Append(("版・H3 ハギ", Presets.HagiBurn388())).Append(("版・H3 死神と墓守", Presets.HagiDeath388())).ToArray();
 /// <summary>第390期: 第389期の R5m を規定のハギにした（旧は `HagiH389`）。第389期までの器具はハギを旧に固定する。ほかの駒はそのまま返す。
 /// 古い口の終端（`PinV381`）と `PinMug386` ／ `PinE385` の後ろにも置いた（どの口を通ってもハギは旧になる）。</summary>
-public static UnitDef PinH389(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hagi) || ReferenceEquals(d, UnitCatalog.HagiH391) || ReferenceEquals(d, UnitCatalog.HagiH401) || ReferenceEquals(d, UnitCatalog.HagiH402) || ReferenceEquals(d, UnitCatalog.HagiH403) ? UnitCatalog.HagiH389 : PinT393(d);   // 第402期: `HagiH401` も   // 第394期: 規定のトモも旧へ（古い口の終端）   // 第392期: 第390〜391期の規定（`HagiH391`）も第389期までの旧へ
+public static UnitDef PinH389(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hagi) || ReferenceEquals(d, UnitCatalog.HagiH391) || ReferenceEquals(d, UnitCatalog.HagiH401) || ReferenceEquals(d, UnitCatalog.HagiH402) || ReferenceEquals(d, UnitCatalog.HagiH403) || ReferenceEquals(d, UnitCatalog.HagiH404) ? UnitCatalog.HagiH389 : PinT393(d);   // 第405期: `HagiH404` も   // 第402期: `HagiH401` も   // 第394期: 規定のトモも旧へ（古い口の終端）   // 第392期: 第390〜391期の規定（`HagiH391`）も第389期までの旧へ
 public static Formation Pin389(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinH389(d); return g; }
 /// <summary>第390期: 「版・R5 ハギ」「版・R5 死神と墓守」を規定のハギの台「試遊・ハギ 台B」「試遊・死神と墓守」に改め、末尾に版の2台（「版・VA ハギ」「版・移動 ハギ」）を足した。
 /// 第389期の一覧は、足した2台を外し、改めた2台を第389期の名前と版の R5m に戻し、ほかの台のハギを旧に固定した写し。</summary>
@@ -728,7 +728,7 @@ public static readonly string[] VersionRows390 = { "版・VA ハギ", "版・移
 /// 第390期の一覧は、足した台を外し、外した台を「版・移動 ハギ」の手前に足し戻した写し。</summary>
 public static readonly string[] VersionRows391 = { "版・P1 ハギ" };
 /// <summary>第392期: 第391期の P1h を規定のハギにした（旧は `HagiH391`・R5m）。第390〜391期の器具はハギを旧に固定する。ほかの駒はそのまま返す。</summary>
-public static UnitDef PinH391(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hagi) || ReferenceEquals(d, UnitCatalog.HagiH401) || ReferenceEquals(d, UnitCatalog.HagiH402) || ReferenceEquals(d, UnitCatalog.HagiH403) ? UnitCatalog.HagiH391 : PinT393(d);   // 第402期: 第392〜401期の規定（`HagiH401`）も   // 第394期: 規定のトモも旧へ
+public static UnitDef PinH391(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hagi) || ReferenceEquals(d, UnitCatalog.HagiH401) || ReferenceEquals(d, UnitCatalog.HagiH402) || ReferenceEquals(d, UnitCatalog.HagiH403) || ReferenceEquals(d, UnitCatalog.HagiH404) ? UnitCatalog.HagiH391 : PinT393(d);   // 第405期: `HagiH404` も   // 第402期: 第392〜401期の規定（`HagiH401`）も   // 第394期: 規定のトモも旧へ
 public static Formation Pin391(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinH391(d); return g; }
 /// <summary>第392期: `Presets.Versions` から「版・P1 ハギ」を外し（並びは `Presets.HagiPlay389(HagiP1h)`）、末尾に「試遊・手番 探索1位」を足した。
 /// 第391期の一覧は、足した台を外し、各台のハギを旧に固定し、外した台を末尾に足し戻した写し。</summary>
@@ -754,12 +754,15 @@ public static Formation Pin398(Formation f) { var g = f.Clone(); foreach ((int s
 /// <summary>第400期: トモ ＝ L1 を規定にした。第394〜399期の規定で測った器具はこれを通す（トモ → `TomoH399`（T3））。ほかの駒はそのまま返す。</summary>
 public static UnitDef PinT399(UnitDef d) => ReferenceEquals(d, UnitCatalog.Tomo) ? UnitCatalog.TomoH399 : PinH401(d);   // 第402期: 規定のハギも第392〜401期の旧（P1h）へ
 /// <summary>第402期: ハギ ＝ 第401期の H123 を規定にした。第392〜401期の規定（P1h）で測った器具はこれを通す（ハギ → `HagiH401`）。ほかの駒はそのまま返す。`PinT399`（第394期以降の口の終端）の後ろにも置いた。</summary>
-public static UnitDef PinH401(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hagi) || ReferenceEquals(d, UnitCatalog.HagiH402) || ReferenceEquals(d, UnitCatalog.HagiH403) ? UnitCatalog.HagiH401 : d;   // 第403期: 第402期の規定（`HagiH402`）も
+public static UnitDef PinH401(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hagi) || ReferenceEquals(d, UnitCatalog.HagiH402) || ReferenceEquals(d, UnitCatalog.HagiH403) || ReferenceEquals(d, UnitCatalog.HagiH404) ? UnitCatalog.HagiH401 : d;   // 第405期: `HagiH404` も   // 第403期: 第402期の規定（`HagiH402`）も
 /// <summary>第403期: ハギ ＝ 第402期の B を規定にした。第402期の規定（H123）で測った器具はこれを通す（ハギ → `HagiH402`）。ほかの駒はそのまま返す。</summary>
-public static UnitDef PinH402(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hagi) || ReferenceEquals(d, UnitCatalog.HagiH403) ? UnitCatalog.HagiH402 : d;   // 第404期: 第403期の規定（`HagiH403`）も
+public static UnitDef PinH402(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hagi) || ReferenceEquals(d, UnitCatalog.HagiH403) || ReferenceEquals(d, UnitCatalog.HagiH404) ? UnitCatalog.HagiH402 : d;   // 第405期: `HagiH404` も   // 第404期: 第403期の規定（`HagiH403`）も
 /// <summary>第404期: ハギ ＝ 第403期の T1 を規定にした。第403期の規定（H123 ＋ B）で測った器具はこれを通す（ハギ → `HagiH403`）。ほかの駒はそのまま返す。</summary>
-public static UnitDef PinH403(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hagi) ? UnitCatalog.HagiH403 : d;
+public static UnitDef PinH403(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hagi) || ReferenceEquals(d, UnitCatalog.HagiH404) ? UnitCatalog.HagiH403 : d;   // 第405期: 第404期の規定（`HagiH404`）も
 public static Formation Pin403(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinH403(d); return g; }
+/// <summary>第405期: ハギ ＝ 第404期の R50 を規定にした。第404期の規定（H123 ＋ B ＋ T1）で測った器具はこれを通す（ハギ → `HagiH404`）。ほかの駒はそのまま返す。</summary>
+public static UnitDef PinH404(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hagi) ? UnitCatalog.HagiH404 : d;
+public static Formation Pin404(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinH404(d); return g; }
 public static Formation Pin402(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinH402(d); return g; }
 public static Formation Pin401(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinH401(d); return g; }
 public static Formation Pin399(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinT399(d); return g; }
@@ -804,7 +807,12 @@ public static readonly string[] VersionRows403 = { "版・二度斬り ハギ" }
 /// <summary>第404期: T1 を規定のハギにし、「版・二度斬り ハギ」を「試遊・ハギ 哀歌」（規定のハギ）に改め、「版・大物 ハギ」を規定 ＋ A に、末尾に「版・刈り続け ハギ」を足した。
 /// 第403期の一覧は、足した台を外し、改めた台を第403期の名前と版の T12A に、「版・大物 ハギ」を第403期の A に戻し、ほかの台のハギを旧（`HagiH403`）に固定した写し。</summary>
 public static readonly string[] VersionRows404 = { "版・刈り続け ハギ" };
-public static (string Name, Formation F)[] VersionsH403() => Presets.Versions.Where(r => !VersionRows404.Contains(r.Name))
+/// <summary>第405期: R50 を規定のハギにし、「版・刈り続け ハギ」（キャリー × R45）を外し、「版・大物 ハギ」を規定 ＋ A（`HagiBigA405`）にした。
+/// 第404期の一覧は、ほかの台のハギを旧（`HagiH404`）に固定し、「版・大物 ハギ」を第404期の A に戻し、末尾に「版・刈り続け ハギ」を足し戻した写し。</summary>
+public static (string Name, Formation F)[] VersionsH404() => Presets.Versions
+    .Select(r => r.Name == "版・大物 ハギ" ? (r.Name, Presets.HagiBig402(UnitCatalog.HagiBigA404)) : (r.Name, F: Pin404(r.F)))
+    .Append(("版・刈り続け ハギ", Presets.HagiReap404())).ToArray();
+public static (string Name, Formation F)[] VersionsH403() => VersionsH404().Where(r => !VersionRows404.Contains(r.Name))   /* 第405期: 第404期の一覧から */
     .Select(r => r.Name == "試遊・ハギ 哀歌" ? ("版・二度斬り ハギ", Presets.HagiTwin403(UnitCatalog.HagiSingleT12A))
                : r.Name == "版・大物 ハギ" ? (r.Name, Presets.HagiBig402(UnitCatalog.HagiBigA403)) : (r.Name, F: Pin403(r.F))).ToArray();
 public static (string Name, Formation F)[] VersionsH402() => VersionsH403().Where(r => !VersionRows403.Contains(r.Name))   /* 第404期: 第403期の一覧から */
