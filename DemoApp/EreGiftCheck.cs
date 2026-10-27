@@ -35,8 +35,11 @@ public partial class EreGiftCheck : Node
                     field.SetGatherClock(true, 1);
                     float age = fx.Age;
                     var halo = field.DirgeAuras.FirstOrDefault(); float haloAge = halo?.Age ?? 0;
+                    float handTurns = halo?.HandTurns ?? 0;
                     await Wait(.12);
                     Require(fx.Age == age && (halo is null || halo.Age == haloAge), "停止中に音符と受け取りの光を進めない");
+                    Require(halo is null || halo.HandTurns == handTurns, "停止中に時計の針も進めない");
+                    if (begins) Require(!fx.Impact.IsCompleted && halo is { Releasing: true }, "時計を進めている途中で追加行動を始めない");
                     Require(!field.FindChildren("*", "", true, false).OfType<PopupLabel2D>().Any(), "受け渡しと解放でテロップを作らない");
                     await Snapshot($"{(mirror ? "enemy-bard" : "player-bard")}-{id}-{(begins ? "act" : "transfer")}");
                     field.SetGatherClock(false, 4);
@@ -96,7 +99,7 @@ public partial class EreGiftCheck : Node
                 await main.StopViewerPlayback();
             }
             main.QueueFree(); await Frame();
-            GD.Print("ERE_GIFT_CHECK_OK textless retained-light release scripts=12 parity actual-targets ally enemy mirror pause speed death interrupt replay hp cleanup");
+            GD.Print("ERE_GIFT_CHECK_OK textless clock-hands clock-contact retained-light release scripts=12 parity actual-targets ally enemy mirror pause speed death interrupt replay hp cleanup");
             GetTree().Quit();
         }
         catch (Exception e) { GD.PushError(e.ToString()); GetTree().Quit(1); }
@@ -159,7 +162,9 @@ public partial class EreGiftCheck : Node
                 await Wait(.55);
             }
             Task play = Play();
-            string folder = ProjectSettings.GlobalizePath("res://../.tmp/ere-gift-textless/" + (enemy ? "enemy" : "ally"));
+            string output = OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--capture-dir="))?.Split('=', 2)[1]
+                ?? ProjectSettings.GlobalizePath("res://../.tmp/ere-gift-textless");
+            string folder = System.IO.Path.Combine(output, enemy ? "enemy" : "ally");
             System.IO.Directory.CreateDirectory(folder);
             for (int i = 0; i < 300 && !play.IsCompleted; i++)
             {

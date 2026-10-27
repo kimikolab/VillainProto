@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="768" height="768" viewBox="0 0 512 512">
+  <!-- 赤は金の装飾、青は陣営色の五線譜としてシェーダーで着色する。 -->
+  <defs>
+    <g id="note" fill="#f00">
+      <ellipse cx="-4" cy="9" rx="10" ry="6.5" transform="rotate(-24 -4 9)"/>
+      <path d="M3 8V-27H6V5Z"/>
+      <path d="M4-27C7-16 25-19 18 0C20-14 5-9 4-18Z"/>
+    </g>
+    <g id="pair" fill="#f00">
+      <ellipse cx="-9" cy="10" rx="8" ry="5.5" transform="rotate(-24 -9 10)"/>
+      <ellipse cx="12" cy="4" rx="8" ry="5.5" transform="rotate(-24 12 4)"/>
+      <path d="M-3 9V-23L19-29V4H16V-19L0-15V9Z"/>
+    </g>
+    <g id="vine" fill="none" stroke="#f00" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M-43-215Q-19-215 0-232Q19-215 43-215" stroke-width="1.7"/>
+      <path d="M-31-218C-37-236-12-241-9-226C-6-214-21-214-20-223M31-218C37-236 12-241 9-226C6-214 21-214 20-223" stroke-width="1.4"/>
+      <path d="M-4-233L0-244L4-233L0-227Z" fill="#f00" stroke="none"/>
+      <path d="M-39-221Q-37-235-29-231Q-29-222-39-221M39-221Q37-235 29-231Q29-222 39-221" fill="#f00" stroke="none"/>
+    </g>
+  </defs>
+  <g fill="none" stroke="#00f">
+    <circle cx="256" cy="256" r="170" stroke-width="1.0" opacity=".65"/>
+    <circle cx="256" cy="256" r="178" stroke-width="1.1" opacity=".75"/>
+    <circle cx="256" cy="256" r="186" stroke-width="1.4"/>
+    <circle cx="256" cy="256" r="194" stroke-width="1.1" opacity=".75"/>
+    <circle cx="256" cy="256" r="202" stroke-width="1.0" opacity=".65"/>
+    <circle cx="256" cy="256" r="219" stroke-width="1.5" opacity=".8"/>
+  </g>
+  <g transform="translate(256 256)">
+    <use href="#vine"/>
+    <use href="#vine" transform="rotate(60)"/>
+    <use href="#vine" transform="rotate(120)"/>
+    <use href="#vine" transform="rotate(180)"/>
+    <use href="#vine" transform="rotate(240)"/>
+    <use href="#vine" transform="rotate(300)"/>
+  </g>
+  <!-- 音符を時計の12か所に正立させ、針だけが時計回りに進む。 -->
+  <use href="#pair" transform="translate(256 70)"/>
+  <use href="#note" transform="translate(349 94.92)"/>
+  <use href="#note" transform="translate(417.08 163)"/>
+  <use href="#pair" transform="translate(442 256)"/>
+  <use href="#note" transform="translate(417.08 349)"/>
+  <use href="#note" transform="translate(349 417.08)"/>
+  <use href="#pair" transform="translate(256 442)"/>
+  <use href="#note" transform="translate(163 417.08)"/>
+  <use href="#note" transform="translate(94.92 349)"/>
+  <use href="#pair" transform="translate(70 256)"/>
+  <use href="#note" transform="translate(94.92 163)"/>
+  <use href="#note" transform="translate(163 94.92)"/>
+</svg>

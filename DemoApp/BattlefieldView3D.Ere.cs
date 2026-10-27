@@ -30,8 +30,8 @@ public partial class BattlefieldView3D
         Color tint = enemy ? EreGiftArt.Enemy : EreGiftArt.Ally;
         if (begins) { DirgeActPlays++; DeathSongs++; } else DirgeGiftPlays++;
         if (enemy) DirgeEnemyPlays++;
-        float duration = begins ? .90f : .76f;
-        float contact = begins ? .28f : .60f;
+        float duration = begins ? DirgeAura3D.ReleaseDuration : .76f;
+        float contact = begins ? DirgeAura3D.ReleaseContact : .60f;
         var fx = GatherEffect(duration, contact);
         if (!begins) bard.SetDirgeSinging(true);
         fx.Configure(duration, contact, () => {
@@ -43,9 +43,11 @@ public partial class BattlefieldView3D
         });
         if (begins)
         {
-            // 受け取った音が胸へ集まり、弾ける瞬間に台本の追加行動へ繋ぐ。
+            // 時計の針が12時へ進み切る瞬間から台本の追加行動へ繋ぐ。
             var aura = ReceiveDirge(bard, target, tint);
             aura.Release();
+            fx.Purchased(target.FxPoint, false, tint, .85f, contact);
+            fx.Flash(target.FxPoint, GatherArt.Light, 1.2f, contact, .22f);
             fx.Configure(duration, contact, () => { if (IsInstanceValid(aura)) aura.Stop(); });
         }
         if (!begins)
@@ -97,7 +99,8 @@ public partial class BattlefieldView3D
 internal static class EreGiftArt
 {
     internal static readonly Color Ally = new("b9f4ff"), Enemy = new("ffabbe");
-    private static Texture2D? _note, _encore;
+    private static Texture2D? _note, _clockFace;
+    internal static Texture2D ClockFace => _clockFace ??= GD.Load<Texture2D>("res://assets/fx/ere_clock_face.svg");
     private static Texture2D Svg(string body)
     {
         var image = new Image();
@@ -105,5 +108,4 @@ internal static class EreGiftArt
         return ImageTexture.CreateFromImage(image);
     }
     internal static Texture2D Note => _note ??= Svg("<g fill='white'><ellipse cx='38' cy='92' rx='20' ry='13' transform='rotate(-22 38 92)'/><path d='M52 91V19L102 8V70H94V32L60 40V91Z'/><ellipse cx='81' cy='74' rx='20' ry='13' transform='rotate(-22 81 74)'/></g>");
-    internal static Texture2D Encore => _encore ??= Svg("<g fill='none' stroke='white' stroke-width='4' stroke-linecap='round'><path d='M100 34A47 47 0 1 0 109 78'/><path d='M80 33L103 35 104 12' stroke-width='6'/></g><g fill='white'><ellipse cx='52' cy='82' rx='13' ry='9' transform='rotate(-22 52 82)'/><path d='M61 82V37L84 31V43L67 48V82Z'/></g>");
 }
