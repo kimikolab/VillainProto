@@ -1296,6 +1296,7 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 wata413 mixed           # 第413期 §3-4: compare のワタを含む行のワタを版に替えた写し × 本編 5 波 ＋ 近衛 ／ 大隊・seed 0..199（2 秒）
     dotnet run --project BattleSim -c Release 0 wata413 log <0|u|m> <boss|guard|bat|s4> [seed]   # 第413期: 1戦のログ
     dotnet run --project BattleSim -c Release 0 wata413 check           # 第413期: 自己検査（版の札・手番・台・鎖の終端・規定の台で鳴らない・ワタ自身は殴らない）（1 秒）
+    dotnet run --project BattleSim -c Release 0 inv414 all              # 第414期: 軸の横並び（第348期 §3 の形・いまの規定・第348期の表との差）＋ デバフの速さの中身 ＋ ムドを他の軸に入れた台 ＋ カーズ ／ ワタの材料（q1 ／ q2 ／ q3 ／ q4 で分けても回る）（12 秒）
     dotnet run --project BattleSim -c Release 0 sh358 p0                # 第358期 §2 Phase 0: 破片の流れ（書いた ／ 敵の一撃で割れた ／ 読んだ ／ 残った）・ツギの板の返し（1回 ／ 同じ主へ集まった塊）・ヒビの砕けと倒れた T・ボスの1ターンの与ダメ ／ 回復（規定・代表台 3 × 5 波・seed 0..99・1 秒）
     dotnet run --project BattleSim -c Release 0 sh358 seats [版]        # 第358期 §4: ヒビ ／ ガレ ＋ 6枚（ウロ ／ ツギ ／ ササ ／ ガルド ／ ドルガ ／ ゴルム）から3枚 × 席の全並び ＝ 2,400 並び × ボス（seed 0..4）／ 近衛 ／ 大隊（seed 0..19）・版（既定 hbgr）と規定の両方（16 秒）
     dotnet run --project BattleSim -c Release 0 sh358 flow [版,…]       # 第358期 §6 の 1・2: 破片の流れ ／ 返し ／ 礫 ／ ボスへの届き方（1ターンの与ダメを 欠片の返し ／ 礫 ／ 板の返し ／ ほか に分ける）× 版・代表台 4 × ボス ／ 大隊
