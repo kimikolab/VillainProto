@@ -1,0 +1,15 @@
+{
+  "date": "2026-10-27",
+  "purpose": "交差時の第三刀身を除去し、遠い手を柄へ戻す",
+  "passes": [
+    {
+      "prompt": "Edit the provided single transparent full-body game sprite. Keep EXACTLY the same character, clothing, armor, face, cape, legs, body proportions and deep wide lunge pose, right-facing attack. Keep image transparent and whole character fully inside canvas. ONLY correct the malformed two crossed swords and adjust the fingers/hand orientation minimally as necessary.\n\nThere must be EXACTLY TWO complete normal straight long swords, each ONE blade, ONE gold crossguard, ONE grip held by ONE hand, and ONE gold pommel. Their blades form a large X above and in front of the hands. Blade A runs from the LOWER LEFT hand and guard diagonally toward the UPPER RIGHT tip. Blade B runs from the LOWER RIGHT hand and guard diagonally toward the UPPER LEFT tip. For each sword, tip, blade centerline, guard center, grip and pommel must be COLLINEAR. The lower right sword grip MUST extend diagonally DOWN RIGHT from its guard, not down left. At the crossing, one blade cleanly occludes the other. BOTH blade tips are ABOVE the guards. Remove entirely the erroneous THIRD BLADE EXTENSION descending toward bottom right beyond the lower right gold guard. No blade should point down-right below either hand. Only the short dark grip and gold pommel should extend down-right from the lower right guard. Both blades are ordinary single straight steel blades with matching gold guards, same design as reference.\n\nKeep wrists distinct and each glove wrapped around one grip. Make sword topology physically coherent, do not just erase tip while retaining incorrectly aligned handle. No effects, trails, text, shadow or backdrop. Preserve full-body scale and silhouette of torso/cape/legs.",
+      "output": "C:/Users/Pon/.codex/generated_images/01a17adf-fa51-7731-b86c-5d24b3dfff2b/exec-cdc0297b-c795-4c71-a5ec-2b3c219b05f0.png"
+    },
+    {
+      "prompt": "Refine this transparent game sprite with only a tiny local correction to the FAR hand (the glove on screen right). Both swords are now straight and correct and MUST remain exactly as drawn. However the far glove is currently next to its sword grip. Move/redraw that far glove so it actually WRAPS AROUND the dark brown grip between the LOWER RIGHT gold crossguard and its gold pommel. That grip slopes DOWN RIGHT. The glove must be centered on that grip, with fingers tightly curled around it and thumb opposing, covering the central dark grip while leaving the pommel visible. Adjust/extend only that forearm and wrist so the hand reaches it naturally. Exactly two human hands, one per sword. Keep the near hand wrapping the lower left grip unchanged. No extra fingers, blades, guards or grips. Everything else including the X blades, torso, head, legs, cape, body proportions, camera and full body framing stays unchanged. Transparent background.",
+      "output": "C:/Users/Pon/.codex/generated_images/01a17adf-fa51-7731-b86c-5d24b3dfff2b/exec-c5c49093-cbd4-469f-9293-d8d8324f9b7c.png",
+      "adopted": "source-cross-fixed.png"
+    }
+  ]
+}

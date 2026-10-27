@@ -2152,7 +2152,10 @@ public partial class Main : Control
         if (ShowDustDamage(eventIndex, e)) return;
         bool poison = _statusCauseByDamageIndex.TryGetValue(eventIndex, out string? status)
             && status == StatusKeys.LabelOf(StatusKeys.Poison);
-        target?.AnimateHit(poison, _numbDamage.GetValueOrDefault(eventIndex, 1f));
+        bool utsuImpact = !poison && actor?.UnitId == "utsu" && _utsu.FastEvents.Contains(eventIndex)
+            && !e.Relayed && e.ShareFromId is null && actor != target;
+        Vector3? utsuDirection = utsuImpact && target is not null ? target.RestPosition - actor!.RestPosition : null;
+        target?.AnimateHit(poison, _numbDamage.GetValueOrDefault(eventIndex, 1f) * (utsuImpact ? 1.35f : 1f), utsuDirection);
         if (actor?.UnitId == "shiga" && e.Pattern == AttackPattern.Sweep && target is not null)
             _battleField.ShowWhipFlash(target, e.Amount, _speed);
         if (e.Amount > 0) _battleField.PlayStatusDamageSound(status);

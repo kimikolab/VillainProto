@@ -353,10 +353,13 @@ public partial class BattleAttackAudio : Node
         if (unitId == "kado") PlayVariation(KadoCounter);
     }
 
-    private void PlayVariation(string[] paths, float boostDb = 0)
-        => PlayStream(LoadSound(PickVariation(paths)), boostDb);
+    internal void PlayUtsuStrike(int ordinal, bool finish)
+        => PlayVariation(new[] { UtsuAttack[System.Math.Clamp(ordinal - 1, 0, UtsuAttack.Length - 1)] }, finish ? 1.5f : 0, finish ? .82f : .92f);
 
-    private void PlayStream(AudioStream stream, float boostDb = 0)
+    private void PlayVariation(string[] paths, float boostDb = 0, float pitch = 1)
+        => PlayStream(LoadSound(PickVariation(paths)), boostDb, pitch);
+
+    private void PlayStream(AudioStream stream, float boostDb = 0, float pitch = 1)
     {
         // 攻撃・受け流しを合わせて最大4音。再生速度でピッチを変えない。
         int index = _nextVoice++ % _voices.Length;
@@ -365,7 +368,7 @@ public partial class BattleAttackAudio : Node
         voice.VolumeDb += boostDb - _voiceBoosts[index];
         _voiceBoosts[index] = boostDb;
         voice.Stream = stream;
-        voice.PitchScale = 1f;
+        voice.PitchScale = pitch;
         voice.Play();
     }
 

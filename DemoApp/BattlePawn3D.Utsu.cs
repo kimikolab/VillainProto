@@ -18,6 +18,7 @@ public partial class BattlePawn3D
     internal bool UtsuTrailActive => AttackClipPlaying && UtsuCurrentTrack()?.Trail == true;
     internal string? UtsuPose => UtsuCurrentTrack()?.Pose;
     internal int UtsuActiveBlade => UtsuCurrentTrack()?.Active ?? 0;
+    internal bool UtsuBladeActive(int blade) => UtsuActiveBlade < 0 || UtsuActiveBlade == blade;
 
     private UtsuTrack? UtsuCurrentTrack()
     {

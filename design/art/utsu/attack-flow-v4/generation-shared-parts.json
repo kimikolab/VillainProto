@@ -1,0 +1,68 @@
+{
+  "mode": "built-in image_gen",
+  "assets": [
+    {
+      "name": "step",
+      "source": "source-step-headfix.png",
+      "adopted": "body-step.png",
+      "generated": "C:/Users/Pon/.codex/generated_images/01a17adf-fa51-7731-b86c-5d24b3dfff2b/exec-2244ba4b-3d42-4300-b7cc-ea69f0ae7b24.png",
+      "prompt": "Use case: precise-object-edit. Edit the attached game animation sprite sheet into BODY-ONLY PARTS for a cutout rig. Remove ONLY the hair, skull, face and ears from ALL FOUR characters. These are empty costume/body animation parts, not injuries: NO gore, blood, wounds, stump, mannequin head or helmet. Leave the black neck collar and every shoulder, arm, sword, torso, cape, leg and boot pixel in exactly its existing position and shape. Where a head used to be, use clean TRANSPARENCY, with only a small natural collar opening remaining. Do not add any head or resize/reposition any body. The four bodies must remain on the exact same 1254 x 1254 canvas at the same coordinates. Preserve the full original poses, silhouettes, weapon geometry, clothing details, textures and transparent background. No labels, no shadows, no new background. This is a technical sprite-part extraction, not a new illustration."
+    },
+    {
+      "name": "drive",
+      "source": "source-drive-headfix.png",
+      "adopted": "body-drive.png",
+      "generated": "C:/Users/Pon/.codex/generated_images/01a17adf-fa51-7731-b86c-5d24b3dfff2b/exec-fa9b2d56-f37e-4f7a-a263-e7fec9af5e61.png",
+      "prompt": "Use case: precise-object-edit. Edit the attached game animation sprite sheet into BODY-ONLY PARTS for a cutout rig. Remove ONLY the hair, skull, face and ears from ALL FOUR characters. These are empty costume/body animation parts, not injuries: NO gore, blood, wounds, stump, mannequin head or helmet. Leave the black neck collar and every shoulder, arm, sword, torso, cape, leg and boot pixel in exactly its existing position and shape. Where a head used to be, use clean TRANSPARENCY, with only a small natural collar opening remaining. Do not add any head or resize/reposition any body. The four bodies must remain on the exact same 1254 x 1254 canvas at the same coordinates. Preserve the full original poses, silhouettes, weapon geometry, clothing details, textures and transparent background. No labels, no shadows, no new background. This is a technical sprite-part extraction, not a new illustration."
+    },
+    {
+      "name": "rise",
+      "source": "source-rise-headfix.png",
+      "adopted": "body-rise.png",
+      "generated": "C:/Users/Pon/.codex/generated_images/01a17adf-fa51-7731-b86c-5d24b3dfff2b/exec-25ba8565-c823-4806-84e5-b12ea4990250.png",
+      "prompt": "Use case: precise-object-edit. Edit the attached game animation sprite sheet into BODY-ONLY PARTS for a cutout rig. Remove ONLY the hair, skull, face and ears from ALL FOUR characters. These are empty costume/body animation parts, not injuries: NO gore, blood, wounds, stump, mannequin head or helmet. Leave the black neck collar and every shoulder, arm, sword, torso, cape, leg and boot pixel in exactly its existing position and shape. Where a head used to be, use clean TRANSPARENCY, with only a small natural collar opening remaining. Do not add any head or resize/reposition any body. The four bodies must remain on the exact same 1254 x 1254 canvas at the same coordinates. Preserve the full original poses, silhouettes, weapon geometry, clothing details, textures and transparent background. No labels, no shadows, no new background. This is a technical sprite-part extraction, not a new illustration."
+    },
+    {
+      "name": "turn",
+      "source": "source-turn-headfix.png",
+      "adopted": "body-turn.png",
+      "generated": "C:/Users/Pon/.codex/generated_images/01a17adf-fa51-7731-b86c-5d24b3dfff2b/exec-504fbb82-95a1-4b19-b6e6-3d692981f79b.png",
+      "prompt": "Use case: precise-object-edit. Edit the attached game animation sprite sheet into BODY-ONLY PARTS for a cutout rig. Remove ONLY the hair, skull, face and ears from ALL FOUR characters. These are empty costume/body animation parts, not injuries: NO gore, blood, wounds, stump, mannequin head or helmet. Leave the black neck collar and every shoulder, arm, sword, torso, cape, leg and boot pixel in exactly its existing position and shape. Where a head used to be, use clean TRANSPARENCY, with only a small natural collar opening remaining. Do not add any head or resize/reposition any body. The four bodies must remain on the exact same 1536 x 1024 canvas at the same coordinates. Preserve the full original poses, silhouettes, weapon geometry, clothing details, textures and transparent background. No labels, no shadows, no new background. This is a technical sprite-part extraction, not a new illustration."
+    },
+    {
+      "name": "hop",
+      "source": "source-hop-headfix.png",
+      "adopted": "body-hop.png",
+      "generated": "C:/Users/Pon/.codex/generated_images/01a17adf-fa51-7731-b86c-5d24b3dfff2b/exec-5e67c7e3-3e0d-4b5d-b571-abc5659b354c.png",
+      "prompt": "Use case: precise-object-edit. Edit the attached game animation sprite sheet into BODY-ONLY PARTS for a cutout rig. Remove ONLY the hair, skull, face and ears from ALL FOUR characters. These are empty costume/body animation parts, not injuries: NO gore, blood, wounds, stump, mannequin head or helmet. Leave the black neck collar and every shoulder, arm, sword, torso, cape, leg and boot pixel in exactly its existing position and shape. Where a head used to be, use clean TRANSPARENCY, with only a small natural collar opening remaining. Do not add any head or resize/reposition any body. The four bodies must remain on the exact same 1536 x 1024 canvas at the same coordinates. Preserve the full original poses, silhouettes, weapon geometry, clothing details, textures and transparent background. No labels, no shadows, no new background. This is a technical sprite-part extraction, not a new illustration."
+    },
+    {
+      "name": "cross",
+      "source": "source-cross-headfix.png",
+      "adopted": "body-cross.png",
+      "generated": "C:/Users/Pon/.codex/generated_images/01a17adf-fa51-7731-b86c-5d24b3dfff2b/exec-3e9cdefd-1959-4edb-8fc4-205d3e0cb34e.png",
+      "prompt": "Use case: precise-object-edit. Edit the attached game animation sprite sheet into BODY-ONLY PARTS for a cutout rig. Remove ONLY the hair, skull, face and ears from ALL FOUR characters. These are empty costume/body animation parts, not injuries: NO gore, blood, wounds, stump, mannequin head or helmet. Leave the black neck collar and every shoulder, arm, sword, torso, cape, leg and boot pixel in exactly its existing position and shape. Where a head used to be, use clean TRANSPARENCY, with only a small natural collar opening remaining. Do not add any head or resize/reposition any body. The four bodies must remain on the exact same 1536 x 1024 canvas at the same coordinates. Preserve the full original poses, silhouettes, weapon geometry, clothing details, textures and transparent background. No labels, no shadows, no new background. This is a technical sprite-part extraction, not a new illustration."
+    },
+    {
+      "name": "cross-fixed",
+      "source": "source-cross-fixed-headfix.png",
+      "adopted": "body-cross-fixed.png",
+      "generated": "C:/Users/Pon/.codex/generated_images/01a17adf-fa51-7731-b86c-5d24b3dfff2b/exec-d70de5ac-2484-4863-9cb1-90ccd938af66.png",
+      "prompt": "Use case: precise-object-edit. Edit the attached game animation sprite sheet into BODY-ONLY PARTS for a cutout rig. Remove ONLY the hair, skull, face and ears from the SINGLE character. These are empty costume/body animation parts, not injuries: NO gore, blood, wounds, stump, mannequin head or helmet. Leave the black neck collar and every shoulder, arm, sword, torso, cape, leg and boot pixel in exactly its existing position and shape. Where a head used to be, use clean TRANSPARENCY, with only a small natural collar opening remaining. Do not add any head or resize/reposition any body. The single body must remain on the exact same 1512 x 1040 canvas at the same coordinates. Preserve the full original poses, silhouettes, weapon geometry, clothing details, textures and transparent background. No labels, no shadows, no new background. This is a technical sprite-part extraction, not a new illustration."
+    },
+    {
+      "name": "sweep",
+      "source": "source-sweep.png",
+      "adopted": "body-sweep.png",
+      "generated": "C:/Users/Pon/.codex/generated_images/01a17adf-fa51-7731-b86c-5d24b3dfff2b/exec-c3c5572e-1c65-459f-9bec-2e8bb47ec67c.png",
+      "prompt": "Use case: precise-object-edit. Edit the attached game animation sprite sheet into BODY-ONLY PARTS for a cutout rig. Remove ONLY the hair, skull, face and ears from the SINGLE character. These are empty costume/body animation parts, not injuries: NO gore, blood, wounds, stump, mannequin head or helmet. Leave the black neck collar and every shoulder, arm, sword, torso, cape, leg and boot pixel in exactly its existing position and shape. Where a head used to be, use clean TRANSPARENCY, with only a small natural collar opening remaining. Do not add any head or resize/reposition any body. The single body must remain on the exact same 1536 x 1024 canvas at the same coordinates. Preserve the full original poses, silhouettes, weapon geometry, clothing details, textures and transparent background. No labels, no shadows, no new background. This is a technical sprite-part extraction, not a new illustration."
+    },
+    {
+      "name": "heads",
+      "source": "../../../../DemoApp/assets/portraits/battle/idle_loop/utsu/utsu_idle_00.png",
+      "adopted": "shared-heads.png",
+      "generated": "C:/Users/Pon/.codex/generated_images/01a17adf-fa51-7731-b86c-5d24b3dfff2b/exec-6fa74ac8-d4f6-4e8d-a396-b1b4216724ed.png",
+      "prompt": "Create a game animation HEAD PART model sheet from the attached canonical character. Exactly THREE isolated cutout heads horizontally across one transparent landscape canvas. No full bodies, no torso, no shoulders, no cape, no collars. Include the entire hair, skull, face, ears and a short natural neck ending just below the jaw. Match the reference character EXACTLY: same brown hairstyle and face identity, same realistic anime painting, same cranial proportions and face width. These three heads are the SAME person at the SAME skull scale and same lighting, intended to be interchangeable animation parts.\nLeft: the exact three-quarter RIGHT-facing head from reference, looking to screen right, neutral determined expression. This is the main canonical head; faithfully preserve his face and hair, do not make him younger or change proportions.\nMiddle: same head turned to RIGHT PROFILE, nose pointing right, same skull height and depth, natural amount of visible face, no exaggerated hair mass.\nRight: same head seen from BACK THREE-QUARTER, still looking screen right with only a narrow glimpse of cheek/nose at the right edge. Same skull size, same hairstyle.\nAll three heads upright at the SAME HEIGHT and SAME SCALE, evenly spaced with wide transparent gaps. No text, labels, frames, shadows, weapons, shoulders, bodies or background. Clean transparent alpha, complete silhouette not clipped."
+    }
+  ]
+}

@@ -8,7 +8,7 @@ internal sealed class UtsuPresentation
     internal sealed record Swing(int Actor, int Ordinal, int Count)
     {
         internal bool Keep => Ordinal < Count;
-        internal string Clip => $"utsu_hit{System.Math.Min(Ordinal, 5)}_{(Keep && Ordinal < 5 ? "link" : "end")}_v3";
+        internal string Clip => $"utsu_hit{System.Math.Min(Ordinal, 5)}_{(Keep && Ordinal < 5 ? "link" : "end")}_v4";
     }
     internal readonly Dictionary<int, Swing> Swings = new();
     internal readonly Dictionary<int, List<int>> Ends = new();

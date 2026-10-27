@@ -5,20 +5,20 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 
-// ウツの全身原画を分離・等比縮小する制作ツール。部位ワープや逆再生は行わない。
+// 身体セルと共通頭部を組む制作ツール。頭部は全姿勢で同じ倍率を使う。
 public partial class UtsuCelExport : Node
 {
     private sealed record Cell(int Label, int X, int Y, int Width, int Height);
     public override void _Ready()
     {
-        try { Export(); GD.Print("UTSU_CEL_EXPORT_OK whole-body dual-blade head-scale connected-prefix"); GetTree().Quit(); }
+        try { Export(); GD.Print("UTSU_CEL_EXPORT_OK whole-body dual-blade body-scale connected-prefix"); GetTree().Quit(); }
         catch (Exception error) { GD.PushError(error.ToString()); GetTree().Quit(1); }
     }
 
     private static void Export()
     {
         string repo = Path.GetFullPath(ProjectSettings.GlobalizePath("res://.."));
-        string source = Path.Combine(repo, "design/art/utsu/attack-step-v3");
+        string source = Path.Combine(repo, "design/art/utsu/attack-flow-v4");
         using var spec = JsonDocument.Parse(File.ReadAllText(Path.Combine(source, "cel-animation.json")));
         var root = spec.RootElement;
         int width = root.GetProperty("canvas")[0].GetInt32(), height = root.GetProperty("canvas")[1].GetInt32();
@@ -47,13 +47,25 @@ public partial class UtsuCelExport : Node
                 if (last > 3000) found.Add(new(label, left, top, right - left + 1, bottom - top + 1));
             }
             int expected = root.GetProperty("sheets").GetProperty(group.Key).GetInt32();
+            // 頭を外すと、その陰に隠れていた上げ腕が独立する場合がある。所属セルを明記して結合する。
+            if (group.Key.StartsWith("body-hop", StringComparison.Ordinal) && found.Count == 5)
+            {
+                Cell arm = found.Single(c => c.X > 1100 && c.Y < 30 && c.Height < 180);
+                Cell body = found.Single(c => c.X > 700 && c.Y < 200 && c.Height > 300);
+                for (int i = 0; i < labels.Length; i++) if (labels[i] == arm.Label) labels[i] = body.Label;
+                int left = Math.Min(arm.X, body.X), top = Math.Min(arm.Y, body.Y);
+                found.Remove(arm); found.Remove(body);
+                found.Add(new(body.Label, left, top, Math.Max(arm.X + arm.Width, body.X + body.Width) - left,
+                    Math.Max(arm.Y + arm.Height, body.Y + body.Height) - top));
+            }
             var cells = found.OrderBy(c => expected <= 2 ? 0 : Math.Clamp((c.Y + c.Height / 2) * 2 / h, 0, 1))
                 .ThenBy(c => c.X + c.Width / 2).ToArray();
             if (cells.Length != expected) throw new InvalidOperationException($"{group.Key}: 全身セルが{expected}枚ではありません ({cells.Length})");
             foreach (var pose in group)
             {
                 string key = pose.GetProperty("key").GetString()!; Cell cell = cells[pose.GetProperty("cell").GetInt32()];
-                float scale = root.GetProperty("headPixels").GetSingle() / Point(pose.GetProperty("head")[0]).DistanceTo(Point(pose.GetProperty("head")[1]));
+                float scale = pose.TryGetProperty("scale", out var specifiedScale) ? specifiedScale.GetSingle()
+                    : root.GetProperty("headPixels").GetSingle() / Point(pose.GetProperty("head")[0]).DistanceTo(Point(pose.GetProperty("head")[1]));
                 Vector2 ground = Point(pose.GetProperty("ground"));
                 int x0 = Math.Max(0, cell.X - 3), y0 = Math.Max(0, cell.Y - 3);
                 int cw = Math.Min(w - x0, cell.Width + 6), ch = Math.Min(h - y0, cell.Height + 6);
@@ -77,13 +89,29 @@ public partial class UtsuCelExport : Node
                 if (ox < 0 || oy < 0 || ox + clean.GetWidth() >= width || oy + clean.GetHeight() >= height)
                     throw new InvalidOperationException($"{key}: 全身が共通キャンバスから切れます");
                 var canvas = Image.CreateEmpty(width, height, false, Image.Format.Rgba8); canvas.Fill(Colors.Transparent);
-                canvas.BlitRect(clean, new Rect2I(0, 0, clean.GetWidth(), clean.GetHeight()), new Vector2I(ox, oy));
+                canvas.BlendRect(clean, new Rect2I(0, 0, clean.GetWidth(), clean.GetHeight()), new Vector2I(ox, oy));
+                if (pose.TryGetProperty("headPart", out var part))
+                {
+                    var definition = root.GetProperty("headParts").GetProperty(part.GetProperty("id").GetString()!);
+                    using var headSheet = Image.LoadFromFile(Path.Combine(source, root.GetProperty("headSheet").GetString()!));
+                    var r = definition.GetProperty("rect");
+                    using var head = headSheet.GetRegion(new Rect2I(r[0].GetInt32(), r[1].GetInt32(), r[2].GetInt32(), r[3].GetInt32()));
+                    Vector2 neck = Point(part.GetProperty("neck"));
+                    Vector2 position = new(ox + (neck.X - x0) * scale, oy + (neck.Y - y0) * scale);
+                    DrawPart(canvas, head, Point(definition.GetProperty("anchor")), position,
+                        root.GetProperty("headPartScale").GetSingle(), Mathf.DegToRad(part.GetProperty("angle").GetSingle()));
+                }
                 canvas.SavePng(Path.Combine(source, "poses", key + ".png"));
                 float[] Uv(JsonElement point) { Vector2 p = Point(point); return new[] { (ox + (p.X - x0) * scale) / width, (oy + (p.Y - y0) * scale) / height }; }
                 var blades = pose.GetProperty("blades").EnumerateArray().Select(b => new { root = Uv(b[0]), tip = Uv(b[1]) }).ToArray();
                 poses[key] = (canvas, new { blades });
-                GD.Print($"UTSU_CEL_POSE {key} head={root.GetProperty("headPixels")} scale={scale:F3}");
+                GD.Print($"UTSU_CEL_POSE {key} scale={scale:F3}");
             }
+        }
+        if (OS.GetCmdlineUserArgs().Contains("--poses-only"))
+        {
+            foreach (var pose in poses.Values) pose.Image.Dispose();
+            return;
         }
         foreach (var clip in root.GetProperty("clips").EnumerateArray())
         {
@@ -109,7 +137,9 @@ public partial class UtsuCelExport : Node
             {
                 var pose = poses[keys[i]]; pose.Image.SavePng(Path.Combine(dest, $"{name}_{i:000}.png"));
                 float? advance = clip.TryGetProperty("advance", out var curve) ? curve[i].GetSingle() : null;
-                tracks.Add(new { pose = keys[i], geometry = pose.Geometry, advance, trail = i >= contact - 2 && i <= contact + 2 });
+                int trailStart = clip.TryGetProperty("trailStart", out var ts) ? ts.GetInt32() : contact - 2;
+                int trailEnd = clip.TryGetProperty("trailEnd", out var te) ? te.GetInt32() : contact + 2;
+                tracks.Add(new { pose = keys[i], geometry = pose.Geometry, advance, trail = i >= trailStart && i <= trailEnd });
             }
             File.WriteAllText(Path.Combine(dest, "clip.json"), JsonSerializer.Serialize(new {
                 source = root.GetProperty("sourceId").GetString(), frames = keys.Length, fps = root.GetProperty("fps").GetInt32(), contact,
@@ -121,5 +151,31 @@ public partial class UtsuCelExport : Node
             GD.Print($"UTSU_CEL_CLIP {name} frames={keys.Length} contact={contact}");
         }
         foreach (var pose in poses.Values) pose.Image.Dispose();
+    }
+
+    // 同一パーツを等比縮小して回す。乗算済みアルファで補間し、透明縁の色漏れを防ぐ。
+    private static void DrawPart(Image canvas, Image source, Vector2 pivot, Vector2 position, float scale, float angle)
+    {
+        source.Convert(Image.Format.Rgba8); source.PremultiplyAlpha();
+        int sourceWidth = source.GetWidth(), sourceHeight = source.GetHeight();
+        source.Resize((int)MathF.Round(sourceWidth * scale), (int)MathF.Round(sourceHeight * scale), Image.Interpolation.Lanczos);
+        pivot *= scale;
+        int w = source.GetWidth(), h = source.GetHeight();
+        var corners = new[] { Vector2.Zero, new Vector2(w, 0), new Vector2(0, h), new Vector2(w, h) }
+            .Select(p => (p - pivot).Rotated(angle) + position).ToArray();
+        int x0 = (int)MathF.Floor(corners.Min(p => p.X)), x1 = (int)MathF.Ceiling(corners.Max(p => p.X));
+        int y0 = (int)MathF.Floor(corners.Min(p => p.Y)), y1 = (int)MathF.Ceiling(corners.Max(p => p.Y));
+        if (x0 < 0 || y0 < 0 || x1 >= canvas.GetWidth() || y1 >= canvas.GetHeight()) throw new InvalidOperationException("共通頭部がキャンバス外です");
+        Color Sample(int x, int y) => x < 0 || y < 0 || x >= w || y >= h ? Colors.Transparent : source.GetPixel(x, y);
+        for (int y = y0; y <= y1; y++) for (int x = x0; x <= x1; x++)
+        {
+            Vector2 p = (new Vector2(x + .5f, y + .5f) - position).Rotated(-angle) + pivot - new Vector2(.5f, .5f);
+            int px = (int)MathF.Floor(p.X), py = (int)MathF.Floor(p.Y);
+            Color color = Sample(px, py).Lerp(Sample(px + 1, py), p.X - px)
+                .Lerp(Sample(px, py + 1).Lerp(Sample(px + 1, py + 1), p.X - px), p.Y - py);
+            if (color.A <= 0) continue;
+            color.R /= color.A; color.G /= color.A; color.B /= color.A;
+            canvas.SetPixel(x, y, canvas.GetPixel(x, y).Blend(color));
+        }
     }
 }

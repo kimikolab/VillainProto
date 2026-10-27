@@ -1,0 +1,388 @@
+{
+  "source": "utsu-flow-v4",
+  "fps": 30,
+  "clips": [
+    {
+      "name": "utsu_hit1_link_v4",
+      "frames": 19,
+      "contact": 15
+    },
+    {
+      "name": "utsu_hit1_end_v4",
+      "frames": 31,
+      "contact": 15
+    },
+    {
+      "name": "utsu_hit2_link_v4",
+      "frames": 9,
+      "contact": 5
+    },
+    {
+      "name": "utsu_hit2_end_v4",
+      "frames": 21,
+      "contact": 5
+    },
+    {
+      "name": "utsu_hit3_link_v4",
+      "frames": 9,
+      "contact": 5
+    },
+    {
+      "name": "utsu_hit3_end_v4",
+      "frames": 21,
+      "contact": 5
+    },
+    {
+      "name": "utsu_hit4_link_v4",
+      "frames": 10,
+      "contact": 5
+    },
+    {
+      "name": "utsu_hit4_end_v4",
+      "frames": 20,
+      "contact": 5
+    },
+    {
+      "name": "utsu_hit5_end_v4",
+      "frames": 22,
+      "contact": 5
+    }
+  ],
+  "poses": [
+    {
+      "name": "cross5",
+      "alpha_bbox": [
+        384,
+        357,
+        1215,
+        1003
+      ]
+    },
+    {
+      "name": "cut1",
+      "alpha_bbox": [
+        308,
+        414,
+        1247,
+        1014
+      ]
+    },
+    {
+      "name": "cut2",
+      "alpha_bbox": [
+        384,
+        323,
+        1162,
+        1012
+      ]
+    },
+    {
+      "name": "drive1",
+      "alpha_bbox": [
+        402,
+        408,
+        1036,
+        1002
+      ]
+    },
+    {
+      "name": "drive2",
+      "alpha_bbox": [
+        451,
+        359,
+        1082,
+        1008
+      ]
+    },
+    {
+      "name": "fall4",
+      "alpha_bbox": [
+        169,
+        293,
+        1202,
+        1003
+      ]
+    },
+    {
+      "name": "land4",
+      "alpha_bbox": [
+        292,
+        460,
+        1329,
+        999
+      ]
+    },
+    {
+      "name": "launch4",
+      "alpha_bbox": [
+        208,
+        317,
+        1174,
+        982
+      ]
+    },
+    {
+      "name": "load2",
+      "alpha_bbox": [
+        398,
+        423,
+        1177,
+        1017
+      ]
+    },
+    {
+      "name": "load5",
+      "alpha_bbox": [
+        273,
+        332,
+        1183,
+        1010
+      ]
+    },
+    {
+      "name": "pass1",
+      "alpha_bbox": [
+        405,
+        428,
+        1032,
+        1011
+      ]
+    },
+    {
+      "name": "pass5",
+      "alpha_bbox": [
+        310,
+        555,
+        1226,
+        1012
+      ]
+    },
+    {
+      "name": "pivot2",
+      "alpha_bbox": [
+        249,
+        196,
+        1027,
+        1013
+      ]
+    },
+    {
+      "name": "pivot3",
+      "alpha_bbox": [
+        142,
+        294,
+        1226,
+        1016
+      ]
+    },
+    {
+      "name": "ready",
+      "alpha_bbox": [
+        553,
+        294,
+        1053,
+        1000
+      ]
+    },
+    {
+      "name": "ready_new",
+      "alpha_bbox": [
+        553,
+        294,
+        1053,
+        1000
+      ]
+    },
+    {
+      "name": "recover",
+      "alpha_bbox": [
+        311,
+        333,
+        1261,
+        1016
+      ]
+    },
+    {
+      "name": "rise_drive",
+      "alpha_bbox": [
+        380,
+        355,
+        1054,
+        1016
+      ]
+    },
+    {
+      "name": "spring3",
+      "alpha_bbox": [
+        441,
+        305,
+        1147,
+        1018
+      ]
+    },
+    {
+      "name": "step_load",
+      "alpha_bbox": [
+        351,
+        373,
+        1087,
+        1016
+      ]
+    },
+    {
+      "name": "step_plant",
+      "alpha_bbox": [
+        304,
+        395,
+        1035,
+        1011
+      ]
+    },
+    {
+      "name": "step_push",
+      "alpha_bbox": [
+        341,
+        416,
+        1154,
+        1012
+      ]
+    },
+    {
+      "name": "sweep3",
+      "alpha_bbox": [
+        307,
+        392,
+        1285,
+        1006
+      ]
+    },
+    {
+      "name": "unwind3",
+      "alpha_bbox": [
+        202,
+        343,
+        1226,
+        1019
+      ]
+    },
+    {
+      "name": "wind5",
+      "alpha_bbox": [
+        304,
+        358,
+        1166,
+        1013
+      ]
+    }
+  ],
+  "media": [
+    {
+      "name": "dance-2-1x.mp4",
+      "frames": 112,
+      "fps": "30",
+      "size": [
+        1280,
+        720
+      ],
+      "audio": 1,
+      "sha256": "f66c49b4a0983b173e2b362a2d525486b5a7dafb298278fd567f2693fa291373"
+    },
+    {
+      "name": "dance-2-bare.mp4",
+      "frames": 116,
+      "fps": "30",
+      "size": [
+        1280,
+        720
+      ],
+      "audio": 0,
+      "sha256": "91f05342c099bfb46203e866582eab5725cc62475c81602f90820295ec41ed2c"
+    },
+    {
+      "name": "dance-3-1x.mp4",
+      "frames": 123,
+      "fps": "30",
+      "size": [
+        1280,
+        720
+      ],
+      "audio": 1,
+      "sha256": "d9ba136336b448db71be34e9f9e675cfeb08b7d9bfee696d6373356f047426ff"
+    },
+    {
+      "name": "dance-4-1x.mp4",
+      "frames": 133,
+      "fps": "30",
+      "size": [
+        1280,
+        720
+      ],
+      "audio": 1,
+      "sha256": "031a68c91c4da10232658a984a93b01043bb8b85afe9349b2dfa0977061a054a"
+    },
+    {
+      "name": "dance-5-1x.mp4",
+      "frames": 147,
+      "fps": "30",
+      "size": [
+        1280,
+        720
+      ],
+      "audio": 1,
+      "sha256": "1cce3e786b0cdf6c161e8e6cb9a66ff3c8e7de401e2d74aa55718b7c4ee67260"
+    },
+    {
+      "name": "dance-5-bare.mp4",
+      "frames": 151,
+      "fps": "30",
+      "size": [
+        1280,
+        720
+      ],
+      "audio": 0,
+      "sha256": "43c428e2a8aa6050504fc042372c6dd749ff567d0fae8c075ec313c5afa4b9ec"
+    },
+    {
+      "name": "dance-5-face-closeup.mp4",
+      "frames": 301,
+      "fps": "30",
+      "size": [
+        1280,
+        720
+      ],
+      "audio": 0,
+      "sha256": "23670e6220b30164b1edbb409dcbe91ff44daf51fb508b3d2a4902a794c30615"
+    },
+    {
+      "name": "utsu-flow-2-to-5-1x.mp4",
+      "frames": 515,
+      "fps": "30",
+      "size": [
+        1280,
+        720
+      ],
+      "audio": 1,
+      "sha256": "94ef9e79185b27874023d1658b8233e10a38910a39c8cdbe521d0f52a237b16f"
+    },
+    {
+      "name": "dance-2-slow.gif",
+      "frames": 84,
+      "duration_ms": 5600
+    },
+    {
+      "name": "dance-3-slow.gif",
+      "frames": 92,
+      "duration_ms": 6140
+    },
+    {
+      "name": "dance-4-slow.gif",
+      "frames": 100,
+      "duration_ms": 6670
+    },
+    {
+      "name": "dance-5-slow.gif",
+      "frames": 110,
+      "duration_ms": 7340
+    }
+  ]
+}

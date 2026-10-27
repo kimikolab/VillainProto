@@ -1,0 +1,44 @@
+[
+  {
+    "source": "source-step.png",
+    "adopted": "source-step-headfix.png",
+    "prompt": "Surgical edit of this four-pose transparent sprite sheet. Keep the full sheet layout, exactly four poses in the same places, all body silhouettes, neck bases, shoulders, clothing, arms, swords, legs and feet unchanged. Change ONLY the size of each HEAD including hair and face as a coherent whole. Heads are too large for the body. Reduce the top-left head to 80% of its current linear size, top-right head to 78%, bottom-left head to 84%, bottom-right head to 84%. Scale each head about its NECK ATTACHMENT so chin remains near collar; fill vacated space with transparency or natural neck/cape as appropriate. Do not shrink whole characters. Do not move feet, belt, shoulders, blades. Adult slender swordsman proportions, identical recognizable brown-haired face, unchanged anime painting style. No additional figures, no labels. Preserve transparent background. Keep same square framing, do not recompose or enlarge any pose. The only visible change should be slightly smaller, correctly proportioned heads.",
+    "output": "C:/Users/Pon/.codex/generated_images/01a17adf-fa51-7731-b86c-5d24b3dfff2b/exec-ade99638-7a0a-4b88-a106-42c5ae12bc9c.png"
+  },
+  {
+    "source": "source-drive.png",
+    "adopted": "source-drive-headfix.png",
+    "prompt": "Edit this transparent four-pose sprite sheet surgically. Preserve exact layout, pose placement, body proportions, neck attachments, torso, cape, shoulders, arms, weapons, legs, feet and full canvas. ONLY correct oversized HEADS, including hair+face as one unit, scaling around each neck attachment so the chin stays attached to the collar. TOP LEFT head: unchanged. TOP RIGHT head: reduce to 90% linear size. BOTTOM LEFT head: unchanged. BOTTOM RIGHT head: reduce to 90% linear size. Keep same recognizable brown-haired adult character, facial expression and viewing direction. This is a subtle anatomical size correction, do not over-shrink heads or change poses. No effects/text/backdrop, preserve transparency.",
+    "output": "C:/Users/Pon/.codex/generated_images/01a17adf-fa51-7731-b86c-5d24b3dfff2b/exec-08a53cdd-7ed9-4068-95fe-ad799d740759.png"
+  },
+  {
+    "source": "source-rise.png",
+    "adopted": "source-rise-headfix.png",
+    "prompt": "Surgical edit of this four-pose transparent game sprite sheet. Keep the four poses, placement, body, neck attachment, shoulders, armor, cape, arms, both swords, legs and feet exactly unchanged. ONLY subtly reduce heads (hair and face together, keeping neck attached): top-left head to 94% of current linear size; top-right head to 90%; both bottom heads UNCHANGED. Keep face identity, expression, facing and drawing style. Do not enlarge characters, alter pose or recompose. Fill former head edges with transparency. Exactly four full bodies with margin, transparent background, no effects or text.",
+    "output": "C:/Users/Pon/.codex/generated_images/01a17adf-fa51-7731-b86c-5d24b3dfff2b/exec-e12f2ab0-f291-4886-a1c6-a8dd7ca17fe0.png"
+  },
+  {
+    "source": "source-turn.png",
+    "adopted": "source-turn-headfix.png",
+    "prompt": "Surgical edit of this four-pose transparent game sprite sheet. Preserve exact layout and all body/weapon/cape/leg pixels as closely as possible. ONLY subtly reduce heads including hair and face, about their neck attachment: top-left to 94% of current linear size, top-right to 90%, bottom-left unchanged, bottom-right to 94%. Preserve adult face identity/expression/viewing angle. Do not move shoulders or feet, do not resize whole characters or recompose the sheet. No text or effects, keep background transparent.",
+    "output": "C:/Users/Pon/.codex/generated_images/01a17adf-fa51-7731-b86c-5d24b3dfff2b/exec-48ecb654-1250-4af6-8490-4a775c5a8705.png"
+  },
+  {
+    "source": "source-hop.png",
+    "adopted": "source-hop-headfix.png",
+    "prompt": "Surgical anatomical edit of this four-pose transparent sprite sheet. Keep all four poses and exact positions, same torso, neck attachments, cape, limbs, armor, swords and feet. ONLY scale the TOP RIGHT and BOTTOM RIGHT heads (entire hair and face together) to 90% of their current linear size, anchored at the neck/collar. Both LEFT heads unchanged. Subtle smaller head proportion, same face identity, hair and expression. No body resizing or pose changes. Keep same landscape sheet layout and transparent background; no text or effects.",
+    "output": "C:/Users/Pon/.codex/generated_images/01a17adf-fa51-7731-b86c-5d24b3dfff2b/exec-953048af-a575-411d-b949-071f8e649a12.png"
+  },
+  {
+    "source": "source-cross.png",
+    "adopted": "source-cross-headfix.png",
+    "prompt": "Surgical edit: in this four-pose transparent sprite sheet ONLY reduce the BOTTOM RIGHT character's entire head (hair and face together) to 88% of its current linear size, anchored at his neck/collar. This recovery pose must have adult small-head proportions matching the other poses. All other heads and bodies stay unchanged, especially all feet, knees, belt, cape, arms, swords, and pose placement. Preserve exact four-cell layout and canvas framing. No whole-character resizing, no pose change, no effects or text; preserve transparency.",
+    "output": "C:/Users/Pon/.codex/generated_images/01a17adf-fa51-7731-b86c-5d24b3dfff2b/exec-87ced1b6-5a99-4416-8606-6968a1b2c495.png"
+  },
+  {
+    "source": "source-cross-fixed.png",
+    "adopted": "source-cross-fixed-headfix.png",
+    "prompt": "Surgical edit of this SINGLE transparent full-body game sprite. ONLY reduce the head including hair and face to 90% of its current linear size, scaling about the neck attachment so the chin stays naturally near the collar. Preserve character face identity and expression. Keep ALL other geometry unchanged: shoulders, torso, cape, feet, knees, arms, hands and BOTH properly constructed crossed swords. Do not move the hands or alter the X swords at all. Same full-body placement and framing, no resizing the whole character. Transparent background, no text/effects. Subtle adult head-proportion correction.",
+    "output": "C:/Users/Pon/.codex/generated_images/01a17adf-fa51-7731-b86c-5d24b3dfff2b/exec-ece0cc4c-251b-4264-9470-634a381b728c.png"
+  }
+]

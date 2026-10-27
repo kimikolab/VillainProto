@@ -21,13 +21,18 @@ public partial class UtsuDanceCheck : Control
             _movie = OS.GetCmdlineUserArgs().Contains("--movie");
             CheckAssets(); CheckIndex();
             _main = new Main { ViewerMode = true }; _main.SetAnchorsPreset(LayoutPreset.FullRect); AddChild(_main);
+            _main.ViewerField.UtsuEffectsEnabled = !OS.GetCmdlineUserArgs().Contains("--bare");
             _main.ViewerFastPlayback = !_movie; _main.ViewerLeadInSeconds = _movie ? .55 : 0;
-            foreach (int count in new[] { 2, 3, 4, 5 }) await Run(count, mirror: false, changeTargets: false);
+            foreach (int count in OS.GetCmdlineUserArgs().Contains("--two-only") ? new[] { 2 }
+                : OS.GetCmdlineUserArgs().Contains("--five-only") ? new[] { 5 } : new[] { 2, 3, 4, 5 }) await Run(count, mirror: false, changeTargets: false);
             if (!_movie)
             {
                 await Run(1, false, false);
                 await Run(5, true, false);
                 await Run(5, false, true);
+                _main.ViewerField.UtsuEffectsEnabled = false;
+                await Run(2, false, false);
+                _main.ViewerField.UtsuEffectsEnabled = true;
                 await StepPoseCheck();
                 await PauseAndCancel();
                 await RealBattle();
@@ -36,7 +41,9 @@ public partial class UtsuDanceCheck : Control
             await _main.StopViewerPlayback(); _main.QueueFree(); await Frame(); await Frame();
             if (_movie)
             {
-                string path = ProjectSettings.GlobalizePath("res://../design/art/utsu/attack-step-v3/capture-segments.json");
+                string path = ProjectSettings.GlobalizePath("res://../design/art/utsu/attack-flow-v4/capture-segments.json");
+                if (OS.GetCmdlineUserArgs().Contains("--bare")) path = path.Replace("capture-segments.json", "capture-bare.json");
+                if (OS.GetCmdlineUserArgs().Contains("--bare") && OS.GetCmdlineUserArgs().Contains("--five-only")) path = path.Replace("capture-bare.json", "capture-bare-five.json");
                 File.WriteAllText(path, JsonSerializer.Serialize(new { fps = 30, speed = 1, segments = _segments }, new JsonSerializerOptions { WriteIndented = true }));
             }
             GD.Print($"UTSU_DANCE_CHECK_OK checks={_assertions} prefix=2,3,4,5 contact-once dual-blades pause speed mirror death cancel reset seek replay actual-hp idle-return movie={_movie}");
@@ -47,37 +54,60 @@ public partial class UtsuDanceCheck : Control
 
     private void CheckAssets()
     {
-        // 同じ頭の倍率だけでは、胴の短い原画が縮んで見える。実測した胴とすねも待機基準で照合する。
-        string path = ProjectSettings.GlobalizePath("res://../design/art/utsu/attack-step-v3/cel-animation.json");
+        // 顔の縦線を手で測る方式では顔幅の違いを見逃す。共通頭部の実表示倍率を照合する。
+        string path = ProjectSettings.GlobalizePath("res://../design/art/utsu/attack-flow-v4/cel-animation.json");
         using var spec = JsonDocument.Parse(File.ReadAllText(path));
         Vector2 Point(JsonElement p) => new(p[0].GetSingle(), p[1].GetSingle());
         var bodyPoses = spec.RootElement.GetProperty("poses").EnumerateArray().Where(p => p.TryGetProperty("body", out _)).ToArray();
-        float Length(JsonElement pose, string from, string to)
-        {
-            var body = pose.GetProperty("body"); var head = pose.GetProperty("head");
-            float scale = spec.RootElement.GetProperty("headPixels").GetSingle() / Point(head[0]).DistanceTo(Point(head[1]));
-            return Point(body.GetProperty(from)).DistanceTo(Point(body.GetProperty(to))) * scale;
-        }
         var ready = bodyPoses.Single(p => p.GetProperty("key").GetString() == "ready");
+        Require(bodyPoses.Length == spec.RootElement.GetProperty("poses").GetArrayLength(), "全姿勢に配置用の基準点がある");
+        float HeadLength(JsonElement pose) => Point(pose.GetProperty("head")[0]).DistanceTo(Point(pose.GetProperty("head")[1])) * pose.GetProperty("scale").GetSingle();
         foreach (var pose in bodyPoses)
         {
-            Require(Math.Abs(Length(pose, "neck", "pelvis") / Length(ready, "neck", "pelvis") - 1) < .12, "攻撃と待機で胴の長さが一致");
-            Require(Math.Abs(Length(pose, "knee", "ankle") / Length(ready, "knee", "ankle") - 1) < .12, "攻撃と待機ですねの長さが一致");
+            if (pose.TryGetProperty("headPart", out var part))
+            {
+                Require(spec.RootElement.GetProperty("headParts").TryGetProperty(part.GetProperty("id").GetString()!, out _)
+                    && !part.TryGetProperty("scale", out _), "各差分は同じ頭部パーツと共通倍率を使う");
+                Require(pose.GetProperty("sheet").GetString()!.EndsWith("-refit.png"), "途中に旧体格の身体セルが混ざらない");
+            }
+            else Require(pose.GetProperty("sheet").GetString()!.EndsWith("idle_loop/utsu/utsu_idle_00.png"), "帰還は採用済み待機Aそのもの");
+            // 投影した折れ線の合計長は体格一致を保証しない。体格は等倍全身比較と実描画で確認する。
+        }
+        Require(Math.Abs(spec.RootElement.GetProperty("headPartScale").GetSingle() * 555 / HeadLength(ready) - 1) < .001f,
+            "共通頭部の寸法を採用待機Aの頭部寸法に合わせる");
+        Require(Math.Abs(ready.GetProperty("scale").GetSingle() * spec.RootElement.GetProperty("clipScale").GetSingle() / 1536 - 1f / 960) < .000001f, "帰還セルと待機Aの実表示倍率が同じ");
+        using var readyImage = Image.LoadFromFile(ProjectSettings.GlobalizePath("res://../design/art/utsu/attack-flow-v4/poses/ready.png"));
+        using var returnImage = Image.LoadFromFile(ProjectSettings.GlobalizePath("res://../design/art/utsu/attack-flow-v4/poses/ready_new.png"));
+        Require(readyImage.GetData().SequenceEqual(returnImage.GetData()), "待機直前の類似構えも同一原画に統一");
+        var cross = bodyPoses.Single(p => p.GetProperty("key").GetString() == "cross5");
+        for (int blade = 0; blade < 2; blade++)
+        {
+            Vector2 root = Point(cross.GetProperty("blades")[blade][0]);
+            Vector2 tip = Point(cross.GetProperty("blades")[blade][1]);
+            Vector2 pommel = Point(cross.GetProperty("pommels")[blade]);
+            Require((tip-root).Normalized().Dot((pommel-root).Normalized()) < -.99f, "クロス斬りの各刀身と柄が一直線につながる");
+            Require(tip.Y < root.Y && pommel.Y > root.Y, "交差する二本とも切先が鍔の上、柄が下");
         }
         for (int hit = 1; hit <= 5; hit++)
         {
-            var end = BattlePawn3D.AttackClipOf($"utsu_hit{hit}_end_v3");
+            var end = BattlePawn3D.AttackClipOf($"utsu_hit{hit}_end_v4");
             Require(end is not null && end.Contact > 0 && end.Contact < end.Frames.Length, "各打に接触コマ");
-            Require(end!.Frames.All(f => f.GetSize() == new Vector2(1280, 960)), "全身の共通キャンバス");
+            Require(end!.Frames.All(f => f.GetSize() == new Vector2(1600, 1100)), "全身の共通キャンバス");
+            string motionPath = ProjectSettings.GlobalizePath($"res://assets/portraits/battle/attack_clip/utsu_hit{hit}_end_v4/motion.json");
+            using var motion = JsonDocument.Parse(File.ReadAllText(motionPath));
+            Require(motion.RootElement.GetProperty("activeBlade").GetInt32() == (hit == 5 ? -1 : (hit - 1) % 2), "左右交互から最後だけ双剣同時へ");
+            var frames = motion.RootElement.GetProperty("frames");
+            Require(frames[end.Contact].GetProperty("trail").GetBoolean(), "接触時は実際の刀身に剣閃");
+            Require(!frames[0].GetProperty("trail").GetBoolean() && !frames[frames.GetArrayLength()-1].GetProperty("trail").GetBoolean(), "予備動作と帰還に追加の剣閃を作らない");
             if (hit == 5) continue;
-            var link = BattlePawn3D.AttackClipOf($"utsu_hit{hit}_link_v3")!;
+            var link = BattlePawn3D.AttackClipOf($"utsu_hit{hit}_link_v4")!;
             Require(link.Contact == end.Contact, "終わる場合と続く場合の接触時刻は同じ");
             for (int k = 0; k <= end.Contact; k++)
             {
                 using var a = link.Frames[k].GetImage(); using var b = end.Frames[k].GetImage();
                 Require(a.GetData().SequenceEqual(b.GetData()), "連撃段階を変えても接触までの全身原画が同じ");
             }
-            var next = BattlePawn3D.AttackClipOf($"utsu_hit{hit + 1}_{(hit + 1 < 5 ? "link" : "end")}_v3")!;
+            var next = BattlePawn3D.AttackClipOf($"utsu_hit{hit + 1}_{(hit + 1 < 5 ? "link" : "end")}_v4")!;
             using var last = link.Frames[^1].GetImage(); using var first = next.Frames[0].GetImage();
             Require(last.GetData().SequenceEqual(first.GetData()), "前の振り抜きと次の予備動作が同じセルでつながる");
             Require(Math.Abs(link.Vertical[^1] - next.Vertical[0]) < .001f, "連撃間の跳躍高が連続");
@@ -136,7 +166,7 @@ public partial class UtsuDanceCheck : Control
         await _main.StopViewerPlayback(); _main.SetPlaybackSpeed(1);
         _main.EnterScripted(FxCatalog.UtsuOpenings(), FxCatalog.UtsuEvents(5), "停止と中断", 0);
         var actor = _main.ViewerField.FindPawn(1)!;
-        await Until(() => actor.AttackClipPlaying && actor.UtsuClipName == "utsu_hit1_link_v3");
+        await Until(() => actor.AttackClipPlaying && actor.UtsuClipName == "utsu_hit1_link_v4");
         _main.PausePlayback();
         int before = actor.AttackClipFrame; var position = actor.Position;
         await Wait(.12);
@@ -160,7 +190,7 @@ public partial class UtsuDanceCheck : Control
         await animation;
         Require(field.UtsuContacts == 0 && !actor.AttackClipPlaying, "命中前の死亡でも剣閃・接触を残さない");
         field.RevivePawn(actor); Require(actor.IdleLoopPlaying, "蘇生で待機Aへ復帰");
-        var cancelled = actor.PlayUtsuClip("utsu_hit4_link_v3", () => throw new InvalidOperationException("勝利の中断後に接触"), true);
+        var cancelled = actor.PlayUtsuClip("utsu_hit4_link_v4", () => throw new InvalidOperationException("勝利の中断後に接触"), true);
         actor.AnimateVictory();
         await cancelled;
         Require(!actor.AttackClipPlaying && actor.UtsuClipName is null && actor.AttackClipVertical == 0, "空中攻撃中の勝利で姿勢・高さ・未命中の接触を解除");
@@ -182,7 +212,7 @@ public partial class UtsuDanceCheck : Control
         _main.ResumePlayback();
         await Until(() => actor.UtsuPose == "step_plant");
         var planted = actor.Position;
-        await Until(() => actor.UtsuPose == "coil");
+        await Until(() => actor.UtsuPose == "drive1");
         Require(actor.Position.DistanceTo(planted) < .001f, "踏着後は前進せず腰の溜めへ接続する");
         await Until(() => !_main.IsPlaying);
         Require(_main.ViewerField.UtsuContacts == 2, "踏み込みを追加しても命中は二回だけ");

@@ -11,9 +11,11 @@ public partial class RicaWeaponTrail3D : MeshInstance3D
     private ShaderMaterial _material = null!, _returnMaterial = null!;
     private string? _clip;
     private const double Life = .18;
+    private bool _weighty;
 
-    internal void Start()
+    internal void Start(bool weighty = false)
     {
+        _weighty = weighty;
         TopLevel = true; GlobalTransform = Transform3D.Identity;
         Mesh = _ribbon; CastShadow = ShadowCastingSetting.Off;
         _material = new ShaderMaterial { Shader = new Shader { Code = @"
@@ -22,6 +24,7 @@ render_mode unshaded,blend_add,cull_disabled,depth_draw_never;
 uniform vec4 tint:source_color;
 uniform float strength=1.0;
 uniform bool luminous=false;
+uniform bool weighty=false;
 void fragment(){
  if(luminous){
   float age=clamp(UV.y,0.0,1.0);
@@ -41,9 +44,9 @@ void fragment(){
   EMISSION=(white*(core*4.3+inner*1.2+rim*2.0)+edge_color*(halo*0.70+fine*1.8))*strength*fade;
   ALPHA=clamp(core+rim+halo*0.48+inner*0.70+fine,0.0,1.0)*fade;
  }else{
- float edge=exp(-pow((1.0-UV.x)*72.0,2.0));
+ float edge=exp(-pow((1.0-UV.x)*(weighty?38.0:72.0),2.0));
  float hair=exp(-abs(UV.x-0.90)*110.0)*0.55;
- float wake=pow(UV.x,2.0)*0.27;
+ float wake=pow(UV.x,2.0)*(weighty?0.40:0.27);
  float fade=pow(UV.y,1.8);
  ALBEDO=mix(tint.rgb,vec3(0.97,0.99,1.0),edge);
  EMISSION=(tint.rgb*(wake+hair)*1.5+vec3(0.95,0.99,1.0)*edge*3.0)*strength;
@@ -97,6 +100,7 @@ void fragment(){
         material.SetShaderParameter("tint", tint);
         material.SetShaderParameter("strength",luminous?1.45f:1.0f);
         material.SetShaderParameter("luminous",luminous);
+        material.SetShaderParameter("weighty",_weighty);
         _ribbon.SurfaceBegin(Godot.Mesh.PrimitiveType.Triangles);
         var distance=new float[_samples.Count];
         for(int i=1;i<_samples.Count;i++)distance[i]=distance[i-1]+_samples[i-1].Tip.DistanceTo(_samples[i].Tip);

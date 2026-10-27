@@ -485,7 +485,7 @@ void fragment() {
             .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
     }
 
-    public void AnimateHit(bool poison = false, float recoil = 1f)
+    public void AnimateHit(bool poison = false, float recoil = 1f, Vector3? recoilDirection = null)
     {
         if (!_alive) return;
         if (SwordDrawn && !poison) return; // 剣の段はよろめかず、その場で返す。
@@ -496,6 +496,8 @@ void fragment() {
         tween.TweenProperty(_sprite, "modulate", hit, 0.045);
         tween.TweenProperty(_sprite, "modulate", Colors.White, 0.18);
         Vector3 kick = new(Team == BattleContext.PlayerTeam ? -0.20f : 0.20f, 0.06f, 0.12f);
+        if (recoilDirection is Vector3 direction && direction.LengthSquared() > .0001f)
+            kick = direction.Normalized() * .20f + Vector3.Up * .06f;
         kick *= recoil;
         if (poison) kick *= 0.25f;
         var shake = BeginMotion();

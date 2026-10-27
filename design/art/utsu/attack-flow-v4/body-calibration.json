@@ -1,0 +1,434 @@
+{
+  "ready_new": {
+    "scale": 0.8,
+    "head": 107.2,
+    "blades": [
+      186.6,
+      187.7
+    ],
+    "bodyGuideStatus": "\u65e7\u539f\u753b\u306e\u914d\u7f6e\u7528\u57fa\u6e96\u70b9\u3002\u8eab\u4f53\u4fee\u6b63\u5f8c\u306e\u9aa8\u9577\u6e2c\u5b9a\u5024\u3067\u306f\u306a\u304f\u3001\u4f53\u683c\u306e\u5408\u5426\u5224\u5b9a\u306b\u306f\u4f7f\u308f\u306a\u3044\u3002"
+  },
+  "step_load": {
+    "scale": 1.1413558769570085,
+    "head": 107.20000000000002,
+    "blades": [
+      311.5,
+      204.5
+    ],
+    "headPart": {
+      "id": "front",
+      "neck": [
+        990,
+        172
+      ],
+      "angle": 4
+    },
+    "headPartScale": 0.19315315315315315,
+    "bodyGuideStatus": "\u65e7\u539f\u753b\u306e\u914d\u7f6e\u7528\u57fa\u6e96\u70b9\u3002\u8eab\u4f53\u4fee\u6b63\u5f8c\u306e\u9aa8\u9577\u6e2c\u5b9a\u5024\u3067\u306f\u306a\u304f\u3001\u4f53\u683c\u306e\u5408\u5426\u5224\u5b9a\u306b\u306f\u4f7f\u308f\u306a\u3044\u3002"
+  },
+  "step_push": {
+    "scale": 1.0999690968939384,
+    "head": 107.20000000000003,
+    "blades": [
+      251.5,
+      231.6
+    ],
+    "headPart": {
+      "id": "front",
+      "neck": [
+        449,
+        755
+      ],
+      "angle": 8
+    },
+    "headPartScale": 0.19315315315315315,
+    "bodyGuideStatus": "\u65e7\u539f\u753b\u306e\u914d\u7f6e\u7528\u57fa\u6e96\u70b9\u3002\u8eab\u4f53\u4fee\u6b63\u5f8c\u306e\u9aa8\u9577\u6e2c\u5b9a\u5024\u3067\u306f\u306a\u304f\u3001\u4f53\u683c\u306e\u5408\u5426\u5224\u5b9a\u306b\u306f\u4f7f\u308f\u306a\u3044\u3002"
+  },
+  "step_plant": {
+    "scale": 1.095623493722963,
+    "head": 107.20000000000006,
+    "blades": [
+      262.0,
+      284.2
+    ],
+    "headPart": {
+      "id": "front",
+      "neck": [
+        1084,
+        765
+      ],
+      "angle": 4
+    },
+    "headPartScale": 0.19315315315315315,
+    "bodyGuideStatus": "\u65e7\u539f\u753b\u306e\u914d\u7f6e\u7528\u57fa\u6e96\u70b9\u3002\u8eab\u4f53\u4fee\u6b63\u5f8c\u306e\u9aa8\u9577\u6e2c\u5b9a\u5024\u3067\u306f\u306a\u304f\u3001\u4f53\u683c\u306e\u5408\u5426\u5224\u5b9a\u306b\u306f\u4f7f\u308f\u306a\u3044\u3002"
+  },
+  "drive1": {
+    "scale": 0.9766631471218586,
+    "head": 107.2,
+    "blades": [
+      183.7,
+      126.3
+    ],
+    "headPart": {
+      "id": "front",
+      "neck": [
+        467,
+        173
+      ],
+      "angle": 6
+    },
+    "headPartScale": 0.19315315315315315,
+    "bodyGuideStatus": "\u65e7\u539f\u753b\u306e\u914d\u7f6e\u7528\u57fa\u6e96\u70b9\u3002\u8eab\u4f53\u4fee\u6b63\u5f8c\u306e\u9aa8\u9577\u6e2c\u5b9a\u5024\u3067\u306f\u306a\u304f\u3001\u4f53\u683c\u306e\u5408\u5426\u5224\u5b9a\u306b\u306f\u4f7f\u308f\u306a\u3044\u3002"
+  },
+  "drive2": {
+    "scale": 1.0891828599740212,
+    "head": 107.2,
+    "blades": [
+      335.1,
+      312.3
+    ],
+    "headPart": {
+      "id": "front",
+      "neck": [
+        972,
+        177
+      ],
+      "angle": 2
+    },
+    "headPartScale": 0.19315315315315315,
+    "bodyGuideStatus": "\u65e7\u539f\u753b\u306e\u914d\u7f6e\u7528\u57fa\u6e96\u70b9\u3002\u8eab\u4f53\u4fee\u6b63\u5f8c\u306e\u9aa8\u9577\u6e2c\u5b9a\u5024\u3067\u306f\u306a\u304f\u3001\u4f53\u683c\u306e\u5408\u5426\u5224\u5b9a\u306b\u306f\u4f7f\u308f\u306a\u3044\u3002"
+  },
+  "cut1": {
+    "scale": 1.0584574597723972,
+    "head": 107.19999999999997,
+    "blades": [
+      235.8,
+      205.9
+    ],
+    "headPart": {
+      "id": "back",
+      "neck": [
+        464,
+        750
+      ],
+      "angle": 5
+    },
+    "headPartScale": 0.19315315315315315,
+    "bodyGuideStatus": "\u65e7\u539f\u753b\u306e\u914d\u7f6e\u7528\u57fa\u6e96\u70b9\u3002\u8eab\u4f53\u4fee\u6b63\u5f8c\u306e\u9aa8\u9577\u6e2c\u5b9a\u5024\u3067\u306f\u306a\u304f\u3001\u4f53\u683c\u306e\u5408\u5426\u5224\u5b9a\u306b\u306f\u4f7f\u308f\u306a\u3044\u3002"
+  },
+  "pass1": {
+    "scale": 1.1141265943799208,
+    "head": 107.19999999999997,
+    "blades": [
+      170.1,
+      257.4
+    ],
+    "headPart": {
+      "id": "profile",
+      "neck": [
+        1104,
+        800
+      ],
+      "angle": 12
+    },
+    "headPartScale": 0.19315315315315315,
+    "bodyGuideStatus": "\u65e7\u539f\u753b\u306e\u914d\u7f6e\u7528\u57fa\u6e96\u70b9\u3002\u8eab\u4f53\u4fee\u6b63\u5f8c\u306e\u9aa8\u9577\u6e2c\u5b9a\u5024\u3067\u306f\u306a\u304f\u3001\u4f53\u683c\u306e\u5408\u5426\u5224\u5b9a\u306b\u306f\u4f7f\u308f\u306a\u3044\u3002"
+  },
+  "load2": {
+    "scale": 1.2191544986372254,
+    "head": 107.2,
+    "blades": [
+      232.4,
+      229.2
+    ],
+    "headPart": {
+      "id": "front",
+      "neck": [
+        383,
+        209
+      ],
+      "angle": 6
+    },
+    "headPartScale": 0.19315315315315315,
+    "bodyGuideStatus": "\u65e7\u539f\u753b\u306e\u914d\u7f6e\u7528\u57fa\u6e96\u70b9\u3002\u8eab\u4f53\u4fee\u6b63\u5f8c\u306e\u9aa8\u9577\u6e2c\u5b9a\u5024\u3067\u306f\u306a\u304f\u3001\u4f53\u683c\u306e\u5408\u5426\u5224\u5b9a\u306b\u306f\u4f7f\u308f\u306a\u3044\u3002"
+  },
+  "rise_drive": {
+    "scale": 1.1687070057012625,
+    "head": 107.20000000000002,
+    "blades": [
+      198.1,
+      289.9
+    ],
+    "headPart": {
+      "id": "front",
+      "neck": [
+        979,
+        153
+      ],
+      "angle": -6
+    },
+    "headPartScale": 0.19315315315315315,
+    "bodyGuideStatus": "\u65e7\u539f\u753b\u306e\u914d\u7f6e\u7528\u57fa\u6e96\u70b9\u3002\u8eab\u4f53\u4fee\u6b63\u5f8c\u306e\u9aa8\u9577\u6e2c\u5b9a\u5024\u3067\u306f\u306a\u304f\u3001\u4f53\u683c\u306e\u5408\u5426\u5224\u5b9a\u306b\u306f\u4f7f\u308f\u306a\u3044\u3002"
+  },
+  "cut2": {
+    "scale": 1.1419828733208048,
+    "head": 107.2,
+    "blades": [
+      154.3,
+      207.8
+    ],
+    "headPart": {
+      "id": "profile",
+      "neck": [
+        339,
+        797
+      ],
+      "angle": -20
+    },
+    "headPartScale": 0.19315315315315315,
+    "bodyGuideStatus": "\u65e7\u539f\u753b\u306e\u914d\u7f6e\u7528\u57fa\u6e96\u70b9\u3002\u8eab\u4f53\u4fee\u6b63\u5f8c\u306e\u9aa8\u9577\u6e2c\u5b9a\u5024\u3067\u306f\u306a\u304f\u3001\u4f53\u683c\u306e\u5408\u5426\u5224\u5b9a\u306b\u306f\u4f7f\u308f\u306a\u3044\u3002"
+  },
+  "pivot2": {
+    "scale": 1.303103349930573,
+    "head": 107.20000000000005,
+    "blades": [
+      230.5,
+      281.2
+    ],
+    "headPart": {
+      "id": "back",
+      "neck": [
+        1010,
+        807
+      ],
+      "angle": 8
+    },
+    "headPartScale": 0.19315315315315315,
+    "bodyGuideStatus": "\u65e7\u539f\u753b\u306e\u914d\u7f6e\u7528\u57fa\u6e96\u70b9\u3002\u8eab\u4f53\u4fee\u6b63\u5f8c\u306e\u9aa8\u9577\u6e2c\u5b9a\u5024\u3067\u306f\u306a\u304f\u3001\u4f53\u683c\u306e\u5408\u5426\u5224\u5b9a\u306b\u306f\u4f7f\u308f\u306a\u3044\u3002"
+  },
+  "pivot3": {
+    "scale": 1.39313797883175,
+    "head": 107.20000000000002,
+    "blades": [
+      372.2,
+      300.8
+    ],
+    "headPart": {
+      "id": "back",
+      "neck": [
+        509,
+        130
+      ],
+      "angle": 3
+    },
+    "headPartScale": 0.19315315315315315,
+    "bodyGuideStatus": "\u65e7\u539f\u753b\u306e\u914d\u7f6e\u7528\u57fa\u6e96\u70b9\u3002\u8eab\u4f53\u4fee\u6b63\u5f8c\u306e\u9aa8\u9577\u6e2c\u5b9a\u5024\u3067\u306f\u306a\u304f\u3001\u4f53\u683c\u306e\u5408\u5426\u5224\u5b9a\u306b\u306f\u4f7f\u308f\u306a\u3044\u3002"
+  },
+  "unwind3": {
+    "scale": 1.2827605470547216,
+    "head": 107.2,
+    "blades": [
+      305.5,
+      288.5
+    ],
+    "headPart": {
+      "id": "front",
+      "neck": [
+        1197,
+        178
+      ],
+      "angle": 6
+    },
+    "headPartScale": 0.19315315315315315,
+    "bodyGuideStatus": "\u65e7\u539f\u753b\u306e\u914d\u7f6e\u7528\u57fa\u6e96\u70b9\u3002\u8eab\u4f53\u4fee\u6b63\u5f8c\u306e\u9aa8\u9577\u6e2c\u5b9a\u5024\u3067\u306f\u306a\u304f\u3001\u4f53\u683c\u306e\u5408\u5426\u5224\u5b9a\u306b\u306f\u4f7f\u308f\u306a\u3044\u3002"
+  },
+  "sweep3": {
+    "scale": 0.6506261692099826,
+    "head": 107.2,
+    "blades": [
+      255.7,
+      220.3
+    ],
+    "headPart": {
+      "id": "back",
+      "neck": [
+        789,
+        246
+      ],
+      "angle": 7
+    },
+    "headPartScale": 0.19315315315315315,
+    "bodyGuideStatus": "\u65e7\u539f\u753b\u306e\u914d\u7f6e\u7528\u57fa\u6e96\u70b9\u3002\u8eab\u4f53\u4fee\u6b63\u5f8c\u306e\u9aa8\u9577\u6e2c\u5b9a\u5024\u3067\u306f\u306a\u304f\u3001\u4f53\u683c\u306e\u5408\u5426\u5224\u5b9a\u306b\u306f\u4f7f\u308f\u306a\u3044\u3002"
+  },
+  "spring3": {
+    "scale": 1.3846308336756068,
+    "head": 107.19999999999997,
+    "blades": [
+      245.3,
+      268.2
+    ],
+    "headPart": {
+      "id": "front",
+      "neck": [
+        1325,
+        696
+      ],
+      "angle": 10
+    },
+    "headPartScale": 0.19315315315315315,
+    "bodyGuideStatus": "\u65e7\u539f\u753b\u306e\u914d\u7f6e\u7528\u57fa\u6e96\u70b9\u3002\u8eab\u4f53\u4fee\u6b63\u5f8c\u306e\u9aa8\u9577\u6e2c\u5b9a\u5024\u3067\u306f\u306a\u304f\u3001\u4f53\u683c\u306e\u5408\u5426\u5224\u5b9a\u306b\u306f\u4f7f\u308f\u306a\u3044\u3002"
+  },
+  "launch4": {
+    "scale": 1.2200910802808984,
+    "head": 107.2,
+    "blades": [
+      294.7,
+      327.3
+    ],
+    "headPart": {
+      "id": "front",
+      "neck": [
+        461,
+        125
+      ],
+      "angle": -8
+    },
+    "headPartScale": 0.19315315315315315,
+    "bodyGuideStatus": "\u65e7\u539f\u753b\u306e\u914d\u7f6e\u7528\u57fa\u6e96\u70b9\u3002\u8eab\u4f53\u4fee\u6b63\u5f8c\u306e\u9aa8\u9577\u6e2c\u5b9a\u5024\u3067\u306f\u306a\u304f\u3001\u4f53\u683c\u306e\u5408\u5426\u5224\u5b9a\u306b\u306f\u4f7f\u308f\u306a\u3044\u3002"
+  },
+  "fall4": {
+    "scale": 1.3331762006203791,
+    "head": 107.20000000000002,
+    "blades": [
+      290.1,
+      360.0
+    ],
+    "headPart": {
+      "id": "front",
+      "neck": [
+        1172,
+        215
+      ],
+      "angle": 10
+    },
+    "headPartScale": 0.19315315315315315,
+    "bodyGuideStatus": "\u65e7\u539f\u753b\u306e\u914d\u7f6e\u7528\u57fa\u6e96\u70b9\u3002\u8eab\u4f53\u4fee\u6b63\u5f8c\u306e\u9aa8\u9577\u6e2c\u5b9a\u5024\u3067\u306f\u306a\u304f\u3001\u4f53\u683c\u306e\u5408\u5426\u5224\u5b9a\u306b\u306f\u4f7f\u308f\u306a\u3044\u3002"
+  },
+  "land4": {
+    "scale": 1.1354624244531082,
+    "head": 107.20000000000006,
+    "blades": [
+      237.8,
+      315.9
+    ],
+    "headPart": {
+      "id": "front",
+      "neck": [
+        524,
+        677
+      ],
+      "angle": 16
+    },
+    "headPartScale": 0.19315315315315315,
+    "bodyGuideStatus": "\u65e7\u539f\u753b\u306e\u914d\u7f6e\u7528\u57fa\u6e96\u70b9\u3002\u8eab\u4f53\u4fee\u6b63\u5f8c\u306e\u9aa8\u9577\u6e2c\u5b9a\u5024\u3067\u306f\u306a\u304f\u3001\u4f53\u683c\u306e\u5408\u5426\u5224\u5b9a\u306b\u306f\u4f7f\u308f\u306a\u3044\u3002"
+  },
+  "load5": {
+    "scale": 1.3777591900550126,
+    "head": 107.20000000000007,
+    "blades": [
+      260.4,
+      263.1
+    ],
+    "headPart": {
+      "id": "front",
+      "neck": [
+        1233,
+        695
+      ],
+      "angle": 4
+    },
+    "headPartScale": 0.19315315315315315,
+    "bodyGuideStatus": "\u65e7\u539f\u753b\u306e\u914d\u7f6e\u7528\u57fa\u6e96\u70b9\u3002\u8eab\u4f53\u4fee\u6b63\u5f8c\u306e\u9aa8\u9577\u6e2c\u5b9a\u5024\u3067\u306f\u306a\u304f\u3001\u4f53\u683c\u306e\u5408\u5426\u5224\u5b9a\u306b\u306f\u4f7f\u308f\u306a\u3044\u3002"
+  },
+  "wind5": {
+    "scale": 1.2026966427855406,
+    "head": 107.2,
+    "blades": [
+      383.3,
+      346.0
+    ],
+    "headPart": {
+      "id": "front",
+      "neck": [
+        464,
+        198
+      ],
+      "angle": 3
+    },
+    "headPartScale": 0.19315315315315315,
+    "bodyGuideStatus": "\u65e7\u539f\u753b\u306e\u914d\u7f6e\u7528\u57fa\u6e96\u70b9\u3002\u8eab\u4f53\u4fee\u6b63\u5f8c\u306e\u9aa8\u9577\u6e2c\u5b9a\u5024\u3067\u306f\u306a\u304f\u3001\u4f53\u683c\u306e\u5408\u5426\u5224\u5b9a\u306b\u306f\u4f7f\u308f\u306a\u3044\u3002"
+  },
+  "cross5": {
+    "scale": 0.6850160890068404,
+    "head": 107.19999999999999,
+    "blades": [
+      331.9,
+      364.0
+    ],
+    "headPart": {
+      "id": "front",
+      "neck": [
+        740,
+        391
+      ],
+      "angle": 12
+    },
+    "headPartScale": 0.19315315315315315,
+    "bodyGuideStatus": "\u65e7\u539f\u753b\u306e\u914d\u7f6e\u7528\u57fa\u6e96\u70b9\u3002\u8eab\u4f53\u4fee\u6b63\u5f8c\u306e\u9aa8\u9577\u6e2c\u5b9a\u5024\u3067\u306f\u306a\u304f\u3001\u4f53\u683c\u306e\u5408\u5426\u5224\u5b9a\u306b\u306f\u4f7f\u308f\u306a\u3044\u3002"
+  },
+  "pass5": {
+    "scale": 1.0846385779588137,
+    "head": 107.19999999999997,
+    "blades": [
+      352.8,
+      229.3
+    ],
+    "headPart": {
+      "id": "front",
+      "neck": [
+        554,
+        672
+      ],
+      "angle": 14
+    },
+    "headPartScale": 0.19315315315315315,
+    "bodyGuideStatus": "\u65e7\u539f\u753b\u306e\u914d\u7f6e\u7528\u57fa\u6e96\u70b9\u3002\u8eab\u4f53\u4fee\u6b63\u5f8c\u306e\u9aa8\u9577\u6e2c\u5b9a\u5024\u3067\u306f\u306a\u304f\u3001\u4f53\u683c\u306e\u5408\u5426\u5224\u5b9a\u306b\u306f\u4f7f\u308f\u306a\u3044\u3002"
+  },
+  "recover": {
+    "scale": 1.451023419839575,
+    "head": 107.19999999999996,
+    "blades": [
+      326.8,
+      383.3
+    ],
+    "headPart": {
+      "id": "front",
+      "neck": [
+        1178,
+        618
+      ],
+      "angle": 0
+    },
+    "headPartScale": 0.19315315315315315,
+    "bodyGuideStatus": "\u65e7\u539f\u753b\u306e\u914d\u7f6e\u7528\u57fa\u6e96\u70b9\u3002\u8eab\u4f53\u4fee\u6b63\u5f8c\u306e\u9aa8\u9577\u6e2c\u5b9a\u5024\u3067\u306f\u306a\u304f\u3001\u4f53\u683c\u306e\u5408\u5426\u5224\u5b9a\u306b\u306f\u4f7f\u308f\u306a\u3044\u3002"
+  },
+  "ready": {
+    "scale": 0.8,
+    "head": 107.2,
+    "blades": [
+      186.6,
+      187.7
+    ],
+    "bodyGuideStatus": "\u65e7\u539f\u753b\u306e\u914d\u7f6e\u7528\u57fa\u6e96\u70b9\u3002\u8eab\u4f53\u4fee\u6b63\u5f8c\u306e\u9aa8\u9577\u6e2c\u5b9a\u5024\u3067\u306f\u306a\u304f\u3001\u4f53\u683c\u306e\u5408\u5426\u5224\u5b9a\u306b\u306f\u4f7f\u308f\u306a\u3044\u3002"
+  }
+}

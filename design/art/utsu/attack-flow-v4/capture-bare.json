@@ -1,0 +1,12 @@
+{
+  "fps": 30,
+  "speed": 1,
+  "segments": [
+    {
+      "name": "dance-2",
+      "count": 2,
+      "start_frame": 0,
+      "end_frame": 112
+    }
+  ]
+}
