@@ -111,6 +111,7 @@ public partial class Main
         _battleField.SetGatherClock(_paused, _speed);
         _battleField.SetPoisonClock(_paused, _speed);
         _battleField.SetDeathClock(_paused, _speed);
+        _battleField.SetMudoClock(_paused, _speed);
         foreach (var pawn in _battleField.Pawns.Values) pawn.AnimationSpeed = _speed;
         if (ViewerMode) _battleField.ProcessMode = _paused ? ProcessModeEnum.Disabled : ProcessModeEnum.Inherit;
     }

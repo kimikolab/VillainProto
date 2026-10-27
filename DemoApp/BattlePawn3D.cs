@@ -57,6 +57,8 @@ public partial class BattlePawn3D : Node3D
     // 反撃の被弾でも連撃中の立ち位置へ戻す。
     public void HoldComboPosition() => _comboPosition = Position;
     public bool IsGuarding => _guardPosition is not null;
+    // 前の連番を待っていた帰還処理が、次の攻撃の移動を上書きしないための世代。
+    internal int AttackMotionVersion { get; set; }
 
     // 配置は変えず、台本の介入から被弾までだけ前へ出る。
     public void BeginGuard(Vector3 position)

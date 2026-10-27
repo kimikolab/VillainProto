@@ -72,6 +72,16 @@ public partial class BorgAttackClipCheck : Control
             await Wait(0.5);
             Require(!borg.AttackClipPlaying && borg.IdleLoopPlaying && borg.Position.DistanceTo(home) < 0.05f, "振り切ってから席へ戻る");
 
+            // 前の振り切りが次の踏み込み中に終わっても、旧帰還が待機中のTweenを消さない。
+            await field.Attack(borg, target, AttackPattern.Sweep, hits);
+            while (borg.AttackClipPlaying && borg.AttackClipFrame < clip.Frames.Length - 2)
+                await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+            var overlapping = field.Attack(borg, target, AttackPattern.Sweep, hits, attackPower: 0);
+            Require(await Task.WhenAny(overlapping, Wait(2)) == overlapping, "振り切りと次の攻撃が重なっても再生を完了");
+            await overlapping;
+            await borg.AttackClipFinished;
+            await Wait(0.5);
+
             // 倒れたら止めて通常の絵へ。
             _ = borg.PlayAttackClip(name);
             await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);

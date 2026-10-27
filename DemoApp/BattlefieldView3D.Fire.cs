@@ -245,6 +245,7 @@ void fragment(){
         IReadOnlyList<BattlePawn3D> targets, FireAttackCue cue, double speed)
     {
         if (actor is null || target is null) return;
+        actor.AttackMotionVersion++;
         speed = Math.Max(0.1, speed);
         int generation = _fireGeneration;
         int soundGeneration = _attackAudio.FireSoundGeneration;

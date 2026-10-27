@@ -19,10 +19,12 @@ public partial class BattlefieldView3D
     /// <summary>踏み込んだ駒は、攻撃の連番を振り切ってから元の席へ戻る（連番が無ければすぐ戻る）。</summary>
     private static async void ReturnAfterAttackClip(BattlePawn3D pawn)
     {
-        // 振り切り中に次の斬り返しへ切り替わった場合も、その連番が終わるまで戻さない。
-        while (IsInstanceValid(pawn) && pawn.IsInsideTree() && pawn.AttackClipPlaying)
+        int motionVersion = pawn.AttackMotionVersion;
+        // 同じ攻撃内で連番が切り替わった場合も振り切りまで待つ。次の攻撃には帰還を持ち越さない。
+        while (IsInstanceValid(pawn) && pawn.IsInsideTree() && pawn.AttackMotionVersion == motionVersion && pawn.AttackClipPlaying)
             await pawn.AttackClipFinished;
-        if (IsInstanceValid(pawn) && pawn.IsInsideTree())
+        // 次の攻撃の踏み込み中に旧帰還がBeginMotionを呼ぶと、待機中のTweenをKillして再生が止まる。
+        if (IsInstanceValid(pawn) && pawn.IsInsideTree() && pawn.AttackMotionVersion == motionVersion)
         { if (pawn.UnitId == "rica") pawn.ReleaseRicaPose(); pawn.ReturnFromAttack(); }
     }
 

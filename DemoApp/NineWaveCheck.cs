@@ -80,7 +80,16 @@ public partial class NineWaveCheck : Control
             if (!(bool)typeof(Main).GetField("_playing", Flags)!.GetValue(main)!) return;
             await ToSignal(GetTree().CreateTimer(0.025), SceneTreeTimer.SignalName.Timeout);
         }
-        throw new InvalidOperationException("再生が完了しませんでした");
+        var playback = (Task?)typeof(Main).GetField("_playbackTask", Flags)!.GetValue(main);
+        if (playback?.Exception is { } error) throw error;
+        int index = (int)typeof(Main).GetField("_eventIndex", Flags)!.GetValue(main)! - 1;
+        var result = (BattleResult)typeof(Main).GetField("_result", Flags)!.GetValue(main)!;
+        var e = result.Events[index];
+        var field = (BattlefieldView3D)typeof(Main).GetField("_battleField", Flags)!.GetValue(main)!;
+        var pawn = field.FindPawn(e.ActorId);
+        var motion = pawn is null ? null : (Tween?)typeof(BattlePawn3D).GetField("_motion", Flags)!.GetValue(pawn);
+        throw new InvalidOperationException($"再生が完了しませんでした index={index} T{e.Turn} {e.Kind} amount={e.Amount}"
+            + $" actor={pawn?.UnitId} clip={pawn?.AttackClipPlaying}/{pawn?.AttackClipFrame} motion={motion?.IsValid()}/{(motion?.IsValid() == true ? motion.IsRunning() : false)}");
     }
 
     private static void Require(bool ok, string message)

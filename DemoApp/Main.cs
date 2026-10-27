@@ -1280,6 +1280,7 @@ public partial class Main : Control
         _hagiFastEvent = false;
         _utsuFastEvent = false;
         _battleField.SetDeathClock(false, _speed);
+        _battleField.SetMudoClock(false, _speed);
         _pause.Text = "一時停止";
         if (ViewerMode && ViewerLeadInSeconds > 0) await HoldViewerLeadIn(token);
         if (token != _playToken || !_battleMode) return;
@@ -1918,6 +1919,14 @@ public partial class Main : Control
                 break;
 
             case BattleEventKind.StatusGain:
+                if (e.Text == "dull" && e.Amount == 1 && actor?.UnitId == "mudo"
+                    && target is not null && actor.Team != target.Team)
+                {
+                    _battleField.ShowMudoDull(target);
+                    AppendLog($"  {NameOf(e.ActorId)} → {NameOf(e.TargetId)}：攻撃 −1");
+                    await Delay(0.08);
+                    break;
+                }
                 if (e.Text == StatusKeys.Cowed)
                 {
                     await PlayCowedGain(eventIndex);
@@ -1995,6 +2004,7 @@ public partial class Main : Control
                 break;
 
             case BattleEventKind.Highlight:
+                if (actor?.UnitId == "mudo") _battleField.ShowMudoBurst(actor);
                 if (_result is not null && ErePresentation.IsGiftHighlight(_result.Events, eventIndex))
                 { AppendLog(e.Text ?? ""); break; }
                 // 大鎌の見せ場は絵で伝える。字幕の待ちで連続する振りを切らない。
@@ -2644,6 +2654,7 @@ public partial class Main : Control
         _battleField.SetGatherClock(_paused, _speed);
         _battleField.SetPoisonClock(_paused, _speed);
         _battleField.SetDeathClock(_paused, _speed);
+        _battleField.SetMudoClock(_paused, _speed);
         _pause.Text = _paused ? "再開" : "一時停止";
         Notice(_paused ? "一時停止中" : "再生中", _paused ? UiKit.Gold : UiKit.Player);
     }
@@ -2658,6 +2669,7 @@ public partial class Main : Control
         _battleField.SetGatherClock(_paused, _speed);
         _battleField.SetPoisonClock(_paused, _speed);
         _battleField.SetDeathClock(_paused, _speed);
+        _battleField.SetMudoClock(_paused, _speed);
         _speedPicker.Selected = index;
         Notice($"再生速度 ×{_speed:0.#}", UiKit.Player);
     }
@@ -2708,6 +2720,7 @@ public partial class Main : Control
         _enemyScaleSettings.Visible = true;
         _battleField.Visible = false;
         _battleField.EndGatherPresentation();
+        _battleField.ResetMudoPresentation();
         _battleMusic.Stop();
         _partyBar.Visible = false;
         SetScoreVisible(false);

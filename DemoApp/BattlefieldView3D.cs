@@ -308,6 +308,7 @@ public partial class BattlefieldView3D : Control
         GurenReleases = GurenGains = SwordDraws = SwordRipostes = NumbSwings = VenomReturns = Spews = 0;
         ConcentratePlays = ThickenPlays = InvertedHealPlays = SipPlays = KindlePlays = TaintPlays = 0;
         MireSlams = MireConducts = MireFlows = MireBursts = WhipSweeps = ElectricWhipSweeps = 0;
+        ResetMudoPresentation();
         ThunderPlays = DischargePlays = ShockStagePlays = ShockLeakPlays = ShockInversePlays = 0;
         _shieldCowedGeneration++;
         TormentHitPlays = 0;
@@ -629,6 +630,7 @@ public partial class BattlefieldView3D : Control
         int? blastDestination = null)
     {
         if (from is null || to is null) return;
+        from.AttackMotionVersion++;
         int attackGeneration = _specialGeneration;
         Color color = friendly ? UiKit.Violet : reaction ? UiKit.Gold : from.Team == BattleContext.PlayerTeam ? UiKit.Player : UiKit.Enemy;
         List<BattlePawn3D> hits = impacted.Distinct().ToList();
