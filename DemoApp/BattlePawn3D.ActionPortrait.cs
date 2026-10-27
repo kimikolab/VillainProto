@@ -144,6 +144,7 @@ public partial class BattlePawn3D
             padding = key == "husher_shatter_burst" ? .0195f : .0234f;
         }
         ApplyRicaIdlePortrait(ref key, ref height, ref padding);
+        ApplyMudoPortrait(ref key, ref height, ref padding);
         Texture2D portrait = UiKit.BattlePortrait(_atlas, key, _burning);
         _portraitGroundDistance = height * (0.5f - padding);
         _portraitBaseY = PortraitGroundY + _portraitGroundDistance;

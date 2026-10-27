@@ -9,9 +9,11 @@ public partial class BattlefieldView3D
     private bool _mudoPaused;
     private double _mudoSpeed = 1;
     internal int MudoBursts, MudoDulls;
+    internal static readonly Color MudoMudTint = new("#aebbc9");
 
     internal void ResetMudoPresentation()
     {
+        foreach (var pawn in _pawns.Values) pawn.SetMudoErupting(false);
         foreach (var pulse in _mudoPulses)
             if (IsInstanceValid(pulse)) { pulse.Hide(); pulse.QueueFree(); }
         foreach (var label in _mudoLabels)
@@ -31,6 +33,7 @@ public partial class BattlefieldView3D
     internal void ShowMudoBurst(BattlePawn3D pawn)
     {
         MudoBursts++;
+        pawn.SetMudoErupting(true);
         var pulse = new MudoMudPulse3D();
         pulse.Configure(pawn);
         pulse.SetClock(_mudoPaused, _mudoSpeed);
@@ -44,11 +47,11 @@ public partial class BattlefieldView3D
         MudoDulls++;
         // 他の浮き文字と同じ実時間の寿命。連撃でも頭・HPを覆わない小さな数字にする。
         _mudoLabels.RemoveAll(p => !IsInstanceValid(p) || p.IsQueuedForDeletion());
-        if (Float(pawn, "−1", HexMudFx.Tint, false, 3.35f, 0.85f) is { } label) _mudoLabels.Add(label);
+        if (Float(pawn, "−1", MudoMudTint, false, 3.35f, 0.85f) is { } label) _mudoLabels.Add(label);
     }
 }
 
-// 呪いのしみと同じ泥の形・色。駒の動作や位置を変更せず、胸元より下で短く揺れる。
+// 呪いのしみの形を灰色の泥で再利用。駒の動作や位置を変更せず、胸元より下で短く揺れる。
 public partial class MudoMudPulse3D : Node3D
 {
     private BattlePawn3D _pawn = null!;
@@ -63,7 +66,7 @@ public partial class MudoMudPulse3D : Node3D
     public override void _Ready()
     {
         _mud = HexMudFx.Stain(this, Vector3.Zero);
-        ((ShaderMaterial)_mud.MaterialOverride).SetShaderParameter("tint", new Color(HexMudFx.Tint, 0.85f));
+        ((ShaderMaterial)_mud.MaterialOverride).SetShaderParameter("tint", new Color(BattlefieldView3D.MudoMudTint, 0.85f));
         DrawPulse();
     }
 

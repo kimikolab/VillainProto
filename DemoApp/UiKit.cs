@@ -130,7 +130,7 @@ public static class UiKit
         {
             if (!PortraitCache.TryGetValue(key, out Texture2D? portrait))
             {
-                portrait = LoadTexture(path, mipmaps: key == "tome");
+                portrait = LoadTexture(path, mipmaps: key is "tome" or "mudo");
                 PortraitCache[key] = portrait;
             }
             return portrait;
@@ -165,7 +165,7 @@ public static class UiKit
         {
             if (!BattlePortraitCache.TryGetValue(key, out Texture2D? portrait))
             {
-                portrait = LoadTexture(path, mipmaps: key == "tome" || key.StartsWith("tome_"));
+                portrait = LoadTexture(path, mipmaps: key is "tome" or "mudo" || key.StartsWith("tome_") || key.StartsWith("mudo_"));
                 BattlePortraitCache[key] = portrait;
             }
             return portrait;
@@ -248,6 +248,8 @@ public static class UiKit
     /// </summary>
     public static float BattlePortraitBottomPaddingRatio(string key) => key switch
     {
+        "mudo" => 23f / 1515f,
+        "mudo_erupt" => 69f / 1166f,
         "gare_load" => 20f / 1536f,
         "gare_fire" => 66f / 1536f,
         "gare_empty" => 15f / 1536f,

@@ -200,6 +200,7 @@ public partial class BattlePawn3D : Node3D
         AddChild(_poison);
 
         Texture2D portrait = UiKit.BattlePortrait(atlas, opening.UnitId);
+        if (opening.UnitId == "mudo") _ = UiKit.BattlePortrait(atlas, "mudo_erupt");
         // 弾き返しの途中で初回PNGの復号が入らないよう、開戦時に差分も読み込む。
         if (opening.UnitId == "hane")
         {
@@ -540,6 +541,7 @@ void fragment() {
 
     public void AnimateDeath()
     {
+        SetMudoErupting(false);
         SetDirgeGlow(0, Colors.White);
         StopDeathVisual();
         SetDirgeSinging(false);
@@ -603,6 +605,7 @@ void fragment() {
 
     public void AnimateRevive()
     {
+        SetMudoErupting(false);
         CancelHagiMotion();
         HagiReaped = false; _hagiDissolve = 0;
         _portraitMaterial.SetShaderParameter("hagi_dissolve", 0f);
@@ -653,6 +656,7 @@ void fragment() {
 
     public void AnimateVictory()
     {
+        SetMudoErupting(false);
         SetDirgeGlow(0, Colors.White);
         StopDeathVisual();
         if (!_alive || Team != BattleContext.PlayerTeam) return;

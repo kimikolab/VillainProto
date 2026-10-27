@@ -18,6 +18,7 @@ public partial class MudoCheck : Control
     {
         try
         {
+            CheckBurstBoundaries();
             string? capture = OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--mudo-capture="))?["--mudo-capture=".Length..];
             if (capture is not null)
             {
@@ -63,6 +64,29 @@ public partial class MudoCheck : Control
         catch (Exception e) { GD.PushError(e.ToString()); GetTree().Quit(1); }
     }
 
+    private static void CheckBurstBoundaries()
+    {
+        static BattleEvent E(BattleEventKind kind, int? actor, int? target = null, bool reaction = false)
+            => new() { Kind = kind, Turn = 1, ActorId = actor, TargetId = target, Reaction = reaction };
+        var openings = new[] { new DemoOpening(1, 0, "mudo", "ムド", 0, 100, 100, 3, AttackPattern.Single, true) };
+        BattleEvent[] events = {
+            E(BattleEventKind.Highlight, 1),
+            E(BattleEventKind.Attack, 1, 2, true), E(BattleEventKind.Damage, 1, 2, true),
+            E(BattleEventKind.Attack, 2, 1, true), E(BattleEventKind.Damage, 2, 1, true),
+            E(BattleEventKind.Heal, 1, 1),
+            E(BattleEventKind.Attack, 1, 2, true), E(BattleEventKind.Damage, 1, 2, true), E(BattleEventKind.Heal, 1, 1),
+            E(BattleEventKind.Damage, 3, 2),
+            E(BattleEventKind.Highlight, 1), E(BattleEventKind.Attack, 1, 2, true),
+            E(BattleEventKind.Damage, 1, 2, true), E(BattleEventKind.TurnStart, null),
+            E(BattleEventKind.Highlight, 99), E(BattleEventKind.Attack, 99, 2, true),
+        };
+        var plan = MudoPresentation.Build(events, openings);
+        Require(plan.Starts.Count == 2 && plan.Starts[0].Hits == 2 && plan.Starts[0].End == 9,
+            "途中の別の反撃で変身を切らず、元の通常ダメージまで持ち越さない");
+        Require(plan.Starts[10].Hits == 1 && plan.Starts[10].End == 13 && !plan.Starts.ContainsKey(14),
+            "最後の1発と未知の書き手の区切り");
+    }
+
     private void CheckReplay()
     {
         var result = Read<BattleResult>("_result");
@@ -74,6 +98,11 @@ public partial class MudoCheck : Control
         int dulls = result.Events.Count(e => e.Kind == BattleEventKind.StatusGain && e.Text == "dull"
             && e.Amount == 1 && Mudo(e.ActorId) && e.TargetId is int target && opening[target].Team != opening[e.ActorId!.Value].Team);
         Require(bursts > 0 && dulls > 0 && field.MudoBursts == bursts && field.MudoDulls == dulls, "暴発と弱体の表示件数一致");
+        var plan = MudoPresentation.Build(result.Events, opening.Values.ToArray());
+        int attacks = result.Events.Count(e => e.Kind == BattleEventKind.Attack && e.Reaction && Mudo(e.ActorId));
+        Require(plan.Starts.Count == bursts && plan.Starts.Values.Sum(b => b.Hits) == attacks,
+            "全ての暴発と割り込み打撃が変身区間に入る");
+        Require(field.Pawns.Values.All(p => !p.MudoErupting), "連打後は通常姿へ戻る");
         foreach (var pawn in field.Pawns.Values)
         {
             var hp = result.Events.LastOrDefault(e => e.TargetId == pawn.InstanceId
@@ -89,12 +118,20 @@ public partial class MudoCheck : Control
         var openings = new DemoOpening[] {
             new(1, 0, "mudo", "ムド", 0, 100, 100, 10, AttackPattern.Single, true),
             new(2, 1, "knight", "標的", 0, 100, 100, 10, AttackPattern.Single, true),
+            new(3, 1, "mudo", "敵ムド", 1, 100, 100, 10, AttackPattern.Single, true),
         };
         field.BeginBattle(openings, "泥の演出確認", 0);
         field.Visible = true;
         var pawn = field.FindPawn(1)!;
+        var sprite = pawn.GetChildren().OfType<Sprite3D>().Single();
+        var normalTexture = sprite.Texture;
+        float normalPixel = sprite.PixelSize;
         _main.SetPlaybackSpeed(1);
         field.ShowMudoBurst(pawn);
+        Require(pawn.MudoErupting && sprite.Texture != normalTexture, "暴発で巨大な腕の立ち絵へ切替");
+        float feet = sprite.Position.Y - (1166 - 69 - 1166 * 0.5f) * sprite.PixelSize;
+        Require(Math.Abs(feet - BattlePawn3D.PortraitGroundYForCheck) < 0.001f, "怒り姿の足元を地面へ固定");
+        Require(Math.Abs(sprite.PixelSize * 963 - normalPixel * 1413) < 0.001f, "変身で胴の身長を変えない");
         var pulse = Descendants(field).OfType<MudoMudPulse3D>().Single();
         _main.PausePlayback();
         double frozen = pulse.Elapsed;
@@ -105,13 +142,20 @@ public partial class MudoCheck : Control
         await Wait(0.08);
         Require(pulse.Elapsed >= 0.12 && pulse.Elapsed < 0.36, "2倍速で進む");
         field.ShowMudoDull(field.FindPawn(2)!);
-        Require(Descendants(field).OfType<PopupLabel2D>().Any(l => l.Text == "−1" && l.Modulate == HexMudFx.Tint), "泥色の小さな−1");
+        Require(Descendants(field).OfType<PopupLabel2D>().Any(l => l.Text == "−1" && l.Modulate == BattlefieldView3D.MudoMudTint), "泥色の小さな−1");
+        pawn.SetMudoErupting(false);
+        Require(!pawn.MudoErupting && sprite.Texture == normalTexture, "連打終端で通常の絵へ戻す");
+        var enemy = field.FindPawn(3)!;
+        enemy.SetMudoErupting(true);
+        Require(enemy.GetChildren().OfType<Sprite3D>().Single().FlipH, "敵の怒り姿を左右反転");
+        enemy.SetMudoErupting(false);
         field.BeginBattle(openings, "再戦", 0);
         await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
         Require(!Descendants(field).OfType<MudoMudPulse3D>().Any()
             && !Descendants(field).OfType<PopupLabel2D>().Any(), "再戦で泥と数字を片付ける");
         field.ShowMudoBurst(field.FindPawn(1)!);
         field.FindPawn(1)!.AnimateDeath();
+        Require(!field.FindPawn(1)!.MudoErupting, "死亡時に変身状態も消す");
         await Wait(0.05);
         Require(!Descendants(field).OfType<MudoMudPulse3D>().Any(), "死亡後に泥を残さない");
         field.FindPawn(1)!.SetHp(100);

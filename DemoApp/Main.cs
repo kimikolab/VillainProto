@@ -18,6 +18,7 @@ public partial class Main : Control
     private readonly Dictionary<int, DemoOpening> _openingById = new();
     private readonly Dictionary<int, string> _statusCauseByDamageIndex = new();
     private readonly HashSet<int> _linkedStatusEventIndices = new();
+    private MudoPresentation _mudo = new();
 
     /// <summary>
     /// 同時着弾（第124期 3-a）で<b>攻撃の側がまとめて描いた</b> <c>Damage</c> の添字。
@@ -1203,6 +1204,7 @@ public partial class Main : Control
         _hush = HushPresentation.Build(_result.Events, _battleOpening);
         _hagi = HagiPresentation.Build(_result.Events, _battleOpening, _death?.Hagi);
         _utsu = UtsuPresentation.Build(_result.Events, _battleOpening);
+        _mudo = MudoPresentation.Build(_result.Events, _battleOpening);
         _hagiFrame = -1;
         _shownHagiDamage.Clear();
 
@@ -1311,6 +1313,8 @@ public partial class Main : Control
             await FinishDustBurst(eventIndex);
             _dohaFastEvent = false;
             if (token != _playToken || !_battleMode) return;
+            if (_mudo.Ends.TryGetValue(_eventIndex, out var mudoOwners))
+                foreach (int owner in mudoOwners) _battleField.FindPawn(owner)?.SetMudoErupting(false);
             await FinishZan(eventIndex);
             if (token != _playToken || !_battleMode) return;
             await FinishMarkLoop(eventIndex);
@@ -2004,7 +2008,7 @@ public partial class Main : Control
                 break;
 
             case BattleEventKind.Highlight:
-                if (actor?.UnitId == "mudo") _battleField.ShowMudoBurst(actor);
+                if (actor?.UnitId == "mudo" && _mudo.Starts.ContainsKey(eventIndex)) _battleField.ShowMudoBurst(actor);
                 if (_result is not null && ErePresentation.IsGiftHighlight(_result.Events, eventIndex))
                 { AppendLog(e.Text ?? ""); break; }
                 // 大鎌の見せ場は絵で伝える。字幕の待ちで連続する振りを切らない。
