@@ -1,0 +1,22 @@
+{
+  "ready": {
+    "head": 110,
+    "torso": 216.4,
+    "shin": 194.6
+  },
+  "coil": {
+    "head": 110,
+    "torso": 215.4,
+    "shin": 205.6
+  },
+  "cut1": {
+    "head": 110,
+    "torso": 204.9,
+    "shin": 188.6
+  },
+  "recover": {
+    "head": 110,
+    "torso": 230.9,
+    "shin": 183.1
+  }
+}

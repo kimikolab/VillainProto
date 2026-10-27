@@ -1,0 +1,22 @@
+[
+  {
+    "tag": "utsu_idle_v1_s2022",
+    "prompt_id": "7e6ae0c7-3287-4bdc-98c0-28511cdbdf00",
+    "seed": 2022
+  },
+  {
+    "tag": "utsu_idle_v1_s5055",
+    "prompt_id": "4a0a87a1-8e02-43c9-be8b-194a4eb44efb",
+    "seed": 5055
+  },
+  {
+    "tag": "utsu_idle_v1_s2022_final",
+    "prompt_id": "cfe4aac9-7999-4752-b482-2b5c1538fa4c",
+    "seed": null
+  },
+  {
+    "tag": "utsu_idle_v1_s5055_final",
+    "prompt_id": "c77cea2a-45de-486a-8751-a1b5f6b70291",
+    "seed": null
+  }
+]

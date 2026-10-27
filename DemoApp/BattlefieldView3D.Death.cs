@@ -19,6 +19,8 @@ public partial class BattlefieldView3D
         foreach (var pawn in _pawns.Values)
         {
             pawn.HagiPaused = paused;
+            pawn.UtsuPaused = paused;
+            if (pawn.UnitId == "utsu") pawn.AnimationSpeed = _deathSpeed;
             if (pawn.UnitId == "hagi") pawn.AnimationSpeed = _deathSpeed;
         }
     }

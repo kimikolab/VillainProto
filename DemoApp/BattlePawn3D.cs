@@ -555,6 +555,7 @@ void fragment() {
         _statusSnapshot.Clear();
         _alive = false;
         CancelHagiMotion();
+        CancelUtsuMotion();
         _misaFeathers?.SetActive(false);
         SetPlank(0);
         SetScrapStock(0);
@@ -651,6 +652,7 @@ void fragment() {
         SetDirgeGlow(0, Colors.White);
         StopDeathVisual();
         if (!_alive || Team != BattleContext.PlayerTeam) return;
+        CancelUtsuMotion();
         SetDirgeSinging(false);
         SetSekkiWrapping(false);
         SetDecoyShown(false);
@@ -720,6 +722,7 @@ void fragment() {
         ProcessHagiVisual((float)(delta * AnimationSpeed));
         if (_unitId == "hagi" && (HagiPaused || _movementPortrait is "hagi_step" or "hagi_windup")) return;
         if (_unitId == "rica" && _ricaMotionPaused) return;
+        if (_unitId == "utsu" && UtsuPaused) return;
         _phase += (float)delta * 2.1f;
         UpdateKataStakes();
         if (!_alive || _victory) return;

@@ -303,6 +303,7 @@ public partial class BattlefieldView3D : Control
         LiliRites = LiliRiteStrikes = LiliRiteReleases = LiliRiteFinishes = 0;
         _inverseHolders.Clear();
         _specialGeneration++;
+        ResetUtsuPresentation();
         ResetGaldSwordPresentation();
         GurenReleases = GurenGains = SwordDraws = SwordRipostes = NumbSwings = VenomReturns = Spews = 0;
         ConcentratePlays = ThickenPlays = InvertedHealPlays = SipPlays = KindlePlays = TaintPlays = 0;

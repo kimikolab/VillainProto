@@ -1202,6 +1202,7 @@ public partial class Main : Control
         _zan = ZanPresentation.Build(_result.Events, _battleOpening, _markRally);
         _hush = HushPresentation.Build(_result.Events, _battleOpening);
         _hagi = HagiPresentation.Build(_result.Events, _battleOpening, _death?.Hagi);
+        _utsu = UtsuPresentation.Build(_result.Events, _battleOpening);
         _hagiFrame = -1;
         _shownHagiDamage.Clear();
 
@@ -1277,6 +1278,7 @@ public partial class Main : Control
         _playing = true;
         _paused = false;
         _hagiFastEvent = false;
+        _utsuFastEvent = false;
         _battleField.SetDeathClock(false, _speed);
         _pause.Text = "一時停止";
         if (ViewerMode && ViewerLeadInSeconds > 0) await HoldViewerLeadIn(token);
@@ -1322,6 +1324,10 @@ public partial class Main : Control
             _misaFastEvent = false;
             _golmFastEvent = false;
             _zanFastEvent = false;
+            if (_utsu.Ends.TryGetValue(_eventIndex, out var utsuOwners))
+                foreach (int owner in utsuOwners) await _battleField.FinishUtsuMotion(owner);
+            if (token != _playToken || !_battleMode) return;
+            _utsuFastEvent = false;
             foreach (var combo in _comboEnds.Where(pair => _eventIndex >= pair.Value).ToArray())
             {
                 if (combo.Key.UnitId == "rica") _battleField.FinishComboMotion(combo.Key);
@@ -1339,6 +1345,7 @@ public partial class Main : Control
         CompleteViewerSeek();
         ApplyDeathFrames(_result.Events.Count);
         await _battleField.FinishRicaMotions();
+        await _battleField.FinishUtsuMotions();
         if (token != _playToken || !_battleMode) return;
         FinishSekkiPlayback();
         _battleField.ClearDirgeAuras();
@@ -1433,6 +1440,7 @@ public partial class Main : Control
 
     private async Task ApplyEvent(BattleEvent e, int eventIndex)
     {
+        _utsuFastEvent = _utsu.FastEvents.Contains(eventIndex);
         ObserveSekkiEvent(e, eventIndex);
         StartDustBurst(eventIndex);
         _dohaFastEvent = _dohaShares.FastEvents.Contains(eventIndex);
@@ -1566,12 +1574,12 @@ public partial class Main : Control
                 _movement.Attacks.TryGetValue(eventIndex, out var movementCue);
                 bool misaAttack = _misa.Attacks.Contains(eventIndex) || _markLoop.FeatherAttacks.Contains(eventIndex);
                 bool golmAttack = _golm.Attacks.ContainsKey(eventIndex);
-                bool flowingAttack = golmAttack || misaAttack || actor?.UnitId is "shiga" or "hagi" || movementCue is not null || actor?.UnitId == "sero"
+                bool flowingAttack = golmAttack || misaAttack || actor?.UnitId is "shiga" or "hagi" or "utsu" || movementCue is not null || actor?.UnitId == "sero"
                     || actor?.UnitId == "basa" && e.Pattern == AttackPattern.Sweep;
                 if (e.Reaction && !continuingCombo && !flowingAttack)
                     await _battleField.ShowBonusAttack(actor);
                 // 責め苦も位置保持だけを共用する。Attackの回数・連撃の計数は増やさない。
-                int? holdEnd = misaAttack || golmAttack || actor?.UnitId == "hagi" ? null : FindComboEnd(eventIndex, e)
+                int? holdEnd = misaAttack || golmAttack || actor?.UnitId is "hagi" or "utsu" ? null : FindComboEnd(eventIndex, e)
                     ?? (actor?.UnitId == "shiga" && _result is not null ? FindTormentEnd(_result.Events, eventIndex) : null);
                 if (!continuingCombo && actor is not null && holdEnd is { } comboEnd)
                 {
@@ -1579,6 +1587,8 @@ public partial class Main : Control
                 }
                 if (actor?.UnitId == "hagi")
                     await PlayHagiAttack(eventIndex, actor, target);
+                else if (actor?.UnitId == "utsu")
+                    await PlayUtsuAttack(eventIndex, actor, impactTargets);
                 else if (golmAttack)
                     await _battleField.PlayGolmImpact(actor, target, e, _golm.Attacks[eventIndex] == GolmArmLabels.Stomp,
                         captureFollows: _golm.CapturingAttacks.Contains(eventIndex));
@@ -2602,7 +2612,7 @@ public partial class Main : Control
 
     private async Task Delay(double seconds, bool raw = false)
     {
-        if (!raw && _hagiFastEvent) return;
+        if (!raw && (_hagiFastEvent || _utsuFastEvent)) return;
         if (!raw && _dustChainFastEvent) return;
         if (!raw && _dohaFastEvent) seconds = Math.Min(seconds, 0.04);
         if (!raw && (_fireFastEvent || _misaFastEvent || _zanFastEvent || _golmFastEvent)) return;

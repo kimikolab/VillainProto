@@ -1,4 +1,23 @@
 {
+  "utsu": {
+    "still": "DemoApp/assets/portraits/battle/utsu_idle_right.png",
+    "pronoun": "he",
+    "char": "The slim adult male dual swordsman Utsu keeps the EXACT original right-facing three-quarter ready stance. He has tousled short dark brown hair, a pale tired youthful masculine face, focused gray eyes, a worn short navy half-cape, ivory split tunic, dark trousers, crossed brown leather straps and asymmetric silver armor. He holds exactly TWO slender straight steel swords, ONE firmly gripped in each gloved hand: the forward sword guards diagonally upward toward screen right, the rear sword stays lowered diagonally backward toward screen left. Both guards, grips and hands keep their original anatomical connections. ",
+    "motion": "Like an agile fighting-game dual swordsman, he repeats a connected rhythmic ready bounce in place: both knees clearly flex and straighten, his hips and torso lower then rise together, and his shoulders, neck, head, elbows and wrists follow naturally as one connected body. The restrained knee spring is visibly readable, without deep squatting or pitching his torso. His two hands and swords rise and settle gently with the shoulders while keeping their different guard heights. Preserve his original slight forward inclination and quiet unsmiling alert expression, with no additional hunching. He is ready to chain the first cut into the second, but never performs a slash or swings either sword during this idle. ",
+    "sway": "His short hair tips, navy cape edges and ivory waist panels sway with a slight natural delay and settle with his body. BOTH swords remain completely straight and rigid with constant length and thickness; their blades, guards and pommels move as intact rigid objects attached to the hands. Both sword tips remain inside the image throughout. No fire, magic, glow, smoke or slash trails.",
+    "neg": "bending sword, flexible blade, rubber weapon, changing sword length, melting guard, extra sword, missing sword, detached handle, hand sliding on grip, crossed hands, swinging sword, attacking, slashing, spinning, deep squat, extreme bounce, hunching further forward, head turning, smiling, weapon leaving frame",
+    "note": "2026-10-27 ユーザーがAを選択しゲーム反映を依頼。seed 2022を6コマで継ぎ目補修した24コマ・1.50秒の双剣待機をidle_loop/utsuへ導入。足元926固定、緑0、継ぎ目0.84x。B（seed 5055・37コマ）は比較用として保存。記録はdesign/art/utsu/idle-loop-v1/notes.md。",
+    "adopted": {
+      "tag": "utsu_idle_v1_s2022_final",
+      "seed": 2022,
+      "crossfade": 6,
+      "frames": 24,
+      "fps": 16,
+      "loop": "utsu",
+      "date": "2026-10-27",
+      "candidate": "A"
+    }
+  },
   "_readme": "④b（キャラごとの文）。組み立ては idle_loop.py の compose(): HEAD + char + motion + 共通の縛り（sway を含む）。neg は共通の負のプロンプトの後ろに足す。新しいキャラは既存の項目を写して char / motion / sway を書き換える。motion には『膝がはっきり曲がって伸びる・弾む』を必ず入れる（『ゆっくり重く』『わずかに』と書くと止まる）。",
   "hagi": {
     "still": "DemoApp/assets/portraits/battle/hagi_idle_right.png",

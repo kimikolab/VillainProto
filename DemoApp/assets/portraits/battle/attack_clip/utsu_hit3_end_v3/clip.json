@@ -1,0 +1,50 @@
+{
+  "source": "utsu-step-v3",
+  "frames": 15,
+  "fps": 30,
+  "contact": 4,
+  "anchor": [
+    600,
+    900
+  ],
+  "idleAnchor": [
+    512,
+    1484
+  ],
+  "scale": 2,
+  "referencePortrait": "utsu",
+  "forward": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "vertical": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ]
+}

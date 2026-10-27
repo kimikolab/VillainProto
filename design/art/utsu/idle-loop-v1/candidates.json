@@ -1,0 +1,51 @@
+{
+  "source": "DemoApp\\assets\\portraits\\battle\\utsu_idle_right.png",
+  "source_sha256": "e0430a5a361eb8b01f06f33d8e72a056e28185115c810db2ee7152570a074d21",
+  "fps": 16,
+  "status": "installed",
+  "selected": "A",
+  "installed_date": "2026-10-27",
+  "installed_path": "DemoApp/assets/portraits/battle/idle_loop/utsu",
+  "candidates": [
+    {
+      "label": "A",
+      "tag": "utsu_idle_v1_s2022_final",
+      "seed": 2022,
+      "frames": 24,
+      "seconds": 1.5,
+      "size": [
+        640,
+        960
+      ],
+      "bottom_range": [
+        926,
+        926
+      ],
+      "head_vertical_range_px": 11,
+      "max_opaque_border_pixels": 0,
+      "crossfade": 6,
+      "frame_bytes": 14628929,
+      "preview": "design\\art\\utsu\\idle-loop-v1\\candidates\\A\\compare.gif"
+    },
+    {
+      "label": "B",
+      "tag": "utsu_idle_v1_s5055_final",
+      "seed": 5055,
+      "frames": 37,
+      "seconds": 2.3125,
+      "size": [
+        640,
+        960
+      ],
+      "bottom_range": [
+        926,
+        926
+      ],
+      "head_vertical_range_px": 9,
+      "max_opaque_border_pixels": 0,
+      "crossfade": 6,
+      "frame_bytes": 22337632,
+      "preview": "design\\art\\utsu\\idle-loop-v1\\candidates\\B\\compare.gif"
+    }
+  ]
+}

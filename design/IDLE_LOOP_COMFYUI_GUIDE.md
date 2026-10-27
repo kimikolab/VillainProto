@@ -12,6 +12,8 @@ Claude Code・Codex・人のどれが作業しても同じ結果になるよう�
 
 ## 0. 全体の流れ
 
+ウツは2026-10-27にユーザー選択のA（`utsu`・24コマ・16fps・1.50秒）を導入。双剣リメイク戦闘絵を原本とし、記録は `design/art/utsu/idle-loop-v1/notes.md`。
+
     元絵を用意 ─→ prompts.json に 1 項目足す ─→ gen（seed 2〜3 本・1 本 約 13 分）
         ─→ check（数値で明らかな失敗を落とす）─→ 必要なら recut（継ぎ目を混ぜる・1 分）
         ─→ 比較 GIF をユーザーに見せて 1 本選んでもらう ─→ install ─→ ビルドとチェック ─→ コミット
@@ -180,7 +182,7 @@ C:/tools/Godot_v4.7.2-stable_mono_win64/Godot_console.exe --path DemoApp --headl
 合否は `IDLE_LOOP_CHECK_OK` / `PORTRAIT_STATE_CHECK_OK` / `FIRE_CHECK_OK` / `MOVEMENT_PORTRAIT_CHECK_OK` の行で読む
 （終了時の `RID allocations … leaked` は既存の警告）。
 
-- **`IdleLoopCheck.cs` はコマ数を数えている**（ヒヨ 19・ボルグ 44・ホタ 36・ガルド 32・ガレ 30・ヒビ 30・リィカ 39・ハギ 48・エレ待機40／歌唱48）。入れ替えたら数を直す。新しい駒を足したら、その駒の「開戦から連番・同じ高さ」の確認を足す。
+- **`IdleLoopCheck.cs` はコマ数を数えている**（ヒヨ 19・ボルグ 44・ホタ 36・ガルド 32・ガレ 30・ヒビ 30・リィカ 39・ハギ 48・エレ待機40／歌唱48・ウツ24）。入れ替えたら数を直す。新しい駒を足したら、その駒の「開戦から連番・同じ高さ」の確認を足す。
 - 実戦の画面は窓ありで撮る:
   `Godot.exe --path DemoApp -- --demo-autoplay "--demo-preset=火選り (ヒヨ×ホタ)" --demo-stage=2 --demo-seed=1 "--demo-capture-dir=<出力先>"`（6 枚撮って終わる）。
 

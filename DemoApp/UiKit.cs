@@ -350,7 +350,7 @@ public static class UiKit
         "nel" => 0.0378f,
         "ere" => 16f / 1536f,
         "ere_singing" => 13f / 1536f,
-        "utsu" => 0.0436f,
+        "utsu" => 52f / 1536f, // 双剣リメイク戦闘絵の足元余白。
         "gare" => 31f / 1536f,
         "hibi" => 146f / 1536f,
         "recruit" => 0.0260f,

@@ -42,7 +42,7 @@ public static partial class FxCatalog
         new FxCue("live.mark", "標 守り型（実戦）", "台本（実戦）", new[] { "golm", "zan", "hisa" },
             FxCueKind.Live, PresetName: "試遊・標 守り型", Stage: 1, Seed: 0,
             Highlight: e => e.Kind is BattleEventKind.GolmArm or BattleEventKind.Swallow),
-    }.OfType<FxCue>().Concat(HagiCues()).ToArray());
+    }.OfType<FxCue>().Concat(HagiCues()).Concat(UtsuCues()).ToArray());
 
     private static readonly Lazy<IReadOnlyList<FxCue>> AllCues = new(() =>
         Array.AsReadOnly(Registered.Concat(AllUnits()).ToArray()));

@@ -1,0 +1,216 @@
+{
+  "source": "utsu-step-v3",
+  "fps": 30,
+  "clips": [
+    {
+      "name": "utsu_hit1_link_v3",
+      "frames": 21,
+      "contact": 16
+    },
+    {
+      "name": "utsu_hit1_end_v3",
+      "frames": 29,
+      "contact": 16
+    },
+    {
+      "name": "utsu_hit2_link_v3",
+      "frames": 10,
+      "contact": 5
+    },
+    {
+      "name": "utsu_hit2_end_v3",
+      "frames": 18,
+      "contact": 5
+    },
+    {
+      "name": "utsu_hit3_link_v3",
+      "frames": 9,
+      "contact": 4
+    },
+    {
+      "name": "utsu_hit3_end_v3",
+      "frames": 15,
+      "contact": 4
+    },
+    {
+      "name": "utsu_hit4_link_v3",
+      "frames": 9,
+      "contact": 4
+    },
+    {
+      "name": "utsu_hit4_end_v3",
+      "frames": 19,
+      "contact": 4
+    },
+    {
+      "name": "utsu_hit5_end_v3",
+      "frames": 15,
+      "contact": 3
+    }
+  ],
+  "poses": [
+    {
+      "name": "air4",
+      "alpha_bbox": [
+        263,
+        215,
+        824,
+        843
+      ]
+    },
+    {
+      "name": "back3",
+      "alpha_bbox": [
+        161,
+        125,
+        698,
+        903
+      ]
+    },
+    {
+      "name": "coil",
+      "alpha_bbox": [
+        258,
+        242,
+        939,
+        902
+      ]
+    },
+    {
+      "name": "cut1",
+      "alpha_bbox": [
+        260,
+        298,
+        895,
+        903
+      ]
+    },
+    {
+      "name": "cut2",
+      "alpha_bbox": [
+        146,
+        159,
+        930,
+        903
+      ]
+    },
+    {
+      "name": "drive1",
+      "alpha_bbox": [
+        266,
+        308,
+        948,
+        902
+      ]
+    },
+    {
+      "name": "drive2",
+      "alpha_bbox": [
+        228,
+        262,
+        929,
+        902
+      ]
+    },
+    {
+      "name": "drop5",
+      "alpha_bbox": [
+        118,
+        374,
+        1005,
+        904
+      ]
+    },
+    {
+      "name": "land",
+      "alpha_bbox": [
+        183,
+        334,
+        984,
+        902
+      ]
+    },
+    {
+      "name": "launch4",
+      "alpha_bbox": [
+        185,
+        71,
+        882,
+        904
+      ]
+    },
+    {
+      "name": "pass1",
+      "alpha_bbox": [
+        171,
+        315,
+        962,
+        902
+      ]
+    },
+    {
+      "name": "ready",
+      "alpha_bbox": [
+        346,
+        194,
+        852,
+        902
+      ]
+    },
+    {
+      "name": "recover",
+      "alpha_bbox": [
+        270,
+        225,
+        872,
+        902
+      ]
+    },
+    {
+      "name": "step_load",
+      "alpha_bbox": [
+        334,
+        187,
+        855,
+        902
+      ]
+    },
+    {
+      "name": "step_plant",
+      "alpha_bbox": [
+        318,
+        239,
+        879,
+        900
+      ]
+    },
+    {
+      "name": "step_push",
+      "alpha_bbox": [
+        116,
+        333,
+        992,
+        901
+      ]
+    },
+    {
+      "name": "sweep3",
+      "alpha_bbox": [
+        249,
+        286,
+        940,
+        903
+      ]
+    },
+    {
+      "name": "tuck5",
+      "alpha_bbox": [
+        67,
+        114,
+        920,
+        722
+      ]
+    }
+  ],
+  "media": []
+}

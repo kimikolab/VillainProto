@@ -1,0 +1,30 @@
+{
+  "fps": 30,
+  "speed": 1,
+  "segments": [
+    {
+      "name": "dance-2",
+      "count": 2,
+      "start_frame": 0,
+      "end_frame": 111
+    },
+    {
+      "name": "dance-3",
+      "count": 3,
+      "start_frame": 112,
+      "end_frame": 232
+    },
+    {
+      "name": "dance-4",
+      "count": 4,
+      "start_frame": 233,
+      "end_frame": 368
+    },
+    {
+      "name": "dance-5",
+      "count": 5,
+      "start_frame": 369,
+      "end_frame": 511
+    }
+  ]
+}

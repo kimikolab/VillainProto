@@ -97,6 +97,7 @@ public partial class BattlePawn3D
     {
         if (_unitId == "rica" && _ricaMotionPaused) return;
         if (_unitId == "hagi" && HagiPaused) return;
+        if (_unitId == "utsu" && UtsuPaused) return;
         if (!_idleLoopActive) return;
         // 勝利絵・倒れた駒は連番で上書きしない（勝利・死亡の演出は RefreshBattlePortrait を通らない）。
         if (_victory || !_alive) { _idleLoopActive = false; return; }

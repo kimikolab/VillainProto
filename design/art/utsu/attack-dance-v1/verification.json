@@ -1,0 +1,247 @@
+{
+  "source": "utsu-dance-v1",
+  "fps": 30,
+  "clips": [
+    {
+      "name": "utsu_hit1_link_v1",
+      "frames": 11,
+      "contact": 6
+    },
+    {
+      "name": "utsu_hit1_end_v1",
+      "frames": 18,
+      "contact": 6
+    },
+    {
+      "name": "utsu_hit2_link_v1",
+      "frames": 8,
+      "contact": 3
+    },
+    {
+      "name": "utsu_hit2_end_v1",
+      "frames": 15,
+      "contact": 3
+    },
+    {
+      "name": "utsu_hit3_link_v1",
+      "frames": 8,
+      "contact": 3
+    },
+    {
+      "name": "utsu_hit3_end_v1",
+      "frames": 15,
+      "contact": 3
+    },
+    {
+      "name": "utsu_hit4_link_v1",
+      "frames": 8,
+      "contact": 3
+    },
+    {
+      "name": "utsu_hit4_end_v1",
+      "frames": 15,
+      "contact": 3
+    },
+    {
+      "name": "utsu_hit5_end_v1",
+      "frames": 15,
+      "contact": 3
+    }
+  ],
+  "poses": [
+    {
+      "name": "air4",
+      "alpha_bbox": [
+        332,
+        466,
+        821,
+        860
+      ]
+    },
+    {
+      "name": "back3",
+      "alpha_bbox": [
+        203,
+        325,
+        762,
+        901
+      ]
+    },
+    {
+      "name": "coil",
+      "alpha_bbox": [
+        322,
+        403,
+        726,
+        903
+      ]
+    },
+    {
+      "name": "cut1",
+      "alpha_bbox": [
+        279,
+        448,
+        901,
+        903
+      ]
+    },
+    {
+      "name": "cut2",
+      "alpha_bbox": [
+        347,
+        368,
+        918,
+        906
+      ]
+    },
+    {
+      "name": "drop5",
+      "alpha_bbox": [
+        310,
+        496,
+        888,
+        904
+      ]
+    },
+    {
+      "name": "land",
+      "alpha_bbox": [
+        337,
+        535,
+        862,
+        903
+      ]
+    },
+    {
+      "name": "launch4",
+      "alpha_bbox": [
+        331,
+        416,
+        885,
+        903
+      ]
+    },
+    {
+      "name": "pass1",
+      "alpha_bbox": [
+        282,
+        439,
+        874,
+        901
+      ]
+    },
+    {
+      "name": "ready",
+      "alpha_bbox": [
+        346,
+        194,
+        852,
+        902
+      ]
+    },
+    {
+      "name": "recover",
+      "alpha_bbox": [
+        363,
+        452,
+        793,
+        905
+      ]
+    },
+    {
+      "name": "sweep3",
+      "alpha_bbox": [
+        344,
+        404,
+        917,
+        901
+      ]
+    },
+    {
+      "name": "tuck5",
+      "alpha_bbox": [
+        282,
+        291,
+        860,
+        733
+      ]
+    }
+  ],
+  "media": [
+    {
+      "name": "dance-2-1x.mp4",
+      "frames": 104,
+      "fps": "30",
+      "size": [
+        1280,
+        720
+      ],
+      "audio": 1,
+      "sha256": "973d4f14393a05eaf3aada5c61cee867cf8239332976e33480d81223f2dc91a4"
+    },
+    {
+      "name": "dance-3-1x.mp4",
+      "frames": 116,
+      "fps": "30",
+      "size": [
+        1280,
+        720
+      ],
+      "audio": 1,
+      "sha256": "b582ca5702c2def2f88d82b81e46103eae526c744d6287e83de157ad117b99af"
+    },
+    {
+      "name": "dance-4-1x.mp4",
+      "frames": 128,
+      "fps": "30",
+      "size": [
+        1280,
+        720
+      ],
+      "audio": 1,
+      "sha256": "4c048ffd2384d76d2e61b59f17fdd9ba0702c83cb4f04e82e5409a81c4b1f844"
+    },
+    {
+      "name": "dance-5-1x.mp4",
+      "frames": 140,
+      "fps": "30",
+      "size": [
+        1280,
+        720
+      ],
+      "audio": 1,
+      "sha256": "1b80eaa00cdac8dfb4fffb31a2de7f502aee4c248e2ea49a83c039d2933ce027"
+    },
+    {
+      "name": "utsu-dance-2-to-5-1x.mp4",
+      "frames": 488,
+      "fps": "30",
+      "size": [
+        1280,
+        720
+      ],
+      "audio": 1,
+      "sha256": "36a942ec8f8ea4f68d17e03ffaa1c73a7ce886df77bb9172aa4302b5327957c3"
+    },
+    {
+      "name": "dance-2-slow.gif",
+      "frames": 78,
+      "duration_ms": 5200
+    },
+    {
+      "name": "dance-3-slow.gif",
+      "frames": 87,
+      "duration_ms": 5800
+    },
+    {
+      "name": "dance-4-slow.gif",
+      "frames": 96,
+      "duration_ms": 6400
+    },
+    {
+      "name": "dance-5-slow.gif",
+      "frames": 105,
+      "duration_ms": 7000
+    }
+  ]
+}

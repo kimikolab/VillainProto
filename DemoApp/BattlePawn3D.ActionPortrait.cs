@@ -51,6 +51,7 @@ public partial class BattlePawn3D
     private void RefreshBattlePortrait()
     {
         if (_sprite is null || _victory) return;
+        if (ApplyUtsuHeldPortrait()) return;
         if (ApplyRicaApproachPortrait()) return;
         string key = _unitId;
         float height = _portraitHeight;

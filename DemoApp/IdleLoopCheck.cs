@@ -32,6 +32,9 @@ public partial class IdleLoopCheck : Node3D
             var ereSongFrames = BattlePawn3D.IdleLoopFramesOf("ere_singing");
             Require(ereFrames.Length == 40 && ereSongFrames.Length == 48, "エレの採用Aは40コマ、スキルCは48コマ");
             Require(ereFrames.Concat(ereSongFrames).All(frame => frame.GetSize() == new Vector2(640, 960)), "エレの待機と演奏の寸法");
+            var utsuFrames = BattlePawn3D.IdleLoopFramesOf("utsu");
+            Require(utsuFrames.Length == 24, "ウツの採用Aは24コマ");
+            Require(utsuFrames.All(frame => frame.GetSize() == new Vector2(640, 960)), "ウツの連番の寸法");
             Require(BattlePawn3D.IdleLoopFramesOf("golm").Length == 0, "連番の無い駒は空");
             var still = UiKit.BattlePortrait(atlas, "hiyo");
 
@@ -53,6 +56,8 @@ public partial class IdleLoopCheck : Node3D
             var hagiEnemy = MakePawn(atlas, 15, BattleContext.EnemyTeam, 20.6f, "hagi");
             var ere = MakePawn(atlas, 16, BattleContext.PlayerTeam, 22.4f, "ere");
             var ereEnemy = MakePawn(atlas, 17, BattleContext.EnemyTeam, 24.2f, "ere");
+            var utsu = MakePawn(atlas, 18, BattleContext.PlayerTeam, 26.0f, "utsu");
+            var utsuEnemy = MakePawn(atlas, 19, BattleContext.EnemyTeam, 27.8f, "utsu");
             var sprite = SpriteOf(hiyo);
 
             // 開戦直後から連番。待機絵と同じ高さ（=同じ足元）で描く。
@@ -61,7 +66,7 @@ public partial class IdleLoopCheck : Node3D
             float worldHeight = sprite.Texture.GetHeight() * sprite.PixelSize;
             Require(Math.Abs(worldHeight - UiKit.PortraitWorldHeight("hiyo")) < 1e-4f, "待機絵と同じ高さ");
             Require(!golm.IdleLoopPlaying && SpriteOf(golm).Texture == UiKit.BattlePortrait(atlas, "golm"), "連番の無い駒は静止絵のまま");
-            foreach (var (pawn, key) in new[] { (borg, "borg"), (hota, "hota"), (gald, "gald"), (gare, "gare"), (hibi, "hibi"), (rica, "rica"), (hagi, "hagi"), (ere, "ere"), (ereEnemy, "ere") })
+            foreach (var (pawn, key) in new[] { (borg, "borg"), (hota, "hota"), (gald, "gald"), (gare, "gare"), (hibi, "hibi"), (rica, "rica"), (hagi, "hagi"), (ere, "ere"), (ereEnemy, "ere"), (utsu, "utsu"), (utsuEnemy, "utsu") })
             {
                 var s = SpriteOf(pawn);
                 Require(pawn.IdleLoopPlaying && BattlePawn3D.IdleLoopFramesOf(key).Contains(s.Texture), $"{key} も開戦から連番");
@@ -69,6 +74,23 @@ public partial class IdleLoopCheck : Node3D
                 Require(Shader(s) == s.Texture, $"{key} もシェーダーと同じ連番");
             }
             Require(SpriteOf(ereEnemy).FlipH, "敵側のエレは左右反転");
+            Require(!SpriteOf(utsu).FlipH && SpriteOf(utsuEnemy).FlipH, "ウツの味方は右向き、敵は左右反転");
+            Require(CountDistinct(utsu, 1.6) == 24, "ウツの全24コマが進み周期を跨ぐ");
+            utsu.AnimationSpeed = 2;
+            Require(CountDistinct(utsu, 0.3) >= 6, "ウツも倍速で進む");
+            utsu.AnimationSpeed = 1;
+            float utsuHeight = SpriteOf(utsu).Texture.GetHeight() * SpriteOf(utsu).PixelSize;
+            float utsuGround = SpriteOf(utsu).Position.Y - utsuHeight * (0.5f - UiKit.BattlePortraitBottomPaddingRatio("utsu"));
+            Require(Math.Abs(utsuGround - 0.05f) < 1e-4f, "ウツの待機も靴底を地面へ固定");
+            utsu.SetBurning(true);
+            Require(utsu.IdleLoopPlaying && utsuFrames.Contains(SpriteOf(utsu).Texture), "ウツは燃焼中も通常の連番が回る");
+            utsu.SetBurning(false);
+            utsu.AnimateDeath();
+            var utsuDead = SpriteOf(utsu).Texture;
+            CountDistinct(utsu, 0.3);
+            Require(!utsu.IdleLoopPlaying && SpriteOf(utsu).Texture == utsuDead && Shader(SpriteOf(utsu)) == utsuDead, "ウツも死亡で止まる");
+            utsu.AnimateRevive();
+            Require(utsu.IdleLoopPlaying && utsuFrames.Contains(SpriteOf(utsu).Texture), "ウツも蘇生で再開");
             Require(CountDistinct(ere, 2.6) == 40, "エレの待機40コマが進み周期を跨ぐ");
             ere.SetDirgeSinging(true);
             Require(ere.IdleLoopFrame == 0 && ereSongFrames.Contains(SpriteOf(ere).Texture), "演奏Cを先頭から再生");
@@ -242,6 +264,7 @@ public partial class IdleLoopCheck : Node3D
             hibi.AnimateVictory();
             rica.AnimateVictory();
             hagi.AnimateVictory();
+            utsu.AnimateVictory();
             await Wait(0.7);
             Require(!hiyo.IdleLoopPlaying && sprite.Texture == UiKit.Portrait(atlas, "hiyo"), "勝利絵を保つ");
             Require(!galdWinner.IdleLoopPlaying && SpriteOf(galdWinner).Texture == UiKit.Portrait(atlas, "gald"), "ガルドも勝利絵を保つ");
@@ -249,10 +272,12 @@ public partial class IdleLoopCheck : Node3D
             Require(!hibi.IdleLoopPlaying && SpriteOf(hibi).Texture == UiKit.Portrait(atlas, "hibi") && Shader(SpriteOf(hibi)) == SpriteOf(hibi).Texture, "ヒビも勝利絵を保つ");
             Require(!rica.IdleLoopPlaying && SpriteOf(rica).Texture == UiKit.Portrait(atlas, "rica") && Shader(SpriteOf(rica)) == SpriteOf(rica).Texture, "リィカも勝利絵を保つ");
             Require(still != frames[0], "静止絵と連番は別の画像");
+            CountDistinct(utsu, 0.3);
+            Require(!utsu.IdleLoopPlaying && SpriteOf(utsu).Texture == UiKit.Portrait(atlas, "utsu") && Shader(SpriteOf(utsu)) == SpriteOf(utsu).Texture, "ウツも勝利時は両剣を下げた通常絵を保つ");
 
             CountDistinct(hagi, 0.3);
             Require(!hagi.IdleLoopPlaying && SpriteOf(hagi).Texture == UiKit.Portrait(atlas, "hagi") && Shader(SpriteOf(hagi)) == SpriteOf(hagi).Texture, "ハギも勝利絵を保つ");
-            GD.Print("IDLE_LOOP_CHECK_OK hiyo borg hota hota_burning gald gare hibi rica hagi ere ere_singing start advance speed pause action gift burning burning-variant death revive victory enemy fallback sword kneel");
+            GD.Print("IDLE_LOOP_CHECK_OK hiyo borg hota hota_burning gald gare hibi rica hagi ere ere_singing utsu start advance speed pause action gift burning burning-variant death revive victory enemy fallback sword kneel ground");
             GetTree().Quit();
         }
         catch (Exception e)
