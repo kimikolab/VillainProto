@@ -7349,6 +7349,20 @@ public static class UnitCatalog
         MinusText = "呪いを刻むのに手一杯で殴れない（刻める敵が残っている間はカリ自身は攻撃しない）",
         Flavor = Kari.Flavor,
     };
+    // 第410期: K-d0 を採る（ポンの判断・像は「呪いを刻む書き手」）。名前は「祟りのカーズ」（`Id = "kari"` のまま・札は K-d0 の `KariMarkDeepen`）。規定化の前に HP 62 ／ 90 の2版を測る。
+    const string KarzPlus410 = "手番で、呪われた敵のうち呪いがいちばん深い1体に呪いを刻みつける。刻まれた敵は殴るたび呪いが深まる（攻撃力 -4・カーズが倒れるまで）";
+    const string KarzMinus410 = "呪いを刻むのに手一杯で殴れない（刻める敵が残っている間は自分は攻撃しない）";
+    static UnitDef Karz410(int hp) => new()
+    {
+        Id = Kari.Id, Name = "祟りのカーズ", MaxHp = hp, Attack = Kari.Attack, Speed = Kari.Speed, Advances = Kari.Advances, Pattern = Kari.Pattern,
+        Traits = new[] { TraitId.KariMarkDeepen },
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "呪いを刻む") },
+        PlusText = KarzPlus410, MinusText = KarzMinus410, Flavor = "",
+    };
+    /// <summary>第410期 KZ-62: 祟りのカーズ（＝ 第409期の K-d0 の名前だけ替えた版・HP 62）。</summary>
+    public static readonly UnitDef KariKz62 = Karz410(62);
+    /// <summary>第410期 KZ-90: 祟りのカーズの HP を 90 に（攻 4 ／ 速 9 ／ 札は同じ）。</summary>
+    public static readonly UnitDef KariKz90 = Karz410(90);
     /// <summary>第408期 K-d 駆り立てる: 呪われた後列の敵を前へ引きずり出す（<see cref="TraitId.KariDrag"/>・攻 4）。</summary>
     public static readonly UnitDef KariKd = new()
     {

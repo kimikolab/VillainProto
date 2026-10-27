@@ -356,7 +356,7 @@ static class Kari408Diag
         Expect("第408期の口に `PickOne` ／ `Roll(` が無い（決定的に選ぶ）", body.Length > 0 && !body.Contains("PickOne") && !body.Contains("Roll("), $"{body.Length} 文字");
         // 試遊の台
         bool rows = Presets.Versions.Any(r => r.Name == "版・K-k 呪い" && r.F.Occupied().Any(o => o.Def == kk))
-                 && Presets.Versions.Any(r => r.Name == "版・K-d 呪い" && r.F.Occupied().Any(o => o.Def == kd || o.Def == UnitCatalog.KariKd0));   // 第409期に K-d0 へ入れ替えた
+                 && Presets.Versions.Any(r => r.Name is "版・K-d 呪い" or "版・カーズ 呪い" && r.F.Occupied().Any(o => o.Def == kd || o.Def == UnitCatalog.KariKd0 || o.Def == UnitCatalog.KariKz62 || o.Def == UnitCatalog.KariKz90));   // 第409期に K-d0 へ・第410期に「版・カーズ 呪い」（祟りのカーズ）へ
         Expect("試遊の台「版・K-k 呪い」「版・K-d 呪い」が `Presets.Versions` にある", rows);
         Console.WriteLine();
         Console.WriteLine(_fail == 0 ? "**すべて OK**" : $"**NG {_fail} 件**");

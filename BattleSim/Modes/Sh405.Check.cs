@@ -231,7 +231,7 @@ static partial class Sh405Diag
 
         // ---- 試遊の台 ----
         {
-            var vrows = Presets.Versions;
+            var vrows = VersionsH407();   // 第410期: 第408期から末尾に足したカリ ／ カーズの台を外した一覧（＝ 第405〜407期の一覧）で見る
             bool now = !vrows.Any(r => r.Name == "版・刈り続け ハギ") && vrows.First(r => r.Name == "版・大物 ハギ").F[1] == UnitCatalog.HagiBigA405
                 && vrows.First(r => r.Name == "試遊・ハギ キャリー").F[3] == hagi && vrows.First(r => r.Name == "試遊・ハギ 哀歌").F[3] == hagi && vrows.First(r => r.Name == "試遊・ハギ 台B").F[3] == hagi
                 && !vrows.SelectMany(r => r.F.Occupied()).Any(o => o.Def == UnitCatalog.HagiReapR45 || o.Def == UnitCatalog.HagiReapR50 || o.Def == UnitCatalog.HagiReapL45 || o.Def == UnitCatalog.HagiBigA404 || o.Def == old);

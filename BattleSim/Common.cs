@@ -809,7 +809,11 @@ public static readonly string[] VersionRows403 = { "版・二度斬り ハギ" }
 public static readonly string[] VersionRows404 = { "版・刈り続け ハギ" };
 /// <summary>第405期: R50 を規定のハギにし、「版・刈り続け ハギ」（キャリー × R45）を外し、「版・大物 ハギ」を規定 ＋ A（`HagiBigA405`）にした。
 /// 第404期の一覧は、ほかの台のハギを旧（`HagiH404`）に固定し、「版・大物 ハギ」を第404期の A に戻し、末尾に「版・刈り続け ハギ」を足し戻した写し。</summary>
-public static (string Name, Formation F)[] VersionsH404() => Presets.Versions
+/// <summary>第408〜410期: カリの版の台（第408期「版・K-k 呪い」「版・K-d 呪い」・第410期に「版・K-d 呪い」を「版・カーズ 呪い」に改名）を末尾に足した。
+/// 第407期までの一覧はそれを外した写し（ほかの台は同じ・カリは規定の駒のまま）。第410期に足した——第408〜409期は鎖の終端（`Presets.Versions`）から外し忘れて、第384〜403期の試遊の台の検査（`VersionsH384` 〜 `VersionsH402` を読む 19 本）が × になっていた。</summary>
+public static readonly string[] VersionRows410 = { "版・K-k 呪い", "版・K-d 呪い", "版・カーズ 呪い" };
+public static (string Name, Formation F)[] VersionsH407() => Presets.Versions.Where(r => !VersionRows410.Contains(r.Name)).ToArray();
+public static (string Name, Formation F)[] VersionsH404() => VersionsH407()
     .Select(r => r.Name == "版・大物 ハギ" ? (r.Name, Presets.HagiBig402(UnitCatalog.HagiBigA404)) : (r.Name, F: Pin404(r.F)))
     .Append(("版・刈り続け ハギ", Presets.HagiReap404())).ToArray();
 public static (string Name, Formation F)[] VersionsH403() => VersionsH404().Where(r => !VersionRows404.Contains(r.Name))   /* 第405期: 第404期の一覧から */

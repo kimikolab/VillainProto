@@ -319,11 +319,11 @@ static class Kari409Diag
         string b = i0 >= 0 && i1 > i0 ? src[i0..i1] : "";
         Expect("第409期の口（`KariMark409`）に `PickOne` ／ `Roll(` が無い", b.Length > 0 && !b.Contains("PickOne") && !b.Contains("Roll("), $"{b.Length} 文字");
         var vrows = Presets.Versions.Select(r => r.Name).ToList();
-        int iK = vrows.IndexOf("版・K-k 呪い"), iD = vrows.IndexOf("版・K-d 呪い");
+        int iK = vrows.IndexOf("版・K-k 呪い"), iD = Math.Max(vrows.IndexOf("版・K-d 呪い"), vrows.IndexOf("版・カーズ 呪い"));   // 第410期に「版・カーズ 呪い」へ改名
         Expect("試遊の台「版・K-k 呪い」（K-k のまま）「版・K-d 呪い」（第409期の版）が `Presets.Versions` の末尾にある",
             iK >= 0 && iD >= 0 && vrows.Skip(Math.Min(iK, iD)).All(n => n.StartsWith("版・"))
             && Presets.Versions[iK].F.Occupied().Any(o => o.Def == UnitCatalog.KariKk)
-            && Presets.Versions[iD].F.Occupied().Any(o => o.Def == kd || o.Def == kd1 || o.Def == kd0));
+            && Presets.Versions[iD].F.Occupied().Any(o => o.Def == kd || o.Def == kd1 || o.Def == kd0 || o.Def == UnitCatalog.KariKz62 || o.Def == UnitCatalog.KariKz90));
         Console.WriteLine();
         Console.WriteLine(_fail == 0 ? "**すべて OK**" : $"**NG {_fail} 件**");
         if (_fail > 0) Environment.ExitCode = 1;
