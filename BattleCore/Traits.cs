@@ -1053,6 +1053,9 @@ public enum TraitId
     KariDragOnce,         // 往復止め（K-d1・`KariDrag` と組む）: 同じ敵を二度は引きずり出さない（敵1体につき一度・引きずり出せる敵が尽きたらふつうに殴る）（**判定は engine の `KariDrag408`**・札そのものは印）
     KariMarkDeepen,       // 呪いを深める（K-d0）: 手番で、呪われた敵のうち弱体の累計が最も大きい1体（まだ付けていない敵・同じなら席番号）に「攻撃するたび攻撃力 −4」を付ける（`Dull`・書き手はカリ・カリが倒れるまで）。席は動かさない・的の固定は無い。全員に付いていればふつうに殴る（**判定は engine の `KariMark409`**）
     HagiLineLow,          // 線を下げる（H123L）: 魂の深さの線を 2 ／ 3 ／ 4 ／ 5 割 → 1 ／ 2 ／ 3 ／ 4 割・刈りの印を足した線の上限を 6 割 → 5 割にする（**札そのものは挙動を持たない**・`HagiDepthTrait.LinePermil` ／ engine の `ReapLineFor389` が読む）
+    // --- 第412期で足した札（指示書 design/PHASE412_MUDO_LOOP_SPEC.md §1）。ムドの見直し①の版（`All` の外）。保持者 0 枚 ---
+    MudoStrikeRage,       // 呪いの一撃で怒る（M-u・ムド）: 呪われた敵（`StatusKeys.Curse > 0`）に味方の単体の一撃（HP が減ったもの）が入るたび怒り +1（自分の一撃 ／ 鎖で届いた分（`hexShare`）は数えない・上限なし・殴られた回数と同じ帳簿・閾を越えたらその場で暴発）（**判定は engine の `MudoStrike412`**・札そのものは印）
+    MudoMireDull,         // 殴り返しが敵を弱らせる（M-d・ムド）: 暴発の1発が敵に入るたび（HP が減ったもの）、その主目標の攻撃力 −1（`Dull`・書き手はムド・その戦の間）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -13500,6 +13503,22 @@ public sealed class EruptTrait : Trait
         TryFire(ctx, self);
     }
 
+    /// <summary>第412期 M-u（<see cref="TraitId.MudoStrikeRage"/>）: 呪われた敵に味方の一撃が入ったときの怒り。</summary>
+    public const int StrikeRagePerHit = 1;
+
+    /// <summary>
+    /// 第412期 M-u: 呪われた敵に味方の単体の一撃が入った。<b>呼び口は engine の <c>MudoStrike412</c> の1箇所</b>（保持者がいる戦だけ）。
+    /// 怒りは殴られた回数と同じ帳簿（<see cref="CountKey"/>）・閾を越えたら被弾 ／ 呪いと同じ門でその場で暴発する。
+    /// </summary>
+    public static void AddStrikeRage(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+        self.SetCounter(CountKey, RageOf(self) + StrikeRagePerHit);
+        ctx.TallyOf(self).Mu412Rage += StrikeRagePerHit;
+        ctx.Log($"    {self.Name} の泥が揺れる（呪われた者が刻まれた・怒り +{StrikeRagePerHit}・{RageOf(self)}）", LogKind.Trigger);
+        TryFire(ctx, self);
+    }
+
     /// <summary>閾を越えていれば暴発する（被弾 ／ 呪い の両方の口が通る・第354期に被弾の口から切り出した——規定の順序は1つも変えていない）。</summary>
     static void TryFire(BattleContext ctx, UnitState self)
     {
@@ -13567,6 +13586,22 @@ public sealed class MudoCurseHeavyTrait : Trait
     public static int DropOf(UnitState self) => Math.Max(0, -self.AtkBonus);
     public override int ModifyAttack(UnitState self, int atk) =>
         self.RawCounter(EruptTrait.BurstKey) > 0 ? atk + DropOf(self) * PerDull : atk;
+}
+
+/// <summary>
+/// 殴り返しが敵を弱らせる（第412期・M-d・ムドの版）。<b>暴発の1発（<see cref="EruptTrait.BurstKey"/> が立っている間）が敵に入るたび、その主目標の攻撃力を <see cref="PerSwing"/> 下げる</b>
+/// （弱体の窓口 <c>Dull</c>・書き手はムド・恒久＝その戦の間）。累計（<see cref="BattleContext.DullReceived353"/>）に乗るので、カーズの印は累計の深い順に付く。
+/// 自分の手番の通常攻撃では下げない・HP が減らなかった発（回避など）でも下げない。乱数を引かない。
+/// </summary>
+public sealed class MudoMireDullTrait : Trait
+{
+    public const int PerSwing = 1;
+    public override TraitId Id => TraitId.MudoMireDull;
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+    {
+        if (self.RawCounter(EruptTrait.BurstKey) <= 0 || dealt <= 0 || target.TeamId == self.TeamId || !target.IsAlive) return;
+        ctx.MireDull412(self, target, PerSwing);
+    }
 }
 
 /// <summary>
@@ -20068,6 +20103,8 @@ public static class TraitCatalog
         new KariDragTrait(),                                         // 第408期（駆り立てる K-d・判定は engine の KariDrag408）
         new MarkOnlyTrait(TraitId.KariDragOnce),                     // 第409期（往復止め K-d1・印・判定は engine の KariDrag408）
         new KariMarkDeepenTrait(),                                   // 第409期（呪いを深める K-d0・判定は engine の KariMark409）
+        new MarkOnlyTrait(TraitId.MudoStrikeRage),                   // 第412期（呪いの一撃で怒る M-u・印・判定は engine の MudoStrike412 → EruptTrait.AddStrikeRage）
+        new MudoMireDullTrait(),                                     // 第412期（殴り返しが敵を弱らせる M-d）
         new EruptTrait(),      // 第180期
         new SmearTrait(),      // 第180期
         new SpitTrait(),       // 第180期

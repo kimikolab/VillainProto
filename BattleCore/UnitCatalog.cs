@@ -7421,6 +7421,16 @@ public static class UnitCatalog
     /// <summary>第354期 M1 ＋ M2。</summary>
     public static readonly UnitDef MudoM12 = Re351(MudoH354, MudoH354.Traits.Append(TraitId.MudoCurseRage).Append(TraitId.MudoCurseHeavy).ToArray(), MudoH354.Name,
         Must354(MudoH354.PlusText, MudoRageFind354, MudoRageText354) + MudoHeavyText354 + MudoWantText354, MudoH354.MinusText);
+    // 第412期: ムドの見直し①（指示書 design/PHASE412_MUDO_LOOP_SPEC.md §1）。版は規定のムド（M1＋M2）の上に札を足すだけ（HP ／ 攻 ／ 速は同じ・`All` の外・保持者 0 枚）。
+    const string MudoStrikeText412 = "。呪われた者が刻まれるたび、泥が揺れて怒りが溜まる（味方の一撃 1 につき 1）";
+    const string MudoMireText412 = "。殴り返しの泥は相手の得物を鈍らせる（1発につき攻撃力 -1）";
+    /// <summary>第412期 M-u 呪いの一撃で怒る: 規定 ＋ <see cref="TraitId.MudoStrikeRage"/>。</summary>
+    public static readonly UnitDef MudoMu = Re351(Mudo, Mudo.Traits.Append(TraitId.MudoStrikeRage).ToArray(), Mudo.Name, Mudo.PlusText + MudoStrikeText412, Mudo.MinusText);
+    /// <summary>第412期 M-d 殴り返しが敵を弱らせる: 規定 ＋ <see cref="TraitId.MudoMireDull"/>。</summary>
+    public static readonly UnitDef MudoMd = Re351(Mudo, Mudo.Traits.Append(TraitId.MudoMireDull).ToArray(), Mudo.Name, Mudo.PlusText + MudoMireText412, Mudo.MinusText);
+    /// <summary>第412期 M-ud: 両方。</summary>
+    public static readonly UnitDef MudoMud = Re351(Mudo, Mudo.Traits.Append(TraitId.MudoStrikeRage).Append(TraitId.MudoMireDull).ToArray(), Mudo.Name,
+        Mudo.PlusText + MudoStrikeText412 + MudoMireText412, Mudo.MinusText);
     /// <summary>第354期 配り: 規定のワタ ＋ <see cref="TraitId.RelayFeedMudo"/>（ウツ（5発まで）→ ムド（下げ幅 12 まで）→ 最も強い敵の順に回す）。</summary>
     public static readonly UnitDef WataFeedMudo = Re351(WataH354, WataH354.Traits.Append(TraitId.RelayFeedMudo).ToArray(), WataH354.Name,
         WataFeedText354(WataH354.PlusText), WataH354.MinusText);

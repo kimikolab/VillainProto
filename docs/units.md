@@ -716,6 +716,8 @@
 | `KariDragOnce` | - |
 | `KariMarkDeepen` | 祟りのカーズ |
 | `HagiLineLow` | - |
+| `MudoStrikeRage` | - |
+| `MudoMireDull` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

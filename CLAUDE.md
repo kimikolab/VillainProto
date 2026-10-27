@@ -158,7 +158,7 @@ engine は駒を受け取る版（`FormationRules.AreAdjacent(UnitState, UnitSta
 - **(G14)** 情報セルは `compare` が使う帯（seed 0..199）で数える（席の追試は帯B でよい）。第89期以降に席を選んだ行への波及調査は未了。
 - **(G15)** 取り込み・引用は行番号ではなく構造（見出し・箇条書きの先頭）で切り、取り込んだ文字列が原文に含まれることを機械で確かめる。
 - **(G16)** 線を引く条件と採る条件は同じ集合で書く。向きは「線は緩く、採用は厳しい」。線を満たすが採る条件で落ちた数も出力に書く（効かなかったことも記録する）。
-- **(G17)** `UnitCatalog.All` ／ `Retired` ／ `Presets` に触る期は、受け入れ条件に `sweep`（全診断の exit 検査）を入れる。`All` から外すのは「`Retired` へ移す」の1行で、辞書のキーや `Id` の引きは `Everyone`（`All ∪ Retired`）。**日中は `sweep fast`・full は夜間（`sweep nightly`）、朝にサマリを確認。差分があれば翌朝の最初の仕事は原因特定（`git bisect`）**（`design/SWEEP_NIGHTLY.md`）。sweep が回すのは現役網（`design/SWEEP_ROSTER.md`・加点方式）だけで、新しい器具は入れると決めたときだけ `SweepDiag.Active` に足す。合格は異常終了 0 本かつ上限 0 本（上限 150 秒）。**凍結庫**（`design/SWEEP_FREEZER.md`）の本を使う期は Phase 0 で `sweep thaw <絞り込み>` を1回走らせ、封印（`design/freezer/seals.tsv`）と照合する——不一致なら `git bisect`。
+- **(G17)** `UnitCatalog.All` ／ `Retired` ／ `Presets` に触る期は、受け入れ条件に `sweep`（全診断の exit 検査）を入れる。`All` から外すのは「`Retired` へ移す」の1行で、辞書のキーや `Id` の引きは `Everyone`（`All ∪ Retired`）。**日中は `sweep fast`・full は夜間（`sweep nightly`）、朝にサマリを確認。差分があれば翌朝の最初の仕事は原因特定（`git bisect`）**（`design/SWEEP_NIGHTLY.md`）。sweep が回すのは現役網（`design/SWEEP_ROSTER.md`・加点方式）だけで、新しい器具は入れると決めたときだけ `SweepDiag.Active` に足す。合格は異常終了 0 本かつ上限 0 本（上限 150 秒）。**凍結庫**（`design/SWEEP_FREEZER.md`）の本を使う期は Phase 0 で `sweep thaw <絞り込み>` を1回走らせ、封印（`design/freezer/seals.tsv`）と照合する——不一致なら `git bisect`。**転生・規定の切替で旧を読む器具が出ても、現役網の外の器具は固定せず封印する**（内は固定して `digest_cache` で照合・R426）。
 
 ## 新機構の判定規約
 

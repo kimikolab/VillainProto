@@ -9774,6 +9774,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.KariDrag)) _kariDragLive = true;         // 第408期（K-d）
         if (u.HasTrait(TraitId.KariMarkDeepen)) { _kariDragLive = true; _plunderCumLive = true; }   // 第409期（K-d0・−4 の口と累計の表を使う）
         if (u.HasTrait(TraitId.MudoCurseRage) || u.HasTrait(TraitId.MudoCurseHeavy)) _mudoCurseLive = true;
+        if (u.HasTrait(TraitId.MudoStrikeRage)) _mudoStrike412.Add(u);   // 第412期（M-u・呪いの一撃で怒る）
         if (u.HasTrait(TraitId.CurseScar)) { _scar355Live = true; _curseScarPct355[u.TeamId] = 100; }                                                       // 第355期（N-100）
         else if (u.HasTrait(TraitId.CurseScarHalf)) { _scar355Live = true; _curseScarPct355[u.TeamId] = Math.Max(_curseScarPct355[u.TeamId], 50); }     // 第355期（N-50）
         if (u.HasTrait(TraitId.ShardGift)) { _hibiRetLive = true; _hibiRet ??= u; }   // 第358期（HB-r・返しの破片）
@@ -15058,6 +15059,10 @@ public sealed class BattleContext
         //   `!hexShare`  1ホップ（共有が共有を呼ぶと往復する）
         //   同じ陣営だけ  陣営をまたぐと、ムドが敵を呪う目的と味方が呪われる副作用が混ざる
         //   `spillWound: false`  共有 → 傷 → 滲み の経路をこの期では作らない
+        // 第412期 M-u: 呪われた敵に味方の単体の一撃が入った（鎖の口と同じ出来事・鎖で届いた分は数えない）。保持者のいない戦は比較1つで抜ける。
+        if (_mudoStrike412.Count > 0 && singleHit && !hexShare && amount > 0 && source is not null
+            && source.TeamId != target.TeamId && target.RawCounter(StatusKeys.Curse) > 0) MudoStrike412(source);
+
         if (Curse.Enabled && singleHit && target.RawCounter(StatusKeys.Curse) > 0)
         {
             if (hexShare)
@@ -18244,6 +18249,26 @@ public sealed class BattleContext
 
     /// <summary>第354期 M1 ／ M2: 呪いを欲しがるムド（<see cref="TraitId.MudoCurseRage"/> ／ <see cref="TraitId.MudoCurseHeavy"/>）の保持者がいる戦。</summary>
     bool _mudoCurseLive;
+    /// <summary>第412期 M-u（<see cref="TraitId.MudoStrikeRage"/>）の保持者（加わった順）。空なら呼び口は比較1つで抜ける。</summary>
+    readonly List<UnitState> _mudoStrike412 = new();
+    /// <summary>第412期 M-u: <paramref name="source"/> の一撃が呪われた敵に入った。同じ陣営の生きた保持者（<paramref name="source"/> 自身を除く）の怒りが溜まる。</summary>
+    void MudoStrike412(UnitState source)
+    {
+        foreach (UnitState m in _mudoStrike412)
+            if (m.IsAlive && m != source && m.TeamId == source.TeamId) EruptTrait.AddStrikeRage(this, m);
+    }
+    /// <summary>第412期 M-d（<see cref="MudoMireDullTrait"/>）: 暴発の1発の主目標を下げる（窓口 <c>Dull</c>・書き手はムド）。計数だけ足す。</summary>
+    public void MireDull412(UnitState mudo, UnitState target, int amount)
+    {
+        UnitTally t = TallyOf(mudo);
+        t.Md412Swings++;
+        int before = target.AtkBonus;
+        Dull(target, amount, DullRoute.Other, mudo);
+        int got = Math.Max(0, before - target.AtkBonus);
+        t.Md412Dull += got;
+        if (got > 0 && _kariMark409.ContainsKey(target.InstanceId)) t.Md412OnMarked++;
+        if (got > 0) Log($"    {mudo.Name} の泥が {target.Name} の得物を鈍らせる（攻撃 -{got}）", LogKind.Status);
+    }
     /// <summary>第354期: 渡しが拾わない「呪いを欲しがる」ムドか。</summary>
     static bool WantsCurse354(UnitState u) => u.HasTrait(TraitId.MudoCurseRage) || u.HasTrait(TraitId.MudoCurseHeavy);
     /// <summary>第354期 配り: 回し先のムド（暴発の札の持ち主・生きている・席の若い順・乱数を引かない）。</summary>

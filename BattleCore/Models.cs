@@ -2418,6 +2418,8 @@ public sealed class UnitTally
     public long K408Carves, K408CarveHits, K408CumRead, K408CarveDealt, K408Plain, K408PickedKari, K408FedFromKari, K408Drags, K408DragAimed, K408Deepened;
     /// <summary>第409期（<b>計数のみ</b>・カリの版）: 同じ敵を二度目以上に引きずり出した回数（往復）／ K-d0 が −4 の印を付けた敵の数。誰も読んで分岐しない。</summary>
     public long K409Redrags, K409Marks;
+    /// <summary>第412期（<b>計数のみ</b>・ムドの版）: M-u で溜めた怒り ／ M-d で下げようとした発 ／ 実際に下げた量 ／ うちカーズの印が付いた敵へ。誰も読んで分岐しない。</summary>
+    public long Mu412Rage, Md412Swings, Md412Dull, Md412OnMarked;
     /// <summary>第355期（<b>計数のみ</b>・呪われた傷 ／ ウツの爪痕）: その駒の一撃で削れた最大HP（出どころの側・刻みなど出どころの無い分は受け手の <c>Cs355ScarTakenNoSource</c>）／ 削られた最大HP（受け手の側）。誰も読んで分岐しない。</summary>
     public long Cs355ScarDealt, Cs355ScarTaken, Cs355ScarTakenNoSource;
     /// <summary>第358期（<b>計数のみ</b>・破片軸の版）。ヒビ（HB-r）: 配った手番 ／ 配った量 ／ 返した回数 ／ 返した量（名目）／ 実際に減らした HP ／ 返しで倒した数 ／
@@ -3923,6 +3925,7 @@ public sealed class UnitTally
         K408Carves += o.K408Carves; K408CarveHits += o.K408CarveHits; K408CumRead += o.K408CumRead; K408CarveDealt += o.K408CarveDealt; K408Plain += o.K408Plain;   // 第408期
         K408PickedKari += o.K408PickedKari; K408FedFromKari += o.K408FedFromKari; K408Drags += o.K408Drags; K408DragAimed += o.K408DragAimed; K408Deepened += o.K408Deepened;
         K409Redrags += o.K409Redrags; K409Marks += o.K409Marks;   // 第409期
+        Mu412Rage += o.Mu412Rage; Md412Swings += o.Md412Swings; Md412Dull += o.Md412Dull; Md412OnMarked += o.Md412OnMarked;   // 第412期
         Db353PlunderGain += o.Db353PlunderGain; Db353PlunderHits += o.Db353PlunderHits; Db353PlunderDry += o.Db353PlunderDry; Db353PlunderMiss += o.Db353PlunderMiss; Db353PlunderBoss += o.Db353PlunderBoss;   // 第353期
         Fg339Spray = AddArr(Fg339Spray, o.Fg339Spray); Fg339AllyHits = AddArr(Fg339AllyHits, o.Fg339AllyHits); Fg339AllyDmg = AddArr(Fg339AllyDmg, o.Fg339AllyDmg);
         SharedAway += o.SharedAway; ShareTakenHits += o.ShareTakenHits; ShareGives += o.ShareGives; ShareGiven += o.ShareGiven; ShareGiftAccrued += o.ShareGiftAccrued;   // 第297期
