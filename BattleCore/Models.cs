@@ -2420,6 +2420,10 @@ public sealed class UnitTally
     public long K409Redrags, K409Marks;
     /// <summary>第412期（<b>計数のみ</b>・ムドの版）: M-u で溜めた怒り ／ M-d で下げようとした発 ／ 実際に下げた量 ／ うちカーズの印が付いた敵へ。誰も読んで分岐しない。</summary>
     public long Mu412Rage, Md412Swings, Md412Dull, Md412OnMarked;
+    /// <summary>第413期（<b>計数のみ</b>・ワタの渡し手番）。ワタの側: 手番 ／ 鳴った ／ 押し付けが無かった ／ 応える味方がいない ／ 止められた（痺れ・粛）／ 届かない ／ 怒りが 0・ターンごとの鳴った回数。応えた側: 応えた回数 ／ 発 ／ 与ダメ ／ 軛で切られた発 ／ 吐いた回数 ／ 吐いた怒り ／ うち閾に届かず吐いた回数。誰も読んで分岐しない。</summary>
+    public long Wg413Turns, Wg413Calls, Wg413Silent, Wg413NoAlly, Wg413Blocked, Wg413Reach, Wg413Dry;
+    public long[]? Wg413CallsByTurn;
+    public long Wg413Answers, Wg413Swings, Wg413Dealt, Wg413YokeCut, Wg413Vents, Wg413VentRage, Wg413VentBelow;
     /// <summary>第355期（<b>計数のみ</b>・呪われた傷 ／ ウツの爪痕）: その駒の一撃で削れた最大HP（出どころの側・刻みなど出どころの無い分は受け手の <c>Cs355ScarTakenNoSource</c>）／ 削られた最大HP（受け手の側）。誰も読んで分岐しない。</summary>
     public long Cs355ScarDealt, Cs355ScarTaken, Cs355ScarTakenNoSource;
     /// <summary>第358期（<b>計数のみ</b>・破片軸の版）。ヒビ（HB-r）: 配った手番 ／ 配った量 ／ 返した回数 ／ 返した量（名目）／ 実際に減らした HP ／ 返しで倒した数 ／
@@ -3926,6 +3930,9 @@ public sealed class UnitTally
         K408PickedKari += o.K408PickedKari; K408FedFromKari += o.K408FedFromKari; K408Drags += o.K408Drags; K408DragAimed += o.K408DragAimed; K408Deepened += o.K408Deepened;
         K409Redrags += o.K409Redrags; K409Marks += o.K409Marks;   // 第409期
         Mu412Rage += o.Mu412Rage; Md412Swings += o.Md412Swings; Md412Dull += o.Md412Dull; Md412OnMarked += o.Md412OnMarked;   // 第412期
+        Wg413Turns += o.Wg413Turns; Wg413Calls += o.Wg413Calls; Wg413Silent += o.Wg413Silent; Wg413NoAlly += o.Wg413NoAlly; Wg413Blocked += o.Wg413Blocked; Wg413Reach += o.Wg413Reach; Wg413Dry += o.Wg413Dry;   // 第413期
+        Wg413CallsByTurn = AddArr(Wg413CallsByTurn, o.Wg413CallsByTurn);
+        Wg413Answers += o.Wg413Answers; Wg413Swings += o.Wg413Swings; Wg413Dealt += o.Wg413Dealt; Wg413YokeCut += o.Wg413YokeCut; Wg413Vents += o.Wg413Vents; Wg413VentRage += o.Wg413VentRage; Wg413VentBelow += o.Wg413VentBelow;
         Db353PlunderGain += o.Db353PlunderGain; Db353PlunderHits += o.Db353PlunderHits; Db353PlunderDry += o.Db353PlunderDry; Db353PlunderMiss += o.Db353PlunderMiss; Db353PlunderBoss += o.Db353PlunderBoss;   // 第353期
         Fg339Spray = AddArr(Fg339Spray, o.Fg339Spray); Fg339AllyHits = AddArr(Fg339AllyHits, o.Fg339AllyHits); Fg339AllyDmg = AddArr(Fg339AllyDmg, o.Fg339AllyDmg);
         SharedAway += o.SharedAway; ShareTakenHits += o.ShareTakenHits; ShareGives += o.ShareGives; ShareGiven += o.ShareGiven; ShareGiftAccrued += o.ShareGiftAccrued;   // 第297期

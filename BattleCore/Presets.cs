@@ -935,6 +935,9 @@ public static class Presets
     /// ネルが中央だと呪詛の漏れが味方4枚に届き、ワタ → ウツへ回る呪いが増える。</summary>
     public static Formation CurseCenterNel() =>
         Formation.Build(front1: UnitCatalog.Wata, front3: UnitCatalog.Mudo, center: UnitCatalog.Nel, back1: UnitCatalog.Kubi, back3: UnitCatalog.Utsu);
+    /// <summary>第413期: 「版・W-u 呪い」「版・W-m 呪い」の並び（「試遊・呪い」と同じ並びで、ワタが版）。</summary>
+    public static Formation WataGift413(UnitDef wata) =>
+        Formation.Build(front1: wata, front3: UnitCatalog.Mudo, center: UnitCatalog.Nel, back1: UnitCatalog.Kubi, back3: UnitCatalog.Utsu);
 
     public static (string Name, Formation F)[] Versions => new (string, Formation)[]
     {
@@ -1061,6 +1064,9 @@ public static class Presets
         // 第411期: KZ-90 を規定のカリ（祟りのカーズ）にしたので「版・カーズ 呪い」は「試遊・カーズ 呪い」として「試遊・呪い 壁」の後ろへ移し、「版・K-k 呪い」は外した（過去の器具は `Common.VersionsH407`）。
         // 第412期: ムドの版の台「版・M-ud 呪い」（「試遊・カーズ 呪い」のムドを M-ud に）を足した。
         // 第413期: M-ud を規定のムドにしたので「版・M-ud 呪い」は外した（「試遊・カーズ 呪い」と同じ並びになる・並びは `MudoLoop412` に残す）。
+        // 第413期: ワタの渡し手番の版の台「版・W-u 呪い」「版・W-m 呪い」（「試遊・呪い」のワタを版に）。過去の器具の一覧（`Common.VersionsH407` から先）には入らない。
+        ("版・W-u 呪い", WataGift413(UnitCatalog.WataWu)),
+        ("版・W-m 呪い", WataGift413(UnitCatalog.WataWm)),
     };
 
     /// <summary>第410期: 「版・カーズ 呪い」（第409期の「版・K-d 呪い」を改名）の並び。`kari410 seats` の最良（KZ-90・ワタをカーズに替えた前1・強4 100）。</summary>

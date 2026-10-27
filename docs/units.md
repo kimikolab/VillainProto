@@ -718,6 +718,8 @@
 | `HagiLineLow` | - |
 | `MudoStrikeRage` | 泥人形ムド |
 | `MudoMireDull` | 泥人形ムド |
+| `WataCallBlade` | - |
+| `WataCallMire` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

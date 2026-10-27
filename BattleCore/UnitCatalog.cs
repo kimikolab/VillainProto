@@ -6104,6 +6104,22 @@ public static class UnitCatalog
         Flavor = WataH354.Flavor,
     };
 
+    // 第413期: ワタの渡し手番（指示書 design/PHASE413_WATA_GIFT_SPEC.md §2）。版は規定のワタ（WT-u ＋ 配り）の上に札を足し、`Actions = [Skill]`（ワタ自身は殴らない）。
+    // HP ／ 攻 ／ 速はそのまま・`All` の外・保持者 0 枚。
+    static UnitDef WataCall413(TraitId call, string plus) => new()
+    {
+        Id = Wata.Id, Name = Wata.Name, MaxHp = Wata.MaxHp, Attack = Wata.Attack, Speed = Wata.Speed, Advances = Wata.Advances, Pattern = Wata.Pattern,
+        Traits = Wata.Traits.Append(call).ToArray(),
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "重さを返す") },
+        PlusText = Wata.PlusText + plus,
+        MinusText = Wata.MinusText + "。自分では殴らない",
+        Flavor = Wata.Flavor,
+    };
+    /// <summary>第413期 W-u 刃を呼ぶ: 規定のワタ ＋ <see cref="TraitId.WataCallBlade"/>。</summary>
+    public static readonly UnitDef WataWu = WataCall413(TraitId.WataCallBlade, "。敵へ渡した呪いの重さに、最も呪われた仲間の刃が応える（その敵をその場で殴る）");
+    /// <summary>第413期 W-m 泥を呼ぶ: 規定のワタ ＋ <see cref="TraitId.WataCallMire"/>。</summary>
+    public static readonly UnitDef WataWm = WataCall413(TraitId.WataCallMire, "。敵へ渡した呪いの重さに、泥人形が応える（溜めた怒りをその場で吐く）");
+
     /// <summary>
     /// 驕りのオゴ。<b>隣接を「量」ではなく「誰がいるか」で読む2枚目</b>（第46期）。
     ///

@@ -1056,6 +1056,9 @@ public enum TraitId
     // --- 第412期で足した札（指示書 design/PHASE412_MUDO_LOOP_SPEC.md §1）。ムドの見直し①の版（`All` の外）。保持者 0 枚 ---
     MudoStrikeRage,       // 呪いの一撃で怒る（M-u・ムド）: 呪われた敵（`StatusKeys.Curse > 0`）に味方の単体の一撃（HP が減ったもの）が入るたび怒り +1（自分の一撃 ／ 鎖で届いた分（`hexShare`）は数えない・上限なし・殴られた回数と同じ帳簿・閾を越えたらその場で暴発）（**判定は engine の `MudoStrike412`**・札そのものは印）
     MudoMireDull,         // 殴り返しが敵を弱らせる（M-d・ムド）: 暴発の1発が敵に入るたび（HP が減ったもの）、その主目標の攻撃力 −1（`Dull`・書き手はムド・その戦の間）
+    // --- 第413期で足した札（指示書 design/PHASE413_WATA_GIFT_SPEC.md §2）。ワタの渡し手番の版（`All` の外）。保持者 0 枚 ---
+    WataCallBlade,        // 刃を呼ぶ（W-u・ワタ）: 手番で、前の自分の手番から敵へ重荷を押し付けていれば、押し付けた敵のうち最も強い1体（同じなら席番号）を、最も呪われている味方（下げ幅 −AtkBonus が最大・ワタ自身を除く・同じなら席番号・0 なら誰も）がその場で殴る（その味方の手番と同じ発数・届かなければ何も起きない）。ワタ自身は殴らない（**判定は engine の `WataCall413`**）
+    WataCallMire,         // 泥を呼ぶ（W-m・ワタ）: 同じ条件で、暴発を持つ味方（`Erupt`・同じなら席番号）が溜めた怒りをその場で吐く（閾に届いていなくても溜めた回数だけ殴り返す・怒りは消費・相手は押し付けた敵・暴発と同じ経路）。怒りが 0 なら何も起きない。ワタ自身は殴らない（**判定は engine の `WataCall413`**）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -13593,6 +13596,18 @@ public sealed class MudoCurseHeavyTrait : Trait
 /// （弱体の窓口 <c>Dull</c>・書き手はムド・恒久＝その戦の間）。累計（<see cref="BattleContext.DullReceived353"/>）に乗るので、カーズの印は累計の深い順に付く。
 /// 自分の手番の通常攻撃では下げない・HP が減らなかった発（回避など）でも下げない。乱数を引かない。
 /// </summary>
+/// <summary>
+/// 渡し手番（第413期・W-u ／ W-m・ワタの版）。手番の中身は engine の <c>WataCall413</c>（前の手番からの押し付けを読んで、味方に応えさせる）。ワタ自身は殴らない。
+/// 札は2枚あり、どちらの版かは <see cref="Id"/> で分ける。乱数を引かない。
+/// </summary>
+public sealed class WataCallTrait : Trait
+{
+    readonly TraitId _id;
+    public WataCallTrait(TraitId id) => _id = id;
+    public override TraitId Id => _id;
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action) => ctx.WataCall413(self, mire: _id == TraitId.WataCallMire);
+}
+
 public sealed class MudoMireDullTrait : Trait
 {
     public const int PerSwing = 1;
@@ -20105,6 +20120,8 @@ public static class TraitCatalog
         new KariMarkDeepenTrait(),                                   // 第409期（呪いを深める K-d0・判定は engine の KariMark409）
         new MarkOnlyTrait(TraitId.MudoStrikeRage),                   // 第412期（呪いの一撃で怒る M-u・印・判定は engine の MudoStrike412 → EruptTrait.AddStrikeRage）
         new MudoMireDullTrait(),                                     // 第412期（殴り返しが敵を弱らせる M-d）
+        new WataCallTrait(TraitId.WataCallBlade),                    // 第413期（刃を呼ぶ W-u・判定は engine の WataCall413）
+        new WataCallTrait(TraitId.WataCallMire),                     // 第413期（泥を呼ぶ W-m・判定は engine の WataCall413）
         new EruptTrait(),      // 第180期
         new SmearTrait(),      // 第180期
         new SpitTrait(),       // 第180期

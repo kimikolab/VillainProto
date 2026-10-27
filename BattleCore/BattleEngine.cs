@@ -9775,6 +9775,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.KariMarkDeepen)) { _kariDragLive = true; _plunderCumLive = true; }   // 第409期（K-d0・−4 の口と累計の表を使う）
         if (u.HasTrait(TraitId.MudoCurseRage) || u.HasTrait(TraitId.MudoCurseHeavy)) _mudoCurseLive = true;
         if (u.HasTrait(TraitId.MudoStrikeRage)) _mudoStrike412.Add(u);   // 第412期（M-u・呪いの一撃で怒る）
+        if (u.HasTrait(TraitId.WataCallBlade) || u.HasTrait(TraitId.WataCallMire)) _wataCall413Live = true;   // 第413期（W-u ／ W-m・渡し手番）
         if (u.HasTrait(TraitId.CurseScar)) { _scar355Live = true; _curseScarPct355[u.TeamId] = 100; }                                                       // 第355期（N-100）
         else if (u.HasTrait(TraitId.CurseScarHalf)) { _scar355Live = true; _curseScarPct355[u.TeamId] = Math.Max(_curseScarPct355[u.TeamId], 50); }     // 第355期（N-50）
         if (u.HasTrait(TraitId.ShardGift)) { _hibiRetLive = true; _hibiRet ??= u; }   // 第358期（HB-r・返しの破片）
@@ -14705,7 +14706,8 @@ public sealed class BattleContext
             string who = source?.Def.Id ?? "（出どころなし）";
             YokeCutBy.TryGetValue(who, out var acc);
             YokeCutBy[who] = (acc.Hits + 1, acc.Lost + amount - Yoke.Cap);
-            if (source is not null && source.RawCounter(EruptTrait.BurstKey) > 0) { UnitTally bt = TallyOf(source); bt.Db354BurstYokeCut++; bt.Db354BurstYokeLost += amount - Yoke.Cap; }   // 第354期（計数のみ・暴発の発）
+            if (source is not null && source.RawCounter(EruptTrait.BurstKey) > 0) { UnitTally bt = TallyOf(source); bt.Db354BurstYokeCut++; bt.Db354BurstYokeLost += amount - Yoke.Cap; }
+            if (_wgActor413 is not null && source == _wgActor413) TallyOf(source).Wg413YokeCut++;   // 第413期（計数のみ・応えた発）   // 第354期（計数のみ・暴発の発）
 
             Log($"    軛が {target.Name} への一撃を {amount} から {Yoke.Cap} に切った", LogKind.Trigger);
             // 第171期・**表示専用**。**`amount` を書き換える前**に打つ（切り落とされた量は
@@ -18249,6 +18251,96 @@ public sealed class BattleContext
 
     /// <summary>第354期 M1 ／ M2: 呪いを欲しがるムド（<see cref="TraitId.MudoCurseRage"/> ／ <see cref="TraitId.MudoCurseHeavy"/>）の保持者がいる戦。</summary>
     bool _mudoCurseLive;
+    /// <summary>第413期 W-u ／ W-m の保持者が戦闘に出たか。<b>いなければ押し付けの記録は比較1つで抜ける。</b></summary>
+    bool _wataCall413Live;
+    /// <summary>第413期: ワタ（<c>InstanceId</c>）→ 前の自分の手番から押し付けた敵（重複なし・押し付けた順）。手番で読んで消す。</summary>
+    readonly Dictionary<int, List<UnitState>> _wataPush413 = new();
+    /// <summary>第413期・計数のみ: いま応えている味方（軛で切られた発を数える）。</summary>
+    UnitState? _wgActor413;
+    void NoteWataPush413(UnitState relayer, UnitState victim)
+    {
+        if (!relayer.HasTrait(TraitId.WataCallBlade) && !relayer.HasTrait(TraitId.WataCallMire)) return;
+        if (!_wataPush413.TryGetValue(relayer.InstanceId, out var list)) _wataPush413[relayer.InstanceId] = list = new();
+        if (!list.Contains(victim)) list.Add(victim);
+    }
+
+    /// <summary>
+    /// 第413期 W-u ／ W-m（ワタの渡し手番）。<b>前の自分の手番から敵へ重荷を押し付けていれば</b>、押し付けた敵のうち生きていて最も強い1体（今の攻撃力・同じなら席番号）へ、味方を1回応えさせる。
+    /// W-u（<paramref name="mire"/> が偽）: 最も呪われている味方（下げ幅 −AtkBonus が最大・ワタ自身を除く・同じなら席番号・下げ幅 0 なら誰も）が、その味方の手番と同じ発数でその敵だけを殴る（倒れたら残りは振らない）。
+    /// W-m（真）: 暴発を持つ味方（同じなら席番号）が溜めた怒りを全部吐く（閾に届いていなくても・暴発と同じ経路）。怒りが 0 なら何も起きない。
+    /// どちらも手番の外の行動なので痺れ・粛に止められる（<see cref="CanActOutOfTurn"/>）。届くかは応える味方の的の集合（<see cref="TargetPool"/>）で決める。乱数を引かない。
+    /// </summary>
+    public void WataCall413(UnitState wata, bool mire)
+    {
+        UnitTally wt = TallyOf(wata);
+        wt.Wg413Turns++;
+        List<UnitState>? pushed = _wataPush413.Remove(wata.InstanceId, out var l) ? l : null;
+        UnitState? aim = pushed?.Where(u => u.IsAlive).OrderByDescending(u => u.CurrentAttack).ThenBy(u => u.Slot).FirstOrDefault();
+        if (aim is null) { wt.Wg413Silent++; return; }
+        var allies = LivingMembers(wata.TeamId).Where(u => u != wata);
+        UnitState? ally = mire
+            ? allies.Where(u => u.HasTrait(TraitId.Erupt)).OrderBy(u => u.Slot).FirstOrDefault()
+            : allies.Where(u => u.AtkBonus < 0).OrderBy(u => u.AtkBonus).ThenBy(u => u.Slot).FirstOrDefault();
+        if (ally is null) { wt.Wg413NoAlly++; return; }
+        if (mire && EruptTrait.RageOf(ally) <= 0) { wt.Wg413Dry++; return; }
+        if (!CanActOutOfTurn(ally, mire ? OutOfTurnRoute.Erupt : OutOfTurnRoute.Other)) { wt.Wg413Blocked++; return; }
+        if (!TargetPool(ally).Contains(aim)) { wt.Wg413Reach++; return; }
+        wt.Wg413Calls++;
+        (wt.Wg413CallsByTurn ??= new long[UnitTally.Z369Len])[Math.Clamp(_turn, 0, UnitTally.Z369Len - 1)]++;
+        UnitTally at = TallyOf(ally);
+        at.Wg413Answers++;
+        int dealtBefore = at.DamageToEnemy;
+        var prev = _wgActor413;
+        _wgActor413 = ally;
+        try
+        {
+            if (!mire)
+            {
+                Log($"  {wata.Name} が {aim.Name} へ渡した呪いの重さに、{ally.Name} の刃が応える", LogKind.Trigger);
+                int hits = 1;
+                foreach (Trait t in ally.Traits) hits = t.ModifyHitCount(ally, hits);
+                if (hits < 1) hits = 1;
+                for (int i = 0; i < hits; i++)
+                {
+                    if (!ally.IsAlive || !aim.IsAlive) break;
+                    at.Wg413Swings++;
+                    _forcedTarget = aim;
+                    try { PerformAttack(ally, "    "); }
+                    finally { _forcedTarget = null; }
+                }
+            }
+            else
+            {
+                int n = EruptTrait.RageOf(ally);
+                ally.SetCounter(EruptTrait.CountKey, 0);
+                at.Wg413Vents++;
+                at.Wg413VentRage += n;
+                if (n < EruptTrait.Threshold) at.Wg413VentBelow++;
+                Interrupt(() =>
+                {
+                    Log($"  {wata.Name} が {aim.Name} へ渡した呪いの重さに、{ally.Name} が溜めた泥を吐く（{n} 連撃）", LogKind.Highlight, ally);
+                    if (Erupt.Smear == SmearWhen.PerErupt) SmearTrait.Scatter(this, ally, SmearTrait.PerErupt);   // 暴発と同じ経路（泥は最初の1発より前）
+                    ally.SetCounter(EruptTrait.BurstKey, 1);
+                    try
+                    {
+                        for (int i = 0; i < n; i++)
+                        {
+                            if (!ally.IsAlive || !TeamAlive(Opponent(ally.TeamId))) break;
+                            at.Wg413Swings++;
+                            if (aim.IsAlive) _forcedTarget = aim;
+                            try { PerformAttack(ally, "    "); }
+                            finally { _forcedTarget = null; }
+                            Heal(ally, EruptTrait.HealPerSwing, ally);
+                        }
+                    }
+                    finally { ally.SetCounter(EruptTrait.BurstKey, 0); }
+                });
+            }
+        }
+        finally { _wgActor413 = prev; }
+        at.Wg413Dealt += at.DamageToEnemy - dealtBefore;
+    }
+
     /// <summary>第412期 M-u（<see cref="TraitId.MudoStrikeRage"/>）の保持者（加わった順）。空なら呼び口は比較1つで抜ける。</summary>
     readonly List<UnitState> _mudoStrike412 = new();
     /// <summary>第412期 M-u: <paramref name="source"/> の一撃が呪われた敵に入った。同じ陣営の生きた保持者（<paramref name="source"/> 自身を除く）の怒りが溜まる。</summary>
@@ -19346,6 +19438,7 @@ public sealed class BattleContext
                     Relaying(() => Dull(victim, sent, DullRoute.Relay, relayer));
                     if (take > 0) Relaying(() => Dull(victim, take, DullRoute.Relay, relayer));
                     if (before > 0 && victim.CurrentAttack == 0) RelayZeroed++;
+                    if (_wataCall413Live) NoteWataPush413(relayer, victim);   // 第413期（W-u ／ W-m: 次の自分の手番が読む）
 
                     Log($"    {relayer.Name} が {target.Name} の重荷を {victim.Name} へ渡した（攻撃 -{sent}）",
                         LogKind.Trigger);
