@@ -15199,6 +15199,7 @@ public sealed class BattleContext
         tt.TurnsTaken++;
         if (_whipLive && actor.RawCounter(StatusKeys.Daunted) > 0) tt.TurnsDaunted322++;   // 第322期・計数のみ（萎縮したまま迎えた手番）
         if (_powderLive && actor == _powderHolder) PowderHead(actor);   // 第323期（手番の頭に帯電していた駒を控える・読むだけ）
+        if (_verbose) UtsuHitsAll415();   // 第415期・表示専用（`AtkBonus` を直に書く経路で変わった手数を、手番の枠の外で拾う）
         int handEv0 = _events.Count;   // 第239期・**計数のみ**（手番の枠。verbose のときだけ `Hands` に積む）
         try
         {
@@ -15213,6 +15214,7 @@ public sealed class BattleContext
                 && (actor.HasTrait(TraitId.DolgaWakeDouble) || actor.HasTrait(TraitId.DolgaWakeStack)))
                 NoteIdle399(actor);
             if (_verbose) Hands.Add(new HandRecord(_turn, actor.InstanceId, actor.TeamId, outcome, handEv0, _events.Count));
+            if (_verbose) UtsuHitsAll415();   // 第415期・表示専用（手番の枠を閉じた後）
             // 第217期（**計数のみ**）: 手番を続けて失った数。見せしめか感電がある戦闘でだけ数える（私有キー・誰も読んで分岐しない）。
             if (_restrainLive || _shockLive)
             {
@@ -18176,7 +18178,7 @@ public sealed class BattleContext
                 // 確定させているのと同じ順序）。
                 DullTakenByRoute[(int)route] += amount;
                 TraitMark rm = BeginTrait(TraitId.Relay, taker);      // 第94期 (T2) の印
-                RelayThrough(taker, target, amount);
+                RelayThrough(taker, target, amount, by);
                 EndTrait(rm);
                 return;
             }
@@ -18207,7 +18209,7 @@ public sealed class BattleContext
         // 渡していない呼び出し元からは今までどおり null が載る。
         EmitStatusGain(receiver, DullKey, amount, by);
         receiver.AtkBonus -= amount;
-        if (receiver.HasTrait(TraitId.Perverse)) NotePerverse351(receiver);   // 第351期（計数のみ）
+        if (receiver.HasTrait(TraitId.Perverse)) { NotePerverse351(receiver); UtsuHits415(receiver); }   // 第351期（計数のみ）・第415期（表示専用・手数が変わった瞬間）
         if (_mudoCurseLive && receiver.HasTrait(TraitId.MudoCurseRage)) EruptTrait.AddCurseRage(this, receiver, amount);   // 第354期 M1: 浴びた呪いが怒りに（攻撃力を引いた後）
         if (_plunderCumLive) _dullRecv353[receiver.InstanceId] = _dullRecv353.GetValueOrDefault(receiver.InstanceId) + amount;   // 第353期 UK-c: 実際に攻撃力が下がった量の累計（横取りの後の受け手）
         if (atkBefore > 0 && receiver.CurrentAttack == 0)
@@ -18458,6 +18460,63 @@ public sealed class BattleContext
         _kariMark409[aim.InstanceId] = self;
         t.K409Marks++;
         Log($"  {self.Name} が {aim.Name} の呪いを深く刻みつけた（殴るたび攻撃 -{KariDragTrait.Deepen}）", LogKind.Action);
+        if (_verbose)
+        {
+            SkillTarget415(self, aim);                            // 第415期・表示専用（手番の `Skill` に印の敵を載せる）
+            EmitScript415(aim, KarzMarkText, 1, self);            // 第415期・表示専用（印が付いた瞬間・消えるのはカーズの `Death`）
+        }
+    }
+
+    // ---------------------------------------------------------------------------------
+    // 第415期（指示書 design/PHASE415_SCRIPT_EVENTS_SPEC.md）—— デバフ軸の演出に要る台本の出来事。**表示専用・verbose でなければ1行も走らない・乱数を引かない。**
+    // ---------------------------------------------------------------------------------
+    /// <summary>カーズの印が付いた瞬間の <c>StatusGain</c> の <c>Text</c>（<see cref="StatusKeys"/> には足さない——カウンタではない）。</summary>
+    public const string KarzMarkText = "karz_mark";
+    /// <summary>逆しま（ウツ）の手数が変わった瞬間の <c>StatusGain</c> の <c>Text</c>（<c>Amount</c> ＝ 新しい手数）。</summary>
+    public const string UtsuHitsText = "utsu_hits";
+    /// <summary>ワタが味方の弱体を引き受けた瞬間の <c>StatusGain</c> の <c>Text</c>（受け手 ＝ ワタ・<c>FromId</c> ＝ 元の受け手・ワタの攻撃力は下がらない）。</summary>
+    public const string WataTakeText = "wata_take";
+    /// <summary>逆しまの駒ごとの、台本に最後に出した手数（verbose のときしか触らない）。</summary>
+    readonly Dictionary<int, int> _utsuHits415 = new();
+
+    /// <summary>第415期: この手番に打った <c>Skill</c>（直近・同じ駒・同じターン）に的を載せ直す。盤面は読まない。</summary>
+    void SkillTarget415(UnitState actor, UnitState target)
+    {
+        for (int i = _events.Count - 1; i >= 0; i--)
+        {
+            BattleEvent e = _events[i];
+            if (e.Kind != BattleEventKind.Skill || e.ActorId != actor.InstanceId || e.Turn != _turn) continue;
+            if (e.TargetId is null)
+                _events[i] = new BattleEvent { Kind = e.Kind, Turn = e.Turn, ActorId = e.ActorId, Text = e.Text, TargetId = target.InstanceId };
+            return;
+        }
+    }
+
+    /// <summary>第415期: 逆しまの手数（手番の <c>SwingTurnHits</c> と同じ畳み込み）が前回出した値と違えば <c>StatusGain</c> を1件出す。初回は必ず出す。</summary>
+    void UtsuHits415(UnitState u)
+    {
+        if (!_verbose || !u.IsAlive || !u.HasTrait(TraitId.Perverse)) return;
+        int hits = 1;
+        foreach (Trait t in u.Traits) hits = t.ModifyHitCount(u, hits);
+        if (hits < 1) hits = 1;
+        if (_utsuHits415.TryGetValue(u.InstanceId, out int prev) && prev == hits) return;
+        _utsuHits415[u.InstanceId] = hits;
+        EmitScript415(u, UtsuHitsText, hits, u);
+    }
+
+    /// <summary>第415期: 3 つの出来事の口。<c>EmitStatusGain</c> を通さない（あちらの1回きりの読み飛ばし札 <c>_flSkipGainId</c> を消費しないため）。</summary>
+    void EmitScript415(UnitState target, string text, int amount, UnitState? writer, UnitState? from = null)
+        => Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.StatusGain, Turn = _turn, ActorId = writer?.InstanceId, TargetId = target.InstanceId,
+            Amount = amount, Text = text, FromId = from?.InstanceId,
+        });
+
+    /// <summary>第415期: 盤上の逆しま全員を見直す（開戦 ／ 手番の前後 ／ 決着。<c>AtkBonus</c> を直に書く経路も拾うため）。</summary>
+    internal void UtsuHitsAll415()
+    {
+        if (!_verbose) return;
+        foreach (UnitState u in _units) UtsuHits415(u);
     }
 
     /// <summary>K-d: 引きずり出された敵の単体の的（カリが pool にいて生きていれば）。</summary>
@@ -19377,8 +19436,10 @@ public sealed class BattleContext
     /// <para>転嫁は <see cref="Dull"/> を再び呼ぶので <see cref="Relaying"/> で包む。
     /// 現状の敵ロスターに渡し持ちはいないが、置いた瞬間に無限往復する。</para>
     /// </summary>
-    private void RelayThrough(UnitState relayer, UnitState target, int amount)
+    private void RelayThrough(UnitState relayer, UnitState target, int amount, UnitState? by = null)
     {
+        // 第415期・表示専用: 引き受けた瞬間（受け手 ＝ ワタ・書き手 ＝ 元の弱体の書き手・`FromId` ＝ 元の受け手）。ワタの攻撃力は下がらない。配り ／ 押し付けより前に出る。
+        if (_verbose) EmitScript415(relayer, WataTakeText, amount, by, from: target);
         RelayTaken += amount;
         RelayFrom[target.Name] = RelayFrom.TryGetValue(target.Name, out int prev) ? prev + amount : amount;
         UnitTally rt = TallyOf(relayer);                                               // 第351期（計数のみ）
@@ -19595,6 +19656,7 @@ public sealed class BattleContext
         if (!WhetBlock.Blocks(route))
         {
             receiver.AtkBonus += amount;
+            UtsuHits415(receiver);   // 第415期・表示専用（強化で手数が 1 に戻った瞬間・保持者でなければ真偽で抜ける）
             receiver.WhetReceived += amount;
             // 第68期。**`WhetReceived` と同じ行・同じ条件**で外から届いた量の帳簿にも積む。
             NoteCarry(receiver, UnitTally.CarryWhet, amount);
@@ -20326,6 +20388,7 @@ public static class BattleEngine
             }
         }
         ctx.DrainFeatherMarksPublic();   // 第298期（MF・開戦時に書かれた標の羽。保持者がいなければ比較1つで抜ける）
+        ctx.UtsuHitsAll415();            // 第415期・表示専用（逆しまの手数の初期値・verbose でなければ真偽1つで抜ける）
 
         int turn = 1;
         for (; turn <= MaxTurns; turn++)
@@ -20457,6 +20520,7 @@ public static class BattleEngine
         bool playerWon = (ctx.TeamAlive(BattleContext.PlayerTeam) || ctx.LastStandVictoryTeam == BattleContext.PlayerTeam)
                          && !ctx.TeamAlive(BattleContext.EnemyTeam);
 
+        ctx.UtsuHitsAll415();   // 第415期・表示専用（最後の手番の後に変わった手数・決着時の値に揃える）
         ctx.Log(playerWon ? "=== 勝利 ===" : "=== 敗北 ===", LogKind.System);
 
         // 生き残った駒の「最後に活動していたターン」は決着ターン。

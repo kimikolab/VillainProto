@@ -1731,3 +1731,10 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - `BattleContext.EmitDirge` は表示専用の `BattleEventKind.Dirge` を記録する。verbose が偽なら何も作らず、盤面・乱数・計数は変えない。
 - `DirgeTurn` ／ `DirgeSing` が受け手を控えた時に `DirgeLabels.Gift`、`DrainGifts` が生存・相手陣営の生存を確認して実際に手番を渡す直前に `DirgeLabels.Act`。ActorId は楽士、TargetId は受け手、Team は受け手の陣営、Slot は渡す順。
 - 表示側は相手の強さやログ本文から対象を推測しない。飛ばされた手番には Act を出さない。詳細と検証は `ERE_GIFT_PRESENTATION.md`。
+
+## デバフ軸の台本の出来事（第415期・表示専用）
+
+- **カーズの印**: `KariMark409` が印を付けた瞬間に `StatusGain`（`Text` ＝ `BattleContext.KarzMarkText` ＝ `"karz_mark"`・`ActorId` ＝ カーズ・`TargetId` ＝ 印の敵・量 1）。同じ手番の `Skill`（呪いを刻む）の `TargetId` にも印の敵を載せ直す（`SkillTarget415`）。消えるのはカーズの `Death`（出来事は足さない）。
+- **ウツの手数**: 逆しま（`Perverse`）の保持者の手数（`SwingTurnHits` と同じ `ModifyHitCount` の畳み込み）が前に出した値と違ったら `StatusGain`（`Text` ＝ `"utsu_hits"`・`ActorId` ＝ `TargetId` ＝ ウツ・量 ＝ 新しい手数 1〜5）。見る場所は開戦（ターン 0・初期値を必ず1件）／ `Dull` ／ `Whet` で攻撃力が動いた直後 ／ 手番の枠の前後 ／ 決着の直前（`UtsuHitsAll415`）。
+- **ワタの引き受け元**: `RelayThrough` の頭で `StatusGain`（`Text` ＝ `"wata_take"`・受け手 ＝ ワタ・`ActorId` ＝ 元の弱体の書き手・量 ＝ 引き受けた量・新しい欄 `BattleEvent.FromId` ＝ 元の受け手）。ワタの攻撃力は下がらない（渡しは `AtkBonus` を引かない）。配り（`CursePass` 回す）／ 押し付けより前に出る。
+- 3 つとも `EmitScript415` から `Emit` へ直に積む（`EmitStatusGain` の1回きりの読み飛ばし札を消費しない）。verbose が偽なら1件も作らず、盤面・乱数・計数は変えない。`replay` の JSON には載せていない（DemoApp は `BattleEvent` を直に読む）。

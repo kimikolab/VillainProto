@@ -35,7 +35,9 @@ static class ShockDigestDiag
     /// <summary>第231期以後に足した出来事の種類（<b>どのモードでも外す</b>——挑発の表示は規定のセロにも出るので、前の期の台本と揃えるには必ず外す）。</summary>
     static readonly HashSet<string> SkipAlways = new() { "DecoyShow", "SpringGuard", "MoveShot", "Landing", "ShockGauge", "Feather", "Scar", "MarkLayer", "SilkBall", "Web", "Insight", "MarkRally" };   // 第291期: 表示専用の4種を足した・第292期: 糸玉・第293期: 網・第295期: 見切り・あいつを狙え
     /// <summary>後の期に足した <c>BattleEvent</c> の欄。</summary>
-    static readonly HashSet<string> SkipProps = new() { "BrittleExtra", "PartnerId", "PowderRoute" };   // 第291期: 粉の経路の欄
+    static readonly HashSet<string> SkipProps = new() { "BrittleExtra", "PartnerId", "PowderRoute", "FromId" };   // 第291期: 粉の経路の欄・第415期: ワタの引き受け元の欄
+    /// <summary>第415期: 表示専用の <c>StatusGain</c>（カーズの印 ／ ウツの手数 ／ ワタの引き受け）は数えない。</summary>
+    static readonly HashSet<string> SkipGainTexts = new() { BattleContext.KarzMarkText, BattleContext.UtsuHitsText, BattleContext.WataTakeText };
 
     /// <summary>
     /// 第287期: `compare` の行の規定のトウ（第287期から T3）を旧の規定 `TouT0` に戻した行。指紋の台は規定化の前（第286期まで）の台本を写すので、
@@ -229,6 +231,7 @@ static class ShockDigestDiag
                     foreach (BattleEvent e in r.Events)
                     {
                         if (SkipAlways.Contains(e.Kind.ToString())) continue;
+                        if (e.Kind == BattleEventKind.StatusGain && e.Text is { } gt && SkipGainTexts.Contains(gt)) continue;   // 第415期
                         if (mode is not ("f224" or "r225" or "k226" or "l227" or "h228" or "g229" or "w230") && SkipKinds.Contains(e.Kind.ToString())) continue;
                         counted++;
                         var sb = new StringBuilder();

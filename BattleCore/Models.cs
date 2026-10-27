@@ -5899,6 +5899,13 @@ public sealed class BattleEvent
     public int? DeflectFromId { get; init; }
 
     /// <summary>
+    /// 第415期（<b>表示専用</b>）: ワタの引き受け（<c>StatusGain</c>・<c>Text</c> ＝ <see cref="BattleContext.WataTakeText"/>・受け手 ＝ ワタ）のときだけ、
+    /// <b>元の受け手</b>（弱体を受けるはずだった味方）の InstanceId が入る。それ以外は <c>null</c>。
+    /// 線は <c>FromId</c> → <c>TargetId</c>（ワタ）に引く。<b>どの規則も読まない。</b>
+    /// </summary>
+    public int? FromId { get; init; }
+
+    /// <summary>
     /// 第222期・<see cref="BattleEventKind.Regroup"/> で前へ出した駒（<b>表示専用</b>）。<b>どの規則も読まない。</b>
     /// </summary>
     public int? PartnerId { get; init; }
