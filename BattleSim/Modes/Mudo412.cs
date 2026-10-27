@@ -26,13 +26,13 @@ static class Mudo412Diag
     static string Pct(long a, long n) => n == 0 ? "—" : F1(100.0 * a / n);
     static string Short(UnitDef d) => S307.Short(d);
 
-    static readonly I.W[] Waves = { I.Boss, I.Guard, I.Bat, I.StrongWaves[2] };
+    internal static readonly I.W[] Waves = { I.Boss, I.Guard, I.Bat, I.StrongWaves[2] };
     static readonly (string Key, string Label, UnitDef D)[] Vers =
     {
         ("0", "規定", UnitCatalog.Mudo), ("u", "M-u", UnitCatalog.MudoMu), ("d", "M-d", UnitCatalog.MudoMd), ("ud", "M-ud", UnitCatalog.MudoMud),
     };
     static readonly (string Key, string Name)[] BoardRows = { ("play", "試遊・呪い"), ("karz", "試遊・カーズ 呪い") };
-    static Formation BoardOf(string name) => Presets.Versions.First(r => r.Name == name).F;
+    internal static Formation BoardOf(string name) => Presets.Versions.First(r => r.Name == name).F;
     static Formation Swap(Formation f, UnitDef mudo)
     {
         var g = f.Clone();
@@ -77,7 +77,7 @@ static class Mudo412Diag
     // ---------------------------------------------------------------------------------
     // 1戦の計数
     // ---------------------------------------------------------------------------------
-    sealed class Fx
+    internal sealed class Fx
     {
         public long N, Wins, WinT, Fell, Turns;
         public long TailN, TailTurns, TailDirect;          // 尻尾（生きた敵が1体になった次のターンから・ボスは開戦から）
@@ -114,7 +114,7 @@ static class Mudo412Diag
             .Select(kv => $"{kv.Key} {Pct(kv.Value, N)}%・T{Per(DeathT[kv.Key], kv.Value)}"));
     }
 
-    static Fx One(Formation f, I.W w, int seed)
+    internal static Fx One(Formation f, I.W w, int seed)
     {
         var (r, p, e) = I.Raw(f, w, seed, verbose: true);
         var a = new Fx { N = 1, Turns = r.Turns, CurHitsTurns = r.Turns };
@@ -189,7 +189,7 @@ static class Mudo412Diag
         return a;
     }
 
-    static Fx Measure(Formation f, I.W w, int n = Seeds)
+    internal static Fx Measure(Formation f, I.W w, int n = Seeds)
     {
         var parts = new Fx[n];
         Parallel.For(0, n, s => parts[s] = One(f, w, s));

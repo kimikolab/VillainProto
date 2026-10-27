@@ -634,6 +634,7 @@ if (focusId == "kari408") { Kari408Diag.Run(args, stageIndex); return; }    // �
 if (focusId == "kari409") { Kari409Diag.Run(args, stageIndex); return; }    // 第409期
 if (focusId == "kari410") { Kari410Diag.Run(args, stageIndex); return; }    // 第410期
 if (focusId == "mudo412") { Mudo412Diag.Run(args, stageIndex); return; }    // 第412期
+if (focusId == "wata413") { Wata413Diag.Run(args, stageIndex); return; }    // 第413期
 if (focusId == "sh358") { Sh358Diag.Run(args, stageIndex); return; }        // 第358期
 if (focusId == "sh359") { Sh359Diag.Run(args, stageIndex); return; }        // 第359期
 if (focusId == "sh360") { Sh360Diag.Run(args, stageIndex); return; }        // 第360期

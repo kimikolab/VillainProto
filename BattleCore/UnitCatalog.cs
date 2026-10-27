@@ -257,16 +257,31 @@ public static class UnitCatalog
     };
 
     /// <summary>
-    /// 泥人形ムド（規定）。<b>第355期に第354期の M1＋M2 を規定にした</b>（ポンの判断・指示書 design/PHASE355_CURSE_SCAR_SPEC.md §2）——
+    /// 泥人形ムド（第355〜412期の規定・<b>第413期から旧</b>）。<b>第355期に第354期の M1＋M2 を規定にした</b>（ポンの判断・指示書 design/PHASE355_CURSE_SCAR_SPEC.md §2）——
     /// 旧（<see cref="MudoH354"/>）に <see cref="TraitId.MudoCurseRage"/> ／ <see cref="TraitId.MudoCurseHeavy"/> を足した。札と文面は第354期の <see cref="MudoM12"/> と同じ。
+    /// 第413期に M-ud を規定にした（<see cref="Mudo"/>）。この旧を読む器具は、現役網の内（`shockdigest`）だけを `Common.PinM412` で固定し、外は封印した（R426）。
     /// </summary>
-    public static readonly UnitDef Mudo = new()
+    public static readonly UnitDef MudoH412 = new()
     {
         Id = MudoH354.Id, Name = MudoH354.Name, MaxHp = MudoH354.MaxHp, Attack = MudoH354.Attack, Speed = MudoH354.Speed,
         Traits = MudoH354.Traits.Append(TraitId.MudoCurseRage).Append(TraitId.MudoCurseHeavy).ToArray(),
         PlusText = Must354(MudoH354.PlusText, MudoRageFind354, MudoRageText354) + MudoHeavyText354 + MudoWantText354,
         MinusText = MudoH354.MinusText,
         Flavor = MudoH354.Flavor
+    };
+
+    /// <summary>
+    /// 泥人形ムド（規定）。<b>第413期に第412期の M-ud を規定にした</b>（ポンの判断・指示書 design/PHASE413_WATA_GIFT_SPEC.md §0）——
+    /// 旧（<see cref="MudoH412"/>・M1＋M2）に <see cref="TraitId.MudoStrikeRage"/>（呪いの一撃で怒る）／ <see cref="TraitId.MudoMireDull"/>（殴り返しが敵を弱らせる）を足した。
+    /// HP ／ 攻 ／ 速・塗り（<c>Smear</c>）・「倒れると不発」はそのまま。札と文面は第412期の <see cref="MudoMud"/> と同じ。
+    /// </summary>
+    public static readonly UnitDef Mudo = new()
+    {
+        Id = MudoH412.Id, Name = MudoH412.Name, MaxHp = MudoH412.MaxHp, Attack = MudoH412.Attack, Speed = MudoH412.Speed,
+        Traits = MudoH412.Traits.Append(TraitId.MudoStrikeRage).Append(TraitId.MudoMireDull).ToArray(),
+        PlusText = MudoH412.PlusText + MudoStrikeText412 + MudoMireText412,
+        MinusText = MudoH412.MinusText,
+        Flavor = MudoH412.Flavor
     };
 
     /// <summary>
@@ -7425,12 +7440,13 @@ public static class UnitCatalog
     const string MudoStrikeText412 = "。呪われた者が刻まれるたび、泥が揺れて怒りが溜まる（味方の一撃 1 につき 1）";
     const string MudoMireText412 = "。殴り返しの泥は相手の得物を鈍らせる（1発につき攻撃力 -1）";
     /// <summary>第412期 M-u 呪いの一撃で怒る: 規定 ＋ <see cref="TraitId.MudoStrikeRage"/>。</summary>
-    public static readonly UnitDef MudoMu = Re351(Mudo, Mudo.Traits.Append(TraitId.MudoStrikeRage).ToArray(), Mudo.Name, Mudo.PlusText + MudoStrikeText412, Mudo.MinusText);
+    // 第413期: 規定のムドが M-ud になったので、版は旧（`MudoH412`）から作る（`MudoMud` は規定と同じ札の別の定義・残置）。
+    public static readonly UnitDef MudoMu = Re351(MudoH412, MudoH412.Traits.Append(TraitId.MudoStrikeRage).ToArray(), MudoH412.Name, MudoH412.PlusText + MudoStrikeText412, MudoH412.MinusText);
     /// <summary>第412期 M-d 殴り返しが敵を弱らせる: 規定 ＋ <see cref="TraitId.MudoMireDull"/>。</summary>
-    public static readonly UnitDef MudoMd = Re351(Mudo, Mudo.Traits.Append(TraitId.MudoMireDull).ToArray(), Mudo.Name, Mudo.PlusText + MudoMireText412, Mudo.MinusText);
+    public static readonly UnitDef MudoMd = Re351(MudoH412, MudoH412.Traits.Append(TraitId.MudoMireDull).ToArray(), MudoH412.Name, MudoH412.PlusText + MudoMireText412, MudoH412.MinusText);
     /// <summary>第412期 M-ud: 両方。</summary>
-    public static readonly UnitDef MudoMud = Re351(Mudo, Mudo.Traits.Append(TraitId.MudoStrikeRage).Append(TraitId.MudoMireDull).ToArray(), Mudo.Name,
-        Mudo.PlusText + MudoStrikeText412 + MudoMireText412, Mudo.MinusText);
+    public static readonly UnitDef MudoMud = Re351(MudoH412, MudoH412.Traits.Append(TraitId.MudoStrikeRage).Append(TraitId.MudoMireDull).ToArray(), MudoH412.Name,
+        MudoH412.PlusText + MudoStrikeText412 + MudoMireText412, MudoH412.MinusText);
     /// <summary>第354期 配り: 規定のワタ ＋ <see cref="TraitId.RelayFeedMudo"/>（ウツ（5発まで）→ ムド（下げ幅 12 まで）→ 最も強い敵の順に回す）。</summary>
     public static readonly UnitDef WataFeedMudo = Re351(WataH354, WataH354.Traits.Append(TraitId.RelayFeedMudo).ToArray(), WataH354.Name,
         WataFeedText354(WataH354.PlusText), WataH354.MinusText);

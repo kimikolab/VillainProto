@@ -772,6 +772,9 @@ public static UnitDef PinH404(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hagi)
 /// <summary>第411期: カリ ＝ 祟りのカーズ（第410期の KZ-90）を規定にした。第410期以前の規定（駆り立てのカリ）で測った器具はこれを通す（カリ → `KariH406`）。ほかの駒はそのまま返す。
 /// 古い口の終端（`PinS325` ／ `PinH401` ／ `PinH402` ／ `PinH403` ／ `PinH404`）の後ろに置いた——どの固定の口を通る器具もカリは旧になる。</summary>
 public static UnitDef PinK406(UnitDef d) => ReferenceEquals(d, UnitCatalog.Kari) ? UnitCatalog.KariH406 : d;
+/// <summary>第413期: 規定のムド（M-ud）→ 旧（`MudoH412`・M1＋M2）。<b>R426 により、現役網の内（`shockdigest`）だけが使う</b>（古い口の鎖には入れない・外の器具は封印）。</summary>
+public static UnitDef PinM412(UnitDef d) => ReferenceEquals(d, UnitCatalog.Mudo) ? UnitCatalog.MudoH412 : d;
+public static Formation Pin412(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinM412(d); return g; }
 public static Formation Pin406(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinK406(d); return g; }
 public static Formation Pin404(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinH404(d); return g; }
 public static Formation Pin402(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinH402(d); return g; }
