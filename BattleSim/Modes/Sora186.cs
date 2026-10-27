@@ -36,7 +36,7 @@ static partial class Sora186Diag
 
     static IEnumerable<(string Band, string Name, Formation F)> Bands()
     {
-        foreach ((string n, Formation f) in CompareBuilds()) yield return ("compare", n, f);
+        foreach ((string n, Formation f) in CompareBuildsH410()) yield return ("compare", n, f);
         foreach ((string n, Formation f) in CrossBuilds()) yield return ("交差帯", n, f);
     }
 

@@ -30,7 +30,7 @@ public static void Run(string[] args, int stageIndex)
 
     IReadOnlyList<EnemyCatalog.Stage> lsStages = EnemyCatalog.Stages;
     int lsW = lsStages.Count;
-    var lsRoster51 = UnitCatalog.All.ToArray();
+    var lsRoster51 = AllH410();
     UnitDef lsNew = UnitCatalog.Ono;
     var lsRoster52 = lsRoster51.Concat(new[] { lsNew }).ToArray();
 
@@ -156,7 +156,7 @@ public static void Run(string[] args, int stageIndex)
     }
     string LsPlace(Formation f) => string.Join(" / ", f.Occupied().Select(o => $"{FormationRules.SeatNames[o.Slot]}:{o.Def.Name}"));
 
-    var lsAllRows = CompareBuilds();
+    var lsAllRows = CompareBuildsH410();
 
     // ---- docs/balance.md の現在値（戦闘0回で読む）------------------------------------------------
     var lsBalance = new Dictionary<string, double[]>();
@@ -199,7 +199,7 @@ public static void Run(string[] args, int stageIndex)
     //        測れる組が無ければ受け取り最大の組を採り、床であることを報告する。
     // 配置:  単騎・軸あり は規則配置 H を出発点に `lastslot seats` で reseat → confirm（閾値 5.0pt）。
     var lsSoloPool = new[] { UnitCatalog.Dolga, UnitCatalog.Rica, UnitCatalog.Mug, UnitCatalog.Tsugi, UnitCatalog.Lili, UnitCatalog.SasaH360, UnitCatalog.Vel };
-    var lsTrapPool = new[] { UnitCatalog.Golm, UnitCatalog.Gan, UnitCatalog.KuguKG0, UnitCatalog.Shio, UnitCatalog.Kari, UnitCatalog.Hiyo,
+    var lsTrapPool = new[] { UnitCatalog.Golm, UnitCatalog.Gan, UnitCatalog.KuguKG0, UnitCatalog.Shio, UnitCatalog.KariH406, UnitCatalog.Hiyo,
                              UnitCatalog.Lili, UnitCatalog.Rica, UnitCatalog.Hari, UnitCatalog.Beni, UnitCatalog.Tsugi };
     const int LsPickSeeds = 50;
     IEnumerable<UnitDef[]> LsCombos4(UnitDef[] pool)
@@ -699,28 +699,29 @@ public static void Run(string[] args, int stageIndex)
         Console.WriteLine("# 第79期 —— 受け入れ基準（Q7）: `compare` 305 セルの突き合わせ");
         Console.WriteLine();
         int mism = 0, cellsN = 0, missing = 0;
+        var lsDocRows = CompareBuilds();   // docs/balance.md と突き合わせるので今の行（第411期）
         var lines = new List<string>();
-        Parallel.For(0, lsAllRows.Length, i =>
+        Parallel.For(0, lsDocRows.Length, i =>
         {
             var v = new double[lsW];
             for (int w = 0; w < lsW; w++)
             {
                 int wins = 0;
                 for (int seed = 0; seed < 200; seed++)
-                    if (BattleEngine.Run(lsAllRows[i].F, lsStages[w].Enemy, seed, verbose: false).PlayerWon) wins++;
+                    if (BattleEngine.Run(lsDocRows[i].F, lsStages[w].Enemy, seed, verbose: false).PlayerWon) wins++;
                 v[w] = wins * 100.0 / 200;
             }
             lock (lines)
             {
-                if (!lsBalance.TryGetValue(lsAllRows[i].Name, out double[]? doc)) { missing++; return; }
+                if (!lsBalance.TryGetValue(lsDocRows[i].Name, out double[]? doc)) { missing++; return; }
                 for (int w = 0; w < lsW; w++)
                 {
                     cellsN++;
-                    if (Math.Abs(doc[w] - v[w]) > 0.05) { mism++; lines.Add($"| {lsAllRows[i].Name} | 第{w + 1}波 | {doc[w]:F1} | {v[w]:F1} |"); }
+                    if (Math.Abs(doc[w] - v[w]) > 0.05) { mism++; lines.Add($"| {lsDocRows[i].Name} | 第{w + 1}波 | {doc[w]:F1} | {v[w]:F1} |"); }
                 }
             }
         });
-        Console.WriteLine($"`CompareBuilds()` {lsAllRows.Length} 行 × {lsW} 波 × seed 0..199 を回し直して `docs/balance.md` と突き合わせた: "
+        Console.WriteLine($"`CompareBuilds()` {lsDocRows.Length} 行 × {lsW} 波 × seed 0..199 を回し直して `docs/balance.md` と突き合わせた: "
                           + $"**{cellsN} セル・ずれ {mism} 件**（`docs/balance.md` に無い行 {missing}）。");
         if (lines.Count > 0)
         {

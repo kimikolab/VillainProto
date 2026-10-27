@@ -268,8 +268,8 @@ public static void Run(string[] args, int stageIndex)
             Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.HibiH359, center: UnitCatalog.Dolga, back1: UnitCatalog.Zan, back3: UnitCatalog.Hisa)),
         // 第148期 段0。帯A 79.6 → 85.3（+5.7）・狙 ○・情報セル 3 → 3・粗順 9。
         ("駆り立て (カリ×ドルガ)",
-            Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Gald, center: UnitCatalog.Gan, back1: UnitCatalog.Kari, back3: UnitCatalog.Zan),
-            Formation.Build(front1: UnitCatalog.Zan, front3: UnitCatalog.Gald, center: UnitCatalog.Dolga, back1: UnitCatalog.Gan, back3: UnitCatalog.Kari)),
+            Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Gald, center: UnitCatalog.Gan, back1: UnitCatalog.KariH406, back3: UnitCatalog.Zan),
+            Formation.Build(front1: UnitCatalog.Zan, front3: UnitCatalog.Gald, center: UnitCatalog.Dolga, back1: UnitCatalog.Gan, back3: UnitCatalog.KariH406)),
         // 第148期 段0。帯A 84.0 → 94.4（+10.4）・狙 ○・情報セル 2 → 3・粗順 2。
         ("火選り (ヒヨ×ホタ)",
             Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Mudo, center: UnitCatalog.Hota, back1: UnitCatalog.Hiyo, back3: UnitCatalog.Borg),

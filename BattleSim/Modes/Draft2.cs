@@ -45,7 +45,7 @@ public static void Run(string[] args, int stageIndex)
     IReadOnlyList<EnemyCatalog.Stage> d2Base = EnemyCatalog.Stages;
     int d2W = d2Base.Count;
     var d2Sw = System.Diagnostics.Stopwatch.StartNew();
-    var d2Roster = UnitCatalog.All.ToArray();
+    var d2Roster = AllH410();
     int d2RN = d2Roster.Length;                       // 51
     var d2KeyOf = d2Roster.ToDictionary(u => u.Id, TraitKeyMap.KeysOf);
 
@@ -317,7 +317,7 @@ public static void Run(string[] args, int stageIndex)
         // ---- 0-4. 弱い波の倍率の根拠 ----
         Console.WriteLine("## 0-4. 弱い波の倍率の根拠（§2-3）");
         Console.WriteLine();
-        var idealRows0 = CompareBuilds();
+        var idealRows0 = CompareBuildsH410();
         double idAtk = idealRows0.Average(b => b.F.Occupied().Sum(o => o.Def.Attack));
         double idHp = idealRows0.Average(b => b.F.Occupied().Sum(o => o.Def.MaxHp));
         Console.WriteLine($"理想編成 {idealRows0.Length} 行の 総攻の平均 **{idAtk:F1}** / 総HPの平均 **{idHp:F0}**。");
@@ -726,7 +726,7 @@ public static void Run(string[] args, int stageIndex)
         Console.WriteLine();
 
         // 理想61行（同じ実行の中で測り直す）
-        var idealRows = CompareBuilds();
+        var idealRows = CompareBuildsH410();
         var idFull = new double[idealRows.Length];
         Parallel.For(0, idealRows.Length, r =>
         {

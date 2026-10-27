@@ -355,7 +355,7 @@ public static Formation Pin324(Formation f)
 /// 第326期: 規定のシガ（段0 ＝ 2倍で入れた的は怖くない）を第322〜325期の規定（`ShigaH325`）に替える。ほかの駒はそのまま返す。
 /// 古い固定の口（`PinS317` ／ `PinSS318` ／ `PinSH321` ／ `PinDS316`）は先に `UnitCatalog.Shiga` をもっと古い規定へ替えるので、ここを終端に通す必要はない。
 /// </summary>
-public static UnitDef PinS325(UnitDef d) => ReferenceEquals(d, UnitCatalog.Shiga) ? UnitCatalog.ShigaH325 : d;
+public static UnitDef PinS325(UnitDef d) => ReferenceEquals(d, UnitCatalog.Shiga) ? UnitCatalog.ShigaH325 : PinK406(d);   // 第411期: 規定のカリ（祟りのカーズ）も旧（駆り立てのカリ）へ
 
 /// <summary>第326期: シガの段0 を規定にした。第325期の規定の駒で測った器具（`tou325`）はこれを通す（トウ ／ カタ ／ クグは E3 のまま）。陣形とレリックは保つ。
 /// 第327期: トウも第325〜326期の規定（`TouH326`）へ替える（`PinT326`）。</summary>
@@ -701,9 +701,16 @@ public static UnitDef PinM379(UnitDef d) => ReferenceEquals(d, UnitCatalog.Mug) 
 /// <summary>第385期: 楽士 G1 を哀歌のエレ（`ere`・ウケの籍）にした。過去の器具はエレを第384期の版の楽士（`Bard384G1`）に、`All` はウケのいる第384期の並びに、`compare` は 64 行に固定する。</summary>
 public static UnitDef PinE385(UnitDef d) => ReferenceEquals(d, UnitCatalog.Ere) ? UnitCatalog.Bard384G1 : PinH389(d);   // 第390期: 規定のハギも旧へ
 public static Formation Pin385(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinE385(d); return g; }
-public static UnitDef[] AllH384() => UnitCatalog.All.Select(d => ReferenceEquals(d, UnitCatalog.Ere) ? UnitCatalog.Uke : d).ToArray();
+public static UnitDef[] AllH384() => AllH410().Select(d => ReferenceEquals(d, UnitCatalog.Ere) ? UnitCatalog.Uke : d).ToArray();   // 第411期: カリも旧へ
+/// <summary>第411期: `All` のカリを旧（駆り立てのカリ・`KariH406`）に戻した写し（第410期までの 52 枚）。</summary>
+public static UnitDef[] AllH410() => UnitCatalog.All.Select(PinK406).ToArray();
+    public static UnitDef[] EveryoneH410() => UnitCatalog.Everyone.Select(PinK406).ToArray();   // `Everyone` の第410期まで（id kari は駆り立てのカリ）
+/// <summary>第411期: `compare` の2行をカーズで作り替えて改名した（新 → 旧の行名）。第410期までの器具は `CompareBuildsH410` で旧の行名 ＋ 旧のカリに戻して読む。</summary>
+public static readonly (string Now, string Old)[] CompareRenames411 = { ("刻み (カーズ×ドルガ)", "駆り立て (カリ×ドルガ)"), ("刻み改 (カーズ×死軸)", "駆り立て改 (カリ×死軸)") };
+public static (string Name, Formation F)[] CompareBuildsH410() => CompareBuilds()
+    .Select(r => (CompareRenames411.FirstOrDefault(x => x.Now == r.Name).Old ?? r.Name, Pin406(r.F))).ToArray();
 public static readonly string[] CompareRows385 = { "燃焼×哀歌 (ボルグ×ホタ×エレ)", "死軸×哀歌 (リィカ×スィド×エレ)" };
-public static (string Name, Formation F)[] CompareBuildsH384() => CompareBuilds().Where(r => !CompareRows385.Contains(r.Name)).Select(r => (r.Name, Pin393(r.F))).ToArray();   // 第394期: 過去の器具の行なのでトモも旧へ
+public static (string Name, Formation F)[] CompareBuildsH384() => CompareBuildsH410().Where(r => !CompareRows385.Contains(r.Name)).Select(r => (r.Name, Pin393(r.F))).ToArray();   // 第394期: 過去の器具の行なのでトモも旧へ
 /// <summary>第385期: 「試遊・死 エレ ／ 試遊・燃焼 エレ」を第384期の名前（「版・楽士 死 ／ 外」）と版の楽士（`Bard384G1`）に戻した写し（第382〜384期の器具の試遊の台の項目）。</summary>
 /// <summary>第386期: `Presets.Versions` の末尾に版の2台（「版・弾け ／ 寄生 死の連鎖」）を足した。第385期の一覧（足す前）は、末尾の版の台を除いた写し。</summary>
 public static (string Name, Formation F)[] VersionsH385() => VersionsH386().Where(r => r.Name is not ("版・弾け 死の連鎖" or "版・寄生 死の連鎖")).ToArray();   // 第387期: 第386期の一覧（ムグは旧）から
@@ -754,14 +761,18 @@ public static Formation Pin398(Formation f) { var g = f.Clone(); foreach ((int s
 /// <summary>第400期: トモ ＝ L1 を規定にした。第394〜399期の規定で測った器具はこれを通す（トモ → `TomoH399`（T3））。ほかの駒はそのまま返す。</summary>
 public static UnitDef PinT399(UnitDef d) => ReferenceEquals(d, UnitCatalog.Tomo) ? UnitCatalog.TomoH399 : PinH401(d);   // 第402期: 規定のハギも第392〜401期の旧（P1h）へ
 /// <summary>第402期: ハギ ＝ 第401期の H123 を規定にした。第392〜401期の規定（P1h）で測った器具はこれを通す（ハギ → `HagiH401`）。ほかの駒はそのまま返す。`PinT399`（第394期以降の口の終端）の後ろにも置いた。</summary>
-public static UnitDef PinH401(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hagi) || ReferenceEquals(d, UnitCatalog.HagiH402) || ReferenceEquals(d, UnitCatalog.HagiH403) || ReferenceEquals(d, UnitCatalog.HagiH404) ? UnitCatalog.HagiH401 : d;   // 第405期: `HagiH404` も   // 第403期: 第402期の規定（`HagiH402`）も
+public static UnitDef PinH401(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hagi) || ReferenceEquals(d, UnitCatalog.HagiH402) || ReferenceEquals(d, UnitCatalog.HagiH403) || ReferenceEquals(d, UnitCatalog.HagiH404) ? UnitCatalog.HagiH401 : PinK406(d);   // 第405期: `HagiH404` も   // 第403期: 第402期の規定（`HagiH402`）も   // 第411期: カリも旧へ
 /// <summary>第403期: ハギ ＝ 第402期の B を規定にした。第402期の規定（H123）で測った器具はこれを通す（ハギ → `HagiH402`）。ほかの駒はそのまま返す。</summary>
-public static UnitDef PinH402(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hagi) || ReferenceEquals(d, UnitCatalog.HagiH403) || ReferenceEquals(d, UnitCatalog.HagiH404) ? UnitCatalog.HagiH402 : d;   // 第405期: `HagiH404` も   // 第404期: 第403期の規定（`HagiH403`）も
+public static UnitDef PinH402(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hagi) || ReferenceEquals(d, UnitCatalog.HagiH403) || ReferenceEquals(d, UnitCatalog.HagiH404) ? UnitCatalog.HagiH402 : PinK406(d);   // 第405期: `HagiH404` も   // 第404期: 第403期の規定（`HagiH403`）も   // 第411期: カリも旧へ
 /// <summary>第404期: ハギ ＝ 第403期の T1 を規定にした。第403期の規定（H123 ＋ B）で測った器具はこれを通す（ハギ → `HagiH403`）。ほかの駒はそのまま返す。</summary>
-public static UnitDef PinH403(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hagi) || ReferenceEquals(d, UnitCatalog.HagiH404) ? UnitCatalog.HagiH403 : d;   // 第405期: 第404期の規定（`HagiH404`）も
+public static UnitDef PinH403(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hagi) || ReferenceEquals(d, UnitCatalog.HagiH404) ? UnitCatalog.HagiH403 : PinK406(d);   // 第405期: 第404期の規定（`HagiH404`）も   // 第411期: カリも旧へ
 public static Formation Pin403(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinH403(d); return g; }
 /// <summary>第405期: ハギ ＝ 第404期の R50 を規定にした。第404期の規定（H123 ＋ B ＋ T1）で測った器具はこれを通す（ハギ → `HagiH404`）。ほかの駒はそのまま返す。</summary>
-public static UnitDef PinH404(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hagi) ? UnitCatalog.HagiH404 : d;
+public static UnitDef PinH404(UnitDef d) => ReferenceEquals(d, UnitCatalog.Hagi) ? UnitCatalog.HagiH404 : PinK406(d);   // 第411期: カリも旧へ
+/// <summary>第411期: カリ ＝ 祟りのカーズ（第410期の KZ-90）を規定にした。第410期以前の規定（駆り立てのカリ）で測った器具はこれを通す（カリ → `KariH406`）。ほかの駒はそのまま返す。
+/// 古い口の終端（`PinS325` ／ `PinH401` ／ `PinH402` ／ `PinH403` ／ `PinH404`）の後ろに置いた——どの固定の口を通る器具もカリは旧になる。</summary>
+public static UnitDef PinK406(UnitDef d) => ReferenceEquals(d, UnitCatalog.Kari) ? UnitCatalog.KariH406 : d;
+public static Formation Pin406(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinK406(d); return g; }
 public static Formation Pin404(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinH404(d); return g; }
 public static Formation Pin402(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinH402(d); return g; }
 public static Formation Pin401(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinH401(d); return g; }
@@ -811,8 +822,12 @@ public static readonly string[] VersionRows404 = { "版・刈り続け ハギ" }
 /// 第404期の一覧は、ほかの台のハギを旧（`HagiH404`）に固定し、「版・大物 ハギ」を第404期の A に戻し、末尾に「版・刈り続け ハギ」を足し戻した写し。</summary>
 /// <summary>第408〜410期: カリの版の台（第408期「版・K-k 呪い」「版・K-d 呪い」・第410期に「版・K-d 呪い」を「版・カーズ 呪い」に改名）を末尾に足した。
 /// 第407期までの一覧はそれを外した写し（ほかの台は同じ・カリは規定の駒のまま）。第410期に足した——第408〜409期は鎖の終端（`Presets.Versions`）から外し忘れて、第384〜403期の試遊の台の検査（`VersionsH384` 〜 `VersionsH402` を読む 19 本）が × になっていた。</summary>
-public static readonly string[] VersionRows410 = { "版・K-k 呪い", "版・K-d 呪い", "版・カーズ 呪い" };
+public static readonly string[] VersionRows410 = { "版・K-k 呪い", "版・K-d 呪い", "版・カーズ 呪い", "試遊・カーズ 呪い" };   // 第411期: 「版・カーズ 呪い」を「試遊・カーズ 呪い」（規定のカーズ）に改め、「版・K-k 呪い」を外した
 public static (string Name, Formation F)[] VersionsH407() => Presets.Versions.Where(r => !VersionRows410.Contains(r.Name)).ToArray();
+/// <summary>第411期: 第410期の一覧（第407期の一覧の末尾に「版・K-k 呪い」（K-k）と「版・カーズ 呪い」（KZ-90）・カリは旧）。第408〜410期の器具の試遊の台の項目が読む。</summary>
+public static (string Name, Formation F)[] VersionsH410() => VersionsH407().Select(r => (r.Name, F: Pin406(r.F)))
+    .Append(("版・K-k 呪い", Formation.Build(front1: UnitCatalog.KariKk, front3: UnitCatalog.Mudo, center: UnitCatalog.Nel, back1: UnitCatalog.Kubi, back3: UnitCatalog.Utsu)))
+    .Append(("版・カーズ 呪い", Presets.KarzBoard410())).ToArray();
 public static (string Name, Formation F)[] VersionsH404() => VersionsH407()
     .Select(r => r.Name == "版・大物 ハギ" ? (r.Name, Presets.HagiBig402(UnitCatalog.HagiBigA404)) : (r.Name, F: Pin404(r.F)))
     .Append(("版・刈り続け ハギ", Presets.HagiReap404())).ToArray();
@@ -1315,7 +1330,9 @@ public static string UnitRowOf(string doc, string name)
 // 第282期: 旧トメ（止め・`UnitCatalog.TomeT0`）に固定した器具が読む `compare` の行。規定のトメ（第282期から T1）を T0 に差し替えた写し
 // ——第281期までの行と中身が同じになる（finisher ／ survive ／ escale が使う。出力が規定化の前後で一致するのが門）。
 public static readonly (string Name, Formation F)[] CompareT0 =
-    Presets.Compare.Select(r => (r.Name, FvSwap(r.F, UnitCatalog.Tome, UnitCatalog.TomeT0))).ToArray();
+    Presets.Compare.Select(r => (OldName411(r.Name), FvSwap(Pin406(r.F), UnitCatalog.Tome, UnitCatalog.TomeT0))).ToArray();
+// 第411期: `CompareT0` は第410期までの行（旧の行名 ＋ 旧のカリ `KariH406`）。`CompareRenames411` は初期化の順でまだ空のことがあるので名前は直に書く
+public static string OldName411(string n) => n switch { "刻み (カーズ×ドルガ)" => "駆り立て (カリ×ドルガ)", "刻み改 (カーズ×死軸)" => "駆り立て改 (カリ×死軸)", _ => n };
 // 第92期の交差帯。**CompareBuilds() とは完全に別の入口**で、生成物も docs/crossing.md と分けてある。
 // 定義は Presets.Cross（上と同じ理由で移した）。
 public static (string Name, Formation F)[] CrossBuilds() => Presets.Cross;

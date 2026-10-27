@@ -449,16 +449,16 @@ public static void Run(string[] args, int stageIndex)
             ("カリ同居（トメ後1 / カリ後3）",
              Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Gald,
                              center: UnitCatalog.Sora, back1: UnitCatalog.TomeT0,
-                             back3: UnitCatalog.Kari)),
+                             back3: UnitCatalog.KariH406)),
             // 対照（同じ顔ぶれで5枚目を素体に）。**この3行の差が干渉の帰属。**
             ("対照（トメ後1 / 5枚目は素体のカリ）",
              Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Gald,
                              center: UnitCatalog.Sora, back1: UnitCatalog.TomeT0,
                              back3: new UnitDef
                              {
-                                 Id = "kari_plain", Name = "素体のカリ", MaxHp = UnitCatalog.Kari.MaxHp,
-                                 Attack = UnitCatalog.Kari.Attack, Speed = UnitCatalog.Kari.Speed,
-                                 Traits = Array.Empty<TraitId>(), Pattern = UnitCatalog.Kari.Pattern
+                                 Id = "kari_plain", Name = "素体のカリ", MaxHp = UnitCatalog.KariH406.MaxHp,
+                                 Attack = UnitCatalog.KariH406.Attack, Speed = UnitCatalog.KariH406.Speed,
+                                 Traits = Array.Empty<TraitId>(), Pattern = UnitCatalog.KariH406.Pattern
                              }))
         };
         Console.WriteLine("| 版 | 第1波 | 第2波 | 第3波 | 第4波 | 第5波 | 平均 | 発火 | 空振り | 列越え | 消費 | 止めた砲火 | 対象 |");

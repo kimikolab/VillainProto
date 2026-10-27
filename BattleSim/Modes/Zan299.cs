@@ -42,7 +42,7 @@ static class Zan299Diag
     static string Short(UnitDef d) { var m = System.Text.RegularExpressions.Regex.Match(d.Name, @"[ァ-ヴー]+$"); return m.Success ? m.Value : d.Name; }
     // 第300期: ザン（ZM-a）・ヒサ（矢面は羽も半分）を規定にした——台は `Pin300` で第299期の規定（ザン `ZanZNb` ／ ヒサ `HisaHKs`）に固定する。
     static Formation Playtest(string n) => Pin300(Presets.Playtest.First(r => r.Name == n).F);
-    static Formation CompareRow(string n) => Pin300(CompareBuilds().First(r => r.Name == n).F);
+    static Formation CompareRow(string n) => Pin300(CompareBuildsH410().First(r => r.Name == n).F);
     static bool Has(Formation f, UnitDef d) => f.Occupied().Any(o => ReferenceEquals(o.Def, d));
 
     /// <summary>代表台（§6-2）。段0 の後の規定で組む。最後の2台はミサのいない ザンの行（ZM-a ＝ ZM-1 の確認）。</summary>
@@ -236,7 +236,7 @@ static class Zan299Diag
     {
         Console.WriteLine("# 第299期 `compare` 64 行 × 版（seed 0..199・第1〜5波）");
         Console.WriteLine();
-        var rows = CompareBuilds().Select(r => (r.Name, F: Pin300(r.F))).ToArray();   // 第300期: 第299期の規定に固定
+        var rows = CompareBuildsH410().Select(r => (r.Name, F: Pin300(r.F))).ToArray();   // 第300期: 第299期の規定に固定
         var baseR = rows.ToDictionary(r => r.Name, r => CompareRates(r.F));
         Console.WriteLine($"ザンのいる行: {string.Join(" ／ ", rows.Where(r => Has(r.F, UnitCatalog.ZanZNb)).Select(r => r.Name))}");
         Console.WriteLine();

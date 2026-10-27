@@ -120,7 +120,7 @@ static partial class Sh366Diag
         // ---- 試遊の台 ----
         {
             // 第367期: 第366期の「版・」の3台は外した（並びは `Presets.HisaBoard366` に固定・版の台はここで組む）。検査は「頭の7台」と「第366期の版の台が無い」に。
-            var vr = Presets.Versions.Select(r => r.Name).ToArray();
+            var vr = VersionsH407().Select(r => r.Name).ToArray();
             bool rows = vr.Take(7).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷" })
                 && !vr.Any(n => n is "版・P-t ヒサ" or "版・P-60 ヒサ" or "版・P-180 ヒサ");
             Expect("`Presets.Versions` の頭 ＝ 試遊の7台・第366期の「版・P-t ／ P-60 ／ P-180 ヒサ」は無い（第367期に外した）", rows, string.Join("、", vr));

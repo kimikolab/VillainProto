@@ -149,7 +149,7 @@ static partial class Formation2Diag
         var sB = new double[2, 4]; int nB = 0;
         foreach (string row in TankRows)
         {
-            Formation x = CompareBuilds().First(r => r.Name == row).F;
+            Formation x = CompareBuildsH410().First(r => r.Name == row).F;
             UnitDef gald = x.Occupied().First(o => o.Def.Id == "gald").Def;
             var mem = Members(x);
             var cells = new List<string>(); var up201 = new List<string>(); var up202 = new List<string>();
@@ -250,7 +250,7 @@ static partial class Formation2Diag
     static List<string> CompareLines(Func<Formation, Formation> map, Func<Formation, bool>? only = null)
     {
         var got = new List<string>();
-        foreach (var (name, f0) in CompareBuilds())
+        foreach (var (name, f0) in CompareBuildsH410())
         {
             if (only is not null && !only(f0)) { got.Add(""); continue; }
             Formation f = map(f0);
@@ -286,7 +286,7 @@ static partial class Formation2Diag
             var moved = new List<string>();
             for (int i = 0; i < Math.Min(want.Count, now.Count); i++)
             {
-                bool sid = CompareBuilds()[i].F.Occupied().Any(o => o.Def.Id == "sid");
+                bool sid = CompareBuildsH410()[i].F.Occupied().Any(o => o.Def.Id == "sid");
                 if (want[i].Trim() != back[i].Trim()) dBack++;
                 if (sid) { if (want[i].Trim() != now[i].Trim()) moved.Add(now[i]); continue; }
                 n++; if (want[i].Trim() != now[i].Trim()) dNo++;
@@ -332,7 +332,7 @@ static partial class Formation2Diag
         foreach (var (_, _, _, s) in SidDiag.MainForms197()) forms.Add(WithShape(ToDiamond(s, SidDiag.SidS, s.Occupied().First(o => o.Def.Id == "beni").Def, new[] { 0, 4, 1 }), FormationShape.Diamond));
         foreach (string row in TankRows)
         {
-            Formation x = CompareBuilds().First(r => r.Name == row).F;
+            Formation x = CompareBuildsH410().First(r => r.Name == row).F;
             forms.Add(ToDiamond(x, x.Occupied().First(o => o.Def.Id == "gald").Def, null, new[] { 0, 2, 4, 1 }));
         }
         long total = 0, miss = 0, fb = 0, tie = 0, tieBad = 0, byLane1 = 0, byLane2 = 0, byLane3 = 0, unknown = 0;

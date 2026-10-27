@@ -96,7 +96,7 @@ static class Mark184Diag
     static readonly string[] MarkUnits = { "hisa", "zan", "sora", "tome", "kari" };
     static bool Has(Formation f, string id) => f.Occupied().Any(o => o.Def.Id == id);
     static bool Mine(Formation f) => MarkUnits.Any(id => Has(f, id));
-    static string Who(Formation f) => string.Join("・", MarkUnits.Where(id => Has(f, id)).Select(id => Short(UnitCatalog.ById(id))));
+    static string Who(Formation f) => string.Join("・", MarkUnits.Where(id => Has(f, id)).Select(id => Short(PinK406(UnitCatalog.ById(id)))));
 
     static BattleResult Fight(Formation f, int st, int seed, Version v, bool verbose = false)
         => BattleEngine.Run(Apply(f, v), EnemyCatalog.Stages[st].Enemy, seed, verbose: verbose, markRule: v.Rule);
@@ -142,7 +142,7 @@ static class Mark184Diag
         Console.WriteLine("|---|---|---|---|");
         foreach (var kv in writerIds)
         {
-            var mine = UnitCatalog.Everyone.Where(d => d.Traits.Contains(kv.Key)).Select(d => d.Name).ToList();
+            var mine = EveryoneH410().Where(d => d.Traits.Contains(kv.Key)).Select(d => d.Name).ToList();
             var foes = EnemyCatalog.Stages.SelectMany(s => s.Enemy.Occupied()).Select(o => o.Def)
                 .Where(d => d.Traits.Contains(kv.Key)).Select(d => d.Name).Distinct().ToList();
             Console.WriteLine("| `" + kv.Key + "` | " + kv.Value + " | " + (mine.Count == 0 ? "—" : string.Join("・", mine))
@@ -222,7 +222,7 @@ static class Mark184Diag
                 if (mi is not null && mi.DeclaringType == ty) hooks.Add(h);
             }
             if (hooks.Count == 0) continue;
-            var holders = UnitCatalog.All.Where(d => d.Traits.Contains(id)).Select(d => Short(d)).ToList();
+            var holders = AllH410().Where(d => d.Traits.Contains(id)).Select(d => Short(d)).ToList();
             Console.WriteLine("| `" + id + "` | " + string.Join(" / ", hooks) + " | " + (holders.Count == 0 ? "—" : string.Join("・", holders)) + " |");
         }
         Console.WriteLine();
@@ -710,8 +710,8 @@ static class Mark184Diag
         }
 
         // (e) 保持者
-        Console.WriteLine("- (e) 旧 `Marker` の保持者（`All`）: **" + UnitCatalog.All.Count(d => d.Traits.Contains(TraitId.Marker)) + "** ／ 旧 `Avenge`: **"
-                          + UnitCatalog.All.Count(d => d.Traits.Contains(TraitId.Avenge)) + "**（どちらも 0 が正）");
+        Console.WriteLine("- (e) 旧 `Marker` の保持者（`All`）: **" + AllH410().Count(d => d.Traits.Contains(TraitId.Marker)) + "** ／ 旧 `Avenge`: **"
+                          + AllH410().Count(d => d.Traits.Contains(TraitId.Avenge)) + "**（どちらも 0 が正）");
         Console.WriteLine();
     }
 

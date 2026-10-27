@@ -6373,8 +6373,10 @@ public static class UnitCatalog
     ///
     /// <para>HP62・攻4・速9 は探索段階の初期値。<b>掃引の対象は <c>GoadRule.Boost</c> だけ</b>で、
     /// HP・攻・速は振らない。<b>攻4 と低いのは、貢献が他人を強くすることだから。</b></para>
+    /// <para><b>第411期: 規定のカリは祟りのカーズ（<see cref="Kari"/>）に転生した。</b>これは第52〜410期の規定（駆り立てのカリ）の写しで、`All` の外の対照。
+    /// 第410期以前の規定で測った器具は <c>Common.PinK406</c> で読み替える。</para>
     /// </summary>
-    public static readonly UnitDef Kari = new()
+    public static readonly UnitDef KariH406 = new()
     {
         Id = "kari",
         Name = "駆り立てのカリ",
@@ -6386,6 +6388,33 @@ public static class UnitCatalog
         PlusText = "毎ターン隣のいちばん殴れる味方に自分の力を渡す（攻撃力が上がり続ける）",
         MinusText = "渡した相手を前に押し出すので、その味方は狙われる。隣に誰もいなければ何もできない",
         Flavor = "前に出ろとしか言えない。言い方を知らないだけで、渡せるものは全部渡している。"
+    };
+
+    /// <summary>
+    /// 祟りのカーズ（第411期に転生・第407〜410期・旧は <see cref="KariH406"/>）。<b>呪いを刻む書き手</b>——手番で、呪われた敵のうち弱体の累計が
+    /// 最も大きい1体（まだ印の無い敵）に「攻撃するたび攻撃力 −4」の印を付ける（札 <see cref="TraitId.KariMarkDeepen"/>・判定は engine の <c>KariMark409</c>）。
+    /// 印を付けられる敵がいなければふつうに殴る。−4 は敵への <c>Dull</c> で、ムドの <c>MudoCurseRage</c> には入らない。
+    /// <para>HP 90 ／ 攻 4 ／ 速 9 は第410期の KZ-90（強4 で KZ-62 の 68 → 100・ボスは札が受け持ち・強4 は HP が受け持つ）。</para>
+    /// <para>採らなかった版（定義は残置・`All` の外）:
+    /// K-k 刻む（<see cref="KariKk"/>）＝ 開戦の味方への弱体で刃が 0 になり働かない（第408期）／
+    /// K-d 駆り立てる（<see cref="KariKd"/>）＝ 効いていたのは引きずり出しではなく −4（第409期の K-d0 と同じかそれ以下）／
+    /// K-d1 往復止め（<see cref="KariKd1"/>）＝ 往復は仕事をしておらず勝率は K-d と同じ（第409期）／
+    /// KZ-62（<see cref="KariKz62"/>）＝ 前1 で T2.6 に倒れて印が 2 体で止まる・強4 68（第410期）。
+    /// <see cref="KariKd0"/> ／ <see cref="KariKz90"/> は規定と同じ札の別の定義（K-d0 は HP 62・KZ-90 は規定と同じ数値）として残す。</para>
+    /// </summary>
+    public static readonly UnitDef Kari = new()
+    {
+        Id = "kari",
+        Name = "祟りのカーズ",
+        MaxHp = 90,
+        Attack = 4,
+        Speed = 9,
+        Advances = false,
+        Traits = new[] { TraitId.KariMarkDeepen },
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "呪いを刻む") },
+        PlusText = "手番で、呪われた敵のうち呪いがいちばん深い1体に呪いを刻みつける。刻まれた敵は殴るたび呪いが深まる（攻撃力 -4・カーズが倒れるまで）",
+        MinusText = "呪いを刻むのに手一杯で殴れない（刻める敵が残っている間は自分は攻撃しない）",
+        Flavor = ""
     };
 
 
@@ -7322,39 +7351,39 @@ public static class UnitCatalog
     /// <summary>第408期 K-k 刻む: 余った呪いを発の数に変える（<see cref="TraitId.KariCarve"/>・攻 6）。</summary>
     public static readonly UnitDef KariKk = new()
     {
-        Id = Kari.Id, Name = "刻みのカリ", MaxHp = Kari.MaxHp, Attack = 6, Speed = Kari.Speed, Advances = Kari.Advances, Pattern = Kari.Pattern,
+        Id = KariH406.Id, Name = "刻みのカリ", MaxHp = KariH406.MaxHp, Attack = 6, Speed = KariH406.Speed, Advances = KariH406.Advances, Pattern = KariH406.Pattern,
         Traits = new[] { TraitId.KariCarve },
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "呪いを刻む") },
         PlusText = "手番で、呪われた敵のうち積まれた呪いがいちばん深い1体を、呪いの深さに応じて何度も刻む（4 につき 1 度・最大 8 度）",
         MinusText = "刻むたび刃がこぼれる（攻撃力 -1）。呪われた敵が届かなければふつうに殴る",
-        Flavor = Kari.Flavor,
+        Flavor = KariH406.Flavor,
     };
     /// <summary>第409期 K-d1 往復止め: K-d ＋ 同じ敵を二度は引きずり出さない（<see cref="TraitId.KariDragOnce"/>）。</summary>
     public static readonly UnitDef KariKd1 = new()
     {
-        Id = Kari.Id, Name = "駆り立てのカリ", MaxHp = Kari.MaxHp, Attack = Kari.Attack, Speed = Kari.Speed, Advances = Kari.Advances, Pattern = Kari.Pattern,
+        Id = KariH406.Id, Name = "駆り立てのカリ", MaxHp = KariH406.MaxHp, Attack = KariH406.Attack, Speed = KariH406.Speed, Advances = KariH406.Advances, Pattern = KariH406.Pattern,
         Traits = new[] { TraitId.KariDrag, TraitId.KariDragOnce },
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "前へ駆り立てる") },
         PlusText = "手番で、呪われた敵のうち最も後ろの1体を前へ引きずり出す（同じ敵は一度だけ）。引きずり出された敵は殴るたび呪いが深まる（攻撃力 -4）",
         MinusText = "引きずり出された敵はカリを狙う（カリが倒れるまで）",
-        Flavor = Kari.Flavor,
+        Flavor = KariH406.Flavor,
     };
     /// <summary>第409期 K-d0 呪いを深める: 引きずり出さず、累計の大きい呪われた敵に「殴るたび −4」を付けていく（<see cref="TraitId.KariMarkDeepen"/>・攻 4）。</summary>
     public static readonly UnitDef KariKd0 = new()
     {
-        Id = Kari.Id, Name = "駆り立てのカリ", MaxHp = Kari.MaxHp, Attack = Kari.Attack, Speed = Kari.Speed, Advances = Kari.Advances, Pattern = Kari.Pattern,
+        Id = KariH406.Id, Name = "駆り立てのカリ", MaxHp = KariH406.MaxHp, Attack = KariH406.Attack, Speed = KariH406.Speed, Advances = KariH406.Advances, Pattern = KariH406.Pattern,
         Traits = new[] { TraitId.KariMarkDeepen },
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "呪いを深める") },
         PlusText = "手番で、呪われた敵のうち呪いがいちばん深い1体に呪いを刻みつける。刻まれた敵は殴るたび呪いが深まる（攻撃力 -4・カリが倒れるまで）",
         MinusText = "呪いを刻むのに手一杯で殴れない（刻める敵が残っている間はカリ自身は攻撃しない）",
-        Flavor = Kari.Flavor,
+        Flavor = KariH406.Flavor,
     };
     // 第410期: K-d0 を採る（ポンの判断・像は「呪いを刻む書き手」）。名前は「祟りのカーズ」（`Id = "kari"` のまま・札は K-d0 の `KariMarkDeepen`）。規定化の前に HP 62 ／ 90 の2版を測る。
     const string KarzPlus410 = "手番で、呪われた敵のうち呪いがいちばん深い1体に呪いを刻みつける。刻まれた敵は殴るたび呪いが深まる（攻撃力 -4・カーズが倒れるまで）";
     const string KarzMinus410 = "呪いを刻むのに手一杯で殴れない（刻める敵が残っている間は自分は攻撃しない）";
     static UnitDef Karz410(int hp) => new()
     {
-        Id = Kari.Id, Name = "祟りのカーズ", MaxHp = hp, Attack = Kari.Attack, Speed = Kari.Speed, Advances = Kari.Advances, Pattern = Kari.Pattern,
+        Id = KariH406.Id, Name = "祟りのカーズ", MaxHp = hp, Attack = KariH406.Attack, Speed = KariH406.Speed, Advances = KariH406.Advances, Pattern = KariH406.Pattern,
         Traits = new[] { TraitId.KariMarkDeepen },
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "呪いを刻む") },
         PlusText = KarzPlus410, MinusText = KarzMinus410, Flavor = "",
@@ -7366,12 +7395,12 @@ public static class UnitCatalog
     /// <summary>第408期 K-d 駆り立てる: 呪われた後列の敵を前へ引きずり出す（<see cref="TraitId.KariDrag"/>・攻 4）。</summary>
     public static readonly UnitDef KariKd = new()
     {
-        Id = Kari.Id, Name = "駆り立てのカリ", MaxHp = Kari.MaxHp, Attack = Kari.Attack, Speed = Kari.Speed, Advances = Kari.Advances, Pattern = Kari.Pattern,
+        Id = KariH406.Id, Name = "駆り立てのカリ", MaxHp = KariH406.MaxHp, Attack = KariH406.Attack, Speed = KariH406.Speed, Advances = KariH406.Advances, Pattern = KariH406.Pattern,
         Traits = new[] { TraitId.KariDrag },
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "前へ駆り立てる") },
         PlusText = "手番で、呪われた敵のうち最も後ろの1体を前へ引きずり出す。引きずり出された敵は殴るたび呪いが深まる（攻撃力 -4）",
         MinusText = "引きずり出された敵はカリを狙う（カリが倒れるまで）",
-        Flavor = Kari.Flavor,
+        Flavor = KariH406.Flavor,
     };
 
     // ---------------------------------------------------------------------------------

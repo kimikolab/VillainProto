@@ -173,7 +173,7 @@ static partial class Sh372Diag
         // ---- 試遊の台 ----
         {
             // 第373期: 第372期の「版・Va ／ Vb ／ Vc」は外した（Va を規定にした・並びはこの器具の中で組む）。検査は「頭の9台」と「第372期の版の台が無い」に。
-            var vr = Presets.Versions.Select(r => r.Name).ToArray();
+            var vr = VersionsH407().Select(r => r.Name).ToArray();
             bool rows = vr.Take(9).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒", "試遊・毒 席替え" })
                 && !vr.Any(n => n is "版・Va 散らす" or "版・Vb 高い段" or "版・Vc 集中");
             string seat = S307.Seats(Presets.Versions.First(r => r.Name == "試遊・毒 席替え").F);

@@ -185,7 +185,7 @@ static class Sh376Diag
 
         // ---- 試遊の台 ----
         {
-            var vr = Presets.Versions.Select(r => r.Name).ToArray();
+            var vr = VersionsH407().Select(r => r.Name).ToArray();
             bool rows = vr.Take(11).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒", "試遊・毒 席替え", "試遊・毒 紅", "試遊・ヴィオ 台B" });
             Expect("`Presets.Versions` ＝ 試遊の8台 ＋「試遊・毒 席替え」＋「試遊・毒 紅」＋「試遊・ヴィオ 台B」・第375期の版の台は無い", rows, string.Join("、", vr));
         }

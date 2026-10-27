@@ -611,7 +611,8 @@ public static class Presets
         // **第148期 段0 で測ったが採らなかった。** 帯B +5.4pt と線ぎりぎりを通るが、候補は**カリを後3の角へ置く形**
         // ——上に「1位と4位は採らない（カリを角へ置いた形だが 発火 1.59 / 空振り 3.16）」と
         // 書いてある席と同じ族である。**配置探索が機構を無効化する席**（第49期）。
-        ("駆り立て (カリ×ドルガ)", Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Gald, center: UnitCatalog.Gan, back1: UnitCatalog.Kari, back3: UnitCatalog.Zan)),
+        // 第411期: カリを祟りのカーズ（呪いを刻む書き手）に転生させたので、行名を「刻み (カーズ×ドルガ)」に改めた（駒の並びは同じ・旧の行名と旧のカリは `Common.CompareBuildsH410`）。
+        ("刻み (カーズ×ドルガ)", Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Gald, center: UnitCatalog.Gan, back1: UnitCatalog.Kari, back3: UnitCatalog.Zan)),
         // 死軸の台。**「死の連鎖 (リィカ軸)」とメンバーが1枚しか違わない**——
         // ヴェル（継ぎ接ぎ）をカリに差し替えただけ（`鱗 (ウロ×死軸)` と同じ作り方）。
         // **押し出された駒が死ぬことが資産になる**台で、墓守リィカが層を積み、
@@ -619,7 +620,8 @@ public static class Presets
         // **配置は動かさない**——仮置きが confirm の粗探索 3位 / 120通りで、
         // §1 の作法 (1)「現行が上位5通りに入っていれば動かさない」に該当する
         // （1位との差は −0.1pt）。発火 2.95 / 空振り 1.28。
-        ("駆り立て改 (カリ×死軸)", Formation.Build(front1: UnitCatalog.Zoto, front3: UnitCatalog.Mug,
+        // 第411期: 行名を「刻み改 (カーズ×死軸)」に改めた（並びは同じ・旧は `Common.CompareBuildsH410`）。
+        ("刻み改 (カーズ×死軸)", Formation.Build(front1: UnitCatalog.Zoto, front3: UnitCatalog.Mug,
                                           center: UnitCatalog.Golm, back1: UnitCatalog.Rica,
                                           back3: UnitCatalog.Kari)),
         // 止め（第53期）。**2行の狙いは「消費の代金が立つ台と立たない台」を並べること。**
@@ -945,6 +947,8 @@ public static class Presets
         ("試遊・呪い", CurseCenterNel()),
         // 第356期 §6: 「試遊・呪い 壁」（`db356 seats` の1位・ボス ／ 近衛 ／ 大隊のすべてで1位・ムドを残す並び）。前1 ウツ ／ 前3 ワタ ／ 中央 ネル ／ 後1 ムド ／ 後3 ツギ。採るか ／ 試遊・呪いと入れ替えるかはポン。
         ("試遊・呪い 壁", Formation.Build(front1: UnitCatalog.Utsu, front3: UnitCatalog.Wata, center: UnitCatalog.Nel, back1: UnitCatalog.Mudo, back3: UnitCatalog.Tsugi)),
+        // 第411期: 「試遊・カーズ 呪い」＝「試遊・呪い」のワタを規定のカーズに替えた並び（第410期の「版・カーズ 呪い」・前1 カーズ ／ 前3 ムド ／ 中央 ネル ／ 後1 クビ ／ 後3 ウツ）。
+        ("試遊・カーズ 呪い", KarzPlay411()),
         // 第359期: 第358期の「版・」の4台（HB-r ／ GR-r ／ HB-r＋GR-r ／ HB-r＋GR-r ツギ）は外した（GR-r を規定にした・並びは `sh358` の中に固定）。
         // 第360期: 第359期の「版・」の3台（HB-s ／ HB-f ／ HB-f 呪い）は外した（HB-f を規定にした・並びは `sh359` の中に固定）。
         // 第361期: 第360期の「版・」の3台（SS-k ／ SS-w ／ SS-w 呪い）は外した（SS-w を規定にした・並びは `sh360` の中に固定）。
@@ -1053,16 +1057,16 @@ public static class Presets
         //   （大隊でハギの手番の 69% が 3 体以上を倒す・当たった後の刈り取り 1戦 7.5 回・近衛 3.3 → 2.4T）。採否はポン。
         // 第405期: R50 をハギの規定にし R45 は採らないので「版・刈り続け ハギ」を外した（「試遊・ハギ キャリー」が規定の R50 の台・過去の器具は `Common.VersionsH404` が足し戻す）。
         //   「版・大物 ハギ」は規定 ＋ A（`HagiBigA405`）になった（第404期の A は `Common.VersionsH404` が戻す）。
-        // 第408期: カリの版の台（`kari408 seats` の最良の席・どちらも「試遊・呪い」のワタをカリに替えた並び・前1 カリ ／ 前3 ムド ／ 中央 ネル ／ 後1 クビ ／ 後3 ウツ）。採否はポン（「版・」の台は末尾に置く・第366期から）。
-        ("版・K-k 呪い", Formation.Build(front1: UnitCatalog.KariKk, front3: UnitCatalog.Mudo, center: UnitCatalog.Nel, back1: UnitCatalog.Kubi, back3: UnitCatalog.Utsu)),
-        // 第409期: 「版・K-d 呪い」を `kari409 seats` の最良（K-d0 呪いを深める・並びは同じ）に入れ替えた（第408期の K-d は `UnitCatalog.KariKd` のまま残る・強4 62 → 68）。
-        // 第410期: 「版・K-d 呪い」を「版・カーズ 呪い」に改名し、`kari410 seats` の最良（KZ-90 祟りのカーズ HP 90・並びは同じ）に入れ替えた。
-        ("版・カーズ 呪い", KarzBoard410()),
+        // 第408期: カリの版の台「版・K-k 呪い」「版・K-d 呪い」を足した（第409期に K-d → K-d0・第410期に「版・カーズ 呪い」（KZ-90）へ改名）。
+        // 第411期: KZ-90 を規定のカリ（祟りのカーズ）にしたので「版・カーズ 呪い」は「試遊・カーズ 呪い」として「試遊・呪い 壁」の後ろへ移し、「版・K-k 呪い」は外した（過去の器具は `Common.VersionsH407`）。
     };
 
     /// <summary>第410期: 「版・カーズ 呪い」（第409期の「版・K-d 呪い」を改名）の並び。`kari410 seats` の最良（KZ-90・ワタをカーズに替えた前1・強4 100）。</summary>
     public static Formation KarzBoard410() =>
         Formation.Build(front1: UnitCatalog.KariKz90, front3: UnitCatalog.Mudo, center: UnitCatalog.Nel, back1: UnitCatalog.Kubi, back3: UnitCatalog.Utsu);
+    /// <summary>第411期: 「試遊・カーズ 呪い」の並び（`KarzBoard410` と同じ並びで、駒は規定のカーズ）。</summary>
+    public static Formation KarzPlay411() =>
+        Formation.Build(front1: UnitCatalog.Kari, front3: UnitCatalog.Mudo, center: UnitCatalog.Nel, back1: UnitCatalog.Kubi, back3: UnitCatalog.Utsu);
 
     /// <summary>第404期: 「版・刈り続け ハギ」の並び（「試遊・ハギ キャリー」と同じ: 前1 スィド ／ 前3 ボルグ ／ 中央 ベニ ／ 後1 ハギ ／ 後3 トウ）。既定はハギの版 R45。第405期に試遊の台から外した（過去の器具 `Common.VersionsH404` だけが使う）。</summary>
     public static Formation HagiReap404(UnitDef? hagi = null) => HagiCarry401(hagi ?? UnitCatalog.HagiReapR45);

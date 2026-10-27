@@ -43,11 +43,11 @@ public static void Run(string[] args, int stageIndex)
     IReadOnlyList<EnemyCatalog.Stage> d3Base = EnemyCatalog.Stages;
     int d3W = d3Base.Count;
     var d3Sw = System.Diagnostics.Stopwatch.StartNew();
-    var d3Roster = UnitCatalog.All.ToArray();
+    var d3Roster = AllH410();
     int d3RN = d3Roster.Length;                       // 51
     // **第141期: キー表は `Everyone` で引く。** 理想61行（`CompareBuilds()`）にはエグが残っているので、
     // `d3Roster`（＝`All`・抽選の母集団）だけで表を作ると `D3Pairs` が `d3KeyOf["egu"]` で落ちる。
-    var d3KeyOf = UnitCatalog.Everyone.ToDictionary(u => u.Id, TraitKeyMap.KeysOf);
+    var d3KeyOf = EveryoneH410().ToDictionary(u => u.Id, TraitKeyMap.KeysOf);
 
     // ---- 測る前に固定した定数 ------------------------------------------------------------
     //
@@ -324,7 +324,7 @@ public static void Run(string[] args, int stageIndex)
         Console.WriteLine();
 
         // ---- 0-4. 理想61行の同じ指標（分母） ----
-        var idealRows0 = CompareBuilds();
+        var idealRows0 = CompareBuildsH410();
         double idAtk = idealRows0.Average(b => b.F.Occupied().Sum(o => o.Def.Attack));
         double idHp = idealRows0.Average(b => b.F.Occupied().Sum(o => o.Def.MaxHp));
         var idealTeams = idealRows0.Select(b => b.F.Occupied().Select(o => o.Def).ToArray()).ToArray();
@@ -693,7 +693,7 @@ public static void Run(string[] args, int stageIndex)
         Console.WriteLine();
 
         // 理想61行（同じ実行の中で測り直す。**回収量の分母**）
-        var idealRows = CompareBuilds();
+        var idealRows = CompareBuildsH410();
         var idWinW = new int[idealRows.Length][];
         Parallel.For(0, idealRows.Length, r =>
         {

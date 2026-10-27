@@ -38,7 +38,7 @@ public static void Run(string[] args, int stageIndex)
     int ckSeed0 = ckAlt ? 200 : 0;
     int ckSeedN = ckAlt ? 400 : 200;
     IReadOnlyList<EnemyCatalog.Stage> ckStages = EnemyCatalog.Stages;
-    var ckAll = CompareBuilds().ToArray();
+    var ckAll = CompareBuildsH410().ToArray();
 
     bool CkHasYomi((string Name, Formation F) row)
         => row.F.Occupied().Any(o => o.Item2.Id == UnitCatalog.Yomi.Id);

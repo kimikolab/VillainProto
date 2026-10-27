@@ -139,7 +139,7 @@ static partial class Sora186Diag
         // ---- (G2) ----
         Console.WriteLine("## 表B. (G2) の「壊れ／制約」の分解（`compare` 61 行の分母・**報告のみ**）");
         Console.WriteLine();
-        var builds = CompareBuilds().ToList();
+        var builds = CompareBuildsH410().ToList();
         double[] O(string n) => res[("compare/" + n, V0.Name)];
         double[] N(string n) => res[("compare/" + n, New.Name)];
         var dropped = new List<(string Name, int Wave, double Delta)>();

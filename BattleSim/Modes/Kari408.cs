@@ -258,7 +258,7 @@ static class Kari408Diag
     static void Mixed()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = Presets.Compare.Where(b => b.F.Occupied().Any(o => o.Def.Id == "kari")).ToArray();
+        var rows = CompareBuildsH410().Where(b => b.F.Occupied().Any(o => o.Def.Id == "kari")).ToArray();   // 第411期: 旧の行名 ＋ 旧のカリ（駆り立て）
         var waves = EnemyCatalog.Stages.Select((st, i) => ($"第{i + 1}波", (Func<Formation, int, BattleResult>)((f, s) => BattleEngine.Run(f, st.Enemy, s, verbose: false))))
             .Concat(new[] { ("近衛", EnemyCatalog.EliteGuardWave), ("大隊", EnemyCatalog.EliteBattalionWave) }
                 .Select(x => (x.Item1, (Func<Formation, int, BattleResult>)((f, s) => BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), BattleEngine.MaterializeEnemy(x.Item2, EnemyCatalog.EliteScale), s, verbose: false)))))
@@ -305,7 +305,7 @@ static class Kari408Diag
         _fail = 0;
         Console.WriteLine("# 第408期 kari408 check —— 自己検査");
         Console.WriteLine();
-        var kk = UnitCatalog.KariKk; var kd = UnitCatalog.KariKd; var k0 = UnitCatalog.Kari;
+        var kk = UnitCatalog.KariKk; var kd = UnitCatalog.KariKd; var k0 = UnitCatalog.KariH406;   // 第411期: 規定のカリは祟りのカーズになった（k0 は旧の駆り立てで見る）
         Expect("版の定義: Id ＝ kari・HP ／ 速は旧のまま・攻 6 ／ 4・札は KariCarve ／ KariDrag だけ・手番は Skill",
             kk.Id == k0.Id && kd.Id == k0.Id && kk.MaxHp == k0.MaxHp && kd.MaxHp == k0.MaxHp && kk.Speed == k0.Speed && kd.Speed == k0.Speed
             && kk.Attack == 6 && kd.Attack == 4 && kk.Traits.SequenceEqual(new[] { TraitId.KariCarve }) && kd.Traits.SequenceEqual(new[] { TraitId.KariDrag })
@@ -355,8 +355,9 @@ static class Kari408Diag
         string body = i0 >= 0 && i1 > i0 ? src[i0..i1] : "";
         Expect("第408期の口に `PickOne` ／ `Roll(` が無い（決定的に選ぶ）", body.Length > 0 && !body.Contains("PickOne") && !body.Contains("Roll("), $"{body.Length} 文字");
         // 試遊の台
-        bool rows = Presets.Versions.Any(r => r.Name == "版・K-k 呪い" && r.F.Occupied().Any(o => o.Def == kk))
-                 && Presets.Versions.Any(r => r.Name is "版・K-d 呪い" or "版・カーズ 呪い" && r.F.Occupied().Any(o => o.Def == kd || o.Def == UnitCatalog.KariKd0 || o.Def == UnitCatalog.KariKz62 || o.Def == UnitCatalog.KariKz90));   // 第409期に K-d0 へ・第410期に「版・カーズ 呪い」（祟りのカーズ）へ
+        var v410 = VersionsH410();   // 第411期: 第410期の一覧で見る
+        bool rows = v410.Any(r => r.Name == "版・K-k 呪い" && r.F.Occupied().Any(o => o.Def == kk))
+                 && v410.Any(r => r.Name is "版・K-d 呪い" or "版・カーズ 呪い" && r.F.Occupied().Any(o => o.Def == kd || o.Def == UnitCatalog.KariKd0 || o.Def == UnitCatalog.KariKz62 || o.Def == UnitCatalog.KariKz90));   // 第409期に K-d0 へ・第410期に「版・カーズ 呪い」（祟りのカーズ）へ
         Expect("試遊の台「版・K-k 呪い」「版・K-d 呪い」が `Presets.Versions` にある", rows);
         Console.WriteLine();
         Console.WriteLine(_fail == 0 ? "**すべて OK**" : $"**NG {_fail} 件**");

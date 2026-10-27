@@ -54,9 +54,9 @@ static partial class Sh405Diag
 
         // ---- 規定の compare（docs と一致・第404期の表から動いたのはハギのいる行だけ・R50 の列と同じ）----
         {
-            var map = S390.BalanceMap(File.Exists("docs/balance.md") ? File.ReadAllText("docs/balance.md") : "");
+            var map = S390.BalanceMap(S390.GitShow("cf2661f7:docs/balance.md"));   // 第411期: 第405〜410期の表（compare は第406〜410期に動いていない）と、カーズの2行を旧の行名 ＋ 旧のカリに戻した行で比べる
             var head = S390.BalanceMap(S390.GitShow($"{HeadSha}:docs/balance.md"));
-            var rows = CompareBuilds(); var g = CGrid(rows, CompareSeeds);
+            var rows = CompareBuildsH410(); var g = CGrid(rows, CompareSeeds);
             var rcol = CGrid(rows.Select(r => (r.Name, F: I.Swap(Pin404(r.F), "hagi", r50))).ToArray(), CompareSeeds);
             int diff = 0, miss = 0, noHagiMoved = 0, notR = 0;
             for (int ri = 0; ri < rows.Length; ri++)

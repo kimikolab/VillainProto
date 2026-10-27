@@ -89,7 +89,7 @@ static partial class Formation2Diag
         var tankPicks = new List<(string Row, string Tag, Pick P)>();
         foreach (string row in TankRows)
         {
-            Formation x = CompareBuilds().First(r => r.Name == row).F;
+            Formation x = CompareBuildsH410().First(r => r.Name == row).F;
             UnitDef gald = x.Occupied().First(o => o.Def.Id == "gald").Def;
             Formation p200 = ToDiamond(x, gald, null, new[] { 0, 2, 4, 1 });
             var mem = Members(x);

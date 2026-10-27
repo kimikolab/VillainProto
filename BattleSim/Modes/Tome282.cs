@@ -495,7 +495,7 @@ static class Tome282Diag
 
         // (i) 器具の固定: `CompareT0` は第281期までの行（規定のトメ → T0）と同じ顔ぶれ
         bool same = CompareT0.Length == CompareBuilds().Length && CompareT0.Zip(CompareBuilds()).All(z =>
-            z.First.Name == z.Second.Name && z.First.F.Occupied().Select(o => o.Def.Id).SequenceEqual(z.Second.F.Occupied().Select(o => o.Def.Id))
+            z.First.Name == OldName411(z.Second.Name) && z.First.F.Occupied().Select(o => o.Def.Id).SequenceEqual(z.Second.F.Occupied().Select(o => o.Def.Id))
             && !z.First.F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Tome)));
         Expect("(i) 旧トメに固定した器具が読む行（`CompareT0`）は規定のトメを1枚も含まず、顔ぶれ（Id）は `compare` と同じ", same);
 

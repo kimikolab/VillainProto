@@ -52,7 +52,7 @@ static class GoadDiag
 //     dotnet run --project BattleSim -c Release 0 goad cross     # ソラ・ウツとの干渉（同居版）
 public static void Run(string[] args, int stageIndex)
 {
-    var gdBuilds = CompareBuilds();
+    var gdBuilds = CompareBuildsH410();
     IReadOnlyList<EnemyCatalog.Stage> gdStages = EnemyCatalog.Stages;
     const int GdSeeds = 200;   // compare / spread / divert と揃える
     int GdMain = GoadRule.Default.Boost;
@@ -60,7 +60,7 @@ public static void Run(string[] args, int stageIndex)
 
     string gdMode = args.Length > 2 ? args[2] : "";
 
-    static bool GdHasKari(Formation f) => f.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Kari));
+    static bool GdHasKari(Formation f) => f.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.KariH406));
 
     var gdTargets = gdBuilds.Where(b => GdHasKari(b.F)).ToArray();
     if (gdMode.Length > 0 && gdMode != "sweep" && gdMode != "confirm"
@@ -73,15 +73,15 @@ public static void Run(string[] args, int stageIndex)
     // 入っただけか」が割れない。
     UnitDef GdPlainDef = new()
     {
-        Id = "kari_plain", Name = "素体のカリ", MaxHp = UnitCatalog.Kari.MaxHp,
-        Attack = UnitCatalog.Kari.Attack, Speed = UnitCatalog.Kari.Speed,
-        Traits = Array.Empty<TraitId>(), Pattern = UnitCatalog.Kari.Pattern
+        Id = "kari_plain", Name = "素体のカリ", MaxHp = UnitCatalog.KariH406.MaxHp,
+        Attack = UnitCatalog.KariH406.Attack, Speed = UnitCatalog.KariH406.Speed,
+        Traits = Array.Empty<TraitId>(), Pattern = UnitCatalog.KariH406.Pattern
     };
     Formation GdPlain(Formation f)
     {
         var g = new Formation();
         foreach ((int slot, UnitDef d) in f.Occupied())
-            g[slot] = ReferenceEquals(d, UnitCatalog.Kari) ? GdPlainDef : d;
+            g[slot] = ReferenceEquals(d, UnitCatalog.KariH406) ? GdPlainDef : d;
         return g;
     }
     // カリを外した4体版（対照3）。**第21期の飽和検査**も兼ねる。
@@ -89,17 +89,17 @@ public static void Run(string[] args, int stageIndex)
     {
         var g = new Formation();
         foreach ((int slot, UnitDef d) in f.Occupied())
-            if (!ReferenceEquals(d, UnitCatalog.Kari)) g[slot] = d;
+            if (!ReferenceEquals(d, UnitCatalog.KariH406)) g[slot] = d;
         return g;
     }
 
     // カリの席だけを振った5変種（他の4枚は元の相対順のまま詰める）。
     static Formation GdSeat(Formation f, int seat)
     {
-        var others = f.Occupied().Where(o => !ReferenceEquals(o.Def, UnitCatalog.Kari))
+        var others = f.Occupied().Where(o => !ReferenceEquals(o.Def, UnitCatalog.KariH406))
                       .Select(o => o.Def).ToList();
         var g = new Formation();
-        g[seat] = UnitCatalog.Kari;
+        g[seat] = UnitCatalog.KariH406;
         int k = 0;
         for (int i = 0; i < FormationRules.PlayableSlotCount && k < others.Count; i++)
             if (i != seat) g[i] = others[k++];
@@ -330,7 +330,7 @@ public static void Run(string[] args, int stageIndex)
             double sa = 0, sp = 0;
             foreach ((int _, UnitDef d) in b.F.Occupied())
             {
-                if (ReferenceEquals(d, UnitCatalog.Kari)) continue;
+                if (ReferenceEquals(d, UnitCatalog.KariH406)) continue;
                 string id = d.Id;
                 double a = GdGet(z.Dmg, id), p = GdGet(pz.Dmg, id);
                 double ta = GdGet(z.Taken, id), tp = GdGet(pz.Taken, id);
@@ -446,13 +446,13 @@ public static void Run(string[] args, int stageIndex)
             // カリが付けた標は**その手番のうちに**剥がされる ＝ 代金が消える
             ("ソラ同居・ソラが後（カリ中央 / ソラ後3）",
              Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Gan,
-                             center: UnitCatalog.Kari, back1: UnitCatalog.Dolga,
+                             center: UnitCatalog.KariH406, back1: UnitCatalog.Dolga,
                              back3: UnitCatalog.Sora)),
             // ソラが前（前3・席1）: ソラ → カリ（席2）の順なので、
             // カリの標は**その手番のあいだ生きている** ＝ 代金を払う
             ("ソラ同居・ソラが先（ソラ前3 / カリ中央）",
              Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sora,
-                             center: UnitCatalog.Kari, back1: UnitCatalog.Dolga,
+                             center: UnitCatalog.KariH406, back1: UnitCatalog.Dolga,
                              back3: UnitCatalog.Gan)),
             // ウツ同居。**`逆しま (ネル×ウツ)` を土台にした診断のローカル**（`CompareBuilds()` は触らない）。
             // カリを前3（隣接＝中央・後3）に置き、隣接候補を ネル(攻7) と ウツ(攻9) だけにする
@@ -460,7 +460,7 @@ public static void Run(string[] args, int stageIndex)
             // ネル(7) に負ける**（自己修正の実証）。土台を選んだのは、素朴に組んだ版
             // （ガルド・ガン・ザンの顔ぶれ）が 100/0/0/0/0 の床に落ちたため（第21期の飽和検査）。
             ("ウツ同居（カリ前3 / ウツ後3）",
-             Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Kari,
+             Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.KariH406,
                              center: UnitCatalog.Nel, back1: UnitCatalog.Gald,
                              back3: UnitCatalog.Utsu))
         };
@@ -691,7 +691,7 @@ public static void Run(string[] args, int stageIndex)
             int Seat(Formation f)
             {
                 foreach ((int slot, UnitDef d) in f.Occupied())
-                    if (ReferenceEquals(d, UnitCatalog.Kari)) return slot;
+                    if (ReferenceEquals(d, UnitCatalog.KariH406)) return slot;
                 return -1;
             }
             int Deg(int slot)

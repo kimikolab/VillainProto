@@ -374,8 +374,8 @@ static class Kari407Diag
     {
         Console.WriteLine("## Q3 カリの現状");
         Console.WriteLine();
-        var rows = Presets.Compare.Where(b => b.F.Occupied().Any(o => o.Def.Id == "kari")).ToArray();
-        var plain = Plain(UnitCatalog.Kari);
+        var rows = CompareBuildsH410().Where(b => b.F.Occupied().Any(o => o.Def.Id == "kari")).ToArray();   // 第411期: 旧の行名 ＋ 旧のカリ（駆り立て）
+        var plain = Plain(UnitCatalog.KariH406);   // 第411期: 旧のカリの素体
         var waves = EnemyCatalog.Stages.Select((st, i) => ($"第{i + 1}波", (Func<Formation, int, BattleResult>)((f, s) => BattleEngine.Run(f, st.Enemy, s, verbose: false))))
             .Concat(new[] { ("近衛", EnemyCatalog.EliteGuardWave), ("大隊", EnemyCatalog.EliteBattalionWave) }
                 .Select(x => (x.Item1, (Func<Formation, int, BattleResult>)((f, s) => BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), BattleEngine.MaterializeEnemy(x.Item2, EnemyCatalog.EliteScale), s, verbose: false)))))

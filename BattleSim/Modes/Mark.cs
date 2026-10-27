@@ -84,7 +84,7 @@ static class MarkDiag
         int allLoops = Count(Src("BattleCore/Engagement.cs"), "foreach (string key in StatusKeys.All");
         Console.WriteLine("| `BattleCore/Engagement.cs`（`StatusKeys.All` の一括消去 " + allLoops + " 箇所） | **0** | 会戦の境界 |");
         Console.WriteLine("| `BattleCore/Traits.cs`（`ScapegoatTrait` の引き取り・`Kinds` に `Marked` を含む） | **−1** | 業（保持者 "
-                          + UnitCatalog.All.Count(d => d.Traits.Contains(TraitId.Scapegoat)) + " 枚） |");
+                          + AllH410().Count(d => d.Traits.Contains(TraitId.Scapegoat)) + " 枚） |");
         Console.WriteLine();
         Console.WriteLine("- **1 を書く箇所（書き手）: " + ones + "** ／ **0 にする箇所（消し手）: " + zeroes + "**（＋ 境界の一括消去と業）");
         Console.WriteLine("- **「誰かが殴ると外れる」経路は 0 件。** 消すのは "
@@ -136,7 +136,7 @@ static class MarkDiag
         Console.WriteLine();
         Console.WriteLine("| 行 | 書き手 | 読み手 | 標の向き |");
         Console.WriteLine("|---|---|---|---|");
-        var all = CompareBuilds();
+        var all = CompareBuildsH410();
         foreach (string name in Rows)
         {
             var hit = all.FirstOrDefault(r => r.Name == name);
@@ -184,7 +184,7 @@ static class MarkDiag
 
     static string Holders(TraitId id)
     {
-        var v = UnitCatalog.All.Where(d => d.Traits.Contains(id)).Select(d => d.Name).ToList();
+        var v = AllH410().Where(d => d.Traits.Contains(id)).Select(d => d.Name).ToList();
         return v.Count == 0 ? "**0 枚**" : v.Count + " 枚（" + string.Join("・", v) + "）";
     }
 
@@ -219,7 +219,7 @@ static class MarkDiag
         Console.WriteLine("5 行 × 5 波 × seed 0.." + (Seeds - 1) + "。**分母は第2〜5波**（規約 (G10)）。");
         Console.WriteLine();
 
-        var all = CompareBuilds();
+        var all = CompareBuildsH410();
         var picked = Rows.Select(n => all.First(r => r.Name == n)).ToArray();
         var v0 = new Res[picked.Length];
         var vs = new Res[picked.Length];
@@ -365,7 +365,7 @@ static class MarkDiag
         Console.WriteLine("**取り分 ＝ Δ ÷ (100 − V0)**（第144期）。V0 が 99.0 以上の行は余地が無いので取り分の分母から外す。");
         Console.WriteLine();
 
-        var rows = CompareBuilds();
+        var rows = CompareBuildsH410();
         var w0 = new double[rows.Length];
         var ws = new double[rows.Length];
         var wa = new double[rows.Length];
@@ -496,7 +496,7 @@ static class MarkDiag
                     if (!double.TryParse(c[i + 2].Replace("%", ""), out v[i])) { ok = false; break; }
                 if (ok) want[c[1]] = v;
             }
-            var rows = CompareBuilds();
+            var rows = CompareBuilds();   // docs/balance.md と突き合わせるので今の行（第411期）
             var got = new double[rows.Length][];
             Parallel.For(0, rows.Length, i =>
             {
@@ -552,7 +552,7 @@ static class MarkDiag
         Console.WriteLine("## (e) 帳簿が閉じる（`mark run` の表E と同じ検算を全61行で）");
         Console.WriteLine();
         long bad2 = 0, opened = 0, other = 0, rowsWith = 0;
-        var cb = CompareBuilds();
+        var cb = CompareBuildsH410();
         var res = new (long Bad, long Opened, long Other, int With)[cb.Length];
         Parallel.For(0, cb.Length, i =>
         {

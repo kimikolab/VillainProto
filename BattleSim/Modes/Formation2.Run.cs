@@ -216,7 +216,7 @@ static partial class Formation2Diag
         var waveGapP2mX = new double[5];
         foreach (string row in TankRows)
         {
-            Formation x = CompareBuilds().First(r => r.Name == row).F;
+            Formation x = CompareBuildsH410().First(r => r.Name == row).F;
             UnitDef gald = x.Occupied().First(o => o.Def.Id == "gald").Def;
             Formation p2g = ToDiamond(x, gald, null, new[] { 0, 2, 4, 1 });
             M mxg = Measure(x, true), mpg = Measure(p2g, true);
@@ -335,7 +335,7 @@ static partial class Formation2Diag
         {
             var want = File.ReadAllLines(path).Where(l => l.StartsWith("| ") && l.Contains('%')).ToList();
             var got = new List<string>();
-            foreach (var (name, f) in CompareBuilds())
+            foreach (var (name, f) in CompareBuildsH410())
             {
                 var w = new double[5];
                 for (int st = 0; st < 5; st++)
@@ -436,7 +436,7 @@ static partial class Formation2Diag
     internal static void Log(string arg)
     {
         var parts = System.Text.RegularExpressions.Regex.Matches(arg, @"""[^""]*""|\S+").Select(m => m.Value.Trim('"')).ToList();
-        Formation x = CompareBuilds().First(r => r.Name == parts[0]).F;
+        Formation x = CompareBuildsH410().First(r => r.Name == parts[0]).F;
         UnitDef gald = x.Occupied().First(o => o.Def.Id == "gald").Def;
         Formation f = parts.Count > 3 && parts[3] == "x" ? x : ToDiamond(x, gald, null, new[] { 0, 2, 4, 1 });
         BattleResult r = BattleEngine.Run(f, EnemyCatalog.Stages[int.Parse(parts[1]) - 1].Enemy, int.Parse(parts[2]), verbose: true);

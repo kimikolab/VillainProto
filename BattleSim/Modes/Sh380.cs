@@ -139,7 +139,7 @@ static partial class Sh380Diag
     static void Stage0()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = CompareBuilds().Select(r => (r.Name, F: Pin381(r.F))).ToArray();   // 第382期: ヴェルは第381期までの規定に固定
+        var rows = CompareBuildsH410().Select(r => (r.Name, F: Pin381(r.F))).ToArray();   // 第382期: ヴェルは第381期までの規定に固定
         int nw = EnemyCatalog.Stages.Count, last = nw - 1;
         double[,] G((string Name, Formation F)[] rs)
         {
@@ -177,11 +177,11 @@ static partial class Sh380Diag
 
         var boards = new (string Name, Formation F)[]
         {
-            ("死の連鎖 (リィカ軸)", Pin381(CompareBuilds().First(r => r.Name == "死の連鎖 (リィカ軸)").F)),
-            ("継ぎ当て×死の連鎖", Pin381(CompareBuilds().First(r => r.Name == "継ぎ当て×死の連鎖").F)),
+            ("死の連鎖 (リィカ軸)", Pin381(CompareBuildsH410().First(r => r.Name == "死の連鎖 (リィカ軸)").F)),
+            ("継ぎ当て×死の連鎖", Pin381(CompareBuildsH410().First(r => r.Name == "継ぎ当て×死の連鎖").F)),
             ("死・ソム", Pin381(Presets.DeathSom379())),
-            ("鱗 (ウロ×死軸)", Pin381(CompareBuilds().First(r => r.Name == "鱗 (ウロ×死軸)").F)),
-            ("駆り立て改 (カリ×死軸)", Pin381(CompareBuilds().First(r => r.Name == "駆り立て改 (カリ×死軸)").F)),
+            ("鱗 (ウロ×死軸)", Pin381(CompareBuildsH410().First(r => r.Name == "鱗 (ウロ×死軸)").F)),
+            ("駆り立て改 (カリ×死軸)", Pin381(CompareBuildsH410().First(r => r.Name == "駆り立て改 (カリ×死軸)").F)),
         };
         var waves = new (string Name, I.W[] Ws)[] { ("ボス", new[] { I.Boss }), ("近衛", new[] { I.Guard }), ("大隊", new[] { I.Bat }), ("本編 第5波", new[] { I.M5 }), ("強 第2〜5波", I.StrongWaves) };
         var rg = new S377.B[boards.Length, 2, waves.Length];
@@ -286,7 +286,7 @@ static partial class Sh380Diag
             ("ゾトを含む最良（段2 の組の最良の並び）", mPairs.First(x => Has(x.C, "zoto")).C.F, PairRank(mPairs, c => Has(c, "zoto"))),
             ("ゴルムを含む最良", mPairs.First(x => Has(x.C, "golm")).C.F, PairRank(mPairs, c => Has(c, "golm"))),
             ("ゾト ＋ ゴルムの組の最良の並び", mPairs.First(x => Has(x.C, "zoto") && Has(x.C, "golm")).C.F, PairRank(mPairs, c => Has(c, "zoto") && Has(c, "golm"))),
-            ("今の死の連鎖 (リィカ軸)（ゾト ／ ゴルム・今の席）", Pin381(CompareBuilds().First(r => r.Name == "死の連鎖 (リィカ軸)").F), 0),
+            ("今の死の連鎖 (リィカ軸)（ゾト ／ ゴルム・今の席）", Pin381(CompareBuildsH410().First(r => r.Name == "死の連鎖 (リィカ軸)").F), 0),
         };
         foreach (var (name, f, r2i) in extra)
         {

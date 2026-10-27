@@ -21,11 +21,11 @@ public static void Run(string[] args, int stageIndex)
 
     IReadOnlyList<EnemyCatalog.Stage> c3Stages = EnemyCatalog.Stages;
     int c3W = c3Stages.Count;
-    var c3Roster = UnitCatalog.All.ToArray();
+    var c3Roster = AllH410();
     int c3RN = c3Roster.Length;
     string c3YomiId = UnitCatalog.Yomi.Id;
 
-    var c3All = CompareBuilds().ToArray();
+    var c3All = CompareBuildsH410().ToArray();
     bool C3HasYomi((string Name, Formation F) row) => row.F.Occupied().Any(o => o.Def.Id == c3YomiId);
     var c3Rows = c3All.Where(C3HasYomi).ToArray();
     var c3Other = c3All.Where(b => !C3HasYomi(b)).ToArray();

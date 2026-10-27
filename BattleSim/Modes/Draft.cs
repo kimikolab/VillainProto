@@ -39,7 +39,7 @@ public static void Run(string[] args, int stageIndex)
     IReadOnlyList<EnemyCatalog.Stage> dfStages = EnemyCatalog.Stages;
     int dfW = dfStages.Count;
     var dfSw = System.Diagnostics.Stopwatch.StartNew();
-    var dfRoster = UnitCatalog.All.ToArray();
+    var dfRoster = AllH410();
     int dfRN = dfRoster.Length;                     // 51
 
     // ---- 測る前に固定した定数（§1〜§2。**結果を見てから動かしていない**） ----------------
@@ -81,7 +81,7 @@ public static void Run(string[] args, int stageIndex)
         UnitCatalog.Vio,  UnitCatalog.Yomi, UnitCatalog.Basa, UnitCatalog.Shio, UnitCatalog.Utsu,
         UnitCatalog.Doha, UnitCatalog.Kubi, UnitCatalog.Sekki, UnitCatalog.Hota, UnitCatalog.HibiH359,
         UnitCatalog.ShigaG3K, UnitCatalog.Zan, UnitCatalog.Kiri, UnitCatalog.Egu,  UnitCatalog.Nata,
-        UnitCatalog.Hari, UnitCatalog.Hane, UnitCatalog.Uke,  UnitCatalog.Wata, UnitCatalog.Kari,
+        UnitCatalog.Hari, UnitCatalog.Hane, UnitCatalog.Uke,  UnitCatalog.Wata, UnitCatalog.KariH406,
         UnitCatalog.Tome, UnitCatalog.Hiyo,
         // (3) 対照
         UnitCatalog.Zoto, UnitCatalog.Uro,  UnitCatalog.Nel,
@@ -104,7 +104,7 @@ public static void Run(string[] args, int stageIndex)
         [UnitCatalog.ShigaG3K.Id] = 27.4, [UnitCatalog.Zan.Id] = 33.4, [UnitCatalog.Kiri.Id] = 13.9,
         [UnitCatalog.Egu.Id] = 26.8, [UnitCatalog.Nata.Id] = 19.5, [UnitCatalog.Hari.Id] = 28.6,
         [UnitCatalog.Hane.Id] = 14.6, [UnitCatalog.Uke.Id] = 23.0, [UnitCatalog.Wata.Id] = 44.6,
-        [UnitCatalog.Kari.Id] = 26.4, [UnitCatalog.Tome.Id] = 36.7, [UnitCatalog.Hiyo.Id] = 15.8,
+        [UnitCatalog.KariH406.Id] = 26.4, [UnitCatalog.Tome.Id] = 36.7, [UnitCatalog.Hiyo.Id] = 15.8,
         [UnitCatalog.Zoto.Id] = 38.7, [UnitCatalog.Uro.Id] = 45.7, [UnitCatalog.Nel.Id] = 27.2,
     };
 
@@ -132,7 +132,7 @@ public static void Run(string[] args, int stageIndex)
     // **第141期: キー表は `Everyone`（`All ∪ Retired`）で引く。** `dfTargets` の 30 体はこの期の対象として固定してあり
     // エグ（第139期）とハリ（第108期）を含む——`dfRoster`（＝`All`）で表を作ると `dfKeyOfUnit["egu"]` で落ちる。
     // **抽選の母集団 `dfRoster` は `All` のまま**（列挙は触らない）。
-    var dfKeyOfUnit = UnitCatalog.Everyone.ToDictionary(u => u.Id, TraitKeyMap.KeysOf);
+    var dfKeyOfUnit = EveryoneH410().ToDictionary(u => u.Id, TraitKeyMap.KeysOf);
 
     // ---- 標本の作り方（**測る前に固定**） ------------------------------------------------
     //
@@ -701,7 +701,7 @@ public static void Run(string[] args, int stageIndex)
         Console.WriteLine("**器具を揃えた散布を主判定に、指示書どおりの散布を併記に**した。両方を下に出す。");
         Console.WriteLine();
 
-        var idealRows = CompareBuilds();
+        var idealRows = CompareBuildsH410();
         var idealFull = new double[idealRows.Length][];
         Parallel.For(0, idealRows.Length, r =>
         {

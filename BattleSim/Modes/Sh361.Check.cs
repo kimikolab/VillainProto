@@ -142,7 +142,7 @@ static partial class Sh361Diag
         // ---- 試遊の台 ----
         {
             // 第362期: 「版・」の2台は `Presets.Versions` から外した。第361期の3台は `Boards361` に固定して確かめる。
-            var vr = Presets.Versions.Select(r => r.Name).ToArray();
+            var vr = VersionsH407().Select(r => r.Name).ToArray();
             string[] want = { "試遊・破片", "版・SS-s 破片", "版・SS-n 破片" };
             bool rows = vr.Take(6).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片" }) && !vr.Any(want.Skip(1).Contains)
                 && Seats(Presets.Versions.First(r => r.Name == "試遊・破片").F) == PlayKey;

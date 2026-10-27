@@ -58,7 +58,7 @@ static partial class Sh387Diag
     // 棚卸しの 10 枚 ／ 素体 ／ 試遊の台 ／ 波
     // ---------------------------------------------------------------------------------
     internal static readonly UnitDef[] Ten =
-        { UnitCatalog.Kari, UnitCatalog.Uro, UnitCatalog.TomoH393, UnitCatalog.Nomi, UnitCatalog.SekkiH396, UnitCatalog.HagiH389, UnitCatalog.Kubi, UnitCatalog.Ban, UnitCatalog.DolgaH395, UnitCatalog.Gan };   // 第396期: ドルガは第395期までの規定に固定
+        { UnitCatalog.KariH406, UnitCatalog.Uro, UnitCatalog.TomoH393, UnitCatalog.Nomi, UnitCatalog.SekkiH396, UnitCatalog.HagiH389, UnitCatalog.Kubi, UnitCatalog.Ban, UnitCatalog.DolgaH395, UnitCatalog.Gan };   // 第396期: ドルガは第395期までの規定に固定
 
     /// <summary>素体（同じ体・札なし・ふつうに殴る・型 ／ 踏込はそのまま）。器具の中だけ（`Id` の尾に `_plain387`）。</summary>
     internal static UnitDef Plain(UnitDef d) => new()
@@ -159,7 +159,7 @@ static partial class Sh387Diag
     static void Zero()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = CompareBuilds();
+        var rows = CompareBuildsH410();
         var old = rows.Select(r => (r.Name, Pin386(r.F))).ToArray();
         var g0 = CGrid(old, CompareSeeds); var g1 = CGrid(rows, CompareSeeds);
         int nw = EnemyCatalog.Stages.Count, last = nw - 1;
@@ -230,7 +230,7 @@ static partial class Sh387Diag
     static void Use()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = CompareBuilds();
+        var rows = CompareBuildsH410();
         var g = CGrid(rows, CompareSeeds);
         int nw = EnemyCatalog.Stages.Count;
         Console.WriteLine($"# {Tag} §4-2 今どこで使われているか —— `compare` {rows.Length} 行のうち 10 枚のいる行");
@@ -456,7 +456,7 @@ static partial class Sh387Diag
 
         // ---- 替え合い ----
         var pairs = Pairs348.Concat(Ten.Select(d => (d.Id, near[d.Id]))).Distinct().ToArray();
-        var rows = CompareBuilds();
+        var rows = CompareBuildsH410();
         Console.WriteLine($"## 替え合い（A のいる `compare` の行 ／ 試遊の台で、A を B に替えた差・本編 第2〜5波 ／ 試遊の台は 4 波・seed 0..{Seeds - 1}）");
         Console.WriteLine();
         Console.WriteLine("| A → B | `compare` の行（行の数・差の平均 pt・最も落ちた行）| 試遊の台（台の数・差の平均 pt）|");
@@ -493,7 +493,7 @@ static partial class Sh387Diag
     static void DolgaGan()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = CompareBuilds().Where(r => Has(r.F, "dolga") || Has(r.F, "gan")).Select(r => ("行・" + r.Name, r.F)).ToArray();
+        var rows = CompareBuildsH410().Where(r => Has(r.F, "dolga") || Has(r.F, "gan")).Select(r => ("行・" + r.Name, r.F)).ToArray();
         var play = Play();
         var all = rows.Concat(play.Select(p => (p.Name, p.F))).ToArray();
         var ws = new[] { 0, 1, 2, 7 };
@@ -515,7 +515,7 @@ static partial class Sh387Diag
         string Avg(int[] set) => string.Join(" ／ ", Enumerable.Range(0, ws.Length).Select(wi => F1(set.Average(i => t[i, wi].Win))));
         Console.WriteLine($"- ドルガ ／ ガンのいる台（{withDG.Length} 台）の平均: {Avg(withDG)}。");
         Console.WriteLine($"- ドルガ ／ ガンのいない試遊の台（{playOther.Length} 台）の平均: {Avg(playOther)}。");
-        var others = CompareBuilds().Where(r => !Has(r.F, "dolga") && !Has(r.F, "gan")).ToArray();
+        var others = CompareBuildsH410().Where(r => !Has(r.F, "dolga") && !Has(r.F, "gan")).ToArray();
         var to = new S377.B[others.Length, ws.Length];
         Parallel.For(0, to.Length, k => to[k / ws.Length, k % ws.Length] = S377.Measure(others[k / ws.Length].F, W8[ws[k % ws.Length]].Ws, Seeds));
         Console.WriteLine($"- ドルガ ／ ガンのいない `compare` の行（{others.Length} 行）の平均: {string.Join(" ／ ", Enumerable.Range(0, ws.Length).Select(wi => F1(Enumerable.Range(0, others.Length).Average(i => to[i, wi].Win))))}（ドルガ ／ ガンのいる `compare` の行 {rows.Length} 行: {Avg(Enumerable.Range(0, rows.Length).ToArray())}）。");

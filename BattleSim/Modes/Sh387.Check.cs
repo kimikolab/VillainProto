@@ -111,7 +111,7 @@ static partial class Sh387Diag
                         if (!Same(a, b)) diff++;
                         if (a.Events.Count != b.Events.Count || a.Log.Count != b.Log.Count) evd++;
                     }
-            var rows = CompareBuilds().Where(r => Has(r.F, "mug")).ToArray();
+            var rows = CompareBuildsH410().Where(r => Has(r.F, "mug")).ToArray();
             var g0 = CGrid(rows, 20); var g1 = CGrid(rows.Select(r => (r.Name, Replace(r.F, "mug", UnitCatalog.MugP))).ToArray(), 20);
             int cd = 0; for (int i = 0; i < rows.Length; i++) for (int w = 0; w < EnemyCatalog.Stages.Count; w++) if (g0[i, w] != g1[i, w]) cd++;
             Expect("段0: 規定のムグは第386期の `MugP` と同じ動き（ムグのいる試遊の台 4 × ボス ／ 近衛 ／ 大隊 ／ 第5波 × seed 0..4 の勝敗 ／ T ／ 生存数 ／ 出来事の数 ／ ログの数・`compare` のムグのいる行 × 5 波 × seed 0..19）", diff == 0 && evd == 0 && cd == 0 && rows.Length > 0,
@@ -148,7 +148,7 @@ static partial class Sh387Diag
             var plains = Ten.Select(Plain).ToArray();
             bool plain = plains.All(p => p.Traits.Count == 0 && p.Id.EndsWith("_plain387", StringComparison.Ordinal) && p.Actions is null)
                 && Ten.Zip(plains).All(x => x.First.MaxHp == x.Second.MaxHp && x.First.Attack == x.Second.Attack && x.First.Speed == x.Second.Speed && x.First.Pattern == x.Second.Pattern && x.First.Advances == x.Second.Advances);
-            var everywhere = CompareBuilds().Concat(CrossBuilds()).Concat(Presets.Playtest).Concat(Presets.Versions).SelectMany(r => r.F.Occupied()).Select(o => o.Def.Id).ToHashSet();
+            var everywhere = CompareBuildsH410().Concat(CrossBuilds()).Concat(Presets.Playtest).Concat(Presets.Versions).SelectMany(r => r.F.Occupied()).Select(o => o.Def.Id).ToHashSet();
             bool inside = !everywhere.Any(id => id.EndsWith("_plain387", StringComparison.Ordinal)) && !UnitCatalog.Everyone.Any(d => d.Id.EndsWith("_plain387", StringComparison.Ordinal));
             var b0 = Play(); var before = b0.Select(r => S307Seats(r.F)).ToArray();
             _ = Put(b0[0].F, 0, Ten[0]); _ = Replace(b0[0].F, b0[0].F[0]!.Id, Plain(Ten[0]));
@@ -215,10 +215,10 @@ static partial class Sh387Diag
 
         // ---- 規定の compare 全行 ----
         {
-            var bal = File.Exists("docs/balance.md") ? File.ReadAllLines("docs/balance.md") : Array.Empty<string>();
+            var bal = Sh390Diag.GitShow("cf2661f7:docs/balance.md").Split('\n');   // 第411期: 第410期までの表と、カーズの2行を旧の行名 ＋ 旧のカリに戻した行（`CompareBuildsH410`）で比べる
             var map = new Dictionary<string, string[]>();
             foreach (var l in bal) { var c = l.Split('|').Select(x => x.Trim()).ToArray(); if (c.Length >= 8 && c[2].EndsWith('%')) map[c[1]] = c.Skip(2).Take(5).ToArray(); }
-            var rows = CompareBuilds(); var g = CGrid(rows, CompareSeeds);
+            var rows = CompareBuildsH410(); var g = CGrid(rows, CompareSeeds);
             int diff = 0, miss = 0;
             for (int ri = 0; ri < rows.Length; ri++)
             {

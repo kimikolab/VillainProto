@@ -13,6 +13,7 @@ using K9 = Kari409Diag;
 //     dotnet run --project BattleSim -c Release 0 kari410 seats    # §2-2: 25 並び × {KZ-62, KZ-90}（＋ 確かめの K-d0）× 4 波・seed 0..99
 //     dotnet run --project BattleSim -c Release 0 kari410 mixed    # §2-4: compare のカリの2行のカリを KZ-90 ／ 素体 HP 90 攻 4 に差し替えた写し × 7 波・seed 0..199
 //     dotnet run --project BattleSim -c Release 0 kari410 check    # 自己検査
+//     dotnet run --project BattleSim -c Release 0 kari410 s411     # 第411期: 「試遊・カーズ 呪い」（規定のカーズ）× 4 波・seed 0..99 が第410期 §3-6 の KZ-90 の行と同じか
 //
 // **予測のファイルが無ければ seats ／ mixed を走らせない**（R397・`.tmp/p410/predict.md`）。
 // =====================================================================================
@@ -50,7 +51,8 @@ static class Kari410Diag
             case "seats": Seats(); return;
             case "mixed": Mixed(); return;
             case "check": Check(); return;
-            default: Console.WriteLine("kari410: モードは seats / mixed / check。"); return;
+            case "s411": S411(); return;
+            default: Console.WriteLine("kari410: モードは seats / mixed / check / s411。"); return;
         }
     }
 
@@ -192,7 +194,7 @@ static class Kari410Diag
     static void Mixed()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = Presets.Compare.Where(b => b.F.Occupied().Any(o => o.Def.Id == "kari")).ToArray();
+        var rows = CompareBuildsH410().Where(b => b.F.Occupied().Any(o => o.Def.Id == "kari")).ToArray();   // 第411期: 旧の行名 ＋ 旧のカリ（駆り立て）
         var waves = EnemyCatalog.Stages.Select((st, i) => ($"第{i + 1}波", (Func<Formation, int, BattleResult>)((f, s) => BattleEngine.Run(f, st.Enemy, s, verbose: false))))
             .Concat(new[] { ("近衛", EnemyCatalog.EliteGuardWave), ("大隊", EnemyCatalog.EliteBattalionWave) }
                 .Select(x => (x.Item1, (Func<Formation, int, BattleResult>)((f, s) => BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), BattleEngine.MaterializeEnemy(x.Item2, EnemyCatalog.EliteScale), s, verbose: false)))))
@@ -222,6 +224,21 @@ static class Kari410Diag
         Console.WriteLine($"所要 {sw.Elapsed.TotalSeconds:F0} 秒。");
     }
 
+    /// <summary>第411期: KZ-90 を規定にした確かめ。「試遊・カーズ 呪い」× 4 波が第410期 §3-6 の KZ-90 の行と同じか（違えば exit 1）。</summary>
+    static void S411()
+    {
+        string[] exp = { "100.0・10.0T", "100.0・6.3T", "100.0・5.4T", "100.0・10.1T" };
+        var f = Presets.Versions.First(r => r.Name == "試遊・カーズ 呪い").F;
+        var got = Waves.Select(w => K8.Measure(f, w).WT).ToArray();
+        bool seat = S307.Seats(f) == S307.Seats(Presets.KarzBoard410()) && f.Occupied().Any(o => o.Def == UnitCatalog.Kari) && UnitCatalog.All.Contains(UnitCatalog.Kari);
+        int same = Enumerable.Range(0, 4).Count(i => got[i] == exp[i]);
+        Console.WriteLine($"# 第411期 「試遊・カーズ 呪い」（{S307.Seats(f)}・規定のカーズ {(seat ? "はい" : "**いいえ**")}）× {string.Join(" ／ ", Waves.Select(w => w.Name))}・seed 0..99");
+        Console.WriteLine();
+        Console.WriteLine($"第410期 §3-6 の KZ-90: {string.Join(" ／ ", exp)}");
+        Console.WriteLine($"いま: {string.Join(" ／ ", got)} → 4 波のうち同じ {same}");
+        if (!seat || same != 4) Environment.ExitCode = 1;
+    }
+
     static int _fail;
     static void Expect(string what, bool ok, string detail = "")
     {
@@ -233,12 +250,12 @@ static class Kari410Diag
         _fail = 0;
         Console.WriteLine("# 第410期 kari410 check —— 自己検査");
         Console.WriteLine();
-        var k0 = UnitCatalog.Kari; var z62 = UnitCatalog.KariKz62; var z90 = UnitCatalog.KariKz90; var d0 = UnitCatalog.KariKd0;
+        var k0 = UnitCatalog.KariH406; var z62 = UnitCatalog.KariKz62; var z90 = UnitCatalog.KariKz90; var d0 = UnitCatalog.KariKd0;   // 第411期: 規定のカリは祟りのカーズになった（k0 は旧の駆り立てで見る）
         Expect("版の定義: Id ＝ kari・名前「祟りのカーズ」・HP 62 ／ 90・攻 4 ／ 速 9・札は K-d0 と同じ（`KariMarkDeepen`）・手番は Skill・フレーバーは空",
             new[] { z62, z90 }.All(d => d.Id == k0.Id && d.Name == "祟りのカーズ" && d.Attack == d0.Attack && d.Speed == d0.Speed && d.Traits.SequenceEqual(d0.Traits)
                 && d.Actions.Count == 1 && d.Actions[0].Kind == ActionKind.Skill && d.Flavor == "") && z62.MaxHp == 62 && z90.MaxHp == 90);
         Expect("保持者 0 枚（`All` ／ `Retired` に版が無い・規定のカリは Goad のまま）",
-            !UnitCatalog.All.Contains(z62) && !UnitCatalog.All.Contains(z90) && !UnitCatalog.Everyone.Any(d => d.Traits.Contains(TraitId.KariMarkDeepen)) && k0.Traits.SequenceEqual(new[] { TraitId.Goad }));
+            !UnitCatalog.All.Contains(z62) && !UnitCatalog.All.Contains(z90) && !UnitCatalog.Everyone.Any(d => d != UnitCatalog.Kari && d.Traits.Contains(TraitId.KariMarkDeepen)) && k0.Traits.SequenceEqual(new[] { TraitId.Goad }));
         int diff = 0;
         foreach (var a in K9.AllArrs().Where((_, i) => i % 5 == 0))
             foreach (var w in Waves)
@@ -248,12 +265,12 @@ static class Kari410Diag
                     if (x.PlayerWon != y.PlayerWon || x.Turns != y.Turns || x.PlayerSurvivors != y.PlayerSurvivors || x.TallyByUnit["kari"].K409Marks != y.TallyByUnit["kari"].K409Marks) diff++;
                 }
         Expect("KZ-62 は第409期の K-d0 と同じ戦をする（5 並び × 4 波 × seed 0..9・勝敗 ／ T ／ 生存 ／ 印）", diff == 0, $"違い {diff}");
-        var names = Presets.Versions.Select(r => r.Name).ToList();
+        var names = VersionsH410().Select(r => r.Name).ToList();   // 第411期: 第410期の一覧で見る
         int iz = names.IndexOf(Row410);
         Expect($"試遊の台「{Row410}」が末尾の「版・」の並びにあり、カーズ（KZ-62 か KZ-90）を置く・「版・K-d 呪い」は無い・「版・K-k 呪い」は K-k のまま",
             iz >= 0 && !names.Contains("版・K-d 呪い") && names.Skip(names.IndexOf("版・K-k 呪い")).All(n => n.StartsWith("版・"))
-            && Presets.Versions[iz].F.Occupied().Any(o => o.Def == z62 || o.Def == z90)
-            && Presets.Versions.First(r => r.Name == "版・K-k 呪い").F.Occupied().Any(o => o.Def == UnitCatalog.KariKk));
+            && VersionsH410()[iz].F.Occupied().Any(o => o.Def == z62 || o.Def == z90)
+            && VersionsH410().First(r => r.Name == "版・K-k 呪い").F.Occupied().Any(o => o.Def == UnitCatalog.KariKk));
         Console.WriteLine();
         Console.WriteLine(_fail == 0 ? "**すべて OK**" : $"**NG {_fail} 件**");
         if (_fail > 0) Environment.ExitCode = 1;

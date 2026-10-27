@@ -91,7 +91,7 @@ static partial class Sh375Diag
         // ---- 試遊の台 ----
         {
             // 第376期: 第375期の「版・C 自傷にヴィオ」「版・C 台Bにヴィオ」は外した（C を規定にした・並びはこの器具の中で組む）。検査は「頭の10台」と「第375期の版の台が無い」に。
-            var vr = Presets.Versions.Select(r => r.Name).ToArray();
+            var vr = VersionsH407().Select(r => r.Name).ToArray();
             bool rows = vr.Take(10).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒", "試遊・毒 席替え", "試遊・毒 紅" })
                 && !vr.Any(n => n is "版・C 自傷にヴィオ" or "版・C 台Bにヴィオ");
             Expect("`Presets.Versions` の頭 ＝ 試遊の8台 ＋「試遊・毒 席替え」＋「試遊・毒 紅」・第375期の版の2台は無い（第376期に外した）", rows, string.Join("、", vr));

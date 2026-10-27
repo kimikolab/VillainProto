@@ -72,7 +72,7 @@ static partial class Formation2Diag
         // ---------------- Q0-3 ----------------
         Console.WriteLine("## Q0-3 スィドの在席行（`compare`）");
         Console.WriteLine();
-        var rows = CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id == "sid")).ToList();
+        var rows = CompareBuildsH410().Where(r => r.F.Occupied().Any(o => o.Def.Id == "sid")).ToList();
         Console.WriteLine("| 行 | スィドの席 | 隣の味方 |");
         Console.WriteLine("|---|---|---|");
         foreach (var r in rows)

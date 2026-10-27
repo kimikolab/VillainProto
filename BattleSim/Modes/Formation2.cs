@@ -179,7 +179,7 @@ static partial class Formation2Diag
         Console.WriteLine();
         Console.WriteLine("| 行 | ガルドの席 | ゴルム/ササ/スィド | 並び | 表B |");
         Console.WriteLine("|---|---|:-:|---|:-:|");
-        foreach (var (name, f) in CompareBuilds().Where(r => Has(r.F, "gald")))
+        foreach (var (name, f) in CompareBuildsH410().Where(r => Has(r.F, "gald")))
         {
             int gs = f.Occupied().First(o => o.Def.Id == "gald").Slot;
             bool clash = Has(f, "golm") || Has(f, "sasa") || Has(f, "sid");
@@ -187,7 +187,7 @@ static partial class Formation2Diag
                               + string.Join(" ", f.Occupied().Select(o => o.Def.Name)) + " | " + (TankRows.Contains(name) ? "**○**" : "") + " |");
         }
         Console.WriteLine();
-        var missing = TankRows.Where(n => !CompareBuilds().Any(r => r.Name == n)).ToList();
+        var missing = TankRows.Where(n => !CompareBuildsH410().Any(r => r.Name == n)).ToList();
         if (missing.Count > 0) Console.WriteLine("**表B の行名が引けない: " + string.Join(", ", missing) + "**");
         Console.WriteLine();
         Console.WriteLine("**敵の攻撃型**（`EnemyCatalog.Stages`・素の型）:");

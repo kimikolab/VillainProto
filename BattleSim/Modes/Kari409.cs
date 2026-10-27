@@ -236,7 +236,7 @@ static class Kari409Diag
     static void Mixed()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = Presets.Compare.Where(b => b.F.Occupied().Any(o => o.Def.Id == "kari")).ToArray();
+        var rows = CompareBuildsH410().Where(b => b.F.Occupied().Any(o => o.Def.Id == "kari")).ToArray();   // 第411期: 旧の行名 ＋ 旧のカリ（駆り立て）
         var waves = EnemyCatalog.Stages.Select((st, i) => ($"第{i + 1}波", (Func<Formation, int, BattleResult>)((f, s) => BattleEngine.Run(f, st.Enemy, s, verbose: false))))
             .Concat(new[] { ("近衛", EnemyCatalog.EliteGuardWave), ("大隊", EnemyCatalog.EliteBattalionWave) }
                 .Select(x => (x.Item1, (Func<Formation, int, BattleResult>)((f, s) => BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), BattleEngine.MaterializeEnemy(x.Item2, EnemyCatalog.EliteScale), s, verbose: false)))))
@@ -280,11 +280,11 @@ static class Kari409Diag
         _fail = 0;
         Console.WriteLine("# 第409期 kari409 check —— 自己検査");
         Console.WriteLine();
-        var k0 = UnitCatalog.Kari; var kd = UnitCatalog.KariKd; var kd1 = UnitCatalog.KariKd1; var kd0 = UnitCatalog.KariKd0;
+        var k0 = UnitCatalog.KariH406; var kd = UnitCatalog.KariKd; var kd1 = UnitCatalog.KariKd1; var kd0 = UnitCatalog.KariKd0;   // 第411期: 規定のカリは祟りのカーズになった（k0 は旧の駆り立てで見る）
         bool body(UnitDef d) => d.Id == k0.Id && d.MaxHp == k0.MaxHp && d.Attack == 4 && d.Speed == k0.Speed && d.Actions.Count == 1 && d.Actions[0].Kind == ActionKind.Skill;
         Expect("版の定義: Id ＝ kari・HP 62 ／ 攻 4 ／ 速 9・手番は Skill・K-d1 ＝ K-d の札 ＋ KariDragOnce・K-d0 ＝ KariMarkDeepen だけ",
             body(kd1) && body(kd0) && kd1.Traits.SequenceEqual(kd.Traits.Append(TraitId.KariDragOnce)) && kd0.Traits.SequenceEqual(new[] { TraitId.KariMarkDeepen }));
-        var held = UnitCatalog.Everyone.Where(d => d.Traits.Any(t => t is TraitId.KariDragOnce or TraitId.KariMarkDeepen)).ToArray();
+        var held = UnitCatalog.Everyone.Where(d => d != UnitCatalog.Kari && d.Traits.Any(t => t is TraitId.KariDragOnce or TraitId.KariMarkDeepen)).ToArray();   // 第411期: 規定のカーズ（K-d0 の札）は除く
         Expect("保持者 0 枚（`All` ／ `Retired` ／ `Presets.Compare` に版が無い・規定のカリは Goad のまま）",
             held.Length == 0 && !UnitCatalog.All.Contains(kd1) && !UnitCatalog.All.Contains(kd0) && k0.Traits.SequenceEqual(new[] { TraitId.Goad }), $"保持者 {held.Length}");
         Expect("25 並びに第408期の5並び（外した駒の席にカリ）が含まれる",
@@ -318,12 +318,12 @@ static class Kari409Diag
         int i1 = i0 < 0 ? -1 : src.IndexOf("/// <summary>K-d: 引きずり出された敵の単体の的", i0, StringComparison.Ordinal);
         string b = i0 >= 0 && i1 > i0 ? src[i0..i1] : "";
         Expect("第409期の口（`KariMark409`）に `PickOne` ／ `Roll(` が無い", b.Length > 0 && !b.Contains("PickOne") && !b.Contains("Roll("), $"{b.Length} 文字");
-        var vrows = Presets.Versions.Select(r => r.Name).ToList();
+        var vrows = VersionsH410().Select(r => r.Name).ToList();   // 第411期: 第410期の一覧で見る
         int iK = vrows.IndexOf("版・K-k 呪い"), iD = Math.Max(vrows.IndexOf("版・K-d 呪い"), vrows.IndexOf("版・カーズ 呪い"));   // 第410期に「版・カーズ 呪い」へ改名
         Expect("試遊の台「版・K-k 呪い」（K-k のまま）「版・K-d 呪い」（第409期の版）が `Presets.Versions` の末尾にある",
             iK >= 0 && iD >= 0 && vrows.Skip(Math.Min(iK, iD)).All(n => n.StartsWith("版・"))
-            && Presets.Versions[iK].F.Occupied().Any(o => o.Def == UnitCatalog.KariKk)
-            && Presets.Versions[iD].F.Occupied().Any(o => o.Def == kd || o.Def == kd1 || o.Def == kd0 || o.Def == UnitCatalog.KariKz62 || o.Def == UnitCatalog.KariKz90));
+            && VersionsH410()[iK].F.Occupied().Any(o => o.Def == UnitCatalog.KariKk)
+            && VersionsH410()[iD].F.Occupied().Any(o => o.Def == kd || o.Def == kd1 || o.Def == kd0 || o.Def == UnitCatalog.KariKz62 || o.Def == UnitCatalog.KariKz90));
         Console.WriteLine();
         Console.WriteLine(_fail == 0 ? "**すべて OK**" : $"**NG {_fail} 件**");
         if (_fail > 0) Environment.ExitCode = 1;

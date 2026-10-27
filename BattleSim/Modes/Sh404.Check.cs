@@ -158,7 +158,7 @@ static partial class Sh404Diag
         {
             var map = S390.BalanceMap(S390.GitShow("27d71da6:docs/balance.md"));   // 第405期: 第404期の表と、ハギを旧に固定した行で比べる
             var head = S390.BalanceMap(S390.GitShow($"{HeadSha}:docs/balance.md"));
-            var rows = CompareBuilds().Select(r => (r.Name, F: Pin404(r.F))).ToArray(); var g = CGrid(rows, CompareSeeds);
+            var rows = CompareBuildsH410().Select(r => (r.Name, F: Pin404(r.F))).ToArray(); var g = CGrid(rows, CompareSeeds);   // 第411期: カーズの2行は旧の行名 ＋ 旧のカリで
             int diff = 0, miss = 0, noHagiMoved = 0;
             for (int ri = 0; ri < rows.Length; ri++)
             {

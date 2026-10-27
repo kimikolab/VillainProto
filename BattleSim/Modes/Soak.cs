@@ -34,7 +34,7 @@ public static void Run(string[] args, int stageIndex)
     int skW = skStages.Count;
     // **第141期: ロスターは `Everyone`（`All ∪ Retired`）。** (P1)＝第89期の再判定の意図した相手にハリが入る
     // （`soak redo89` が `skIdx["hari"]` で落ちていた）。ロスターが B の集合と引き表を兼ねるのでロスターごと広げる。
-    var skRoster = UnitCatalog.Everyone.ToArray();
+    var skRoster = EveryoneH410();
     int skRN = skRoster.Length;                       // 54（第90期は 51）
 
     // ---- 第81期 `pairs2` の定数の写し（**1つも変えていない**）----------------------------------
@@ -538,7 +538,7 @@ public static void Run(string[] args, int stageIndex)
         Console.WriteLine();
 
         // ---- 先に第89期の自己検査 (h) の訂正を確かめる（§1-1）------------------------------------
-        var chkRows = CompareBuilds();
+        var chkRows = CompareBuilds();   // docs/balance.md と突き合わせるので今の行（第411期）
         int diffCells = 0, diffRows = 0;
         var diffNames = new List<string>();
         var chkLock = new object();
@@ -645,7 +645,7 @@ public static void Run(string[] args, int stageIndex)
         Console.WriteLine();
 
         // ---- §1-2 の 3: 同席の行 ----------------------------------------------------------------
-        var rows = CompareBuilds();
+        var rows = CompareBuildsH410();
         var primary = new HashSet<string>(Baseline.PrimaryRows);
         var woundSet = new HashSet<string>(skWoundIds);
         var readSet = new HashSet<string>(skReaderIds);
@@ -767,7 +767,7 @@ public static void Run(string[] args, int stageIndex)
     // =====================================================================================
     if (skArg == "ideal")
     {
-        var rows = CompareBuilds();
+        var rows = CompareBuildsH410();
         var primary = new HashSet<string>(Baseline.PrimaryRows);
         Console.Error.Write("soak ideal: W0 …");
         var i0 = SkIdeal(rows, 0);
@@ -941,7 +941,7 @@ public static void Run(string[] args, int stageIndex)
     {
         Console.WriteLine("# 第90期 表F —— 自己検査");
         Console.WriteLine();
-        var rows = CompareBuilds();
+        var rows = CompareBuilds();   // docs/balance.md と突き合わせるので今の行（第411期）
         var results = new List<(string Tag, string What, string Got, bool Ok)>();
 
         // (b) SoakRule off で `compare` が docs/balance.md と 0 件 -------------------------------
@@ -1162,7 +1162,7 @@ public static void Run(string[] args, int stageIndex)
     // =====================================================================================
     if (skArg == "phase0b")
     {
-        var rows = CompareBuilds();
+        var rows = CompareBuildsH410();
         var primary = new HashSet<string>(Baseline.PrimaryRows);
         Console.WriteLine("# 第91期 表A —— 分母（(G4): 判定を書いた時点で数える）");
         Console.WriteLine();
@@ -1334,7 +1334,7 @@ public static void Run(string[] args, int stageIndex)
     // =====================================================================================
     if (skArg == "split")
     {
-        var rows = CompareBuilds();
+        var rows = CompareBuildsH410();
         var primary = new HashSet<string>(Baseline.PrimaryRows);
         Console.Error.Write("soak split: compare × 3版 …");
         var c3 = SkCompare3(rows);
@@ -1558,7 +1558,7 @@ public static void Run(string[] args, int stageIndex)
     // =====================================================================================
     if (skArg == "check2")
     {
-        var rows = CompareBuilds();
+        var rows = CompareBuilds();   // docs/balance.md と突き合わせるので今の行（第411期）
         var results = new List<(string Tag, string What, string Got, bool Ok)>();
         Console.Error.Write("soak check2: compare × 3版 …");
         var c3 = SkCompare3(rows);

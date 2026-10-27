@@ -158,9 +158,7 @@ public static class Map11Relations
         [TraitId.VioBloodSip] = new(Shape.Adjacent, "血を啜られる",
             "仲間が汚れていないターンは、ヴィオが飢えてこの駒の HP を 4 啜る（ダメージではない・HP 1 未満にはしない・傷は残る）",
             LinkSign.Loss, true, "啜"),
-        [TraitId.Goad] = new(Shape.AdjacentAcceptsSupport, "前に押し出す",
-            "毎ターン、隣でいちばん攻撃力が高い1体に力を渡して前へ出す（渡した相手は狙われる）",
-            LinkSign.Both, true, "押し出す"),
+        // 第411期: 駆り立て（`Goad`）は (a) へ移した——カリが祟りのカーズ（`KariMarkDeepen`・敵陣の呪いを読む）に転生し、52 枚のロスターに保持者がいなくなった（旧の駆り立てのカリは `UnitCatalog.KariH406`）。
         // 第179期の残件（第178期 追補で入れた）。**倒れたときだけ起きる**ので点線
         // ——「隣であること」は席で決まり、**いつ降るかだけが席の外にある**（上の (b) 型）。
         // 第214期: 名前が「血詠みのアカ」に変わった（仕組みはそのまま）ので、線の1語と説明文の語を「血」に揃えた。
@@ -284,6 +282,7 @@ public static class Map11Relations
         [TraitId.Pyre] = "燃えている間だけ形が変わる（相手がいない）",
         [TraitId.Loose] = "外れ矢の行き先はそのときの盤面で決まる",
         [TraitId.Overbear] = "保持者がロスターにいない（棄却駒）",
+        [TraitId.Goad] = "保持者がロスターにいない（第411期にカリが祟りのカーズへ転生・旧の駆り立てのカリは `KariH406`）",
         [TraitId.Slander] = "敵側の札（味方どうしの線ではない）",
         [TraitId.Finisher] = "相手は標の有無で決まる（席ではない）",
         [TraitId.Rally] = "味方全体へ配る（位置を問わない）",

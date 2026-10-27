@@ -176,7 +176,7 @@ static partial class Sh373Diag
         // ---- 試遊の台 ----
         {
             // 第374期: 第373期の「版・A1 ／ A2 ／ A1 席替え」は外した（採らない・並びはこの器具の中で組む）。検査は「頭の10台」と「第373期の版の台が無い」に。
-            var vr = Presets.Versions.Select(r => r.Name).ToArray();
+            var vr = VersionsH407().Select(r => r.Name).ToArray();
             bool rows = vr.Take(10).SequenceEqual(new[] { "試遊・感電 ポンの台", "試遊・ミサ 書き手なし", "試遊・燃焼 ポンの台", Db351Diag.PlayRow, "試遊・呪い 壁", "試遊・破片", "試遊・自傷", "試遊・毒", "試遊・毒 席替え", "試遊・毒 紅" })
                 && !vr.Any(n => n is "版・Va 散らす" or "版・Vb 高い段" or "版・Vc 集中" or "版・A1 半分を吐く" or "版・A2 3分の1を吐く" or "版・A1 席替え");
             string guren = S307.Seats(Presets.Versions.First(r => r.Name == "試遊・毒 紅").F);
