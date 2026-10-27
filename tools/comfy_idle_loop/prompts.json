@@ -237,5 +237,47 @@
     "sway": "The cape, apron hem and braid sway naturally with her whole body. The shovel shaft is straight and rigid and moves together with both hands without bending. No fire, no flames, no aura, no glow, no energy blade.",
     "neg": "bent shovel, flexible shaft, missing spade, duplicate shovel, extra limbs, floating foot, exhausted posture, slouching, hunching, sword, spear, aura, glow",
     "note": "2026-10-24 段別モーション元絵から。通常の採用39コマは維持。2022/5055の比較用候補を生成し、FxViewerと比較GIFで確認する。"
+  },
+  "ere": {
+    "still": "DemoApp/assets/portraits/battle/ere_idle_right.png",
+    "pronoun": "she",
+    "char": "The adult wandering female bard Ere waits facing right in the exact original three-quarter stance. She has a thick long chestnut braid, a small black embroidered cap, a long sheer black veil, ivory puff sleeves, layered black and burgundy skirts, gold star ornaments and brown boots. She holds ONE wooden pear-shaped lute firmly against her chest, its short straight neck pointing up and right: left fingers stay on the frets and the right hand rests over the strings at the round rosette. Preserve the exact mature face, calm attentive expression, lute outline, rosette and straight parallel strings. ",
+    "motion": "A continuous connected full-body fighting-game idle: repeat two or three graceful rhythmic guard bounces. Both knees clearly flex and straighten; the pelvis lowers and rises, with chest, shoulders and head following together. Keep an elegant upright back, chest lifted and chin level, never hunching over the instrument. The breathing and knee motion are visible but restrained, approximately a small hand-width in total. Her forearms and the rigid lute follow her shoulders gently. The right fingers softly prepare the strings without a broad performance strum; the left hand maintains its grip on the same frets. ",
+    "sway": "The braid, veil, loose ivory sleeves, skirt hems, burgundy lute ribbon and small gold charms gently lag behind the connected body motion, sway and settle. The lute is rigid: never bend, stretch or inflate its wooden body, neck, strings or tuning pegs. Do not detach the neck, do not change the finger count. No music notes, no magic, no glow, no particles, no smoke. Her lips keep the original shape; she is waiting rather than actively singing.",
+    "neg": "hunching, bowing, exhausted posture, body leaning forward, extreme bounce, instrument bending, changing instrument size, extra lute neck, extra strings, hand sliding off neck, strumming wildly, performance gesture, head turning, singing mouth, lip sync, large mouth movements, detached neck, isolated moving head",
+    "note": "2026-10-27 ユーザー依頼。現行の待機AからWan2.2でseed 2022／5055の2候補を生成。2022を継ぎ目6コマ・全体上1pxで補修した40コマのAを提示。5055は切り直し後も継ぎ目が目立つため除外。2026-10-27にユーザーがA+Cを選択し、待機Aを通常プレイへ反映。記録はdesign/art/ere/motion-v1/notes.md。",
+    "adopted": {
+      "tag": "ere_idle_v1_s2022_final_aligned",
+      "seed": 2022,
+      "frames": 40,
+      "fps": 16,
+      "loop": "ere",
+      "type": "loop",
+      "date": "2026-10-27",
+      "candidate": "待機A",
+      "crossfade": 6,
+      "translation_y": -1
+    }
+  },
+  "ere_singing": {
+    "still": "DemoApp/assets/portraits/battle/ere_singing_idle_right.png",
+    "full": "A 2D anime game bard performing her lament skill, a continuous repeating musical performance animation. The adult female bard Ere keeps the exact original right-facing three-quarter pose, eyes softly closed and chin lifted as she sings with the original narrow open mouth. Preserve her chestnut braid, embroidered black cap and veil, ivory sleeves, burgundy and black layered skirt, star jewelry and brown boots. She holds ONE wooden pear-shaped lute across her chest; her left hand stays wrapped around the SAME upper frets and the right wrist performs two or three CLEAR visible down-up strumming gestures across the strings over the rosette. Her right elbow opens, the wrist sweeps down across the strings and returns; the hand does NOT leave the wooden soundboard area. Her chest expands and rises on the musical phrase, shoulders and lute rise together, then her knees flex gently and the full body settles before the next phrase. A graceful confident connected performance, not an idle mannequin, not a dancing spin. The instrument moves as ONE RIGID object following the torso and arms. The pear body, rosette, straight neck, straight parallel strings and tuning pegs never change shape or length. The braid, veil, sleeve cuffs, skirt hems, gold chains and lute ribbon follow the musical upper-body movement with soft natural delay. Both boots remain firmly planted at the exact same ground positions. No steps, no jumping, no turning, no forward travel. Keep her eyes closed and mouth small throughout, no exaggerated lip sync. Same face, same costume and colors. No floating music notes, no magical effects, no glow, no particles: the game adds the gift effect later. Fixed camera, no zoom, full body and both boots always visible, plain solid green background.",
+    "neg": "frozen pose, static instrument, still right arm, idle breathing only, dancing, swaying sideways, leaning forward, hunched back, screaming, wide open mouth, tongue, talking to camera, eyes opening, face turning to camera, instrument bending, expanding lute, longer neck, instrument melting, fingers detached, hands crossing, extra fingers, transparent hands, extra hands, changing strings, sparkles, subtitles",
+    "note": "2026-10-27 ユーザー依頼。現行の歌唱Cからseed 2022／3033を生成。ループ自動抽出は演奏動作を落とすため、生動画先頭48コマを透過した単発3秒のスキルC／Dとして提示。文字・音符・魔法は生成へ焼き込まずゲーム側で重ねる。2026-10-27にユーザーがA+Cを選択し、スキルCを通常プレイへ反映。記録はdesign/art/ere/motion-v1/notes.md。",
+    "adopted": {
+      "tag": "ere_skill_v1_s2022_aligned",
+      "seed": 2022,
+      "frames": 48,
+      "fps": 16,
+      "loop": "ere_singing",
+      "type": "one_shot",
+      "date": "2026-10-27",
+      "candidate": "スキルC",
+      "source_range": [
+        0,
+        48
+      ],
+      "crossfade": 0
+    }
   }
 }

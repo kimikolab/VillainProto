@@ -35,6 +35,7 @@ public partial class ErePortraitCheck : Node
             await Until(() => pawn.DirgeSinging, "台本の哀歌でCへ変更");
             Check(pawn, _song);
             _main.PausePlayback();
+            Require(!_main.ViewerField.FindChildren("*", "", true, false).OfType<PopupLabel2D>().Any(), "歌唱にSKILLテロップを重ねない");
             await Snapshot("battle-song-c-game-check.png");
             await Wait(0.90);
             Require(pawn.DirgeSinging, "停止中はCを保持");
@@ -131,11 +132,14 @@ public partial class ErePortraitCheck : Node
 
     private async Task Wait(double seconds) => await ToSignal(GetTree().CreateTimer(seconds), SceneTreeTimer.SignalName.Timeout);
 
-    private static void Check(BattlePawn3D pawn, Texture2D expected)
+    private void Check(BattlePawn3D pawn, Texture2D expected)
     {
         var sprite = pawn.GetChildren().OfType<Sprite3D>().Single();
-        Require(sprite.Texture == expected, "実際のSprite3Dの画像");
-        Require(((ShaderMaterial)sprite.MaterialOverride).GetShaderParameter("portrait_texture").AsGodotObject() == expected,
+        string? loop = expected == _idle ? "ere" : expected == _song ? "ere_singing" : null;
+        var frames = loop is null ? Array.Empty<Texture2D>() : BattlePawn3D.IdleLoopFramesOf(loop);
+        Require(pawn.IdleLoopPlaying && frames.Length > 0 ? frames.Contains(sprite.Texture) : sprite.Texture == expected,
+            "実際のSprite3Dの画像または対応するモーション");
+        Require(((ShaderMaterial)sprite.MaterialOverride).GetShaderParameter("portrait_texture").AsGodotObject() == sprite.Texture,
             "シェーダーの画像");
     }
 

@@ -12,6 +12,13 @@ public partial class BattlePawn3D
     public bool IsBinding { get; private set; }
     public bool IsFrightened { get; private set; }
     public bool DirgeSinging { get; private set; }
+    internal float DirgeGlow { get; private set; }
+    internal void SetDirgeGlow(float amount, Color tint)
+    {
+        DirgeGlow = PresentationAlive ? Math.Clamp(amount, 0, 1) : 0;
+        _portraitMaterial?.SetShaderParameter("dirge_glow", DirgeGlow);
+        _portraitMaterial?.SetShaderParameter("dirge_tint", tint);
+    }
 
     public void SetDirgeSinging(bool active)
     {
@@ -19,6 +26,11 @@ public partial class BattlePawn3D
         if (DirgeSinging == next) return;
         DirgeSinging = next;
         RefreshBattlePortrait();
+        if (next && _idleLoopActive)
+        {
+            _idleLoopTime = 0; _idleLoopFrame = -1;
+            ApplyIdleLoopFrame();
+        }
     }
 
     public void SetFrightened(bool active)

@@ -8,31 +8,14 @@ public partial class Main
 {
     private DeathPresentation? _death;
     private int _deathFrame;
-    private BattlePawn3D? _deathSinger;
-    private int _deathRecipients;
     private async Task<bool> PlayDeathAxis(BattleEvent e, int index, BattlePawn3D? actor, BattlePawn3D? target)
     {
         _battleField.SetDeathClock(_paused, _speed);
-        if (index == 0) { _deathFrame = -1; _deathSinger = null; _deathRecipients = 0; }
+        if (index == 0) _deathFrame = -1;
         int token = _playToken;
         bool awakened = ApplyDeathFrames(index);
         if (awakened) await HoldDeathBeat(0.25, token);
         if (token != _playToken || !_battleMode) return true;
-        if (e.Kind == BattleEventKind.TurnStart) { _deathSinger = null; _deathRecipients = 0; }
-        if (e.Kind == BattleEventKind.Skill && actor?.UnitId == "ere" && _result is not null
-            && ErePresentation.IsSongSkill(_result.Events, index))
-        {
-            _deathSinger = actor; _deathRecipients = 2;
-        }
-        // 贈られた実手番の直前に出る Highlight の宛先。強い駒を画面側では選ばない。
-        if (e.Kind == BattleEventKind.Highlight && actor is not null && actor != _deathSinger
-            && _deathSinger is not null && _deathRecipients > 0
-            && _result!.Hands.Any(h => h.ActorId == actor.InstanceId && h.EventStart == index + 1))
-        {
-            _battleField.ShowDeathSong(_deathSinger, actor); _deathRecipients--;
-            await HoldDeathBeat(0.30, token);
-            if (token != _playToken || !_battleMode) return true;
-        }
         if (e.Kind == BattleEventKind.Death && target is not null) _battleField.ShowDeathOffering(target);
         if (e.Kind == BattleEventKind.Damage && target is not null && e.SourceTrait is TraitId.Rot or TraitId.RicaRaiseDead or TraitId.RicaRaiseDeadStack or TraitId.RicaAwakenRaise)
         {

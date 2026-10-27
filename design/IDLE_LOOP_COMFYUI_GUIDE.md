@@ -4,6 +4,8 @@
 Claude Code・Codex・人のどれが作業しても同じ結果になるように、操作は `tools/comfy_idle_loop/idle_loop.py` の命令にまとめてある。
 採用までの経緯と数値は `design/art/hane/hane-idle-loop-v1-notes.md`（方式の比較・ボルグ／ホタ／ヒヨ）と `design/art/hiyo/hiyo-idle-loop-comfyui-v1.md`（ゲームへの接続・燃焼差分）。
 
+**エレ（2026-10-27採用）**: 待機Aは `ere` の40コマ・2.5秒ループ、スキルCは `ere_singing` の48コマ・3秒の単発（ともに16fps）。採用記録は `design/art/ere/motion-v1/notes.md`。歌唱は巡回せず終端を保ち、音の受け渡しから追加手番へ繋ぐ。
+
 **いまゲームに入っているもの**: ヒヨ（`hiyo`）・ボルグ（`borg`）・ホタ（`hota`）・ホタの燃焼差分（`hota_burning`）・ガルド（`gald`、v4 A・32コマ、記録は `design/art/gald/idle-loop-v4/notes.md`）・ガレ（`gare`、v3 A70・30コマ、記録は `design/art/gare/idle-loop-v3/notes.md`）・ヒビ（`hibi`、v2・元動画の30コマを直接使用、記録は `design/art/hibi/idle-loop-v2/notes.md`）・リィカ（`rica`、B・39コマ、記録は `design/art/rica/idle-loop-v2/notes.md`）・ハギ（`hagi`、修正版B・48コマ、記録は `design/art/hagi/idle-loop-v2/integration.json`）。
 
 ---
@@ -161,6 +163,7 @@ D:/comfyui/venv/Scripts/python.exe tools/comfy_idle_loop/idle_loop.py install ho
 `DemoApp/assets/portraits/battle/idle_loop/<連番名>/<連番名>_idle_NN.png` に入れる（古い連番は消してから入れる）。**コードは触らない**。
 
 - 連番名 `<駒ID>` … 通常の待機絵のときに回る。動作差分（贈り物・煽り・回収など）のあいだは止まり、戻ると再開。死亡・勝利では止まる。再生速度に追従。
+- 連番名 `ere_singing` … エレの歌唱中に単発で再生し、演奏後の姿勢を受け渡しまで保つ。生成元動画から演奏の1フレーズを切り出すため、自動ループ抽出の静かな区間を使わない（`design/art/ere/motion-v1/postprocess.py`）。
 - 連番名 `<駒ID>_burning` … その駒に燃焼差分の絵（`<駒ID>_burning_idle_right.png`）があるとき、燃えているあいだ回る。無ければ燃焼差分の静止絵のまま。
 - 仕組みは `DemoApp/BattlePawn3D.IdleLoop.cs`（読み込みは `IdleLoopFramesOf` の 1 箇所）。
 
@@ -177,7 +180,7 @@ C:/tools/Godot_v4.7.2-stable_mono_win64/Godot_console.exe --path DemoApp --headl
 合否は `IDLE_LOOP_CHECK_OK` / `PORTRAIT_STATE_CHECK_OK` / `FIRE_CHECK_OK` / `MOVEMENT_PORTRAIT_CHECK_OK` の行で読む
 （終了時の `RID allocations … leaked` は既存の警告）。
 
-- **`IdleLoopCheck.cs` はコマ数を数えている**（ヒヨ 19・ボルグ 44・ホタ 36・ガルド 32・ガレ 30・ヒビ 30・リィカ 39・ハギ 48）。入れ替えたら数を直す。新しい駒を足したら、その駒の「開戦から連番・同じ高さ」の確認を足す。
+- **`IdleLoopCheck.cs` はコマ数を数えている**（ヒヨ 19・ボルグ 44・ホタ 36・ガルド 32・ガレ 30・ヒビ 30・リィカ 39・ハギ 48・エレ待機40／歌唱48）。入れ替えたら数を直す。新しい駒を足したら、その駒の「開戦から連番・同じ高さ」の確認を足す。
 - 実戦の画面は窓ありで撮る:
   `Godot.exe --path DemoApp -- --demo-autoplay "--demo-preset=火選り (ヒヨ×ホタ)" --demo-stage=2 --demo-seed=1 "--demo-capture-dir=<出力先>"`（6 枚撮って終わる）。
 

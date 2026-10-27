@@ -109,13 +109,6 @@ public partial class BattlefieldView3D
     {
         DeathFlow(pawn.GlobalPosition, pawn.FxPoint + Vector3.Up * 0.4f, new Color("edf6ff"), DeathFx3D.Shape.Rise);
     }
-    internal void ShowDeathSong(BattlePawn3D singer, BattlePawn3D recipient)
-    {
-        DeathSongs++;
-        Color tint = recipient.Team == singer.Team ? new Color("f3d488") : new Color("e9a079");
-        DeathFlow(singer.FxPoint, recipient.FxPoint, tint, DeathFx3D.Shape.Song);
-        DeathFlow(recipient.FxPoint, recipient.FxPoint, tint, DeathFx3D.Shape.Burst);
-    }
     private void ShowGraveSlash(BattlePawn3D from, System.Collections.Generic.IReadOnlyList<BattlePawn3D> hits)
     {
         GraveSlashes++;

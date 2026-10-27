@@ -28,6 +28,10 @@ public partial class IdleLoopCheck : Node3D
             var hagiFrames = BattlePawn3D.IdleLoopFramesOf("hagi");
             Require(hagiFrames.Length == 48, "ハギの修正版Bは48コマ");
             Require(hagiFrames.All(frame => frame.GetSize() == new Vector2(640, 960)), "ハギの連番の寸法");
+            var ereFrames = BattlePawn3D.IdleLoopFramesOf("ere");
+            var ereSongFrames = BattlePawn3D.IdleLoopFramesOf("ere_singing");
+            Require(ereFrames.Length == 40 && ereSongFrames.Length == 48, "エレの採用Aは40コマ、スキルCは48コマ");
+            Require(ereFrames.Concat(ereSongFrames).All(frame => frame.GetSize() == new Vector2(640, 960)), "エレの待機と演奏の寸法");
             Require(BattlePawn3D.IdleLoopFramesOf("golm").Length == 0, "連番の無い駒は空");
             var still = UiKit.BattlePortrait(atlas, "hiyo");
 
@@ -47,6 +51,8 @@ public partial class IdleLoopCheck : Node3D
             var ricaEnemy = MakePawn(atlas, 13, BattleContext.EnemyTeam, 17.0f, "rica");
             var hagi = MakePawn(atlas, 14, BattleContext.PlayerTeam, 18.8f, "hagi");
             var hagiEnemy = MakePawn(atlas, 15, BattleContext.EnemyTeam, 20.6f, "hagi");
+            var ere = MakePawn(atlas, 16, BattleContext.PlayerTeam, 22.4f, "ere");
+            var ereEnemy = MakePawn(atlas, 17, BattleContext.EnemyTeam, 24.2f, "ere");
             var sprite = SpriteOf(hiyo);
 
             // 開戦直後から連番。待機絵と同じ高さ（=同じ足元）で描く。
@@ -55,13 +61,21 @@ public partial class IdleLoopCheck : Node3D
             float worldHeight = sprite.Texture.GetHeight() * sprite.PixelSize;
             Require(Math.Abs(worldHeight - UiKit.PortraitWorldHeight("hiyo")) < 1e-4f, "待機絵と同じ高さ");
             Require(!golm.IdleLoopPlaying && SpriteOf(golm).Texture == UiKit.BattlePortrait(atlas, "golm"), "連番の無い駒は静止絵のまま");
-            foreach (var (pawn, key) in new[] { (borg, "borg"), (hota, "hota"), (gald, "gald"), (gare, "gare"), (hibi, "hibi"), (rica, "rica"), (hagi, "hagi") })
+            foreach (var (pawn, key) in new[] { (borg, "borg"), (hota, "hota"), (gald, "gald"), (gare, "gare"), (hibi, "hibi"), (rica, "rica"), (hagi, "hagi"), (ere, "ere"), (ereEnemy, "ere") })
             {
                 var s = SpriteOf(pawn);
                 Require(pawn.IdleLoopPlaying && BattlePawn3D.IdleLoopFramesOf(key).Contains(s.Texture), $"{key} も開戦から連番");
                 Require(Math.Abs(s.Texture.GetHeight() * s.PixelSize - UiKit.PortraitWorldHeight(key)) < 1e-4f, $"{key} も待機絵と同じ高さ");
                 Require(Shader(s) == s.Texture, $"{key} もシェーダーと同じ連番");
             }
+            Require(SpriteOf(ereEnemy).FlipH, "敵側のエレは左右反転");
+            Require(CountDistinct(ere, 2.6) == 40, "エレの待機40コマが進み周期を跨ぐ");
+            ere.SetDirgeSinging(true);
+            Require(ere.IdleLoopFrame == 0 && ereSongFrames.Contains(SpriteOf(ere).Texture), "演奏Cを先頭から再生");
+            CountDistinct(ere, 3.2);
+            Require(ere.IdleLoopFrame == 47 && Shader(SpriteOf(ere)) == SpriteOf(ere).Texture, "演奏Cは48コマを1回再生して終端を保つ");
+            ere.SetDirgeSinging(false);
+            Require(ere.IdleLoopPlaying && ereFrames.Contains(SpriteOf(ere).Texture), "演奏後に待機Aへ戻る");
             Require(CountDistinct(hagi, 3.1) == 48, "ハギの全48コマが進み周期を跨ぐ");
             hagi.AnimationSpeed = 2;
             Require(CountDistinct(hagi, 0.3) >= 6, "ハギも倍速で進む");
@@ -238,7 +252,7 @@ public partial class IdleLoopCheck : Node3D
 
             CountDistinct(hagi, 0.3);
             Require(!hagi.IdleLoopPlaying && SpriteOf(hagi).Texture == UiKit.Portrait(atlas, "hagi") && Shader(SpriteOf(hagi)) == SpriteOf(hagi).Texture, "ハギも勝利絵を保つ");
-            GD.Print("IDLE_LOOP_CHECK_OK hiyo borg hota hota_burning gald gare hibi rica hagi start advance speed pause action gift burning burning-variant death revive victory enemy fallback sword kneel");
+            GD.Print("IDLE_LOOP_CHECK_OK hiyo borg hota hota_burning gald gare hibi rica hagi ere ere_singing start advance speed pause action gift burning burning-variant death revive victory enemy fallback sword kneel");
             GetTree().Quit();
         }
         catch (Exception e)

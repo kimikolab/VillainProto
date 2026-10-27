@@ -1,0 +1,35 @@
+{
+  "title": "エレのスキル",
+  "candidates": [
+    {
+      "tag": "ere_skill_v1_s2022_aligned",
+      "frames": 48,
+      "fps": 16,
+      "size": [
+        640,
+        960
+      ],
+      "top_range": 11,
+      "sole_range": [
+        951,
+        951
+      ],
+      "sha256_first": "dd6e55f9a9d888ce9ae5ff0de417f94e39e7d6f85662b747660111347da56ab4"
+    },
+    {
+      "tag": "ere_skill_v1_s3033_aligned",
+      "frames": 48,
+      "fps": 16,
+      "size": [
+        640,
+        960
+      ],
+      "top_range": 9,
+      "sole_range": [
+        951,
+        951
+      ],
+      "sha256_first": "f15419f8a4e780ad380922fbf47de6b3480e21d1bf9aec09cd466671c7231d8f"
+    }
+  ]
+}

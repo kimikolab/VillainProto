@@ -12013,6 +12013,7 @@ public sealed class BattleContext
                     if (!to.IsAlive) { gb.R382Skipped++; continue; }
                     if (!TeamAlive(Opponent(to.TeamId))) { gb.R382Skipped += 1 + _giftQueue.Count; _giftQueue.Clear(); break; }
                     bool foe = to.TeamId != giver.TeamId;
+                    EmitDirge(giver, to, ord, DirgeLabels.Act);
                     Log(foe ? $"  {to.Name} も哀歌に応えてもう一度動く" : $"  {to.Name} は {giver.Name} の哀歌に立ち上がってもう一度戦う", LogKind.Highlight, to);
                     UnitTally tt = TallyOf(to);
                     long d0 = tt.DamageToEnemy;
@@ -17070,6 +17071,7 @@ public sealed class BattleContext
         else if (TopAttacker(bard.TeamId, bard) is { } to)
         {
             bt.R382Songs++;
+            EmitDirge(bard, to, 1, DirgeLabels.Gift);
             Log($"    {bard.Name} が哀歌を奏でる（倒れた味方 {allies}）——{to.Name} がもう一度立ち上がる", LogKind.Highlight, bard);
             _giftQueue.Enqueue((bard, to, 1));
             sang = true;
@@ -17078,6 +17080,7 @@ public sealed class BattleContext
         if (foes > 0 && bard.HasTrait(TraitId.DirgeEcho) && TopAttacker(Opponent(bard.TeamId), null) is { } e)
         {
             bt.R382Echoes++;
+            EmitDirge(bard, e, 2, DirgeLabels.Gift);
             Log($"    哀歌は敵にも届く（倒れた敵 {foes}）——{e.Name} がもう一度動く", LogKind.Trigger, bard);
             _giftQueue.Enqueue((bard, e, 2));
         }
@@ -17085,10 +17088,20 @@ public sealed class BattleContext
         if (sang && bard.HasTrait(TraitId.DirgeEchoAlways) && TopAttacker(Opponent(bard.TeamId), null) is { } e2)
         {
             bt.R382Echoes++;
+            EmitDirge(bard, e2, 2, DirgeLabels.Gift);
             Log($"    哀歌は敵の耳にも届く——{e2.Name} が奮い立ってもう一度動く", LogKind.Trigger, bard);
             _giftQueue.Enqueue((bard, e2, 2));
         }
         return sang;
+    }
+
+    // 台本の通知だけ。呼び出し前後で盤面・乱数・計数を動かさない。
+    private void EmitDirge(UnitState bard, UnitState to, int order, string label)
+    {
+        if (!_verbose) return;
+        Emit(new BattleEvent { Kind = BattleEventKind.Dirge, Turn = _turn,
+            ActorId = bard.InstanceId, TargetId = to.InstanceId, Team = to.TeamId,
+            Slot = order, Text = label });
     }
 
     /// <summary>
@@ -17102,11 +17115,13 @@ public sealed class BattleContext
         if (_inGift) { bt.R382InGift++; return false; }
         if (TopAttacker(bard.TeamId, bard) is not { } to) { bt.R382NoOne++; return false; }
         bt.R382Songs++;
+        EmitDirge(bard, to, 1, DirgeLabels.Gift);
         Log($"    {bard.Name} の哀歌の音が満ちた——{to.Name} がもう一度立ち上がる", LogKind.Highlight, bard);
         _giftQueue.Enqueue((bard, to, 1));
         if (bard.HasTrait(TraitId.DirgeEchoAlways) && TopAttacker(Opponent(bard.TeamId), null) is { } e)
         {
             bt.R382Echoes++;
+            EmitDirge(bard, e, 2, DirgeLabels.Gift);
             Log($"    哀歌は敵の耳にも届く——{e.Name} が奮い立ってもう一度動く", LogKind.Trigger, bard);
             _giftQueue.Enqueue((bard, e, 2));
         }

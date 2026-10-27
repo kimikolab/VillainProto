@@ -1,0 +1,530 @@
+{
+  "prompt": [
+    11,
+    "50d4b794-17ee-49f3-97f9-7f6614f5fe16",
+    {
+      "1": {
+        "class_type": "UNETLoader",
+        "inputs": {
+          "unet_name": "wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors",
+          "weight_dtype": "default"
+        }
+      },
+      "2": {
+        "class_type": "UNETLoader",
+        "inputs": {
+          "unet_name": "wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors",
+          "weight_dtype": "default"
+        }
+      },
+      "3": {
+        "class_type": "CLIPLoader",
+        "inputs": {
+          "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+          "type": "wan",
+          "device": "default"
+        }
+      },
+      "4": {
+        "class_type": "VAELoader",
+        "inputs": {
+          "vae_name": "wan_2.1_vae.safetensors"
+        }
+      },
+      "5": {
+        "class_type": "LoadImage",
+        "inputs": {
+          "image": "vp_ere.png"
+        }
+      },
+      "30": {
+        "class_type": "EmptyImage",
+        "inputs": {
+          "width": 1024,
+          "height": 1536,
+          "batch_size": 1,
+          "color": 45376
+        }
+      },
+      "31": {
+        "class_type": "InvertMask",
+        "inputs": {
+          "mask": [
+            "5",
+            1
+          ]
+        }
+      },
+      "32": {
+        "class_type": "ImageCompositeMasked",
+        "inputs": {
+          "destination": [
+            "30",
+            0
+          ],
+          "source": [
+            "5",
+            0
+          ],
+          "x": 0,
+          "y": 0,
+          "resize_source": false,
+          "mask": [
+            "31",
+            0
+          ]
+        }
+      },
+      "19": {
+        "class_type": "ImageScale",
+        "inputs": {
+          "image": [
+            "32",
+            0
+          ],
+          "upscale_method": "lanczos",
+          "width": 640,
+          "height": 960,
+          "crop": "disabled"
+        }
+      },
+      "6": {
+        "class_type": "CLIPTextEncode",
+        "inputs": {
+          "clip": [
+            "3",
+            0
+          ],
+          "text": "A 2D anime fighting game character idle animation, like a Street Fighter or Guilty Gear idle loop. The adult wandering female bard Ere waits facing right in the exact original three-quarter stance. She has a thick long chestnut braid, a small black embroidered cap, a long sheer black veil, ivory puff sleeves, layered black and burgundy skirts, gold star ornaments and brown boots. She holds ONE wooden pear-shaped lute firmly against her chest, its short straight neck pointing up and right: left fingers stay on the frets and the right hand rests over the strings at the round rosette. Preserve the exact mature face, calm attentive expression, lute outline, rosette and straight parallel strings. A continuous connected full-body fighting-game idle: repeat two or three graceful rhythmic guard bounces. Both knees clearly flex and straighten; the pelvis lowers and rises, with chest, shoulders and head following together. Keep an elegant upright back, chest lifted and chin level, never hunching over the instrument. The breathing and knee motion are visible but restrained, approximately a small hand-width in total. Her forearms and the rigid lute follow her shoulders gently. The right fingers softly prepare the strings without a broad performance strum; the left hand maintains its grip on the same frets. Both feet stay flat on the ground in exactly the same spots; she never jumps and never steps. Her body keeps facing right and does not turn toward the camera. The braid, veil, loose ivory sleeves, skirt hems, burgundy lute ribbon and small gold charms gently lag behind the connected body motion, sway and settle. The lute is rigid: never bend, stretch or inflate its wooden body, neck, strings or tuning pegs. Do not detach the neck, do not change the finger count. No music notes, no magic, no glow, no particles, no smoke. Her lips keep the original shape; she is waiting rather than actively singing. Same face, same costume, same colors. Fixed camera, no zoom, full body always visible, flat plain green background."
+        }
+      },
+      "7": {
+        "class_type": "CLIPTextEncode",
+        "inputs": {
+          "clip": [
+            "3",
+            0
+          ],
+          "text": "static image, frozen pose, walking, moving across the frame, turning around, camera movement, zoom, cuts, jumping, hopping, feet leaving the ground, stepping, turning to face the camera, cropped feet, cropped ears, multiple characters, changing costume, changing face, extra limbs, extra fingers, deformed hands, flicker, text, watermark, background change, shadows on background, hunching, bowing, exhausted posture, body leaning forward, extreme bounce, instrument bending, changing instrument size, extra lute neck, extra strings, hand sliding off neck, strumming wildly, performance gesture, head turning, singing mouth, lip sync, large mouth movements, detached neck, isolated moving head"
+        }
+      },
+      "8": {
+        "class_type": "ModelSamplingSD3",
+        "inputs": {
+          "model": [
+            "1",
+            0
+          ],
+          "shift": 8.0
+        }
+      },
+      "9": {
+        "class_type": "ModelSamplingSD3",
+        "inputs": {
+          "model": [
+            "2",
+            0
+          ],
+          "shift": 8.0
+        }
+      },
+      "10": {
+        "class_type": "WanImageToVideo",
+        "inputs": {
+          "positive": [
+            "6",
+            0
+          ],
+          "negative": [
+            "7",
+            0
+          ],
+          "vae": [
+            "4",
+            0
+          ],
+          "width": 640,
+          "height": 960,
+          "length": 81,
+          "batch_size": 1,
+          "start_image": [
+            "19",
+            0
+          ]
+        }
+      },
+      "11": {
+        "class_type": "KSamplerAdvanced",
+        "inputs": {
+          "model": [
+            "8",
+            0
+          ],
+          "add_noise": "enable",
+          "noise_seed": 5055,
+          "steps": 20,
+          "cfg": 3.5,
+          "sampler_name": "euler",
+          "scheduler": "simple",
+          "positive": [
+            "10",
+            0
+          ],
+          "negative": [
+            "10",
+            1
+          ],
+          "latent_image": [
+            "10",
+            2
+          ],
+          "start_at_step": 0,
+          "end_at_step": 10,
+          "return_with_leftover_noise": "enable"
+        }
+      },
+      "12": {
+        "class_type": "KSamplerAdvanced",
+        "inputs": {
+          "model": [
+            "9",
+            0
+          ],
+          "add_noise": "disable",
+          "noise_seed": 0,
+          "steps": 20,
+          "cfg": 3.5,
+          "sampler_name": "euler",
+          "scheduler": "simple",
+          "positive": [
+            "10",
+            0
+          ],
+          "negative": [
+            "10",
+            1
+          ],
+          "latent_image": [
+            "11",
+            0
+          ],
+          "start_at_step": 10,
+          "end_at_step": 20,
+          "return_with_leftover_noise": "disable"
+        }
+      },
+      "13": {
+        "class_type": "VAEDecode",
+        "inputs": {
+          "samples": [
+            "12",
+            0
+          ],
+          "vae": [
+            "4",
+            0
+          ]
+        }
+      },
+      "14": {
+        "class_type": "CreateVideo",
+        "inputs": {
+          "images": [
+            "13",
+            0
+          ],
+          "fps": 16.0
+        }
+      },
+      "15": {
+        "class_type": "SaveVideo",
+        "inputs": {
+          "video": [
+            "14",
+            0
+          ],
+          "filename_prefix": "VillainProto/idle_loop/ere_idle_v1_s5055_raw",
+          "format": "auto",
+          "codec": "auto"
+        }
+      },
+      "40": {
+        "class_type": "VPIdleLoopFind",
+        "inputs": {
+          "images": [
+            "13",
+            0
+          ],
+          "min_length": 16,
+          "max_length": 48,
+          "skip_head": 8,
+          "min_motion": 3.0,
+          "compare_size": 192,
+          "min_step": 2.5,
+          "crossfade": 0
+        }
+      },
+      "45": {
+        "class_type": "PreviewAny",
+        "inputs": {
+          "source": [
+            "40",
+            4
+          ]
+        }
+      },
+      "41": {
+        "class_type": "BiRefNetRMBG",
+        "inputs": {
+          "image": [
+            "40",
+            0
+          ],
+          "model": "BiRefNet_toonout",
+          "sensitivity": 1.0,
+          "mask_blur": 0,
+          "mask_offset": 0,
+          "invert_output": false,
+          "refine_foreground": false,
+          "background": "Alpha",
+          "background_color": "#222222"
+        }
+      },
+      "42": {
+        "class_type": "VPGreenKeyAlpha",
+        "inputs": {
+          "images": [
+            "40",
+            0
+          ],
+          "mask": [
+            "41",
+            1
+          ],
+          "key_low": 25.0,
+          "key_high": 75.0,
+          "despill": true,
+          "edge_width": 12
+        }
+      },
+      "43": {
+        "class_type": "SaveImage",
+        "inputs": {
+          "images": [
+            "42",
+            0
+          ],
+          "filename_prefix": "VillainProto/idle_loop/ere_idle_v1_s5055_rgba/f"
+        }
+      },
+      "44": {
+        "class_type": "SaveAnimatedWEBP",
+        "inputs": {
+          "images": [
+            "42",
+            0
+          ],
+          "filename_prefix": "VillainProto/idle_loop/ere_idle_v1_s5055_loop",
+          "fps": 16.0,
+          "lossless": false,
+          "quality": 90,
+          "method": "default"
+        }
+      }
+    },
+    {
+      "client_id": "937469c2-0dd8-47cb-ac37-c95e552226f8",
+      "create_time": 1793031093276
+    },
+    [
+      "44",
+      "15",
+      "43",
+      "45"
+    ]
+  ],
+  "outputs": {
+    "45": {
+      "text": [
+        "81 frames / loop [53, 69) = 16 frames / seam 5.33 = 3.63x of median step 1.47 (目立つ) / 動きが小さすぎる（1コマの差 1.47 < 2.5）: 動きの指示を強めるか seed を替える"
+      ]
+    },
+    "15": {
+      "images": [
+        {
+          "filename": "ere_idle_v1_s5055_raw_00001_.mp4",
+          "subfolder": "VillainProto\\idle_loop",
+          "type": "output"
+        }
+      ],
+      "animated": [
+        true
+      ]
+    },
+    "44": {
+      "images": [
+        {
+          "filename": "ere_idle_v1_s5055_loop_00001_.webp",
+          "subfolder": "VillainProto\\idle_loop",
+          "type": "output"
+        }
+      ],
+      "animated": [
+        true
+      ]
+    },
+    "43": {
+      "images": [
+        {
+          "filename": "f_00001_.png",
+          "subfolder": "VillainProto\\idle_loop\\ere_idle_v1_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00002_.png",
+          "subfolder": "VillainProto\\idle_loop\\ere_idle_v1_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00003_.png",
+          "subfolder": "VillainProto\\idle_loop\\ere_idle_v1_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00004_.png",
+          "subfolder": "VillainProto\\idle_loop\\ere_idle_v1_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00005_.png",
+          "subfolder": "VillainProto\\idle_loop\\ere_idle_v1_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00006_.png",
+          "subfolder": "VillainProto\\idle_loop\\ere_idle_v1_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00007_.png",
+          "subfolder": "VillainProto\\idle_loop\\ere_idle_v1_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00008_.png",
+          "subfolder": "VillainProto\\idle_loop\\ere_idle_v1_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00009_.png",
+          "subfolder": "VillainProto\\idle_loop\\ere_idle_v1_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00010_.png",
+          "subfolder": "VillainProto\\idle_loop\\ere_idle_v1_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00011_.png",
+          "subfolder": "VillainProto\\idle_loop\\ere_idle_v1_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00012_.png",
+          "subfolder": "VillainProto\\idle_loop\\ere_idle_v1_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00013_.png",
+          "subfolder": "VillainProto\\idle_loop\\ere_idle_v1_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00014_.png",
+          "subfolder": "VillainProto\\idle_loop\\ere_idle_v1_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00015_.png",
+          "subfolder": "VillainProto\\idle_loop\\ere_idle_v1_s5055_rgba",
+          "type": "output"
+        },
+        {
+          "filename": "f_00016_.png",
+          "subfolder": "VillainProto\\idle_loop\\ere_idle_v1_s5055_rgba",
+          "type": "output"
+        }
+      ]
+    }
+  },
+  "status": {
+    "status_str": "success",
+    "completed": true,
+    "messages": [
+      [
+        "execution_start",
+        {
+          "prompt_id": "50d4b794-17ee-49f3-97f9-7f6614f5fe16",
+          "timestamp": 1793031928431
+        }
+      ],
+      [
+        "execution_cached",
+        {
+          "nodes": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "30",
+            "31",
+            "32",
+            "19",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10"
+          ],
+          "prompt_id": "50d4b794-17ee-49f3-97f9-7f6614f5fe16",
+          "timestamp": 1793031928437
+        }
+      ],
+      [
+        "execution_success",
+        {
+          "prompt_id": "50d4b794-17ee-49f3-97f9-7f6614f5fe16",
+          "timestamp": 1793032572876
+        }
+      ]
+    ]
+  },
+  "meta": {
+    "45": {
+      "node_id": "45",
+      "display_node": "45",
+      "parent_node": null,
+      "real_node_id": "45"
+    },
+    "15": {
+      "node_id": "15",
+      "display_node": "15",
+      "parent_node": null,
+      "real_node_id": "15"
+    },
+    "44": {
+      "node_id": "44",
+      "display_node": "44",
+      "parent_node": null,
+      "real_node_id": "44"
+    },
+    "43": {
+      "node_id": "43",
+      "display_node": "43",
+      "parent_node": null,
+      "real_node_id": "43"
+    }
+  }
+}

@@ -45,8 +45,8 @@ public partial class DeathAxisCheck : Control
             await _field.Attack(rica, _field.FindPawn(8)!, AttackPattern.Sweep, new[] { _field.FindPawn(8)! }, advance: false, holdPosition: true);
             Require(rica.Position.DistanceTo(first) > 0.2f && _field.GraveSlashes == 2, "連撃の実対象へ跳ぶ");
             await Wait(0.08); await Capture("rica-chain");
-            _field.ShowDeathSong(_field.FindPawn(4)!, rica);
-            _field.ShowDeathSong(_field.FindPawn(4)!, target);
+            _field.ShowDirgeGift(_field.FindPawn(4)!, rica, true);
+            _field.ShowDirgeGift(_field.FindPawn(4)!, target, true);
             _field.ShowDeathSummon(_field.FindPawn(3), _field.FindPawn(5)!);
             _field.ApplyDeathState(new(2, 0, 3, 0, 45, true));
             await Wait(0.25); await Capture("death-loop");

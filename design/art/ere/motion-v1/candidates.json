@@ -1,0 +1,53 @@
+{
+  "status": "installed",
+  "candidates": [
+    {
+      "candidate": "idle-A",
+      "tag": "ere_idle_v1_s2022_final_aligned",
+      "frames": 40,
+      "fps": 16,
+      "directory": "design/art/ere/motion-v1/candidates/idle-A",
+      "type": "loop",
+      "sha256_first": "5ad39df52fc98d26658793abbdd44d662ca7a740364e3f254ec691de54752b6e"
+    },
+    {
+      "candidate": "skill-C",
+      "tag": "ere_skill_v1_s2022_aligned",
+      "frames": 48,
+      "fps": 16,
+      "directory": "design/art/ere/motion-v1/candidates/skill-C",
+      "type": "one_shot",
+      "sha256_first": "dd6e55f9a9d888ce9ae5ff0de417f94e39e7d6f85662b747660111347da56ab4"
+    },
+    {
+      "candidate": "skill-D",
+      "tag": "ere_skill_v1_s3033_aligned",
+      "frames": 48,
+      "fps": 16,
+      "directory": "design/art/ere/motion-v1/candidates/skill-D",
+      "type": "one_shot",
+      "sha256_first": "f15419f8a4e780ad380922fbf47de6b3480e21d1bf9aec09cd466671c7231d8f"
+    }
+  ],
+  "selection": [
+    "idle-A",
+    "skill-C"
+  ],
+  "installed_date": "2026-10-27",
+  "installed": [
+    {
+      "candidate": "idle-A",
+      "directory": "DemoApp/assets/portraits/battle/idle_loop/ere",
+      "frames": 40,
+      "bytes": 26118970,
+      "sha256_first": "2ab996f23be0661f62e765d40bd251888a1ce3aee202d80d00040bc13412d313"
+    },
+    {
+      "candidate": "skill-C",
+      "directory": "DemoApp/assets/portraits/battle/idle_loop/ere_singing",
+      "frames": 48,
+      "bytes": 31481621,
+      "sha256_first": "525b7d32be237cf5eadb582430a3a2d432e189118453c2480f6b09d53766fc4b"
+    }
+  ]
+}

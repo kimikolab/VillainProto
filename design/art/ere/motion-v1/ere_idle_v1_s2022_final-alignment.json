@@ -1,0 +1,12 @@
+{
+  "source": "ere_idle_v1_s2022_final",
+  "output": "ere_idle_v1_s2022_final_aligned",
+  "reference": "DemoApp/assets/portraits/battle/ere_idle_right.png",
+  "reference_sole": 949,
+  "source_sole_range": [
+    950,
+    951
+  ],
+  "translation_y": -1,
+  "frames": 40
+}

@@ -306,8 +306,8 @@ Helton Yan's Pixel Combat - Single Files の指定音源を無加工でコピー
 | fire_hota_strong_pierce.mp3 | D:/Assets/SE/Springin/炎の風2.mp3 | ホタ段3・強貫通の発射時／-11 dB（共通補正+3 dB）、原音ピッチ、0.65秒を再生速度で調整し末尾をフェード |
 | fire_projectile.mp3 | 火炎魔法1.mp3 | ホタ段1・2の発射／-13 dB |
 | fire_aura.mp3 | オーラ2.mp3 | 爆炎の解放／-12 dB、火勢4到達／-15 dB |
-| fire_gift.mp3 | 魔法陣を展開.mp3 | ギフトの受け渡し／-13 dB |
-| fire_gift_turn.mp3 | ステータス上昇魔法2.mp3 | ギフトの手番開始／-11 dB |
+| fire_gift.mp3 | 魔法陣を展開.mp3 | ギフトの受け渡し／-13 dB、エレの哀歌の受け渡し／-18 dB |
+| fire_gift_turn.mp3 | ステータス上昇魔法2.mp3 | ギフトの手番開始／-11 dB、エレの追加手番開始／-15 dB |
 | fire_condense.mp3 | ステータス上昇魔法1.mp3 | あぶれた火の凝縮／-15 dB |
 | fire_heal.mp3 | 回復魔法1.mp3 | 味方への爆炎が癒しになる／-17 dB |
 | fire_charge.mp3 | パワーチャージ.mp3 | 大火槍・臨界・ボルグの溜め／-9 dB |

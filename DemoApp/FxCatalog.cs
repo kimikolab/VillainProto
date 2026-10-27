@@ -27,6 +27,9 @@ public static partial class FxCatalog
     public static IReadOnlyList<FxCue> Registered { get; } = Array.AsReadOnly(new FxCue?[]
     {
         Thunder(), Storm(), Poison(), Swallow(), Dropkick(),
+        new FxCue("live.ere.gift", "エレ 哀歌から追加手番へ", "哀歌・手番の受け渡し", new[] { "ere" },
+            FxCueKind.Live, BuildFormation: () => Presets.DeathBard382(UnitCatalog.Ere), Stage: 2, Seed: 0,
+            Highlight: e => e.Kind == BattleEventKind.Dirge),
         RicaMotion(0, false), RicaMotion(1, false), RicaMotion(2, false), RicaMotion(3, false),
         RicaMotion(0, true), RicaMotion(1, true), RicaMotion(2, true), RicaMotion(3, true),
         RicaIdleAlternative(1), RicaIdleAlternative(2), RicaIdleAlternative(3),

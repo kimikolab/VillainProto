@@ -32,6 +32,7 @@ public partial class BattlefieldView3D
     }
     internal void EndGatherPresentation()
     {
+        ClearDirgeAuras();
         foreach (var fx in GatherEffects.ToArray()) fx.Cancel();
         _gatherEffects.Clear();
         foreach (var bag in _pebbleBags.Values)
@@ -43,6 +44,7 @@ public partial class BattlefieldView3D
     private void ResetGatherPresentation()
     {
         EndGatherPresentation();
+        DirgeGiftPlays = DirgeActPlays = DirgeEnemyPlays = 0;
         PebblePickPlays = PebbleVolleyPlays = PebbleEmptyPlays = BloodReadPlays = BloodFalloutPlays = BloodDryPlays = 0;
         BloodGatherSources = BloodReleaseTargets = LastBloodMotes = LastGatherTargets = 0;
     }

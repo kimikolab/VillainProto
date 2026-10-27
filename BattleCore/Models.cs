@@ -4855,6 +4855,20 @@ public enum BattleEventKind
     /// 巻き込み（隣の仲間への 2）は今どおりハギからの <c>Damage</c>（<c>FriendlyFire</c>）。<b>どの規則も読まない。</b>
     /// </summary>
     Reap,
+
+    /// <summary>
+    /// 哀歌の手番の受け渡し（表示専用）。ActorId ＝ 楽士、TargetId ＝ 受け手、Team ＝ 受け手の陣営。
+    /// Text ＝ DirgeLabels.Gift は手番を控えた瞬間、DirgeLabels.Act は実際に動く直前。
+    /// Slot ＝ 渡す順（味方1・敵2）。倒れた受け手や戦闘終了で飛ばされた手番には Act を出さない。
+    /// どの規則も読まない。盤面・乱数・計数は変更しない。
+    /// </summary>
+    Dirge,
+}
+
+public static class DirgeLabels
+{
+    public const string Gift = "哀歌を届ける";
+    public const string Act = "哀歌の追加手番";
 }
 
 /// <summary>`Reap`（第405期）の <c>Text</c> と、刈り取りの種類（<c>Slot</c>）／ 魂の出どころ（<c>Slot</c>）。</summary>

@@ -308,6 +308,28 @@ Godot_console.exe --headless --path DemoApp res://MovementCheck.tscn -- --replay
 Godot_console.exe --path DemoApp res://MovementAudioCheck.tscn
 ```
 
+### エレの哀歌と追加手番
+
+エレから受け手へ五線と光の音符を流し、届いた相手に音符と淡い身体の光を残します。
+実際に動く直前に音符が胸元へ集まり、回転する光紋と身体の発光が弾けて追加行動へ繋がります。
+味方は青白、敵へ届く哀歌は桃色。テロップや「SKILL」の文字を重ねず、演出だけで伝えます。
+台本の受け渡し／実手番の通知を使い、画面側では対象を選び直しません。
+停止・途中の倍速変更・中断・死亡・再戦に対応します。
+
+待機は採用A（`idle_loop/ere/`・40コマ）、歌唱は採用C（`idle_loop/ere_singing/`・48コマ）を16fpsで再生します。
+待機は2.5秒のループ、歌唱は3秒の1フレーズを単発で再生します。
+演奏の終端を2体への受け渡しまで保ち、実際の追加手番で待機へ戻します。
+モーション候補と作成・検査記録は `../design/art/ere/motion-v1/notes.md`。
+
+演出ビューアの「エレ 哀歌から追加手番へ」、または次のコマンドで確認できます。
+
+```powershell
+Godot_console.exe --path DemoApp res://FxViewer.tscn -- --fx-cue=live.ere.gift
+Godot_console.exe --headless --path DemoApp res://EreGiftCheck.tscn
+```
+
+素材の採否・検証内容は `../design/ERE_GIFT_PRESENTATION.md`。
+
 ### 燃焼軸の演出
 
 `FireLevel` / `FireArmor` の表示専用通知を `Main.Fire.cs` で受け、

@@ -1724,3 +1724,10 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
   - 「印」は `ReapMark389`（刻んだ一撃の `Damage` の直前・`StatusRemaining` ＝ その敵の線）・「段の重み」は `StageMul401`・「印の重み」は `MarkWeight401`（巻き込みの敵にも）。
   - 「魂」「段」「線」は `HagiDepthTrait.Gain`（`from` に出どころの駒を足した・表示だけに使う）と `OnTurnStart` の薄れ。上限 9 で止まって増えないときは出ない。
 - **規定（R50）では「振る前の刈り取り」（種類 1）はほぼ出ず、「二度斬りの 2 発目の刈り取り」（種類 6）は事実上出ない**——当たった後の刈り取りが同じ線で先に拾う。列ごと（5）も 6 台 × 4 波 × seed 0..19 で 0。
+
+
+## 哀歌の手番の表示通知（2026-10-27）
+
+- `BattleContext.EmitDirge` は表示専用の `BattleEventKind.Dirge` を記録する。verbose が偽なら何も作らず、盤面・乱数・計数は変えない。
+- `DirgeTurn` ／ `DirgeSing` が受け手を控えた時に `DirgeLabels.Gift`、`DrainGifts` が生存・相手陣営の生存を確認して実際に手番を渡す直前に `DirgeLabels.Act`。ActorId は楽士、TargetId は受け手、Team は受け手の陣営、Slot は渡す順。
+- 表示側は相手の強さやログ本文から対象を推測しない。飛ばされた手番には Act を出さない。詳細と検証は `ERE_GIFT_PRESENTATION.md`。

@@ -236,6 +236,8 @@ public partial class BattlePawn3D : Node3D
 render_mode unshaded, cull_disabled, blend_mix, depth_prepass_alpha;
 uniform sampler2D portrait_texture : source_color, filter_linear_mipmap;
 uniform vec4 portrait_tint : source_color = vec4(1.0);
+uniform vec4 dirge_tint : source_color = vec4(0.7,0.95,1.0,1.0);
+uniform float dirge_glow = 0.0;
 uniform float aura_amount = 0.0;
 uniform float numb_amount = 0.0;
 uniform float scar_glow = 0.0;
@@ -318,6 +320,10 @@ void fragment() {
     float fire_crack = pow(max(0.0,1.0-abs(sin(UV.y*61.0+sin(UV.x*39.0)*2.0))),24.0);
     ALBEDO *= 1.0-fire_damage*heat_zone*0.22;
     EMISSION += fire_tint.rgb*heat_zone*(metal_edge*fire_heat*0.35+fire_crack*fire_damage*0.65);
+    // 哀歌の受け取りと解放。胴と装備だけを光らせ、顔・HPの読みやすさを保つ。
+    float dirge_zone = smoothstep(0.25,0.36,UV.y)*(1.0-smoothstep(0.75,0.88,UV.y));
+    ALBEDO = mix(ALBEDO,dirge_tint.rgb,dirge_zone*dirge_glow*0.26);
+    EMISSION += dirge_tint.rgb*dirge_zone*dirge_glow*(0.25+metal_edge*0.65);
     // 粉焼は立ち絵そのものの胴を中心に赤く光らせる。透過部分には出さない。
     float powder_zone = smoothstep(0.24,0.36,UV.y)*(1.0-smoothstep(0.72,0.88,UV.y));
     float powder_vein = pow(max(0.0,1.0-abs(sin(UV.x*73.0+sin(UV.y*49.0)*2.0))),10.0);
@@ -530,6 +536,7 @@ void fragment() {
 
     public void AnimateDeath()
     {
+        SetDirgeGlow(0, Colors.White);
         StopDeathVisual();
         SetDirgeSinging(false);
         SetSekkiWrapping(false);
@@ -641,6 +648,7 @@ void fragment() {
 
     public void AnimateVictory()
     {
+        SetDirgeGlow(0, Colors.White);
         StopDeathVisual();
         if (!_alive || Team != BattleContext.PlayerTeam) return;
         SetDirgeSinging(false);

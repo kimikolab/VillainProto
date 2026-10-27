@@ -1,0 +1,12 @@
+{
+  "source": "ere_skill_v1_s3033",
+  "output": "ere_skill_v1_s3033_aligned",
+  "reference": "DemoApp/assets/portraits/battle/ere_singing_idle_right.png",
+  "reference_sole": 951,
+  "source_sole_range": [
+    951,
+    951
+  ],
+  "translation_y": 0,
+  "frames": 48
+}

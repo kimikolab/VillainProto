@@ -1,0 +1,51 @@
+[
+  {
+    "tag": "ere_idle_v1_s2022",
+    "prompt_id": "be44193a-91f8-4d2c-9a25-edb81c3d04fa",
+    "seed": 2022
+  },
+  {
+    "tag": "ere_idle_v1_s5055",
+    "prompt_id": "50d4b794-17ee-49f3-97f9-7f6614f5fe16",
+    "seed": 5055
+  },
+  {
+    "tag": "ere_song_v1_s2022",
+    "prompt_id": "62de809f-35f1-4893-9e6c-a43a6ef36e72",
+    "seed": 2022
+  },
+  {
+    "tag": "ere_song_v1_s3033",
+    "prompt_id": "a230e279-9a70-487a-94ed-e1a785d2fa70",
+    "seed": 3033
+  },
+  {
+    "tag": "ere_idle_v1_s2022_final",
+    "prompt_id": "2eec46f7-e6c3-4bd4-a25b-c88b51066475",
+    "seed": 2022,
+    "requeued_from": "ec1de054-aca9-4f08-9144-26a21e29e4b0"
+  },
+  {
+    "tag": "ere_idle_v1_s5055_final",
+    "prompt_id": "74352fdb-8b1a-4eaa-867c-723f4018032e",
+    "seed": 5055
+  },
+  {
+    "tag": "ere_idle_v1_s5055_seam12",
+    "prompt_id": "24714d25-49bd-4d6c-8261-1e244482bca7",
+    "source": "ere_idle_v1_s5055",
+    "kind": "idle12"
+  },
+  {
+    "tag": "ere_skill_v1_s2022",
+    "prompt_id": "329b1362-fcb8-4fbd-92c7-6c59e1d89ce5",
+    "source": "ere_song_v1_s2022",
+    "kind": "skill"
+  },
+  {
+    "tag": "ere_skill_v1_s3033",
+    "prompt_id": "49cff75b-53af-417c-a05d-73ce79f8c740",
+    "source": "ere_song_v1_s3033",
+    "kind": "skill"
+  }
+]

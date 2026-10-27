@@ -1341,6 +1341,7 @@ public partial class Main : Control
         await _battleField.FinishRicaMotions();
         if (token != _playToken || !_battleMode) return;
         FinishSekkiPlayback();
+        _battleField.ClearDirgeAuras();
         _playing = false;
         if (ViewerMode) return;
         _battleField.EndGolmPresentation();
@@ -1475,6 +1476,7 @@ public partial class Main : Control
         if (await PlayMisa(e, eventIndex, actor, target)) return;
         if (await PlayGolm(e, actor, target) || hushToken != _playToken || !_battleMode) return;
         if (await PlayFire(e, eventIndex, actor, target)) return;
+        if (await PlayEreGift(e, eventIndex, actor, target)) return;
         if (await PlayMovement(e, eventIndex, actor, target)) return;
         if (await PlayThunder(e, eventIndex, actor, target)) return;
         if (await PlayMire(e, eventIndex, actor, target)) return;
@@ -1983,6 +1985,8 @@ public partial class Main : Control
                 break;
 
             case BattleEventKind.Highlight:
+                if (_result is not null && ErePresentation.IsGiftHighlight(_result.Events, eventIndex))
+                { AppendLog(e.Text ?? ""); break; }
                 // 大鎌の見せ場は絵で伝える。字幕の待ちで連続する振りを切らない。
                 if (actor?.UnitId == "hagi") { AppendLog(e.Text ?? ""); break; }
                 // 第124期 3-e: 「テロップは1倍速でも読むのが難しい」「『火のそばを見ている』
@@ -2027,7 +2031,9 @@ public partial class Main : Control
                 if (!e.Reaction && (actor?.UnitId != "susu" || e.Text == AshActionLabels.Release))
                     _battleField.ReleaseChargedSkill(actor);
                 if (e.Text == AshActionLabels.Release) actor?.BeginAshRelease();
-                _battleField.Float(actor, AkaPresentation.Text(e.Text ?? "SKILL"), actor?.UnitId == "susu" ? AkaPresentation.Blood : UiKit.Heal, true);
+                // エレの歌は音符と身体の光で伝える。術名のテロップは重ねない。
+                if (actor?.UnitId != "ere")
+                    _battleField.Float(actor, AkaPresentation.Text(e.Text ?? "SKILL"), actor?.UnitId == "susu" ? AkaPresentation.Blood : UiKit.Heal, true);
                 AppendLog($"[color=#{UiKit.Heal.ToHtml(false)}]{NameOf(e.ActorId)} — {e.Text ?? "術"}[/color]");
                 bool singing = actor?.UnitId == "ere" && _result is not null
                     && ErePresentation.IsSongSkill(_result.Events, eventIndex);
@@ -2035,12 +2041,14 @@ public partial class Main : Control
                 if (singing) actor!.SetDirgeSinging(true);
                 try
                 {
-                    if (singing) await HoldDirgeSong(songToken);
+                    if (singing) await HoldDirgeSong(songToken, actor!);
                     else await Delay(0.22);
                 }
                 finally
                 {
-                    if (singing && GodotObject.IsInstanceValid(actor)) actor!.SetDirgeSinging(false);
+                    bool sustain = songToken == _playToken && _battleMode && actor?.IdleLoopPlaying == true
+                        && _result is not null && ErePresentation.HasFollowingGift(_result.Events, eventIndex, e.ActorId);
+                    if (singing && !sustain && GodotObject.IsInstanceValid(actor)) actor!.SetDirgeSinging(false);
                 }
                 break;
             }
