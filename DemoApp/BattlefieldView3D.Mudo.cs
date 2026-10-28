@@ -13,7 +13,11 @@ public partial class BattlefieldView3D
 
     internal void ResetMudoPresentation()
     {
-        foreach (var pawn in _pawns.Values) pawn.SetMudoErupting(false);
+        foreach (var pawn in _pawns.Values)
+        {
+            pawn.SetMudoErupting(false);
+            pawn.SetMudoIdleClock(false, _mudoSpeed);
+        }
         foreach (var pulse in _mudoPulses)
             if (IsInstanceValid(pulse)) { pulse.Hide(); pulse.QueueFree(); }
         foreach (var label in _mudoLabels)
@@ -25,6 +29,7 @@ public partial class BattlefieldView3D
     internal void SetMudoClock(bool paused, double speed)
     {
         _mudoPaused = paused; _mudoSpeed = Math.Max(0.1, speed);
+        foreach (var pawn in _pawns.Values) pawn.SetMudoIdleClock(paused, _mudoSpeed);
         _mudoPulses.RemoveAll(p => !IsInstanceValid(p) || p.IsQueuedForDeletion());
         foreach (var pulse in _mudoPulses) pulse.SetClock(paused, _mudoSpeed);
     }

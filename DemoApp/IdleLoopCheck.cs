@@ -35,6 +35,8 @@ public partial class IdleLoopCheck : Node3D
             var utsuFrames = BattlePawn3D.IdleLoopFramesOf("utsu");
             Require(utsuFrames.Length == 24, "ウツの採用Aは24コマ");
             Require(utsuFrames.All(frame => frame.GetSize() == new Vector2(640, 960)), "ウツの連番の寸法");
+            var mudoFrames = BattlePawn3D.IdleLoopFramesOf("mudo");
+            Require(mudoFrames.Length == 24 && mudoFrames.All(frame => frame.GetSize() == new Vector2(640, 960)), "ムドの採用Aは640×960の24コマ");
             Require(BattlePawn3D.IdleLoopFramesOf("golm").Length == 0, "連番の無い駒は空");
             var still = UiKit.BattlePortrait(atlas, "hiyo");
 
@@ -58,6 +60,8 @@ public partial class IdleLoopCheck : Node3D
             var ereEnemy = MakePawn(atlas, 17, BattleContext.EnemyTeam, 24.2f, "ere");
             var utsu = MakePawn(atlas, 18, BattleContext.PlayerTeam, 26.0f, "utsu");
             var utsuEnemy = MakePawn(atlas, 19, BattleContext.EnemyTeam, 27.8f, "utsu");
+            var mudo = MakePawn(atlas, 20, BattleContext.PlayerTeam, 29.6f, "mudo");
+            var mudoEnemy = MakePawn(atlas, 21, BattleContext.EnemyTeam, 31.4f, "mudo");
             var sprite = SpriteOf(hiyo);
 
             // 開戦直後から連番。待機絵と同じ高さ（=同じ足元）で描く。
@@ -66,6 +70,31 @@ public partial class IdleLoopCheck : Node3D
             float worldHeight = sprite.Texture.GetHeight() * sprite.PixelSize;
             Require(Math.Abs(worldHeight - UiKit.PortraitWorldHeight("hiyo")) < 1e-4f, "待機絵と同じ高さ");
             Require(!golm.IdleLoopPlaying && SpriteOf(golm).Texture == UiKit.BattlePortrait(atlas, "golm"), "連番の無い駒は静止絵のまま");
+            Require(mudo.IdleLoopPlaying && mudoFrames.Contains(SpriteOf(mudo).Texture), "ムドも開戦から待機A");
+            Require(Math.Abs(SpriteOf(mudo).PixelSize * 960 - UiKit.PortraitWorldHeight("mudo")) < 1e-4f, "ムドも元絵と同じキャンバス高");
+            Require(CountDistinct(mudo, 1.6) == 24, "ムドの全24コマが進み周期を跨ぐ");
+            mudo.SetMudoIdleClock(true, 1);
+            int mudoPausedFrame = mudo.IdleLoopFrame;
+            CountDistinct(mudo, 0.3);
+            Require(mudo.IdleLoopFrame == mudoPausedFrame, "ムドも一時停止で止まる");
+            mudo.SetMudoIdleClock(false, 2);
+            Require(CountDistinct(mudo, 0.3) >= 8, "ムドも再開後に倍速で進む");
+            mudo.SetMudoIdleClock(false, 1);
+            mudo.SetMudoErupting(true);
+            CountDistinct(mudo, 0.3);
+            Require(!mudo.IdleLoopPlaying && SpriteOf(mudo).Texture == UiKit.BattlePortrait(atlas, "mudo_erupt"), "暴発の巨大腕姿を待機で上書きしない");
+            mudo.SetMudoErupting(false);
+            Require(mudo.IdleLoopPlaying && mudoFrames.Contains(SpriteOf(mudo).Texture), "連打後は待機Aへ復帰");
+            mudo.SetBurning(true);
+            Require(mudo.IdleLoopPlaying, "ムドは燃焼中も待機A");
+            mudo.SetBurning(false);
+            mudo.AnimateDeath();
+            var mudoDead = SpriteOf(mudo).Texture;
+            CountDistinct(mudo, 0.3);
+            Require(!mudo.IdleLoopPlaying && SpriteOf(mudo).Texture == mudoDead, "ムドも死亡時に連番停止");
+            mudo.AnimateRevive();
+            Require(mudo.IdleLoopPlaying && mudoFrames.Contains(SpriteOf(mudo).Texture), "ムドも蘇生後に待機A");
+            Require(mudoEnemy.IdleLoopPlaying && SpriteOf(mudoEnemy).FlipH, "敵側のムドも反転して待機A");
             foreach (var (pawn, key) in new[] { (borg, "borg"), (hota, "hota"), (gald, "gald"), (gare, "gare"), (hibi, "hibi"), (rica, "rica"), (hagi, "hagi"), (ere, "ere"), (ereEnemy, "ere"), (utsu, "utsu"), (utsuEnemy, "utsu") })
             {
                 var s = SpriteOf(pawn);
@@ -265,8 +294,11 @@ public partial class IdleLoopCheck : Node3D
             rica.AnimateVictory();
             hagi.AnimateVictory();
             utsu.AnimateVictory();
+            mudo.AnimateVictory();
             await Wait(0.7);
             Require(!hiyo.IdleLoopPlaying && sprite.Texture == UiKit.Portrait(atlas, "hiyo"), "勝利絵を保つ");
+            CountDistinct(mudo, 0.3);
+            Require(!mudo.IdleLoopPlaying && SpriteOf(mudo).Texture == UiKit.Portrait(atlas, "mudo"), "ムドも勝利絵を保つ");
             Require(!galdWinner.IdleLoopPlaying && SpriteOf(galdWinner).Texture == UiKit.Portrait(atlas, "gald"), "ガルドも勝利絵を保つ");
             Require(!gare.IdleLoopPlaying && SpriteOf(gare).Texture == UiKit.Portrait(atlas, "gare"), "ガレも勝利絵を保つ");
             Require(!hibi.IdleLoopPlaying && SpriteOf(hibi).Texture == UiKit.Portrait(atlas, "hibi") && Shader(SpriteOf(hibi)) == SpriteOf(hibi).Texture, "ヒビも勝利絵を保つ");
@@ -277,7 +309,7 @@ public partial class IdleLoopCheck : Node3D
 
             CountDistinct(hagi, 0.3);
             Require(!hagi.IdleLoopPlaying && SpriteOf(hagi).Texture == UiKit.Portrait(atlas, "hagi") && Shader(SpriteOf(hagi)) == SpriteOf(hagi).Texture, "ハギも勝利絵を保つ");
-            GD.Print("IDLE_LOOP_CHECK_OK hiyo borg hota hota_burning gald gare hibi rica hagi ere ere_singing utsu start advance speed pause action gift burning burning-variant death revive victory enemy fallback sword kneel ground");
+            GD.Print("IDLE_LOOP_CHECK_OK hiyo borg hota hota_burning gald gare hibi rica hagi ere ere_singing utsu mudo start advance speed pause action gift burning burning-variant death revive victory enemy fallback sword kneel ground");
             GetTree().Quit();
         }
         catch (Exception e)

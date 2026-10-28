@@ -1,8 +1,17 @@
 using Godot;
+using System;
 
 public partial class BattlePawn3D
 {
     internal bool MudoErupting { get; private set; }
+    internal bool MudoIdlePaused { get; private set; }
+
+    internal void SetMudoIdleClock(bool paused, double speed)
+    {
+        if (_unitId != "mudo") return;
+        MudoIdlePaused = paused;
+        AnimationSpeed = Math.Max(0.1, speed);
+    }
 
     internal void SetMudoErupting(bool active)
     {
@@ -16,8 +25,9 @@ public partial class BattlePawn3D
     {
         if (_unitId != "mudo" || !MudoErupting || !_alive) return;
         key = "mudo_erupt";
-        // 頭〜足の実画素高（通常1413px・怒り963px）を揃える。腕だけが大きくなる。
-        height *= 1166f / 1515f * 1413f / 963f;
+        // 外套のフード〜泥だまり（通常1335px・怒り933px）を揃え、拳だけを巨大化する。
+        // 掲げた拳はフードより高いため、画像全体の輪郭高では合わせない。
+        height *= 1024f / 1515f * 1335f / 933f;
         padding = UiKit.BattlePortraitBottomPaddingRatio(key);
     }
 }

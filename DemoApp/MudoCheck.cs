@@ -125,13 +125,22 @@ public partial class MudoCheck : Control
         var pawn = field.FindPawn(1)!;
         var sprite = pawn.GetChildren().OfType<Sprite3D>().Single();
         var normalTexture = sprite.Texture;
-        float normalPixel = sprite.PixelSize;
+        var normalFrames = BattlePawn3D.IdleLoopFramesOf("mudo");
+        Require(normalFrames.Length == 24 && pawn.IdleLoopPlaying && normalFrames.Contains(normalTexture), "採用Aの24コマが開戦から回る");
+        float normalHeight = sprite.PixelSize * normalTexture.GetHeight();
         _main.SetPlaybackSpeed(1);
         field.ShowMudoBurst(pawn);
         Require(pawn.MudoErupting && sprite.Texture != normalTexture, "暴発で巨大な腕の立ち絵へ切替");
-        float feet = sprite.Position.Y - (1166 - 69 - 1166 * 0.5f) * sprite.PixelSize;
+        float feet = sprite.Position.Y - (1024 - 16 - 1024 * 0.5f) * sprite.PixelSize;
         Require(Math.Abs(feet - BattlePawn3D.PortraitGroundYForCheck) < 0.001f, "怒り姿の足元を地面へ固定");
-        Require(Math.Abs(sprite.PixelSize * 963 - normalPixel * 1413) < 0.001f, "変身で胴の身長を変えない");
+        Require(Math.Abs(sprite.PixelSize * 933 - normalHeight * 1335 / 1515) < 0.001f, "変身で外套のフードから泥だまりまでの高さを変えない");
+        using (var image = sprite.Texture!.GetImage())
+        {
+            Require(image.GetPixel(600, 550).A > .95f && image.GetPixel(680, 730).A > .95f
+                && image.GetPixel(900, 790).A > .95f, "外套の内側の陰を透過で消さない");
+            Require(image.GetPixel(0, 0).A == 0 && image.GetPixel(750, 30).A == 0,
+                "外側の背景は透明のまま");
+        }
         var pulse = Descendants(field).OfType<MudoMudPulse3D>().Single();
         _main.PausePlayback();
         double frozen = pulse.Elapsed;
@@ -144,7 +153,7 @@ public partial class MudoCheck : Control
         field.ShowMudoDull(field.FindPawn(2)!);
         Require(Descendants(field).OfType<PopupLabel2D>().Any(l => l.Text == "−1" && l.Modulate == BattlefieldView3D.MudoMudTint), "泥色の小さな−1");
         pawn.SetMudoErupting(false);
-        Require(!pawn.MudoErupting && sprite.Texture == normalTexture, "連打終端で通常の絵へ戻す");
+        Require(!pawn.MudoErupting && pawn.IdleLoopPlaying && normalFrames.Contains(sprite.Texture), "連打終端で通常の待機Aへ戻す");
         var enemy = field.FindPawn(3)!;
         enemy.SetMudoErupting(true);
         Require(enemy.GetChildren().OfType<Sprite3D>().Single().FlipH, "敵の怒り姿を左右反転");

@@ -78,7 +78,7 @@ def nodes08(image, pos, neg, seed, prefix, width=1024, height=1536):
                                   "start_at_step": 10, "end_at_step": 20, "return_with_leftover_noise": "disable"}, (3, 1), "low 10–20"),
         (13, "VAEDecode", {"samples": [12, 0], "vae": [4, 0]}, (3, 2), None),
         (14, "CreateVideo", {"images": [13, 0], "fps": 16.0}, (4, 0), None),
-        (15, "SaveVideo", {"video": [14, 0], "filename_prefix": f"VillainProto/idle_loop/{prefix}_raw", "format": "auto", "codec": "auto"}, (4, 1), "生の動画（緑背景・全フレーム）"),
+        (15, "SaveVideo", {"video": [14, 0], "filename_prefix": f"VillainProto/idle_loop/{prefix}_raw", "format": "auto", "format.codec": "auto", "codec": "auto"}, (4, 1), "生の動画（緑背景・全フレーム）"),
         *post_nodes([13, 0], prefix, crossfade=0, max_length=48),
     ]
 

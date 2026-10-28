@@ -248,8 +248,8 @@ public static class UiKit
     /// </summary>
     public static float BattlePortraitBottomPaddingRatio(string key) => key switch
     {
-        "mudo" => 23f / 1515f,
-        "mudo_erupt" => 69f / 1166f,
+        "mudo" => 61f / 1515f,
+        "mudo_erupt" => 16f / 1024f,
         "gare_load" => 20f / 1536f,
         "gare_fire" => 66f / 1536f,
         "gare_empty" => 15f / 1536f,

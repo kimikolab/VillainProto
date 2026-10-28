@@ -278,6 +278,23 @@
       "translation_y": -1
     }
   },
+  "mudo": {
+    "still": "DemoApp/assets/portraits/battle/mudo_idle_right.png",
+    "full": "A continuous 2D fantasy fighting game idle loop of the exact gray mud mantle creature in the input image. The creature is a legless hood-shaped mantle made entirely of wet mineral gray mud, a small hanging mask-like face inside its hood, two small drooping mud hands, overlapping draped sheets with dark inner shadow surfaces, and one connected puddle base. Preserve its original open circular O mouth, narrow eye slots, muddy hood outline, small stones, warm reflected highlights and cool shadows. Repeat THREE clearly visible rhythmic squash-and-rise cycles in place over five seconds: the entire hood and upper mud mantle sink down together about one tenth of the head height while its lower folds gently compress and spread, then rise back to the original slumped silhouette. The small arms follow the mantle with heavy delayed swaying, dangling fingers sag and recover. The draped folds stretch and compress together like viscous heavy clay, never separate disconnected pieces. The puddle BASE remains planted at the exact same ground height and position with a stable footprint, never lifting or sliding. Inner dark shadow surfaces remain solid opaque material and move with their surrounding folds, never open new holes or erase the shade. Keep the creature weak and droopy, the arms remain SMALL throughout, never transform or attack. Mouth stays a fixed round open hole and eyes keep the same shape. No human anatomy, no torso muscles, no knees, no legs or feet, no new limbs. Keep the same right-facing three-quarter view and same wet gray material. Clearly visible connected full-body movement, no static portrait. No splashes separating from the body, no smoke, particles, glow or magic. Fixed camera, no zoom, full body always visible, flat plain solid green background.",
+    "neg": "human body, human legs, knees, feet, chest muscles, belly, giant arms, giant fists, punching, rage transformation, angry face, changing mouth, lip sync, new holes, dissolving shadows, disappearing inner mud, transparent body, melting away, severed hands, detached mud drops, slime jumping, floating puddle, drifting base, changing pose, turning head, spray, water splashes, smoke, glow",
+    "note": "2026-10-28 ユーザー依頼。泥の外套型の通常待機絵からWan2.2 I2Vでseed2022/5055を生成・検品。Aは24コマ1.50秒の控えめな沈み込み、Bは末尾6コマを混合した39コマ2.44秒の大きなへたり。内側の陰・丸い口・接地を保持し、怒りの巨大腕化は混ぜない。ユーザーがAを選択し、通常プレイへ導入。採用した動きを保ち、接地と内側の陰を維持。記録はdesign/art/mudo/idle-loop-v1/notes.md。",
+    "adopted": {
+      "tag": "mudo_mantle_idle_v1_s2022",
+      "seed": 2022,
+      "frames": 24,
+      "fps": 16,
+      "loop": "mudo",
+      "type": "loop",
+      "date": "2026-10-28",
+      "candidate": "A",
+      "crossfade": 0
+    }
+  },
   "ere_singing": {
     "still": "DemoApp/assets/portraits/battle/ere_singing_idle_right.png",
     "full": "A 2D anime game bard performing her lament skill, a continuous repeating musical performance animation. The adult female bard Ere keeps the exact original right-facing three-quarter pose, eyes softly closed and chin lifted as she sings with the original narrow open mouth. Preserve her chestnut braid, embroidered black cap and veil, ivory sleeves, burgundy and black layered skirt, star jewelry and brown boots. She holds ONE wooden pear-shaped lute across her chest; her left hand stays wrapped around the SAME upper frets and the right wrist performs two or three CLEAR visible down-up strumming gestures across the strings over the rosette. Her right elbow opens, the wrist sweeps down across the strings and returns; the hand does NOT leave the wooden soundboard area. Her chest expands and rises on the musical phrase, shoulders and lute rise together, then her knees flex gently and the full body settles before the next phrase. A graceful confident connected performance, not an idle mannequin, not a dancing spin. The instrument moves as ONE RIGID object following the torso and arms. The pear body, rosette, straight neck, straight parallel strings and tuning pegs never change shape or length. The braid, veil, sleeve cuffs, skirt hems, gold chains and lute ribbon follow the musical upper-body movement with soft natural delay. Both boots remain firmly planted at the exact same ground positions. No steps, no jumping, no turning, no forward travel. Keep her eyes closed and mouth small throughout, no exaggerated lip sync. Same face, same costume and colors. No floating music notes, no magical effects, no glow, no particles: the game adds the gift effect later. Fixed camera, no zoom, full body and both boots always visible, plain solid green background.",

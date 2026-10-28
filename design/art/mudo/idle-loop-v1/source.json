@@ -1,0 +1,15 @@
+{
+  "source": "DemoApp/assets/portraits/battle/mudo_idle_right.png",
+  "sha256": "1003dde0b2fb5fad6b924e18de29d1122a7ccc137773ccc52981ca998db8e681",
+  "size": [
+    1038,
+    1515
+  ],
+  "seeds": [
+    2022,
+    5055
+  ],
+  "positive": "A continuous 2D fantasy fighting game idle loop of the exact gray mud mantle creature in the input image. The creature is a legless hood-shaped mantle made entirely of wet mineral gray mud, a small hanging mask-like face inside its hood, two small drooping mud hands, overlapping draped sheets with dark inner shadow surfaces, and one connected puddle base. Preserve its original open circular O mouth, narrow eye slots, muddy hood outline, small stones, warm reflected highlights and cool shadows. Repeat THREE clearly visible rhythmic squash-and-rise cycles in place over five seconds: the entire hood and upper mud mantle sink down together about one tenth of the head height while its lower folds gently compress and spread, then rise back to the original slumped silhouette. The small arms follow the mantle with heavy delayed swaying, dangling fingers sag and recover. The draped folds stretch and compress together like viscous heavy clay, never separate disconnected pieces. The puddle BASE remains planted at the exact same ground height and position with a stable footprint, never lifting or sliding. Inner dark shadow surfaces remain solid opaque material and move with their surrounding folds, never open new holes or erase the shade. Keep the creature weak and droopy, the arms remain SMALL throughout, never transform or attack. Mouth stays a fixed round open hole and eyes keep the same shape. No human anatomy, no torso muscles, no knees, no legs or feet, no new limbs. Keep the same right-facing three-quarter view and same wet gray material. Clearly visible connected full-body movement, no static portrait. No splashes separating from the body, no smoke, particles, glow or magic. Fixed camera, no zoom, full body always visible, flat plain solid green background.",
+  "negative": "static image, frozen pose, walking, moving across the frame, turning around, camera movement, zoom, cuts, jumping, hopping, feet leaving the ground, stepping, turning to face the camera, cropped feet, cropped ears, multiple characters, changing costume, changing face, extra limbs, extra fingers, deformed hands, flicker, text, watermark, background change, shadows on background, human body, human legs, knees, feet, chest muscles, belly, giant arms, giant fists, punching, rage transformation, angry face, changing mouth, lip sync, new holes, dissolving shadows, disappearing inner mud, transparent body, melting away, severed hands, detached mud drops, slime jumping, floating puddle, drifting base, changing pose, turning head, spray, water splashes, smoke, glow",
+  "installed": false
+}

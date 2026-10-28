@@ -1,0 +1,51 @@
+{
+  "source": "DemoApp\\assets\\portraits\\battle\\mudo_idle_right.png",
+  "source_sha256": "1003dde0b2fb5fad6b924e18de29d1122a7ccc137773ccc52981ca998db8e681",
+  "fps": 16,
+  "status": "adopted",
+  "candidates": [
+    {
+      "label": "A",
+      "tag": "mudo_mantle_idle_v1_s2022",
+      "frames": 24,
+      "seconds": 1.5,
+      "size": [
+        640,
+        960
+      ],
+      "source_bottom": 920,
+      "bottom_range": [
+        920,
+        920
+      ],
+      "head_vertical_range_px": 22,
+      "max_opaque_border_pixels": 9,
+      "max_green_pixels": 0,
+      "max_body_border_pixels": 0,
+      "frame_bytes": 21199982,
+      "preview": "design\\art\\mudo\\idle-loop-v1\\candidates\\A\\compare.gif"
+    },
+    {
+      "label": "B",
+      "tag": "mudo_mantle_idle_v1_s5055_final",
+      "frames": 39,
+      "seconds": 2.4375,
+      "size": [
+        640,
+        960
+      ],
+      "source_bottom": 920,
+      "bottom_range": [
+        920,
+        921
+      ],
+      "head_vertical_range_px": 66,
+      "max_opaque_border_pixels": 0,
+      "max_green_pixels": 0,
+      "max_body_border_pixels": 0,
+      "frame_bytes": 25137715,
+      "preview": "design\\art\\mudo\\idle-loop-v1\\candidates\\B\\compare.gif"
+    }
+  ],
+  "adopted": "A"
+}

@@ -1,0 +1,22 @@
+{
+  "date": "2026-10-28",
+  "candidate": "A",
+  "tag": "mudo_mantle_idle_v1_s2022",
+  "seed": 2022,
+  "frames": 24,
+  "fps": 16,
+  "seconds": 1.5,
+  "crossfade": 0,
+  "source": "DemoApp\\assets\\portraits\\battle\\mudo_idle_right.png",
+  "source_sha256": "1003dde0b2fb5fad6b924e18de29d1122a7ccc137773ccc52981ca998db8e681",
+  "destination": "DemoApp/assets/portraits/battle/idle_loop/mudo",
+  "installed_frame_bytes": 19310121,
+  "pixels_match_candidate": true,
+  "source_bottom": 920,
+  "bottom_range": [
+    920,
+    920
+  ],
+  "max_opaque_border_pixels": 9,
+  "body_border_pixels": 0
+}
