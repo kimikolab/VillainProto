@@ -2913,6 +2913,9 @@ public sealed class UnitTally
     /// <summary>第204期（<b>計数専用</b>）: この駒に載っていた破片の最大値（リリの手番の頭の走査と、リリが破片を足した直後に更新）。</summary>
     public int ArmorPeakSeen;
 
+    /// <summary>第416期（<b>計数専用</b>・駆け寄る口づけ `KissRush` の保持者だけが持つ）。中身は <see cref="KissRushBook"/>。</summary>
+    public KissRushBook? KissRush416;
+
     /// <summary>
     /// 第198期 Phase 0（<b>計数専用・どの規則も読まない</b>）: 自陣営で<b>最後の1体</b>になった瞬間（味方陣営だけ・召喚された駒も数える）。
     /// <c>AloneTurn</c> そのターン（0 ＝ 一度もならなかった。蘇生で仲間が戻っても最初の値のまま）／
@@ -3524,6 +3527,7 @@ public sealed class UnitTally
         if (o.PlankToRow is not null) { PlankToRow ??= new long[3]; for (int i = 0; i < 3; i++) PlankToRow[i] += o.PlankToRow[i]; }
         if (o.FirstAidToRow is not null) { FirstAidToRow ??= new long[3]; for (int i = 0; i < 3; i++) FirstAidToRow[i] += o.FirstAidToRow[i]; }
         KissTierMax = Math.Max(KissTierMax, o.KissTierMax);
+        if (o.KissRush416 is not null) (KissRush416 ??= new()).Add(o.KissRush416);
         if (o.RiteFoeHist is not null) { RiteFoeHist ??= new long[3]; for (int i = 0; i < 3; i++) RiteFoeHist[i] += o.RiteFoeHist[i]; }
         RiteMaxPerFoe = Math.Max(RiteMaxPerFoe, o.RiteMaxPerFoe);
         if (o.KissStolenBy is not null)
@@ -5635,9 +5639,46 @@ public static class PlankLabels
     public const string Opening = "出撃前の板";
 }
 
+/// <summary>
+/// 第416期（<b>計数専用</b>）: リリの駆け寄る口づけ（<see cref="KissRushTrait"/>）の帳簿。
+/// <c>Chances</c> 引き金（敵の直の一撃で味方の HP が減り、その味方が生きている）／ <c>Fired</c> 駆け寄った ／ <c>Capped</c> そのターンの上限で切られた ／
+/// <c>Hushed</c> 粛で止まった ／ <c>Held</c> 痺れ・組み付き・割り込みや反撃の中で止まった ／ <c>Fallen</c> その一撃で味方が倒れた（引き金に入れない）／
+/// <c>Nominal</c>・<c>Drained</c> 吸う名目と実際に敵から減った量 ／ <c>Kills</c> 吸い取りで倒した ／ <c>StigmaNew</c> 聖痕を新しく付けた ／
+/// <c>Healed</c>・<c>Armor</c>・<c>Blocked</c> 注いで癒えた量・破片・止められた量 ／ <c>Stoic</c>・<c>StoicDrained</c> 支援拒否で捨てた回数と量 ／ <c>LostRecv</c> 注ぐ前に受け取り手が倒れた ／
+/// <c>Moves</c>・<c>MovedLayers</c>・<c>MovedBy</c> 駆け寄りで移した状態（キー ＋ "|" ＋ 受け取った駒の <c>Def.Id</c>）／
+/// <c>StealN</c>・<c>StealPos</c>・<c>StealNeg</c>・<c>StolenBy</c> 駆け寄りで移した攻撃力の上げ下げ ／
+/// <c>RecvBy</c> 殴られた味方（<c>Def.Id</c>）ごとの回数・<c>HealBy</c> 注いで癒えた量 ／ <c>FoeSlot</c> 殴った敵の席（0〜8）／ <c>ByTurn</c> ターンごとの回数（添字 ＝ ターン・30 で丸める）／
+/// <c>PainOverlap</c> 駆け寄った一撃の量のうち、後の手番の口づけが痛みとしても読んだ量 ／ <c>TurnSpillSkipped</c> LK-1m で手番の口づけが移さなかった回数 ／ <c>Inverted</c> 注ぎが反転（ベニの輪）で傷になった量。
+/// </summary>
+public sealed class KissRushBook
+{
+    public long Chances, Fired, Capped, Hushed, Held, Fallen, Nominal, Drained, Kills, StigmaNew, Healed, Armor, Blocked, Stoic, StoicDrained, LostRecv,
+                Moves, MovedLayers, StealN, StealPos, StealNeg, PainOverlap, TurnSpillSkipped, Inverted;
+    public readonly Dictionary<string, (long N, long Sum)> MovedBy = new(), StolenBy = new();
+    public readonly Dictionary<string, long> RecvBy = new(), HealBy = new();
+    public readonly long[] FoeSlot = new long[9], ByTurn = new long[31];
+
+    public void Add(KissRushBook o)
+    {
+        Chances += o.Chances; Fired += o.Fired; Capped += o.Capped; Hushed += o.Hushed; Held += o.Held; Fallen += o.Fallen;
+        Nominal += o.Nominal; Drained += o.Drained; Kills += o.Kills; StigmaNew += o.StigmaNew; Healed += o.Healed; Armor += o.Armor; Blocked += o.Blocked;
+        Stoic += o.Stoic; StoicDrained += o.StoicDrained; LostRecv += o.LostRecv; Moves += o.Moves; MovedLayers += o.MovedLayers;
+        StealN += o.StealN; StealPos += o.StealPos; StealNeg += o.StealNeg; PainOverlap += o.PainOverlap; TurnSpillSkipped += o.TurnSpillSkipped; Inverted += o.Inverted;
+        foreach (var (k, v) in o.MovedBy) MovedBy[k] = MovedBy.TryGetValue(k, out var a) ? (a.N + v.N, a.Sum + v.Sum) : v;
+        foreach (var (k, v) in o.StolenBy) StolenBy[k] = StolenBy.TryGetValue(k, out var a) ? (a.N + v.N, a.Sum + v.Sum) : v;
+        foreach (var (k, v) in o.RecvBy) RecvBy[k] = RecvBy.GetValueOrDefault(k) + v;
+        foreach (var (k, v) in o.HealBy) HealBy[k] = HealBy.GetValueOrDefault(k) + v;
+        for (int i = 0; i < FoeSlot.Length; i++) FoeSlot[i] += o.FoeSlot[i];
+        for (int i = 0; i < ByTurn.Length; i++) ByTurn[i] += o.ByTurn[i];
+    }
+}
+
 /// <summary><see cref="BattleEventKind.Kiss"/> の <c>Text</c>（第204期・<b>表示専用</b>）。</summary>
 public static class KissLabels
 {
+    /// <summary>第416期（駆け寄る口づけ・版だけ）: 仲間が殴られて駆け寄った瞬間。<c>TargetId</c> = 殴られた仲間、<c>SpreadFromId</c> = 殴った敵、<c>Amount</c> = その一撃の量。
+    /// 続いて <see cref="Drain"/>（相手は殴った敵）→ 状態移し → <see cref="Give"/>（受け取り手は殴られた仲間）がふつうの口づけと同じ形で並ぶ。</summary>
+    public const string Rush = "駆け寄り";
     public const string Drain = "吸い取り";
     public const string Give = "口移し";
     public const string Armor = "破片";

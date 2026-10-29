@@ -1738,3 +1738,11 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **ウツの手数**: 逆しま（`Perverse`）の保持者の手数（`SwingTurnHits` と同じ `ModifyHitCount` の畳み込み）が前に出した値と違ったら `StatusGain`（`Text` ＝ `"utsu_hits"`・`ActorId` ＝ `TargetId` ＝ ウツ・量 ＝ 新しい手数 1〜5）。見る場所は開戦（ターン 0・初期値を必ず1件）／ `Dull` ／ `Whet` で攻撃力が動いた直後 ／ 手番の枠の前後 ／ 決着の直前（`UtsuHitsAll415`）。
 - **ワタの引き受け元**: `RelayThrough` の頭で `StatusGain`（`Text` ＝ `"wata_take"`・受け手 ＝ ワタ・`ActorId` ＝ 元の弱体の書き手・量 ＝ 引き受けた量・新しい欄 `BattleEvent.FromId` ＝ 元の受け手）。ワタの攻撃力は下がらない（渡しは `AtkBonus` を引かない）。配り（`CursePass` 回す）／ 押し付けより前に出る。
 - 3 つとも `EmitScript415` から `Emit` へ直に積む（`EmitStatusGain` の1回きりの読み飛ばし札を消費しない）。verbose が偽なら1件も作らず、盤面・乱数・計数は変えない。`replay` の JSON には載せていない（DemoApp は `BattleEvent` を直に読む）。
+
+## 第416期 —— リリの駆け寄る口づけ（版だけ・`KissRushTrait`）
+
+- 窓口は既存の `OnDamaged` ／ `OnAllyDamaged`（HP を引いた後・死亡判定の前）。新しい窓口は足していない。
+- **`HitFrame` に `BurnTick` ／ `HexShare` を足した**（`ApplyDamageCore` が立てる・既定は偽）。「敵の直の一撃」の判定（`Levy` ／ `FriendlyFire` ／ `Relayed` ／ `HexShare` ／ `BurnTick` を外す・弾き返しと同じ集合）に要るためで、**読むのは `KissRushTrait` だけ**。盤面は1ビットも変えない。
+- **`OutOfTurnRoute.KissRush` を足した**（`Other` の前・問う相手はリリ）。`OutOfTurnRoutes.Names` に「駆け寄る口づけ」。
+- 本体は `ctx.Interrupt` で包む。駆け寄りの吸い取り（`KissTrait.Drain`）の中では `InInterrupt` を見る反応（敵の応急処置・弾き返し・暴発）が止まる——手番の口づけとの違いはここだけ。
+- 保持者がいない戦では `KissRushTrait` のフックが走らない（札を持つ駒だけ）。手番の口づけの側に足したのは、`KissSpillRushOnly` の `HasTrait` の比較1つと、私有キー `kissRushPend` の読み（0 なら何もしない）だけ。乱数を引かない。

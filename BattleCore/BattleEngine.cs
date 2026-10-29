@@ -551,6 +551,8 @@ public enum OutOfTurnRoute
     Resonance,
     /// <summary>打ち返し（第318期・シガの版 SG `BetrayBackswing`・`Backswing`。<b>問う相手はシガ</b>）。</summary>
     Backswing,
+    /// <summary>駆け寄る口づけ（第416期・リリの版 LK `KissRush`・`KissRushTrait`。<b>問う相手はリリ</b>——殴られた味方ではない）。</summary>
+    KissRush,
     /// <summary>呼び出し口を名乗らなかった問い合わせ（既定値。<b>現状 0 件</b>）。</summary>
     Other
 }
@@ -560,7 +562,7 @@ public static class OutOfTurnRoutes
 {
     /// <summary>経路の名前（<see cref="OutOfTurnRoute"/> の順）。</summary>
     public static readonly string[] Names =
-        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "斬り返し", "応急処置", "追い撃ち", "緊急退避", "突風", "弾き返し", "移動の追撃", "感電の割り込み", "橋", "羽の標撃ち", "庇い", "指差し", "叫び", "騎士の斬り返し", "光", "緊急の喚び出し", "避雷針", "共鳴返し", "打ち返し", "その他" };
+        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "斬り返し", "応急処置", "追い撃ち", "緊急退避", "突風", "弾き返し", "移動の追撃", "感電の割り込み", "橋", "羽の標撃ち", "庇い", "指差し", "叫び", "騎士の斬り返し", "光", "緊急の喚び出し", "避雷針", "共鳴返し", "打ち返し", "駆け寄る口づけ", "その他" };
 
     /// <summary>経路の数。</summary>
     public static int Count => Names.Length;
@@ -9148,8 +9150,10 @@ public sealed class BattleContext
     ///
     /// <para><b><c>Levy</c> だけが盤面の規則に読まれる</b>——徴収（生贄・吸い・置き去りの削り）は
     /// 「攻撃によるダメージ」ではないので糧を渡さない。残りは計数専用。</para>
+    /// <para>第416期: <c>BurnTick</c>（毒・火の刻み）と <c>HexShare</c>（呪いの共有）を足した。読むのは駆け寄る口づけ（<c>KissRushTrait</c>・版だけ）の
+    /// 「敵の直の一撃」の判定だけ（ほかの読み手は無い・盤面は1ビットも変えない）。</para>
     /// </summary>
-    public readonly record struct HitFrame(bool Levy, bool FriendlyFire, bool Relayed, AttackPattern? Pattern);
+    public readonly record struct HitFrame(bool Levy, bool FriendlyFire, bool Relayed, AttackPattern? Pattern, bool BurnTick = false, bool HexShare = false);
 
     /// <summary>いま解決中のダメージの札。<see cref="ApplyDamage"/> の外では既定値。</summary>
     public HitFrame Hit { get; private set; }
@@ -13605,7 +13609,7 @@ public sealed class BattleContext
                          AttackPattern? pattern, bool levy)
     {
         HitFrame prevHit = Hit;
-        Hit = new HitFrame(levy, isFriendlyFire, relayed, pattern);
+        Hit = new HitFrame(levy, isFriendlyFire, relayed, pattern, burnTick, hexShare);
         // 第208期: 撃ち返す板の控え（1回の `ApplyDamage` の枠ごと。入れ子の呼び出しは退避・復帰する）。
         int prevHitSerial212 = CurrentHitSerial; CurrentHitSerial = ++_hitSerial;   // 第212期（計数のみ・1回の ApplyDamage の枠の通し番号）
         int prevAmt = _reflectAmt; UnitState? prevFrom = _reflectFrom;

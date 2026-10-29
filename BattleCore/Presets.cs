@@ -1067,7 +1067,20 @@ public static class Presets
         // 第413期: ワタの渡し手番の版の台「版・W-u 呪い」「版・W-m 呪い」（「試遊・呪い」のワタを版に）。過去の器具の一覧（`Common.VersionsH407` から先）には入らない。
         ("版・W-u 呪い", WataGift413(UnitCatalog.WataWu)),
         ("版・W-m 呪い", WataGift413(UnitCatalog.WataWm)),
+        // 第416期: リリの駆け寄る口づけの版の台（指示書 PHASE415_LILI_RUSH_SPEC.md §4-6）。台・呪い ＝「試遊・呪い」のクビをリリに（前1 ウツ ／ 前3 ムド ／ 中央 ネル ／ 後1 ワタ ／ 後3 リリ）、
+        //   台・紅 ＝「試遊・毒 紅」のラウをリリに。過去の器具の一覧（`Common.VersionsH407` から先）には入らない。採否はポン。
+        ("版・LK-1 呪い", LiliCurse416(UnitCatalog.LiliLk1)),
+        ("版・LK-1 紅", LiliGuren416(UnitCatalog.LiliLk1)),
+        ("版・LK-2 呪い", LiliCurse416(UnitCatalog.LiliLk2)),
+        ("版・LK-1m 呪い", LiliCurse416(UnitCatalog.LiliLk1m)),
     };
+
+    /// <summary>第416期: 台・呪い（「試遊・呪い」のクビをリリに替え、ウツを矢面に: 前1 ウツ ／ 前3 ムド ／ 中央 ネル ／ 後1 ワタ ／ 後3 リリ）。既定は規定のリリ。</summary>
+    public static Formation LiliCurse416(UnitDef? lili = null) =>
+        Formation.Build(front1: UnitCatalog.Utsu, front3: UnitCatalog.Mudo, center: UnitCatalog.Nel, back1: UnitCatalog.Wata, back3: lili ?? UnitCatalog.Lili);
+    /// <summary>第416期: 台・紅（「試遊・毒 紅」のラウ（後1）をリリに: 前1 ボルグ ／ 前3 スィド ／ 中央 ベニ ／ 後1 リリ ／ 後3 グザ）。既定は規定のリリ。</summary>
+    public static Formation LiliGuren416(UnitDef? lili = null) =>
+        Formation.Build(front1: UnitCatalog.Borg, front3: UnitCatalog.Sid, center: UnitCatalog.Beni, back1: lili ?? UnitCatalog.Lili, back3: UnitCatalog.Guza);
 
     /// <summary>第410期: 「版・カーズ 呪い」（第409期の「版・K-d 呪い」を改名）の並び。`kari410 seats` の最良（KZ-90・ワタをカーズに替えた前1・強4 100）。</summary>
     public static Formation KarzBoard410() =>

@@ -720,6 +720,9 @@
 | `MudoMireDull` | 泥人形ムド |
 | `WataCallBlade` | - |
 | `WataCallMire` | - |
+| `KissRush` | - |
+| `KissRush2` | - |
+| `KissSpillRushOnly` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

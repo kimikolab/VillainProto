@@ -637,6 +637,7 @@ if (focusId == "mudo412") { Mudo412Diag.Run(args, stageIndex); return; }    // �
 if (focusId == "wata413") { Wata413Diag.Run(args, stageIndex); return; }    // 第413期
 if (focusId == "inv414") { Inv414Diag.Run(args, stageIndex); return; }    // 第414期
 if (focusId == "script415") { Script415Diag.Run(args, stageIndex); return; }    // 第415期
+if (focusId == "lili416") { Lili416Diag.Run(args, stageIndex); return; }    // 第416期
 if (focusId == "sh358") { Sh358Diag.Run(args, stageIndex); return; }        // 第358期
 if (focusId == "sh359") { Sh359Diag.Run(args, stageIndex); return; }        // 第359期
 if (focusId == "sh360") { Sh360Diag.Run(args, stageIndex); return; }        // 第360期

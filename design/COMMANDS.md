@@ -1298,6 +1298,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 wata413 check           # 第413期: 自己検査（版の札・手番・台・鎖の終端・規定の台で鳴らない・ワタ自身は殴らない）（1 秒）
     dotnet run --project BattleSim -c Release 0 inv414 all              # 第414期: 軸の横並び（第348期 §3 の形・いまの規定・第348期の表との差）＋ デバフの速さの中身 ＋ ムドを他の軸に入れた台 ＋ カーズ ／ ワタの材料（q1 ／ q2 ／ q3 ／ q4 で分けても回る）（12 秒）
     dotnet run --project BattleSim -c Release 0 script415 check         # 第415期: 台本の出来事 3 つ（karz_mark ／ utsu_hits ／ wata_take の FromId）の自己検査・verbose の有無で勝敗 ／ T が変わらない（1 秒）
+    dotnet run --project BattleSim -c Release 0 lili416 p0              # 第416期 Phase 0 §1: リリの台 × {LK-1, LK-2} × ボス ／ 近衛 ／ 大隊 ／ 強4 ＋ 本編 第2波・seed 0..9 の引き金の数 ／ 上限で切られた ／ 粛（1 秒）
+    dotnet run --project BattleSim -c Release 0 lili416 boards          # 第416期 §4-2: 8 台（台・呪い ／ 台・紅 ／ 試遊・自傷 ／ compare のリリの5行 ＋ 交差帯の傷×被弾）× {規定, LK-1, LK-2, LK-1m} × 4 波 ＋ 本編 5 波・seed 0..99（予測 `.tmp/p416/predict.md` が無ければ走らない）（5 秒）
+    dotnet run --project BattleSim -c Release 0 lili416 seats           # 第416期 §4-3: 台・呪い ／ 反撃改 × リリの席 5 通り × {規定, LK-1} × 4 波（2 秒）
+    dotnet run --project BattleSim -c Release 0 lili416 log <0|1|2|1m> <台の鍵> <波の鍵> [seed]   # 第416期: 1戦のログ（台の鍵 curse / guren / self / taikyu / hangeki / hangeki2 / kizu / nensho・波の鍵 boss / guard / bat / s4 / m1..m5）
+    dotnet run --project BattleSim -c Release 0 lili416 check           # 第416期: 自己検査（版の札・All の外・試遊の台と鎖の終端・規定で帳簿が空・上限 1 ／ 2・LK-1m は手番で移さない・verbose の有無・PickOne を使わない）（1 秒）
     dotnet run --project BattleSim -c Release 0 sh358 p0                # 第358期 §2 Phase 0: 破片の流れ（書いた ／ 敵の一撃で割れた ／ 読んだ ／ 残った）・ツギの板の返し（1回 ／ 同じ主へ集まった塊）・ヒビの砕けと倒れた T・ボスの1ターンの与ダメ ／ 回復（規定・代表台 3 × 5 波・seed 0..99・1 秒）
     dotnet run --project BattleSim -c Release 0 sh358 seats [版]        # 第358期 §4: ヒビ ／ ガレ ＋ 6枚（ウロ ／ ツギ ／ ササ ／ ガルド ／ ドルガ ／ ゴルム）から3枚 × 席の全並び ＝ 2,400 並び × ボス（seed 0..4）／ 近衛 ／ 大隊（seed 0..19）・版（既定 hbgr）と規定の両方（16 秒）
     dotnet run --project BattleSim -c Release 0 sh358 flow [版,…]       # 第358期 §6 の 1・2: 破片の流れ ／ 返し ／ 礫 ／ ボスへの届き方（1ターンの与ダメを 欠片の返し ／ 礫 ／ 板の返し ／ ほか に分ける）× 版・代表台 4 × ボス ／ 大隊

@@ -1566,6 +1566,27 @@ public static class UnitCatalog
         Flavor = "彼女は惜しみなく与える。誰から奪ったものかは気にしない。"
     };
 
+    // 第416期: リリの駆け寄る口づけ（指示書 design/PHASE415_LILI_RUSH_SPEC.md §2・期の番号は第416期）。版は規定のリリ（8枚）の上に札を足す。
+    // HP ／ 攻 ／ 速・手番の口づけ・祝福の儀・還りはそのまま・`All` の外・保持者 0 枚。
+    const string LiliRushPlus416 = "。仲間が殴られると、殴った敵に駆け寄って口づけし、吸った精気をその仲間に注ぐ";
+    const string LiliRushMinus416 = "。駆け寄って吸った敵の状態と攻撃力の上げ下げは、殴られた仲間が背負う";
+    static UnitDef LiliRush416(TraitId[] extra, string plus, string minus) => new()
+    {
+        Id = Lili.Id, Name = Lili.Name, MaxHp = Lili.MaxHp, Attack = Lili.Attack, Speed = Lili.Speed, Advances = Lili.Advances, Pattern = Lili.Pattern,
+        Traits = Lili.Traits.Concat(extra).ToArray(),
+        Actions = Lili.Actions,
+        PlusText = Lili.PlusText + plus,
+        MinusText = minus,
+        Flavor = Lili.Flavor,
+    };
+    /// <summary>第416期 LK-1 駆け寄る口づけ: 規定のリリ ＋ <see cref="TraitId.KissRush"/>（1ターン1回）。</summary>
+    public static readonly UnitDef LiliLk1 = LiliRush416(new[] { TraitId.KissRush }, LiliRushPlus416 + "（1ターン1回）", Lili.MinusText + LiliRushMinus416);
+    /// <summary>第416期 LK-2: LK-1 の上限を1ターン2回に（<see cref="TraitId.KissRush2"/>）。</summary>
+    public static readonly UnitDef LiliLk2 = LiliRush416(new[] { TraitId.KissRush, TraitId.KissRush2 }, LiliRushPlus416 + "（1ターン2回）", Lili.MinusText + LiliRushMinus416);
+    /// <summary>第416期 LK-1m: LK-1 ＋ 手番の口づけでは状態と強弱を移さない（<see cref="TraitId.KissSpillRushOnly"/>・マイナスは駆け寄りの中だけ）。</summary>
+    public static readonly UnitDef LiliLk1m = LiliRush416(new[] { TraitId.KissRush, TraitId.KissSpillRushOnly }, LiliRushPlus416 + "（1ターン1回）",
+        "駆け寄って吸った敵の状態（毒・火・呪い・痺れなど）と攻撃力の上げ下げは、殴られた仲間が背負う");
+
     /// <summary>
     /// 継ぎ当てのノノ（第203期まで）。<b>第204期にリリへ転生した</b>——対照として定義だけ残す（<see cref="All"/> にも <c>Retired</c> にも入れない。
     /// 逆位・まどろみと同じ扱い）。<c>Presets</c> はリリを引く。

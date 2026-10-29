@@ -8,6 +8,8 @@ description: 第259期に `CLAUDE.md` の「現状値」節を**逐語で**移�
 
 ## 現状値
 
+**第416期は軽い期で、版だけ（規定は動かさない）**（指示書 `PHASE416_LILI_RUSH_SPEC.md`（受け取った名は `PHASE415_LILI_RUSH_SPEC.md`）・報告 `design/PHASE416_LILI_RUSH.md`・器具 `lili416`）。リリの駆け寄る口づけの版 LK-1 ／ LK-2 ／ LK-1m（`UnitCatalog.LiliLk1` ／ `LiliLk2` ／ `LiliLk1m`）——仲間が殴られると殴った敵に駆け寄って吸い、殴られた本人に注ぐ（状態と強弱の移しも本人へ）。`compare` 0 セル・全66行 ／ 主判定19行 ／ 情報セルは動かない。試遊の台に「版・LK-1 呪い」「版・LK-1 紅」「版・LK-2 呪い」「版・LK-1m 呪い」を足し、鎖の終端 `VersionsH407` が `VersionRows416` で外す。engine には `HitFrame` の `BurnTick` ／ `HexShare` と `OutOfTurnRoute.KissRush` を足した（読むのはこの札だけ）。
+
 **第415期は小さな期・表示専用**（指示書 `PHASE415_SCRIPT_EVENTS_SPEC.md`・報告 `design/PHASE415_SCRIPT_EVENTS.md`・盤面は動かさない）。デバフ軸の演出（`CODEX_BRIEF_DEBUFF.md` §4）に要る台本の出来事を3つ足した。カーズの印（`StatusGain` `karz_mark`・カーズの手番の `Skill` にも印の敵）、ウツの手数（`utsu_hits`・手数が変わった瞬間と開戦の初期値）、ワタの引き受け（`wata_take`・新しい欄 `FromId` ＝ 元の受け手）。指示書は「受け手ワタの `StatusGain` に元の受け手を載せる」だったが、その出来事はもともと無かった（渡しはワタの攻撃力を引かない）ので新設した。`compare` 0 セル。`docs/` の差は情報行 2 行（`watch.md` の初期化子の数・`roster_audit.md` の秒数）。`shockdigest` は新しい欄と出来事を数えないようにした（第291期と同じ作法）。器具は `script415`。
 
 **第414期は数えるだけの期**（指示書 `PHASE414_AXES_RECHECK_SPEC.md`・報告 `design/PHASE414_AXES_RECHECK.md`・規則も版も足さない・器具 `inv414`）。第348期 §3 の軸の横並びを、いまの規定（`inv348` の古い期への固定を外した）と、デバフの行を「試遊・呪い」「試遊・カーズ 呪い」に替えた台で取り直した。デバフは勝率の物差しでは並んで1位（単独 0）・ボスで味方が倒れない。速さ ／ 的 ／ 強 2〜5 では上に軸がある。速さの芯はウツとムドの2枚。ムドは呪いの書き手（ネル）とウツのいる台でだけ強く、他の軸の汎用の駒ではない。ワタの死は倒しT に響かず、回復を入れる理由は数字に出ない。第348期の後に規定を作り替えた駒のいない移動 ／ 感電は、第348期の表と1セルも動かない。

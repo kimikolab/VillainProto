@@ -1059,6 +1059,10 @@ public enum TraitId
     // --- 第413期で足した札（指示書 design/PHASE413_WATA_GIFT_SPEC.md §2）。ワタの渡し手番の版（`All` の外）。保持者 0 枚 ---
     WataCallBlade,        // 刃を呼ぶ（W-u・ワタ）: 手番で、前の自分の手番から敵へ重荷を押し付けていれば、押し付けた敵のうち最も強い1体（同じなら席番号）を、最も呪われている味方（下げ幅 −AtkBonus が最大・ワタ自身を除く・同じなら席番号・0 なら誰も）がその場で殴る（その味方の手番と同じ発数・届かなければ何も起きない）。ワタ自身は殴らない（**判定は engine の `WataCall413`**）
     WataCallMire,         // 泥を呼ぶ（W-m・ワタ）: 同じ条件で、暴発を持つ味方（`Erupt`・同じなら席番号）が溜めた怒りをその場で吐く（閾に届いていなくても溜めた回数だけ殴り返す・怒りは消費・相手は押し付けた敵・暴発と同じ経路）。怒りが 0 なら何も起きない。ワタ自身は殴らない（**判定は engine の `WataCall413`**）
+    // --- 第416期で足した札（指示書 PHASE415_LILI_RUSH_SPEC.md §2・期の番号は第416期）。リリの駆け寄る口づけの版（`All` の外）。保持者 0 枚 ---
+    KissRush,             // 駆け寄る口づけ（LK-1・リリ）: 生きている敵の直の一撃で味方（リリ自身を含む）の HP が減ると、手番の外で殴った敵に口づけし（聖痕を問わない・無ければ付ける）、その一撃の半分（最低8）を吸って殴られた本人に注ぐ。状態と強弱の移しも本人へ。本人が支援拒否なら吸うだけ。1ターン1回（`KissRushTrait`）
+    KissRush2,            // 駆け寄りを1ターン2回に（LK-2・リリ）（**札そのものは挙動を持たない**・`KissRushTrait` が上限を読む）
+    KissSpillRushOnly,    // 手番の口づけでは移さない（LK-1m・リリ）: 状態と強弱の移しを駆け寄りの中だけにする（**札そのものは挙動を持たない**・`KissTrait.DrainOne` が読む）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -19326,6 +19330,7 @@ public sealed class KissTrait : Trait
         self.SetCounter(PainMarkKey, 0);
         self.SetCounter(HealSumKey, 0);
         self.SetCounter(TierKey, 0);
+        if (self.RawCounter(KissRushTrait.PendKey) != 0) self.SetCounter(KissRushTrait.PendKey, 0);   // 第416期（計数のみ・保持者がいなければ触らない）
     }
 
     /// <summary>手番の頭の痛み（第205期）。前の手番の終わり（1手番目は戦の開始）から、味方の陣営が失った HP。</summary>
@@ -19343,6 +19348,12 @@ public sealed class KissTrait : Trait
         int pain = PainNow(ctx, self);
         t.KissActs++;
         t.KissPainSum += pain;
+        // 第416期（計数のみ）: 前の手番から駆け寄った一撃の量（その一撃は痛みにも入っている・§2 の決めで差し引かない）。
+        if (self.RawCounter(KissRushTrait.PendKey) is int pend and > 0)
+        {
+            (t.KissRush416 ??= new()).PainOverlap += Math.Min(pend, pain);
+            self.SetCounter(KissRushTrait.PendKey, 0);
+        }
         ActBody(ctx, self, foes, percent, rite, t, pain);
         self.SetCounter(PainMarkKey, (int)ctx.PainLostOf(self.TeamId));
     }
@@ -19413,8 +19424,16 @@ public sealed class KissTrait : Trait
         if (ReferenceEquals(recv, self)) t.KissToSelf++;
         ctx.Log($"    {self.Name} が {foe.Name} に口づけし、精気を吸った（{drained}）→ {recv.Name}", LogKind.Trigger);
 
-        if (self.HasTrait(TraitId.KissSpill)) Transfer(ctx, self, foe, recv, t);
-        if (self.HasTrait(TraitId.KissSteal)) Steal(ctx, self, foe, recv, t);
+        // 第416期（LK-1m）: 手番の口づけでは移さない（移しは駆け寄りの中だけ）。札が無ければ1行も変わらない。
+        if (self.HasTrait(TraitId.KissSpillRushOnly))
+        {
+            if (self.HasTrait(TraitId.KissSpill) || self.HasTrait(TraitId.KissSteal)) (t.KissRush416 ??= new()).TurnSpillSkipped++;
+        }
+        else
+        {
+            if (self.HasTrait(TraitId.KissSpill)) Transfer(ctx, self, foe, recv, t);
+            if (self.HasTrait(TraitId.KissSteal)) Steal(ctx, self, foe, recv, t);
+        }
 
         ctx.EmitKiss(self, KissLabels.Give, recv, drained, from: foe);
         var (healed, armor, blocked) = Give(ctx, self, recv, drained);
@@ -19429,7 +19448,7 @@ public sealed class KissTrait : Trait
     /// （通すと引き受け・渡しが移した弱体を横取りし、<c>WhetReceived</c> に「外から押された」が載る）。尾灯の消灯と同じく直に足し引きする。
     /// 儀式では移さない（第204期の状態と同じ）。
     /// </summary>
-    static void Steal(BattleContext ctx, UnitState self, UnitState foe, UnitState to, UnitTally t)
+    internal static void Steal(BattleContext ctx, UnitState self, UnitState foe, UnitState to, UnitTally t, KissRushBook? rush = null)
     {
         int v = foe.AtkBonus;
         if (v == 0) return;
@@ -19439,6 +19458,12 @@ public sealed class KissTrait : Trait
         if (v > 0) t.KissStealPos += v; else t.KissStealNeg -= v;
         var by = t.KissStolenBy ??= new();
         by[to.Def.Id] = by.TryGetValue(to.Def.Id, out var a) ? (a.N + 1, a.Sum + v) : (1, v);
+        if (rush is not null)   // 第416期（計数のみ）: 駆け寄りの中の移し
+        {
+            rush.StealN++;
+            if (v > 0) rush.StealPos += v; else rush.StealNeg -= v;
+            rush.StolenBy[to.Def.Id] = rush.StolenBy.TryGetValue(to.Def.Id, out var r) ? (r.N + 1, r.Sum + v) : (1, v);
+        }
         ctx.EmitKiss(self, KissLabels.Steal, to, v, from: foe, remaining: to.AtkBonus);
         ctx.Log($"    {foe.Name} の攻撃力の{(v > 0 ? "上げ" : "下げ")}（{v:+0;-0}）が {to.Name} へ移った", LogKind.Status);
     }
@@ -19471,7 +19496,7 @@ public sealed class KissTrait : Trait
     }
 
     /// <summary>吸う（術のダメージ）。戻り値 ＝ 実際に敵の HP から減った量。</summary>
-    static int Drain(BattleContext ctx, UnitState self, UnitState foe, int nominal)
+    internal static int Drain(BattleContext ctx, UnitState self, UnitState foe, int nominal)
     {
         if (nominal <= 0 || !foe.IsAlive) return 0;
         int before = foe.Hp;
@@ -19534,7 +19559,7 @@ public sealed class KissTrait : Trait
     }
 
     /// <summary>状態を移す（代金）。書き手の記録（傷の刻み手）も一緒に移す。</summary>
-    static void Transfer(BattleContext ctx, UnitState self, UnitState foe, UnitState to, UnitTally t)
+    internal static void Transfer(BattleContext ctx, UnitState self, UnitState foe, UnitState to, UnitTally t, KissRushBook? rush = null)
     {
         foreach (string k in Moved)
         {
@@ -19551,6 +19576,11 @@ public sealed class KissTrait : Trait
             string key = k + "|" + to.Def.Id;
             var by = t.KissMovedBy ??= new();
             by[key] = by.TryGetValue(key, out var a) ? (a.N + 1, a.Sum + v) : (1, v);
+            if (rush is not null)   // 第416期（計数のみ）: 駆け寄りの中の移し
+            {
+                rush.Moves++; rush.MovedLayers += v;
+                rush.MovedBy[key] = rush.MovedBy.TryGetValue(key, out var r) ? (r.N + 1, r.Sum + v) : (1, v);
+            }
             ctx.EmitStatusTransfer(self, foe, to, k, v, after);
             ctx.Log($"    {foe.Name} の{StatusKeys.LabelOf(k)}（{v}）が {to.Name} へ移った", LogKind.Status);
         }
@@ -19640,6 +19670,104 @@ public sealed class KissTrait : Trait
         ctx.Log($"    {dead.Name} の聖痕から祝福が還る → {to.Name}（{amount}）", LogKind.Trigger);
         var (h, ar, _) = Give(ctx, self, to, amount);
         t.ReturnHealed += h; t.ReturnArmor += ar;
+    }
+}
+
+/// <summary>
+/// 駆け寄る口づけ（第416期・リリの版 LK-1 ／ LK-2 ／ LK-1m・指示書 PHASE415_LILI_RUSH_SPEC.md §2）。
+/// <b>生きている敵の直の一撃</b>（徴収・味方の刃・中継・呪いの共有・刻みを除く）で味方（リリ自身を含む）の HP が減ると、
+/// リリは手番の外で<b>殴った敵</b>に口づけし（聖痕を問わない・無ければ付ける）、その一撃の量の <see cref="KissTrait.PainPercent"/>%（最低 <see cref="KissTrait.PainFloor"/>）を吸って
+/// <b>殴られた本人</b>に注ぐ。状態と強弱の移し（<see cref="TraitId.KissSpill"/> ／ <see cref="TraitId.KissSteal"/>）も本人へ。
+/// 本人が支援拒否（<see cref="UnitState.AcceptsSupport"/> が偽）なら<b>吸うだけ</b>（回復も移しも起きない・最も傷ついた味方へは落とさない）。
+///
+/// <para>作法は応急処置（<see cref="FirstAidTrait"/>）に揃える: 割り込み・反撃の中では出ない ／ <c>ctx.CanActOutOfTurn(リリ, KissRush)</c> を通す ／
+/// 本体は <c>ctx.Interrupt</c> で包む ／ その一撃で倒れた味方には注がない（引き金にも数えない）／ 1ターン1回（<see cref="TraitId.KissRush2"/> で2回）・先に通知が来た方。</para>
+///
+/// <para><b>手番の痛みの印からは引かない</b>（§2 の決め）。駆け寄った一撃は次の手番の痛みにも入る——重なりは <see cref="KissRushBook.PainOverlap"/> に数えるだけ。
+/// <b>乱数を引かない</b>（相手は殴った敵・受け取り手は殴られた本人で決まる）。</para>
+/// </summary>
+public sealed class KissRushTrait : Trait
+{
+    /// <summary>その戦で最後に駆け寄ったターン ＋ 1（私有キー・0 ＝ まだ）。</summary>
+    public const string TurnKey = "kissRushTurn";
+    /// <summary>そのターンに駆け寄った回数（<see cref="TurnKey"/> と組で読む）。</summary>
+    public const string CountKey = "kissRushCount";
+    /// <summary>計数のみ: 前の手番から駆け寄った一撃の量の累計（手番の口づけが痛みとして読んだら 0 に戻す）。</summary>
+    public const string PendKey = "kissRushPend";
+
+    public override TraitId Id => TraitId.KissRush;
+
+    public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source) => Try(ctx, self, self, dmg, source);
+    public override void OnAllyDamaged(BattleContext ctx, UnitState self, UnitState ally, int dmg, UnitState? source) => Try(ctx, self, ally, dmg, source);
+
+    public override void OnCarryOver(UnitState self)
+    {
+        self.SetCounter(TurnKey, 0);
+        self.SetCounter(CountKey, 0);
+        self.SetCounter(PendKey, 0);
+    }
+
+    static void Try(BattleContext ctx, UnitState self, UnitState hit, int dmg, UnitState? foe)
+    {
+        if (dmg <= 0 || !self.IsAlive || foe is null || !foe.IsAlive || foe.TeamId == self.TeamId) return;
+        var h = ctx.Hit;
+        if (h.Levy || h.FriendlyFire || h.Relayed || h.HexShare || h.BurnTick) return;
+        var book = ctx.TallyOf(self).KissRush416 ??= new();
+        if (!hit.IsAlive) { book.Fallen++; return; }
+        book.Chances++;
+        int limit = self.HasTrait(TraitId.KissRush2) ? 2 : 1;
+        int used = self.RawCounter(TurnKey) == ctx.Turn + 1 ? self.RawCounter(CountKey) : 0;
+        if (used >= limit) { book.Capped++; return; }
+        if (ctx.InInterrupt || ctx.InReaction) { book.Held++; return; }
+        if (!ctx.CanActOutOfTurn(self, OutOfTurnRoute.KissRush))
+        {
+            if (ctx.HushBindingNow) book.Hushed++; else book.Held++;
+            return;
+        }
+        self.SetCounter(TurnKey, ctx.Turn + 1);
+        self.SetCounter(CountKey, used + 1);
+        ctx.Interrupt(() => Rush(ctx, self, hit, dmg, foe, book));
+    }
+
+    static void Rush(BattleContext ctx, UnitState self, UnitState hit, int dmg, UnitState foe, KissRushBook book)
+    {
+        UnitTally t = ctx.TallyOf(self);
+        book.Fired++;
+        book.ByTurn[Math.Clamp(ctx.Turn, 0, book.ByTurn.Length - 1)]++;
+        book.FoeSlot[Math.Clamp(foe.Slot, 0, book.FoeSlot.Length - 1)]++;
+        book.RecvBy[hit.Def.Id] = book.RecvBy.GetValueOrDefault(hit.Def.Id) + 1;
+        self.SetCounter(PendKey, self.RawCounter(PendKey) + dmg);
+        ctx.EmitKiss(self, KissLabels.Rush, hit, dmg, from: foe);
+        ctx.Log($"    {self.Name} が {hit.Name} を殴った {foe.Name} へ駆け寄った", LogKind.Trigger);
+        if (foe.RawCounter(StatusKeys.Stigma) <= 0)
+        {
+            foe.SetCounter(StatusKeys.Stigma, 1);
+            ctx.EmitStatusGain(foe, StatusKeys.Stigma, 1, self);
+            book.StigmaNew++;
+        }
+        int nominal = KissTrait.PainAmount(dmg);
+        book.Nominal += nominal;
+        ctx.EmitKiss(self, KissLabels.Drain, foe, nominal);
+        int drained = KissTrait.Drain(ctx, self, foe, nominal);
+        book.Drained += drained;
+        if (!foe.IsAlive) book.Kills++;
+        if (!self.IsAlive) return;
+        if (!hit.IsAlive) { book.LostRecv++; return; }
+        if (!hit.AcceptsSupport)
+        {
+            book.Stoic++; book.StoicDrained += drained;
+            ctx.Log($"    {self.Name} は精気を吸ったが、{hit.Name} は受け取らない（{drained}）", LogKind.Trigger);
+            return;
+        }
+        ctx.Log($"    {self.Name} が {foe.Name} に口づけし、精気を吸った（{drained}）→ {hit.Name}", LogKind.Trigger);
+        if (self.HasTrait(TraitId.KissSpill)) KissTrait.Transfer(ctx, self, foe, hit, t, book);
+        if (self.HasTrait(TraitId.KissSteal)) KissTrait.Steal(ctx, self, foe, hit, t, book);
+        ctx.EmitKiss(self, KissLabels.Give, hit, drained, from: foe);
+        int hpBefore = hit.Hp;
+        var (healed, armor, blocked) = KissTrait.Give(ctx, self, hit, drained);
+        if (hit.Hp < hpBefore) book.Inverted += hpBefore - Math.Max(0, hit.Hp);
+        book.Healed += healed; book.Armor += armor; book.Blocked += blocked;
+        if (healed > 0) book.HealBy[hit.Def.Id] = book.HealBy.GetValueOrDefault(hit.Def.Id) + healed;
     }
 }
 
@@ -20344,6 +20472,9 @@ public static class TraitCatalog
         new BraceHeldDeliverTrait(), // 第213期（受け切っても配る）
         new KissBareTrait(),         // 第204期（対照・保持者 0 枚）
         new Kiss30Trait(),           // 第204期（対照・保持者 0 枚）
+        new KissRushTrait(),                                         // 第416期（駆け寄る口づけ LK-1・版だけ）
+        new MarkOnlyTrait(TraitId.KissRush2),                        // 第416期（1ターン2回 LK-2・印・`KissRushTrait` が読む）
+        new MarkOnlyTrait(TraitId.KissSpillRushOnly),                // 第416期（手番では移さない LK-1m・印・`KissTrait.DrainOne` が読む）
         new LastStandHoldOldScarTrait(),   // 第199期（対照・保持者 0 枚）
         new LastStandHoldNoStockTrait(),   // 第199期（対照・保持者 0 枚）
         new LastStandHoldMutualLossTrait(),// 第199期（対照・保持者 0 枚）

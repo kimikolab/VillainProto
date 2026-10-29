@@ -84,4 +84,4 @@
 - `checkup ideal` が値を返した駒: 51 / 52 （返さないのは `CompareBuilds()` に在席 0 枠の駒だけ）
 - `stage catalog` が引けた駒: 51 / 52
 
-所要 505.3 秒（うち `stage catalog` が 480.6 秒）。
+所要 487.6 秒（うち `stage catalog` が 464.0 秒）。
