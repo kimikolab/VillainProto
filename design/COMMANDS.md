@@ -1303,6 +1303,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 lili416 seats           # 第416期 §4-3: 台・呪い ／ 反撃改 × リリの席 5 通り × {規定, LK-1} × 4 波（2 秒）
     dotnet run --project BattleSim -c Release 0 lili416 log <0|1|2|1m> <台の鍵> <波の鍵> [seed]   # 第416期: 1戦のログ（台の鍵 curse / guren / self / taikyu / hangeki / hangeki2 / kizu / nensho・波の鍵 boss / guard / bat / s4 / m1..m5）
     dotnet run --project BattleSim -c Release 0 lili416 check           # 第416期: 自己検査（版の札・All の外・試遊の台と鎖の終端・規定で帳簿が空・上限 1 ／ 2・LK-1m は手番で移さない・verbose の有無・PickOne を使わない）（1 秒）
+    dotnet run --project BattleSim -c Release 0 lili417 p0              # 第417期 Phase 0 §3: 引き金の減り（主目標だけ）・儀式の基準値・差し引きの見込み（8 台 × 4 波 ＋ 本編 第2波・seed 0..9）（1 秒）
+    dotnet run --project BattleSim -c Release 0 lili417 boards          # 第417期 §4-2: 8 台 × {規定, LK-1m, LK-1m-d, LK-1m-s, LK-1m-p, LK-2m} × 4 波 ＋ 本編 5 波・seed 0..99（予測 `.tmp/p417/predict.md` が無ければ走らない）（6 秒）
+    dotnet run --project BattleSim -c Release 0 lili417 seats           # 第417期 §4-3: 台・呪い × リリの席 5 通り × {規定, LK-1m, LK-1m-p} × 4 波（2 秒）
+    dotnet run --project BattleSim -c Release 0 lili417 log <0|1m|d|s|p|2m> <台の鍵> <波の鍵> [seed]   # 第417期: 1戦のログ（台の鍵・波の鍵は lili416 と同じ）
+    dotnet run --project BattleSim -c Release 0 lili417 check           # 第417期: 自己検査（版の札・All の外・試遊の台の入れ替えと鎖の終端・差し引き後の重なり 0・聖痕なし・主目標だけ・上限 2・verbose の有無・PickOne を使わない）（1 秒）
     dotnet run --project BattleSim -c Release 0 sh358 p0                # 第358期 §2 Phase 0: 破片の流れ（書いた ／ 敵の一撃で割れた ／ 読んだ ／ 残った）・ツギの板の返し（1回 ／ 同じ主へ集まった塊）・ヒビの砕けと倒れた T・ボスの1ターンの与ダメ ／ 回復（規定・代表台 3 × 5 波・seed 0..99・1 秒）
     dotnet run --project BattleSim -c Release 0 sh358 seats [版]        # 第358期 §4: ヒビ ／ ガレ ＋ 6枚（ウロ ／ ツギ ／ ササ ／ ガルド ／ ドルガ ／ ゴルム）から3枚 × 席の全並び ＝ 2,400 並び × ボス（seed 0..4）／ 近衛 ／ 大隊（seed 0..19）・版（既定 hbgr）と規定の両方（16 秒）
     dotnet run --project BattleSim -c Release 0 sh358 flow [版,…]       # 第358期 §6 の 1・2: 破片の流れ ／ 返し ／ 礫 ／ ボスへの届き方（1ターンの与ダメを 欠片の返し ／ 礫 ／ 板の返し ／ ほか に分ける）× 版・代表台 4 × ボス ／ 大隊

@@ -1302,6 +1302,8 @@ public sealed class BattleContext
     bool _sdLive;
     /// <summary>第322期: 次の <c>ApplyDamage</c> が鞭の一振りの一撃か（鞭の枠が立て、<c>ApplyDamageBody</c> の最初で読んで消す・SD と計数が読む）。</summary>
     bool _whipHitNext;
+    /// <summary>第417期: 次の <see cref="ApplyDamage"/> が範囲攻撃の巻き込み ／ 貫きの通過であることの札（<see cref="HitFrame.Splash"/>・読むのは駆け寄りの LK-1m-p だけ）。</summary>
+    bool _splashNext;
     /// <summary>第322期（SD）: 次の起爆の起点の感電を残す（<c>ApplyDamageBody</c> が立て、<see cref="ShockTrigger"/> の最初の行で読んで消す）。</summary>
     UnitState? _sdKeepRoot;
     /// <summary>第322期・<b>計数のみ</b>: 鞭の一撃で起点として弾けた敵の見張り（InstanceId → 鞭の持ち主）。次に鞭が入る前に、ほかの駒の一撃が先に届いたか。</summary>
@@ -9152,8 +9154,11 @@ public sealed class BattleContext
     /// 「攻撃によるダメージ」ではないので糧を渡さない。残りは計数専用。</para>
     /// <para>第416期: <c>BurnTick</c>（毒・火の刻み）と <c>HexShare</c>（呪いの共有）を足した。読むのは駆け寄る口づけ（<c>KissRushTrait</c>・版だけ）の
     /// 「敵の直の一撃」の判定だけ（ほかの読み手は無い・盤面は1ビットも変えない）。</para>
+    /// <para>第417期: <c>Splash</c>（範囲攻撃の巻き込み・貫きの通過＝主目標でない一撃）を足した。立てるのは <c>PerformAttackBody</c> の巻き込みの輪と
+    /// <c>ResolvePierce</c> の先頭より後ろの段だけ（<c>_splashNext</c> を立てて <c>ApplyDamageCore</c> の最初の行で読んで消す）。
+    /// 読むのは駆け寄る口づけの「狙われた仲間だけ」（LK-1m-p・<c>KissRushPrimary</c>）だけ。</para>
     /// </summary>
-    public readonly record struct HitFrame(bool Levy, bool FriendlyFire, bool Relayed, AttackPattern? Pattern, bool BurnTick = false, bool HexShare = false);
+    public readonly record struct HitFrame(bool Levy, bool FriendlyFire, bool Relayed, AttackPattern? Pattern, bool BurnTick = false, bool HexShare = false, bool Splash = false);
 
     /// <summary>いま解決中のダメージの札。<see cref="ApplyDamage"/> の外では既定値。</summary>
     public HitFrame Hit { get; private set; }
@@ -13366,6 +13371,7 @@ public sealed class BattleContext
             UnitState recv = shield is null ? extra : ShieldRecv(shield, extra, ref share);
             if (_fireLvLive) NoteFireContact(actor, recv);   // 第242期
             if (whip is not null) _whipHitNext = true;     // 第322期
+            _splashNext = true;                            // 第417期（主目標でない一撃の札・`ApplyDamageCore` が最初に読んで消す）
             ApplyDamage(recv, share, actor, pattern: pattern);
             _whipHitNext = false;
         }
@@ -13471,6 +13477,7 @@ public sealed class BattleContext
             int got = dmg;
             UnitState recv = shield is null ? u : ShieldRecv(shield, u, ref got);
             if (_fireLvLive) NoteFireContact(actor, recv);   // 第242期
+            if (u != entry) _splashNext = true;              // 第417期（貫きの通過＝主目標でない一撃の札）
             ApplyDamage(recv, got, actor, pattern: AttackPattern.Pierce);
             if (u == entry) primaryDealt = dmg;
             passed++;
@@ -13608,8 +13615,9 @@ public sealed class BattleContext
                          bool singleHit, bool hexShare,
                          AttackPattern? pattern, bool levy)
     {
+        bool splash417 = _splashNext; _splashNext = false;   // 第417期（巻き込み ／ 貫きの通過の札・ここで読んで消す・入れ子の中継には渡らない）
         HitFrame prevHit = Hit;
-        Hit = new HitFrame(levy, isFriendlyFire, relayed, pattern, burnTick, hexShare);
+        Hit = new HitFrame(levy, isFriendlyFire, relayed, pattern, burnTick, hexShare, splash417);
         // 第208期: 撃ち返す板の控え（1回の `ApplyDamage` の枠ごと。入れ子の呼び出しは退避・復帰する）。
         int prevHitSerial212 = CurrentHitSerial; CurrentHitSerial = ++_hitSerial;   // 第212期（計数のみ・1回の ApplyDamage の枠の通し番号）
         int prevAmt = _reflectAmt; UnitState? prevFrom = _reflectFrom;

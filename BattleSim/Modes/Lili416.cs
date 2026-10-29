@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 using I = Inv348Diag;
 using S307 = Som307Diag;
@@ -30,7 +30,7 @@ static class Lili416Diag
     static Formation VersionRow(string name) => Presets.Versions.First(r => r.Name == name).F;
 
     /// <summary>台（§4-2）。鍵 ／ 名前 ／ 並び（規定のリリ）。</summary>
-    static readonly (string Key, string Name, Func<Formation> F)[] Boards =
+    internal static readonly (string Key, string Name, Func<Formation> F)[] Boards =
     {
         ("curse", "台・呪い", () => Presets.LiliCurse416()),
         ("guren", "台・紅", () => Presets.LiliGuren416()),
@@ -42,15 +42,15 @@ static class Lili416Diag
         ("nensho", "燃焼 (ボルグ×ホタ)", () => CompareRow("燃焼 (ボルグ×ホタ)")),
     };
 
-    static I.W MainWave(int i) =>
+    internal static I.W MainWave(int i) =>
         new($"本編 第{i}波", () => BattleEngine.Materialize(EnemyCatalog.Stages[i - 1].Enemy, BattleContext.EnemyTeam, EnemyScaleRule.Default), EnemyScaleRule.Default);
-    static readonly I.W[] Hard = { I.Boss, I.Guard, I.Bat, I.StrongWaves[2] };
-    static readonly I.W[] Mains = Enumerable.Range(1, 5).Select(MainWave).ToArray();
-    static readonly (string Key, I.W W)[] WaveKeys =
+    internal static readonly I.W[] Hard = { I.Boss, I.Guard, I.Bat, I.StrongWaves[2] };
+    internal static readonly I.W[] Mains = Enumerable.Range(1, 5).Select(MainWave).ToArray();
+    internal static readonly (string Key, I.W W)[] WaveKeys =
         new[] { ("boss", I.Boss), ("guard", I.Guard), ("bat", I.Bat), ("s4", I.StrongWaves[2]) }
         .Concat(Enumerable.Range(1, 5).Select(i => ($"m{i}", Mains[i - 1]))).ToArray();
 
-    static Formation Swap(Formation f, UnitDef lili)
+    internal static Formation Swap(Formation f, UnitDef lili)
     {
         var g = f.Clone();
         foreach (var o in f.Occupied()) if (o.Def.Id == "lili") g[o.Slot] = lili;
@@ -68,7 +68,7 @@ static class Lili416Diag
     // ---------------------------------------------------------------------------------
     internal sealed class Fx
     {
-        public long N, Wins, WinT, Turns, Fell, LiliDied, LiliDeathT, Tier1T, Tier1N, RiteT, RiteN;
+        public long N, Wins, WinT, Turns, Fell, LiliDied, LiliDeathT, Tier1T, Tier1N, RiteT, RiteN, RiteFires;   // 第417期: RiteFires（1戦の儀式の回数）
         public long HealTurn, HealRite, HealReturn, HealRush, Leak, UtsuDmg, UtsuGot, BeniInverse;
         public long TurnMoves, TurnLayers, TurnMovesFront, TurnStealNeg, TurnStealPos, TurnStealNegFront, KissActs, KissPain;
         public long RushMovesFront, RushMovesReader, RushStealNegFront, RushStealNegReader;
@@ -78,7 +78,7 @@ static class Lili416Diag
         public void Add(Fx o)
         {
             N += o.N; Wins += o.Wins; WinT += o.WinT; Turns += o.Turns; Fell += o.Fell; LiliDied += o.LiliDied; LiliDeathT += o.LiliDeathT;
-            Tier1T += o.Tier1T; Tier1N += o.Tier1N; RiteT += o.RiteT; RiteN += o.RiteN;
+            Tier1T += o.Tier1T; Tier1N += o.Tier1N; RiteT += o.RiteT; RiteN += o.RiteN; RiteFires += o.RiteFires;
             HealTurn += o.HealTurn; HealRite += o.HealRite; HealReturn += o.HealReturn; HealRush += o.HealRush; Leak += o.Leak;
             UtsuDmg += o.UtsuDmg; UtsuGot += o.UtsuGot; BeniInverse += o.BeniInverse;
             TurnMoves += o.TurnMoves; TurnLayers += o.TurnLayers; TurnMovesFront += o.TurnMovesFront; TurnStealNeg += o.TurnStealNeg; TurnStealPos += o.TurnStealPos;
@@ -96,7 +96,7 @@ static class Lili416Diag
     }
 
     /// <summary>読み手（第416期 §3 の表）: ウツ（逆しま）・ムド（呪いで重くなる泥）・ボルグ（燃える体）・ベニの隣（紅の輪・ベニ自身を含む）。</summary>
-    static HashSet<string> ReadersOf(Formation f)
+    internal static HashSet<string> ReadersOf(Formation f)
     {
         var r = new HashSet<string>();
         foreach (var (slot, d) in f.Occupied())
@@ -110,7 +110,7 @@ static class Lili416Diag
         }
         return r;
     }
-    static HashSet<string> FrontOf(Formation f) => f.Occupied().Where(o => o.Slot is 0 or 1).Select(o => o.Def.Id).ToHashSet();
+    internal static HashSet<string> FrontOf(Formation f) => f.Occupied().Where(o => o.Slot is 0 or 1).Select(o => o.Def.Id).ToHashSet();
 
     internal static Fx One(Formation f, I.W w, int seed)
     {
@@ -128,6 +128,7 @@ static class Lili416Diag
             a.KissActs = t.KissActs; a.KissPain = t.KissPainSum;
             if (t.KissTierTurn is { } tt && tt[0] > 0) { a.Tier1T = tt[0]; a.Tier1N = 1; }
             if (t.RiteFirstTurn > 0) { a.RiteT = t.RiteFirstTurn; a.RiteN = 1; }
+            a.RiteFires = t.RiteFires;
             var rb = t.KissRush416;
             if (rb is not null) { a.Rush.Add(rb); a.HealRush = rb.Healed; }
             // 手番の移し ＝ 全体 − 駆け寄りの分。
@@ -375,7 +376,8 @@ static class Lili416Diag
         Req(Vers.Skip(1).All(v => v.D.MaxHp == 78 && v.D.Attack == 3 && v.D.Speed == 6 && v.D.Id == "lili"), "版の HP ／ 攻 ／ 速 ／ Id は規定のまま");
         Req(!UnitCatalog.All.Any(d => d.Traits.Contains(TraitId.KissRush) || d.Traits.Contains(TraitId.KissRush2) || d.Traits.Contains(TraitId.KissSpillRushOnly)), "`All` に保持者 0 枚");
         // 2. 試遊の台と鎖の終端
-        Req(VersionRows416.All(n => Presets.Versions.Any(r => r.Name == n)), "試遊の台に「版・LK-…」の4台がある");
+        // 第417期に「版・LK-1 呪い」「版・LK-1 紅」「版・LK-2 呪い」を外した（残るのは「版・LK-1m 呪い」だけ）。
+        Req(Presets.Versions.Any(r => r.Name == "版・LK-1m 呪い") && VersionRows416.Count(n => Presets.Versions.Any(r => r.Name == n)) == 1, "試遊の台に「版・LK-1m 呪い」が残る（ほかの3台は第417期に外した）");
         Req(!VersionsH407().Any(r => VersionRows416.Contains(r.Name)), "鎖の終端（`VersionsH407`）が4台を外す");
         // 3. 規定の台で鳴らない・帳簿が無い
         var curse0 = One(Presets.LiliCurse416(), I.Boss, 0);

@@ -1587,6 +1587,19 @@ public static class UnitCatalog
     public static readonly UnitDef LiliLk1m = LiliRush416(new[] { TraitId.KissRush, TraitId.KissSpillRushOnly }, LiliRushPlus416 + "（1ターン1回）",
         "駆け寄って吸った敵の状態（毒・火・呪い・痺れなど）と攻撃力の上げ下げは、殴られた仲間が背負う");
 
+    // 第417期: 駆け寄りの絞り込み（指示書 design/PHASE417_LILI_RUSH2_SPEC.md §2）。4 版とも LK-1m の上に積み、共通の直し（駆け寄った一撃を手番の痛みから引く・`KissRushDeduct`）を入れる。
+    // LK-1m（第416期のまま）は対照として触らない。`All` の外・保持者 0 枚。
+    static UnitDef LiliRush417(TraitId[] extra, string plus) =>
+        LiliRush416(new[] { TraitId.KissRush, TraitId.KissSpillRushOnly, TraitId.KissRushDeduct }.Concat(extra).ToArray(), plus, LiliLk1m.MinusText);
+    /// <summary>第417期 LK-1m-d: LK-1m ＋ 痛みの差し引きだけ（差し引きの効きを読む対照）。</summary>
+    public static readonly UnitDef LiliLk1md = LiliRush417(Array.Empty<TraitId>(), LiliRushPlus416 + "（1ターン1回）");
+    /// <summary>第417期 LK-1m-s: LK-1m-d ＋ 駆け寄りでは聖痕を付けない（<see cref="TraitId.KissRushNoStigma"/>）。</summary>
+    public static readonly UnitDef LiliLk1ms = LiliRush417(new[] { TraitId.KissRushNoStigma }, LiliRushPlus416 + "（1ターン1回）。駆け寄った敵に聖痕は残らない");
+    /// <summary>第417期 LK-1m-p: LK-1m-d ＋ 狙われた仲間だけ（<see cref="TraitId.KissRushPrimary"/>・巻き込み ／ 貫きの通過では鳴らない）。</summary>
+    public static readonly UnitDef LiliLk1mp = LiliRush417(new[] { TraitId.KissRushPrimary }, LiliRushPlus416 + "（狙われた仲間だけ・1ターン1回）");
+    /// <summary>第417期 LK-2m: LK-1m-d ＋ 1ターン2回（<see cref="TraitId.KissRush2"/>）。</summary>
+    public static readonly UnitDef LiliLk2m = LiliRush417(new[] { TraitId.KissRush2 }, LiliRushPlus416 + "（1ターン2回）");
+
     /// <summary>
     /// 継ぎ当てのノノ（第203期まで）。<b>第204期にリリへ転生した</b>——対照として定義だけ残す（<see cref="All"/> にも <c>Retired</c> にも入れない。
     /// 逆位・まどろみと同じ扱い）。<c>Presets</c> はリリを引く。

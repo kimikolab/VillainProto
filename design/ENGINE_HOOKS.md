@@ -1746,3 +1746,10 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **`OutOfTurnRoute.KissRush` を足した**（`Other` の前・問う相手はリリ）。`OutOfTurnRoutes.Names` に「駆け寄る口づけ」。
 - 本体は `ctx.Interrupt` で包む。駆け寄りの吸い取り（`KissTrait.Drain`）の中では `InInterrupt` を見る反応（敵の応急処置・弾き返し・暴発）が止まる——手番の口づけとの違いはここだけ。
 - 保持者がいない戦では `KissRushTrait` のフックが走らない（札を持つ駒だけ）。手番の口づけの側に足したのは、`KissSpillRushOnly` の `HasTrait` の比較1つと、私有キー `kissRushPend` の読み（0 なら何もしない）だけ。乱数を引かない。
+
+## 第417期 —— 駆け寄りの絞り込み（版だけ・`KissRushTrait` に 3 枚の印）
+
+- **`HitFrame.Splash` を足した**（範囲攻撃の巻き込み ／ 貫きの通過＝主目標でない一撃）。立てるのは `PerformAttackBody` の巻き込みの輪（`SecondaryTargets`）と `ResolvePierce` の先頭より後ろの段だけ。
+  `BattleContext._splashNext` を立てて、`ApplyDamageCore` の**最初の行で読んで消す**（入れ子の中継には渡らない）。**読むのは駆け寄りの LK-1m-p（`KissRushPrimary`）だけ**。盤面は変えない。
+- 印 3 枚（`KissRushDeduct` ／ `KissRushNoStigma` ／ `KissRushPrimary`）は `MarkOnlyTrait`。読むのは `KissRushTrait` と、手番の口づけの計数（`KissTrait.Act` の重なりの数え方）だけ。
+- 差し引きは `KissTrait.PainMarkKey` に鳴った一撃の量を足すだけ（`PainNow` は 0 未満にならない）。新しい窓口は足していない。乱数を引かない。

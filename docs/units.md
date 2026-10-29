@@ -723,6 +723,9 @@
 | `KissRush` | - |
 | `KissRush2` | - |
 | `KissSpillRushOnly` | - |
+| `KissRushDeduct` | - |
+| `KissRushNoStigma` | - |
+| `KissRushPrimary` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

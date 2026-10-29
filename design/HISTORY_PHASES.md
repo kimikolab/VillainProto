@@ -8,6 +8,8 @@ description: 第259期に `CLAUDE.md` の「現状値」節を**逐語で**移�
 
 ## 現状値
 
+**第417期は軽い期で、版だけ（規定は動かさない）**（指示書 `PHASE417_LILI_RUSH2_SPEC.md`・報告 `design/PHASE417_LILI_RUSH2.md`・器具 `lili417`）。駆け寄る口づけの絞り込みの版 LK-1m-d ／ LK-1m-s ／ LK-1m-p ／ LK-2m（`UnitCatalog.LiliLk1md` ／ `LiliLk1ms` ／ `LiliLk1mp` ／ `LiliLk2m`）——4 版とも LK-1m に「駆け寄った一撃を手番の痛みから引く」を足し、聖痕なし ／ 狙われた仲間だけ ／ 1ターン2回を1つずつ載せた。`compare` 0 セル・全66行 ／ 主判定19行 ／ 情報セルは動かない。試遊の台は「版・LK-1 呪い」「版・LK-1 紅」「版・LK-2 呪い」を外し、「版・LK-1m-s 呪い」「版・LK-1m-s 紅」「版・LK-1m-p 呪い」「版・LK-2m 呪い」を足した（鎖の終端 `VersionsH407` が `VersionRows417` で外す）。engine には `HitFrame.Splash` を足した（読むのは LK-1m-p だけ）。
+
 **第416期は軽い期で、版だけ（規定は動かさない）**（指示書 `PHASE416_LILI_RUSH_SPEC.md`（受け取った名は `PHASE415_LILI_RUSH_SPEC.md`）・報告 `design/PHASE416_LILI_RUSH.md`・器具 `lili416`）。リリの駆け寄る口づけの版 LK-1 ／ LK-2 ／ LK-1m（`UnitCatalog.LiliLk1` ／ `LiliLk2` ／ `LiliLk1m`）——仲間が殴られると殴った敵に駆け寄って吸い、殴られた本人に注ぐ（状態と強弱の移しも本人へ）。`compare` 0 セル・全66行 ／ 主判定19行 ／ 情報セルは動かない。試遊の台に「版・LK-1 呪い」「版・LK-1 紅」「版・LK-2 呪い」「版・LK-1m 呪い」を足し、鎖の終端 `VersionsH407` が `VersionRows416` で外す。engine には `HitFrame` の `BurnTick` ／ `HexShare` と `OutOfTurnRoute.KissRush` を足した（読むのはこの札だけ）。
 
 **第415期は小さな期・表示専用**（指示書 `PHASE415_SCRIPT_EVENTS_SPEC.md`・報告 `design/PHASE415_SCRIPT_EVENTS.md`・盤面は動かさない）。デバフ軸の演出（`CODEX_BRIEF_DEBUFF.md` §4）に要る台本の出来事を3つ足した。カーズの印（`StatusGain` `karz_mark`・カーズの手番の `Skill` にも印の敵）、ウツの手数（`utsu_hits`・手数が変わった瞬間と開戦の初期値）、ワタの引き受け（`wata_take`・新しい欄 `FromId` ＝ 元の受け手）。指示書は「受け手ワタの `StatusGain` に元の受け手を載せる」だったが、その出来事はもともと無かった（渡しはワタの攻撃力を引かない）ので新設した。`compare` 0 セル。`docs/` の差は情報行 2 行（`watch.md` の初期化子の数・`roster_audit.md` の秒数）。`shockdigest` は新しい欄と出来事を数えないようにした（第291期と同じ作法）。器具は `script415`。
