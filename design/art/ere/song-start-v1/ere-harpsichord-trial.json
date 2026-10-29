@@ -1,0 +1,11 @@
+{
+  "source": ".tmp\\ere-harpsichord-game.avi",
+  "frames": 341,
+  "fps": 30,
+  "seconds": 11.366666666666667,
+  "audio": "Godot MovieWriterの実録音 / AAC 48kHz stereo",
+  "peak": 0.2255859375,
+  "performance_start_peak": 0.12172190845012665,
+  "motion": "既存C・変更なし",
+  "sound": "400 Sounds Pack / harpsichord_mystery.wav / -6 dB"
+}

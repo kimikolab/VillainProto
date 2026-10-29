@@ -29,11 +29,14 @@ public partial class Main
     {
         if (_fastSmoke) return;
         double seconds = singer.DirgeSongSeconds;
+        _battleField.SetGatherClock(_paused, _speed);
+        var performance = _battleField.ShowDirgePerformance(singer, (float)seconds);
         double elapsed = 0;
         while (elapsed < seconds && token == _playToken && _battleMode && singer.PresentationAlive)
         {
             await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
             if (!_paused) elapsed += GetProcessDeltaTime() * _speed;
         }
+        if (token != _playToken || !_battleMode || !singer.PresentationAlive) performance.Cancel();
     }
 }

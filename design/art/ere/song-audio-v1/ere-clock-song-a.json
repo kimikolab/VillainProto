@@ -1,0 +1,11 @@
+{
+  "source": ".tmp\\ere-clock-song-a-game.avi",
+  "frames": 341,
+  "fps": 30,
+  "seconds": 11.366666666666667,
+  "audio": "Godot MovieWriterの実録音 / AAC 48kHz stereo",
+  "peak": 0.292236328125,
+  "performance_start_peak": 0.2348933070898056,
+  "motion": "既存C・変更なし",
+  "sound": "A: Ah.mp3 / through clock / -8 dB"
+}

@@ -1,0 +1,11 @@
+{
+  "source": ".tmp\\ere-ah-b-game.avi",
+  "frames": 341,
+  "fps": 30,
+  "seconds": 11.366666666666667,
+  "audio": "Godot MovieWriterの実録音 / AAC 48kHz stereo",
+  "peak": 0.2652587890625,
+  "performance_start_peak": 0.19325163960456848,
+  "motion": "既存C・変更なし",
+  "sound": "B: Ah (1).mp3 / 1.10-4.10s / -8 dB"
+}

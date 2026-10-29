@@ -74,3 +74,13 @@ obj/
 /DemoApp/assets/audio/se/rica_landing.wav.import
 /DemoApp/assets/audio/se/rica_absorb.wav
 /DemoApp/assets/audio/se/rica_absorb.wav.import
+
+# 400 Sounds Packの購入音源。配置元はSOURCES.mdのエレ演奏開始の節。
+/DemoApp/assets/audio/se/ere_harpsichord.wav
+/DemoApp/assets/audio/se/ere_harpsichord.wav.import
+
+# ユーザー提供の演奏比較音源。再作成はdesign/art/ere/song-audio-v1/prepare.py。
+/DemoApp/assets/audio/se/ere_song_ah_a.wav
+/DemoApp/assets/audio/se/ere_song_ah_a.wav.import
+/DemoApp/assets/audio/se/ere_song_ah_b.wav
+/DemoApp/assets/audio/se/ere_song_ah_b.wav.import

@@ -1,0 +1,52 @@
+{
+  "status": "not_adopted",
+  "candidates": [
+    {
+      "candidate": "A",
+      "tag": "ere_performance_v2_s2022_phrase0",
+      "seed": 2022,
+      "frames": 48,
+      "fps": 16,
+      "type": "one_shot",
+      "source_range": [
+        0,
+        48
+      ],
+      "translation_y": 0,
+      "sole_range": [
+        951,
+        951
+      ],
+      "reference_sole": 951,
+      "green_pixels": 0,
+      "sha256_first": "c16b0eceeee2d39b406eeab2c985b8490aef2dad8ced66c855fc9b2d0f3af4d1",
+      "directory": "design/art/ere/performance-v2/candidates/A"
+    },
+    {
+      "candidate": "B",
+      "tag": "ere_performance_v2_s3033_phrase0",
+      "seed": 3033,
+      "frames": 48,
+      "fps": 16,
+      "type": "one_shot",
+      "source_range": [
+        0,
+        48
+      ],
+      "translation_y": 0,
+      "sole_range": [
+        951,
+        951
+      ],
+      "reference_sole": 951,
+      "green_pixels": 0,
+      "sha256_first": "d03f9d69a26a332056c236d11c105186868f51af4b527f69849c4b66b227c9d1",
+      "directory": "design/art/ere/performance-v2/candidates/B"
+    }
+  ],
+  "decision": {
+    "date": "2026-10-29",
+    "selected": "existing_C",
+    "reason": "ユーザーがCを自然と評価。演奏開始の光と音符で視認性を補う方針。"
+  }
+}

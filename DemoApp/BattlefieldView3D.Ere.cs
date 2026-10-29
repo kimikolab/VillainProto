@@ -10,6 +10,7 @@ public partial class BattlefieldView3D
     internal IEnumerable<DirgeAura3D> DirgeAuras => _dirgeAuras.Where(a => IsInstanceValid(a) && !a.IsQueuedForDeletion());
     internal void ClearDirgeAuras()
     {
+        StopDirgeMusic();
         foreach (var aura in DirgeAuras.ToArray()) aura.Stop();
         _dirgeAuras.Clear();
         foreach (var pawn in _pawns.Values) pawn.SetDirgeSinging(false);
@@ -43,6 +44,7 @@ public partial class BattlefieldView3D
         });
         if (begins)
         {
+            ReleaseDirgeMusic(bard);
             // 時計の針が12時へ進み切る瞬間から台本の追加行動へ繋ぐ。
             var aura = ReceiveDirge(bard, target, tint);
             aura.Release();

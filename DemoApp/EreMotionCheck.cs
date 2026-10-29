@@ -98,23 +98,44 @@ public partial class EreMotionCheck : Node
             Cue(BattleEventKind.Dirge, target:3, text:DirgeLabels.Act, slot:2),
             Cue(BattleEventKind.Highlight, actor:3, text:"哀歌"),
             Cue(BattleEventKind.Attack, actor:3, target:2),
+            Cue(BattleEventKind.Skill, text:"哀歌"),
+            Cue(BattleEventKind.Dirge, target:2, text:DirgeLabels.Gift, slot:1),
+            Cue(BattleEventKind.Dirge, target:2, text:DirgeLabels.Act, slot:1),
+            Cue(BattleEventKind.Highlight, actor:2, text:"哀歌"),
+            Cue(BattleEventKind.Attack, actor:2, target:3),
         }, "哀歌のモーションと手番の受け渡し");
         var singer = main.ViewerField.FindPawn(1)!;
         if (!_installed) singer.PreviewEreMotion(_idle, _song);
+        for (int i = 0; i < 2000 && !main.ViewerField.DirgePerformances.Any() && main.ViewerPlaybackError is null; i++) await Wait(.005);
+        var performance = main.ViewerField.DirgePerformances.SingleOrDefault();
+        Require(performance is not null && singer.DirgeSinging && main.ViewerField.DirgeGiftPlays == 0,
+            "本番で演奏開始と同時に光と音符を出し、ギフト前の3秒を空白にしない");
+        bool hasSongs = ResourceLoader.Exists("res://assets/audio/se/" + BattlefieldView3D.DirgeSongA)
+            && ResourceLoader.Exists("res://assets/audio/se/" + BattlefieldView3D.DirgeSongB);
+        Require(!hasSongs || main.ViewerField.LastDirgeSong == BattlefieldView3D.DirgeSongA
+            && main.ViewerField.DirgeMusic is not null, "本番の最初の演奏はA");
+        main.PausePlayback();
+        float songAge = performance!.Age; int songFrame = singer.IdleLoopFrame;
+        await Wait(.12);
+        Require(performance.Age == songAge && singer.IdleLoopFrame == songFrame, "本番の停止で演奏Cと開始の光を一緒に止める");
+        main.ResumePlayback();
         for (int i = 0; i < 2000 && main.ViewerField.DirgeGiftPlays < 2 && main.ViewerPlaybackError is null; i++) await Wait(.005);
         Require(main.ViewerField.DirgeGiftPlays == 2 && main.ViewerField.DirgeActPlays == 0 && main.ViewerPlaybackError is null,
             "本番経路で1フレーズの後に2体へ音を渡す");
         main.PausePlayback();
         Require(singer.DirgeSinging && singer.IdleLoopFrame == _song.Length - 1,
             "2体への受け渡しでも演奏を先頭へ巻き戻さず終端の姿勢を保つ");
-        var earlier = main.ViewerField.GatherEffects.FirstOrDefault(f => f.Age >= .5f);
+        var earlier = main.ViewerField.GatherEffects.FirstOrDefault(f => f != main.ViewerField.DirgeMusic && f.Age >= .5f);
         Require(earlier is not null, "先の受け渡しの余韻");
         earlier!.SetClock(false, 1); earlier._Process(.3);
         Require(singer.DirgeSinging, "先の受け渡しの後片付けが次の歌唱を消さない");
+        Require(!main.ViewerField.DirgePerformances.Any(), "演奏の光は受け渡しへの余韻で消える");
         main.ResumePlayback();
         for (int i = 0; i < 2000 && main.IsPlaying && main.ViewerPlaybackError is null; i++) await Wait(.005);
         Require(!main.IsPlaying && main.ViewerPlaybackError is null && !singer.DirgeSinging,
             "追加手番の開始・再生終了で待機に戻る");
+        Require(!hasSongs || main.ViewerField.LastDirgeSong == BattlefieldView3D.DirgeSongB,
+            "同じ戦闘の2回目の演奏はB");
         await main.StopViewerPlayback(); main.QueueFree(); await Frame();
     }
     private static Sprite3D Sprite(BattlePawn3D pawn) => pawn.GetChildren().OfType<Sprite3D>().Single();

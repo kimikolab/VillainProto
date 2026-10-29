@@ -44,6 +44,7 @@ public partial class BattlefieldView3D
     private void ResetGatherPresentation()
     {
         EndGatherPresentation();
+        ResetDirgeSongSequence();
         DirgeGiftPlays = DirgeActPlays = DirgeEnemyPlays = 0;
         PebblePickPlays = PebbleVolleyPlays = PebbleEmptyPlays = BloodReadPlays = BloodFalloutPlays = BloodDryPlays = 0;
         BloodGatherSources = BloodReleaseTargets = LastBloodMotes = LastGatherTargets = 0;

@@ -1,0 +1,13 @@
+{
+  "source": ".tmp\\ere-uplight-v2",
+  "fps": 30,
+  "frames": {
+    "ally": 170,
+    "enemy": 170
+  },
+  "total_frames": 340,
+  "seconds": 11.333333333333334,
+  "gif_seconds": 5.67,
+  "motion": "既存C・変更なし",
+  "audio": false
+}

@@ -1,0 +1,30 @@
+[
+  {
+    "tag": "ere_performance_v2_s2022",
+    "prompt_id": "69abd5f3-6440-4b66-af50-d4fc7728249b",
+    "seed": 2022
+  },
+  {
+    "tag": "ere_performance_v2_s3033",
+    "prompt_id": "1a0c42c1-a839-4ffc-8239-6aaced501b0c",
+    "seed": 3033
+  },
+  {
+    "tag": "ere_performance_v2_s2022_phrase0",
+    "prompt_id": "2d69f954-3ad0-4c58-a2e3-479df087b58f",
+    "source": "ere_performance_v2_s2022",
+    "source_range": [
+      0,
+      48
+    ]
+  },
+  {
+    "tag": "ere_performance_v2_s3033_phrase0",
+    "prompt_id": "7c83d650-9a02-44c7-a01d-62cfef7959aa",
+    "source": "ere_performance_v2_s3033",
+    "source_range": [
+      0,
+      48
+    ]
+  }
+]

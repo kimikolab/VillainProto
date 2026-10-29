@@ -1,0 +1,28 @@
+[
+  {
+    "label": "a",
+    "source": "C:\\Users\\Pon\\Downloads\\Ah.mp3",
+    "sha256": "328a24f7d42c7962137f15d52a24da90572ce2581a247edfa2be28f0bb64d3bd",
+    "source_seconds": 6.7735,
+    "start": 0.08,
+    "seconds": 3,
+    "gain_db": -2.3901707607187896,
+    "rms_dbfs": -18.01318359375,
+    "peak_dbfs": -2.3752853870391846,
+    "runtime_db": -8,
+    "output": "DemoApp\\assets\\audio\\se\\ere_song_ah_a.wav"
+  },
+  {
+    "label": "b",
+    "source": "C:\\Users\\Pon\\Downloads\\Ah (1).mp3",
+    "sha256": "c17610adf5bb44d69906a9732ac7a736fbd4a5c4725c16cb0a7563846012bdef",
+    "source_seconds": 6.76,
+    "start": 1.1,
+    "seconds": 3,
+    "gain_db": 0.43496131610110245,
+    "rms_dbfs": -18.028676986694336,
+    "peak_dbfs": -3.0837132930755615,
+    "runtime_db": -8,
+    "output": "DemoApp\\assets\\audio\\se\\ere_song_ah_b.wav"
+  }
+]

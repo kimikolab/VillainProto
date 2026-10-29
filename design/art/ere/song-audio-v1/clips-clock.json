@@ -1,0 +1,28 @@
+[
+  {
+    "label": "a",
+    "source": "C:\\Users\\Pon\\Downloads\\Ah.mp3",
+    "sha256": "328a24f7d42c7962137f15d52a24da90572ce2581a247edfa2be28f0bb64d3bd",
+    "source_seconds": 6.7735,
+    "start": 0.08,
+    "seconds": 6.6935,
+    "gain_db": -2.680774913712982,
+    "rms_dbfs": -18.0,
+    "peak_dbfs": -2.6658904552459717,
+    "runtime_db": -8,
+    "output": "DemoApp\\assets\\audio\\se\\ere_song_clock_a.wav"
+  },
+  {
+    "label": "b",
+    "source": "C:\\Users\\Pon\\Downloads\\Ah (1).mp3",
+    "sha256": "c17610adf5bb44d69906a9732ac7a736fbd4a5c4725c16cb0a7563846012bdef",
+    "source_seconds": 6.76,
+    "start": 1.1,
+    "seconds": 5.66,
+    "gain_db": -0.6624664100373931,
+    "rms_dbfs": -18.00357437133789,
+    "peak_dbfs": -3.8461949825286865,
+    "runtime_db": -8,
+    "output": "DemoApp\\assets\\audio\\se\\ere_song_clock_b.wav"
+  }
+]

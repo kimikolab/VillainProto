@@ -7,6 +7,16 @@ using System.Threading.Tasks;
 // 受け渡しと実手番を別々に照合。実戦の対象・件数・順序を画面側で選び直さない。
 public partial class EreGiftCheck : Node
 {
+    // 無指定は本番と同じ交互再生。明示指定で各曲単独の比較もできる。
+    private static string? SongMode => OS.GetCmdlineUserArgs()
+        .FirstOrDefault(a => a.StartsWith("--ere-audio="))?.Split('=', 2)[1];
+    private static bool SongToClock => SongMode is "clock-a" or "clock-b";
+    private static string? SongClip => SongMode switch {
+            "a" => "ere_song_ah_a.wav", "b" => "ere_song_ah_b.wav",
+            "clock-a" => "ere_song_clock_a.wav", "clock-b" => "ere_song_clock_b.wav",
+            _ => null,
+        };
+
     public override async void _Ready()
     {
         try
@@ -14,8 +24,9 @@ public partial class EreGiftCheck : Node
             CheckScripts();
             var field = new BattlefieldView3D();
             field.SetAnchorsPreset(Control.LayoutPreset.FullRect); AddChild(field);
-            if (OS.GetCmdlineUserArgs().Contains("--clip"))
+            if (OS.GetCmdlineUserArgs().Contains("--clip") || OS.GetCmdlineUserArgs().Contains("--movie"))
             { await CaptureSequence(field); field.QueueFree(); await Frame(); GetTree().Quit(); return; }
+            if (SongMode is null) CheckSongSequence(field);
             foreach (bool mirror in new[] { false, true })
             {
                 var openings = new[] {
@@ -23,6 +34,8 @@ public partial class EreGiftCheck : Node
                     Opening(2, UnitCatalog.Gald, mirror ? 1 : 0, 0),
                     Opening(3, UnitCatalog.Ere, mirror ? 0 : 1, 2),
                 };
+                field.BeginBattle(openings, "哀歌：味方へ託す／敵にも届く", 0);
+                await CheckPerformance(field);
                 field.BeginBattle(openings, "哀歌：味方へ託す／敵にも届く", 0);
                 field.SetGatherClock(false, 1);
                 foreach (int id in new[] { 2, 3 })
@@ -99,7 +112,7 @@ public partial class EreGiftCheck : Node
                 await main.StopViewerPlayback();
             }
             main.QueueFree(); await Frame();
-            GD.Print("ERE_GIFT_CHECK_OK textless clock-hands clock-contact retained-light release scripts=12 parity actual-targets ally enemy mirror pause speed death interrupt replay hp cleanup");
+            GD.Print("ERE_GIFT_CHECK_OK performance-start performance-cleanup textless clock-hands clock-contact retained-light release scripts=12 parity actual-targets ally enemy mirror pause speed death interrupt replay hp cleanup");
             GetTree().Quit();
         }
         catch (Exception e) { GD.PushError(e.ToString()); GetTree().Quit(1); }
@@ -143,18 +156,119 @@ public partial class EreGiftCheck : Node
     }
     private static DemoOpening Opening(int id, UnitDef u, int team, int slot) => new(id, team, u.Id, u.Name,
         slot, u.MaxHp, u.MaxHp, u.Attack, AttackPattern.Single, u.Advances, u.Traits);
+    private static void CheckSongSequence(BattlefieldView3D field)
+    {
+        if (!ResourceLoader.Exists("res://assets/audio/se/" + BattlefieldView3D.DirgeSongA)
+            || !ResourceLoader.Exists("res://assets/audio/se/" + BattlefieldView3D.DirgeSongB)) return;
+        var openings = new[] { Opening(1, UnitCatalog.Ere, 0, 2), Opening(2, UnitCatalog.Gald, 0, 0) };
+        field.BeginBattle(openings, "哀歌の交互再生", 0);
+        foreach (string expected in new[] { BattlefieldView3D.DirgeSongA, BattlefieldView3D.DirgeSongB,
+            BattlefieldView3D.DirgeSongA, BattlefieldView3D.DirgeSongB, BattlefieldView3D.DirgeSongA })
+        {
+            var bard = field.FindPawn(1)!; bard.SetDirgeSinging(true);
+            field.ShowDirgePerformance(bard, 3);
+            Require(field.LastDirgeSong == expected && field.DirgeMusic is not null, "発動ごとにA→B→A→Bを選択");
+            var player = field.DirgeMusic!.GetChildren().OfType<AudioStreamPlayer>().Single();
+            Require(player.Stream.ResourcePath.EndsWith(expected), "選択した曲を実際のプレイヤーへ接続");
+            field.EndGatherPresentation();
+            Require(field.DirgeMusic is null, "前の曲を止めてから次の曲へ切り替える");
+        }
+        field.BeginBattle(openings, "哀歌の再戦", 0);
+        var singer = field.FindPawn(1)!; singer.SetDirgeSinging(true);
+        field.ShowDirgePerformance(singer, 3);
+        Require(field.LastDirgeSong == BattlefieldView3D.DirgeSongA, "再戦時はAへ戻す");
+        field.EndGatherPresentation();
+        GD.Print("ERE_SONG_SEQUENCE_OK A B A B A replay=A");
+    }
+    private async Task CheckPerformance(BattlefieldView3D field)
+    {
+        var bard = field.FindPawn(1)!;
+        bard.SetDirgeSinging(true);
+        field.SetGatherClock(false, 1);
+        var fx = field.ShowDirgePerformance(bard, 3, SongClip, SongToClock);
+        Require(field.DirgePerformances.Single() == fx, "演奏開始から専用の光と音符を表示");
+        fx._Process(.15);
+        var musicFx = field.DirgeMusic;
+        musicFx?._Process(.15);
+        bool toClock = SongToClock || SongClip is null && musicFx is not null;
+        string clip = SongClip ?? field.LastDirgeSong ?? "ere_harpsichord.wav";
+        bool hasMusic = ResourceLoader.Exists("res://assets/audio/se/" + clip);
+        Require(SongClip is null || hasMusic, "指定した比較音源を配置済み");
+        var music = (musicFx ?? fx).GetChildren().OfType<AudioStreamPlayer>()
+            .FirstOrDefault(p => p.Stream?.ResourcePath.EndsWith(clip) == true);
+        Require(!hasMusic || music is { Playing: true } && music.PitchScale == 1, "演奏開始の音源を原音ピッチで鳴らす");
+        field.SetGatherClock(true, 1);
+        float age = fx.Age;
+        // 音声スレッドへ停止が届いた後に比較。報告位置にはミキサー1ブロック程度の揺れがある。
+        await Wait(.05);
+        float musicPosition = music?.GetPlaybackPosition() ?? 0;
+        await Wait(.12);
+        Require(fx.Age == age, "演奏の光と音符も一時停止に従う");
+        Require(music is null || music.StreamPaused && Math.Abs(music.GetPlaybackPosition() - musicPosition) < .025f,
+            $"停止中に演奏音の再生位置も進めない（停止={music?.StreamPaused}, 位置={musicPosition:F4}→{music?.GetPlaybackPosition():F4}）");
+        Require(!field.FindChildren("*", "", true, false).OfType<PopupLabel2D>().Any(), "演奏開始にも文字を出さない");
+        field.SetGatherClock(false, 4);
+        Require(music is null || !music.StreamPaused && music.PitchScale == 1, "再開と倍速でも演奏音のピッチを保つ");
+        fx._Process(.9);
+        musicFx?._Process(.9);
+        Require(fx.Finished.IsCompletedSuccessfully && fx.Finished.Result && !field.DirgePerformances.Any(), "倍速で演奏の余韻まで完了し後片付け");
+        Require(bard.DirgeSinging, "光の後片付けが演奏モーションを巻き戻さない");
+        field.SetGatherClock(false, 1);
+        if (toClock)
+        {
+            Require(musicFx is not null && field.DirgeMusic == musicFx && music is { Playing: true },
+                "3秒のモーションと開始の光が終わっても曲を続ける");
+            var clock = field.ShowDirgeGift(bard, field.FindPawn(2)!, true);
+            musicFx!._Process(DirgeAura3D.ReleaseDuration - .25f);
+            Require(!musicFx.Finished.IsCompleted && music!.VolumeDb < -8, "時計の解放の余韻で曲をフェードする");
+            field.SetGatherClock(true, 1);
+            float tailAge = musicFx.Age;
+            await Wait(.12);
+            Require(musicFx.Age == tailAge && music!.StreamPaused, "時計の余韻の途中でも曲のフェードを停止");
+            field.SetGatherClock(false, 1);
+            musicFx._Process(.26);
+            clock._Process(DirgeAura3D.ReleaseDuration);
+            Require(musicFx.Finished.IsCompletedSuccessfully && musicFx.Finished.Result && field.DirgeMusic is null,
+                "時計が消える時刻で曲も終了して後片付け");
+            var interrupted = field.ShowDirgePerformance(bard, 3, SongClip, true);
+            var heldMusic = field.DirgeMusic!;
+            interrupted._Process(.10); heldMusic._Process(.10);
+            interrupted.Cancel();
+            Require(heldMusic.Finished.IsCompleted && !heldMusic.Finished.Result && field.DirgeMusic is null,
+                "演奏の途中中断で長い曲も残さない");
+            field.ShowDirgePerformance(bard, 3, SongClip, true);
+            var resetMusic = field.DirgeMusic!;
+            resetMusic._Process(.10);
+            field.EndGatherPresentation();
+            Require(resetMusic.Finished.IsCompleted && !resetMusic.Finished.Result
+                && field.DirgeMusic is null && !field.GatherEffects.Any(), "再戦用の終了処理で長い曲と余韻を全消去");
+            bard.SetDirgeSinging(true);
+        }
+        var dying = field.ShowDirgePerformance(bard, 3, SongClip, SongToClock);
+        var dyingMusic = field.DirgeMusic;
+        dying._Process(.10);
+        dyingMusic?._Process(.10);
+        bard.AnimateDeath(); dying._Process(.01);
+        dyingMusic?._Process(.01);
+        Require(dying.Finished.IsCompleted && !dying.Finished.Result && !field.DirgePerformances.Any(), "演奏中の死亡で光と音符を消す");
+        Require(field.DirgeMusic is null, "演奏者の死亡で継続中の曲も止める");
+        await Frame();
+    }
     private async Task CaptureSequence(BattlefieldView3D field)
     {
+        bool saveFrames = !OS.GetCmdlineUserArgs().Contains("--movie");
+        field.BeginBattle(new[] { Opening(1, UnitCatalog.Ere, 0, 2), Opening(2, UnitCatalog.Gald, 0, 0),
+            Opening(3, UnitCatalog.Gald, 1, 0) }, "エレの哀歌", 0);
         foreach (bool enemy in new[] { false, true })
         {
-            field.BeginBattle(new[] { Opening(1, UnitCatalog.Ere, 0, 2), Opening(2, UnitCatalog.Gald, 0, 0),
-                Opening(3, UnitCatalog.Gald, 1, 0) }, "エレの哀歌", 0);
             field.SetGatherClock(false, 1);
             var bard = field.FindPawn(1)!; var target = field.FindPawn(enemy ? 3 : 2)!;
             var opponent = field.FindPawn(enemy ? 2 : 3)!;
             async Task Play()
             {
                 await Wait(.30);
+                bard.SetDirgeSinging(true);
+                await field.ShowDirgePerformance(bard, (float)bard.DirgeSongSeconds, SongClip, SongToClock).Impact;
                 await field.ShowDirgeGift(bard, target, false).Finished;
                 await Wait(.32);
                 await field.ShowDirgeGift(bard, target, true).Impact;
@@ -165,11 +279,11 @@ public partial class EreGiftCheck : Node
             string output = OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--capture-dir="))?.Split('=', 2)[1]
                 ?? ProjectSettings.GlobalizePath("res://../.tmp/ere-gift-textless");
             string folder = System.IO.Path.Combine(output, enemy ? "enemy" : "ally");
-            System.IO.Directory.CreateDirectory(folder);
+            if (saveFrames) System.IO.Directory.CreateDirectory(folder);
             for (int i = 0; i < 300 && !play.IsCompleted; i++)
             {
                 await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
-                Require(GetViewport().GetTexture().GetImage().SavePng($"{folder}/{i:D4}.png") == Error.Ok, "連続描画の保存");
+                if (saveFrames) Require(GetViewport().GetTexture().GetImage().SavePng($"{folder}/{i:D4}.png") == Error.Ok, "連続描画の保存");
             }
             Require(play.IsCompletedSuccessfully, "音の到着から実際の攻撃まで連続描画");
             field.EndGatherPresentation();
