@@ -1618,6 +1618,17 @@ public static class UnitCatalog
         Flavor = LiliH417.Flavor,
     };
 
+    /// <summary>第418期 LK-2m-s（版）: 規定のリリ ＋ 駆け寄りを1ターン2回に（<see cref="TraitId.KissRush2"/>）。文面は「（1ターン1回）」→「（1ターン2回）」だけ。`All` の外。</summary>
+    public static readonly UnitDef LiliLk2ms = new()
+    {
+        Id = Lili.Id, Name = Lili.Name, MaxHp = Lili.MaxHp, Attack = Lili.Attack, Speed = Lili.Speed, Advances = Lili.Advances, Pattern = Lili.Pattern,
+        Traits = Lili.Traits.Append(TraitId.KissRush2).ToArray(),
+        Actions = Lili.Actions,
+        PlusText = Lili.PlusText.Replace("（1ターン1回）", "（1ターン2回）"),
+        MinusText = Lili.MinusText,
+        Flavor = Lili.Flavor,
+    };
+
 
     /// <summary>
     /// 継ぎ当てのノノ（第203期まで）。<b>第204期にリリへ転生した</b>——対照として定義だけ残す（<see cref="All"/> にも <c>Retired</c> にも入れない。

@@ -1309,6 +1309,8 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 lili417 log <0|1m|d|s|p|2m> <台の鍵> <波の鍵> [seed]   # 第417期: 1戦のログ（台の鍵・波の鍵は lili416 と同じ）
     dotnet run --project BattleSim -c Release 0 lili417 check           # 第417期: 自己検査（版の札・All の外・試遊の台の入れ替えと鎖の終端・差し引き後の重なり 0・聖痕なし・主目標だけ・上限 2・verbose の有無・PickOne を使わない）（1 秒）
     dotnet run --project BattleSim -c Release 0 lili418 settle          # 第418期 段0: 「試遊・リリ 呪い」「試遊・リリ 紅」× 4 波・seed 0..99 が第417期の LK-1m-s（`LiliLk1ms`）と一致するか（1 秒）
+    dotnet run --project BattleSim -c Release 0 lili418 boards          # 第418期 本体 §3-2: 8 台 × {規定, LK-2m-s} × 4 波 ＋ 本編 5 波・seed 0..99（予測 `.tmp/p418/predict.md` が無ければ走らない）（4 秒）
+    dotnet run --project BattleSim -c Release 0 lili418 log <0|2> <台の鍵> <波の鍵> [seed]   # 第418期: 1戦のログ（台の鍵・波の鍵は lili416 と同じ）
     dotnet run --project BattleSim -c Release 0 lili418 check           # 第418期: 自己検査（規定のリリの札と文面・旧 `LiliH417`・`PinL418`・試遊の台の入れ替えと鎖の終端）（1 秒）
     dotnet run --project BattleSim -c Release 0 sh358 p0                # 第358期 §2 Phase 0: 破片の流れ（書いた ／ 敵の一撃で割れた ／ 読んだ ／ 残った）・ツギの板の返し（1回 ／ 同じ主へ集まった塊）・ヒビの砕けと倒れた T・ボスの1ターンの与ダメ ／ 回復（規定・代表台 3 × 5 波・seed 0..99・1 秒）
     dotnet run --project BattleSim -c Release 0 sh358 seats [版]        # 第358期 §4: ヒビ ／ ガレ ＋ 6枚（ウロ ／ ツギ ／ ササ ／ ガルド ／ ドルガ ／ ゴルム）から3枚 × 席の全並び ＝ 2,400 並び × ボス（seed 0..4）／ 近衛 ／ 大隊（seed 0..19）・版（既定 hbgr）と規定の両方（16 秒）
