@@ -688,6 +688,8 @@
 | `SlimeHarden` | - |
 | `SlimeSwell` | 人呑みのセッキ |
 | `SlimeHaven` | - |
+| `SlimeGulpAlly` | - |
+| `SlimeGulpFoe` | - |
 | `DolgaFocus` | のろまの巨兵ドルガ |
 | `DolgaWakeDouble` | - |
 | `DolgaWakeStack` | - |

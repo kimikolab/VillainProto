@@ -1312,6 +1312,12 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 lili418 boards          # 第418期 本体 §3-2: 8 台 × {規定, LK-2m-s} × 4 波 ＋ 本編 5 波・seed 0..99（予測 `.tmp/p418/predict.md` が無ければ走らない）（4 秒）
     dotnet run --project BattleSim -c Release 0 lili418 log <0|2> <台の鍵> <波の鍵> [seed]   # 第418期: 1戦のログ（台の鍵・波の鍵は lili416 と同じ）
     dotnet run --project BattleSim -c Release 0 lili418 check           # 第418期: 自己検査（規定のリリの札と文面・旧 `LiliH417`・`PinL418`・試遊の台の入れ替えと鎖の終端）（1 秒）
+    dotnet run --project BattleSim -c Release 0 sekki419 p0            # 第419期 Phase 0 (a)(b): 手番の台 2 つ × 4 波・規定のセッキ・seed 0..99（倒れる一撃の数と型・包み ／ 弾き返し・ターン頭の「動かなかった味方」・号令の +8）（1 秒）
+    dotnet run --project BattleSim -c Release 0 sekki419 p0c [seed]    # 第419期 Phase 0 (c): elite 分かち×逆しま (ドハ×ウツ) × 近衛 の旧のリリ ／ 規定のリリ（旧で勝ち規定で負ける seed と、1 戦の 2 本のログ）
+    dotnet run --project BattleSim -c Release 0 sekki419 boards        # 第419期 §3-2 ／ 3-3: 台 3 つ（手番 包み ／ 手番 芯4枚 ／ 呪い（クビ → セッキ））× {規定, SW-a, SW-e, SW-ae} × 4 波・seed 0..99（予測 `.tmp/p419/predict.md` が無ければ走らない）（1 秒）
+    dotnet run --project BattleSim -c Release 0 sekki419 mixed         # 第419期 §3-4: `compare` のセッキを含む 3 行 × {規定, SW-a, SW-e, SW-ae} × 本編 5 波 ＋ 近衛 ／ 大隊・seed 0..199（4 秒）
+    dotnet run --project BattleSim -c Release 0 sekki419 log <0|a|e|ae> <台の鍵|row:行名の頭> <波の鍵> [seed]   # 第419期: 1戦のログ（台 wrap ／ core4 ／ curse・波 boss ／ guard ／ bat ／ s4 ／ m1〜m5）
+    dotnet run --project BattleSim -c Release 0 sekki419 check         # 第419期: 自己検査（版の定義・SW-a が鳴る ／ 2 回まで・SW-e は勇者を呑まない・決定的・計数の規則が盤面を動かさない・試遊の台と鎖の終端）（1 秒）
     dotnet run --project BattleSim -c Release 0 sh358 p0                # 第358期 §2 Phase 0: 破片の流れ（書いた ／ 敵の一撃で割れた ／ 読んだ ／ 残った）・ツギの板の返し（1回 ／ 同じ主へ集まった塊）・ヒビの砕けと倒れた T・ボスの1ターンの与ダメ ／ 回復（規定・代表台 3 × 5 波・seed 0..99・1 秒）
     dotnet run --project BattleSim -c Release 0 sh358 seats [版]        # 第358期 §4: ヒビ ／ ガレ ＋ 6枚（ウロ ／ ツギ ／ ササ ／ ガルド ／ ドルガ ／ ゴルム）から3枚 × 席の全並び ＝ 2,400 並び × ボス（seed 0..4）／ 近衛 ／ 大隊（seed 0..19）・版（既定 hbgr）と規定の両方（16 秒）
     dotnet run --project BattleSim -c Release 0 sh358 flow [版,…]       # 第358期 §6 の 1・2: 破片の流れ ／ 返し ／ 礫 ／ ボスへの届き方（1ターンの与ダメを 欠片の返し ／ 礫 ／ 板の返し ／ ほか に分ける）× 版・代表台 4 × ボス ／ 大隊

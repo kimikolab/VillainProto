@@ -7911,6 +7911,7 @@ public sealed class BattleContext
             vt.SparkVeilSoaked += soak;
             (vt.SparkVeilSoakedT ??= new long[12])[Math.Min(_turn, 11)] += soak;
             u.SetCounter(SparkTrait.VeilKey, Math.Min(vk - soak, after));
+            if (Math.Min(vk - soak, after) <= 0) vt.VeilBreaks419++;   // 第419期・計数のみ（衣が砕けた回数・ソムの光の衣の下見）
         }
         if (u.RawCounter(StatusKeys.Plank) > 0)
         {
@@ -9754,6 +9755,8 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.DolgaWall) && !_dolgaWalls.Contains(u)) _dolgaWalls.Add(u);   // 第394期（休む巨兵は壁）
         if (u.HasTrait(TraitId.SlimeWrap) && !_slimeWraps.Contains(u)) _slimeWraps.Add(u);   // 第396期（包むセッキ）
         if (u.HasTrait(TraitId.SlimeHaven)) _slimeHavenLive = true;                           // 第397期（R 避難所・包まれた味方は次の手番を失う）
+        if (u.HasTrait(TraitId.SlimeGulpAlly)) _gulpAllyLive = true;                          // 第419期（SW-a 仲間を呑んで守る）
+        if (u.HasTrait(TraitId.SlimeGulpFoe)) _gulpFoeLive = true;                            // 第419期（SW-e 敵を呑む）
         if (u.HasTrait(TraitId.SlimeHarden)) _slimeHardenLive = true;                         // 第398期（K2 固まる）
         if (u.HasTrait(TraitId.DolgaWakeDouble) || u.HasTrait(TraitId.DolgaWakeStack)) _dolgaWakeLive = true;   // 第399期（X1 ／ X2 休み明けの一撃）
         if (u.HasTrait(TraitId.DolgaFocus) || u.HasTrait(TraitId.DolgaHeavy)) _dolgaHitLive = true;   // 第397期（G1 ／ G2・ドルガの一撃）
@@ -11419,7 +11422,12 @@ public sealed class BattleContext
                               int attackPercent = 100, AttackPattern? patternOverride = null)
     {
         // 第396期（包むセッキ）: 帳簿があれば、殴る代わりに敵全体へ弾き返す（帳簿が 0 ならふつうに殴る）。**保持者がいなければ件数の比較1つで抜ける。**
-        if (_slimeWraps.Count > 0 && actor.HasTrait(TraitId.SlimeWrap) && actor.RawCounter(SlimeTrait.StoreKey) > 0) { SlimeBurst(actor, prefix); return; }
+        if (_slimeWraps.Count > 0 && actor.HasTrait(TraitId.SlimeWrap) && actor.RawCounter(SlimeTrait.StoreKey) > 0)
+        {
+            // 第419期（SW-e ／ SW-ae）: 溢れて自分から弾き返すときは、代わりに敵を1体呑む（呑んでいる間は弾き返せない）。**保持者がいなければ真偽1つで抜ける。**
+            if (_gulpFoeLive && actor.HasTrait(TraitId.SlimeGulpFoe) && GulpFoe419(actor, prefix)) return;
+            SlimeBurst(actor, prefix); return;
+        }
         // 第255期（被弾の燃焼）: 1回の攻撃の枠。札が無ければ比較1つで素通り。
         if (OpenBurnHitScope(actor))
         {
@@ -14208,7 +14216,12 @@ public sealed class BattleContext
         {
             UnitState? sl = null;
             foreach (UnitState w in _slimeWraps)
-                if (w.IsAlive && w.TeamId == target.TeamId && w != target && w != source && (sl is null || w.Slot < sl.Slot)) sl = w;
+                if (w.IsAlive && w.TeamId == target.TeamId && w != target && w != source && (sl is null || w.Slot < sl.Slot))
+                {
+                    // 第419期（SW-a）: 仲間を呑んだターンの間は包めない。**保持者がいなければ真偽1つで抜ける。**
+                    if (_gulpAllyLive && GulpHolding419(w)) { NoteWrapBlocked419(w); continue; }
+                    sl = w;
+                }
             if (sl is not null)
             {
                 // 第397期（R 避難所・`SlimeHaven`）: 一撃を丸ごと包む（殴られた味方は何も受けない）
@@ -14766,6 +14779,14 @@ public sealed class BattleContext
             return;
         }
 
+        // 第419期（セッキの版 SW-a ／ SW-ae・`SlimeGulpAlly`）: 仲間を呑んで守る。**倒れる一撃の族**（猶予 ／ 踏みとどまり ／ 焼け残り ／ 逃げ足の後・庇いの前・量は確定している）。
+        // 敵の攻撃（相手陣営の出どころ・刻み ／ 徴収 ／ 中継 ／ 共有 ／ 同士討ちではない）の倒れる一撃を、セッキ（この駒以外・1戦に2回）が呑み込んで代わりに受ける（この駒には何も入らない）。
+        // **保持者がいなければ真偽1つで抜ける。乱数を引かない**（保持者が複数なら席番号の若い方）。
+        if (_gulpAllyLive && amount >= target.Hp && source is not null && source.TeamId != target.TeamId
+            && !burnTick && !levy && !relayed && !hexShare && !isFriendlyFire
+            && TryGulpAlly419(target, source, amount, pattern))
+            return;
+
         // 庇い（第301期・HC・`CoverTrait`）。**HP を引く直前**（破片・受け流し・身構え・軛・猶予・踏みとどまり・逃げ足はすべて上で済み、量は確定している）。
         // 敵の攻撃（相手陣営の出どころ・刻み／徴収／中継／共有／同士討ちではない）の倒れる一撃を、ヒサ（札の保持者・この駒以外）が元の量のまま代わりに受ける。
         // この駒には入れずに返る。**保持者がいなければ件数の比較1つで抜ける。**（第301期 Phase 0 の計数: ヒサ（矢面の保持者）がいる戦の倒れる一撃も同じ所で数える）
@@ -15320,6 +15341,17 @@ public sealed class BattleContext
             TallyOf(actor).R397HeldLost++;
             if (DeepWatch) NoteDeepStalled(actor);
             Log($"  {actor.Name} はゼリーに絡まって動けない", LogKind.Status);
+            return TurnOutcome.Stalled;
+        }
+
+        // 第419期（SW-a）: 呑まれた仲間は、呑まれたターンの残りの手番を失う（避難所と同じ形・engine 側で IdleTurn を立てて Stalled を返す・CanAct は偽にしない）。
+        // 次のターンの頭に吐き出される（印はターン番号なので、次のターンには何もしない）。**保持者がいなければ真偽1つで抜ける。**
+        if (_gulpAllyLive && _gulped419.TryGetValue(actor, out int gulpT419) && gulpT419 == Turn)
+        {
+            actor.SetCounter(StatusKeys.IdleTurn, Turn);
+            TallyOf(actor).Sw419GulpedLost++;
+            if (DeepWatch) NoteDeepStalled(actor);
+            Log($"  {actor.Name} はゼリーの中にいて動けない", LogKind.Status);
             return TurnOutcome.Stalled;
         }
 
@@ -18656,6 +18688,149 @@ public sealed class BattleContext
     bool _slimeHardenLive;                          // 第398期（K2 固まる・`SlimeHarden` の保持者がいる戦）
     bool _dolgaWakeLive;                            // 第399期（X1 ／ X2 休み明けの一撃の保持者がいる戦）
 
+    // ---- 第419期: セッキの版 SW-a（仲間を呑んで守る）／ SW-e（敵を呑む）。状態は戦ごとのこの文脈に持つ（会戦の境界で勝手に消える・私有キーを使わない）。----
+    bool _gulpAllyLive, _gulpFoeLive;
+    readonly Dictionary<UnitState, int> _gulpUses419 = new();    // セッキ → 仲間を呑んだ回数
+    readonly Dictionary<UnitState, int> _gulpHold419 = new();    // セッキ → 最後に仲間を呑んだターン（そのターンの間は包めない）
+    readonly Dictionary<UnitState, int> _gulped419 = new();      // 呑まれた仲間 → 呑まれたターン
+    readonly Dictionary<UnitState, int> _wrapBlockT419 = new();  // セッキ → 包めなかった最後のターン（計数のみ）
+    readonly HashSet<UnitState> _gulpFoeUsed419 = new();          // 敵を呑んだセッキ（1戦に1回）
+    readonly List<GulpedFoe419> _gulpedFoes419 = new();           // 呑まれている敵
+    sealed record GulpedFoe419(UnitState Foe, UnitState Sekki, int Back, int Amount, int Index, int Slot);
+
+    /// <summary>第419期（診断だけが立てる）: ターンの頭に「前のターンに動かなかった」味方を数える（Phase 0 (b)・計数のみ）。</summary>
+    public static bool IdleCensus419;
+
+    bool GulpHolding419(UnitState sekki) => _gulpHold419.TryGetValue(sekki, out int t) && t == _turn;
+
+    void NoteWrapBlocked419(UnitState sekki)
+    {
+        UnitTally t = TallyOf(sekki);   // 計数のみ
+        t.Sw419WrapBlockedHits++;
+        if (!_wrapBlockT419.TryGetValue(sekki, out int last) || last != _turn) { _wrapBlockT419[sekki] = _turn; t.Sw419WrapBlockedTurns++; }
+    }
+
+    /// <summary>第419期（SW-a）: 呑まれたターン（呑まれていなければ −1）。号令 ／ 灯の計数が読む。</summary>
+    public int GulpedAt419(UnitState u) => _gulpAllyLive && _gulped419.TryGetValue(u, out int t) ? t : -1;
+
+    /// <summary>
+    /// 第419期（SW-a）: 倒れる一撃を受ける仲間をセッキが呑み込む。仲間は何も受けない（`IdleTurn` ＝ このターン）。セッキは一撃の量を帳簿に積み、
+    /// 包むと同じ割合で膨らみ（`SlimeSwell`）、HP で受ける（`SlimeMelt` なら 2 割・なければ半分・中継）。1戦に <see cref="SlimeTrait.GulpAllyUses"/> 回。乱数を引かない。
+    /// </summary>
+    bool TryGulpAlly419(UnitState target, UnitState source, int amount, AttackPattern? pattern)
+    {
+        UnitState? sl = null;
+        foreach (UnitState w in _slimeWraps)
+            if (w.IsAlive && w.TeamId == target.TeamId && w != target && w != source && w.HasTrait(TraitId.SlimeGulpAlly) && (sl is null || w.Slot < sl.Slot)) sl = w;
+        if (sl is null) return false;
+        UnitTally st = TallyOf(sl);   // 計数のみ
+        int used = _gulpUses419.GetValueOrDefault(sl);
+        if (used >= SlimeTrait.GulpAllyUses) { st.Sw419GulpSpent++; return false; }
+        _gulpUses419[sl] = used + 1;
+        _gulpHold419[sl] = _turn;
+        _gulped419[target] = _turn;
+        bool resting = SluggishTrait.Resting(this, target);
+        target.SetCounter(StatusKeys.IdleTurn, Turn);
+        st.Sw419Gulps++; st.Sw419GulpAmt += amount; if (amount > st.Sw419GulpMax) st.Sw419GulpMax = amount; if (resting) st.Sw419GulpRest++;
+        UnitTally tt = TallyOf(target); tt.Sw419Gulped++; tt.Sw419GulpedTurn += _turn;
+        Log($"    ★ {sl.Name} が倒れかけた {target.Name} を呑み込み、一撃を代わりに受けた（{amount}）", LogKind.Highlight, sl);
+        if (sl.HasTrait(TraitId.SlimeSwell))
+        {
+            int grow = amount * SlimeTrait.SwellTenths / 10;
+            if (grow > 0) { sl.MaxHp += grow; sl.Hp += grow; st.R397SwellGain += grow; if (sl.MaxHp > st.R397MaxHpPeak) st.R397MaxHpPeak = sl.MaxHp; }
+        }
+        sl.SetCounter(SlimeTrait.StoreKey, sl.RawCounter(SlimeTrait.StoreKey) + amount);
+        int hpPart = sl.HasTrait(TraitId.SlimeMelt) ? amount * SlimeTrait.MeltHpTenths / 10 : amount / 2;
+        if (hpPart > 0) ApplyDamage(sl, hpPart, source, isFriendlyFire: true, relayed: true, pattern: pattern);
+        return true;
+    }
+
+    /// <summary>第419期（SW-e）: 呑めない敵（ボスの一行 ＝ `boss` の駒 ／ 盤面ルールの持ち主）。</summary>
+    static bool IsBossFoe419(UnitState e)
+        => e.Def.Id.StartsWith("boss", StringComparison.Ordinal) || e.HasTrait(TraitId.Inversion) || e.HasTrait(TraitId.Drought) || e.HasTrait(TraitId.Yoke) || e.HasTrait(TraitId.Hush);
+
+    /// <summary>
+    /// 第419期（SW-e）: `PerformAttack` の頭（帳簿 &gt; 0）。敵を呑んでいる間は弾き返さずに何もしない（真）。溢れ（自分の手番・譲られた手番でも割り込み ／ 反撃でもない）のときは、
+    /// 弾き返す代わりに最も弱った敵（HP の割合が最小・同じなら席番号の若い方）を呑む（真・盤面の列から外す）。呑める敵がいなければ偽（今どおり弾き返す）。乱数を引かない。
+    /// </summary>
+    bool GulpFoe419(UnitState s, string prefix)
+    {
+        UnitTally t = TallyOf(s);   // 計数のみ
+        foreach (GulpedFoe419 g in _gulpedFoes419)
+            if (g.Sekki == s) { t.Sw419BurstBlocked++; Log($"{prefix}{s.Name} は敵を呑んでいて弾き返せない", LogKind.Action); return true; }
+        if (InInterrupt || Yielding || _inGift || InReaction || _gulpFoeUsed419.Contains(s)) return false;
+        UnitState? pick = null;
+        foreach (UnitState e in LivingMembers(Opponent(s.TeamId)))
+        {
+            if (IsBossFoe419(e)) continue;
+            if (pick is null) { pick = e; continue; }
+            long a = (long)e.Hp * pick.MaxHp, b = (long)pick.Hp * e.MaxHp;
+            if (a < b || (a == b && e.Slot < pick.Slot)) pick = e;
+        }
+        if (pick is null) { t.Sw419FoeNone++; return false; }
+        int amt = s.RawCounter(SlimeTrait.StoreKey);
+        s.SetCounter(SlimeTrait.StoreKey, 0);
+        _gulpFoeUsed419.Add(s);
+        int idx = _units.IndexOf(pick);
+        _units.RemoveAt(idx);
+        _gulpedFoes419.Add(new GulpedFoe419(pick, s, Turn + SlimeTrait.GulpFoeTurns, amt, idx, pick.Slot));
+        t.Sw419FoeGulps++; TallyOf(pick).Sw419FoeGulped++;
+        Log($"{prefix}★ {s.Name} が溜めた衝撃ごと {pick.Name} を呑み込んだ（{amt}）", LogKind.Highlight, s);
+        return true;
+    }
+
+    /// <summary>第419期（SW-e）: 呑まれている敵か（行動順のループが飛ばす）。</summary>
+    public bool InsideSlime419(UnitState u)
+    {
+        if (!_gulpFoeLive || _gulpedFoes419.Count == 0) return false;
+        foreach (GulpedFoe419 g in _gulpedFoes419) if (g.Foe == u) return true;
+        return false;
+    }
+
+    /// <summary>
+    /// 第419期（SW-e）: ターンの頭（状態の刻みの前）に、呑んで <see cref="SlimeTrait.GulpFoeTurns"/> ターン経った敵を吐き出す。元の席（埋まっていれば空いた席の若い方）に戻し、
+    /// 呑んだときの帳簿の量をセッキの一撃として与える（型は単体・セッキが倒れていれば出どころなし）。**保持者がいなければ真偽1つで抜ける。**
+    /// </summary>
+    public void SpitFoes419()
+    {
+        if (!_gulpFoeLive || _gulpedFoes419.Count == 0) return;
+        for (int i = 0; i < _gulpedFoes419.Count; i++)
+        {
+            GulpedFoe419 g = _gulpedFoes419[i];
+            UnitTally t = TallyOf(g.Sekki);   // 計数のみ
+            if (g.Back > Turn) { t.Sw419FoeHeldTurns++; continue; }
+            _gulpedFoes419.RemoveAt(i--);
+            int seat = g.Slot;
+            bool Taken(int x) { foreach (UnitState u in _units) if (u.TeamId == g.Foe.TeamId && u.Slot == x && u.IsAlive) return true; return false; }
+            if (Taken(seat)) for (int x = 0; x < 9; x++) if (!Taken(x)) { seat = x; break; }
+            g.Foe.Slot = seat;
+            _units.Insert(Math.Min(g.Index, _units.Count), g.Foe);
+            t.Sw419FoeSpits++; t.Sw419FoeHeldTurns++;
+            Log($"  ★ {g.Sekki.Name} が {g.Foe.Name} を吐き出した（傷 {g.Amount}）", LogKind.Highlight, g.Sekki);
+            if (g.Amount <= 0) continue;
+            int hp0 = g.Foe.Hp;
+            ApplyDamage(g.Foe, g.Amount, g.Sekki.IsAlive ? g.Sekki : null, pattern: AttackPattern.Single);
+            t.Sw419FoeSpitDmg += g.Amount; t.Sw419FoeSpitDealt += Math.Max(0, hp0 - Math.Max(0, g.Foe.Hp));
+            if (!g.Foe.IsAlive) t.Sw419FoeSpitKilled++;
+        }
+    }
+
+    /// <summary>第419期 Phase 0 (b)（**計数のみ**）: ターンの頭に「前のターンに動かなかった」生きている味方（プレイヤー陣営）を数える。</summary>
+    public void NoteIdleHead419()
+    {
+        if (Turn < 2) return;
+        foreach (UnitState u in _units)
+        {
+            if (u.TeamId != PlayerTeam || !u.IsAlive || u.RawCounter(StatusKeys.IdleTurn) != Turn - 1) continue;
+            UnitTally t = TallyOf(u);
+            t.Sw419IdleHead++;
+            TraitMark saveMark = Mark; Mark = default;
+            bool wasQuiet = _quiet; _quiet = true;
+            if (Trait.SurrenderedTurn(this, u)) t.Sw419IdleHeadSold++;
+            _quiet = wasQuiet; Mark = saveMark;
+        }
+    }
+
     /// <summary>第397期（G2 大物ほど重い）: 当たる敵の最大 HP の 5%（切り捨て）。計数のみ帳簿に足す。ボスの名前 ／ 種類では分岐しない。</summary>
     /// <summary>第399期（X1 ／ X2）: 動けなかった手番を数える（前のターンも動けなかったら続き・同じターンの二度目は数えない）。計数も控える。</summary>
     void NoteIdle399(UnitState actor)
@@ -20413,6 +20588,8 @@ public static class BattleEngine
             ctx.EmitTurnStart();
             ctx.TickStatuses();
             ctx.RechargeSilkBalls();    // 第292期: 糸玉の帯電し直し（糸玉が無ければ比較1つで抜ける）
+            ctx.SpitFoes419();          // 第419期（SW-e）: 呑んだ敵を吐き出す（保持者がいなければ真偽1つで抜ける）
+            if (BattleContext.IdleCensus419) ctx.NoteIdleHead419();   // 第419期 Phase 0 (b)（診断だけが立てる・計数のみ）
             ctx.EmitStatusSnapshot();   // 削った後の残量を写す。表示用で、盤面には触らない
             ctx.NoteHexCensus();        // 呪い（第96期）の門の 2。**盤面は読むだけ**
             ctx.NoteReaderCensus();     // 積み過ぎ（第115期）の門の 1。**盤面は読むだけ**
@@ -20516,6 +20693,7 @@ public static class BattleEngine
             foreach (UnitState actor in order)
             {
                 if (!actor.IsAlive) continue;
+                if (ctx.InsideSlime419(actor)) continue;   // 第419期（SW-e）: 呑まれている敵は動かない（保持者がいなければ真偽1つで抜ける）
                 if (!ctx.TeamAlive(ctx.Opponent(actor.TeamId))) break;
 
                 ctx.TurnLoopCalls++;   // 第105期・自己検査 (c)（計数のみ）

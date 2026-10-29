@@ -3204,6 +3204,19 @@ public static class UnitCatalog
     public static readonly UnitDef SekkiK12 = SekkiOn397(new[] { TraitId.SlimeWrap, TraitId.SlimeOverflow, TraitId.SlimeDeep, TraitId.SlimeSwell, TraitId.SlimeMelt, TraitId.SlimeHarden },
         (SlimePlus396 + SlimeOverflowText396).Replace("3 割", "5 割").Replace("衝撃の 5 割を吸い取る", "衝撃の 5 割を吸い取る（ほとんどはゼリーに溶けて消える）") + "。吸うほど体が膨らむ。溜めた衝撃でゼリーが固まり、自分への攻撃が軽くなる。弾き返すと柔らかく戻る", SlimeMinus397);
 
+    // ---- 第419期: 人呑みのセッキの版（規定（K1）の上に札を足す・`All` に入れない・数値はそのまま・指示書 design/PHASE419_SEKKI_SWALLOW_SPEC.md §2）----
+    const string GulpAllyPlus419 = "。仲間が倒れる一撃を受ける瞬間、その仲間を呑み込んで庇う（仲間は無傷で吐き出されるが、そのターンは動けない・1戦に2回）";
+    const string GulpAllyMinus419 = "。呑んでいる間は仲間を包めない";
+    const string GulpFoePlus419 = "。溜まりすぎたとき、弾き返す代わりに最も弱った敵を呑み込む（2ターン後に傷を負って吐き出される・ボスは呑めない）";
+    const string GulpFoeMinus419 = "。敵を呑んでいる間は弾き返せない";
+    static UnitDef SekkiOn419(TraitId[] extra, string plus, string minus) => SekkiOn397(Sekki.Traits.Concat(extra).ToArray(), Sekki.PlusText + plus, Sekki.MinusText + minus, name: Sekki.Name, flavor: Sekki.Flavor);
+    /// <summary>セッキの版 SW-a（第419期）: 規定 ＋ 仲間を呑んで守る（`SlimeGulpAlly`）。</summary>
+    public static readonly UnitDef SekkiSWa = SekkiOn419(new[] { TraitId.SlimeGulpAlly }, GulpAllyPlus419, GulpAllyMinus419);
+    /// <summary>セッキの版 SW-e（第419期）: 規定 ＋ 敵を呑む（`SlimeGulpFoe`）。</summary>
+    public static readonly UnitDef SekkiSWe = SekkiOn419(new[] { TraitId.SlimeGulpFoe }, GulpFoePlus419, GulpFoeMinus419);
+    /// <summary>セッキの版 SW-ae（第419期）: SW-a ＋ SW-e。</summary>
+    public static readonly UnitDef SekkiSWae = SekkiOn419(new[] { TraitId.SlimeGulpAlly, TraitId.SlimeGulpFoe }, GulpAllyPlus419 + GulpFoePlus419, GulpAllyMinus419 + GulpFoeMinus419);
+
     /// <summary>
     /// 背かれのソム（第103期・<b>最後の1枠</b>）。<b>第276期に転生した</b>（規定 ＝ S1x・ポンの判断）——
     /// 喚ばれた餌が感電を纏って立ち（<see cref="TraitId.BetrayedShockNoThunder"/>）、纏った餌にはカタの雷が落ちない。

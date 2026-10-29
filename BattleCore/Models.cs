@@ -2559,6 +2559,14 @@ public sealed class UnitTally
     public long[]? R397FocusByN;
     /// <summary>第398期（計数のみ）: K1 ゼリーが消した量（半分との差）・K2 固まって軽くした回数 ／ 量（セッキの側）。</summary>
     public long R398MeltSaved, R398HardenHits, R398HardenSaved;
+    /// <summary>第419期（セッキの版 SW-a ／ SW-e・**計数のみ**）。セッキの側: 仲間を呑んだ回数 ／ 呑んだ一撃の量 ／ 1回の最大 ／ 呑んだ相手が休み番のドルガだった回数 ／ 倒れる一撃が来たが回数を使い切っていた回数 ／
+    /// 呑んでいて包めなかった一撃 ／ そのターン数・敵を呑んだ回数 ／ 呑んでいたターン数 ／ 吐き出したときの傷 ／ そのとき実際に減った HP ／ 吐き出しで倒れた敵 ／ 敵を呑んでいて弾き返せなかった回数 ／ 溢れたが呑める敵がいなかった（弾き返した）回数。
+    /// 呑まれた側: 呑まれた回数 ／ そのせいで失った手番 ／ 呑まれたターンの合計 ／ 次のターンの頭に号令（+8）が読んだ回数 ／ 灯の譲りが読んだ回数。敵の側: 呑まれた回数。
+    /// 全員: ターンの頭に「前のターンに動かなかった」だった回数 ／ そのうち差し出した手番（号令が買える）だった回数（Phase 0 (b)・診断の計数の規則があるときだけ）。</summary>
+    public long Sw419Gulps, Sw419GulpAmt, Sw419GulpMax, Sw419GulpRest, Sw419GulpSpent, Sw419WrapBlockedHits, Sw419WrapBlockedTurns;
+    public long Sw419FoeGulps, Sw419FoeSpits, Sw419FoeHeldTurns, Sw419FoeSpitDmg, Sw419FoeSpitDealt, Sw419FoeSpitKilled, Sw419BurstBlocked, Sw419FoeNone;
+    public long VeilBreaks419;   // 第419期・計数のみ: 光の衣が 0 まで減った回数（受けた味方の側）
+    public long Sw419Gulped, Sw419GulpedLost, Sw419GulpedTurn, Sw419RallyRead, Sw419LampRead, Sw419FoeGulped, Sw419IdleHead, Sw419IdleHeadSold;
     /// <summary>第398期（計数のみ）: ターンごとの弾き返した量（帳簿の推移 ＝ 吸った量の累計 − 弾き返した量の累計・`R396WrapByTurn` と対）。</summary>
     public long[]? R398BurstByTurn, R398WrapHpByTurn;
     /// <summary>第399期（計数のみ）: L1 で増えた譲り（トモの側）・X の休みの連続の記録（1 ／ 2 ／ 3 以上・ドルガの側）・X1 の倍が起きた回数 ／ 足した量・X2 の上乗せが起きた回数 ／ 量。</summary>
@@ -3917,6 +3925,10 @@ public sealed class UnitTally
         R396WrapByTurn = AddArr(R396WrapByTurn, o.R396WrapByTurn);
         R396Bursts += o.R396Bursts; R396BurstAmt += o.R396BurstAmt; R396BurstDealt += o.R396BurstDealt; R396BurstMax = Math.Max(R396BurstMax, o.R396BurstMax);
         R397SwellGain += o.R397SwellGain; R397MaxHpPeak = Math.Max(R397MaxHpPeak, o.R397MaxHpPeak); R397HavenHolds += o.R397HavenHolds; R397HeldLost += o.R397HeldLost; R397FocusSwings += o.R397FocusSwings; R397HeavyAdd += o.R397HeavyAdd; R397FocusByN = AddArr(R397FocusByN, o.R397FocusByN);   // 第397期
+        Sw419Gulps += o.Sw419Gulps; Sw419GulpAmt += o.Sw419GulpAmt; Sw419GulpMax = Math.Max(Sw419GulpMax, o.Sw419GulpMax); Sw419GulpRest += o.Sw419GulpRest; Sw419GulpSpent += o.Sw419GulpSpent; Sw419WrapBlockedHits += o.Sw419WrapBlockedHits; Sw419WrapBlockedTurns += o.Sw419WrapBlockedTurns;   // 第419期
+        Sw419FoeGulps += o.Sw419FoeGulps; Sw419FoeSpits += o.Sw419FoeSpits; Sw419FoeHeldTurns += o.Sw419FoeHeldTurns; Sw419FoeSpitDmg += o.Sw419FoeSpitDmg; Sw419FoeSpitDealt += o.Sw419FoeSpitDealt; Sw419FoeSpitKilled += o.Sw419FoeSpitKilled; Sw419BurstBlocked += o.Sw419BurstBlocked; Sw419FoeNone += o.Sw419FoeNone;
+        VeilBreaks419 += o.VeilBreaks419;
+        Sw419Gulped += o.Sw419Gulped; Sw419GulpedLost += o.Sw419GulpedLost; Sw419GulpedTurn += o.Sw419GulpedTurn; Sw419RallyRead += o.Sw419RallyRead; Sw419LampRead += o.Sw419LampRead; Sw419FoeGulped += o.Sw419FoeGulped; Sw419IdleHead += o.Sw419IdleHead; Sw419IdleHeadSold += o.Sw419IdleHeadSold;
         R398MeltSaved += o.R398MeltSaved; R398HardenHits += o.R398HardenHits; R398HardenSaved += o.R398HardenSaved; R398BurstByTurn = AddArr(R398BurstByTurn, o.R398BurstByTurn); R398WrapHpByTurn = AddArr(R398WrapHpByTurn, o.R398WrapHpByTurn);
         R399IdleYields += o.R399IdleYields; R399Run1 += o.R399Run1; R399Run2 += o.R399Run2; R399Run3 += o.R399Run3; R399DoubleHits += o.R399DoubleHits; R399DoubleAdd += o.R399DoubleAdd; R399StackHits += o.R399StackHits; R399StackAdd += o.R399StackAdd; R399IdleYieldTo += o.R399IdleYieldTo;   // 第399期   // 第398期
         R396BurstInterrupt += o.R396BurstInterrupt; R396BurstYield += o.R396BurstYield; R396BurstGift += o.R396BurstGift; R396BurstOverflow += o.R396BurstOverflow; R396BurstOther += o.R396BurstOther;

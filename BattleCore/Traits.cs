@@ -1021,6 +1021,8 @@ public enum TraitId
     SlimeHarden,          // 固まる（第398期・セッキの版 K2 ／ K12）: セッキが受ける一撃（刻み ／ 徴収を除く・包みで受ける分にも）を帳簿の 1 割（切り捨て）だけ軽くする・下限 0（判定は engine・札そのものは印）
     SlimeSwell,           // 膨らむ（第397期・セッキの版 B）: 吸うたび、吸った量の 2 割（切り捨て）だけ最大 HP と HP が増える（戦闘をまたがない）。溢れの線は素の最大 HP のまま（判定は engine の包むの段 ／ `SlimeTrait.CanAct`・札そのものは印）
     SlimeHaven,           // 避難所（第397期・セッキの版 R）: 範囲の一撃を丸ごと包む（殴られた味方は何も受けない・セッキは吸った量の 2 割を HP で受ける）。包まれた味方は次の自分の手番を1回失う（`IdleTurn` が立つ・判定は engine・札そのものは印）
+    SlimeGulpAlly,        // 仲間を呑んで守る（第419期・セッキの版 SW-a ／ SW-ae）: 仲間（セッキ以外）が敵の攻撃で倒れる一撃を受ける瞬間、その仲間を呑み込んで一撃を代わりに受ける（仲間は何も受けない・セッキは帳簿に一撃の量を積み、HP で受けるのは包むと同じ割合）。呑まれた仲間はそのターン動けない（`IdleTurn` ＝ そのターン・まだ手番が来ていなければ失う）。1戦に2回。呑んだターンの間は範囲を包めない（**判定は engine の `ApplyDamageBody` の「倒れる一撃」の族（必死の逃げ足の後・庇いの前）**・札そのものは印）
+    SlimeGulpFoe,         // 敵を呑む（第419期・セッキの版 SW-e ／ SW-ae）: 溢れて自分から弾き返すとき（自分の手番・帳簿が溢れの線以上）、代わりに最も弱った敵（HP の割合が最小・ボスの一行 ＝ `boss` の駒と盤面ルールの持ち主は除く）を1体呑み込む（盤面の列から外れる・2 ターン後の頭に、帳簿の量の傷を負って吐き出される）。1戦に1回。呑んでいる間は弾き返せない（**判定は engine の `PerformAttack` の頭 ／ ターンの頭の `SpitFoes419`**・札そのものは印）
     DolgaFocus,           // 力が一点に集まる（第397期・ドルガの版 G1 ／ G12）: 全体の薙ぎの1体あたりの量を × 5 ÷ 当たる敵の数（切り捨て）に配り直す（薙ぎ ／ ふつうの一撃は今のまま・判定は engine・札そのものは印）
     DolgaWakeDouble,      // 休み明けは倍（第399期・ドルガの版 X1・基準）: 動けなかったターンの後の最初の一振りの量を 2 倍（G1 の後・G2 の前・判定は engine・札は `DolgaWakeTrait`）
     DolgaWakeStack,       // 止められるほど重い（第399期・ドルガの版 X2）: 2 ターン以上続けて動けなかった後の最初の一振りに、積まれた力（正の `AtkBonus`）を「続けて動けなかったターン数 − 1」回ぶん足す（`AtkBonus` は動かない・判定は engine・札は `DolgaWakeTrait`）
@@ -7471,6 +7473,7 @@ public sealed class RallyTrait : Trait
             // 拡散持ちは自分では受け取らないが、差し出した事実は本人のものなので判定は動かさない。
             ctx.WhetEach(ctx.SupportTargets(ally), ally, Gain, WhetRoute.RallyTurn);
             ctx.Log($"    {self.Name} の号令で {ally.Name} の溜めが乗った（攻撃 +{Gain}）", LogKind.Trigger);
+            if (ctx.GulpedAt419(ally) == ctx.Turn - 1) ctx.TallyOf(ally).Sw419RallyRead++;   // 第419期・計数のみ（呑まれた仲間を号令が読んだ）
         }
     }
 }
@@ -10703,6 +10706,8 @@ public sealed class SlimeTrait : Trait
     public const int MeltHpTenths = 2;
     /// <summary>第397期（R 避難所）: 包まれた味方に立てる「次の自分の手番を失う」の印（私有キー・`StatusKeys.All` に入れない）。</summary>
     public const string HeldKey = "slimeHeld";
+    /// <summary>第419期（SW-a 仲間を呑んで守る ／ SW-e 敵を呑む）: 1戦に呑める回数・呑んだ敵を吐き出すまでのターン数。状態は戦ごとの文脈（`BattleContext`）に持つ（私有キーを使わない＝会戦の境界で勝手に消える）。</summary>
+    public const int GulpAllyUses = 2, GulpFoeUses = 1, GulpFoeTurns = 2;
     /// <summary>自分の手番では殴らない型（尾灯の W1 で灯が付かない）。</summary>
     public override bool NeverAttacksOwnTurn => true;
 
@@ -12599,6 +12604,7 @@ public sealed class TaillightTrait : Trait
         if (!ctx.TeamAlive(ctx.Opponent(self.TeamId))) { t.TaillightNoFoe++; return; }
 
         if (idleLast) { t.R399IdleYields++; ctx.TallyOf(lit).R399IdleYieldTo++; }   // 第399期・計数のみ（L1 で増えた譲り・譲られた側も）
+        if (idleLast && ctx.GulpedAt419(lit) == now - 1) ctx.TallyOf(lit).Sw419LampRead++;   // 第419期・計数のみ（呑まれた仲間を灯の譲りが読んだ）
         Yield(ctx, self, lit, pair: false, why: idleLast && saw != now && !window ? LampLabels.ForIdle : LampLabels.ForDeath);   // 自分の手番なので死亡通知の連鎖の中ではない
     }
 
@@ -20237,6 +20243,8 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.SlimeMelt),                        // 第398期（ゼリーが消す K1 ／ K12・印・判定は engine）
         new MarkOnlyTrait(TraitId.SlimeHarden),                      // 第398期（固まる K2 ／ K12・印・判定は engine）
         new MarkOnlyTrait(TraitId.SlimeHaven),                       // 第397期（避難所 R・印・判定は engine）
+        new MarkOnlyTrait(TraitId.SlimeGulpAlly),                    // 第419期（仲間を呑んで守る SW-a・印・判定は engine）
+        new MarkOnlyTrait(TraitId.SlimeGulpFoe),                     // 第419期（敵を呑む SW-e・印・判定は engine）
         new MarkOnlyTrait(TraitId.DolgaFocus),                       // 第397期（力が一点に集まる G1 ／ G12・印・判定は engine）
         new MarkOnlyTrait(TraitId.DolgaHeavy),                       // 第397期（大物ほど重い G2 ／ G12・印・判定は engine）
         new DolgaWakeTrait(TraitId.DolgaWakeDouble),                 // 第399期（休み明けは倍 X1・判定は engine）
