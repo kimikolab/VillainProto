@@ -775,6 +775,9 @@ public static UnitDef PinK406(UnitDef d) => ReferenceEquals(d, UnitCatalog.Kari)
 /// <summary>第413期: 規定のムド（M-ud）→ 旧（`MudoH412`・M1＋M2）。<b>R426 により、現役網の内（`shockdigest`）だけが使う</b>（古い口の鎖には入れない・外の器具は封印）。</summary>
 public static UnitDef PinM412(UnitDef d) => ReferenceEquals(d, UnitCatalog.Mudo) ? UnitCatalog.MudoH412 : d;
 public static Formation Pin412(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinM412(d); return g; }
+/// <summary>第418期: 規定のリリ（LK-1m-s）→ 旧（`LiliH417`・第206〜417期）。<b>R426 により、現役網の内で照合に差が出た器具（`shockdigest` ／ `fireburst digest` ／ `enemyfire digest`）だけが使う</b>（外の器具は封印）。</summary>
+public static UnitDef PinL418(UnitDef d) => ReferenceEquals(d, UnitCatalog.Lili) ? UnitCatalog.LiliH417 : d;
+public static Formation Pin418(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinL418(d); return g; }
 public static Formation Pin406(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinK406(d); return g; }
 public static Formation Pin404(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinH404(d); return g; }
 public static Formation Pin402(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinH402(d); return g; }
@@ -832,7 +835,9 @@ public static readonly string[] VersionRows412 = { "版・M-ud 呪い", "版・W
 public static readonly string[] VersionRows416 = { "版・LK-1 呪い", "版・LK-1 紅", "版・LK-2 呪い", "版・LK-1m 呪い" };
 /// <summary>第417期に足した試遊の台（鎖の終端 <see cref="VersionsH407"/> が外す・第416期の4台のうち「版・LK-1m 呪い」だけが残る）。</summary>
 public static readonly string[] VersionRows417 = { "版・LK-1m-s 呪い", "版・LK-1m-s 紅", "版・LK-1m-p 呪い", "版・LK-2m 呪い" };
-public static (string Name, Formation F)[] VersionsH407() => Presets.Versions.Where(r => !VersionRows410.Contains(r.Name) && !VersionRows412.Contains(r.Name) && !VersionRows416.Contains(r.Name) && !VersionRows417.Contains(r.Name)).ToArray();
+/// <summary>第418期に足した試遊の台（鎖の終端 <see cref="VersionsH407"/> が外す・第416 ／ 417期の「版・LK-…」の台はこの期に一覧から消えた）。</summary>
+public static readonly string[] VersionRows418 = { "試遊・リリ 呪い", "試遊・リリ 紅", "版・2回 リリ 呪い" };
+public static (string Name, Formation F)[] VersionsH407() => Presets.Versions.Where(r => !VersionRows410.Contains(r.Name) && !VersionRows412.Contains(r.Name) && !VersionRows416.Contains(r.Name) && !VersionRows417.Contains(r.Name) && !VersionRows418.Contains(r.Name)).ToArray();
 /// <summary>第411期: 第410期の一覧（第407期の一覧の末尾に「版・K-k 呪い」（K-k）と「版・カーズ 呪い」（KZ-90）・カリは旧）。第408〜410期の器具の試遊の台の項目が読む。</summary>
 public static (string Name, Formation F)[] VersionsH410() => VersionsH407().Select(r => (r.Name, F: Pin406(r.F)))
     .Append(("版・K-k 呪い", Formation.Build(front1: UnitCatalog.KariKk, front3: UnitCatalog.Mudo, center: UnitCatalog.Nel, back1: UnitCatalog.Kubi, back3: UnitCatalog.Utsu)))

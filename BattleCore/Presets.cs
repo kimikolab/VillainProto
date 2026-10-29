@@ -1069,12 +1069,11 @@ public static class Presets
         ("版・W-m 呪い", WataGift413(UnitCatalog.WataWm)),
         // 第416期: リリの駆け寄る口づけの版の台（指示書 PHASE415_LILI_RUSH_SPEC.md §4-6）。台・呪い ＝「試遊・呪い」のクビをリリに（前1 ウツ ／ 前3 ムド ／ 中央 ネル ／ 後1 ワタ ／ 後3 リリ）、
         //   台・紅 ＝「試遊・毒 紅」のラウをリリに。過去の器具の一覧（`Common.VersionsH407` から先）には入らない。採否はポン。
-        ("版・LK-1m 呪い", LiliCurse416(UnitCatalog.LiliLk1m)),
         // 第417期: 「版・LK-1 呪い」「版・LK-1 紅」「版・LK-2 呪い」を外し、絞り込みの版を足した（指示書 §4-5）。
-        ("版・LK-1m-s 呪い", LiliCurse416(UnitCatalog.LiliLk1ms)),
-        ("版・LK-1m-s 紅", LiliGuren416(UnitCatalog.LiliLk1ms)),
-        ("版・LK-1m-p 呪い", LiliCurse416(UnitCatalog.LiliLk1mp)),
-        ("版・LK-2m 呪い", LiliCurse416(UnitCatalog.LiliLk2m)),
+        // 第418期: LK-1m-s を規定にしたので「版・LK-1m 呪い」「版・LK-1m-s 呪い」「版・LK-1m-s 紅」「版・LK-1m-p 呪い」「版・LK-2m 呪い」を外し、
+        //   規定のリリで「試遊・リリ 呪い」（台・呪いの並び）と「試遊・リリ 紅」（「試遊・毒 紅」のラウをリリに）を足した。過去の器具の一覧（`Common.VersionsH407` から先）には入らない。
+        ("試遊・リリ 呪い", LiliCurse416()),
+        ("試遊・リリ 紅", LiliGuren416()),
     };
 
     /// <summary>第416期: 台・呪い（「試遊・呪い」のクビをリリに替え、ウツを矢面に: 前1 ウツ ／ 前3 ムド ／ 中央 ネル ／ 後1 ワタ ／ 後3 リリ）。既定は規定のリリ。</summary>

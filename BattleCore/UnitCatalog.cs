@@ -1543,8 +1543,10 @@ public static class UnitCatalog
     /// <b>第205期</b>に吸う量を「味方が受けた痛み」から取り（<see cref="TraitId.KissPain"/>）、溢れを捨て（<see cref="TraitId.KissVoid"/>）、
     /// 施した累計で段を上げ（<see cref="TraitId.KissTier"/>）、攻撃力の上げ下げも移す（<see cref="TraitId.KissSteal"/>）形にした。
     /// 旧ノノは下の <see cref="Nono"/> に対照として残す（<see cref="All"/> には入れない）。
+    /// <para><b>第418期に規定の座を下の <see cref="Lili"/>（LK-1m-s・駆け寄る口づけ）に譲った</b>——これは第206〜417期の規定（旧）。
+    /// 旧を読む器具は R426 により現役網の内だけ <c>Common.PinL418</c> で固定する。第416〜417期の版（<c>LiliLk1</c> ほか）はこの旧から作ったまま。</para>
     /// </summary>
-    public static readonly UnitDef Lili = new()
+    public static readonly UnitDef LiliH417 = new()
     {
         Id = "lili",
         Name = "施しのリリ",
@@ -1572,17 +1574,17 @@ public static class UnitCatalog
     const string LiliRushMinus416 = "。駆け寄って吸った敵の状態と攻撃力の上げ下げは、殴られた仲間が背負う";
     static UnitDef LiliRush416(TraitId[] extra, string plus, string minus) => new()
     {
-        Id = Lili.Id, Name = Lili.Name, MaxHp = Lili.MaxHp, Attack = Lili.Attack, Speed = Lili.Speed, Advances = Lili.Advances, Pattern = Lili.Pattern,
-        Traits = Lili.Traits.Concat(extra).ToArray(),
-        Actions = Lili.Actions,
-        PlusText = Lili.PlusText + plus,
+        Id = LiliH417.Id, Name = LiliH417.Name, MaxHp = LiliH417.MaxHp, Attack = LiliH417.Attack, Speed = LiliH417.Speed, Advances = LiliH417.Advances, Pattern = LiliH417.Pattern,
+        Traits = LiliH417.Traits.Concat(extra).ToArray(),
+        Actions = LiliH417.Actions,
+        PlusText = LiliH417.PlusText + plus,
         MinusText = minus,
-        Flavor = Lili.Flavor,
+        Flavor = LiliH417.Flavor,
     };
     /// <summary>第416期 LK-1 駆け寄る口づけ: 規定のリリ ＋ <see cref="TraitId.KissRush"/>（1ターン1回）。</summary>
-    public static readonly UnitDef LiliLk1 = LiliRush416(new[] { TraitId.KissRush }, LiliRushPlus416 + "（1ターン1回）", Lili.MinusText + LiliRushMinus416);
+    public static readonly UnitDef LiliLk1 = LiliRush416(new[] { TraitId.KissRush }, LiliRushPlus416 + "（1ターン1回）", LiliH417.MinusText + LiliRushMinus416);
     /// <summary>第416期 LK-2: LK-1 の上限を1ターン2回に（<see cref="TraitId.KissRush2"/>）。</summary>
-    public static readonly UnitDef LiliLk2 = LiliRush416(new[] { TraitId.KissRush, TraitId.KissRush2 }, LiliRushPlus416 + "（1ターン2回）", Lili.MinusText + LiliRushMinus416);
+    public static readonly UnitDef LiliLk2 = LiliRush416(new[] { TraitId.KissRush, TraitId.KissRush2 }, LiliRushPlus416 + "（1ターン2回）", LiliH417.MinusText + LiliRushMinus416);
     /// <summary>第416期 LK-1m: LK-1 ＋ 手番の口づけでは状態と強弱を移さない（<see cref="TraitId.KissSpillRushOnly"/>・マイナスは駆け寄りの中だけ）。</summary>
     public static readonly UnitDef LiliLk1m = LiliRush416(new[] { TraitId.KissRush, TraitId.KissSpillRushOnly }, LiliRushPlus416 + "（1ターン1回）",
         "駆け寄って吸った敵の状態（毒・火・呪い・痺れなど）と攻撃力の上げ下げは、殴られた仲間が背負う");
@@ -1599,6 +1601,23 @@ public static class UnitCatalog
     public static readonly UnitDef LiliLk1mp = LiliRush417(new[] { TraitId.KissRushPrimary }, LiliRushPlus416 + "（狙われた仲間だけ・1ターン1回）");
     /// <summary>第417期 LK-2m: LK-1m-d ＋ 1ターン2回（<see cref="TraitId.KissRush2"/>）。</summary>
     public static readonly UnitDef LiliLk2m = LiliRush417(new[] { TraitId.KissRush2 }, LiliRushPlus416 + "（1ターン2回）");
+
+    /// <summary>
+    /// 施しのリリ（<b>第418期の規定</b>・第417期の LK-1m-s）。旧（第206〜417期）の8枚 ＋ 駆け寄る口づけ（<see cref="TraitId.KissRush"/>・1ターン1回）
+    /// ＋ 手番の口づけでは移さない（<see cref="TraitId.KissSpillRushOnly"/>）＋ 駆け寄った一撃を手番の痛みから引く（<see cref="TraitId.KissRushDeduct"/>）
+    /// ＋ 駆け寄りでは聖痕を付けない（<see cref="TraitId.KissRushNoStigma"/>）。HP ／ 攻 ／ 速・<c>[Skill]</c>・祝福の儀・還る・段は旧のまま。旧は <see cref="LiliH417"/>。
+    /// </summary>
+    public static readonly UnitDef Lili = new()
+    {
+        Id = LiliH417.Id, Name = LiliH417.Name, MaxHp = LiliH417.MaxHp, Attack = LiliH417.Attack, Speed = LiliH417.Speed, Advances = LiliH417.Advances, Pattern = LiliH417.Pattern,
+        // 札の並び: 旧の8枚の後ろに、駆け寄りの本体 → 手番では移さない → 痛みの差し引き → 聖痕なし（第417期の `LiliLk1ms` と同じ順）。
+        Traits = LiliH417.Traits.Concat(new[] { TraitId.KissRush, TraitId.KissSpillRushOnly, TraitId.KissRushDeduct, TraitId.KissRushNoStigma }).ToArray(),
+        Actions = LiliH417.Actions,
+        PlusText = LiliH417.PlusText + " / 仲間が殴られると、殴った敵に駆け寄って口づけし、吸った精気をその仲間に注ぐ（1ターン1回）。駆け寄った敵に聖痕は残らない",
+        MinusText = "駆け寄って吸った敵の状態（毒・火・呪い・痺れなど）と攻撃力の上げ下げは、殴られた仲間が背負う",
+        Flavor = LiliH417.Flavor,
+    };
+
 
     /// <summary>
     /// 継ぎ当てのノノ（第203期まで）。<b>第204期にリリへ転生した</b>——対照として定義だけ残す（<see cref="All"/> にも <c>Retired</c> にも入れない。

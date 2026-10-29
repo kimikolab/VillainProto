@@ -14,6 +14,7 @@ static partial class FireBurstDiag
             // 第249期 前段: 台はすべて S0（第244期の規定 ＝ `UnitCatalog.BorgR3` / `HotaR3` / `HiyoR3`）に固定した（規定が動いても台本が動かない）。
             ("T3-238", Apply(T3238, VerOf("S0"))), ("T3（242 R3 の1位）", Apply(T3r3, VerOf("S0"))), ("雷＋ボルグ", Apply(ThunderBorg, VerOf("S0"))), ("燃焼（compare）", Apply(BA.RefBurn, VerOf("S0"))),
         };
+        boards = boards.Select(b => (b.Name, Pin418(b.F))).ToArray();   // 第418期（リリ LK-1m-s の規定化）: 規定のリリを旧（`LiliH417`）へ（R426・現役網の内）
         var lines = new List<string>();
         foreach (var (bn, f) in boards)
             for (int w = 0; w < BA.WaveNames.Length; w++)

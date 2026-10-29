@@ -16,6 +16,7 @@ static partial class EnemyFireDiag
             // 第249期 前段: 台はすべて E0（第245期 前段の規定 ＝ `UnitCatalog.BorgE0` / `HotaQ0` / `HiyoU0`）に固定した（規定が動いても台本が動かない）。
             ("T3-244", E0(T3244)), ("T3-238", E0(T3238)), ("雷＋ボルグ", E0(ThunderBorg)), ("燃焼（compare）", E0(BA.RefBurn)),
         };
+        boards = boards.Select(b => (b.Name, Common.Pin418(b.F))).ToArray();   // 第418期（リリ LK-1m-s の規定化）: 規定のリリを旧（`LiliH417`）へ（R426・現役網の内）
         var lines = new List<string>();
         foreach (var (bn, f) in boards)
             for (int w = 0; w < BA.WaveNames.Length; w++)
