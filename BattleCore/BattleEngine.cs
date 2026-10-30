@@ -9757,6 +9757,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.SlimeHaven)) _slimeHavenLive = true;                           // 第397期（R 避難所・包まれた味方は次の手番を失う）
         if (u.HasTrait(TraitId.SlimeGulpAlly)) _gulpAllyLive = true;                          // 第419期（SW-a 仲間を呑んで守る）
         if (u.HasTrait(TraitId.SlimeGulpFoe)) _gulpFoeLive = true;                            // 第419期（SW-e 敵を呑む）
+        if (u.HasTrait(TraitId.SlimeGulpLate)) _gulpLateLive = true;                          // 第420期（SW-n 一日遅れて吐き出す）
         if (u.HasTrait(TraitId.SlimeHarden)) _slimeHardenLive = true;                         // 第398期（K2 固まる）
         if (u.HasTrait(TraitId.DolgaWakeDouble) || u.HasTrait(TraitId.DolgaWakeStack)) _dolgaWakeLive = true;   // 第399期（X1 ／ X2 休み明けの一撃）
         if (u.HasTrait(TraitId.DolgaFocus) || u.HasTrait(TraitId.DolgaHeavy)) _dolgaHitLive = true;   // 第397期（G1 ／ G2・ドルガの一撃）
@@ -13623,6 +13624,7 @@ public sealed class BattleContext
                          bool singleHit, bool hexShare,
                          AttackPattern? pattern, bool levy)
     {
+        if (_gulpLateLive && IsHeld420(target)) { _splashNext = false; return; }   // 第420期（SW-n）: ゼリーの中の仲間は何も受けない（保持者がいなければ真偽1つで抜ける）
         bool splash417 = _splashNext; _splashNext = false;   // 第417期（巻き込み ／ 貫きの通過の札・ここで読んで消す・入れ子の中継には渡らない）
         HitFrame prevHit = Hit;
         Hit = new HitFrame(levy, isFriendlyFire, relayed, pattern, burnTick, hexShare, splash417);
@@ -18701,7 +18703,7 @@ public sealed class BattleContext
     /// <summary>第419期（診断だけが立てる）: ターンの頭に「前のターンに動かなかった」味方を数える（Phase 0 (b)・計数のみ）。</summary>
     public static bool IdleCensus419;
 
-    bool GulpHolding419(UnitState sekki) => _gulpHold419.TryGetValue(sekki, out int t) && t == _turn;
+    bool GulpHolding419(UnitState sekki) => (_gulpHold419.TryGetValue(sekki, out int t) && t == _turn) || (_gulpLateLive && HoldsAlly420(sekki));
 
     void NoteWrapBlocked419(UnitState sekki)
     {
@@ -18740,9 +18742,114 @@ public sealed class BattleContext
             if (grow > 0) { sl.MaxHp += grow; sl.Hp += grow; st.R397SwellGain += grow; if (sl.MaxHp > st.R397MaxHpPeak) st.R397MaxHpPeak = sl.MaxHp; }
         }
         sl.SetCounter(SlimeTrait.StoreKey, sl.RawCounter(SlimeTrait.StoreKey) + amount);
+        // 第420期（SW-n ／ SW-nd・`SlimeGulpLate`）: 呑んだ仲間を盤面の列から外す（的にも行動順にも入らない）。次のターンの終わりに吐き出す。
+        if (_gulpLateLive && sl.HasTrait(TraitId.SlimeGulpLate))
+        {
+            int idx = _units.IndexOf(target);
+            if (idx >= 0)
+            {
+                _units.RemoveAt(idx);
+                _heldAllies420.Add(new HeldAlly420(target, sl, _turn + 1, idx, target.Slot));
+                _lastInside420[target] = _turn;
+            }
+        }
         int hpPart = sl.HasTrait(TraitId.SlimeMelt) ? amount * SlimeTrait.MeltHpTenths / 10 : amount / 2;
         if (hpPart > 0) ApplyDamage(sl, hpPart, source, isFriendlyFire: true, relayed: true, pattern: pattern);
         return true;
+    }
+
+    // ---- 第420期（セッキの版 SW-n ／ SW-nd）: ゼリーの中の仲間。状態は戦ごとの文脈に持つ（私有キーを使わない）。**保持者がいなければ真偽1つで抜ける。乱数を引かない。** ----
+    bool _gulpLateLive;
+    sealed record HeldAlly420(UnitState Ally, UnitState Sekki, int Release, int Index, int Slot);
+    readonly List<HeldAlly420> _heldAllies420 = new();
+    readonly Dictionary<UnitState, int> _lastInside420 = new();   // 仲間 → 最後にゼリーの中にいたターン（計数と号令 ／ 灯の計数が読む）
+
+    bool IsHeld420(UnitState u) { foreach (HeldAlly420 h in _heldAllies420) if (h.Ally == u) return true; return false; }
+    bool HoldsAlly420(UnitState sekki) { foreach (HeldAlly420 h in _heldAllies420) if (h.Sekki == sekki) return true; return false; }
+
+    /// <summary>第420期（計数のみ）: 最後にゼリーの中にいたターン（いなければ −1）。号令 ／ 灯の計数が読む。</summary>
+    public int LastInside420(UnitState u) => _gulpLateLive && _lastInside420.TryGetValue(u, out int t) ? t : -1;
+
+    /// <summary>
+    /// 第420期（SW-n）: 行動順のループ。ゼリーの中の仲間はそのターンの手番を失う（`IdleTurn` ＝ このターン・号令 ／ 据えが読む「動かなかった」になる）。真ならループは飛ばす。
+    /// </summary>
+    public bool SkipHeld420(UnitState actor)
+    {
+        if (!_gulpLateLive || _heldAllies420.Count == 0 || !IsHeld420(actor)) return false;
+        actor.SetCounter(StatusKeys.IdleTurn, Turn);
+        _lastInside420[actor] = Turn;
+        TallyOf(actor).Sw420Lost++;
+        Log($"  {actor.Name} はゼリーの中にいて動けない", LogKind.Status);
+        return true;
+    }
+
+    void Release420(HeldAlly420 h, bool digest)
+    {
+        _heldAllies420.Remove(h);
+        int seat = h.Slot;
+        bool Taken(int x) { foreach (UnitState u in _units) if (u.TeamId == h.Ally.TeamId && u.Slot == x && u.IsAlive) return true; return false; }
+        if (Taken(seat)) for (int x = 0; x < 9; x++) if (!Taken(x)) { seat = x; break; }
+        h.Ally.Slot = seat;
+        _units.Insert(Math.Min(h.Index, _units.Count), h.Ally);
+        UnitTally t = TallyOf(h.Sekki);   // 計数のみ
+        if (digest) t.Sw420DigestSpits++; else t.Sw420HeldSpits++;
+        Log($"  ★ {h.Sekki.Name} が {h.Ally.Name} を{(digest ? "消化して" : "")}吐き出した（無傷）", LogKind.Highlight, h.Sekki);
+    }
+
+    /// <summary>第420期（SW-n）: ターンの終わり。呑んだ次のターンの終わりに来た仲間を元の席（埋まっていれば空いた席の若い方）へ吐き出す。保持者がいなければ真偽1つで抜ける。</summary>
+    public void ReleaseAllies420()
+    {
+        if (!_gulpLateLive || _heldAllies420.Count == 0) return;
+        foreach (HeldAlly420 h in _heldAllies420.ToList())
+            if (h.Release <= Turn) Release420(h, digest: false);
+    }
+
+    /// <summary>第420期（計数のみ）: 決着のときにまだ呑んでいた回数。</summary>
+    public void NoteHeldAtEnd420()
+    {
+        if (!_gulpLateLive) return;
+        foreach (HeldAlly420 h in _heldAllies420) TallyOf(h.Sekki).Sw420HeldAtEnd++;
+    }
+
+    /// <summary>
+    /// 第420期（SW-nd・`SlimeDigest`）: セッキの手番「消化する」。呑んでいる仲間がいれば吐き出してから、その傷を溜めた衝撃の分だけ癒す（上限は最大HP・癒えた分だけ帳簿から減る）。
+    /// いなければ、溢れていれば今どおり弾き返し（`PerformAttack` → 弾き返し）、溢れていなければ溜めの 2 割を消して自分がその分癒える（上限は最大HP）。乱数を引かない。
+    /// </summary>
+    public void SlimeDigest420(UnitState s)
+    {
+        if (!s.IsAlive) return;
+        UnitTally t = TallyOf(s);   // 計数のみ
+        HeldAlly420? held = null;
+        foreach (HeldAlly420 h in _heldAllies420) if (h.Sekki == s) { held = h; break; }
+        int store = s.RawCounter(SlimeTrait.StoreKey);
+        if (held is not null)
+        {
+            Release420(held, digest: true);
+            UnitState a = held.Ally;
+            int want = Math.Min(store, Math.Max(0, a.MaxHp - a.Hp));
+            if (want > 0)
+            {
+                int hp0 = a.Hp;
+                Heal(a, want, s);
+                int got = Math.Max(0, a.Hp - hp0);
+                if (got > 0) { s.SetCounter(SlimeTrait.StoreKey, store - got); t.Sw420DigestHeal += got; }
+            }
+            return;
+        }
+        int line = s.HasTrait(TraitId.SlimeSwell) ? s.Def.MaxHp : s.MaxHp;
+        if (s.HasTrait(TraitId.SlimeOverflow) && store >= line) { PerformAttack(s); return; }
+        int melt = store * 2 / 10;
+        if (melt <= 0) { Log($"  {s.Name} はぷるぷるしている", LogKind.Status); return; }
+        s.SetCounter(SlimeTrait.StoreKey, store - melt);
+        t.Sw420SelfDigestTurns++; t.Sw420SelfDigest += melt;
+        int miss = Math.Max(0, s.MaxHp - s.Hp);
+        Log($"  {s.Name} は溜めた衝撃を消化した（{melt}）", LogKind.Action);
+        if (miss > 0)
+        {
+            int hp0 = s.Hp;
+            Heal(s, Math.Min(melt, miss), s);
+            t.Sw420SelfHeal += Math.Max(0, s.Hp - hp0);
+        }
     }
 
     /// <summary>第419期（SW-e）: 呑めない敵（ボスの一行 ＝ `boss` の駒 ／ 盤面ルールの持ち主）。</summary>
@@ -20694,12 +20801,14 @@ public static class BattleEngine
             {
                 if (!actor.IsAlive) continue;
                 if (ctx.InsideSlime419(actor)) continue;   // 第419期（SW-e）: 呑まれている敵は動かない（保持者がいなければ真偽1つで抜ける）
+                if (ctx.SkipHeld420(actor)) continue;      // 第420期（SW-n）: ゼリーの中の仲間は手番を失う（保持者がいなければ真偽1つで抜ける）
                 if (!ctx.TeamAlive(ctx.Opponent(actor.TeamId))) break;
 
                 ctx.TurnLoopCalls++;   // 第105期・自己検査 (c)（計数のみ）
                 ctx.TakeTurn(actor);
             }
 
+            ctx.ReleaseAllies420(); // 第420期（SW-n）: 呑んだ次のターンの終わりに仲間を吐き出す（保持者がいなければ真偽1つで抜ける）
             ctx.WiltFire();         // 第242期: 育たなかった駒の火勢が萎む（ターンの終わり）。保持者がいなければ比較1つで抜ける
             ctx.CommandPoolTurnEnd();   // 第366期（P-t・ヒサの溜まりをターンの終わりに捨てる）。「溜まったら吐く」の保持者がいなければ比較1つで抜ける
             ctx.VioRetchTurnEnd();      // 第373期（A1 ／ A2・ヴィオの吐き戻し）。保持者がいなければ比較1つで抜ける
@@ -20710,6 +20819,7 @@ public static class BattleEngine
         bool playerWon = (ctx.TeamAlive(BattleContext.PlayerTeam) || ctx.LastStandVictoryTeam == BattleContext.PlayerTeam)
                          && !ctx.TeamAlive(BattleContext.EnemyTeam);
 
+        ctx.NoteHeldAtEnd420(); // 第420期・計数のみ（決着のときにまだ呑んでいた）
         ctx.UtsuHitsAll415();   // 第415期・表示専用（最後の手番の後に変わった手数・決着時の値に揃える）
         ctx.Log(playerWon ? "=== 勝利 ===" : "=== 敗北 ===", LogKind.System);
 

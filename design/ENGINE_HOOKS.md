@@ -1753,3 +1753,13 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
   `BattleContext._splashNext` を立てて、`ApplyDamageCore` の**最初の行で読んで消す**（入れ子の中継には渡らない）。**読むのは駆け寄りの LK-1m-p（`KissRushPrimary`）だけ**。盤面は変えない。
 - 印 3 枚（`KissRushDeduct` ／ `KissRushNoStigma` ／ `KissRushPrimary`）は `MarkOnlyTrait`。読むのは `KissRushTrait` と、手番の口づけの計数（`KissTrait.Act` の重なりの数え方）だけ。
 - 差し引きは `KissTrait.PainMarkKey` に鳴った一撃の量を足すだけ（`PainNow` は 0 未満にならない）。新しい窓口は足していない。乱数を引かない。
+## 第420期 —— セッキの呑みを手番の軸へ（版だけ・`SlimeGulpLate` ／ `SlimeDigest`）／ リリの差し引きの直し（段0）
+
+- **ゼリーの中の仲間**（SW-n）: `TryGulpAlly419` が `SlimeGulpLate` のセッキで仲間を呑んだら、仲間を盤面の列（`_units`）から外す（第419期 SW-e の敵と同じ作り）。
+  - 行動順のループで `SkipHeld420` が手番を飛ばす（`IdleTurn` ＝ そのターン）。
+  - `ApplyDamageCore` の頭で、ゼリーの中の仲間への一撃を捨てる。
+  - ターンの終わり（行動順のループの後）に `ReleaseAllies420` が吐き出す。
+  - 呑んでいる間は `GulpHolding419` が真（包めない）。
+  - **保持者がいなければ真偽1つで抜ける。乱数を引かない。**
+- **消化する**（SW-nd）: `SlimeDigestTrait.OnAction` → `BattleContext.SlimeDigest420`。`SlimeTrait.CanAct` は `SlimeDigest` を持つとき常に真。
+- **リリの差し引き**（段0）: `KissRushTrait.Rush` が痛みの印に足すのを、注ぎ（`Give`）の後に移した。受け取られた駆け寄りだけが対象。旧の挙動は `KissRushDeductAny`（駆け寄りの頭で引く）。新しい窓口は足していない。

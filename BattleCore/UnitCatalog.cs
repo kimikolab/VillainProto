@@ -3231,6 +3231,23 @@ public static class UnitCatalog
     /// <summary>セッキの版 SW-ae（第419期）: SW-a ＋ SW-e。</summary>
     public static readonly UnitDef SekkiSWae = SekkiOn419(new[] { TraitId.SlimeGulpAlly, TraitId.SlimeGulpFoe }, GulpAllyPlus419 + GulpFoePlus419, GulpAllyMinus419 + GulpFoeMinus419);
 
+    // ---- 第420期: 人呑みのセッキの版（規定（K1）の上に・`All` に入れない・数値はそのまま・指示書 design/PHASE420_SEKKI_DIGEST_SPEC.md §2）----
+    const string GulpLatePlus420 = "。仲間が倒れる一撃を受ける瞬間、その仲間を呑み込んで庇う（1戦に2回）";
+    const string GulpLateMinus420 = "。呑んだ仲間を吐き出すのは次のターンの終わり（その間は動けない）。呑んでいる間は仲間を包めない";
+    const string DigestPlus420 = "。手番で、呑んでいる仲間を溜めた衝撃で癒して吐き出す。誰も呑んでいなければ、溜めを少し消して自分が癒える";
+    /// <summary>セッキの版 SW-n（第420期）: 規定 ＋ 仲間を呑んで守る（`SlimeGulpAlly`）＋ 一日遅れて吐き出す（`SlimeGulpLate`）。</summary>
+    public static readonly UnitDef SekkiSWn = SekkiOn419(new[] { TraitId.SlimeGulpAlly, TraitId.SlimeGulpLate }, GulpLatePlus420, GulpLateMinus420);
+    /// <summary>セッキの版 SW-nd（第420期）: SW-n ＋ 手番を「消化する」に（`SlimeDigest`・`Actions = [Skill]`）。マイナスの「自分の手番はぷるぷるしているだけで動かない」を外す。</summary>
+    public static readonly UnitDef SekkiSWnd = new()
+    {
+        Id = SekkiSWn.Id, Name = SekkiSWn.Name, MaxHp = SekkiSWn.MaxHp, Attack = SekkiSWn.Attack, Speed = SekkiSWn.Speed, Advances = SekkiSWn.Advances, Pattern = SekkiSWn.Pattern,
+        Traits = SekkiSWn.Traits.Append(TraitId.SlimeDigest).ToArray(),
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "消化する") },
+        PlusText = SekkiSWn.PlusText + DigestPlus420,
+        MinusText = SekkiSWn.MinusText.Replace("。自分の手番はぷるぷるしているだけで動かない", ""),
+        Flavor = SekkiSWn.Flavor,
+    };
+
     /// <summary>
     /// 背かれのソム（第103期・<b>最後の1枠</b>）。<b>第276期に転生した</b>（規定 ＝ S1x・ポンの判断）——
     /// 喚ばれた餌が感電を纏って立ち（<see cref="TraitId.BetrayedShockNoThunder"/>）、纏った餌にはカタの雷が落ちない。

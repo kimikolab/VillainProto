@@ -1077,7 +1077,8 @@ public static class Presets
         // 第418期 本体: 上限2（LK-2m-s）の版。並びは「試遊・リリ 呪い」と同じ。
         ("版・2回 リリ 呪い", LiliCurse416(UnitCatalog.LiliLk2ms)),
         // 第419期: 人呑みのセッキの「呑む」の版（指示書 PHASE419_SEKKI_SWALLOW_SPEC.md §3-6）。並びは「試遊・手番 芯4枚」でセッキだけ SW-a（4 波の平均がいちばん高かった版）。過去の器具の一覧（`Common.VersionsH407` から先）には入らない。採否はポン。
-        ("版・呑み セッキ", FourCore397(sekki: UnitCatalog.SekkiSWa)),
+        // 第420期: この期の最良の版（芯4枚の 4 波平均）SW-nd に入れ替えた（名前はそのまま）。
+        ("版・呑み セッキ", FourCore397(sekki: UnitCatalog.SekkiSWnd)),
     };
 
     /// <summary>第416期: 台・呪い（「試遊・呪い」のクビをリリに替え、ウツを矢面に: 前1 ウツ ／ 前3 ムド ／ 中央 ネル ／ 後1 ワタ ／ 後3 リリ）。既定は規定のリリ。</summary>

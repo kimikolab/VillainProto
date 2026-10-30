@@ -728,6 +728,8 @@
 | `KissRushDeduct` | 施しのリリ |
 | `KissRushNoStigma` | 施しのリリ |
 | `KissRushPrimary` | - |
+| `SlimeGulpLate` | - |
+| `SlimeDigest` | - |
 | `KissRushDeductAny` | - |
 | `Inversion` | - |
 | `Drought` | - |

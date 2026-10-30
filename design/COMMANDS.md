@@ -1320,6 +1320,10 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sekki419 mixed         # 第419期 §3-4: `compare` のセッキを含む 3 行 × {規定, SW-a, SW-e, SW-ae} × 本編 5 波 ＋ 近衛 ／ 大隊・seed 0..199（4 秒）
     dotnet run --project BattleSim -c Release 0 sekki419 log <0|a|e|ae> <台の鍵|row:行名の頭> <波の鍵> [seed]   # 第419期: 1戦のログ（台 wrap ／ core4 ／ curse・波 boss ／ guard ／ bat ／ s4 ／ m1〜m5）
     dotnet run --project BattleSim -c Release 0 sekki419 check         # 第419期: 自己検査（版の定義・SW-a が鳴る ／ 2 回まで・SW-e は勇者を呑まない・決定的・計数の規則が盤面を動かさない・試遊の台と鎖の終端）（1 秒）
+    dotnet run --project BattleSim -c Release 0 sekki420 boards         # 第420期 §3-2: 台 3 つ × {規定, SW-a, SW-n, SW-nd} × 4 波・seed 0..99（予測 `.tmp/p420/predict.md` が無ければ走らない）（1 秒）
+    dotnet run --project BattleSim -c Release 0 sekki420 mixed          # 第420期 §3-3: `compare` のセッキを含む行 × {規定, SW-a, SW-n, SW-nd} × 本編 5 波 ＋ 近衛 ／ 大隊・seed 0..199
+    dotnet run --project BattleSim -c Release 0 sekki420 log <0|a|n|nd> <台の鍵 ／ row:行名の頭> <波の鍵> [seed]   # 第420期: 1戦のログ
+    dotnet run --project BattleSim -c Release 0 sekki420 check          # 第420期: 自己検査（版の札と文面・SW-a は第419期と同じ・預かり ／ 消化の和・verbose の有無・乱数を引かない）
     dotnet run --project BattleSim -c Release 0 sh358 p0                # 第358期 §2 Phase 0: 破片の流れ（書いた ／ 敵の一撃で割れた ／ 読んだ ／ 残った）・ツギの板の返し（1回 ／ 同じ主へ集まった塊）・ヒビの砕けと倒れた T・ボスの1ターンの与ダメ ／ 回復（規定・代表台 3 × 5 波・seed 0..99・1 秒）
     dotnet run --project BattleSim -c Release 0 sh358 seats [版]        # 第358期 §4: ヒビ ／ ガレ ＋ 6枚（ウロ ／ ツギ ／ ササ ／ ガルド ／ ドルガ ／ ゴルム）から3枚 × 席の全並び ＝ 2,400 並び × ボス（seed 0..4）／ 近衛 ／ 大隊（seed 0..19）・版（既定 hbgr）と規定の両方（16 秒）
     dotnet run --project BattleSim -c Release 0 sh358 flow [版,…]       # 第358期 §6 の 1・2: 破片の流れ ／ 返し ／ 礫 ／ ボスへの届き方（1ターンの与ダメを 欠片の返し ／ 礫 ／ 板の返し ／ ほか に分ける）× 版・代表台 4 × ボス ／ 大隊

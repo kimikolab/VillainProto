@@ -1069,6 +1069,8 @@ public enum TraitId
     KissRushDeduct,       // 駆け寄った一撃を手番の痛みから引く（LK-1m-d ／ -s ／ -p ／ LK-2m の共通の直し・リリ）: 駆け寄りが鳴った一撃の量を痛みの印に足す（次の手番の痛みに二重に入らない）
     KissRushNoStigma,     // 駆け寄りでは聖痕を付けない（LK-1m-s・リリ）: 吸う相手は聖痕を問わない（今のまま）。還る（聖痕の敵が倒れると癒える）は手番の聖痕でだけ起きる
     KissRushPrimary,      // 狙われた仲間だけ（LK-1m-p・リリ）: 鳴るのは単体の一撃か範囲攻撃の主目標への一撃だけ（巻き込み ／ 貫きの通過＝`HitFrame.Splash` では鳴らない）
+    SlimeGulpLate,        // 一日遅れて吐き出す（第420期・セッキの版 SW-n ／ SW-nd・`SlimeGulpAlly` と一緒に持つ）: 呑んだ仲間は盤面の列から外れ（的にも行動順にも入らない・何も受けない）、呑んだターンと次のターンは動けない。次のターンの終わりに無傷で元の席へ吐き出される。呑んでいる間は包めない（**判定は engine の `TryGulpAlly419` ／ ターンの終わりの `ReleaseAllies420`**・札そのものは印）
+    SlimeDigest,          // 消化する（第420期・セッキの版 SW-nd）: 手番を `[Skill「消化する」]` に。呑んでいる仲間がいれば、その傷を溜めた衝撃の分だけ癒して（上限は最大HP・癒えた分だけ帳簿から減る）その場で吐き出す。いなければ、溢れていれば今どおり弾き返し、溢れていなければ溜めの 2 割を消して自分がその分癒える（上限は最大HP）（**判定は engine の `SlimeDigest420`**）
     KissRushDeductAny,    // 第420期: 旧の差し引き（第417〜419期の `KissRushDeduct` の挙動・注ぎが受け取られなくても引く）。旧のリリ `LiliH419` だけが持つ（**札そのものは挙動を持たない**・`KissRushTrait` が読む）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -7475,6 +7477,7 @@ public sealed class RallyTrait : Trait
             ctx.WhetEach(ctx.SupportTargets(ally), ally, Gain, WhetRoute.RallyTurn);
             ctx.Log($"    {self.Name} の号令で {ally.Name} の溜めが乗った（攻撃 +{Gain}）", LogKind.Trigger);
             if (ctx.GulpedAt419(ally) == ctx.Turn - 1) ctx.TallyOf(ally).Sw419RallyRead++;   // 第419期・計数のみ（呑まれた仲間を号令が読んだ）
+            if (ctx.LastInside420(ally) == ctx.Turn - 1) ctx.TallyOf(ally).Sw420RallyRead++;  // 第420期・計数のみ（前のターンにゼリーの中にいた仲間を号令が読んだ）
         }
     }
 }
@@ -10715,12 +10718,20 @@ public sealed class SlimeTrait : Trait
     public override bool CanAct(BattleContext ctx, UnitState self, ActionKind kind)
     {
         if (ctx.InGivenTurn) return true;
+        if (self.HasTrait(TraitId.SlimeDigest)) return true;   // 第420期（SW-nd）: 手番は「消化する」（動かない手番は無い）
         // 第397期（B 膨らむ）: 溢れの線は素の最大 HP（膨らんだ分を含めない）
         int line = self.HasTrait(TraitId.SlimeSwell) ? self.Def.MaxHp : self.MaxHp;
         return self.HasTrait(TraitId.SlimeOverflow) && self.RawCounter(StoreKey) >= line;
     }
 
     public override void OnCarryOver(UnitState self) => self.SetCounter(StoreKey, 0);
+}
+
+/// <summary>第420期（セッキの版 SW-nd）: 手番の「消化する」。判定は engine（<c>SlimeDigest420</c>）。乱数を引かない。</summary>
+public sealed class SlimeDigestTrait : Trait
+{
+    public override TraitId Id => TraitId.SlimeDigest;
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action) => ctx.SlimeDigest420(self);
 }
 
 /// <summary>
@@ -12606,6 +12617,7 @@ public sealed class TaillightTrait : Trait
 
         if (idleLast) { t.R399IdleYields++; ctx.TallyOf(lit).R399IdleYieldTo++; }   // 第399期・計数のみ（L1 で増えた譲り・譲られた側も）
         if (idleLast && ctx.GulpedAt419(lit) == now - 1) ctx.TallyOf(lit).Sw419LampRead++;   // 第419期・計数のみ（呑まれた仲間を灯の譲りが読んだ）
+        if (idleLast && ctx.LastInside420(lit) == now - 1) ctx.TallyOf(lit).Sw420LampRead++;  // 第420期・計数のみ
         Yield(ctx, self, lit, pair: false, why: idleLast && saw != now && !window ? LampLabels.ForIdle : LampLabels.ForDeath);   // 自分の手番なので死亡通知の連鎖の中ではない
     }
 
@@ -20518,6 +20530,8 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.KissRushDeduct),                   // 第417期（駆け寄った一撃を痛みから引く・印・`KissRushTrait` ／ `KissTrait.Act` が読む）
         new MarkOnlyTrait(TraitId.KissRushNoStigma),                 // 第417期（駆け寄りでは聖痕を付けない LK-1m-s・印）
         new MarkOnlyTrait(TraitId.KissRushPrimary),                  // 第417期（狙われた仲間だけ LK-1m-p・印）
+        new MarkOnlyTrait(TraitId.SlimeGulpLate),                    // 第420期（一日遅れて吐き出す SW-n・印・判定は engine）
+        new SlimeDigestTrait(),                                      // 第420期（消化する SW-nd）
         new MarkOnlyTrait(TraitId.KissRushDeductAny),                // 第420期（旧の差し引き・`LiliH419` だけ・印）
         new LastStandHoldOldScarTrait(),   // 第199期（対照・保持者 0 枚）
         new LastStandHoldNoStockTrait(),   // 第199期（対照・保持者 0 枚）
