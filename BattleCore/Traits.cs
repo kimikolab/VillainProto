@@ -1069,6 +1069,7 @@ public enum TraitId
     KissRushDeduct,       // 駆け寄った一撃を手番の痛みから引く（LK-1m-d ／ -s ／ -p ／ LK-2m の共通の直し・リリ）: 駆け寄りが鳴った一撃の量を痛みの印に足す（次の手番の痛みに二重に入らない）
     KissRushNoStigma,     // 駆け寄りでは聖痕を付けない（LK-1m-s・リリ）: 吸う相手は聖痕を問わない（今のまま）。還る（聖痕の敵が倒れると癒える）は手番の聖痕でだけ起きる
     KissRushPrimary,      // 狙われた仲間だけ（LK-1m-p・リリ）: 鳴るのは単体の一撃か範囲攻撃の主目標への一撃だけ（巻き込み ／ 貫きの通過＝`HitFrame.Splash` では鳴らない）
+    KissRushDeductAny,    // 第420期: 旧の差し引き（第417〜419期の `KissRushDeduct` の挙動・注ぎが受け取られなくても引く）。旧のリリ `LiliH419` だけが持つ（**札そのものは挙動を持たない**・`KissRushTrait` が読む）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -19363,7 +19364,7 @@ public sealed class KissTrait : Trait
         if (self.RawCounter(KissRushTrait.PendKey) is int pend and > 0)
         {
             var rb = t.KissRush416 ??= new();
-            int raw = self.HasTrait(TraitId.KissRushDeduct) ? (int)Math.Max(0, ctx.PainLostOf(self.TeamId) - self.RawCounter(PainMarkKey) + pend) : pain;
+            int raw = self.HasTrait(TraitId.KissRushDeduct) || self.HasTrait(TraitId.KissRushDeductAny) ? (int)Math.Max(0, ctx.PainLostOf(self.TeamId) - self.RawCounter(PainMarkKey) + pend) : pain;
             rb.PainOverlap += Math.Max(0, Math.Min(pend, raw) - (raw - pain));
             rb.PainCut += raw - pain;
             self.SetCounter(KissRushTrait.PendKey, 0);
@@ -19753,9 +19754,12 @@ public sealed class KissRushTrait : Trait
         book.ByTurn[Math.Clamp(ctx.Turn, 0, book.ByTurn.Length - 1)]++;
         book.FoeSlot[Math.Clamp(foe.Slot, 0, book.FoeSlot.Length - 1)]++;
         book.RecvBy[hit.Def.Id] = book.RecvBy.GetValueOrDefault(hit.Def.Id) + 1;
-        self.SetCounter(PendKey, self.RawCounter(PendKey) + dmg);
         // 第417期（共通の直し）: 駆け寄った一撃を手番の痛みから引く（痛みの印に足す・`PainNow` は 0 未満にならない）。
-        if (self.HasTrait(TraitId.KissRushDeduct)) self.SetCounter(KissTrait.PainMarkKey, self.RawCounter(KissTrait.PainMarkKey) + dmg);
+        // 第420期: 引くのは**注ぎが受け取られた駆け寄り**だけ（`KissRushDeduct`・下の `Give` の後）。受け取られなくても引く旧の挙動は `KissRushDeductAny`（`LiliH419`）で、ここで引く。
+        // 計数の `PendKey` は「差し引いた量」（差し引く札が無い版は鳴った量）——`KissTrait.Act` の重なりの数え方がこれを読む。
+        bool deductNew = self.HasTrait(TraitId.KissRushDeduct);
+        if (!deductNew) self.SetCounter(PendKey, self.RawCounter(PendKey) + dmg);
+        if (self.HasTrait(TraitId.KissRushDeductAny)) self.SetCounter(KissTrait.PainMarkKey, self.RawCounter(KissTrait.PainMarkKey) + dmg);
         ctx.EmitKiss(self, KissLabels.Rush, hit, dmg, from: foe);
         ctx.Log($"    {self.Name} が {hit.Name} を殴った {foe.Name} へ駆け寄った", LogKind.Trigger);
         if (foe.RawCounter(StatusKeys.Stigma) <= 0)
@@ -19774,11 +19778,12 @@ public sealed class KissRushTrait : Trait
         int drained = KissTrait.Drain(ctx, self, foe, nominal);
         book.Drained += drained;
         if (!foe.IsAlive) book.Kills++;
-        if (!self.IsAlive) return;
-        if (!hit.IsAlive) { book.LostRecv++; return; }
+        if (!self.IsAlive) { if (deductNew) { book.DeductSkipped++; book.DeductSkippedAmt += dmg; } return; }
+        if (!hit.IsAlive) { book.LostRecv++; if (deductNew) { book.DeductSkipped++; book.DeductSkippedAmt += dmg; } return; }
         if (!hit.AcceptsSupport)
         {
             book.Stoic++; book.StoicDrained += drained;
+            if (deductNew) { book.DeductSkipped++; book.DeductSkippedAmt += dmg; }   // 第420期: 受け取られなかった駆け寄りは差し引かない
             ctx.Log($"    {self.Name} は精気を吸ったが、{hit.Name} は受け取らない（{drained}）", LogKind.Trigger);
             return;
         }
@@ -19791,6 +19796,16 @@ public sealed class KissRushTrait : Trait
         if (hit.Hp < hpBefore) book.Inverted += hpBefore - Math.Max(0, hit.Hp);
         book.Healed += healed; book.Armor += armor; book.Blocked += blocked;
         if (healed > 0) book.HealBy[hit.Def.Id] = book.HealBy.GetValueOrDefault(hit.Def.Id) + healed;
+        // 第420期: 注ぎが受け取られた（癒えた量 ＋ 破片 > 0、または反転（ベニの輪）で傷として効いた）駆け寄りだけを手番の痛みから引く（満タンで 0 ／ 止められたときは引かない）。
+        if (deductNew)
+        {
+            if (healed + armor > 0 || hit.Hp < hpBefore)
+            {
+                self.SetCounter(PendKey, self.RawCounter(PendKey) + dmg);
+                self.SetCounter(KissTrait.PainMarkKey, self.RawCounter(KissTrait.PainMarkKey) + dmg);
+            }
+            else { book.DeductSkipped++; book.DeductSkippedAmt += dmg; }
+        }
     }
 }
 
@@ -20503,6 +20518,7 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.KissRushDeduct),                   // 第417期（駆け寄った一撃を痛みから引く・印・`KissRushTrait` ／ `KissTrait.Act` が読む）
         new MarkOnlyTrait(TraitId.KissRushNoStigma),                 // 第417期（駆け寄りでは聖痕を付けない LK-1m-s・印）
         new MarkOnlyTrait(TraitId.KissRushPrimary),                  // 第417期（狙われた仲間だけ LK-1m-p・印）
+        new MarkOnlyTrait(TraitId.KissRushDeductAny),                // 第420期（旧の差し引き・`LiliH419` だけ・印）
         new LastStandHoldOldScarTrait(),   // 第199期（対照・保持者 0 枚）
         new LastStandHoldNoStockTrait(),   // 第199期（対照・保持者 0 枚）
         new LastStandHoldMutualLossTrait(),// 第199期（対照・保持者 0 枚）

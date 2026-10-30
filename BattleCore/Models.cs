@@ -5662,11 +5662,12 @@ public static class PlankLabels
 /// <c>RecvBy</c> 殴られた味方（<c>Def.Id</c>）ごとの回数・<c>HealBy</c> 注いで癒えた量 ／ <c>FoeSlot</c> 殴った敵の席（0〜8）／ <c>ByTurn</c> ターンごとの回数（添字 ＝ ターン・30 で丸める）／
 /// <c>PainOverlap</c> 駆け寄った一撃の量のうち、後の手番の口づけが痛みとしても読んだ量 ／ <c>TurnSpillSkipped</c> LK-1m で手番の口づけが移さなかった回数 ／ <c>Inverted</c> 注ぎが反転（ベニの輪）で傷になった量。
 /// 第417期: <c>NotPrimary</c> 主目標でない一撃（巻き込み ／ 貫きの通過）で鳴らなかった（LK-1m-p・<c>Chances</c> の内数）／ <c>PainCut</c> 差し引きで手番の痛みから外れた量 ／ <c>StigmaSkipped</c> 聖痕の無い敵に駆け寄ったが付けなかった（LK-1m-s）。
+/// 第420期: <c>DeductSkipped</c>・<c>DeductSkippedAmt</c> 注ぎが受け取られず（支援拒否 ／ 満タン ／ 止められた ／ 受け取り手やリリが倒れた・反転は受け取ったに数える）痛みから差し引かなかった回数と一撃の量。
 /// </summary>
 public sealed class KissRushBook
 {
     public long Chances, Fired, Capped, Hushed, Held, Fallen, Nominal, Drained, Kills, StigmaNew, Healed, Armor, Blocked, Stoic, StoicDrained, LostRecv,
-                Moves, MovedLayers, StealN, StealPos, StealNeg, PainOverlap, TurnSpillSkipped, Inverted, NotPrimary, PainCut, StigmaSkipped;
+                Moves, MovedLayers, StealN, StealPos, StealNeg, PainOverlap, TurnSpillSkipped, Inverted, NotPrimary, PainCut, StigmaSkipped, DeductSkipped, DeductSkippedAmt;
     public readonly Dictionary<string, (long N, long Sum)> MovedBy = new(), StolenBy = new();
     public readonly Dictionary<string, long> RecvBy = new(), HealBy = new();
     public readonly long[] FoeSlot = new long[9], ByTurn = new long[31];
@@ -5677,7 +5678,7 @@ public sealed class KissRushBook
         Nominal += o.Nominal; Drained += o.Drained; Kills += o.Kills; StigmaNew += o.StigmaNew; Healed += o.Healed; Armor += o.Armor; Blocked += o.Blocked;
         Stoic += o.Stoic; StoicDrained += o.StoicDrained; LostRecv += o.LostRecv; Moves += o.Moves; MovedLayers += o.MovedLayers;
         StealN += o.StealN; StealPos += o.StealPos; StealNeg += o.StealNeg; PainOverlap += o.PainOverlap; TurnSpillSkipped += o.TurnSpillSkipped; Inverted += o.Inverted;
-        NotPrimary += o.NotPrimary; PainCut += o.PainCut; StigmaSkipped += o.StigmaSkipped;
+        NotPrimary += o.NotPrimary; PainCut += o.PainCut; StigmaSkipped += o.StigmaSkipped; DeductSkipped += o.DeductSkipped; DeductSkippedAmt += o.DeductSkippedAmt;
         foreach (var (k, v) in o.MovedBy) MovedBy[k] = MovedBy.TryGetValue(k, out var a) ? (a.N + v.N, a.Sum + v.Sum) : v;
         foreach (var (k, v) in o.StolenBy) StolenBy[k] = StolenBy.TryGetValue(k, out var a) ? (a.N + v.N, a.Sum + v.Sum) : v;
         foreach (var (k, v) in o.RecvBy) RecvBy[k] = RecvBy.GetValueOrDefault(k) + v;

@@ -1312,6 +1312,8 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 lili418 boards          # 第418期 本体 §3-2: 8 台 × {規定, LK-2m-s} × 4 波 ＋ 本編 5 波・seed 0..99（予測 `.tmp/p418/predict.md` が無ければ走らない）（4 秒）
     dotnet run --project BattleSim -c Release 0 lili418 log <0|2> <台の鍵> <波の鍵> [seed]   # 第418期: 1戦のログ（台の鍵・波の鍵は lili416 と同じ）
     dotnet run --project BattleSim -c Release 0 lili418 check           # 第418期: 自己検査（規定のリリの札と文面・旧 `LiliH417`・`PinL418`・試遊の台の入れ替えと鎖の終端）（1 秒）
+    dotnet run --project BattleSim -c Release 0 lili420 settle          # 第420期 段0: 規定のリリ（受け取られた駆け寄りだけ差し引く）× 旧（`LiliH419`）× 試遊・リリ 呪い ／ 紅 ＋ elite の分かち×逆しま × 4 波（1 秒）
+    dotnet run --project BattleSim -c Release 0 lili420 check           # 第420期 段0: 自己検査（札は増やさない・旧の写し・`PinL420`・重なり 0・差し引かなかった回数・verbose の有無）（1 秒）
     dotnet run --project BattleSim -c Release 0 sekki419 p0            # 第419期 Phase 0 (a)(b): 手番の台 2 つ × 4 波・規定のセッキ・seed 0..99（倒れる一撃の数と型・包み ／ 弾き返し・ターン頭の「動かなかった味方」・号令の +8）（1 秒）
     dotnet run --project BattleSim -c Release 0 sekki419 p0c [seed]    # 第419期 Phase 0 (c): elite 分かち×逆しま (ドハ×ウツ) × 近衛 の旧のリリ ／ 規定のリリ（旧で勝ち規定で負ける seed と、1 戦の 2 本のログ）
     dotnet run --project BattleSim -c Release 0 sekki419 boards        # 第419期 §3-2 ／ 3-3: 台 3 つ（手番 包み ／ 手番 芯4枚 ／ 呪い（クビ → セッキ））× {規定, SW-a, SW-e, SW-ae} × 4 波・seed 0..99（予測 `.tmp/p419/predict.md` が無ければ走らない）（1 秒）

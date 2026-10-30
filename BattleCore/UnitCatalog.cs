@@ -1618,6 +1618,20 @@ public static class UnitCatalog
         Flavor = LiliH417.Flavor,
     };
 
+    /// <summary>
+    /// 施しのリリ（第418〜419期の規定・旧）。規定と同じ札の並びで、差し引きの札だけを旧の挙動（<see cref="TraitId.KissRushDeductAny"/>・注ぎが受け取られなくても引く）に替えた写し。
+    /// 第420期に規定の差し引きを「受け取られた駆け寄りだけ」に直したので、旧として残す（R426: 現役網の内で差が出た器具だけ <c>Common.PinL420</c> で固定する）。
+    /// </summary>
+    public static readonly UnitDef LiliH419 = new()
+    {
+        Id = Lili.Id, Name = Lili.Name, MaxHp = Lili.MaxHp, Attack = Lili.Attack, Speed = Lili.Speed, Advances = Lili.Advances, Pattern = Lili.Pattern,
+        Traits = Lili.Traits.Select(t => t == TraitId.KissRushDeduct ? TraitId.KissRushDeductAny : t).ToArray(),
+        Actions = Lili.Actions,
+        PlusText = Lili.PlusText,
+        MinusText = Lili.MinusText,
+        Flavor = Lili.Flavor,
+    };
+
     /// <summary>第418期 LK-2m-s（版）: 規定のリリ ＋ 駆け寄りを1ターン2回に（<see cref="TraitId.KissRush2"/>）。文面は「（1ターン1回）」→「（1ターン2回）」だけ。`All` の外。</summary>
     public static readonly UnitDef LiliLk2ms = new()
     {
