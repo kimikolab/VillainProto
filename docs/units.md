@@ -730,6 +730,9 @@
 | `KissRushPrimary` | - |
 | `SlimeGulpLate` | 人呑みのセッキ |
 | `SlimeDigest` | - |
+| `Chisel` | - |
+| `ChiselWound` | - |
+| `ChiselNeck` | - |
 | `KissRushDeductAny` | - |
 | `Inversion` | - |
 | `Drought` | - |

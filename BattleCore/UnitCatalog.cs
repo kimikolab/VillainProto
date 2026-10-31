@@ -5768,6 +5768,27 @@ public static class UnitCatalog
         Flavor = "一撃を十に割り、同じ場所を彫り続ける。一彫りは浅い。"
     };
 
+    // ---- 第422期: 刻みのノミの版（一点彫り・規定の上・`All` の外・数値はそのまま・指示書 design/PHASE422_NOMI_CHISEL_SPEC.md §1）----
+    // 連打（`Pellet`）を外して単発にし、一点彫り（`Chisel`）を足す。刻み（`Carve`・傷 1 つにつき +2）・執着（`Fixate`）・再行動（engine の規則）はそのまま。
+
+    static UnitDef NomiOn422(TraitId[] extra, string plus) => new()
+    {
+        Id = Nomi.Id, Name = Nomi.Name, MaxHp = Nomi.MaxHp, Attack = Nomi.Attack, Speed = Nomi.Speed, Advances = Nomi.Advances, Pattern = Nomi.Pattern,
+        Traits = Nomi.Traits.Where(t => t != TraitId.Pellet).Append(TraitId.Chisel).Concat(extra).ToArray(),
+        Actions = Nomi.Actions,
+        PlusText = plus,
+        MinusText = Nomi.MinusText,
+        Flavor = Nomi.Flavor,
+    };
+    const string ChiselPlus422 = "一撃を同じ場所に彫り続ける。同じ敵を殴るたび一彫り深くなり（1 彫りにつき +4）、傷 1 つにつき 2 を上乗せする。刻んだ相手が倒れるともう一度動き、彫りの半分を次へ持ち越す";
+    /// <summary>ノミの版 NM-c 一点彫り（第422期）。</summary>
+    public static readonly UnitDef NomiNMc = NomiOn422(Array.Empty<TraitId>(), ChiselPlus422);
+    /// <summary>ノミの版 NM-cs 一点彫り・傷で深まる（第422期）: 殴るたび 1 ＋ その敵の傷の数だけ深まる・1 彫りにつき +3。</summary>
+    public static readonly UnitDef NomiNMcs = NomiOn422(new[] { TraitId.ChiselWound },
+        ChiselPlus422.Replace("同じ敵を殴るたび一彫り深くなり（1 彫りにつき +4）", "同じ敵を殴るたび、その敵の傷の数だけ深く彫れ（1 彫りにつき +3）"));
+    /// <summary>ノミの版 NM-cb 一点彫り・ボスの首（第422期）: 五彫りに届いた一撃は軛に切られない（1戦に1回）。</summary>
+    public static readonly UnitDef NomiNMcb = NomiOn422(new[] { TraitId.ChiselNeck }, ChiselPlus422 + "。五彫りに届いたとき、その一撃は何にも遮られない（1戦に1回）");
+
     /// <summary>
     /// 旧ノミ（第276期までの規定・N0）。<b>第277期に規定が N1（豆鉄砲）へ転生した</b>ので対照として残し、旧ノミを直接使う過去の器具はこちらに固定した。
     /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。経緯は design/PHASE277_NOMI_REBIRTH.md。

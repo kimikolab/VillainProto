@@ -9159,7 +9159,7 @@ public sealed class BattleContext
     /// <c>ResolvePierce</c> の先頭より後ろの段だけ（<c>_splashNext</c> を立てて <c>ApplyDamageCore</c> の最初の行で読んで消す）。
     /// 読むのは駆け寄る口づけの「狙われた仲間だけ」（LK-1m-p・<c>KissRushPrimary</c>）だけ。</para>
     /// </summary>
-    public readonly record struct HitFrame(bool Levy, bool FriendlyFire, bool Relayed, AttackPattern? Pattern, bool BurnTick = false, bool HexShare = false, bool Splash = false);
+    public readonly record struct HitFrame(bool Levy, bool FriendlyFire, bool Relayed, AttackPattern? Pattern, bool BurnTick = false, bool HexShare = false, bool Splash = false, bool Unblocked = false);
 
     /// <summary>いま解決中のダメージの札。<see cref="ApplyDamage"/> の外では既定値。</summary>
     public HitFrame Hit { get; private set; }
@@ -9758,6 +9758,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.SlimeGulpAlly)) _gulpAllyLive = true;                          // 第419期（SW-a 仲間を呑んで守る）
         if (u.HasTrait(TraitId.SlimeGulpFoe)) _gulpFoeLive = true;                            // 第419期（SW-e 敵を呑む）
         if (u.HasTrait(TraitId.SlimeGulpLate)) _gulpLateLive = true;                          // 第420期（SW-n 一日遅れて吐き出す）
+        if (u.HasTrait(TraitId.Chisel)) _chiselLive = true;                                   // 第422期（ノミの版 一点彫り）
         if (u.HasTrait(TraitId.SlimeHarden)) _slimeHardenLive = true;                         // 第398期（K2 固まる）
         if (u.HasTrait(TraitId.DolgaWakeDouble) || u.HasTrait(TraitId.DolgaWakeStack)) _dolgaWakeLive = true;   // 第399期（X1 ／ X2 休み明けの一撃）
         if (u.HasTrait(TraitId.DolgaFocus) || u.HasTrait(TraitId.DolgaHeavy)) _dolgaHitLive = true;   // 第397期（G1 ／ G2・ドルガの一撃）
@@ -13347,6 +13348,11 @@ public sealed class BattleContext
         // 第401期（H1・印が重い）: 主目標に刻んだ印 × その敵の最大 HP の 3%（段の倍率の後・刈り取りの一撃には足さない）。**保持者がいなければ真偽1つで抜ける。乱数を引かない。**
         bool markW = _markWeightLive401 && !hagiReap && actor.HasTrait(TraitId.HagiMarkWeight);
         if (markW) first += MarkWeight401(actor, target);
+        if (_chiselLive && actor.HasTrait(TraitId.Chisel))   // 第422期（ノミの版 一点彫り）: 手番の一撃に 彫り × k。**保持者がいなければ比較1つで抜ける。**
+        {
+            first += Chisel422(actor, target);
+            if (_unblockedNext422) TallyOf(actor).Ch422NeckAmt += first;
+        }
         if (whip is not null) first = WhipAmount(whip, target, first);   // 第217期（当てる前の2倍）
         UnitState firstRecv = shield is null ? target : ShieldRecv(shield, target, ref first);
         if (_fireLvLive) NoteFireContact(actor, firstRecv);   // 第242期（燃え広がりの控え・当てる前）
@@ -13355,6 +13361,7 @@ public sealed class BattleContext
         ApplyDamage(firstRecv, first, actor, singleHit: pattern == AttackPattern.Single, pattern: pattern);
         _whipHitNext = false;
         _reapNext388 = false;
+        _unblockedNext422 = false;   // 第422期（避けられて読まれなかったときに漏らさない）
 
         // 適用順を混ぜる。同じ一振りで2体以上落ちるとき、死亡順（墓守の層・破裂の連鎖）が
         // 席番号で決まっていた。巻き込む相手の顔ぶれは変わらない——順番だけ。
@@ -13624,10 +13631,11 @@ public sealed class BattleContext
                          bool singleHit, bool hexShare,
                          AttackPattern? pattern, bool levy)
     {
-        if (_gulpLateLive && IsHeld420(target)) { _splashNext = false; return; }   // 第420期（SW-n）: ゼリーの中の仲間は何も受けない（保持者がいなければ真偽1つで抜ける）
+        if (_gulpLateLive && IsHeld420(target)) { _splashNext = false; _unblockedNext422 = false; return; }   // 第420期（SW-n）: ゼリーの中の仲間は何も受けない（保持者がいなければ真偽1つで抜ける）
         bool splash417 = _splashNext; _splashNext = false;   // 第417期（巻き込み ／ 貫きの通過の札・ここで読んで消す・入れ子の中継には渡らない）
+        bool unblocked422 = _unblockedNext422; _unblockedNext422 = false;   // 第422期（NM-cb 遮られない一撃の札・ここで読んで消す）
         HitFrame prevHit = Hit;
-        Hit = new HitFrame(levy, isFriendlyFire, relayed, pattern, burnTick, hexShare, splash417);
+        Hit = new HitFrame(levy, isFriendlyFire, relayed, pattern, burnTick, hexShare, splash417, unblocked422);
         // 第208期: 撃ち返す板の控え（1回の `ApplyDamage` の枠ごと。入れ子の呼び出しは退避・復帰する）。
         int prevHitSerial212 = CurrentHitSerial; CurrentHitSerial = ++_hitSerial;   // 第212期（計数のみ・1回の ApplyDamage の枠の通し番号）
         int prevAmt = _reflectAmt; UnitState? prevFrom = _reflectFrom;
@@ -14709,6 +14717,12 @@ public sealed class BattleContext
         // （`Yoke.Active && AllUnits.Any(u => u.IsAlive && u.HasTrait(TraitId.Yoke))`）で、
         // 走査の対象が全駒から保持者のキャッシュに変わっただけ。
         bool yokeBinding = amount > Yoke.Cap ? YokeBinding : false;
+        // 第422期（NM-cb・`ChiselNeck`）: 五彫りに届いた一撃は軛に切られない（1戦に1回・札は `Chisel422` が立てる）。計数: ノミの一撃が軛で切られた回数。**保持者がいなければ比較1つで抜ける。**
+        if (_chiselLive && yokeBinding && source is not null && source.HasTrait(TraitId.Chisel))
+        {
+            if (Hit.Unblocked) { TallyOf(source).Ch422NeckPassed++; yokeBinding = false; Log($"    {source.Name} の深く彫った一撃は軛に遮られない", LogKind.Trigger); }
+            else TallyOf(source).Ch422YokeCut++;
+        }
         // 第367期（版 Y・`YokeRule.SparesTicks`）: 毒 ／ 燃焼の刻みは切らない。計数は版に依らず（切られた ／ 通った刻みを受けた駒の側に・[0] 毒 ／ [1] 燃焼）。
         if (yokeBinding && tickHit)
         {
@@ -18756,6 +18770,40 @@ public sealed class BattleContext
         int hpPart = sl.HasTrait(TraitId.SlimeMelt) ? amount * SlimeTrait.MeltHpTenths / 10 : amount / 2;
         if (hpPart > 0) ApplyDamage(sl, hpPart, source, isFriendlyFire: true, relayed: true, pattern: pattern);
         return true;
+    }
+
+    // ---- 第422期（ノミの版 一点彫り NM-c ／ NM-cs ／ NM-cb）。帳簿は `ChiselTrait` の私有キー。**保持者がいなければ真偽1つで抜ける。乱数を引かない。** ----
+    bool _chiselLive;
+    bool _unblockedNext422;
+
+    /// <summary>
+    /// 第422期: 手番の一撃に足す彫り × k を返す。同じ敵を続けて殴るたび彫りが深まる（NM-c ／ NM-cb は 1・NM-cs は 1 ＋ その敵の傷の数）。
+    /// 相手が替わったら 0 から（刻んだ相手が倒れた後は `ChiselTrait.OnAnyDeath` が半分を残している）。NM-cb は五彫りに届いた一撃に遮られない札を立てる（1戦に1回）。
+    /// </summary>
+    int Chisel422(UnitState a, UnitState t)
+    {
+        UnitTally tl = TallyOf(a);   // 計数のみ
+        bool wound = a.HasTrait(TraitId.ChiselWound);
+        int stored = a.RawCounter(ChiselTrait.TargetKey);
+        int depth = a.RawCounter(ChiselTrait.DepthKey);
+        if (stored != t.InstanceId + 1)
+        {
+            if (stored != 0) { depth = 0; tl.Ch422Resets++; }   // 倒さずに相手が替わった（執着が解けた）
+            a.SetCounter(ChiselTrait.TargetKey, t.InstanceId + 1);
+        }
+        depth += 1 + (wound ? WoundDepthOf(t) : 0);
+        a.SetCounter(ChiselTrait.DepthKey, depth);
+        int bonus = depth * (wound ? ChiselTrait.PerDepthWound : ChiselTrait.PerDepth);
+        tl.Ch422Hits++; tl.Ch422DepthSum += depth; if (depth > tl.Ch422DepthMax) tl.Ch422DepthMax = depth; tl.Ch422Bonus += bonus;
+        Log($"    {a.Name} が {t.Name} を同じ場所に彫る（{depth} 彫り → +{bonus}）", LogKind.Trigger);
+        if (a.HasTrait(TraitId.ChiselNeck) && depth >= ChiselTrait.NeckDepth && a.RawCounter(ChiselTrait.NeckKey) == 0)
+        {
+            a.SetCounter(ChiselTrait.NeckKey, 1);
+            _unblockedNext422 = true;
+            tl.Ch422Neck++;
+            Log($"    ★ {a.Name} の鑿が深く彫った穴に届いた", LogKind.Highlight, a);
+        }
+        return bonus;
     }
 
     // ---- 第420期（セッキの版 SW-n ／ SW-nd）: ゼリーの中の仲間。状態は戦ごとの文脈に持つ（私有キーを使わない）。**保持者がいなければ真偽1つで抜ける。乱数を引かない。** ----

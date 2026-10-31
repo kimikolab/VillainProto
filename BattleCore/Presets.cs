@@ -1079,6 +1079,9 @@ public static class Presets
         // 第419期: 人呑みのセッキの「呑む」の版（指示書 PHASE419_SEKKI_SWALLOW_SPEC.md §3-6）。並びは「試遊・手番 芯4枚」でセッキだけ SW-a（4 波の平均がいちばん高かった版）。過去の器具の一覧（`Common.VersionsH407` から先）には入らない。採否はポン。
         // 第420期: この期の最良の版（芯4枚の 4 波平均）SW-nd に入れ替えた（名前はそのまま）。
         // 第421期: SW-n を規定にしたので「版・呑み セッキ」を外した（「試遊・手番 芯4枚」「試遊・手番 包み」が規定のセッキを乗せる）。
+        // 第422期: 刻みのノミの一点彫りの版（指示書 PHASE422_NOMI_CHISEL_SPEC.md §2-6）。版は NM-c（3 版の 4 行の合計はほぼ同じ・いちばん素の版）。
+        //   並びは「燃焼×刻み (ボルグ×ホタ×ノミ)」（NM-c の 4 波平均 69.2・ノミ単騎は 25.0）。過去の器具の一覧（`Common.VersionsH407` から先）には入らない。
+        ("版・彫り ノミ", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Borg, center: UnitCatalog.Lili, back1: UnitCatalog.NomiNMc, back3: UnitCatalog.Hota)),
     };
 
     /// <summary>第416期: 台・呪い（「試遊・呪い」のクビをリリに替え、ウツを矢面に: 前1 ウツ ／ 前3 ムド ／ 中央 ネル ／ 後1 ワタ ／ 後3 リリ）。既定は規定のリリ。</summary>

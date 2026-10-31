@@ -2569,6 +2569,8 @@ public sealed class UnitTally
     public long Sw419Gulped, Sw419GulpedLost, Sw419GulpedTurn, Sw419RallyRead, Sw419LampRead, Sw419FoeGulped, Sw419IdleHead, Sw419IdleHeadSold;
     /// <summary>第420期（計数のみ・セッキの版 SW-n ／ SW-nd）。セッキの側: 次のターンの終わりまで預かって吐き出した ／ 消化でその場で吐き出した回数・消化で仲間を癒した量 ／ 自分を消化した手番 ／ 消した溜め ／ 自分が癒えた量 ／ 決着のときにまだ呑んでいた。
     /// 呑まれた仲間の側: ゼリーの中で失った手番 ／ 前のターンに中にいた仲間を号令 ／ 灯が読んだ回数。</summary>
+    /// <summary>第422期（計数のみ・ノミの版 一点彫り）: 彫った一撃 ／ 彫りの和（平均 ＝ 和 ÷ 一撃）／ 最大 ／ 相手が替わって 0 に戻った ／ 持ち越した彫り ／ 上乗せの和 ／ 遮られない一撃が鳴った ／ その量 ／ 軛で切られた一撃 ／ 遮られない一撃が軛を抜けた。</summary>
+    public long Ch422Hits, Ch422DepthSum, Ch422DepthMax, Ch422Resets, Ch422Carry, Ch422Bonus, Ch422Neck, Ch422NeckAmt, Ch422YokeCut, Ch422NeckPassed;
     public long Sw420HeldSpits, Sw420DigestSpits, Sw420DigestHeal, Sw420SelfDigestTurns, Sw420SelfDigest, Sw420SelfHeal, Sw420HeldAtEnd, Sw420Lost, Sw420RallyRead, Sw420LampRead;
     /// <summary>第398期（計数のみ）: ターンごとの弾き返した量（帳簿の推移 ＝ 吸った量の累計 − 弾き返した量の累計・`R396WrapByTurn` と対）。</summary>
     public long[]? R398BurstByTurn, R398WrapHpByTurn;
@@ -3931,6 +3933,7 @@ public sealed class UnitTally
         Sw419Gulps += o.Sw419Gulps; Sw419GulpAmt += o.Sw419GulpAmt; Sw419GulpMax = Math.Max(Sw419GulpMax, o.Sw419GulpMax); Sw419GulpRest += o.Sw419GulpRest; Sw419GulpSpent += o.Sw419GulpSpent; Sw419WrapBlockedHits += o.Sw419WrapBlockedHits; Sw419WrapBlockedTurns += o.Sw419WrapBlockedTurns;   // 第419期
         Sw419FoeGulps += o.Sw419FoeGulps; Sw419FoeSpits += o.Sw419FoeSpits; Sw419FoeHeldTurns += o.Sw419FoeHeldTurns; Sw419FoeSpitDmg += o.Sw419FoeSpitDmg; Sw419FoeSpitDealt += o.Sw419FoeSpitDealt; Sw419FoeSpitKilled += o.Sw419FoeSpitKilled; Sw419BurstBlocked += o.Sw419BurstBlocked; Sw419FoeNone += o.Sw419FoeNone;
         VeilBreaks419 += o.VeilBreaks419;
+        Ch422Hits += o.Ch422Hits; Ch422DepthSum += o.Ch422DepthSum; Ch422DepthMax = Math.Max(Ch422DepthMax, o.Ch422DepthMax); Ch422Resets += o.Ch422Resets; Ch422Carry += o.Ch422Carry; Ch422Bonus += o.Ch422Bonus; Ch422Neck += o.Ch422Neck; Ch422NeckAmt += o.Ch422NeckAmt; Ch422YokeCut += o.Ch422YokeCut; Ch422NeckPassed += o.Ch422NeckPassed;   // 第422期
         Sw420HeldSpits += o.Sw420HeldSpits; Sw420DigestSpits += o.Sw420DigestSpits; Sw420DigestHeal += o.Sw420DigestHeal; Sw420SelfDigestTurns += o.Sw420SelfDigestTurns; Sw420SelfDigest += o.Sw420SelfDigest; Sw420SelfHeal += o.Sw420SelfHeal; Sw420HeldAtEnd += o.Sw420HeldAtEnd; Sw420Lost += o.Sw420Lost; Sw420RallyRead += o.Sw420RallyRead; Sw420LampRead += o.Sw420LampRead;   // 第420期
         Sw419Gulped += o.Sw419Gulped; Sw419GulpedLost += o.Sw419GulpedLost; Sw419GulpedTurn += o.Sw419GulpedTurn; Sw419RallyRead += o.Sw419RallyRead; Sw419LampRead += o.Sw419LampRead; Sw419FoeGulped += o.Sw419FoeGulped; Sw419IdleHead += o.Sw419IdleHead; Sw419IdleHeadSold += o.Sw419IdleHeadSold;
         R398MeltSaved += o.R398MeltSaved; R398HardenHits += o.R398HardenHits; R398HardenSaved += o.R398HardenSaved; R398BurstByTurn = AddArr(R398BurstByTurn, o.R398BurstByTurn); R398WrapHpByTurn = AddArr(R398WrapHpByTurn, o.R398WrapHpByTurn);

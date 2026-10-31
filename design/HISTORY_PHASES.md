@@ -8,6 +8,8 @@ description: 第259期に `CLAUDE.md` の「現状値」節を**逐語で**移�
 
 ## 現状値
 
+**第422期は軽い期で、版だけ（規定は動かさない）**（指示書 `PHASE422_NOMI_CHISEL_SPEC.md`・報告 `design/PHASE422_NOMI_CHISEL.md`・器具 `nomi422`）。刻みのノミの一点彫りの版 NM-c ／ NM-cs ／ NM-cb（`UnitCatalog.NomiNMc` ／ `NomiNMcs` ／ `NomiNMcb`）——連打を外して単発にし、同じ敵を彫るほど一撃が重くなる。ボスは動かず、燃焼×刻みで旧の連打（被弾の燃焼を 1 発ごとに回す）の価値が見えた。`compare` 0 セル・全66行 ／ 主判定19行 ／ 情報セルは動かない。試遊の台に「版・彫り ノミ」を足し、鎖の終端 `VersionsH407` が外す。
+
 **第421期の段0 で、セッキを規定化した**（指示書 `PHASE421_SEKKI_SETTLE_SPEC.md`・報告 `design/PHASE421_SEKKI_SETTLE.md`・器具 `sekki421`）。規定のセッキ ＝ 第420期の SW-n（呑んで庇う・呑んだ仲間は次のターンの終わりまで盤面から外れる）・旧は `UnitCatalog.SekkiH420`。Phase 0 の横並びでは突出しなかった（止める線に当たらない）。`compare` 1 行 1 セル（後衛特化+後備え 第4波 100 → 99.5）・全66行 ／ 主判定19行の丸めは動かない・情報セル 27 / 10 → 28 / 11。`elite` は死の連鎖+後備え 大隊 100 → 68.0。照合の差は現役網の内では `docs/` を今読む 2 本だけで固定 0 本・外の 27 本は封印。試遊の台「版・呑み セッキ」は外した。
 
 **第420期の段0 で、リリの駆け寄りの差し引きを直した**（指示書 `PHASE420_SEKKI_DIGEST_SPEC.md`・報告 `design/PHASE420_SEKKI_DIGEST.md`・器具 `lili420`）。差し引き（`KissRushDeduct`）は注ぎが受け取られた駆け寄りだけにした（支援拒否 ／ 満タン ／ 止められたときは引かない・反転は受け取ったに数える）。旧は `UnitCatalog.LiliH419`（差し引きの札だけを旧の挙動の印 `KissRushDeductAny` に替えた写し・R427）。`compare` 0 セル・全66行 ／ 主判定19行 ／ 情報セルは動かない。`elite` は近衛 5 行（分かち×逆しま 89.5 → 100 ほか）。照合の差は現役網の外の 11 本だけで、固定 0 本・封印。本体は版だけで、セッキの呑みの版 SW-n ／ SW-nd（`UnitCatalog.SekkiSWn` ／ `SekkiSWnd`・札 `SlimeGulpLate` ／ `SlimeDigest`）を測った。どちらも号令 ／ 灯が読む通貨を書かず（0.00 ／戦）、デバフ台の上がり幅が手番台をさらに上回った。試遊の台「版・呑み セッキ」は SW-nd に入れ替えた。

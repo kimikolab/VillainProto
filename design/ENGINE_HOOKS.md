@@ -1763,3 +1763,9 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
   - **保持者がいなければ真偽1つで抜ける。乱数を引かない。**
 - **消化する**（SW-nd）: `SlimeDigestTrait.OnAction` → `BattleContext.SlimeDigest420`。`SlimeTrait.CanAct` は `SlimeDigest` を持つとき常に真。
 - **リリの差し引き**（段0）: `KissRushTrait.Rush` が痛みの印に足すのを、注ぎ（`Give`）の後に移した。受け取られた駆け寄りだけが対象。旧の挙動は `KissRushDeductAny`（駆け寄りの頭で引く）。新しい窓口は足していない。
+
+## 第422期 —— ノミの一点彫り（版だけ・`Chisel` ／ `ChiselWound` ／ `ChiselNeck`）
+
+- **上乗せ**: `PerformAttackBody` が手番の一撃の量（`first`）を作る所に `Chisel422` を 1 行（印の重みの直後）。彫りの帳簿は `ChiselTrait` の私有キー・持ち越しは `ChiselTrait.OnAnyDeath`。
+- **遮られない一撃**（NM-cb）: `HitFrame.Unblocked` を足した（`_unblockedNext422` を立てて `ApplyDamageCore` の最初の行で読んで消す・主目標の `ApplyDamage` の後にも消す）。読むのは軛の段だけ（ノミの一撃を 1 回だけ通す）。
+- **保持者がいなければ真偽1つで抜ける。乱数を引かない。**

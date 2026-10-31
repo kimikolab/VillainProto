@@ -1071,6 +1071,9 @@ public enum TraitId
     KissRushPrimary,      // 狙われた仲間だけ（LK-1m-p・リリ）: 鳴るのは単体の一撃か範囲攻撃の主目標への一撃だけ（巻き込み ／ 貫きの通過＝`HitFrame.Splash` では鳴らない）
     SlimeGulpLate,        // 一日遅れて吐き出す（第420期・セッキの版 SW-n ／ SW-nd・`SlimeGulpAlly` と一緒に持つ）: 呑んだ仲間は盤面の列から外れ（的にも行動順にも入らない・何も受けない）、呑んだターンと次のターンは動けない。次のターンの終わりに無傷で元の席へ吐き出される。呑んでいる間は包めない（**判定は engine の `TryGulpAlly419` ／ ターンの終わりの `ReleaseAllies420`**・札そのものは印）
     SlimeDigest,          // 消化する（第420期・セッキの版 SW-nd）: 手番を `[Skill「消化する」]` に。呑んでいる仲間がいれば、その傷を溜めた衝撃の分だけ癒して（上限は最大HP・癒えた分だけ帳簿から減る）その場で吐き出す。いなければ、溢れていれば今どおり弾き返し、溢れていなければ溜めの 2 割を消して自分がその分癒える（上限は最大HP）（**判定は engine の `SlimeDigest420`**）
+    Chisel,               // 一点彫り（第422期・ノミの版 NM-c ／ NM-cs ／ NM-cb・連打 `Pellet` を外した単発の上に）: 同じ敵を続けて殴るたび彫りが 1 深まり、手番の一撃に 彫り × 4 を上乗せする（上限なし）。相手を替えると彫りは 0。刻んだ相手が倒れたら彫りの半分を持ち越す（**判定は engine の `Chisel422`**・`ChiselTrait` は持ち越しと境界の掃除）
+    ChiselWound,          // 傷で深まる（第422期・NM-cs）: 彫りの深まり方を「殴るたび 1 ＋ その敵の傷の数」に・1 彫りにつき +3（**札そのものは挙動を持たない**・`Chisel422` が読む）
+    ChiselNeck,           // ボスの首（第422期・NM-cb）: 彫りが 5 に届いた一撃は軛に切られない（1戦に1回）（**札そのものは挙動を持たない**・`Chisel422` ／ 軛の段が読む）
     KissRushDeductAny,    // 第420期: 旧の差し引き（第417〜419期の `KissRushDeduct` の挙動・注ぎが受け取られなくても引く）。旧のリリ `LiliH419` だけが持つ（**札そのものは挙動を持たない**・`KissRushTrait` が読む）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -7063,6 +7066,38 @@ public sealed class PelletTrait : Trait
 
     /// <summary>弾数 ＝ 現在の攻撃力（床 1）。他の札が足した回数はそのまま足す。</summary>
     public override int ModifyHitCount(UnitState self, int hits) => hits - 1 + Math.Max(1, self.CurrentAttack);
+}
+
+/// <summary>
+/// 一点彫り（第422期・ノミの版 NM-c ／ NM-cs ／ NM-cb）。上乗せの計算は engine（<c>Chisel422</c>・手番の一撃の量を作る所）。
+/// この札が持つのは、刻んだ相手が倒れたときの持ち越し（彫りの半分）と、会戦の境界の掃除だけ。
+/// 帳簿は私有キー（<see cref="TargetKey"/> ＝ 彫っている敵の <c>InstanceId</c> ＋ 1・<see cref="DepthKey"/> ＝ 彫り・<see cref="NeckKey"/> ＝ 首を使った）で、`StatusKeys.All` に入れない。乱数を引かない。
+/// </summary>
+public sealed class ChiselTrait : Trait
+{
+    public const string TargetKey = "chiselTarget", DepthKey = "chiselDepth", NeckKey = "chiselNeck";
+    /// <summary>1 彫りあたりの上乗せ: NM-c ／ NM-cb は 4、NM-cs（傷で深まる）は 3。5 彫りで旧の連打 10 発ぶん（+20）を越える目安。</summary>
+    public const int PerDepth = 4, PerDepthWound = 3;
+    /// <summary>NM-cb: 遮られない一撃が鳴る彫り。</summary>
+    public const int NeckDepth = 5;
+    public override TraitId Id => TraitId.Chisel;
+
+    public override void OnAnyDeath(BattleContext ctx, UnitState self, UnitState dead)
+    {
+        if (!self.IsAlive || self.RawCounter(TargetKey) != dead.InstanceId + 1) return;
+        int keep = self.RawCounter(DepthKey) / 2;
+        self.SetCounter(DepthKey, keep);
+        self.SetCounter(TargetKey, 0);
+        ctx.TallyOf(self).Ch422Carry += keep;   // 計数のみ
+        if (keep > 0) ctx.Log($"    {self.Name} は彫りの半分（{keep}）を次の獲物へ持ち越す", LogKind.Trigger);
+    }
+
+    public override void OnCarryOver(UnitState self)
+    {
+        self.SetCounter(TargetKey, 0);
+        self.SetCounter(DepthKey, 0);
+        self.SetCounter(NeckKey, 0);
+    }
 }
 
 /// <summary>刻みは一振りに1回（第277期・N1）。<b>札そのものは判定を持たない</b>（<see cref="CarveTrait"/> が読む）。</summary>
@@ -20532,6 +20567,9 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.KissRushPrimary),                  // 第417期（狙われた仲間だけ LK-1m-p・印）
         new MarkOnlyTrait(TraitId.SlimeGulpLate),                    // 第420期（一日遅れて吐き出す SW-n・印・判定は engine）
         new SlimeDigestTrait(),                                      // 第420期（消化する SW-nd）
+        new ChiselTrait(),                                           // 第422期（一点彫り NM-c・上乗せは engine）
+        new MarkOnlyTrait(TraitId.ChiselWound),                      // 第422期（傷で深まる NM-cs・印）
+        new MarkOnlyTrait(TraitId.ChiselNeck),                       // 第422期（ボスの首 NM-cb・印）
         new MarkOnlyTrait(TraitId.KissRushDeductAny),                // 第420期（旧の差し引き・`LiliH419` だけ・印）
         new LastStandHoldOldScarTrait(),   // 第199期（対照・保持者 0 枚）
         new LastStandHoldNoStockTrait(),   // 第199期（対照・保持者 0 枚）

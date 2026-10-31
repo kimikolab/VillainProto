@@ -1328,6 +1328,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sekki421 settle         # 第421期 段0 の確かめ: 試遊・手番 芯4枚 ／ 試遊・呪い（クビ → セッキ）× 4 波が `SekkiSWn` と同じ（1 秒）
     dotnet run --project BattleSim -c Release 0 sekki421 nomi           # 第421期 §4: ノミを含む `compare` ／ 交差帯の行 × 4 波・ノミの与ダメ ／ 一振り ／ 再行動・ノミ → ミサの勝率（2 秒）
     dotnet run --project BattleSim -c Release 0 sekki421 check          # 第421期: 自己検査（規定 ＝ SW-n・旧 `SekkiH420`・`PinS420`・「版・呑み セッキ」を外した）
+    dotnet run --project BattleSim -c Release 0 nomi422 boards          # 第422期 §3: ノミを含む 4 行 × {規定, NM-c, NM-cs, NM-cb} × 4 波・seed 0..99 ＋ ノミ → ミサの勝率（予測 `.tmp/p422/predict.md` が無ければ走らない）（3 秒）
+    dotnet run --project BattleSim -c Release 0 nomi422 mixed           # 第422期 §2-4: 残りの 5 行 × {規定, NM-c} × 本編 5 波 ＋ 近衛 ／ 大隊・seed 0..199
+    dotnet run --project BattleSim -c Release 0 nomi422 bomb            # 第422期 次の下見: 試遊・燃焼 ポンの台 ／ 試遊・自傷 × 4 波・燃焼の刻み ／ 被弾の回数（新駒「爆弾」の起爆の口）（1 秒）
+    dotnet run --project BattleSim -c Release 0 nomi422 log <0|c|cs|cb> <行名の頭> <波の鍵> [seed]   # 第422期: 1戦のログ
+    dotnet run --project BattleSim -c Release 0 nomi422 check           # 第422期: 自己検査（版の札・連打しない・彫りが深まる・首は 1 戦 1 回・verbose の有無・乱数を引かない・試遊の台と鎖の終端）
     dotnet run --project BattleSim -c Release 0 sh358 p0                # 第358期 §2 Phase 0: 破片の流れ（書いた ／ 敵の一撃で割れた ／ 読んだ ／ 残った）・ツギの板の返し（1回 ／ 同じ主へ集まった塊）・ヒビの砕けと倒れた T・ボスの1ターンの与ダメ ／ 回復（規定・代表台 3 × 5 波・seed 0..99・1 秒）
     dotnet run --project BattleSim -c Release 0 sh358 seats [版]        # 第358期 §4: ヒビ ／ ガレ ＋ 6枚（ウロ ／ ツギ ／ ササ ／ ガルド ／ ドルガ ／ ゴルム）から3枚 × 席の全並び ＝ 2,400 並び × ボス（seed 0..4）／ 近衛 ／ 大隊（seed 0..19）・版（既定 hbgr）と規定の両方（16 秒）
     dotnet run --project BattleSim -c Release 0 sh358 flow [版,…]       # 第358期 §6 の 1・2: 破片の流れ ／ 返し ／ 礫 ／ ボスへの届き方（1ターンの与ダメを 欠片の返し ／ 礫 ／ 板の返し ／ ほか に分ける）× 版・代表台 4 × ボス ／ 大隊
