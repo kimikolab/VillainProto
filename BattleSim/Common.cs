@@ -703,7 +703,9 @@ public static UnitDef PinE385(UnitDef d) => ReferenceEquals(d, UnitCatalog.Ere) 
 public static Formation Pin385(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinE385(d); return g; }
 public static UnitDef[] AllH384() => AllH410().Select(d => ReferenceEquals(d, UnitCatalog.Ere) ? UnitCatalog.Uke : d).ToArray();   // 第411期: カリも旧へ
 /// <summary>第411期: `All` のカリを旧（駆り立てのカリ・`KariH406`）に戻した写し（第410期までの 52 枚）。</summary>
-public static UnitDef[] AllH410() => UnitCatalog.All.Select(PinK406).ToArray();
+public static UnitDef[] AllH410() => AllH428().Select(PinK406).ToArray();   // 第429期: 根元を `AllH428`（ウロのいる `All`）に
+/// <summary>第429期: 第428期までの `All`（導火線のチリの位置に鱗のウロ）。古い `All` の写し（`AllH410` ／ `AllH384`）の根元で、封印した器具を起こすときもこれで引く。</summary>
+public static UnitDef[] AllH428() => UnitCatalog.All.Select(d => ReferenceEquals(d, UnitCatalog.Chiri) ? UnitCatalog.Uro : d).ToArray();
     public static UnitDef[] EveryoneH410() => UnitCatalog.Everyone.Select(PinK406).ToArray();   // `Everyone` の第410期まで（id kari は駆り立てのカリ）
 /// <summary>第411期: `compare` の2行をカーズで作り替えて改名した（新 → 旧の行名）。第410期までの器具は `CompareBuildsH410` で旧の行名 ＋ 旧のカリに戻して読む。</summary>
 public static readonly (string Now, string Old)[] CompareRenames411 = { ("刻み (カーズ×ドルガ)", "駆り立て (カリ×ドルガ)"), ("刻み改 (カーズ×死軸)", "駆り立て改 (カリ×死軸)") };
@@ -849,7 +851,7 @@ public static readonly string[] VersionRows418 = { "試遊・リリ 呪い", "�
 /// <summary>第419期に足した試遊の台（鎖の終端 <see cref="VersionsH407"/> が外す）。</summary>
 public static readonly string[] VersionRows419 = { "版・呑み セッキ" };
 public static readonly string[] VersionRows426 = { "版・爆弾 ウケ" };   // 第426期: 爆弾の版の台も鎖の終端で外す（第427期に外した）
-public static readonly string[] VersionRows427 = { "版・導火線 チリ" };   // 第427期: 導火線のチリの版の台も鎖の終端で外す
+public static readonly string[] VersionRows427 = { "版・導火線 チリ", "試遊・導火線 チリ" };   // 第429期: 「試遊・導火線 チリ」（改名）も鎖の終端で外す   // 第427期: 導火線のチリの版の台も鎖の終端で外す
 public static (string Name, Formation F)[] VersionsH407() => Presets.Versions.Where(r => !VersionRows410.Contains(r.Name) && !VersionRows412.Contains(r.Name) && !VersionRows416.Contains(r.Name) && !VersionRows417.Contains(r.Name) && !VersionRows418.Contains(r.Name) && !VersionRows419.Contains(r.Name) && !VersionRows426.Contains(r.Name) && !VersionRows427.Contains(r.Name)).ToArray();
 /// <summary>第411期: 第410期の一覧（第407期の一覧の末尾に「版・K-k 呪い」（K-k）と「版・カーズ 呪い」（KZ-90）・カリは旧）。第408〜410期の器具の試遊の台の項目が読む。</summary>
 public static (string Name, Formation F)[] VersionsH410() => VersionsH407().Select(r => (r.Name, F: Pin406(r.F)))

@@ -6390,6 +6390,8 @@ public static class UnitCatalog
         MinusText = "振るたびに剥がれ、殴られても剥がれる。自分では破片を作れない",
         Flavor = "倒れた者の欠片を拾って身に着ける。誰も惜しまないから、いくらでも拾える。"
     };
+    /// <summary>第429期: 鱗のウロを退役させたときの名前（`Uro` と同じ定義・1 文字も変えていない・`Retired` の末尾）。ウロを使う `compare` ／ 交差帯の 5 行は旧のウロのまま。</summary>
+    public static readonly UnitDef UroH428 = Uro;
 
     /// <summary>
     /// 業のゴウ。<b>ロスターで初めて「状態異常の種類数」を読む駒</b>（第49期）。
@@ -7455,9 +7457,27 @@ public static class UnitCatalog
     /// <b>移し忘れは診断 `sweep`（全診断の exit 検査）が捕まえる</b>——第140期に 19 本が黙って落ちていたのは、
     /// 第108期（ハリ）と第139期（エグ）が外しただけでどこにも移さなかったから。</para>
     /// </summary>
+    /// <summary>
+    /// 導火線のチリ（<b>第429期に新駒</b>・第426〜428期に版で測った・ウロの籍）。規定 ＝ 第428期の BM-emx（<see cref="ChiriBMemx"/> と同じ札の別の定義）。
+    /// <para>手番で、敵の最も前の列の若い席 2 体と両隣の味方に爆弾を仕掛ける。敵の爆弾はこちらの直の刃、味方の爆弾は敵の直の刃を 3 度受けると爆ぜ、浴びた量の半分を撒く
+    /// （敵の爆弾は本人と両隣の敵へ・味方の爆弾は向かいの敵とその両隣へ・味方は巻き込まない）。刻み ／ 巻き込み ／ 中継 ／ 共有では縮まない。誘爆は敵側だけ。持ち主が倒れたら不発。自分では殴らない。</para>
+    /// <para><b>採らなかった形</b>: 味方に仕掛けて味方を巻き込む（第426期 BM-h ＝ 自爆の戦 24〜100%）／ 敵にだけ仕掛ける（第427期 BM-e ＝ 盾役の返しが無く、寄せ集めの大隊が 0 のまま）／
+    /// 刻みで縮む（第427期 BM-em ＝ 爆弾が軽いうちに鳴る・燃焼の台の重さ 19.4 vs 95.8）。「刻みでは縮まない」の勝率の裏付けは燃焼の台（100 に張り付き）でしか見ていない——採る理由は重さと「燃焼 ／ 毒の駒を起爆装置にしない」設計判断。</para>
+    /// <para><b>`All` より前に置く</b>（`All` の初期化が後ろの静的な欄より先に走るので、手番の配列も自前で持つ）。</para>
+    /// </summary>
+    public static readonly UnitDef Chiri = new()
+    {
+        Id = "chiri", Name = "導火線のチリ", MaxHp = 60, Attack = 3, Speed = 6,
+        Traits = new[] { TraitId.BombPlantFoe, TraitId.BombMirror, TraitId.BombNoTick },
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "仕掛ける") },
+        PlusText = ChiriPlus428, MinusText = ChiriMinus428, Flavor = "",
+    };
+    const string ChiriPlus428 = "手番で、敵の前列の二人と両隣の仲間に爆弾を仕掛ける。敵の爆弾はこちらの刃を、仲間の爆弾は敵の刃を三度受けると爆ぜ、浴びた痛みの半分を撒く——敵のは本人と両隣へ、仲間のは向かいの敵とその両隣へ。隣の爆弾も続けて爆ぜる";
+    const string ChiriMinus428 = "自分では殴らない。導火線は直の刃でしか縮まない（燃えても毒でも縮まない）。倒れた者の爆弾は不発";
+
     public static IReadOnlyList<UnitDef> All { get; } = new[]
     {
-        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Lili, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Tsugi, Shiga, Zan, Susu, Gare, Nomi, Kata, Tomo, Hane, Ere, Wata, Uro, Sora, Kari, Tome, Hiyo, Som
+        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Lili, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Tsugi, Shiga, Zan, Susu, Gare, Nomi, Kata, Tomo, Hane, Ere, Wata, Chiri, Sora, Kari, Tome, Hiyo, Som
     };
 
     /// <summary>
@@ -7486,7 +7506,7 @@ public static class UnitCatalog
     /// <para><b>棄却して定義だけ残した素材（オゴ・ゴウ・ヌキ・オノ）はここに入れない</b>——
     /// あれらは一度も `All` に居なかった。ここは「居たが外した」駒の記録である。</para>
     /// </summary>
-    public static IReadOnlyList<UnitDef> Retired { get; } = new[] { Hari, Egu, Kiri, Nata, Uke };   // 第385期: ウケを退役（籍は哀歌のエレへ）
+    public static IReadOnlyList<UnitDef> Retired { get; } = new[] { Hari, Egu, Kiri, Nata, Uke, Uro };   // 第385期: ウケを退役（籍は哀歌のエレへ）・第429期: ウロを退役（籍は導火線のチリへ）
 
     /// <summary>
     /// <b><c>All ∪ Retired</c>（第141期）。辞書のキーや <c>Id</c> の引きに使う集合。</b>
@@ -7613,9 +7633,7 @@ public static class UnitCatalog
         "手番で、敵の前列の二人と両隣の仲間に爆弾を仕掛ける（前列がいなければ最も前の敵へ）。敵の爆弾はこちらの刃を三度受けると爆ぜ、浴びた痛みの半分を本人と両隣に撒く。仲間の爆弾は三度殴られると、向かいの敵とその両隣に撒く",
         "自分では殴らない。仲間の爆弾は仲間が殴られて育つ。倒れた者の爆弾は不発");
     /// <summary>第428期 BM-emx（最終形の候補・BM-em ＋ 刻みでは縮まない・指示書 design/PHASE428_CHIRI_FINAL_SPEC.md §1）。札の組み合わせだけで、engine の窓口は第427期のまま。</summary>
-    public static readonly UnitDef ChiriBMemx = Chiri427(new[] { TraitId.BombPlantFoe, TraitId.BombMirror, TraitId.BombNoTick },
-        "手番で、敵の前列の二人と両隣の仲間に爆弾を仕掛ける。敵の爆弾はこちらの刃を、仲間の爆弾は敵の刃を三度受けると爆ぜ、浴びた痛みの半分を撒く——敵のは本人と両隣へ、仲間のは向かいの敵とその両隣へ。隣の爆弾も続けて爆ぜる",
-        "自分では殴らない。導火線は直の刃でしか縮まない（燃えても毒でも縮まない）。倒れた者の爆弾は不発");
+    public static readonly UnitDef ChiriBMemx = Chiri427(new[] { TraitId.BombPlantFoe, TraitId.BombMirror, TraitId.BombNoTick }, ChiriPlus428, ChiriMinus428);   // 第429期から規定（`Chiri`）と同じ札の別の定義
     /// <summary>第427期 素体（同じ数値・札なし・ふつうに殴る）。測りの対照だけ。</summary>
     public static readonly UnitDef ChiriBM0 = new()
     {

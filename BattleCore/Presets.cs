@@ -1089,7 +1089,8 @@ public static class Presets
         //   過去の器具の一覧（`Common.VersionsH407` から先）には入らない（`VersionRows426`）。
         // 第427期: 「版・爆弾 ウケ」を外し、導火線のチリの版「版・導火線 チリ」（`chiri427 boards` の最良: 「試遊・刻み ノミ」の後1 を BM-em に・4 波平均 38.0・大隊 0 → 52）を足した（指示書 PHASE427_CHIRI_SPEC.md §3-6・`VersionRows427`）。
         // 第428期: BM-emx（最終形の候補）に入れ替え、台は主 6 行の最良「礫 (ガレ×ヒビ×ウロ)」のウロの席（後1・隣にヒビ）に（近衛 8 → 93・大隊 0 → 30・指示書 PHASE428_CHIRI_FINAL_SPEC.md §2-5）。
-        ("版・導火線 チリ", Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Gald, center: UnitCatalog.Hibi, back1: UnitCatalog.ChiriBMemx, back3: UnitCatalog.Gare)),
+        // 第429期: チリを規定にしたので「試遊・導火線 チリ」（規定のチリ・並びは礫のウロの席のまま）に改めた（指示書 PHASE429_CHIRI_SETTLE_SPEC.md §1-6）。
+        ("試遊・導火線 チリ", Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Gald, center: UnitCatalog.Hibi, back1: UnitCatalog.Chiri, back3: UnitCatalog.Gare)),
     };
 
     /// <summary>第416期: 台・呪い（「試遊・呪い」のクビをリリに替え、ウツを矢面に: 前1 ウツ ／ 前3 ムド ／ 中央 ネル ／ 後1 ワタ ／ 後3 リリ）。既定は規定のリリ。</summary>
