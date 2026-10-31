@@ -2575,6 +2575,10 @@ public sealed class UnitTally
     public long Wd423Reads, Wd423ReadAmt, Wd423Peak;
     /// <summary>第424期（計数のみ）: 1 手番（ターン）の読みの和の最大（`Wd424TurnMax`）。`Wd424CurTurn` ／ `Wd424CurSum` は数えている途中の値（合算しない）。</summary>
     public long Wd424TurnMax, Wd424CurSum; public int Wd424CurTurn;
+    /// <summary>第426期（計数のみ・爆弾の版）。仕掛けた側: 仕掛けた数（味方 ／ 敵）・爆ぜた数（味方側 ／ 敵側）・誘爆・重さの和（味方側 ／ 敵側）／ 最大・爆発で倒れた味方 ／ 敵・不発・
+    /// 起爆した一撃（敵の爆弾: ノミ ／ ホタ ／ 燃焼の刻み ／ 他・味方の爆弾: 敵の単体 ／ 範囲 ／ 燃焼の刻み ／ 他）。持ち主の側: 爆ぜた数 ／ 重さ。受けた側: 爆発で減った HP＋破片。</summary>
+    public long Bm426PlantAlly, Bm426PlantFoe, Bm426BlastAlly, Bm426BlastFoe, Bm426Chain, Bm426WeightAlly, Bm426WeightFoe, Bm426WeightMax, Bm426AllyKilled, Bm426FoeKilled, Bm426Duds;
+    public long Bm426TrigNomi, Bm426TrigHota, Bm426TrigBurn, Bm426TrigOther, Bm426TrigSingle, Bm426TrigArea, Bm426TrigAllyBurn, Bm426TrigAllyOther, Bm426Held, Bm426HeldWeight, Bm426BlastTaken;
     public int[]? Wd423ByTurn;
     public long Ch422Hits, Ch422DepthSum, Ch422DepthMax, Ch422Resets, Ch422Carry, Ch422Bonus, Ch422Neck, Ch422NeckAmt, Ch422YokeCut, Ch422NeckPassed;
     public long Sw420HeldSpits, Sw420DigestSpits, Sw420DigestHeal, Sw420SelfDigestTurns, Sw420SelfDigest, Sw420SelfHeal, Sw420HeldAtEnd, Sw420Lost, Sw420RallyRead, Sw420LampRead;
@@ -3941,6 +3945,8 @@ public sealed class UnitTally
         VeilBreaks419 += o.VeilBreaks419;
         Wd423Reads += o.Wd423Reads; Wd423ReadAmt += o.Wd423ReadAmt; Wd423Peak = Math.Max(Wd423Peak, o.Wd423Peak);   // 第423期
         Wd424TurnMax = Math.Max(Wd424TurnMax, o.Wd424TurnMax);   // 第424期
+        Bm426PlantAlly += o.Bm426PlantAlly; Bm426PlantFoe += o.Bm426PlantFoe; Bm426BlastAlly += o.Bm426BlastAlly; Bm426BlastFoe += o.Bm426BlastFoe; Bm426Chain += o.Bm426Chain; Bm426WeightAlly += o.Bm426WeightAlly; Bm426WeightFoe += o.Bm426WeightFoe; Bm426WeightMax = Math.Max(Bm426WeightMax, o.Bm426WeightMax); Bm426AllyKilled += o.Bm426AllyKilled; Bm426FoeKilled += o.Bm426FoeKilled; Bm426Duds += o.Bm426Duds;   // 第426期
+        Bm426TrigNomi += o.Bm426TrigNomi; Bm426TrigHota += o.Bm426TrigHota; Bm426TrigBurn += o.Bm426TrigBurn; Bm426TrigOther += o.Bm426TrigOther; Bm426TrigSingle += o.Bm426TrigSingle; Bm426TrigArea += o.Bm426TrigArea; Bm426TrigAllyBurn += o.Bm426TrigAllyBurn; Bm426TrigAllyOther += o.Bm426TrigAllyOther; Bm426Held += o.Bm426Held; Bm426HeldWeight += o.Bm426HeldWeight; Bm426BlastTaken += o.Bm426BlastTaken;
         Ch422Hits += o.Ch422Hits; Ch422DepthSum += o.Ch422DepthSum; Ch422DepthMax = Math.Max(Ch422DepthMax, o.Ch422DepthMax); Ch422Resets += o.Ch422Resets; Ch422Carry += o.Ch422Carry; Ch422Bonus += o.Ch422Bonus; Ch422Neck += o.Ch422Neck; Ch422NeckAmt += o.Ch422NeckAmt; Ch422YokeCut += o.Ch422YokeCut; Ch422NeckPassed += o.Ch422NeckPassed;   // 第422期
         Sw420HeldSpits += o.Sw420HeldSpits; Sw420DigestSpits += o.Sw420DigestSpits; Sw420DigestHeal += o.Sw420DigestHeal; Sw420SelfDigestTurns += o.Sw420SelfDigestTurns; Sw420SelfDigest += o.Sw420SelfDigest; Sw420SelfHeal += o.Sw420SelfHeal; Sw420HeldAtEnd += o.Sw420HeldAtEnd; Sw420Lost += o.Sw420Lost; Sw420RallyRead += o.Sw420RallyRead; Sw420LampRead += o.Sw420LampRead;   // 第420期
         Sw419Gulped += o.Sw419Gulped; Sw419GulpedLost += o.Sw419GulpedLost; Sw419GulpedTurn += o.Sw419GulpedTurn; Sw419RallyRead += o.Sw419RallyRead; Sw419LampRead += o.Sw419LampRead; Sw419FoeGulped += o.Sw419FoeGulped; Sw419IdleHead += o.Sw419IdleHead; Sw419IdleHeadSold += o.Sw419IdleHeadSold;

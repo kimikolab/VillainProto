@@ -1347,6 +1347,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 nomi425 verify          # 第425期: 段0 の後の docs/balance.md ／ elite.md を期待値と段0 の前の写しに突き合わせる（ノミのいない行で動いたセルが 0 の門）
     dotnet run --project BattleSim -c Release 0 nomi425 confirm         # 第425期 §1-8: 「試遊・刻み ノミ」ほか 3 台 × 4 波・seed 0..99
     dotnet run --project BattleSim -c Release 0 nomi425 bomb            # 第425期 §3: 爆弾の新駒の材料（3 台 × 4 波・浴びた量 ／ 周りの傷＋燃焼・席ごとのばらつき）
+    dotnet run --project BattleSim -c Release 0 bomb426 boards          # 第426期 §3-3: 台 4 つ（自傷 ／ 燃焼 ポンの台 ／ 手番 芯4枚 ／ 刻み ノミ）× 席 {中央, 後1} × {BM-h, BM-f, BM-hc, 素体} × 4 波・seed 0..99（勝率 ／ 爆弾の数 ／ 重さ ／ 起爆した一撃 ／ 受けた量）（予測 `.tmp/p426/predict.md` が無ければ走らない）（4 秒）
+    dotnet run --project BattleSim -c Release 0 bomb426 rows            # 第426期 §3-4: 寄せ集めの候補（compare の行のうちツギ ／ ササ ／ ゴルム ／ ガルドを含む行・戦闘0回）
+    dotnet run --project BattleSim -c Release 0 bomb426 mixed           # 第426期 §3-4: 寄せ集め 3 行 × {元の行, 素体, BM-h} × 本編 5 波 ＋ 近衛 ／ 大隊・seed 0..199（3 秒）
+    dotnet run --project BattleSim -c Release 0 bomb426 log <h|f|hc|0> <台の頭> <中央|後1> <波の鍵> [seed]   # 第426期: 1戦のログ
+    dotnet run --project BattleSim -c Release 0 bomb426 check           # 第426期: 自己検査（版の札 ／ 数値 ／ `All` の外・compare に保持者なし・verbose の有無・BM-hc は誘爆しない・素体は爆弾 0・試遊の台と鎖の終端）
     dotnet run --project BattleSim -c Release 0 nomi425 check           # 第425期: 自己検査（規定 ＝ 旧 − CarveOnce ＋ CarveReadCap・PinN424・試遊の台と鎖の終端・verbose の有無）
     dotnet run --project BattleSim -c Release 0 sh358 p0                # 第358期 §2 Phase 0: 破片の流れ（書いた ／ 敵の一撃で割れた ／ 読んだ ／ 残った）・ツギの板の返し（1回 ／ 同じ主へ集まった塊）・ヒビの砕けと倒れた T・ボスの1ターンの与ダメ ／ 回復（規定・代表台 3 × 5 波・seed 0..99・1 秒）
     dotnet run --project BattleSim -c Release 0 sh358 seats [版]        # 第358期 §4: ヒビ ／ ガレ ＋ 6枚（ウロ ／ ツギ ／ ササ ／ ガルド ／ ドルガ ／ ゴルム）から3枚 × 席の全並び ＝ 2,400 並び × ボス（seed 0..4）／ 近衛 ／ 大隊（seed 0..19）・版（既定 hbgr）と規定の両方（16 秒）

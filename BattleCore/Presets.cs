@@ -1085,6 +1085,9 @@ public static class Presets
         // 第424期: 読みに上限を足した版のうち、ノミ単騎が 100 を下回る中で最も高い NM-wc（1 発の読みは +20 まで）に入れ替え（名前と並びはそのまま・指示書 PHASE424_NOMI_CAP_SPEC.md §2-6）。
         // 第425期: NM-wc を規定にしたので「試遊・刻み ノミ」（規定のノミ・並びはノミ単騎のまま）に改めた（指示書 PHASE425_NOMI_SETTLE_SPEC.md §1-6）。
         ("試遊・刻み ノミ", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gan, center: UnitCatalog.Nomi, back1: UnitCatalog.Vel, back3: UnitCatalog.Dolga)),
+        // 第426期: ウケの枠の新駒「爆弾」の版「版・爆弾 ウケ」（`bomb426 boards` の最良: 「試遊・刻み ノミ」の後1（ヴェル）を BM-hc（誘爆なし）に・4 波平均 37.8・指示書 PHASE426_BOMB_SPEC.md §3-6）。
+        //   過去の器具の一覧（`Common.VersionsH407` から先）には入らない（`VersionRows426`）。
+        ("版・爆弾 ウケ", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gan, center: UnitCatalog.Nomi, back1: UnitCatalog.UkeBMhc, back3: UnitCatalog.Dolga)),
     };
 
     /// <summary>第416期: 台・呪い（「試遊・呪い」のクビをリリに替え、ウツを矢面に: 前1 ウツ ／ 前3 ムド ／ 中央 ネル ／ 後1 ワタ ／ 後3 リリ）。既定は規定のリリ。</summary>

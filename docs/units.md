@@ -738,6 +738,9 @@
 | `CarveReadCap` | 刻みのノミ |
 | `CarveRead1` | - |
 | `KissRushDeductAny` | - |
+| `BombPlant` | - |
+| `BombFull` | - |
+| `BombNoChain` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

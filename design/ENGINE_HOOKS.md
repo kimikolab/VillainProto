@@ -1779,3 +1779,10 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 
 - 新しい窓口は無い。印 3 枚は `CarveTrait` だけが読む: `CarveReadFirst` は `ctx.VolleyShotOf(self) > 0` の発で読みを 0 にする（刻みは毎発）。`CarveReadCap` は 1 発の上乗せを `CarveTrait.ReadCap`（20）で切る。`CarveRead1` は係数を 1 にする。
 - 計数のみ: `UnitTally.Wd424TurnMax`（1 ターンの読みの和の最大・途中の値 `Wd424CurTurn` ／ `Wd424CurSum` は合算しない）。乱数を引かない。
+
+## 第426期 —— 爆弾（ウケの枠の新駒・版だけ・`BombPlant` ／ `BombFull` ／ `BombNoChain`）
+
+- **窓口 1: `BattleContext.PlantBombs426`**（`BombPlantTrait.OnAction` だけが呼ぶ）。隣の味方すべてと敵の前列の席番号が最も若い 1 体（どちらも爆弾を持たない者）に爆弾を置く。乱数を引かない。状態は戦ごとに `BattleContext` の辞書 `_bombs426`（`Counters` に置かない＝会戦の境界の掃除は要らない）。
+- **窓口 2: `ApplyDamageCore` の最後の `BombAfterHit426`**（反射の板 ／ 返しの破片の後）。本体の前に持ち主の HP と HP＋破片を控え、HP が減っていれば導火線 +1・浴びた量（HP＋破片の減り）を足す。3 で爆ぜる（その一撃で倒れても爆ぜる）・3 の前に倒れたら不発。爆発（`Blast426`）は持ち主（生きていれば）とその隣（同じ陣営）に `ApplyDamage(…, 出どころ ＝ 仕掛けた駒, isFriendlyFire ＝ 同じ陣営)`（`singleHit: false`・破片 ／ 身構え ／ 軛はそのまま通る）。
+- **連鎖の止め方**: 爆発の連鎖の中（`_bombBlasting426`）の一撃は導火線を進めず、何か受けた爆弾は誘爆として列（`_bombQueue426`）の後ろに足す（幅優先・爆ぜた爆弾は辞書から外すので 1 個 1 回）。`BombNoChain` は誘爆しない。
+- 爆弾が 1 つも置かれない戦は `_bombs426` が null のまま（`ApplyDamageCore` は null の比較 1 つで抜ける）。計数のみ: `UnitTally.Bm426*`（仕掛けた側 ／ 持ち主 ／ 受けた側）。新しい `BattleEventKind` は無い（爆発は `Highlight` のログ）。

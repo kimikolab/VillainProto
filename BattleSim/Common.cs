@@ -848,7 +848,8 @@ public static readonly string[] VersionRows417 = { "版・LK-1m-s 呪い", "版�
 public static readonly string[] VersionRows418 = { "試遊・リリ 呪い", "試遊・リリ 紅", "版・2回 リリ 呪い", "版・彫り ノミ", "版・刻み ノミ", "試遊・刻み ノミ" };   // 第422期に「版・彫り ノミ」・第423期に「版・刻み ノミ」・第425期に「試遊・刻み ノミ」（「版・刻み ノミ」の改名）も足した（鎖の終端で外す）
 /// <summary>第419期に足した試遊の台（鎖の終端 <see cref="VersionsH407"/> が外す）。</summary>
 public static readonly string[] VersionRows419 = { "版・呑み セッキ" };
-public static (string Name, Formation F)[] VersionsH407() => Presets.Versions.Where(r => !VersionRows410.Contains(r.Name) && !VersionRows412.Contains(r.Name) && !VersionRows416.Contains(r.Name) && !VersionRows417.Contains(r.Name) && !VersionRows418.Contains(r.Name) && !VersionRows419.Contains(r.Name)).ToArray();
+public static readonly string[] VersionRows426 = { "版・爆弾 ウケ" };   // 第426期: 爆弾の版の台も鎖の終端で外す
+public static (string Name, Formation F)[] VersionsH407() => Presets.Versions.Where(r => !VersionRows410.Contains(r.Name) && !VersionRows412.Contains(r.Name) && !VersionRows416.Contains(r.Name) && !VersionRows417.Contains(r.Name) && !VersionRows418.Contains(r.Name) && !VersionRows419.Contains(r.Name) && !VersionRows426.Contains(r.Name)).ToArray();
 /// <summary>第411期: 第410期の一覧（第407期の一覧の末尾に「版・K-k 呪い」（K-k）と「版・カーズ 呪い」（KZ-90）・カリは旧）。第408〜410期の器具の試遊の台の項目が読む。</summary>
 public static (string Name, Formation F)[] VersionsH410() => VersionsH407().Select(r => (r.Name, F: Pin406(r.F)))
     .Append(("版・K-k 呪い", Formation.Build(front1: UnitCatalog.KariKk, front3: UnitCatalog.Mudo, center: UnitCatalog.Nel, back1: UnitCatalog.Kubi, back3: UnitCatalog.Utsu)))

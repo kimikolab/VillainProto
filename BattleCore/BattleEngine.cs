@@ -13651,6 +13651,9 @@ public sealed class BattleContext
         int prevH358 = _hretAmt358; UnitState? prevHF358 = _hretFrom358;   // 第358期（返しの破片）
         _hretAmt358 = 0; _hretFrom358 = null;
         if (_reboundLive && amount > 0) NoteFrameHit(target, source, burnTick);   // 第209期（計数のみ）
+        // 第426期（爆弾の版）: 爆弾の持ち主なら、本体の前に HP と HP＋破片を控える（爆弾が1つも無い戦は null の比較1つで抜ける）。
+        Bomb426? bomb426 = null; int bombHp426 = 0, bombHa426 = 0;
+        if (_bombs426 is not null && _bombs426.TryGetValue(target.InstanceId, out bomb426)) { bombHp426 = target.Hp; bombHa426 = target.Hp + target.RawCounter(StatusKeys.Armor); }
         // 第255期（被弾の燃焼）: 本体の前に「前から燃えていたか」と HP＋破片を控え、本体の後で減っていれば燃焼を刻む。札が無ければ比較1つで抜ける。
         bool burnHit = _burnHitLive && amount > 0 && BurnHitEligible(target, source, burnTick, relayed, hexShare, levy);
         int burnHitBefore = burnHit ? target.Hp + target.RawCounter(StatusKeys.Armor) : 0;
@@ -13689,6 +13692,111 @@ public sealed class BattleContext
         }
         if (myAmt > 0 && myFrom is not null) ReflectPlank(target, myFrom, myAmt, myRest, myRatio);
         if (myH358 > 0 && myHF358 is not null) ShardReturn358(target, myHF358, myH358);   // 第358期（HB-r）
+        if (bomb426 is not null) BombAfterHit426(bomb426, target, source, burnTick, pattern, bombHp426, bombHa426);   // 第426期（導火線 ／ 誘爆 ／ 不発・一撃の後始末が済んでから）
+    }
+
+    // ---- 第426期: 爆弾（ウケの枠の新駒・版 BM-h ／ BM-f ／ BM-hc・指示書 design/PHASE426_BOMB_SPEC.md §1）----
+    // 爆弾は置かれた駒の被弾で進むので、状態は戦ごとに `BattleContext` が持つ（`Counters` に置かない＝会戦の境界の掃除も要らない）。
+    // 乱数は引かない。爆弾が1つも置かれない戦は `_bombs426` が null のまま（`ApplyDamageCore` の比較1つで抜ける）。
+    sealed class Bomb426 { public UnitState Planter = null!, Holder = null!; public int Fuse, Taken; public bool Full, Chain; }
+    Dictionary<int, Bomb426>? _bombs426;
+    readonly List<Bomb426> _bombQueue426 = new();
+    bool _bombBlasting426;
+
+    /// <summary>第426期: その駒が爆弾を持っているか（表示 ／ 器具用・盤面は触らない）。</summary>
+    public bool HasBomb426(UnitState u) => _bombs426 is not null && _bombs426.ContainsKey(u.InstanceId);
+
+    /// <summary>第426期（`BombPlantTrait` の手番）: 隣の味方すべてと、敵の前列のうち席番号が最も若い 1 体（どちらも爆弾を持たない者）に爆弾を置く。</summary>
+    internal void PlantBombs426(UnitState self)
+    {
+        var targets = new List<UnitState>();
+        foreach (UnitState a in LivingMembers(self.TeamId).OrderBy(a => a.Slot))
+            if (a != self && FormationRules.AreAdjacent(self, a) && !HasBomb426(a)) targets.Add(a);
+        UnitState? foe = LivingMembers(Opponent(self.TeamId)).Where(e => e.Row == Row.Front && !HasBomb426(e)).OrderBy(e => e.Slot).FirstOrDefault();
+        if (foe is not null) targets.Add(foe);
+        if (targets.Count == 0) { Log($"    {self.Name} は仕掛ける先が無い", LogKind.Status); return; }
+        _bombs426 ??= new Dictionary<int, Bomb426>();
+        bool full = self.HasTrait(TraitId.BombFull), chain = !self.HasTrait(TraitId.BombNoChain);
+        UnitTally t = TallyOf(self);
+        foreach (UnitState u in targets)
+        {
+            _bombs426[u.InstanceId] = new Bomb426 { Planter = self, Holder = u, Full = full, Chain = chain };
+            if (u.TeamId == self.TeamId) t.Bm426PlantAlly++; else t.Bm426PlantFoe++;
+        }
+        Log($"    {self.Name} が {string.Join("・", targets.Select(u => u.Name))} に爆弾を仕掛けた", LogKind.Status);
+    }
+
+    /// <summary>
+    /// 第426期: 爆弾の持ち主への一撃の後始末（`ApplyDamageCore` の最後）。
+    /// <para>ふつうの一撃: HP が減っていれば導火線が 1 縮み、浴びた量（HP＋破片の減り）を足す。3 で爆ぜる（その一撃で倒れても爆ぜる——引き金が先）。
+    /// 3 に届く前に倒れたら不発。爆発の連鎖の中の一撃: 導火線は進めず、何か受けていれば誘爆（BM-hc は爆ぜない・倒れていれば不発）。</para>
+    /// </summary>
+    void BombAfterHit426(Bomb426 b, UnitState target, UnitState? source, bool burnTick, AttackPattern? pattern, int hpBefore, int haBefore)
+    {
+        if (_bombs426 is null || !_bombs426.TryGetValue(target.InstanceId, out Bomb426? cur) || cur != b) return;
+        int taken = haBefore - (Math.Max(0, target.Hp) + target.RawCounter(StatusKeys.Armor));
+        UnitTally pt = TallyOf(b.Planter);
+        bool fire = false;
+        if (_bombBlasting426)
+        {
+            if (b.Chain && taken > 0) { b.Taken += taken; fire = true; pt.Bm426Chain++; }
+        }
+        else if (target.Hp < hpBefore)
+        {
+            b.Fuse++;
+            b.Taken += Math.Max(0, taken);
+            if (b.Fuse >= BombPlantTrait.Fuse)
+            {
+                fire = true;
+                if (target.TeamId != b.Planter.TeamId)
+                {
+                    if (burnTick) pt.Bm426TrigBurn++;
+                    else if (source?.Def.Id == "nomi") pt.Bm426TrigNomi++;
+                    else if (source?.Def.Id == "hota") pt.Bm426TrigHota++;
+                    else pt.Bm426TrigOther++;
+                }
+                else if (burnTick) pt.Bm426TrigAllyBurn++;
+                else if (source is null || source.TeamId == target.TeamId) pt.Bm426TrigAllyOther++;
+                else if ((pattern ?? source.CurrentPattern) == AttackPattern.Single) pt.Bm426TrigSingle++;
+                else pt.Bm426TrigArea++;
+            }
+        }
+        if (fire) { _bombs426.Remove(target.InstanceId); _bombQueue426.Add(b); }
+        else if (!target.IsAlive) { _bombs426.Remove(target.InstanceId); pt.Bm426Duds++; }
+        if (_bombBlasting426 || _bombQueue426.Count == 0) return;
+        _bombBlasting426 = true;
+        try
+        {
+            for (int i = 0; i < _bombQueue426.Count; i++) Blast426(_bombQueue426[i]);   // 幅優先（誘爆は列の後ろに足される・1 個 1 回）
+        }
+        finally { _bombQueue426.Clear(); _bombBlasting426 = false; }
+    }
+
+    /// <summary>第426期: 爆発。持ち主（生きていれば）とその隣（同じ陣営）に、浴びた量の半分（BM-f は全量）。出どころは仕掛けた駒・範囲（`singleHit: false`）。</summary>
+    void Blast426(Bomb426 b)
+    {
+        UnitState h = b.Holder;
+        int amt = b.Full ? b.Taken : b.Taken / 2;
+        bool foeSide = h.TeamId != b.Planter.TeamId;
+        UnitTally pt = TallyOf(b.Planter), ht = TallyOf(h);
+        if (foeSide) { pt.Bm426BlastFoe++; pt.Bm426WeightFoe += amt; } else { pt.Bm426BlastAlly++; pt.Bm426WeightAlly += amt; }
+        if (amt > pt.Bm426WeightMax) pt.Bm426WeightMax = amt;
+        ht.Bm426Held++; ht.Bm426HeldWeight += amt;
+        Log($"    {h.Name} の爆弾が爆ぜた（{amt}）", LogKind.Highlight, h);
+        if (amt <= 0) return;
+        var hit = new List<UnitState>();
+        if (h.IsAlive) hit.Add(h);
+        foreach (UnitState u in LivingMembers(h.TeamId).OrderBy(u => u.Slot))
+            if (u != h && FormationRules.AreAdjacent(h, u)) hit.Add(u);
+        foreach (UnitState u in hit)
+        {
+            if (!u.IsAlive) continue;
+            bool ff = u.TeamId == b.Planter.TeamId;
+            int before = u.Hp + u.RawCounter(StatusKeys.Armor);
+            ApplyDamage(u, amt, b.Planter, isFriendlyFire: ff);
+            TallyOf(u).Bm426BlastTaken += before - (Math.Max(0, u.Hp) + u.RawCounter(StatusKeys.Armor));
+            if (!u.IsAlive) { if (ff) pt.Bm426AllyKilled++; else pt.Bm426FoeKilled++; }
+        }
     }
 
     /// <summary>ダメージ処理の本体。<see cref="ApplyDamageCore"/> だけが呼ぶ。</summary>

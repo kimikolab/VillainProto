@@ -7571,6 +7571,31 @@ public static class UnitCatalog
     public static readonly UnitDef UkeUKc = Re351(Uke, new[] { TraitId.PlunderCum }, "奪いのウケ",
         "呪いを受けた敵を殴るたび、その呪いの半分を自分の力にする（その戦の間・積み上がる・同じ呪いは二度奪えない）", "呪われていない敵を殴ると、腕が鈍る（攻撃力 -1）");
 
+    // ---- 第426期: ウケの枠の新駒「爆弾」の版（指示書 design/PHASE426_BOMB_SPEC.md §1〜§2・`All` にも `Retired` にも入れない・保持者 0 枚）----
+    // Id はウケの枠を再利用（"uke"）・名前は仮名（ポンが後で決める）。旧のウケ（引き受け）は `Uke` のまま `Retired` に残す（規定化のときに `UkeH385` の名を付ける）。
+    static readonly UnitAction[] BombActions426 = { new(ActionKind.Skill, Label: "仕掛ける") };
+    const string BombMinus426 = "仲間の爆弾は仲間を巻き込む。自分では殴らない。倒れた者の爆弾は不発";
+    static UnitDef Bomb426(TraitId[] traits, string plus) => new()
+    {
+        Id = "uke", Name = "爆弾のウケ", MaxHp = 60, Attack = 3, Speed = 6,
+        Traits = traits, Actions = BombActions426, PlusText = plus, MinusText = BombMinus426, Flavor = "",
+    };
+    /// <summary>第426期 BM-h（浴びた量の半分・§1 の基本形）。</summary>
+    public static readonly UnitDef UkeBMh = Bomb426(new[] { TraitId.BombPlant },
+        "手番で、両隣の仲間と敵の前列の一人に爆弾を仕掛ける。仕掛けられた者が三度殴られると爆ぜ、浴びた痛みの半分を本人と両隣に撒く。隣の爆弾も続けて爆ぜる");
+    /// <summary>第426期 BM-f（浴びた量の全量）。</summary>
+    public static readonly UnitDef UkeBMf = Bomb426(new[] { TraitId.BombPlant, TraitId.BombFull },
+        "手番で、両隣の仲間と敵の前列の一人に爆弾を仕掛ける。仕掛けられた者が三度殴られると爆ぜ、浴びた痛みをそのまま本人と両隣に撒く。隣の爆弾も続けて爆ぜる");
+    /// <summary>第426期 BM-hc（BM-h ＋ 誘爆なし・対照）。</summary>
+    public static readonly UnitDef UkeBMhc = Bomb426(new[] { TraitId.BombPlant, TraitId.BombNoChain },
+        "手番で、両隣の仲間と敵の前列の一人に爆弾を仕掛ける。仕掛けられた者が三度殴られると爆ぜ、浴びた痛みの半分を本人と両隣に撒く");
+    /// <summary>第426期 素体（同じ数値・札なし・ふつうに殴る）。測りの対照だけ。</summary>
+    public static readonly UnitDef UkeBM0 = new()
+    {
+        Id = "uke", Name = "爆弾のウケ（素体）", MaxHp = 60, Attack = 3, Speed = 6,
+        Traits = Array.Empty<TraitId>(), PlusText = "（素体・札なし）", MinusText = "（素体・札なし）", Flavor = "",
+    };
+
     // ---------------------------------------------------------------------------------
     // 第408期【軽い期・版だけ】カリの転生（デバフ軸へ）（指示書 design/PHASE408_KARI_VERSIONS_SPEC.md §2）。版はカリの写し（Id は同じ・HP 62 ／ 速 9・旧の札 Goad は外す・`All` の外）。保持者 0 枚。
     // ---------------------------------------------------------------------------------
