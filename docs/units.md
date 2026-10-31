@@ -733,6 +733,7 @@
 | `Chisel` | - |
 | `ChiselWound` | - |
 | `ChiselNeck` | - |
+| `CarveDeep3` | - |
 | `KissRushDeductAny` | - |
 | `Inversion` | - |
 | `Drought` | - |

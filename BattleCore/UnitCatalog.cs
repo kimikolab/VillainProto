@@ -5768,6 +5768,23 @@ public static class UnitCatalog
         Flavor = "一撃を十に割り、同じ場所を彫り続ける。一彫りは浅い。"
     };
 
+    // ---- 第423期: 刻みのノミの版（毎発刻む・規定の上・`All` の外・数値はそのまま・指示書 design/PHASE423_NOMI_WOUND_SPEC.md §1）----
+    // 連打（`Pellet`）・執着・再行動はそのまま。`CarveOnce`（最初の 1 発だけ刻む）を外すと、刻みの本体（`CarveTrait`）は 1 発ごとに読んで刻む。
+    static UnitDef NomiOn423(TraitId[] extra, string plus) => new()
+    {
+        Id = Nomi.Id, Name = Nomi.Name, MaxHp = Nomi.MaxHp, Attack = Nomi.Attack, Speed = Nomi.Speed, Advances = Nomi.Advances, Pattern = Nomi.Pattern,
+        Traits = Nomi.Traits.Where(t => t != TraitId.CarveOnce).Concat(extra).ToArray(),
+        Actions = Nomi.Actions,
+        PlusText = plus,
+        MinusText = Nomi.MinusText,
+        Flavor = Nomi.Flavor,
+    };
+    const string WoundPlus423 = "攻撃力の数だけ 1 ずつ連打する。一発ごとに傷を刻み、相手の傷 1 つにつき 2 を上乗せする。刻んだ相手が倒れると、もう一度動く（一振りに 1 回）";
+    /// <summary>ノミの版 NM-w 毎発刻む（第423期）: 規定 − `CarveOnce`。</summary>
+    public static readonly UnitDef NomiNMw = NomiOn423(Array.Empty<TraitId>(), WoundPlus423);
+    /// <summary>ノミの版 NM-w3 毎発刻む・深く読む（第423期）: NM-w ＋ 傷 1 つにつき +3（`CarveDeep3`）。</summary>
+    public static readonly UnitDef NomiNMw3 = NomiOn423(new[] { TraitId.CarveDeep3 }, WoundPlus423.Replace("2 を上乗せ", "3 を上乗せ"));
+
     // ---- 第422期: 刻みのノミの版（一点彫り・規定の上・`All` の外・数値はそのまま・指示書 design/PHASE422_NOMI_CHISEL_SPEC.md §1）----
     // 連打（`Pellet`）を外して単発にし、一点彫り（`Chisel`）を足す。刻み（`Carve`・傷 1 つにつき +2）・執着（`Fixate`）・再行動（engine の規則）はそのまま。
 

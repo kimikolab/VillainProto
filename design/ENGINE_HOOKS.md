@@ -1769,3 +1769,8 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **上乗せ**: `PerformAttackBody` が手番の一撃の量（`first`）を作る所に `Chisel422` を 1 行（印の重みの直後）。彫りの帳簿は `ChiselTrait` の私有キー・持ち越しは `ChiselTrait.OnAnyDeath`。
 - **遮られない一撃**（NM-cb）: `HitFrame.Unblocked` を足した（`_unblockedNext422` を立てて `ApplyDamageCore` の最初の行で読んで消す・主目標の `ApplyDamage` の後にも消す）。読むのは軛の段だけ（ノミの一撃を 1 回だけ通す）。
 - **保持者がいなければ真偽1つで抜ける。乱数を引かない。**
+
+## 第423期 —— ノミの毎発刻む（版だけ・`CarveDeep3`）
+
+- 新しい窓口は無い。NM-w は札 `CarveOnce` を外すだけ（`CarveTrait` は札が無ければ 1 発ごとに読んで刻む）。NM-w3 の印 `CarveDeep3` は `CarveTrait` だけが読む。
+- 計数のみ: `Wound` に、診断だけが立てる `BattleContext.WoundTrace423` の下で傷の最大とターンごとの傷（`UnitTally.Wd423Peak` ／ `Wd423ByTurn`）。既定では真偽1つで抜ける。

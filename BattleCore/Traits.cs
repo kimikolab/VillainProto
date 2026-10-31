@@ -1074,6 +1074,7 @@ public enum TraitId
     Chisel,               // 一点彫り（第422期・ノミの版 NM-c ／ NM-cs ／ NM-cb・連打 `Pellet` を外した単発の上に）: 同じ敵を続けて殴るたび彫りが 1 深まり、手番の一撃に 彫り × 4 を上乗せする（上限なし）。相手を替えると彫りは 0。刻んだ相手が倒れたら彫りの半分を持ち越す（**判定は engine の `Chisel422`**・`ChiselTrait` は持ち越しと境界の掃除）
     ChiselWound,          // 傷で深まる（第422期・NM-cs）: 彫りの深まり方を「殴るたび 1 ＋ その敵の傷の数」に・1 彫りにつき +3（**札そのものは挙動を持たない**・`Chisel422` が読む）
     ChiselNeck,           // ボスの首（第422期・NM-cb）: 彫りが 5 に届いた一撃は軛に切られない（1戦に1回）（**札そのものは挙動を持たない**・`Chisel422` ／ 軛の段が読む）
+    CarveDeep3,           // 深く読む（第423期・ノミの版 NM-w3）: 刻みの読みを傷 1 つにつき +2 → +3 に（**札そのものは挙動を持たない**・`CarveTrait` が読む）
     KissRushDeductAny,    // 第420期: 旧の差し引き（第417〜419期の `KissRushDeduct` の挙動・注ぎが受け取られなくても引く）。旧のリリ `LiliH419` だけが持つ（**札そのものは挙動を持たない**・`KissRushTrait` が読む）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -6591,6 +6592,8 @@ public sealed class CarveTrait : Trait
 
     /// <summary>傷1つあたりの上乗せ。<b>加算</b>。畳んだぶん抉り（+3）より低い。</summary>
     public const int PerWound = 2;
+    /// <summary>第423期（NM-w3・`CarveDeep3`）: 深く読む版の傷1つあたりの上乗せ。</summary>
+    public const int PerWoundDeep = 3;
 
     public override TraitId Id => TraitId.Carve;
 
@@ -6610,11 +6613,13 @@ public sealed class CarveTrait : Trait
         int w = ctx.WoundDepthOf(target);
         if (w > 0)
         {
-            ctx.Log($"    {self.Name} が {target.Name} の古い傷をなぞる（傷 {w} → +{PerWound * w}）",
+            ctx.Log($"    {self.Name} が {target.Name} の古い傷をなぞる（傷 {w} → +{(self.HasTrait(TraitId.CarveDeep3) ? PerWoundDeep : PerWound) * w}）",
                 LogKind.Highlight, self);
+            int per = self.HasTrait(TraitId.CarveDeep3) ? PerWoundDeep : PerWound;   // 第423期（NM-w3）: 札が無ければ今の +2
             long hp0 = ctx.HpRemoved;   // 第120期: 実効（盤面から実際に減った HP）を取る
-            ctx.ApplyDamage(target, PerWound * w, self);
-            ctx.NoteWoundRead(target, WoundReader.Carve, w, PerWound * w, ctx.HpRemoved - hp0);
+            ctx.ApplyDamage(target, per * w, self);
+            ctx.NoteWoundRead(target, WoundReader.Carve, w, per * w, ctx.HpRemoved - hp0);
+            UnitTally rt423 = ctx.TallyOf(self); rt423.Wd423Reads++; rt423.Wd423ReadAmt += per * w;   // 第423期・計数のみ
         }
 
         // 上乗せで倒れたなら刻まない（上の生存判定と同じ理由。ApplyDamage を挟んだので取り直す）。
@@ -20570,6 +20575,7 @@ public static class TraitCatalog
         new ChiselTrait(),                                           // 第422期（一点彫り NM-c・上乗せは engine）
         new MarkOnlyTrait(TraitId.ChiselWound),                      // 第422期（傷で深まる NM-cs・印）
         new MarkOnlyTrait(TraitId.ChiselNeck),                       // 第422期（ボスの首 NM-cb・印）
+        new MarkOnlyTrait(TraitId.CarveDeep3),                       // 第423期（深く読む NM-w3・印・`CarveTrait` が読む）
         new MarkOnlyTrait(TraitId.KissRushDeductAny),                // 第420期（旧の差し引き・`LiliH419` だけ・印）
         new LastStandHoldOldScarTrait(),   // 第199期（対照・保持者 0 枚）
         new LastStandHoldNoStockTrait(),   // 第199期（対照・保持者 0 枚）

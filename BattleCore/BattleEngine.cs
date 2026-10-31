@@ -4035,6 +4035,13 @@ public sealed class BattleContext
         }
 
         target.SetCounter(StatusKeys.Wound, w);
+        // 第423期（計数のみ・診断だけが立てる）: 傷の最大とターンごとの傷。既定では真偽1つで抜ける。
+        if (WoundTrace423)
+        {
+            if (w > tt.Wd423Peak) tt.Wd423Peak = w;
+            int[] wb = tt.Wd423ByTurn ??= new int[BattleEngine.MaxTurns + 2];
+            if (Turn >= 0 && Turn < wb.Length) wb[Turn] = w;
+        }
         // 第120期。**書かれた側の陣営**で割る（書き手の帰属は `WoundWritesByRoute` の側にある）。
         (target.TeamId == PlayerTeam ? WoundWriteAlly : WoundWriteFoe)[(int)route] += amount;
         // 在庫の齢（計数専用）。**`Census` のときだけ書く**——既定では counter を1つも足さない
@@ -18716,6 +18723,8 @@ public sealed class BattleContext
 
     /// <summary>第419期（診断だけが立てる）: ターンの頭に「前のターンに動かなかった」味方を数える（Phase 0 (b)・計数のみ）。</summary>
     public static bool IdleCensus419;
+    /// <summary>第423期（診断だけが立てる）: 傷の最大とターンごとの傷を数える（`UnitTally.Wd423Peak` ／ `Wd423ByTurn`・計数のみ）。</summary>
+    public static bool WoundTrace423;
 
     bool GulpHolding419(UnitState sekki) => (_gulpHold419.TryGetValue(sekki, out int t) && t == _turn) || (_gulpLateLive && HoldsAlly420(sekki));
 

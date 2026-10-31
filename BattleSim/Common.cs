@@ -842,7 +842,7 @@ public static readonly string[] VersionRows416 = { "版・LK-1 呪い", "版・L
 /// <summary>第417期に足した試遊の台（鎖の終端 <see cref="VersionsH407"/> が外す・第416期の4台のうち「版・LK-1m 呪い」だけが残る）。</summary>
 public static readonly string[] VersionRows417 = { "版・LK-1m-s 呪い", "版・LK-1m-s 紅", "版・LK-1m-p 呪い", "版・LK-2m 呪い" };
 /// <summary>第418期に足した試遊の台（鎖の終端 <see cref="VersionsH407"/> が外す・第416 ／ 417期の「版・LK-…」の台はこの期に一覧から消えた）。</summary>
-public static readonly string[] VersionRows418 = { "試遊・リリ 呪い", "試遊・リリ 紅", "版・2回 リリ 呪い", "版・彫り ノミ" };   // 第422期に「版・彫り ノミ」も足した（鎖の終端で外す）
+public static readonly string[] VersionRows418 = { "試遊・リリ 呪い", "試遊・リリ 紅", "版・2回 リリ 呪い", "版・彫り ノミ", "版・刻み ノミ" };   // 第422期に「版・彫り ノミ」・第423期に「版・刻み ノミ」も足した（鎖の終端で外す）
 /// <summary>第419期に足した試遊の台（鎖の終端 <see cref="VersionsH407"/> が外す）。</summary>
 public static readonly string[] VersionRows419 = { "版・呑み セッキ" };
 public static (string Name, Formation F)[] VersionsH407() => Presets.Versions.Where(r => !VersionRows410.Contains(r.Name) && !VersionRows412.Contains(r.Name) && !VersionRows416.Contains(r.Name) && !VersionRows417.Contains(r.Name) && !VersionRows418.Contains(r.Name) && !VersionRows419.Contains(r.Name)).ToArray();
