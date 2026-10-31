@@ -48,7 +48,7 @@ static class Inv414Diag
     // ---------------------------------------------------------------------------------
     static Formation Row(string n) => CompareBuilds().Concat(CrossBuilds()).First(r => r.Name == n).F;
     static Formation Play(string n) => Presets.Playtest.Concat(Presets.Versions).First(r => r.Name == n).F;
-    static I.Board[] Boards() => I.Boards().Where(b => b.Axis != "デバフ").Select(b => new I.Board(b.Axis, b.Name,
+    internal static I.Board[] Boards() => I.Boards().Where(b => b.Axis != "デバフ").Select(b => new I.Board(b.Axis, b.Name,
             b.Name == "移動 (チェック波の台)" ? I.MoveCheck : CompareBuilds().Concat(CrossBuilds()).Any(r => r.Name == b.Name) ? Row(b.Name) : Play(b.Name)))
         .Append(new I.Board("デバフ", "試遊・呪い", Play("試遊・呪い")))
         .Append(new I.Board("デバフ", "試遊・カーズ 呪い", Play("試遊・カーズ 呪い"))).ToArray();
@@ -67,14 +67,14 @@ static class Inv414Diag
     // ---------------------------------------------------------------------------------
     // Q1 軸の横並び
     // ---------------------------------------------------------------------------------
-    static readonly string[] Cols = { "ボス 勝率", "ボス 倒しT", "近衛", "大隊", "本編2", "本編4", "本編5", "九体", "的・一 8T", "的・九 8T", "強 2〜5" };
-    static double[] Vals(Dictionary<string, I.St> r) => new[]
+    internal static readonly string[] Cols = { "ボス 勝率", "ボス 倒しT", "近衛", "大隊", "本編2", "本編4", "本編5", "九体", "的・一 8T", "的・九 8T", "強 2〜5" };
+    internal static double[] Vals(Dictionary<string, I.St> r) => new[]
     {
         r[I.Boss.Name].Win, r[I.Boss.Name].Wins == 0 ? double.NegativeInfinity : -(double)r[I.Boss.Name].WinT / r[I.Boss.Name].Wins,
         r[I.Guard.Name].Win, r[I.Bat.Name].Win, r[I.M2.Name].Win, r[I.M4.Name].Win, r[I.M5.Name].Win, r[I.Nine.Name].Win,
         (double)r[I.T1.Name].Dmg8 / r[I.T1.Name].N, (double)r[I.T9.Name].Dmg8 / r[I.T9.Name].N, I.StrongWaves.Average(w => r[w.Name].Win),
     };
-    static string Fmt(int i, double v) => i == 1 ? (double.IsNegativeInfinity(v) ? "—" : F1(-v)) : i is 8 or 9 ? v.ToString("N0") : F1(v);
+    internal static string Fmt(int i, double v) => i == 1 ? (double.IsNegativeInfinity(v) ? "—" : F1(-v)) : i is 8 or 9 ? v.ToString("N0") : F1(v);
     static string Norm(string s) => s.Replace("★", "").Replace("**", "").Replace(",", "").Trim();
 
     static void Q1()

@@ -781,6 +781,9 @@ public static Formation Pin418(Formation f) { var g = f.Clone(); foreach ((int s
 /// <summary>第420期: 規定のリリ（受け取られた駆け寄りだけ差し引く）→ 旧（`LiliH419`・第418〜419期の規定）。<b>R426 により、現役網の内で照合に差が出た器具だけが使う</b>（外の器具は封印）。</summary>
 public static UnitDef PinL420(UnitDef d) => ReferenceEquals(d, UnitCatalog.Lili) ? UnitCatalog.LiliH419 : d;
 public static Formation Pin420(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinL420(d); return g; }
+/// <summary>第421期: 規定のセッキ（SW-n・呑んで庇う）→ 旧（`SekkiH420`・S2h ＋ B ＋ K1）。<b>R426 により、現役網の内で照合に差が出た器具だけが使う</b>（外の器具は封印）。段0 の前は規定がそのまま返る。</summary>
+public static UnitDef PinS420(UnitDef d) => ReferenceEquals(d, UnitCatalog.Sekki) && typeof(UnitCatalog).GetField("SekkiH420")?.GetValue(null) is UnitDef old ? old : d;
+public static Formation PinS420f(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinS420(d); return g; }
 public static Formation Pin406(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinK406(d); return g; }
 public static Formation Pin404(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinH404(d); return g; }
 public static Formation Pin402(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinH402(d); return g; }

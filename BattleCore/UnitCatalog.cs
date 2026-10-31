@@ -3211,8 +3211,10 @@ public static class UnitCatalog
     /// 旧は <see cref="SekkiH398"/>（B）／ その前は <see cref="SekkiH397"/>（S2h）。
     /// <b>第406期に改名した</b>（包みのセッキ → 人呑みのセッキ・規則は1ビットも変えない）。字面は人を餌食にする化け物だが、実際は範囲の一撃の瞬間に仲間を呑み込んで守っている——という誤解の名。
     /// 名前とフレーバーを上書きするのは規定のこの定義だけ（旧 ／ 版の駒は「包みのセッキ」のまま）。
+    /// <para><b>第421期に規定の座を下の <see cref="Sekki"/>（SW-n・呑んで庇う）に譲った</b>——これは第399〜420期の規定（旧）。第419〜420期の版（SW-a ／ SW-e ／ SW-n ／ SW-nd）はこの旧から作ったまま。
+    /// 旧を読む器具は R426 により現役網の内で照合に差が出たものだけ <c>Common.PinS420</c> で固定する。</para>
     /// </summary>
-    public static readonly UnitDef Sekki = SekkiOn397(new[] { TraitId.SlimeWrap, TraitId.SlimeOverflow, TraitId.SlimeDeep, TraitId.SlimeSwell, TraitId.SlimeMelt },
+    public static readonly UnitDef SekkiH420 = SekkiOn397(new[] { TraitId.SlimeWrap, TraitId.SlimeOverflow, TraitId.SlimeDeep, TraitId.SlimeSwell, TraitId.SlimeMelt },
         (SlimePlus396 + SlimeOverflowText396).Replace("3 割", "5 割").Replace("衝撃の 5 割を吸い取る", "衝撃の 5 割を吸い取る（ほとんどはゼリーに溶けて消える）") + "。吸うほど体が膨らむ", SlimeMinus397,
         name: "人呑みのセッキ", flavor: "人を呑む化け物と恐れられ、追われてきた。呑まれた者は、みな無傷で吐き出されていたというのに。");
     public static readonly UnitDef SekkiK12 = SekkiOn397(new[] { TraitId.SlimeWrap, TraitId.SlimeOverflow, TraitId.SlimeDeep, TraitId.SlimeSwell, TraitId.SlimeMelt, TraitId.SlimeHarden },
@@ -3223,7 +3225,7 @@ public static class UnitCatalog
     const string GulpAllyMinus419 = "。呑んでいる間は仲間を包めない";
     const string GulpFoePlus419 = "。溜まりすぎたとき、弾き返す代わりに最も弱った敵を呑み込む（2ターン後に傷を負って吐き出される・ボスは呑めない）";
     const string GulpFoeMinus419 = "。敵を呑んでいる間は弾き返せない";
-    static UnitDef SekkiOn419(TraitId[] extra, string plus, string minus) => SekkiOn397(Sekki.Traits.Concat(extra).ToArray(), Sekki.PlusText + plus, Sekki.MinusText + minus, name: Sekki.Name, flavor: Sekki.Flavor);
+    static UnitDef SekkiOn419(TraitId[] extra, string plus, string minus) => SekkiOn397(SekkiH420.Traits.Concat(extra).ToArray(), SekkiH420.PlusText + plus, SekkiH420.MinusText + minus, name: SekkiH420.Name, flavor: SekkiH420.Flavor);
     /// <summary>セッキの版 SW-a（第419期）: 規定 ＋ 仲間を呑んで守る（`SlimeGulpAlly`）。</summary>
     public static readonly UnitDef SekkiSWa = SekkiOn419(new[] { TraitId.SlimeGulpAlly }, GulpAllyPlus419, GulpAllyMinus419);
     /// <summary>セッキの版 SW-e（第419期）: 規定 ＋ 敵を呑む（`SlimeGulpFoe`）。</summary>
@@ -3247,6 +3249,17 @@ public static class UnitCatalog
         MinusText = SekkiSWn.MinusText.Replace("。自分の手番はぷるぷるしているだけで動かない", ""),
         Flavor = SekkiSWn.Flavor,
     };
+
+    /// <summary>
+    /// 人呑みのセッキ（<b>第421期の規定</b>・第420期の SW-n）。旧（<see cref="SekkiH420"/>・S2h ＋ B ＋ K1 の 5 枚）＋ 仲間を呑んで庇う（<see cref="TraitId.SlimeGulpAlly"/>・1戦に2回）
+    /// ＋ 一日遅れて吐き出す（<see cref="TraitId.SlimeGulpLate"/>・呑んだ仲間は盤面の列から外れ、次のターンの終わりに無傷で戻る）。HP 70 ／ 攻 2 ／ 速 2・手番は「ぷるぷる」（動かない）のまま。
+    /// 札と文面は <see cref="SekkiSWn"/> と同じ（別の定義）。名前とフレーバーは旧のまま（「呑まれた者は、みな無傷で吐き出されていた」が札と合う）。
+    /// <para>第419〜420期に呑みで手番の軸に寄せる版を並べたが、どれも号令 ／ 灯が読む通貨を書かなかった（0.00〜0.05 ／戦）。セッキは「守りは汎用・個性は呑む」で割り切る。採らなかった版（定義は残す・保留在庫）:</para>
+    /// <para>・SW-a（<see cref="SekkiSWa"/>）: 呑まれた仲間を的に残す。守りとしては効くが、吐き出しの像（一日遅れて）が無い。</para>
+    /// <para>・SW-e（<see cref="SekkiSWe"/>）: 敵を呑む。数の波でしか働かず、溢れの弾き返しを決め手にする編成（逆しま+後備え）から決め手を奪う。</para>
+    /// <para>・SW-nd（<see cref="SekkiSWnd"/>）: 手番で消化する。消化の 99〜100% が早く返す側で手番の燃料にならず、自分の消化で溢れに届かず逆しま+後備えを −17 落とす。</para>
+    /// </summary>
+    public static readonly UnitDef Sekki = SekkiOn397(SekkiSWn.Traits.ToArray(), SekkiSWn.PlusText, SekkiSWn.MinusText, name: SekkiSWn.Name, flavor: SekkiSWn.Flavor);
 
     /// <summary>
     /// 背かれのソム（第103期・<b>最後の1枠</b>）。<b>第276期に転生した</b>（規定 ＝ S1x・ポンの判断）——
