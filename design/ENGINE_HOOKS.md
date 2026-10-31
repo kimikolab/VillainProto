@@ -1800,3 +1800,11 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 
 - BM-emx ＝ `BombPlantFoe` ＋ `BombMirror` ＋ `BombNoTick`。第427期の `PlantBombs427` ／ `Fuses427` ／ `MirrorBlast427` をそのまま使う（第427期の版の出力は 1 バイトも動かない・`chiri427 boards` で確かめた）。
 - 計数のみ: `UnitTally.Bm428MirrorKilled`（`MirrorBlast427` の中・向かいへの爆発で倒れた敵）。盤面は触らない。
+
+## 第429期 —— 導火線のチリの規定化・爆弾の表示専用の出来事（`StatusGain` の `Text`・verbose のときだけ・盤面は動かない）
+
+- `bomb_plant`（`BattleContext.BombPlantText`）: `PlantBombs426` ／ `PlantBombs427` の置いた直後。`ActorId` ＝ 仕掛けた駒・`TargetId` ＝ 持ち主・`Amount` ＝ 3。
+- `bomb_fuse`（`BombFuseText`）: `BombAfterHit426` の導火線を縮めた直後。`ActorId` ＝ 縮めた一撃の主（刻みなら無し）・`Amount` ＝ 残り（2 → 1 → 0）。
+- `bomb_blast`（`BombBlastText`）: `Blast426` の頭（範囲の `Damage` の前）。`ActorId` ＝ 仕掛けた駒・`Amount` ＝ 重さ。
+- `bomb_mirror`（`BombMirrorText`）: `MirrorBlast427` の頭。`TargetId` ＝ 持ち主（味方）・`FromId` ＝ 向かいの敵（同じ席番号・空なら最初に当たる敵）・`Amount` ＝ 重さ。
+- `bomb_dud`（`BombDudText`）: 不発（`BombAfterHit426` の中・持ち主の `Death` は本体の中で出た後）。`Amount` ＝ 0。`shockdigest` は 5 つとも `SkipGainTexts` で数えない。

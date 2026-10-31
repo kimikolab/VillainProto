@@ -1361,6 +1361,9 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 chiri428 uro            # 第428期 §3: ウロを引く compare ／ 交差帯の行 × {ウロ, ウロの素体} × 本編 5 波 ＋ 近衛 ／ 大隊・seed 0..199（4 秒）
     dotnet run --project BattleSim -c Release 0 chiri428 log <emx|em|0> <行名の頭> <波の鍵> [seed]   # 第428期: 1戦のログ
     dotnet run --project BattleSim -c Release 0 chiri428 check          # 第428期: 自己検査（BM-emx の札と数値・主 6 行のチリの隣に盾役・刻みでは縮まない・向かいへ爆ぜる・試遊の台と鎖の終端）
+    dotnet run --project BattleSim -c Release 0 chiri429 verify         # 第429期 §1-8: 「試遊・導火線 チリ」と耐久（中央）× 7 波・seed 0..199 を規定のチリと BM-emx で回し、全戦一致を確かめる（1 秒）
+    dotnet run --project BattleSim -c Release 0 chiri429 events         # 第429期 §2: 台本の爆弾の出来事（bomb_plant ／ fuse ／ blast ／ mirror ／ dud）の件数と計数の突き合わせ・verbose の有無
+    dotnet run --project BattleSim -c Release 0 chiri429 check          # 第429期: 自己検査（規定のチリ ＝ BM-emx・`All` 52 枚・ウロは `Retired` の末尾・ウロの 5 行・試遊の台と鎖の終端）
     dotnet run --project BattleSim -c Release 0 nomi425 check           # 第425期: 自己検査（規定 ＝ 旧 − CarveOnce ＋ CarveReadCap・PinN424・試遊の台と鎖の終端・verbose の有無）
     dotnet run --project BattleSim -c Release 0 sh358 p0                # 第358期 §2 Phase 0: 破片の流れ（書いた ／ 敵の一撃で割れた ／ 読んだ ／ 残った）・ツギの板の返し（1回 ／ 同じ主へ集まった塊）・ヒビの砕けと倒れた T・ボスの1ターンの与ダメ ／ 回復（規定・代表台 3 × 5 波・seed 0..99・1 秒）
     dotnet run --project BattleSim -c Release 0 sh358 seats [版]        # 第358期 §4: ヒビ ／ ガレ ＋ 6枚（ウロ ／ ツギ ／ ササ ／ ガルド ／ ドルガ ／ ゴルム）から3枚 × 席の全並び ＝ 2,400 並び × ボス（seed 0..4）／ 近衛 ／ 大隊（seed 0..19）・版（既定 hbgr）と規定の両方（16 秒）

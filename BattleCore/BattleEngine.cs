@@ -13725,6 +13725,7 @@ public sealed class BattleContext
         {
             _bombs426[u.InstanceId] = new Bomb426 { Planter = self, Holder = u, Full = full, Chain = chain };
             if (u.TeamId == self.TeamId) t.Bm426PlantAlly++; else t.Bm426PlantFoe++;
+            if (_verbose) EmitScript415(u, BombPlantText, BombPlantTrait.Fuse, self);   // 第429期・表示専用
         }
         Log($"    {self.Name} が {string.Join("・", targets.Select(u => u.Name))} に爆弾を仕掛けた", LogKind.Status);
     }
@@ -13749,6 +13750,7 @@ public sealed class BattleContext
         {
             if (b.Foe || b.Mirror) NoteTrigger427(b, target, source, burnTick, poisonTick);
             b.Fuse++;
+            if (_verbose) EmitScript415(target, BombFuseText, Math.Max(0, BombPlantTrait.Fuse - b.Fuse), source);   // 第429期・表示専用
             b.Taken += Math.Max(0, taken);
             if (b.Fuse >= BombPlantTrait.Fuse)
             {
@@ -13767,7 +13769,7 @@ public sealed class BattleContext
             }
         }
         if (fire) { _bombs426.Remove(target.InstanceId); _bombQueue426.Add(b); }
-        else if (!target.IsAlive) { _bombs426.Remove(target.InstanceId); pt.Bm426Duds++; }
+        else if (!target.IsAlive) { _bombs426.Remove(target.InstanceId); pt.Bm426Duds++; if (_verbose) EmitScript415(target, BombDudText, 0, b.Planter); }   // 第429期: 不発の出来事（`Death` は本体の中で出た後）
         if (_bombBlasting426 || _bombQueue426.Count == 0) return;
         _bombBlasting426 = true;
         try
@@ -13803,6 +13805,7 @@ public sealed class BattleContext
         {
             _bombs426[u.InstanceId] = new Bomb426 { Planter = self, Holder = u, Chain = true, Foe = true, NoTick = noTick, Mirror = mirror };
             if (u.TeamId == self.TeamId) t.Bm426PlantAlly++; else t.Bm426PlantFoe++;
+            if (_verbose) EmitScript415(u, BombPlantText, BombPlantTrait.Fuse, self);   // 第429期・表示専用
         }
         Log($"    {self.Name} が {string.Join("・", targets.Select(u => u.Name))} に爆弾を仕掛けた", LogKind.Status);
     }
@@ -13841,9 +13844,10 @@ public sealed class BattleContext
         pt.Bm426BlastAlly++; pt.Bm426WeightAlly += amt; pt.Bm427MirrorBlasts++;
         if (amt > pt.Bm426WeightMax) pt.Bm426WeightMax = amt;
         ht.Bm426Held++; ht.Bm426HeldWeight += amt;
+        var hit = LivingMembers(Opponent(h.TeamId)).Where(e => e.Slot == h.Slot || e.Shape.AreAdjacent(h.Slot, e.Slot)).OrderBy(e => e.Slot).ToList();
+        if (_verbose) EmitScript415(h, BombMirrorText, amt, b.Planter, from: hit.FirstOrDefault(e => e.Slot == h.Slot) ?? hit.FirstOrDefault());   // 第429期・表示専用（向かいの敵 ＝ 同じ席番号・空なら最初に当たる敵）
         Log($"    {h.Name} の爆弾が向かいへ爆ぜた（{amt}）", LogKind.Highlight, h);
         if (amt <= 0) return;
-        var hit = LivingMembers(Opponent(h.TeamId)).Where(e => e.Slot == h.Slot || e.Shape.AreAdjacent(h.Slot, e.Slot)).OrderBy(e => e.Slot).ToList();
         foreach (UnitState u in hit)
         {
             if (!u.IsAlive) continue;
@@ -13866,6 +13870,7 @@ public sealed class BattleContext
         if (foeSide) { pt.Bm426BlastFoe++; pt.Bm426WeightFoe += amt; } else { pt.Bm426BlastAlly++; pt.Bm426WeightAlly += amt; }
         if (amt > pt.Bm426WeightMax) pt.Bm426WeightMax = amt;
         ht.Bm426Held++; ht.Bm426HeldWeight += amt;
+        if (_verbose) EmitScript415(h, BombBlastText, amt, b.Planter);   // 第429期・表示専用（範囲の `Damage` の前）
         Log($"    {h.Name} の爆弾が爆ぜた（{amt}）", LogKind.Highlight, h);
         if (amt <= 0) return;
         var hit = new List<UnitState>();
@@ -18735,6 +18740,17 @@ public sealed class BattleContext
     public const string UtsuHitsText = "utsu_hits";
     /// <summary>ワタが味方の弱体を引き受けた瞬間の <c>StatusGain</c> の <c>Text</c>（受け手 ＝ ワタ・<c>FromId</c> ＝ 元の受け手・ワタの攻撃力は下がらない）。</summary>
     public const string WataTakeText = "wata_take";
+    // 第429期（指示書 design/PHASE429_CHIRI_SETTLE_SPEC.md §2）—— 導火線のチリの爆弾の台本の出来事（`StatusGain` の `Text`・表示専用・verbose でなければ1行も走らない・乱数を引かない）。
+    /// <summary>爆弾を仕掛けた（<c>ActorId</c> ＝ 仕掛けた駒・<c>TargetId</c> ＝ 持ち主・<c>Amount</c> ＝ 導火線の残り 3）。</summary>
+    public const string BombPlantText = "bomb_plant";
+    /// <summary>導火線が縮んだ（<c>ActorId</c> ＝ 縮めた一撃の主（刻みなら無し）・<c>Amount</c> ＝ 残り 2 → 1 → 0）。</summary>
+    public const string BombFuseText = "bomb_fuse";
+    /// <summary>爆ぜた（<c>ActorId</c> ＝ 仕掛けた駒・<c>TargetId</c> ＝ 持ち主・<c>Amount</c> ＝ 爆発の重さ・範囲の <c>Damage</c> の前）。</summary>
+    public const string BombBlastText = "bomb_blast";
+    /// <summary>味方の爆弾が向かいへ爆ぜた（<c>TargetId</c> ＝ 持ち主（味方）・<c>FromId</c> ＝ 向かいの敵・<c>Amount</c> ＝ 重さ）。</summary>
+    public const string BombMirrorText = "bomb_mirror";
+    /// <summary>不発（持ち主が導火線の 3 より前に倒れた・<c>Death</c> の後・<c>Amount</c> ＝ 0）。</summary>
+    public const string BombDudText = "bomb_dud";
     /// <summary>逆しまの駒ごとの、台本に最後に出した手数（verbose のときしか触らない）。</summary>
     readonly Dictionary<int, int> _utsuHits415 = new();
 

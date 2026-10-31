@@ -9,6 +9,7 @@ using S307 = Som307Diag;
 // 指示書は design/PHASE429_CHIRI_SETTLE_SPEC.md ／ 報告は design/PHASE429_CHIRI_SETTLE.md。
 //
 //     dotnet run --project BattleSim -c Release 0 chiri429 verify   # §1-8: 「試遊・導火線 チリ」と耐久（中央）× 7 波・seed 0..199 を規定のチリと BM-emx で回し、全戦一致を確かめる
+//     dotnet run --project BattleSim -c Release 0 chiri429 events   # §2: 台本の爆弾の出来事の件数と計数（UnitTally）の突き合わせ・verbose の有無
 //     dotnet run --project BattleSim -c Release 0 chiri429 check    # 自己検査
 // =====================================================================================
 static class Chiri429Diag
@@ -33,6 +34,7 @@ static class Chiri429Diag
         switch (mode)
         {
             case "verify": Verify(); break;
+            case "events": Events(); break;
             case "check": Check(); break;
             default: Console.WriteLine("chiri429: モードは verify / events / check。"); return;
         }
@@ -69,6 +71,39 @@ static class Chiri429Diag
         }
         Console.WriteLine();
         Console.WriteLine("第428期 §3-1 の値: 礫（ウロの席）× BM-emx ＝ 本編 100 ×5 ／ 近衛 93.0 ／ 大隊 30.0・耐久 × BM-emx ＝ 本編 100 ×5 ／ 近衛 100 ／ 大隊 100。");
+    }
+
+    /// <summary>§2: 1 戦の台本の爆弾の出来事を数え、計数と突き合わせる。</summary>
+    static (int Plant, int Fuse, int Blast, int Mirror, int Dud, UnitTally T) Count(Formation f, I.W w, int seed)
+    {
+        var (r, _, _) = I.Raw(f, w, seed, verbose: true, census: false);
+        int C(string t) => r.Events.Count(e => e.Kind == BattleEventKind.StatusGain && e.Text == t);
+        return (C(BattleContext.BombPlantText), C(BattleContext.BombFuseText), C(BattleContext.BombBlastText), C(BattleContext.BombMirrorText), C(BattleContext.BombDudText), r.TallyByUnit["chiri"]);
+    }
+
+    static void Events()
+    {
+        Console.WriteLine("# 第429期 §2 —— 爆弾の表示専用の出来事");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | 波 | seed | bomb_plant ／ 仕掛けた | bomb_blast＋bomb_mirror ／ 爆ぜた | bomb_mirror ／ 向かいへ | bomb_dud ／ 不発 | bomb_fuse |");
+        Console.WriteLine("|---|---|--:|---|---|---|---|--:|");
+        foreach (var w in new[] { I.Guard, I.Bat, I.Boss })
+            foreach (int s in new[] { 0, 1, 2 })
+            {
+                var c = Count(Play, w, s); var t = c.T;
+                long blasts = t.Bm426BlastFoe + t.Bm426BlastAlly;
+                Console.WriteLine($"| {PlayRow} | {w.Name} | {s} | {c.Plant} ／ {t.Bm426PlantFoe + t.Bm426PlantAlly} | {c.Blast + c.Mirror} ／ {blasts} | {c.Mirror} ／ {t.Bm427MirrorBlasts} | {c.Dud} ／ {t.Bm426Duds} | {c.Fuse} |");
+            }
+        Console.WriteLine();
+        bool same = true;
+        foreach (var w in Seven)
+            for (int s = 0; s < 20; s++)
+            {
+                var (a, _, _) = I.Raw(Play, w, s, verbose: false, census: false);
+                var (b, _, _) = I.Raw(Play, w, s, verbose: true, census: false);
+                if (a.PlayerWon != b.PlayerWon || a.Turns != b.Turns) same = false;
+            }
+        Console.WriteLine($"verbose の有無で勝敗 ／ T が変わらない（{PlayRow} × 7 波 × seed 0..19）: {(same ? "○" : "**×**")}");
     }
 
     static void Check()

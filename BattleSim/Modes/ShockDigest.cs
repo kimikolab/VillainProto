@@ -37,7 +37,8 @@ static class ShockDigestDiag
     /// <summary>後の期に足した <c>BattleEvent</c> の欄。</summary>
     static readonly HashSet<string> SkipProps = new() { "BrittleExtra", "PartnerId", "PowderRoute", "FromId" };   // 第291期: 粉の経路の欄・第415期: ワタの引き受け元の欄
     /// <summary>第415期: 表示専用の <c>StatusGain</c>（カーズの印 ／ ウツの手数 ／ ワタの引き受け）は数えない。</summary>
-    static readonly HashSet<string> SkipGainTexts = new() { BattleContext.KarzMarkText, BattleContext.UtsuHitsText, BattleContext.WataTakeText };
+    static readonly HashSet<string> SkipGainTexts = new() { BattleContext.KarzMarkText, BattleContext.UtsuHitsText, BattleContext.WataTakeText,
+        BattleContext.BombPlantText, BattleContext.BombFuseText, BattleContext.BombBlastText, BattleContext.BombMirrorText, BattleContext.BombDudText };   // 第429期: チリの爆弾の表示専用の出来事
 
     /// <summary>
     /// 第287期: `compare` の行の規定のトウ（第287期から T3）を旧の規定 `TouT0` に戻した行。指紋の台は規定化の前（第286期まで）の台本を写すので、
