@@ -734,6 +734,9 @@
 | `ChiselWound` | - |
 | `ChiselNeck` | - |
 | `CarveDeep3` | - |
+| `CarveReadFirst` | - |
+| `CarveReadCap` | - |
+| `CarveRead1` | - |
 | `KissRushDeductAny` | - |
 | `Inversion` | - |
 | `Drought` | - |

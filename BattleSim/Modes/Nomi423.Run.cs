@@ -257,8 +257,8 @@ static partial class Nomi423Diag
         }
         Req(cens, "傷の計数（`WoundTrace423`）の有無で勝敗 ／ T ／ 生存が同じ（ノミ単騎 × 大隊 × 8 seed）");
         var row = Presets.Versions.FirstOrDefault(r => r.Name == "版・刻み ノミ");
-        Req(row.Name is not null && Presets.Versions[^1].Name == "版・刻み ノミ" && row.F.Occupied().Any(o => Vers.Skip(1).Any(v => v.D == o.Def)) && !Presets.Versions.Any(r => r.Name == "版・彫り ノミ"),
-            "「版・刻み ノミ」が末尾で、ノミは版・「版・彫り ノミ」は外した");
+        Req(row.Name is not null && Presets.Versions[^1].Name == "版・刻み ノミ" && row.F.Occupied().Any(o => o.Def.Id == "nomi" && o.Def != UnitCatalog.Nomi) && !Presets.Versions.Any(r => r.Name == "版・彫り ノミ"),
+            "「版・刻み ノミ」が末尾で、ノミは版（第424期から NM-wc）・「版・彫り ノミ」は外した");
         Req(!VersionsH407().Any(r => r.Name == "版・刻み ノミ"), "鎖の終端（`VersionsH407`）は「版・刻み ノミ」を外す");
         Console.WriteLine();
         Console.WriteLine(bad == 0 ? "すべて ○。" : $"× が {bad} 件。");

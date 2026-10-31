@@ -1774,3 +1774,8 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 
 - 新しい窓口は無い。NM-w は札 `CarveOnce` を外すだけ（`CarveTrait` は札が無ければ 1 発ごとに読んで刻む）。NM-w3 の印 `CarveDeep3` は `CarveTrait` だけが読む。
 - 計数のみ: `Wound` に、診断だけが立てる `BattleContext.WoundTrace423` の下で傷の最大とターンごとの傷（`UnitTally.Wd423Peak` ／ `Wd423ByTurn`）。既定では真偽1つで抜ける。
+
+## 第424期 —— ノミの読みの上限（版だけ・`CarveReadFirst` ／ `CarveReadCap` ／ `CarveRead1`）
+
+- 新しい窓口は無い。印 3 枚は `CarveTrait` だけが読む: `CarveReadFirst` は `ctx.VolleyShotOf(self) > 0` の発で読みを 0 にする（刻みは毎発）。`CarveReadCap` は 1 発の上乗せを `CarveTrait.ReadCap`（20）で切る。`CarveRead1` は係数を 1 にする。
+- 計数のみ: `UnitTally.Wd424TurnMax`（1 ターンの読みの和の最大・途中の値 `Wd424CurTurn` ／ `Wd424CurSum` は合算しない）。乱数を引かない。

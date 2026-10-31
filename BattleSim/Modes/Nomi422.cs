@@ -280,7 +280,8 @@ static class Nomi422Diag
         int i1 = src.IndexOf("// ---- 第420期（セッキの版 SW-n ／ SW-nd）", StringComparison.Ordinal);
         Req(i0 > 0 && i1 > i0 && !src[i0..i1].Contains("PickOne") && !src[i0..i1].Contains("Roll("), "`Chisel422` は `PickOne` ／ `Roll` を使わない");
         var row = Presets.Versions.FirstOrDefault(r => r.Name == "版・彫り ノミ");
-        Req(row.Name is not null && Presets.Versions[^1].Name == "版・彫り ノミ" && row.F.Occupied().Any(o => Vers.Skip(1).Any(v => v.D == o.Def)), "「版・彫り ノミ」は `Presets.Versions` の末尾で、ノミは版");
+        // 第423期に「版・刻み ノミ」へ入れ替えて外した（第424期に検査を合わせた）。
+        Req(row.Name is null && Presets.Versions.Any(r => r.Name == "版・刻み ノミ"), "「版・彫り ノミ」は第423期に「版・刻み ノミ」へ入れ替えて外した");
         Req(!VersionsH407().Any(r => r.Name == "版・彫り ノミ"), "鎖の終端（`VersionsH407`）は「版・彫り ノミ」を外す");
         Console.WriteLine();
         Console.WriteLine(bad == 0 ? "すべて ○。" : $"× が {bad} 件。");

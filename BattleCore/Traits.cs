@@ -1075,6 +1075,9 @@ public enum TraitId
     ChiselWound,          // 傷で深まる（第422期・NM-cs）: 彫りの深まり方を「殴るたび 1 ＋ その敵の傷の数」に・1 彫りにつき +3（**札そのものは挙動を持たない**・`Chisel422` が読む）
     ChiselNeck,           // ボスの首（第422期・NM-cb）: 彫りが 5 に届いた一撃は軛に切られない（1戦に1回）（**札そのものは挙動を持たない**・`Chisel422` ／ 軛の段が読む）
     CarveDeep3,           // 深く読む（第423期・ノミの版 NM-w3）: 刻みの読みを傷 1 つにつき +2 → +3 に（**札そのものは挙動を持たない**・`CarveTrait` が読む）
+    CarveReadFirst,       // 最初の 1 発だけ読む（第424期・ノミの版 NM-wa）: 刻むのは毎発・傷の読みはその一振りの最初の 1 発だけ（**札そのものは挙動を持たない**・`CarveTrait` が読む）
+    CarveReadCap,         // 1 発の読みに上限（第424期・NM-wc）: 1 発の上乗せは +20 まで（**札そのものは挙動を持たない**・`CarveTrait` が読む）
+    CarveRead1,           // 傷 1 つにつき +1（第424期・NM-w1）: 読みの係数を 2 → 1（**札そのものは挙動を持たない**・`CarveTrait` が読む）
     KissRushDeductAny,    // 第420期: 旧の差し引き（第417〜419期の `KissRushDeduct` の挙動・注ぎが受け取られなくても引く）。旧のリリ `LiliH419` だけが持つ（**札そのものは挙動を持たない**・`KissRushTrait` が読む）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -6594,6 +6597,8 @@ public sealed class CarveTrait : Trait
     public const int PerWound = 2;
     /// <summary>第423期（NM-w3・`CarveDeep3`）: 深く読む版の傷1つあたりの上乗せ。</summary>
     public const int PerWoundDeep = 3;
+    /// <summary>第424期（NM-wc・`CarveReadCap`）: 1 発の読みの上限。</summary>
+    public const int ReadCap = 20;
 
     public override TraitId Id => TraitId.Carve;
 
@@ -6610,16 +6615,22 @@ public sealed class CarveTrait : Trait
 
         // **足す前に読む。** ここを入れ替えると自己給餌で二次関数に伸びる（上の但し書き）。
         // 第93期: **深手は「傷1つぶん」として読む**（`WoundDepthOf`）。
-        int w = ctx.WoundDepthOf(target);
+        // 第424期（NM-wa・`CarveReadFirst`）: 刻むのは毎発だが、読むのは一振りの最初の 1 発だけ（一振りの外は 0 ＝ 最初の 1 発と同じ）。
+        int w = self.HasTrait(TraitId.CarveReadFirst) && ctx.VolleyShotOf(self) > 0 ? 0 : ctx.WoundDepthOf(target);
         if (w > 0)
         {
-            ctx.Log($"    {self.Name} が {target.Name} の古い傷をなぞる（傷 {w} → +{(self.HasTrait(TraitId.CarveDeep3) ? PerWoundDeep : PerWound) * w}）",
-                LogKind.Highlight, self);
-            int per = self.HasTrait(TraitId.CarveDeep3) ? PerWoundDeep : PerWound;   // 第423期（NM-w3）: 札が無ければ今の +2
+            int per = self.HasTrait(TraitId.CarveDeep3) ? PerWoundDeep : self.HasTrait(TraitId.CarveRead1) ? 1 : PerWound;   // 第423期（NM-w3）／ 第424期（NM-w1）: 札が無ければ今の +2
+            int read = per * w;
+            if (self.HasTrait(TraitId.CarveReadCap) && read > ReadCap) read = ReadCap;   // 第424期（NM-wc）: 1 発の上乗せは +20 まで
+            ctx.Log($"    {self.Name} が {target.Name} の古い傷をなぞる（傷 {w} → +{read}）", LogKind.Highlight, self);
             long hp0 = ctx.HpRemoved;   // 第120期: 実効（盤面から実際に減った HP）を取る
-            ctx.ApplyDamage(target, per * w, self);
-            ctx.NoteWoundRead(target, WoundReader.Carve, w, per * w, ctx.HpRemoved - hp0);
-            UnitTally rt423 = ctx.TallyOf(self); rt423.Wd423Reads++; rt423.Wd423ReadAmt += per * w;   // 第423期・計数のみ
+            ctx.ApplyDamage(target, read, self);
+            ctx.NoteWoundRead(target, WoundReader.Carve, w, read, ctx.HpRemoved - hp0);
+            UnitTally rt423 = ctx.TallyOf(self); rt423.Wd423Reads++; rt423.Wd423ReadAmt += read;   // 第423期・計数のみ
+            // 第424期・計数のみ: 1 手番（ターン）の読みの和と、その最大。
+            if (rt423.Wd424CurTurn != ctx.Turn) { rt423.Wd424CurTurn = ctx.Turn; rt423.Wd424CurSum = 0; }
+            rt423.Wd424CurSum += read;
+            if (rt423.Wd424CurSum > rt423.Wd424TurnMax) rt423.Wd424TurnMax = rt423.Wd424CurSum;
         }
 
         // 上乗せで倒れたなら刻まない（上の生存判定と同じ理由。ApplyDamage を挟んだので取り直す）。
@@ -20576,6 +20587,9 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.ChiselWound),                      // 第422期（傷で深まる NM-cs・印）
         new MarkOnlyTrait(TraitId.ChiselNeck),                       // 第422期（ボスの首 NM-cb・印）
         new MarkOnlyTrait(TraitId.CarveDeep3),                       // 第423期（深く読む NM-w3・印・`CarveTrait` が読む）
+        new MarkOnlyTrait(TraitId.CarveReadFirst),                   // 第424期（最初の 1 発だけ読む NM-wa・印）
+        new MarkOnlyTrait(TraitId.CarveReadCap),                     // 第424期（1 発の読みに上限 NM-wc・印）
+        new MarkOnlyTrait(TraitId.CarveRead1),                       // 第424期（傷 1 つにつき +1 NM-w1・印）
         new MarkOnlyTrait(TraitId.KissRushDeductAny),                // 第420期（旧の差し引き・`LiliH419` だけ・印）
         new LastStandHoldOldScarTrait(),   // 第199期（対照・保持者 0 枚）
         new LastStandHoldNoStockTrait(),   // 第199期（対照・保持者 0 枚）

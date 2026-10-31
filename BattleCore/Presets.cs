@@ -1082,7 +1082,8 @@ public static class Presets
         // 第422期: 刻みのノミの一点彫りの版「版・彫り ノミ」（NM-c）を足した。
         // 第423期: この期の最良（毎発刻む・深く読む NM-w3）に入れ替え、名前を「版・刻み ノミ」に（指示書 PHASE423_NOMI_WOUND_SPEC.md §2-7）。
         //   並びは「刻み (ノミ単騎)」（NM-w3 の 4 波平均 100.0・燃焼×刻みは 75.0）。過去の器具の一覧（`Common.VersionsH407` から先）には入らない。
-        ("版・刻み ノミ", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gan, center: UnitCatalog.NomiNMw3, back1: UnitCatalog.Vel, back3: UnitCatalog.Dolga)),
+        // 第424期: 読みに上限を足した版のうち、ノミ単騎が 100 を下回る中で最も高い NM-wc（1 発の読みは +20 まで）に入れ替え（名前と並びはそのまま・指示書 PHASE424_NOMI_CAP_SPEC.md §2-6）。
+        ("版・刻み ノミ", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gan, center: UnitCatalog.NomiNMwc, back1: UnitCatalog.Vel, back3: UnitCatalog.Dolga)),
     };
 
     /// <summary>第416期: 台・呪い（「試遊・呪い」のクビをリリに替え、ウツを矢面に: 前1 ウツ ／ 前3 ムド ／ 中央 ネル ／ 後1 ワタ ／ 後3 リリ）。既定は規定のリリ。</summary>

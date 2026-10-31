@@ -184,7 +184,7 @@
 | `免除` | その行で免除した駒。`—` は免除対象が1枚もいない行 | — |
 
 **免除の判定は実装から引く**——`OnDeath` を上書きする札 **14 本**（Splitter / Bomber / Colossus / Brace / Ash / Grapple / DohaOverflow / BloodRead / BloodPool / SporeBurst / Inversion / Drought / Yoke / Hush）の保持者。
-**`OnAnyDeath` / `OnAllyDeath`（他人の死を読む側）は混ぜない**——32 本（Necro / Contagion / Pursuer / Taillight / Kiss / Kiss30 / Scrap / RicaAwakenRaise / Dirge / DirgeEcho / DirgeEchoAlways / DirgeSoundG1 / DirgeSoundG2 / HagiSoul / HagiHaste / HagiDepthSoul / HagiSoulMoves / Reviver / Scale / Forfeit / Toll / LastStand / LastStandScar / LastStandPlain / LastStandShield / LastStandHold / LastStandHoldOldScar / LastStandHoldNoStock / LastStandHoldMutualLoss / RicaRaiseDead / RicaRaiseDeadStack / MugSprout）は**1つも免除に使っていない**。
+**`OnAnyDeath` / `OnAllyDeath`（他人の死を読む側）は混ぜない**——33 本（Necro / Contagion / Pursuer / Taillight / Kiss / Kiss30 / Scrap / RicaAwakenRaise / Dirge / DirgeEcho / DirgeEchoAlways / DirgeSoundG1 / DirgeSoundG2 / HagiSoul / HagiHaste / HagiDepthSoul / HagiSoulMoves / Chisel / Reviver / Scale / Forfeit / Toll / LastStand / LastStandScar / LastStandPlain / LastStandShield / LastStandHold / LastStandHoldOldScar / LastStandHoldNoStock / LastStandHoldMutualLoss / RicaRaiseDead / RicaRaiseDeadStack / MugSprout）は**1つも免除に使っていない**。
 混ぜると墓守リィカ・疫みのラウ・追い打ちのハギを含む死軸が丸ごと免除される。
 
 | 編成 | 出撃 | 全試行 | 完全勝利(参考) | **無傷勝利** | **実質無傷勝利** | 免除 |

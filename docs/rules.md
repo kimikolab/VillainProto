@@ -41,7 +41,7 @@
 | 28 | `woundIgnite` | `IgniteRule` | `IgniteRule { Enabled = True }` |  | `derive` / `curse` / `blaze2` / `gauge` / `gather` / `deep` / `soak` / `ledger` / `wound2` / `cross` / `demo` | 第87期 | ○ |
 | 29 | `gather` | `GatherRule` | `GatherRule { Enabled = False }` | ○ | `derive` / `curse` / `hex` / `encore` / `gather` / `deep` / `soak` / `ledger` / `wound2` / `parry` / `wall` / `cross` / `demo` | 第89期 | ○ |
 | 30 | `soak` | `SoakRule` | `SoakRule { Poison = True, Burn = False, DullPerKind = 1 }` |  | `derive` / `curse` / `hex` / `soak` / `ledger` / `lit` / `wound2` / `ember` / `rebirth3` / `rebirtha2` / `beni` / `cross` | 第90期 | ○ |
-| 31 | `deep` | `DeepRule` | `DeepRule { Enabled = False }` | ○ | `derive` / `curse` / `hex` / `encore` / `deep` / `wound2` | 第93期 | ○ |
+| 31 | `deep` | `DeepRule` | `DeepRule { Enabled = False }` | ○ | `derive` / `curse` / `hex` / `encore` / `deep` / `wound2` / `nomi423` | 第93期 | ○ |
 | 32 | `curse` | `CurseRule` | `CurseRule { Enabled = True, SharePercent = 50 }` |  | `curse` / `hex` / `lit` / `mudohex` | 第95期 | ○ |
 | 33 | `betray` | `BetrayRule` | `BetrayRule { Enabled = True, Respawn = True }` |  | `betray` / `tempo` / `ledger` | 第103期 | ○ |
 | 34 | `encore` | `EncoreRule` | `EncoreRule { Enabled = True }` |  | `encore` / `tempo` / `tomo` / `hold2` / `ledger` / `lit` / `rebirth` | 第104期 | ○ |
@@ -89,7 +89,7 @@
 | `ConfusionRule` | `ConfusionRule { Active = False, Percent = 100 }` | ○ | `mark184` / `derange` / `confuse` | 第146期 |
 | `CreakRule` | `CreakRule { Threshold = 0, Source = Whet }` | ○ | `creak` / `pairs` / `creak3` | 第66期 |
 | `CurseRule` | `CurseRule { Enabled = True, SharePercent = 50 }` | ○ | `curse` / `hex` / `lit` / `mudohex` | 第95期 |
-| `DeepRule` | `DeepRule { Enabled = False }` | ○ | `derive` / `curse` / `hex` / `encore` / `deep` / `wound2` | 第93期 |
+| `DeepRule` | `DeepRule { Enabled = False }` | ○ | `derive` / `curse` / `hex` / `encore` / `deep` / `wound2` / `nomi423` | 第93期 |
 | `DivertRule` | `DivertRule { TargetCount = 1, SelfMark = True, Audit = False }` | ○ | `divert` / `survive` / `wildfire` / `mark` | 第50期 |
 | `EmberRule` | `EmberRule { Enabled = False, Fireproof = True, TickHeal = 0, Brittle = 25, BrittleAllies = False, BurnHit = True }` | ○ | `survive` / `ember` / `wildfire` / `scorch` / `burst` / `burnaudit` / `borgguard` / `borgfront` / `fireward` / `firescale` / `firelevel` / `fireburst` / `enemyfire` / `firecycle` / `firetri` / `firewrap` / `firefinish` / `fireatk` / `firekindle` / `giftorder` / `blazesurge` / `burnhit` / `burnadopt` / `foesurge` / `inv348` / `shockdigest` / `rebirth` / `dump` | 第130期 |
 | `EncoreRule` | `EncoreRule { Enabled = True }` | ○ | `encore` / `tempo` / `tomo` / `hold2` / `ledger` / `lit` / `rebirth` | 第104期 |

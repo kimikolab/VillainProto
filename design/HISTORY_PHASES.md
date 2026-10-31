@@ -8,6 +8,8 @@ description: 第259期に `CLAUDE.md` の「現状値」節を**逐語で**移�
 
 ## 現状値
 
+**第424期は軽い期で、版だけ（規定は動かさない）**（指示書 `PHASE424_NOMI_CAP_SPEC.md`・報告 `design/PHASE424_NOMI_CAP.md`・器具 `nomi424`）。刻みのノミの版 NM-wa ／ NM-wc ／ NM-w1（`UnitCatalog.NomiNMwa` ／ `NomiNMwc` ／ `NomiNMw1`）——NM-w の読みに上限を足す。ノミ単騎の 4 波平均は 25.0 ／ 75.0 ／ 100 で、上限の 2 版はボスが 0（ボスは 1 手番の量の門）。`compare` 0 セル・全66行 ／ 主判定19行 ／ 情報セルは動かない。試遊の台「版・刻み ノミ」のノミを NM-w3 から NM-wc に替えた（名前と並びはそのまま）。
+
 **第423期は軽い期で、版だけ（規定は動かさない）**（指示書 `PHASE423_NOMI_WOUND_SPEC.md`・報告 `design/PHASE423_NOMI_WOUND.md`・器具 `nomi423`）。刻みのノミの版 NM-w ／ NM-w3（`UnitCatalog.NomiNMw` ／ `NomiNMw3`）——連打は残し、1 発ごとに傷を刻む。ボスの穴は塞がったが、読みが三角数で伸びて効きすぎた（ノミ単騎 4 波とも 100）。`compare` 0 セル・全66行 ／ 主判定19行 ／ 情報セルは動かない。試遊の台「版・彫り ノミ」を「版・刻み ノミ」（ノミ単騎・NM-w3）に入れ替え、鎖の終端 `VersionsH407` が外す。
 
 **第422期は軽い期で、版だけ（規定は動かさない）**（指示書 `PHASE422_NOMI_CHISEL_SPEC.md`・報告 `design/PHASE422_NOMI_CHISEL.md`・器具 `nomi422`）。刻みのノミの一点彫りの版 NM-c ／ NM-cs ／ NM-cb（`UnitCatalog.NomiNMc` ／ `NomiNMcs` ／ `NomiNMcb`）——連打を外して単発にし、同じ敵を彫るほど一撃が重くなる。ボスは動かず、燃焼×刻みで旧の連打（被弾の燃焼を 1 発ごとに回す）の価値が見えた。`compare` 0 セル・全66行 ／ 主判定19行 ／ 情報セルは動かない。試遊の台に「版・彫り ノミ」を足し、鎖の終端 `VersionsH407` が外す。

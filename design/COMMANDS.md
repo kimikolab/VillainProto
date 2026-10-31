@@ -1339,6 +1339,10 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 nomi423 seats           # 第423期 次の下見: 試遊・燃焼 ポンの台 ／ 試遊・自傷 × 4 波・席ごとの被弾（爆弾を置く席の候補）（1 秒）
     dotnet run --project BattleSim -c Release 0 nomi423 log <0|w|w3> <行名の頭> <波の鍵> [seed]   # 第423期: 1戦のログ
     dotnet run --project BattleSim -c Release 0 nomi423 check           # 第423期: 自己検査（版の札と文面・毎発刻む・傷の計数の有無・verbose の有無・試遊の台と鎖の終端）
+    dotnet run --project BattleSim -c Release 0 nomi424 boards          # 第424期 §3: ノミを含む 5 行 × {規定, NM-w, NM-wa, NM-wc, NM-w1} × 4 波・seed 0..99 ＋ ミサの列 ＋ 第414期の軸の最良との横並び ＋ ボスの推移（版ごと）（予測 `.tmp/p424/predict.md` が無ければ走らない）（4 秒）
+    dotnet run --project BattleSim -c Release 0 nomi424 mixed           # 第424期 §2-4: 残りの 4 行 × {規定, NM-wa, NM-wc（参考）} × 本編 5 波 ＋ 近衛 ／ 大隊・seed 0..199 ＋ ミサの列（4 秒）
+    dotnet run --project BattleSim -c Release 0 nomi424 log <0|w|wa|wc|w1> <行名の頭> <波の鍵> [seed]   # 第424期: 1戦のログ
+    dotnet run --project BattleSim -c Release 0 nomi424 check           # 第424期: 自己検査（版の札と文面・NM-wa は一振りに 1 回読む・NM-wc の 1 発の上限・計数の有無・verbose の有無・試遊の台と鎖の終端）
     dotnet run --project BattleSim -c Release 0 sh358 p0                # 第358期 §2 Phase 0: 破片の流れ（書いた ／ 敵の一撃で割れた ／ 読んだ ／ 残った）・ツギの板の返し（1回 ／ 同じ主へ集まった塊）・ヒビの砕けと倒れた T・ボスの1ターンの与ダメ ／ 回復（規定・代表台 3 × 5 波・seed 0..99・1 秒）
     dotnet run --project BattleSim -c Release 0 sh358 seats [版]        # 第358期 §4: ヒビ ／ ガレ ＋ 6枚（ウロ ／ ツギ ／ ササ ／ ガルド ／ ドルガ ／ ゴルム）から3枚 × 席の全並び ＝ 2,400 並び × ボス（seed 0..4）／ 近衛 ／ 大隊（seed 0..19）・版（既定 hbgr）と規定の両方（16 秒）
     dotnet run --project BattleSim -c Release 0 sh358 flow [版,…]       # 第358期 §6 の 1・2: 破片の流れ ／ 返し ／ 礫 ／ ボスへの届き方（1ターンの与ダメを 欠片の返し ／ 礫 ／ 板の返し ／ ほか に分ける）× 版・代表台 4 × ボス ／ 大隊
