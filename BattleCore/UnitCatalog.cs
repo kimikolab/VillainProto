@@ -7596,6 +7596,29 @@ public static class UnitCatalog
         Traits = Array.Empty<TraitId>(), PlusText = "（素体・札なし）", MinusText = "（素体・札なし）", Flavor = "",
     };
 
+    // ---- 第427期: 導火線のチリ（指示書 design/PHASE427_CHIRI_SPEC.md §1〜§2・`All` にも `Retired` にも入れない・保持者 0 枚）。第426期の爆弾のウケから名前と `Id` を替えた ----
+    const string ChiriMinus427 = "自分では殴らない。導火線はこちらの刃でしか縮まない。倒れた者の爆弾は不発";
+    const string ChiriPlus427 = "手番で、敵の前列の二人に爆弾を仕掛ける（前列がいなければ最も前の敵へ）。仕掛けられた敵がこちらの刃を三度受けると爆ぜ、浴びた痛みの半分を本人と両隣に撒く。隣の爆弾も続けて爆ぜる";
+    static UnitDef Chiri427(TraitId[] traits, string plus, string minus) => new()
+    {
+        Id = "chiri", Name = "導火線のチリ", MaxHp = 60, Attack = 3, Speed = 6,
+        Traits = traits, Actions = BombActions426, PlusText = plus, MinusText = minus, Flavor = "",
+    };
+    /// <summary>第427期 BM-e（基本形・燃焼 ／ 毒の刻みも導火線を縮める）。</summary>
+    public static readonly UnitDef ChiriBMe = Chiri427(new[] { TraitId.BombPlantFoe }, ChiriPlus427, ChiriMinus427);
+    /// <summary>第427期 BM-ex（BM-e ＋ 刻みでは縮まない・対照）。</summary>
+    public static readonly UnitDef ChiriBMex = Chiri427(new[] { TraitId.BombPlantFoe, TraitId.BombNoTick }, ChiriPlus427, ChiriMinus427);
+    /// <summary>第427期 BM-em（BM-e ＋ 隣の味方にも置き、味方の爆弾は向かいの敵へ撒く）。</summary>
+    public static readonly UnitDef ChiriBMem = Chiri427(new[] { TraitId.BombPlantFoe, TraitId.BombMirror },
+        "手番で、敵の前列の二人と両隣の仲間に爆弾を仕掛ける（前列がいなければ最も前の敵へ）。敵の爆弾はこちらの刃を三度受けると爆ぜ、浴びた痛みの半分を本人と両隣に撒く。仲間の爆弾は三度殴られると、向かいの敵とその両隣に撒く",
+        "自分では殴らない。仲間の爆弾は仲間が殴られて育つ。倒れた者の爆弾は不発");
+    /// <summary>第427期 素体（同じ数値・札なし・ふつうに殴る）。測りの対照だけ。</summary>
+    public static readonly UnitDef ChiriBM0 = new()
+    {
+        Id = "chiri", Name = "導火線のチリ（素体）", MaxHp = 60, Attack = 3, Speed = 6,
+        Traits = Array.Empty<TraitId>(), PlusText = "（素体・札なし）", MinusText = "（素体・札なし）", Flavor = "",
+    };
+
     // ---------------------------------------------------------------------------------
     // 第408期【軽い期・版だけ】カリの転生（デバフ軸へ）（指示書 design/PHASE408_KARI_VERSIONS_SPEC.md §2）。版はカリの写し（Id は同じ・HP 62 ／ 速 9・旧の札 Goad は外す・`All` の外）。保持者 0 枚。
     // ---------------------------------------------------------------------------------

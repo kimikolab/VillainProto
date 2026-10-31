@@ -291,7 +291,7 @@ static class Bomb426Diag
         int uid = pv.First(u => u.Def.Id == "uke").InstanceId;
         Req(rv.Events.Any(e => e.Kind == BattleEventKind.Skill && e.ActorId == uid), "台本に「仕掛ける」の Skill が乗る");
         var row = Presets.Versions.FirstOrDefault(r => r.Name == PlayRow);
-        Req(row.Name is not null && row.F.Occupied().Any(o => o.Def.Traits.Contains(TraitId.BombPlant)), $"試遊の台「{PlayRow}」がある（爆弾の版）");
+        Req(row.Name is null, $"試遊の台「{PlayRow}」は第427期に外した（「版・導火線 チリ」に入れ替え）");
         Req(!VersionsH407().Any(r => r.Name == PlayRow), "鎖の終端（`VersionsH407`）は「版・爆弾 ウケ」を外す");
         Console.WriteLine();
         Console.WriteLine(bad == 0 ? "すべて ○。" : $"× が {bad} 件。");

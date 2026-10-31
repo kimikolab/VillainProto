@@ -1083,6 +1083,10 @@ public enum TraitId
     BombPlant,            // 仕掛ける（BM-h・爆弾のウケ）: 手番で、隣の味方すべてと敵の前列の席番号が最も若い 1 体（爆弾を持たない者）に爆弾を置く（乱数なし・1 体に 1 個）。持ち主が HP の減る一撃を 3 度受けると爆ぜ、浴びた量の半分を持ち主と隣（同じ陣営）に撒く。爆発を受けた爆弾も爆ぜる（1 個 1 回）。条件が満ちる前に持ち主が倒れたら不発。自分では殴らない（**判定は engine の `PlantBombs426` ／ `BombAfterHit426`**）
     BombFull,             // 浴びた量の全量（BM-f）（**札そのものは挙動を持たない**・engine の `Blast426` が読む）
     BombNoChain,          // 誘爆なし（BM-hc・対照）: 爆発を受けた爆弾は爆ぜない（**札そのものは挙動を持たない**・engine の `BombAfterHit426` が読む）
+    // --- 第427期で足した札（指示書 design/PHASE427_CHIRI_SPEC.md §1〜§2）。導火線のチリの版（`All` の外）。保持者 0 枚 ---
+    BombPlantFoe,         // 仕掛ける・敵だけ（BM-e・導火線のチリ）: 手番で、敵の最も前の列の席番号が若い 2 体（爆弾を持たない者）に爆弾を置く。爆弾はこちらの駒の直の一撃（と燃焼 ／ 毒の刻み）でしか縮まず、3 で浴びた量の半分を持ち主と隣の敵に撒く。誘爆あり。自分では殴らない（**判定は engine の `PlantBombs427` ／ `Fuses427`**）
+    BombNoTick,           // 刻みでは縮まない（BM-ex）（**札そのものは挙動を持たない**・engine の `Fuses427` が読む）
+    BombMirror,           // 味方の爆弾は向かいへ撒く（BM-em）: 隣の味方にも置く。味方の爆弾は敵の直の一撃でだけ縮み、爆ぜたら向かいの敵（同じ席番号）とその隣に撒く（味方は巻き込まない）（**札そのものは挙動を持たない**・engine の `PlantBombs427` ／ `MirrorBlast427` が読む）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -14757,6 +14761,21 @@ public sealed class ReveilleTrait : Trait
         });
     }
 }
+/// <summary>仕掛ける・敵だけ（第427期・導火線のチリの版 BM-e ／ BM-ex ／ BM-em）。置くだけで、導火線と爆発は engine（第426期の窓口に枝を足した）。</summary>
+public sealed class BombPlantFoeTrait : Trait
+{
+    /// <summary>1 手番に置く敵の数（指示書 §1: 前列の 2 体）。</summary>
+    public const int PerTurn = 2;
+
+    public override TraitId Id => TraitId.BombPlantFoe;
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+    {
+        if (!self.IsAlive) return;
+        ctx.PlantBombs427(self);   // 自分では殴らない（置き先が無ければ何もしない）
+    }
+}
+
 /// <summary>
 /// 仕掛ける（第426期・爆弾のウケの版 BM-h ／ BM-f ／ BM-hc・指示書 design/PHASE426_BOMB_SPEC.md §1）。
 /// <para>手番（`[Skill「仕掛ける」]`）で隣の味方と敵の前列の 1 体に爆弾を置くだけ。導火線 ／ 爆発 ／ 誘爆 ／ 不発は engine（`BattleContext.BombAfterHit426`）が持つ
@@ -20618,6 +20637,9 @@ public static class TraitCatalog
         new BombPlantTrait(),                                        // 第426期（仕掛ける BM-h・爆発は engine）
         new MarkOnlyTrait(TraitId.BombFull),                         // 第426期（浴びた量の全量 BM-f・印）
         new MarkOnlyTrait(TraitId.BombNoChain),                      // 第426期（誘爆なし BM-hc・印）
+        new BombPlantFoeTrait(),                                     // 第427期（仕掛ける・敵だけ BM-e・爆発は engine）
+        new MarkOnlyTrait(TraitId.BombNoTick),                       // 第427期（刻みでは縮まない BM-ex・印）
+        new MarkOnlyTrait(TraitId.BombMirror),                       // 第427期（味方の爆弾は向かいへ BM-em・印）
         new LastStandHoldOldScarTrait(),   // 第199期（対照・保持者 0 枚）
         new LastStandHoldNoStockTrait(),   // 第199期（対照・保持者 0 枚）
         new LastStandHoldMutualLossTrait(),// 第199期（対照・保持者 0 枚）

@@ -917,6 +917,7 @@ public sealed class BattleContext
 
             MarkTickHit();   // 第214期（刻みは K2 のときだけ感電を起爆する）
             _tickNext = _yokeHolders.Count > 0;   // 第367期（軛と刻み・1回の呼び出しにだけ効く札。軛の保持者がいなければ立てない）
+            if (_bombs426 is not null) _poisonTick427 = true;   // 第427期（チリの導火線: 毒の刻みの札・`ApplyDamageCore` の頭で読んで消す・爆弾が無い戦は立てない）
             ApplyDamage(u, poison, null);
         }
     }
@@ -13639,6 +13640,7 @@ public sealed class BattleContext
                          AttackPattern? pattern, bool levy)
     {
         if (_gulpLateLive && IsHeld420(target)) { _splashNext = false; _unblockedNext422 = false; return; }   // 第420期（SW-n）: ゼリーの中の仲間は何も受けない（保持者がいなければ真偽1つで抜ける）
+        bool poisonTick427 = _poisonTick427; _poisonTick427 = false;   // 第427期（毒の刻みの札・ここで読んで消す）
         bool splash417 = _splashNext; _splashNext = false;   // 第417期（巻き込み ／ 貫きの通過の札・ここで読んで消す・入れ子の中継には渡らない）
         bool unblocked422 = _unblockedNext422; _unblockedNext422 = false;   // 第422期（NM-cb 遮られない一撃の札・ここで読んで消す）
         HitFrame prevHit = Hit;
@@ -13692,13 +13694,14 @@ public sealed class BattleContext
         }
         if (myAmt > 0 && myFrom is not null) ReflectPlank(target, myFrom, myAmt, myRest, myRatio);
         if (myH358 > 0 && myHF358 is not null) ShardReturn358(target, myHF358, myH358);   // 第358期（HB-r）
-        if (bomb426 is not null) BombAfterHit426(bomb426, target, source, burnTick, pattern, bombHp426, bombHa426);   // 第426期（導火線 ／ 誘爆 ／ 不発・一撃の後始末が済んでから）
+        if (bomb426 is not null) BombAfterHit426(bomb426, target, source, burnTick, pattern, bombHp426, bombHa426, poisonTick427, relayed || hexShare || levy);   // 第426期（導火線 ／ 誘爆 ／ 不発・一撃の後始末が済んでから）
     }
 
     // ---- 第426期: 爆弾（ウケの枠の新駒・版 BM-h ／ BM-f ／ BM-hc・指示書 design/PHASE426_BOMB_SPEC.md §1）----
     // 爆弾は置かれた駒の被弾で進むので、状態は戦ごとに `BattleContext` が持つ（`Counters` に置かない＝会戦の境界の掃除も要らない）。
     // 乱数は引かない。爆弾が1つも置かれない戦は `_bombs426` が null のまま（`ApplyDamageCore` の比較1つで抜ける）。
-    sealed class Bomb426 { public UnitState Planter = null!, Holder = null!; public int Fuse, Taken; public bool Full, Chain; }
+    sealed class Bomb426 { public UnitState Planter = null!, Holder = null!; public int Fuse, Taken; public bool Full, Chain, Foe, NoTick, Mirror; }   // 第427期: Foe ／ NoTick ／ Mirror（チリの版・第426期の版は 3 つとも偽）
+    bool _poisonTick427;
     Dictionary<int, Bomb426>? _bombs426;
     readonly List<Bomb426> _bombQueue426 = new();
     bool _bombBlasting426;
@@ -13731,7 +13734,7 @@ public sealed class BattleContext
     /// <para>ふつうの一撃: HP が減っていれば導火線が 1 縮み、浴びた量（HP＋破片の減り）を足す。3 で爆ぜる（その一撃で倒れても爆ぜる——引き金が先）。
     /// 3 に届く前に倒れたら不発。爆発の連鎖の中の一撃: 導火線は進めず、何か受けていれば誘爆（BM-hc は爆ぜない・倒れていれば不発）。</para>
     /// </summary>
-    void BombAfterHit426(Bomb426 b, UnitState target, UnitState? source, bool burnTick, AttackPattern? pattern, int hpBefore, int haBefore)
+    void BombAfterHit426(Bomb426 b, UnitState target, UnitState? source, bool burnTick, AttackPattern? pattern, int hpBefore, int haBefore, bool poisonTick = false, bool indirect = false)
     {
         if (_bombs426 is null || !_bombs426.TryGetValue(target.InstanceId, out Bomb426? cur) || cur != b) return;
         int taken = haBefore - (Math.Max(0, target.Hp) + target.RawCounter(StatusKeys.Armor));
@@ -13741,8 +13744,10 @@ public sealed class BattleContext
         {
             if (b.Chain && taken > 0) { b.Taken += taken; fire = true; pt.Bm426Chain++; }
         }
+        else if (target.Hp < hpBefore && !Fuses427(b, target, source, burnTick, poisonTick, indirect)) { }   // 第427期: チリの爆弾は数える一撃を絞る（第426期の版は常に偽で素通り）
         else if (target.Hp < hpBefore)
         {
+            if (b.Foe || b.Mirror) NoteTrigger427(b, target, source, burnTick, poisonTick);
             b.Fuse++;
             b.Taken += Math.Max(0, taken);
             if (b.Fuse >= BombPlantTrait.Fuse)
@@ -13772,9 +13777,88 @@ public sealed class BattleContext
         finally { _bombQueue426.Clear(); _bombBlasting426 = false; }
     }
 
+    // ---- 第427期: 導火線のチリ（版 BM-e ／ BM-ex ／ BM-em・指示書 design/PHASE427_CHIRI_SPEC.md §1〜§2）----
+    /// <summary>
+    /// 第427期（`BombPlantFoeTrait` の手番）: 敵の最も前の列（前列が空なら中列、それも空なら後列・ボスの勇者）のうち、席番号が若い 2 体（爆弾を持たない者）に置く。
+    /// BM-em（`BombMirror`）は自分の隣の味方にも置く。乱数を引かない。
+    /// </summary>
+    internal void PlantBombs427(UnitState self)
+    {
+        var targets = new List<UnitState>();
+        bool mirror = self.HasTrait(TraitId.BombMirror);
+        if (mirror)
+            foreach (UnitState a in LivingMembers(self.TeamId).OrderBy(a => a.Slot))
+                if (a != self && FormationRules.AreAdjacent(self, a) && !HasBomb426(a)) targets.Add(a);
+        var foes = LivingMembers(Opponent(self.TeamId));
+        if (foes.Count > 0)
+        {
+            Row front = foes.Min(e => e.Row);
+            targets.AddRange(foes.Where(e => e.Row == front && !HasBomb426(e)).OrderBy(e => e.Slot).Take(BombPlantFoeTrait.PerTurn));
+        }
+        if (targets.Count == 0) { Log($"    {self.Name} は仕掛ける先が無い", LogKind.Status); return; }
+        _bombs426 ??= new Dictionary<int, Bomb426>();
+        bool noTick = self.HasTrait(TraitId.BombNoTick);
+        UnitTally t = TallyOf(self);
+        foreach (UnitState u in targets)
+        {
+            _bombs426[u.InstanceId] = new Bomb426 { Planter = self, Holder = u, Chain = true, Foe = true, NoTick = noTick, Mirror = mirror };
+            if (u.TeamId == self.TeamId) t.Bm426PlantAlly++; else t.Bm426PlantFoe++;
+        }
+        Log($"    {self.Name} が {string.Join("・", targets.Select(u => u.Name))} に爆弾を仕掛けた", LogKind.Status);
+    }
+
+    /// <summary>
+    /// 第427期: チリの爆弾の導火線を縮める一撃か（第426期の版は常に真）。
+    /// <para>敵の爆弾: 仕掛けた側の駒の直の一撃（中継 ／ 呪いの共有 ／ 徴収を除く）。燃焼 ／ 毒の刻み（出どころは無い）は BM-ex（`NoTick`）では数えない。
+    /// 味方の爆弾（BM-em）: 敵の直の一撃だけ（刻み ／ 味方の巻き込みは数えない）。</para>
+    /// </summary>
+    static bool Fuses427(Bomb426 b, UnitState target, UnitState? source, bool burnTick, bool poisonTick, bool indirect)
+    {
+        if (!b.Foe) return true;
+        bool tick = burnTick || poisonTick;
+        if (target.TeamId != b.Planter.TeamId)
+            return tick ? !b.NoTick && source is null : !indirect && source is not null && source.TeamId == b.Planter.TeamId;
+        return !tick && !indirect && source is not null && source.TeamId != target.TeamId;
+    }
+
+    /// <summary>第427期（計数のみ）: 導火線を縮めた一撃の主を数える（直の一撃は主の帳簿・刻みは仕掛けた側の帳簿）。3 回目なら起爆の主・爆ぜた T。</summary>
+    void NoteTrigger427(Bomb426 b, UnitState target, UnitState? source, bool burnTick, bool poisonTick)
+    {
+        bool last = b.Fuse + 1 >= BombPlantTrait.Fuse;
+        UnitTally pt = TallyOf(b.Planter);
+        if (burnTick) { pt.Bm427FuseBurn++; if (last) pt.Bm427DetBurn++; }
+        else if (poisonTick) { pt.Bm427FusePoison++; if (last) pt.Bm427DetPoison++; }
+        else if (source is not null) { UnitTally st = TallyOf(source); st.Bm427Fuse++; if (last) st.Bm427Det++; }
+        if (last) { pt.Bm427BlastTurnSum += Turn; pt.Bm427BlastTurnN++; }
+    }
+
+    /// <summary>第427期（BM-em）: 味方の爆弾の爆発。持ち主の向かいの敵（同じ席番号）とその隣の敵に、浴びた量の半分。味方は巻き込まない（敵の爆弾は誘爆する）。</summary>
+    void MirrorBlast427(Bomb426 b)
+    {
+        UnitState h = b.Holder;
+        int amt = b.Taken / 2;
+        UnitTally pt = TallyOf(b.Planter), ht = TallyOf(h);
+        pt.Bm426BlastAlly++; pt.Bm426WeightAlly += amt; pt.Bm427MirrorBlasts++;
+        if (amt > pt.Bm426WeightMax) pt.Bm426WeightMax = amt;
+        ht.Bm426Held++; ht.Bm426HeldWeight += amt;
+        Log($"    {h.Name} の爆弾が向かいへ爆ぜた（{amt}）", LogKind.Highlight, h);
+        if (amt <= 0) return;
+        var hit = LivingMembers(Opponent(h.TeamId)).Where(e => e.Slot == h.Slot || e.Shape.AreAdjacent(h.Slot, e.Slot)).OrderBy(e => e.Slot).ToList();
+        foreach (UnitState u in hit)
+        {
+            if (!u.IsAlive) continue;
+            int before = u.Hp + u.RawCounter(StatusKeys.Armor);
+            ApplyDamage(u, amt, b.Planter);
+            long dealt = before - (Math.Max(0, u.Hp) + u.RawCounter(StatusKeys.Armor));
+            TallyOf(u).Bm426BlastTaken += dealt; pt.Bm427MirrorDealt += dealt;
+            if (!u.IsAlive) pt.Bm426FoeKilled++;
+        }
+    }
+
     /// <summary>第426期: 爆発。持ち主（生きていれば）とその隣（同じ陣営）に、浴びた量の半分（BM-f は全量）。出どころは仕掛けた駒・範囲（`singleHit: false`）。</summary>
     void Blast426(Bomb426 b)
     {
+        if (b.Mirror && b.Holder.TeamId == b.Planter.TeamId) { MirrorBlast427(b); return; }   // 第427期（BM-em の味方の爆弾は向かいの敵へ）
         UnitState h = b.Holder;
         int amt = b.Full ? b.Taken : b.Taken / 2;
         bool foeSide = h.TeamId != b.Planter.TeamId;

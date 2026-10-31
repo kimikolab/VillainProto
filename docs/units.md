@@ -741,6 +741,9 @@
 | `BombPlant` | - |
 | `BombFull` | - |
 | `BombNoChain` | - |
+| `BombPlantFoe` | - |
+| `BombNoTick` | - |
+| `BombMirror` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |
