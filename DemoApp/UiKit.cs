@@ -210,6 +210,7 @@ public static class UiKit
         "vio" => 2.25f, // 四足の毒竜。横に広がる尾を含む。
         "borg" => 2.65f,
         "gald" => 2.85f,
+        "ban" => 3.10f, // 幅広い石像の体格。右向きの守り姿勢で表示。
         "sero" => 2.15f,
         "golm" => 3.35f,
         "dolga" => 3.30f,
@@ -282,6 +283,7 @@ public static class UiKit
         "mug" or "spore" => 0.0f, // 透過余白を残し、胞子の下端を地面へ寄せない。
         "kado" => 0.0198f,
         "gald" => 0.0547f,
+        "ban" => 132f / 1536f, // 彫刻の目v2。戦闘待機絵の足先1403行目から下端までの透過余白。
         "gald_hit" => 109f / 1536f,
         "gald_parry" => 91f / 1536f,
         "sero" => 0.02309f,

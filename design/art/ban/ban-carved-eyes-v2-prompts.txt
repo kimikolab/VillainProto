@@ -1,0 +1,29 @@
+据えのバン — 彫刻の目 v2
+日付: 2026-10-31
+生成方式: 内蔵 image_gen
+対象: ban-front-v1.png / ban-idle-right-v1.png
+変更: 黒く沈んでいた目元を浅い眼窩、石の凸面の眼球、彫り込まれた虹彩と瞳の印に変更。発光なし。体格・ポーズ・透過を維持。
+出力: ban-front-v2-carved-eyes.png / ban-idle-right-v2-carved-eyes.png
+
+戦闘用初稿の虹彩に黄味が出たため、末尾の局所修正を適用。初稿は ban-idle-right-v2-carved-eyes-draft.png として保持。
+
+通常立ち絵
+Use case: precise-object-edit / identity-preserve.
+Task: Make a very small LOCAL EDIT ONLY TO THE EYES of this approved stone guardian game sprite. The current eyes disappear into almost black brow shadows. Replace those dark empty sockets with CLEARLY VISIBLE SCULPTED STONE EYES.
+Eye design: same gray stone as the face, solid convex carved eyeballs sitting in shallow sockets, readable upper and lower carved eyelid rims, a simple incised circular iris and a tiny shallow carved pupil mark. Let gentle front-facing reflected light reveal the pale stone eyeball surfaces and the relief of the iris. The exposed eyeballs should be a light-to-mid gray close to the lit cheek stone, with small darker gray carved iris outlines. Shadow under the brow is thin and soft enough that both eye shapes and the iris carving remain legible. They must read as an ancient stone sculpture's carved eyes at reduced game-sprite size. Stern focused gaze remains unchanged.
+No emission, no glowing eyes, no colored gems, no shiny wet eyes, no realistic flesh, no white human sclera, no painted black eye sockets, no large drilled dark pupil holes, no cartoon huge eyes. Maintain the existing strong angular brow and small severe rectangular head.
+STRICT INVARIANTS: preserve EVERYTHING outside the tiny eye regions: same face outline, nose, mouth, head size and orientation, brows' outer shape, body, exact stance and limb positions, hands and toes, stone texture, cracks, costume, outlines and shading style, composition, character scale, canvas size and transparent margins. Do not re-pose or reframe. Exact same full-body sprite, 1024x1536 composition. Keep the true transparent alpha background; do not add a backdrop, vignette, ground or any shadow outside the figure. No text or other objects.
+This is the normal front standing portrait. Preserve its relaxed lowered arms and frontal gaze exactly.
+
+戦闘待機
+Use case: precise-object-edit / identity-preserve.
+Task: Make a very small LOCAL EDIT ONLY TO THE EYES of this approved stone guardian game sprite. The current eyes disappear into almost black brow shadows. Replace those dark empty sockets with CLEARLY VISIBLE SCULPTED STONE EYES.
+Eye design: same gray stone as the face, solid convex carved eyeballs sitting in shallow sockets, readable upper and lower carved eyelid rims, a simple incised circular iris and a tiny shallow carved pupil mark. Let gentle front-facing reflected light reveal the pale stone eyeball surfaces and the relief of the iris. The exposed eyeballs should be a light-to-mid gray close to the lit cheek stone, with small darker gray carved iris outlines. Shadow under the brow is thin and soft enough that both eye shapes and the iris carving remain legible. They must read as an ancient stone sculpture's carved eyes at reduced game-sprite size. Stern focused gaze remains unchanged.
+No emission, no glowing eyes, no colored gems, no shiny wet eyes, no realistic flesh, no white human sclera, no painted black eye sockets, no large drilled dark pupil holes, no cartoon huge eyes. Maintain the existing strong angular brow and small severe rectangular head.
+STRICT INVARIANTS: preserve EVERYTHING outside the tiny eye regions: same face outline, nose, mouth, head size and orientation, brows' outer shape, body, exact stance and limb positions, hands and toes, stone texture, cracks, costume, outlines and shading style, composition, character scale, canvas size and transparent margins. Do not re-pose or reframe. Exact same full-body sprite, 1024x1536 composition. Keep the true transparent alpha background; do not add a backdrop, vignette, ground or any shadow outside the figure. No text or other objects.
+This is the battle idle portrait facing SCREEN RIGHT with a raised open blocking palm. Preserve the rightward head and gaze, the full pose, and foot placement exactly. Give both visible eyes the same light gray carved-stone eye treatment, including the partially foreshortened far eye.
+
+戦闘用の黄味を除く局所修正（入力1: 戦闘初稿 / 入力2: 通常v2、目の材質参照のみ）
+Use case: precise-object-edit. Image 1 is the EDIT TARGET: Ban's right-facing battle sprite. Image 2 is ONLY the eye material reference from the same character's normal sprite.
+Make one tiny correction ONLY in the visible eyes of image 1: remove the yellow / brown / olive color of the iris. Both eyeball and carved iris must be the SAME NEUTRAL GRAY STONE as his cheek, like the gray sculpted eyes in image 2. A shallow incised circular iris rim and shallow central mark define the gaze, all cut from stone. Show the matte rounded stone eyeball surface in a light gray so it is not swallowed by socket shadow. The eye is a carved relief, not an organic living eyeball, not a gem, not painted. No amber, no gold, no wet highlights, no white human sclera and no glow.
+Preserve image 1 exactly everywhere else: right-facing head, brow silhouette, face geometry, pose, arms, blocking palm, body, texture, cracks, light, toes, positioning, framing and 1024x1536 canvas. Do not use image 2's frontal pose. Keep image 1's true transparent alpha without adding a backdrop or ground. Single full-body sprite.

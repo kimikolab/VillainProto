@@ -1,0 +1,21 @@
+据えのバン — 彫刻の目 v2 適用記録
+2026-10-31
+
+通常: ban-front-v2-carved-eyes.png → DemoApp/assets/portraits/ban.png
+戦闘待機: ban-idle-right-v2-carved-eyes.png → DemoApp/assets/portraits/battle/ban_idle_right.png
+制作: 内蔵 image_gen。プロンプト全文は ban-carved-eyes-v2-prompts.txt。
+黒い眼窩を、浅い眼窩・まぶたの縁・石の眼球・彫り込んだ虹彩に変更。発光なし。
+v1原画とスクリーンショットは保持。戦闘v2の黄味を除く局所修正を1回実施。
+
+両方1024×1536、RGBA、アルファ範囲0〜254。通常は完全透明756489px、戦闘は852680px。
+アルファ128以上の外接矩形（右・下は非包含）:
+通常 (31,67)-(1004,1490)、戦闘 (12,122)-(1014,1404)。
+戦闘足先1403行目（0始まり）。UiKit.cs の足元余白を133/1536から132/1536へ調整。
+表示高3.10は維持。原画と採用画像のSHA-256一致。
+戦闘ルール・数値・台本には変更なし。
+
+dotnet build DemoApp/DemoApp.csproj --no-restore -v minimal: 成功、警告0・エラー0。
+capture-integration.gd を最新v2の参照と撮影名へ更新。
+Vulkan Forward+で BAN_ART_GAME_CAPTURE_OK result=0、終了コード0。
+selection-game-check-v2.png / battle-game-check-v2.png を目視して透過、姿勢、足元、目元の反映を確認。
+終了時に既存のRID / CanvasItem / ObjectDB解放警告あり。

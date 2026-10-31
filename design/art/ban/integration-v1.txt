@@ -1,0 +1,30 @@
+据えのバン — 石像版の立ち絵適用
+2026-10-31
+
+採用素材
+通常・編成・勝利: ban-front-v1.png → DemoApp/assets/portraits/ban.png
+戦闘待機（右向き）: ban-idle-right-v1.png → DemoApp/assets/portraits/battle/ban_idle_right.png
+両方1024×1536のRGBA透過PNG。内蔵 image_gen で、承認済み ban-mobile-statue-concept-v1.png を参照して制作。
+生成プロンプト全文: ban-production-v1-prompts.txt
+原画とゲーム採用画像はSHA-256一致。既存のコンセプト案は保持。
+
+表示調整
+DemoApp/UiKit.cs にバンの表示高3.10と、足元透過余白133/1536を追加。
+戦闘画像のアルファ128以上の外接矩形は (12,123)-(1013,1403)（右・下は非包含）。
+足先は1402行目（0始まり）、下端余白133px。
+通常画像の外接矩形は (31,69)-(1001,1488)。
+通常・戦闘の切替は既存のID命名規約に従う。戦闘ルール・数値・台本は変更していない。
+今回の素材は静止立ち絵。待機アニメーションの連番は追加していない。
+
+確認
+dotnet build DemoApp/DemoApp.csproj --no-restore -v minimal: 成功、エラー0。
+既存BattleCoreの警告CS0162とCS8602あり。
+capture-integration.gd: Vulkan Forward+で編成と戦闘を撮影、BAN_ART_GAME_CAPTURE_OK result=0、終了コード0。
+selection-game-check.png / battle-game-check.png を目視し、画像切替・透過・右向きの構え・足元・他の駒との表示サイズを確認。
+頭なしの「追撃×据え (ハギ×バン)」第5波（--demo-stage=4）・seed 0:
+DEMO_SMOKE_COMPLETE events=560 turns=22 won=False shieldShares=28、終了コード0。
+負けも含め戦闘の終了まで正常再生。バンの範囲引受の通知28件を含む。
+終了時には既存のRID / CanvasItem / ObjectDB解放警告が残る。
+
+再撮影
+C:/tools/Godot_v4.7.2-stable_mono_win64/Godot_console.exe --path DemoApp --windowed --resolution 1440x900 --script C:/works/VillainProto/design/art/ban/capture-integration.gd --audio-driver Dummy

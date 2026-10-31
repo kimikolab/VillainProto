@@ -1,0 +1,18 @@
+据えのバン — コンセプトアート初稿 v1
+生成日: 2026-10-29
+生成方式: 内蔵 image_gen
+画像: ban-concept-v1.png
+設定の根拠: BattleCore/UnitCatalog.cs の Ban。踏みしめ、被弾で層が積もる、隣の味方への範囲攻撃を肩代わり、自分では殴らず移動不可。
+外見は初稿としての提案。ゲームへの組み込みは行っていない。
+絵柄参照: design/art/doha/doha-standing-v2-anime.png
+
+Use case: stylized-concept
+Asset type: first concept illustration for the original fantasy auto-battler character 据えのバン (Ban). A single full-body character design, portrait composition.
+Primary request: Design an original immovable defensive party member whose essential idea is "Once he plants his feet, nobody can move him. Because he stays, he can stand in front of those beside him." He does not attack. He braces on his own turn, gains protective layers when struck, and intercepts area attacks threatening adjacent allies.
+Reference image role: Doha is ONLY a reference for this game's Japanese anime illustration medium, line quality, shading and detail density. Create a completely different character identity, build and equipment. Do not copy his horns, bandages, chains or costume.
+Subject: a mature, very broad, stocky male fantasy guardian with a heavy low center of gravity, short neck, wide sturdy torso, huge forearms and particularly large broad armored feet. Clearly human expressive face, short coarse dark hair with a little gray, thick eyebrows, calm stubborn eyes, a slightly tired reassuring expression. His humanity must remain visible through the heavy protection.
+Design: overlapping weathered stone-like armor plates over dark simple cloth, organized in five broad strata particularly readable on his shoulders, forearms and lower legs. The forearms form massive blunt curved defensive surfaces, organically integrated with his armor rather than carrying a separate weapon. Clear stone grain and a few old repaired cracks, designed broad shapes rather than excessive rubble. Thick boots have wide flat soles firmly seated into the ground. Small stratified stone ridges gather around the soles, visually tying him to the earth. Leave face and hands readable. Practical worn clothing and restrained earthy stone/iron tones; no regal decoration.
+Pose and framing: full body in a relaxed but deeply planted three-quarter front guard stance, feet spread, knees slightly bent, weight down, one enormous forearm held across and outward to shelter the space beside him, the other lowered with relaxed open hand. Quiet resolve, no punching or charging. Entire head, forearms, fingers and both feet clearly inside the canvas with margins. Strong compact silhouette, readable at game portrait scale.
+Style/medium: polished Japanese anime dark fantasy RPG illustration, clean fine dark outlines, stylized adult anatomy, clear cel-shaded shadow shapes with restrained soft rendering, deliberate hair locks, smooth illustrated face; match the reference's medium. Subtle material details, no photorealism, no 3D render.
+Scene/backdrop: warm pale gray neutral concept-art background, small localized ground contact shadow and a little displaced earth around the planted boots. No environment scene.
+Constraints: single character only, no other people, no swords, axes or other offensive weapons, no horns, no skull ornaments, no huge magical aura, no floating shards obscuring the body, no typography, no border, no watermark. This is a first visual proposal, not an existing established appearance.
