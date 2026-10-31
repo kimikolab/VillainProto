@@ -7612,6 +7612,10 @@ public static class UnitCatalog
     public static readonly UnitDef ChiriBMem = Chiri427(new[] { TraitId.BombPlantFoe, TraitId.BombMirror },
         "手番で、敵の前列の二人と両隣の仲間に爆弾を仕掛ける（前列がいなければ最も前の敵へ）。敵の爆弾はこちらの刃を三度受けると爆ぜ、浴びた痛みの半分を本人と両隣に撒く。仲間の爆弾は三度殴られると、向かいの敵とその両隣に撒く",
         "自分では殴らない。仲間の爆弾は仲間が殴られて育つ。倒れた者の爆弾は不発");
+    /// <summary>第428期 BM-emx（最終形の候補・BM-em ＋ 刻みでは縮まない・指示書 design/PHASE428_CHIRI_FINAL_SPEC.md §1）。札の組み合わせだけで、engine の窓口は第427期のまま。</summary>
+    public static readonly UnitDef ChiriBMemx = Chiri427(new[] { TraitId.BombPlantFoe, TraitId.BombMirror, TraitId.BombNoTick },
+        "手番で、敵の前列の二人と両隣の仲間に爆弾を仕掛ける。敵の爆弾はこちらの刃を、仲間の爆弾は敵の刃を三度受けると爆ぜ、浴びた痛みの半分を撒く——敵のは本人と両隣へ、仲間のは向かいの敵とその両隣へ。隣の爆弾も続けて爆ぜる",
+        "自分では殴らない。導火線は直の刃でしか縮まない（燃えても毒でも縮まない）。倒れた者の爆弾は不発");
     /// <summary>第427期 素体（同じ数値・札なし・ふつうに殴る）。測りの対照だけ。</summary>
     public static readonly UnitDef ChiriBM0 = new()
     {

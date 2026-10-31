@@ -13851,7 +13851,7 @@ public sealed class BattleContext
             ApplyDamage(u, amt, b.Planter);
             long dealt = before - (Math.Max(0, u.Hp) + u.RawCounter(StatusKeys.Armor));
             TallyOf(u).Bm426BlastTaken += dealt; pt.Bm427MirrorDealt += dealt;
-            if (!u.IsAlive) pt.Bm426FoeKilled++;
+            if (!u.IsAlive) { pt.Bm426FoeKilled++; pt.Bm428MirrorKilled++; }   // 第428期（計数のみ）: 向かいへの爆発で倒れた敵
         }
     }
 

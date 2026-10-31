@@ -1795,3 +1795,8 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
   - 味方の爆弾（`Mirror`）: 敵の直の一撃だけ（刻み ／ 味方の巻き込みは数えない）。爆発は `MirrorBlast427` で、向かいの敵（同じ席番号）とその隣の敵に撒く（味方は巻き込まない・敵の爆弾は誘爆する）。
 - **毒の刻みの札 `_poisonTick427`**: `PoisonTickOnce` が爆弾のある戦だけ立て、`ApplyDamageCore` の頭で読んで消す（燃焼の刻みは既存の `burnTick`）。
 - 計数のみ: `UnitTally.Bm427*`（導火線を縮めた主 ／ 起爆の主 ／ 刻み ／ 爆ぜた T ／ 向かいに撒いた量）。新しい `BattleEventKind` は無い。
+
+## 第428期 —— 導火線のチリ③（版 BM-emx は札の組み合わせだけ・新しい窓口は無い）
+
+- BM-emx ＝ `BombPlantFoe` ＋ `BombMirror` ＋ `BombNoTick`。第427期の `PlantBombs427` ／ `Fuses427` ／ `MirrorBlast427` をそのまま使う（第427期の版の出力は 1 バイトも動かない・`chiri427 boards` で確かめた）。
+- 計数のみ: `UnitTally.Bm428MirrorKilled`（`MirrorBlast427` の中・向かいへの爆発で倒れた敵）。盤面は触らない。

@@ -1356,6 +1356,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 chiri427 mixed          # 第427期 §3-4: 寄せ集め 3 行（第426期と同じ行と席）× {元の行, 素体, BM-e} × 本編 5 波 ＋ 近衛 ／ 大隊・seed 0..199（3 秒）
     dotnet run --project BattleSim -c Release 0 chiri427 log <e|ex|em|0> <台の頭> <後1|中央> <波の鍵> [seed]   # 第427期: 1戦のログ
     dotnet run --project BattleSim -c Release 0 chiri427 check          # 第427期: 自己検査（版の札 ／ 数値 ／ `All` の外・BM-e は味方に置かない・ボスにも置ける・BM-ex は刻みで縮まない・縮めた主はこちらの駒・試遊の台と鎖の終端）
+    dotnet run --project BattleSim -c Release 0 chiri428 mixed          # 第428期 §2-2（主）: 寄せ集め 6 行（チリの隣に盾役）× {BM-emx, BM-em, 素体} × 本編 5 波 ＋ 近衛 ／ 大隊・seed 0..199（予測 `.tmp/p428/predict.md` が無ければ走らない）（5 秒）
+    dotnet run --project BattleSim -c Release 0 chiri428 boards         # 第428期 §2-3（従）: 第427期の 4 台（後1）× {BM-emx, BM-em} × 4 波・seed 0..99（1 秒）
+    dotnet run --project BattleSim -c Release 0 chiri428 uro            # 第428期 §3: ウロを引く compare ／ 交差帯の行 × {ウロ, ウロの素体} × 本編 5 波 ＋ 近衛 ／ 大隊・seed 0..199（4 秒）
+    dotnet run --project BattleSim -c Release 0 chiri428 log <emx|em|0> <行名の頭> <波の鍵> [seed]   # 第428期: 1戦のログ
+    dotnet run --project BattleSim -c Release 0 chiri428 check          # 第428期: 自己検査（BM-emx の札と数値・主 6 行のチリの隣に盾役・刻みでは縮まない・向かいへ爆ぜる・試遊の台と鎖の終端）
     dotnet run --project BattleSim -c Release 0 nomi425 check           # 第425期: 自己検査（規定 ＝ 旧 − CarveOnce ＋ CarveReadCap・PinN424・試遊の台と鎖の終端・verbose の有無）
     dotnet run --project BattleSim -c Release 0 sh358 p0                # 第358期 §2 Phase 0: 破片の流れ（書いた ／ 敵の一撃で割れた ／ 読んだ ／ 残った）・ツギの板の返し（1回 ／ 同じ主へ集まった塊）・ヒビの砕けと倒れた T・ボスの1ターンの与ダメ ／ 回復（規定・代表台 3 × 5 波・seed 0..99・1 秒）
     dotnet run --project BattleSim -c Release 0 sh358 seats [版]        # 第358期 §4: ヒビ ／ ガレ ＋ 6枚（ウロ ／ ツギ ／ ササ ／ ガルド ／ ドルガ ／ ゴルム）から3枚 × 席の全並び ＝ 2,400 並び × ボス（seed 0..4）／ 近衛 ／ 大隊（seed 0..19）・版（既定 hbgr）と規定の両方（16 秒）
