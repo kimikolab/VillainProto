@@ -218,6 +218,7 @@ static class ShockDigestDiag
         benches = benches.Select(b => (b.Item1, Common.Pin401(b.Item2))).ToArray();   // 第402期（ハギ H123 の規定化）: 古い口の鎖（`Pin294`）はハギまで届かないので、規定のハギを第392〜401期の規定（`HagiH401`）へ   // 第294期（クグ KW-a ／ シガ SW-a の規定化）: 全モードの規定のクグ・シガを第293期の規定（KG-b ／ SI-b）へ
         benches = benches.Select(b => (b.Item1, Common.Pin412(b.Item2))).ToArray();   // 第413期（ムド M-ud の規定化）: 規定のムドを第355〜412期の規定（`MudoH412`）へ（R426・現役網の内）
         benches = benches.Select(b => (b.Item1, Common.Pin418(b.Item2))).ToArray();   // 第418期（リリ LK-1m-s の規定化）: 規定のリリを第206〜417期の規定（`LiliH417`）へ（R426・現役網の内）
+        benches = benches.Select(b => (b.Item1, Common.PinN424f(b.Item2))).ToArray();   // 第425期（ノミ NM-wc の規定化）: 規定のノミを第277〜424期の規定（`NomiH424`）へ（R426・現役網の内・照合で差が出たのは m218 ／ m219）
         // 第230期 前段: 転倒の穴が既定になったので、それより前の期の台は穴なしで回す（w230 だけが今の既定）。
         ShufflerRule? digestRule = mode is "w230" or "a231" or "s232" ? null : ShufflerRule.PreHole;
         PropertyInfo[] props = typeof(BattleEvent).GetProperties(BindingFlags.Public | BindingFlags.Instance);

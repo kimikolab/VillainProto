@@ -1343,6 +1343,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 nomi424 mixed           # 第424期 §2-4: 残りの 4 行 × {規定, NM-wa, NM-wc（参考）} × 本編 5 波 ＋ 近衛 ／ 大隊・seed 0..199 ＋ ミサの列（4 秒）
     dotnet run --project BattleSim -c Release 0 nomi424 log <0|w|wa|wc|w1> <行名の頭> <波の鍵> [seed]   # 第424期: 1戦のログ
     dotnet run --project BattleSim -c Release 0 nomi424 check           # 第424期: 自己検査（版の札と文面・NM-wa は一振りに 1 回読む・NM-wc の 1 発の上限・計数の有無・verbose の有無・試遊の台と鎖の終端）
+    dotnet run --project BattleSim -c Release 0 nomi425 expect          # 第425期 §1-3 ／ §1-4: ノミを含む 9 行（compare ＋ 交差帯）× {旧, NM-wc} × 本編 5 波 ＋ 近衛 ／ 大隊・seed 0..199（期待値を .tmp/p425/expect.tsv に・4 秒）
+    dotnet run --project BattleSim -c Release 0 nomi425 verify          # 第425期: 段0 の後の docs/balance.md ／ elite.md を期待値と段0 の前の写しに突き合わせる（ノミのいない行で動いたセルが 0 の門）
+    dotnet run --project BattleSim -c Release 0 nomi425 confirm         # 第425期 §1-8: 「試遊・刻み ノミ」ほか 3 台 × 4 波・seed 0..99
+    dotnet run --project BattleSim -c Release 0 nomi425 bomb            # 第425期 §3: 爆弾の新駒の材料（3 台 × 4 波・浴びた量 ／ 周りの傷＋燃焼・席ごとのばらつき）
+    dotnet run --project BattleSim -c Release 0 nomi425 check           # 第425期: 自己検査（規定 ＝ 旧 − CarveOnce ＋ CarveReadCap・PinN424・試遊の台と鎖の終端・verbose の有無）
     dotnet run --project BattleSim -c Release 0 sh358 p0                # 第358期 §2 Phase 0: 破片の流れ（書いた ／ 敵の一撃で割れた ／ 読んだ ／ 残った）・ツギの板の返し（1回 ／ 同じ主へ集まった塊）・ヒビの砕けと倒れた T・ボスの1ターンの与ダメ ／ 回復（規定・代表台 3 × 5 波・seed 0..99・1 秒）
     dotnet run --project BattleSim -c Release 0 sh358 seats [版]        # 第358期 §4: ヒビ ／ ガレ ＋ 6枚（ウロ ／ ツギ ／ ササ ／ ガルド ／ ドルガ ／ ゴルム）から3枚 × 席の全並び ＝ 2,400 並び × ボス（seed 0..4）／ 近衛 ／ 大隊（seed 0..19）・版（既定 hbgr）と規定の両方（16 秒）
     dotnet run --project BattleSim -c Release 0 sh358 flow [版,…]       # 第358期 §6 の 1・2: 破片の流れ ／ 返し ／ 礫 ／ ボスへの届き方（1ターンの与ダメを 欠片の返し ／ 礫 ／ 板の返し ／ ほか に分ける）× 版・代表台 4 × ボス ／ 大隊

@@ -784,6 +784,9 @@ public static Formation Pin420(Formation f) { var g = f.Clone(); foreach ((int s
 /// <summary>第421期: 規定のセッキ（SW-n・呑んで庇う）→ 旧（`SekkiH420`・S2h ＋ B ＋ K1）。<b>R426 により、現役網の内で照合に差が出た器具だけが使う</b>（外の器具は封印）。段0 の前は規定がそのまま返る。</summary>
 public static UnitDef PinS420(UnitDef d) => ReferenceEquals(d, UnitCatalog.Sekki) && typeof(UnitCatalog).GetField("SekkiH420")?.GetValue(null) is UnitDef old ? old : d;
 public static Formation PinS420f(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinS420(d); return g; }
+/// <summary>第425期: 規定のノミ（NM-wc・毎発刻む・読みは一発に 20 まで）→ 旧（`NomiH424`・第277〜424期・最初の 1 発だけ刻む）。<b>R426 により、現役網の内で照合に差が出た器具だけが使う</b>（外の器具は封印）。</summary>
+public static UnitDef PinN424(UnitDef d) => ReferenceEquals(d, UnitCatalog.Nomi) ? UnitCatalog.NomiH424 : d;
+public static Formation PinN424f(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinN424(d); return g; }
 public static Formation Pin406(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinK406(d); return g; }
 public static Formation Pin404(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinH404(d); return g; }
 public static Formation Pin402(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinH402(d); return g; }
@@ -842,7 +845,7 @@ public static readonly string[] VersionRows416 = { "版・LK-1 呪い", "版・L
 /// <summary>第417期に足した試遊の台（鎖の終端 <see cref="VersionsH407"/> が外す・第416期の4台のうち「版・LK-1m 呪い」だけが残る）。</summary>
 public static readonly string[] VersionRows417 = { "版・LK-1m-s 呪い", "版・LK-1m-s 紅", "版・LK-1m-p 呪い", "版・LK-2m 呪い" };
 /// <summary>第418期に足した試遊の台（鎖の終端 <see cref="VersionsH407"/> が外す・第416 ／ 417期の「版・LK-…」の台はこの期に一覧から消えた）。</summary>
-public static readonly string[] VersionRows418 = { "試遊・リリ 呪い", "試遊・リリ 紅", "版・2回 リリ 呪い", "版・彫り ノミ", "版・刻み ノミ" };   // 第422期に「版・彫り ノミ」・第423期に「版・刻み ノミ」も足した（鎖の終端で外す）
+public static readonly string[] VersionRows418 = { "試遊・リリ 呪い", "試遊・リリ 紅", "版・2回 リリ 呪い", "版・彫り ノミ", "版・刻み ノミ", "試遊・刻み ノミ" };   // 第422期に「版・彫り ノミ」・第423期に「版・刻み ノミ」・第425期に「試遊・刻み ノミ」（「版・刻み ノミ」の改名）も足した（鎖の終端で外す）
 /// <summary>第419期に足した試遊の台（鎖の終端 <see cref="VersionsH407"/> が外す）。</summary>
 public static readonly string[] VersionRows419 = { "版・呑み セッキ" };
 public static (string Name, Formation F)[] VersionsH407() => Presets.Versions.Where(r => !VersionRows410.Contains(r.Name) && !VersionRows412.Contains(r.Name) && !VersionRows416.Contains(r.Name) && !VersionRows417.Contains(r.Name) && !VersionRows418.Contains(r.Name) && !VersionRows419.Contains(r.Name)).ToArray();

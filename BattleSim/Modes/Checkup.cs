@@ -173,6 +173,7 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.BetrayedShockThunderPop] = (HcBothL, "S1 で、纏った餌は雷でも弾ける（第276期）"),
         [TraitId.Pellet]      = (HcBothL, "攻撃力を連撃の回数に変える——手数が増えるのと、1発が 1 点に潰れるのが1つの動作（第277期）"),
         [TraitId.CarveOnce]   = (HcMinusL, "豆鉄砲の一振りで刻むのは1発目だけ（第277期・N1）"),
+        [TraitId.CarveReadCap] = (HcMinusL, "1 発の読みに上限（第424期・ノミ NM-wc・第425期から規定）: 傷の読みの上乗せは一発に 20 まで（毎発刻み毎発読む連打の二次の伸びを一発ごとに切る）"),
         [TraitId.ChargedPowder]     = (HcPlusL,  "殴った相手に感電を付けるだけ（第279期・T1 ／ T2）。止めるのは弾けたとき（S3 の札と一緒に持つ）"),
         [TraitId.ChargedPowderSpread] = (HcPlusL, "粉が殴った敵の隣にも付くだけ（第286期・T3 ／ T3n）"),
         [TraitId.ChargedPowderLeak] = (HcMinusL, "粉を撒くたび隣の味方に感電が付くだけ。粉の代金で、外せば T2 になる（第279期）"),

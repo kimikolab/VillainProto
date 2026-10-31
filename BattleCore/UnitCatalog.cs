@@ -5754,8 +5754,10 @@ public static class UnitCatalog
     /// <para><b>第277期に転生した（豆鉄砲・N1・ポンの判断）</b>——攻撃力を連撃の回数に変える（1 点 × 攻撃力の発・<see cref="TraitId.Pellet"/>）。
     /// 刻みは一振りの1発目だけ（<see cref="TraitId.CarveOnce"/>）なので傷の供給量は旧と同じで、手数だけが 10 倍。執着・もう一度動く（一振りに1回）は残る。
     /// 旧ノミは <see cref="NomiN0"/> に残し、旧ノミを直接使う過去の器具はそちらに固定した。経緯は design/PHASE277_NOMI_REBIRTH.md。<b>名前・フレーバーの最終はポン</b>。</para>
+    /// <para><b>第425期に旧になった</b>（第277〜424期の規定・最初の 1 発だけ刻む <see cref="TraitId.CarveOnce"/>）。規定は <see cref="Nomi"/>（第424期の NM-wc）。
+    /// 第422〜424期の版はこの旧から作ったまま。旧を読む過去の器具の固定は <c>Common.PinN424</c>（R426・現役網の内で照合に差が出た器具だけ）。</para>
     /// </summary>
-    public static readonly UnitDef Nomi = new()
+    public static readonly UnitDef NomiH424 = new()
     {
         Id = "nomi",
         Name = "刻みのノミ",
@@ -5768,16 +5770,41 @@ public static class UnitCatalog
         Flavor = "一撃を十に割り、同じ場所を彫り続ける。一彫りは浅い。"
     };
 
+    /// <summary>
+    /// 刻みのノミ（<b>第425期の規定</b>・第424期の NM-wc）。旧（<see cref="NomiH424"/>）− 最初の 1 発だけ刻む（<see cref="TraitId.CarveOnce"/>）
+    /// ＋ 1 発の読みに上限（<see cref="TraitId.CarveReadCap"/>・上乗せは <see cref="CarveTrait.ReadCap"/> まで）。HP 52 ／ 攻 10 ／ 速 7・連打・執着・再行動はそのまま。
+    /// <para><b>第425期に転生（第422〜424期）</b>。毎発刻み、毎発読む（上乗せは一発に 20 まで）。<see cref="NomiNMwc"/> は規定と同じ札の別の定義。採らなかった版:</para>
+    /// <list type="bullet">
+    /// <item>NM-c ／ cs ／ cb（一点彫り・第422期）: 単発にすると被弾の効果を回す回数が消える。</item>
+    /// <item>NM-w（毎発刻む・上限なし・第423期）: 読みが二次で伸びて 4 波 100。</item>
+    /// <item>NM-wa（読みは一振りの最初の 1 発だけ・第424期）: ボス ／ 大隊 ／ 強4 が 0（保留在庫・傷の読み手を立て直すときの口）。</item>
+    /// <item>NM-w1（傷 1 つにつき +1・第424期）: NM-w と同じ（4 波 100）。</item>
+    /// </list>
+    /// <para>ノミ単騎のボス 0% は穴ではなく制約（ボスは「1 手番の量」の門・ノミ 1 枚では回復より速く削れない）。経緯は design/PHASE425_NOMI_SETTLE.md。</para>
+    /// </summary>
+    public static readonly UnitDef Nomi = new()
+    {
+        Id = NomiH424.Id,
+        Name = NomiH424.Name,
+        MaxHp = NomiH424.MaxHp,
+        Attack = NomiH424.Attack,
+        Speed = NomiH424.Speed,
+        Traits = new[] { TraitId.Pellet, TraitId.Carve, TraitId.Fixate, TraitId.CarveReadCap },
+        PlusText = "攻撃力の数だけ 1 ずつ連打する。一発ごとに傷を刻み、相手の傷 1 つにつき 2 を上乗せする（一発に 20 まで）。刻んだ相手が倒れると、もう一度動く（一振りに 1 回）",
+        MinusText = NomiH424.MinusText,
+        Flavor = NomiH424.Flavor,
+    };
+
     // ---- 第423期: 刻みのノミの版（毎発刻む・規定の上・`All` の外・数値はそのまま・指示書 design/PHASE423_NOMI_WOUND_SPEC.md §1）----
-    // 連打（`Pellet`）・執着・再行動はそのまま。`CarveOnce`（最初の 1 発だけ刻む）を外すと、刻みの本体（`CarveTrait`）は 1 発ごとに読んで刻む。
+    // 第425期: 旧（`NomiH424`）から作ったまま。連打（`Pellet`）・執着・再行動はそのまま。`CarveOnce`（最初の 1 発だけ刻む）を外すと、刻みの本体（`CarveTrait`）は 1 発ごとに読んで刻む。
     static UnitDef NomiOn423(TraitId[] extra, string plus) => new()
     {
-        Id = Nomi.Id, Name = Nomi.Name, MaxHp = Nomi.MaxHp, Attack = Nomi.Attack, Speed = Nomi.Speed, Advances = Nomi.Advances, Pattern = Nomi.Pattern,
-        Traits = Nomi.Traits.Where(t => t != TraitId.CarveOnce).Concat(extra).ToArray(),
-        Actions = Nomi.Actions,
+        Id = NomiH424.Id, Name = NomiH424.Name, MaxHp = NomiH424.MaxHp, Attack = NomiH424.Attack, Speed = NomiH424.Speed, Advances = NomiH424.Advances, Pattern = NomiH424.Pattern,
+        Traits = NomiH424.Traits.Where(t => t != TraitId.CarveOnce).Concat(extra).ToArray(),
+        Actions = NomiH424.Actions,
         PlusText = plus,
-        MinusText = Nomi.MinusText,
-        Flavor = Nomi.Flavor,
+        MinusText = NomiH424.MinusText,
+        Flavor = NomiH424.Flavor,
     };
     const string WoundPlus423 = "攻撃力の数だけ 1 ずつ連打する。一発ごとに傷を刻み、相手の傷 1 つにつき 2 を上乗せする。刻んだ相手が倒れると、もう一度動く（一振りに 1 回）";
     /// <summary>ノミの版 NM-w 毎発刻む（第423期）: 規定 − `CarveOnce`。</summary>
@@ -5799,12 +5826,12 @@ public static class UnitCatalog
 
     static UnitDef NomiOn422(TraitId[] extra, string plus) => new()
     {
-        Id = Nomi.Id, Name = Nomi.Name, MaxHp = Nomi.MaxHp, Attack = Nomi.Attack, Speed = Nomi.Speed, Advances = Nomi.Advances, Pattern = Nomi.Pattern,
-        Traits = Nomi.Traits.Where(t => t != TraitId.Pellet).Append(TraitId.Chisel).Concat(extra).ToArray(),
-        Actions = Nomi.Actions,
+        Id = NomiH424.Id, Name = NomiH424.Name, MaxHp = NomiH424.MaxHp, Attack = NomiH424.Attack, Speed = NomiH424.Speed, Advances = NomiH424.Advances, Pattern = NomiH424.Pattern,
+        Traits = NomiH424.Traits.Where(t => t != TraitId.Pellet).Append(TraitId.Chisel).Concat(extra).ToArray(),
+        Actions = NomiH424.Actions,
         PlusText = plus,
-        MinusText = Nomi.MinusText,
-        Flavor = Nomi.Flavor,
+        MinusText = NomiH424.MinusText,
+        Flavor = NomiH424.Flavor,
     };
     const string ChiselPlus422 = "一撃を同じ場所に彫り続ける。同じ敵を殴るたび一彫り深くなり（1 彫りにつき +4）、傷 1 つにつき 2 を上乗せする。刻んだ相手が倒れるともう一度動き、彫りの半分を次へ持ち越す";
     /// <summary>ノミの版 NM-c 一点彫り（第422期）。</summary>
