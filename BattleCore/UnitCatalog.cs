@@ -3458,11 +3458,13 @@ public static class UnitCatalog
     };
 
     /// <summary>
-    /// 背かれのソム（規定）。<b>第333期に第332期の LV-c（光の衣の上限）を規定にした</b>（ポンの判断 V1・design/PHASE333_SOM_VEIL_CAP_SETTLE_SPEC.md §2）——
+    /// 背かれのソム（第333〜433期の規定）。<b>第333期に第332期の LV-c（光の衣の上限）を規定にした</b>（ポンの判断 V1・design/PHASE333_SOM_VEIL_CAP_SETTLE_SPEC.md §2）——
     /// 第320〜332期の規定（<see cref="SomH332"/>）＋ <see cref="TraitId.SparkVeilCap"/>（第308期の札: 衣で足せるのは、その味方の破片（ほかの書き手を合算）が最大HPの 4 割になるまで・超えた分は捨てる）。
     /// 札と文面は第332期の <see cref="SomLVc332"/> と同じ（衣の句を <see cref="SomVeilCapClause"/> に差し替えた）。
+    /// <para><b>第434期に雷の返し（RBb-gx・<see cref="Som"/>）を規定にしたので、旧の規定の定義を明示的に持つ</b>（第433期まで <see cref="Som"/> だった物と 1 文字も違わない）。
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。第333〜433期の規定のソムで測った器具はこれに固定する（`Common.Pin434`・R426 により現役網の内だけ）。第431〜433期の版（`SomRB*`）もこれから作る。</para>
     /// </summary>
-    public static readonly UnitDef Som = new()
+    public static readonly UnitDef SomH433 = new()
     {
         Id = SomH332.Id,
         Name = SomH332.Name,
@@ -3478,6 +3480,34 @@ public static class UnitCatalog
             : throw new InvalidOperationException("第333期: 第320〜332期の規定のソムの文面に光の衣の句が見つからない"),
         MinusText = SomH332.MinusText,
         Flavor = SomH332.Flavor
+    };
+
+    /// <summary>第434期: 規定のソムのプラスの末尾に足した雷の返しの句（第433期の <see cref="SomRBbgx"/> と同じ）。</summary>
+    public const string SomVeilShockClause = "。光の衣が砕けるとき、砕いた敵とその両隣が痺れる（1 ターンに 1 度・勇者には効かない）";
+
+    // 第434期（第430〜433期）—— 光の衣に雷の返し。採らなかった形（design/PHASE434_SOM_VEIL_SETTLE.md）:
+    //   RB-1（衣が削れるたびに返す）＝ 打ち返しの行のボス 3 → 64 ／ RB-c（捨てた光を溜めて砕けたら放電）＝ ボス 83.5 ／
+    //   RBb-n ／ RBb-lx（両隣に走らない ／ 左右だけ）＝ 打ち返しの行の精鋭の上がりが消える ／ RBb-glx（全体 1 回 ＋ 左右）＝ 寄せ集めの上がりが「砕いた敵だけ」並みで返しの意味が薄い。
+    /// <summary>
+    /// 背かれのソム（規定）。<b>第434期に第433期の RBb-gx（光の衣の雷の返し）を規定にした</b>（ポンの判断・design/PHASE434_SOM_VEIL_SETTLE_SPEC.md §0）——
+    /// 第333〜433期の規定（<see cref="SomH433"/>）＋ <see cref="TraitId.VeilShockBreak"/> ＋ <see cref="TraitId.VeilShockOnceAll"/> ＋ <see cref="TraitId.VeilShockSpareHero"/>
+    /// （敵の直の刃が衣を砕いたとき、砕いた敵とその両隣（`AreAdjacent`）が帯電する・ソム 1 人につき 1 ターン 1 回・勇者には返さない・書き手はソム・判定は engine の `VeilShock431`）。
+    /// 札と文面は第433期の <see cref="SomRBbgx"/> と同じ。HP ／ 攻 ／ 速は変えない。
+    /// </summary>
+    public static readonly UnitDef Som = new()
+    {
+        Id = SomH433.Id,
+        Name = SomH433.Name,
+        MaxHp = SomH433.MaxHp,
+        Attack = SomH433.Attack,
+        Speed = SomH433.Speed,
+        Advances = SomH433.Advances,
+        Pattern = SomH433.Pattern,
+        Traits = SomH433.Traits.Concat(new[] { TraitId.VeilShockBreak, TraitId.VeilShockOnceAll, TraitId.VeilShockSpareHero }).ToArray(),
+        Actions = SomH433.Actions,
+        PlusText = SomH433.PlusText + SomVeilShockClause,
+        MinusText = SomH433.MinusText,
+        Flavor = SomH433.Flavor
     };
 
     // 第294期 —— ソムの守りの版（指示書 design/PHASE294_GUARD_SPEC.md §3-3）。規定（喚び出し）の上に札を足すだけ。`All` にも `Retired` にも入れない（採否はポン）。
@@ -5188,11 +5218,12 @@ public static class UnitCatalog
     public static readonly UnitDef SomLVd332 = SomOn332(TraitId.SparkVeilTemp, SomVeilTempClause);
 
     // 第431期 —— ソムの光の衣の雷の返し（指示書 design/PHASE431_SOM_VEIL_SHOCK_SPEC.md §1）。規定のソムに札を足し、文面を 1 句足すだけ。`All` にも `Retired` にも入れない（採否はポン）。
+    // 第434期: 規定が RBb-gx になったので、土台を第333〜433期の規定（`SomH433`）に替えた（版の札と文面は 1 文字も変わらない）。
     static UnitDef SomOn431(string plus, params TraitId[] add) => new()
     {
-        Id = Som.Id, Name = Som.Name, MaxHp = Som.MaxHp, Attack = Som.Attack, Speed = Som.Speed, Advances = Som.Advances, Pattern = Som.Pattern,
-        Traits = Som.Traits.Concat(add).ToArray(), Actions = Som.Actions,
-        PlusText = Som.PlusText + plus, MinusText = Som.MinusText, Flavor = Som.Flavor,
+        Id = SomH433.Id, Name = SomH433.Name, MaxHp = SomH433.MaxHp, Attack = SomH433.Attack, Speed = SomH433.Speed, Advances = SomH433.Advances, Pattern = SomH433.Pattern,
+        Traits = SomH433.Traits.Concat(add).ToArray(), Actions = SomH433.Actions,
+        PlusText = SomH433.PlusText + plus, MinusText = SomH433.MinusText, Flavor = SomH433.Flavor,
     };
     /// <summary>第431期 RB-1（一撃一感電）。規定 ＋ <see cref="TraitId.VeilShock"/>。</summary>
     public static readonly UnitDef SomRB1 = SomOn431("。光の衣を削った敵は痺れる。衣が砕けるとき、その両隣も痺れる", TraitId.VeilShock);

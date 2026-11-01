@@ -789,6 +789,9 @@ public static Formation PinS420f(Formation f) { var g = f.Clone(); foreach ((int
 /// <summary>第425期: 規定のノミ（NM-wc・毎発刻む・読みは一発に 20 まで）→ 旧（`NomiH424`・第277〜424期・最初の 1 発だけ刻む）。<b>R426 により、現役網の内で照合に差が出た器具だけが使う</b>（外の器具は封印）。</summary>
 public static UnitDef PinN424(UnitDef d) => ReferenceEquals(d, UnitCatalog.Nomi) ? UnitCatalog.NomiH424 : d;
 public static Formation PinN424f(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinN424(d); return g; }
+/// <summary>第434期: 規定のソム（RBb-gx・光の衣の雷の返し）→ 旧（`SomH433`・第333〜433期の規定）。<b>R426 により、現役網の内で照合に差が出た器具だけが使う</b>（外の器具は封印）。</summary>
+public static UnitDef PinS433(UnitDef d) => ReferenceEquals(d, UnitCatalog.Som) ? UnitCatalog.SomH433 : d;
+public static Formation Pin434(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinS433(d); return g; }
 public static Formation Pin406(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinK406(d); return g; }
 public static Formation Pin404(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinH404(d); return g; }
 public static Formation Pin402(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinH402(d); return g; }
@@ -852,7 +855,7 @@ public static readonly string[] VersionRows418 = { "試遊・リリ 呪い", "�
 public static readonly string[] VersionRows419 = { "版・呑み セッキ" };
 public static readonly string[] VersionRows426 = { "版・爆弾 ウケ" };   // 第426期: 爆弾の版の台も鎖の終端で外す（第427期に外した）
 public static readonly string[] VersionRows427 = { "版・導火線 チリ", "試遊・導火線 チリ" };   // 第429期: 「試遊・導火線 チリ」（改名）も鎖の終端で外す   // 第427期: 導火線のチリの版の台も鎖の終端で外す
-public static readonly string[] VersionRows431 = { "版・光の衣 ソム" };   // 第431期: ソムの光の衣の雷の返しの版の台も鎖の終端で外す
+public static readonly string[] VersionRows431 = { "版・光の衣 ソム", "試遊・光の衣 ソム" };   // 第434期: 「試遊・光の衣 ソム」（改名）も鎖の終端で外す   // 第431期: ソムの光の衣の雷の返しの版の台も鎖の終端で外す
 public static (string Name, Formation F)[] VersionsH407() => Presets.Versions.Where(r => !VersionRows410.Contains(r.Name) && !VersionRows412.Contains(r.Name) && !VersionRows416.Contains(r.Name) && !VersionRows417.Contains(r.Name) && !VersionRows418.Contains(r.Name) && !VersionRows419.Contains(r.Name) && !VersionRows426.Contains(r.Name) && !VersionRows427.Contains(r.Name) && !VersionRows431.Contains(r.Name)).ToArray();
 /// <summary>第411期: 第410期の一覧（第407期の一覧の末尾に「版・K-k 呪い」（K-k）と「版・カーズ 呪い」（KZ-90）・カリは旧）。第408〜410期の器具の試遊の台の項目が読む。</summary>
 public static (string Name, Formation F)[] VersionsH410() => VersionsH407().Select(r => (r.Name, F: Pin406(r.F)))
