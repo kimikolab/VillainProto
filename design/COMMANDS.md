@@ -1801,6 +1801,10 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     Godot_console.exe --path DemoApp --headless -- --map11-graph-smoke
         # **第438期 §5-2**: 盤（`MapGraph`・マスのグラフ）の門。画面なし・約 2 秒。(a) N2 → S1 の最短路が拠点を通り敵の拠点を通らない ／
         # (b) N1 の敵で止まって戦闘 ／ (c) 南の先頭が 2 歩で拠点に着き迎撃 ＋ 玩具の盤（N1–S1）× 貪欲 100 seed（報告のみ）。合否は `MAP11_GRAPH_SMOKE_COMPLETE ok=`
+    Godot_console.exe --path DemoApp --headless --quit-after 240000 res://Map11Main.tscn -- --map11-clock-smoke
+        # **第439期 §5-2**: 時計の門。間隔 0 で `ClockStep` を手で回す・約 2 秒。(a) 1 刻で 1 作戦ターン ／ (b) 接敵で止まり戦闘の最中は刻まない ／
+        # (c) 一時停止中は動かない ／ (d) 誰も出さずに刻むと迎撃 ／ (d') 1 枚も配らずに ▶ で陥落 ＋ 待つ代金の表（報告のみ）。合否は `MAP11_CLOCK_SMOKE_COMPLETE ok=`
+        # `--map11-no-clock`（どの Map11Main の起動にも付けられる）で時計を切る——▶ は第438期の「▶ 進める」と同じく出来事まで一気に回す
     Godot_console.exe --path DemoApp --headless -- --map11-phase176
         # **第176期 Phase 0**: Q0-1〜Q0-5（`PortalOn = false` が第175期の 18 量と一致するか ／
         # 重なりと同点の割り方 ／ 湧いた部隊を満タンで作る口 ／ 方針の手順 ／ 走行時間）。約 1 秒

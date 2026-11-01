@@ -45,6 +45,13 @@ public static class Map11
     /// <summary>1 マップの作戦ターンの上限（戦闘回数の上限とは別の歯止め）。</summary>
     public const int TurnCap = 60;
 
+    /// <summary>
+    /// 時計の 1 刻（＝ 1 作戦ターン）の長さ（秒・第439期）。2× はこの半分。
+    /// <b>0 以下にすると時計を切る</b>——▶ は第438期の「▶ 進める」と同じく出来事まで一気に回す。
+    /// 規則（<see cref="Map11State"/>）は読まない。読むのは画面の時計（<see cref="Map11Clock"/>）だけ。
+    /// </summary>
+    public const double TickSeconds = 1.2;
+
     /// <summary>敵部隊の初期のマス。<b>空きマスのぶんだけ奥にいる。</b></summary>
     public static int StartCellOf(int nodeIndex) => nodeIndex + 1;
 

@@ -63,8 +63,16 @@ public partial class Map11Main : Node3D
 
     // ---- 第174期 部B: 作戦ターン ／ 第175期 §1-2: 行き先指定 ----
 
-    /// <summary><b>何かが起きるまで</b>作戦ターンを自動で回す（第175期 §1-2）。</summary>
+    /// <summary>
+    /// 時計の ▶／⏸（第439期）。<b>時計を切ったとき</b>（<see cref="Map11Clock.On"/> が偽）だけは
+    /// 第175期の「▶ 進める」と同じく<b>何かが起きるまで</b>作戦ターンを一気に回す。
+    /// </summary>
     private Button _run = null!;
+    /// <summary>時計の速さ 1×／2×（第439期）。</summary>
+    private Button _speed = null!;
+    /// <summary>盤の上の「刻 n」と次の刻までの目盛り（第439期）。</summary>
+    private Label _clockLabel = null!;
+    private ProgressBar _clockGauge = null!;
     /// <summary>1 作戦ターンだけ進める（慣れた人・検証用。第174期の口をそのまま残す）。</summary>
     private Button _advanceTurn = null!;
     private Label _orderHint = null!;
@@ -175,6 +183,10 @@ public partial class Map11Main : Node3D
     public override void _Ready()
     {
         Map11Session.EnsureStarted();
+        // 第439期: 時計は通しに結び付ける（別の通しなら止めて目盛りを 0 に）。
+        Map11Clock.Bind(St);
+        if (OS.GetCmdlineUserArgs().Contains("--map11-no-clock", StringComparer.Ordinal))
+            Map11Clock.Disabled = true;
 
         BuildWorld();
         BuildUi();
@@ -216,6 +228,8 @@ public partial class Map11Main : Node3D
         _draftSmoke = args.Contains("--map11-draft-smoke", StringComparer.Ordinal);
         // 第177期: **ボタンの経路**（`RunUntilEvent`）を通す門。
         _runSmoke = args.Contains("--map11-run-smoke", StringComparer.Ordinal);
+        // 第439期 §5-2: 時計の門（間隔 0 で `_Process` を手で回す）。
+        _clockSmoke = args.Contains("--map11-clock-smoke", StringComparer.Ordinal);
         // 第174期 自己検査 (d): **「休む」と「迎撃」を1回ずつ含む走行**。
         // seed を固定して全快方針で回す（傷が残っていれば拠点へ戻って休む）。
         if (timeSmoke && St.Turn == 0 && St.Battles == 0 && !Map11Session.TurnRunning)
@@ -224,7 +238,8 @@ public partial class Map11Main : Node3D
             Map11Session.Reset(PortalSmokeSeed);
         if (_draftSmoke && St.Turn == 0 && St.Battles == 0 && !Map11Session.TurnRunning)
             Map11Session.Reset(0);
-        if (_runSmoke)
+        if (_clockSmoke) Callable.From(ClockSmoke).CallDeferred();
+        else if (_runSmoke)
         {
             if (Map11Session.Drafting && St.Bench.Count > 0) St.UseDefaultSquads();
             Callable.From(RunSmokeStep).CallDeferred();
@@ -1056,6 +1071,22 @@ public partial class Map11Main : Node3D
         _toast.Size = new Vector2(900, 26);
         root.AddChild(_toast);
 
+        // 第439期 §3: 盤の上に**刻の数と次の刻までの目盛り**（文字は 1 行）。
+        var clockRow = new HBoxContainer { Position = new Vector2(392, 92), Size = new Vector2(600, 24) };
+        clockRow.AddThemeConstantOverride("separation", 10);
+        clockRow.MouseFilter = Control.MouseFilterEnum.Ignore;
+        root.AddChild(clockRow);
+        _clockLabel = UiKit.Text("", 14, UiKit.Ink);
+        clockRow.AddChild(_clockLabel);
+        _clockGauge = new ProgressBar
+        {
+            MinValue = 0, MaxValue = 1, Step = 0, ShowPercentage = false,
+            CustomMinimumSize = new Vector2(140, 8),
+            SizeFlagsVertical = Control.SizeFlags.ShrinkCenter,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+        };
+        clockRow.AddChild(_clockGauge);
+
         BuildDestButtons(root);
 
         // ---- 左: 隊 ----
@@ -1077,10 +1108,10 @@ public partial class Map11Main : Node3D
         left.AddChild(_leftScroll);
         _hint = UiKit.Text(St.Draft
             ? "① 手札の駒を押す → ② 席の札を押す（15 枚を 1〜3 隊に好きに分ける）"
-              + " → ③ 隊を押して盤の行き先を押す → ④「▶ 進める」。"
+              + " → ③ 隊を押して盤の行き先を押す → ④「▶」で時計が動く（Space で一時停止）。"
               + "道の奥には敵の拠点があり、制圧すれば湧きが止まって第2拠点になります"
             : "① 隊を押す → ② 盤の行き先を押す（拠点を押せば引き返す）"
-              + " → ③「▶ 進める」。何かが起きるまで作戦ターンが流れ、敵も1マスずつ近づきます",
+              + " → ③「▶」で時計が動く（Space で一時停止）。出来事が起きると止まり、敵も1マスずつ近づきます",
             13, GoldColor);
         _hint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         leftCol.AddChild(_hint);
@@ -1121,11 +1152,16 @@ public partial class Map11Main : Node3D
         var turnRow = new HBoxContainer();
         turnRow.AddThemeConstantOverride("separation", 8);
         leftCol.AddChild(turnRow);
-        _run = UiKit.ActionButton("▶ 進める", GoldColor);
+        // 第439期 §3: 「▶ 進める」を外し、**時計の ▶／⏸ と 1×／2×** を同じ行に置く。
+        _run = UiKit.ActionButton("▶", GoldColor);
         _run.CustomMinimumSize = new Vector2(0, 38);
         _run.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        _run.Pressed += RunUntilEvent;
+        _run.Pressed += ToggleClock;
         turnRow.AddChild(_run);
+        _speed = UiKit.ActionButton("1×", UiKit.Muted);
+        _speed.CustomMinimumSize = new Vector2(56, 38);
+        _speed.Pressed += () => { Map11Clock.Fast = !Map11Clock.Fast; RefreshClock(); };
+        turnRow.AddChild(_speed);
         _advanceTurn = UiKit.ActionButton("1ターン", UiKit.Muted);
         _advanceTurn.CustomMinimumSize = new Vector2(96, 38);
         _advanceTurn.Pressed += AdvanceTurn;
@@ -1425,7 +1461,9 @@ public partial class Map11Main : Node3D
     {
         if (St.Finished) { ShowResult(); return; }
         if (Map11Session.TurnRunning) return;
-        if (NothingDeployed()) return;
+        // 第439期 §1: 時計があれば**誰も出ていなくても刻は進む**（門は時計を切ったときだけ）。
+        if (!Map11Clock.On && NothingDeployed()) return;
+        Map11Clock.Stop();
         if (_reform) { _reform = false; ClearHold(); }
         Map11Session.BeginTurn();
         Pump();
@@ -1491,6 +1529,10 @@ public partial class Map11Main : Node3D
     /// <b>何かが起きるまで</b>作戦ターンを回す。
     /// <b>止まらずに回り続けることはない</b>——作戦ターンの上限（<see cref="Map11.TurnCap"/>）に
     /// 達すると <see cref="Map11State.Finished"/> が真になるので、最悪でもそこで終わる。
+    ///
+    /// <para><b>第439期: ここを通るのは時計を切ったとき（<see cref="Map11Clock.On"/> が偽）の ▶ と
+    /// <c>--map11-run-smoke</c> だけ</b>——1 周ぶんは <see cref="TickOnce"/> に切り出したので、
+    /// 時計の 1 刻とこのループの 1 周は同じ1本である。</para>
     /// </summary>
     private void RunUntilEvent()
     {
@@ -1503,28 +1545,96 @@ public partial class Map11Main : Node3D
         for (int guard = Map11.TurnCap + 2; guard > 0; guard--)
         {
             if (St.Finished) break;
-            Watch before = Take();
-            Map11Session.BeginTurn();
-            Map11Session.StepKind kind = Map11Session.StepTurn();
-            Refresh();
-            switch (kind)
-            {
-                case Map11Session.StepKind.Battle: _running = false; ShowEncounter(); return;
-                case Map11Session.StepKind.Intercept: _running = false; ShowIntercept(); return;
-                case Map11Session.StepKind.Fallen: _running = false; ShowResult(); return;
-            }
-            // **終わったかを、止まる理由より先に見る**（第177期・ポンの2巡目で踏んだ）。
-            // 制圧の瞬間は `StopReason` が「制圧した」を返すが、**盤上の敵が 0 なら同時に踏破**である
-            // ——止まる理由だけで帰ると、勝っているのに結果画面が出ず、
-            // 「▶ 進める」も `Finished` で押せなくなって**先へ進めなくなる**。
-            if (St.Finished) { _running = false; Refresh(); ShowResult(); return; }
-            if (StopReason(before) is { } why)
-            { _running = false; ShowToast(why, GoldColor, 5.0f); Refresh(); return; }
+            if (TickOnce()) return;
         }
 
         _running = false;
         Refresh();
         if (St.Finished) ShowResult();
+    }
+
+    /// <summary>
+    /// 1 刻 ＝ 1 作戦ターン（第439期に <see cref="RunUntilEvent"/> の 1 周を切り出した・中身は第438期のまま）。
+    /// <b>止まったら true</b>——窓（接敵・迎撃・結果）かトースト（<see cref="StopReason"/>）を出した。
+    /// </summary>
+    private bool TickOnce()
+    {
+        Watch before = Take();
+        Map11Session.BeginTurn();
+        Map11Session.StepKind kind = Map11Session.StepTurn();
+        Refresh();
+        switch (kind)
+        {
+            case Map11Session.StepKind.Battle: _running = false; ShowEncounter(); return true;
+            case Map11Session.StepKind.Intercept: _running = false; ShowIntercept(); return true;
+            case Map11Session.StepKind.Fallen: _running = false; ShowResult(); return true;
+        }
+        // **終わったかを、止まる理由より先に見る**（第177期・ポンの2巡目で踏んだ）。
+        // 制圧の瞬間は `StopReason` が「制圧した」を返すが、**盤上の敵が 0 なら同時に踏破**である
+        // ——止まる理由だけで帰ると、勝っているのに結果画面が出ず、
+        // 「▶ 進める」も `Finished` で押せなくなって**先へ進めなくなる**。
+        if (St.Finished) { _running = false; Refresh(); ShowResult(); return true; }
+        if (StopReason(before) is { } why)
+        { _running = false; ShowToast(why, GoldColor, 5.0f); Refresh(); return true; }
+        return false;
+    }
+
+    // ---- 第439期 段A2: 時計 ----
+
+    /// <summary>
+    /// ▶／⏸。<b>時計を切っていれば第438期の「▶ 進める」と同じ</b>（出来事まで一気に回す）。
+    /// 時計があれば刻むのを始める／止めるだけで、<b>押した瞬間には刻まない</b>（1 刻ぶん待つ）。
+    /// </summary>
+    private void ToggleClock()
+    {
+        if (!Map11Clock.On) { RunUntilEvent(); return; }
+        if (St.Finished) { ShowResult(); return; }
+        // 戦闘の途中（窓を閉じた）なら作戦ターンの続きを流す（第438期の「▶ 進める」と同じ枝）。
+        if (Map11Session.TurnRunning) { Pump(); return; }
+        if (Map11Clock.Running) Map11Clock.Stop();
+        else
+        {
+            if (_reform) { _reform = false; ClearHold(); }
+            Map11Clock.Start();
+        }
+        Refresh();
+    }
+
+    /// <summary>刻んでよいか。<b>戦闘の最中・窓が出ている・組み直し中・終わった</b>あいだは刻まない。</summary>
+    private bool ClockMayTick()
+        => !St.Finished && !Map11Session.TurnRunning && !_reform
+           && !_encounterOverlay.Visible && !_interceptOverlay.Visible && !_resultOverlay.Visible;
+
+    /// <summary>時計を 1 フレームぶん進める（<c>_Process</c> と時計の門が呼ぶ）。</summary>
+    private void ClockStep(double delta)
+    {
+        if (!Map11Clock.On || !Map11Clock.Running || !ClockMayTick()) return;
+        if (Map11Clock.Advance(delta) && TickOnce()) Map11Clock.Stop();
+        RefreshClock();
+    }
+
+    /// <summary>▶／⏸ ・ 1×／2× ・ 盤の上の「刻 n」と目盛り。</summary>
+    private void RefreshClock()
+    {
+        bool on = Map11Clock.On;
+        _run.Text = !on ? "▶ 進める" : Map11Clock.Running ? "⏸ 一時停止" : "▶ 動かす";
+        _speed.Visible = on;
+        _speed.Text = Map11Clock.Fast ? "2×" : "1×";
+        _clockLabel.Visible = _clockGauge.Visible = on && St.Time.On;
+        _clockLabel.Text = $"刻 {St.Turn}"
+            + (Map11Session.TurnRunning ? " ・ 戦闘中"
+               : Map11Clock.Running ? $" ・ ▶ {(Map11Clock.Fast ? "2×" : "1×")}" : " ・ ⏸ 止まっています");
+        _clockGauge.Value = Map11Clock.Fraction;
+    }
+
+    public override void _UnhandledInput(InputEvent e)
+    {
+        // 第439期 §1: **Space でも ▶／⏸**（ボタンと同じ1本）。
+        if (e is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Space } && !_run.Disabled)
+        {
+            ToggleClock();
+            GetViewport().SetInputAsHandled();
+        }
     }
 
     /// <summary>作戦ターンの続きを流す。<b>戦闘のところで止まって窓を出す。</b></summary>
@@ -1717,6 +1827,8 @@ public partial class Map11Main : Node3D
         }
         _reform = !_reform;
         ClearHold();
+        // 第439期 §3: 組み直しを開いたら時計は止まる（閉じても勝手に再開しない）。
+        if (_reform) Map11Clock.Stop();
         ShowToast(_reform
             ? "組み直し中——札を2枚押すと入れ替わります（控えの駒も同じ）"
             : "組み直しを終えました", GoldColor, 3.0f);
@@ -2383,6 +2495,7 @@ public partial class Map11Main : Node3D
         RefreshDestButtons();
         _run.Disabled = busy;
         _advanceTurn.Disabled = busy;
+        RefreshClock();
         // 第175期: **1 行にまとめた**（第174期は「いまの命令」と「行き先」で2行になっていた）。
         _orderHint.Text = St.Time.On
             ? $"{sel.Label} の行き先: {Map11Orders.Where(St.Graph, Map11Session.Destinations[_selected])}"
@@ -2489,6 +2602,8 @@ public partial class Map11Main : Node3D
         // 画面の大きさが変わると札の位置がずれるので、毎フレーム引き直す（7 枚だけ）。
         foreach (DestButton d in _destButtons)
             d.Node.Position = _camera.UnprojectPosition(d.World) + d.Offset;
+        // 第439期: 時計。**時計の門の最中は門が自分で回す**（フレームの分まで刻ませない）。
+        if (!_clockSmoke) ClockStep(delta);
 
         if (_toastClock <= 0) return;
         _toastClock -= (float)delta;
