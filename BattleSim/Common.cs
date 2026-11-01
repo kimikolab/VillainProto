@@ -1058,6 +1058,11 @@ public static Formation CurseBoardH356 => Presets.CursePlay(UnitCatalog.Wata, Un
 /// <summary>第357期: `Presets.Versions` の「試遊・呪い」だけを第351〜356期の並び（`CurseBoardH356`）に替えた写し（行の数と並びはそのまま）。</summary>
 public static (string Name, Formation F)[] VersionsH356 => Presets.Versions.Select(r => r.Name == "試遊・呪い" ? (r.Name, CurseBoardH356) : r).ToArray();
 
+/// <summary>第438期 段0: 第437期の `Presets.Versions`（「試遊・呪い」＝ `CurseCenterNel`（第357〜437期の並び）・末尾に「試遊・呪い 萎縮」（第438期の「試遊・呪い」の並び））。
+/// <b>R426 により、現役網の内で照合に差が出た器具だけが使う</b>（外の器具は封印）。鎖の終端（`VersionsH407`）は `Presets.Versions` のまま（第437期の「試遊・呪い 萎縮」は `VersionRows436` で外れる）。</summary>
+public static (string Name, Formation F)[] VersionsH437 => Presets.Versions.Select(r => r.Name == "試遊・呪い" ? (r.Name, Presets.CurseCenterNel()) : r)
+    .Append(("試遊・呪い 萎縮", Presets.CurseDaunt437())).ToArray();
+
 /// <summary>第350期: 燃焼の BN-a を規定にした。第349期までの規定の燃焼で測った器具（`burn349` の「規定」・`inv348` ほか）はこれを通す。陣形とレリックは保つ。</summary>
 public static Formation Pin349(Formation f)
 {

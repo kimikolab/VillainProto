@@ -935,6 +935,10 @@ public static class Presets
     /// ネルが中央だと呪詛の漏れが味方4枚に届き、ワタ → ウツへ回る呪いが増える。</summary>
     public static Formation CurseCenterNel() =>
         Formation.Build(front1: UnitCatalog.Wata, front3: UnitCatalog.Mudo, center: UnitCatalog.Nel, back1: UnitCatalog.Kubi, back3: UnitCatalog.Utsu);
+    /// <summary>第438期 段0: 「試遊・呪い」の並び（第437期の「試遊・呪い 萎縮」・`utsu437 seats` の U-d2 の 1 位）。前1 ワタ ／ 前3 ムド ／ 中央 ウツ ／ 後1 クビ ／ 後3 ネル。
+    /// 第357〜437期の「試遊・呪い」（`CurseCenterNel`）は過去の器具が直に ／ `Common.VersionsH437` で引くので残す。</summary>
+    public static Formation CurseDaunt437() =>
+        Formation.Build(front1: UnitCatalog.Wata, front3: UnitCatalog.Mudo, center: UnitCatalog.Utsu, back1: UnitCatalog.Kubi, back3: UnitCatalog.Nel);
     /// <summary>第413期: 「版・W-u 呪い」「版・W-m 呪い」の並び（「試遊・呪い」と同じ並びで、ワタが版）。</summary>
     public static Formation WataGift413(UnitDef wata) =>
         Formation.Build(front1: wata, front3: UnitCatalog.Mudo, center: UnitCatalog.Nel, back1: UnitCatalog.Kubi, back3: UnitCatalog.Utsu);
@@ -947,7 +951,8 @@ public static class Presets
         ("試遊・燃焼 ポンの台", BurnPon(UnitCatalog.Borg, UnitCatalog.Hota, UnitCatalog.Hiyo)),
         // 第351期 Phase 0: 呪いの台の上位1並び（前1 ワタ ／ 前3 ムド ／ 中央 クビ ／ 後1 ネル ／ 後3 ウツ・`db351 seats` の1位）。規定の駒のまま残す試遊の台。
         // 第357期（ポンの判断）: 第356期の C（ヒーラーなし）に替えた（前1 ワタ ／ 前3 ムド ／ 中央 ネル ／ 後1 クビ ／ 後3 ウツ）。旧の並び（中央 クビ ／ 後1 ネル）は `Common.CurseBoardH356`。
-        ("試遊・呪い", CurseCenterNel()),
+        // 第438期 段0（ポンの判断）: 第437期の「試遊・呪い 萎縮」の並び（`CurseDaunt437`・前1 ワタ ／ 前3 ムド ／ 中央 ウツ ／ 後1 クビ ／ 後3 ネル）に替え、「試遊・呪い 萎縮」の行は外した。第357〜437期の並びは `CurseCenterNel`（`Common.VersionsH437`）。
+        ("試遊・呪い", CurseDaunt437()),
         // 第356期 §6: 「試遊・呪い 壁」（`db356 seats` の1位・ボス ／ 近衛 ／ 大隊のすべてで1位・ムドを残す並び）。前1 ウツ ／ 前3 ワタ ／ 中央 ネル ／ 後1 ムド ／ 後3 ツギ。採るか ／ 試遊・呪いと入れ替えるかはポン。
         ("試遊・呪い 壁", Formation.Build(front1: UnitCatalog.Utsu, front3: UnitCatalog.Wata, center: UnitCatalog.Nel, back1: UnitCatalog.Mudo, back3: UnitCatalog.Tsugi)),
         // 第411期: 「試遊・カーズ 呪い」＝「試遊・呪い」のワタを規定のカーズに替えた並び（第410期の「版・カーズ 呪い」・前1 カーズ ／ 前3 ムド ／ 中央 ネル ／ 後1 クビ ／ 後3 ウツ）。
@@ -1097,8 +1102,7 @@ public static class Presets
         // 第434期: RBb-gx を規定にしたので「試遊・光の衣 ソム」（規定のソム・並びは打ち返しの行のまま）に改めた（指示書 PHASE434_SOM_VEIL_SETTLE_SPEC.md §1-6）。
         ("試遊・光の衣 ソム", Formation.Build(front1: UnitCatalog.Shiga, front3: UnitCatalog.Tsugi, center: UnitCatalog.Som, back1: UnitCatalog.Kata, back3: UnitCatalog.Mio)),
         // 第436期の「版・萎縮 ウツ」（台4 × U-d2）は第437期に外した（U-d2 を規定にした・並びは `utsu436` の中に固定）。
-        // 第437期: 「試遊・呪い」の 5 枚の 120 並びの U-d2 の 1 位（`utsu437 seats`・クビとウツが隣: 前1 ワタ ／ 前3 ムド ／ 中央 ウツ ／ 後1 クビ ／ 後3 ネル）。ボス 100・5.0T（今の試遊・呪いは 6.0T）。入れ替えるかはポン（design/PHASE437_UTSU_DAUNT_SETTLE.md）。
-        ("試遊・呪い 萎縮", Formation.Build(front1: UnitCatalog.Wata, front3: UnitCatalog.Mudo, center: UnitCatalog.Utsu, back1: UnitCatalog.Kubi, back3: UnitCatalog.Nel)),
+        // 第437期の「試遊・呪い 萎縮」（`utsu437 seats` の U-d2 の 1 位）は第438期に「試遊・呪い」と入れ替えて外した（第437期の一覧は `Common.VersionsH437`）。
     };
 
     /// <summary>第416期: 台・呪い（「試遊・呪い」のクビをリリに替え、ウツを矢面に: 前1 ウツ ／ 前3 ムド ／ 中央 ネル ／ 後1 ワタ ／ 後3 リリ）。既定は規定のリリ。</summary>
