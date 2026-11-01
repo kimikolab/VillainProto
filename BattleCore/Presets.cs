@@ -1096,8 +1096,9 @@ public static class Presets
         // 第433期: 歯止め②の版 RBb-gx（ソムの全体で 1 ターン 1 回・勇者なし）に差し替えた（design/PHASE433_SOM_VEIL_BRAKE2.md）。
         // 第434期: RBb-gx を規定にしたので「試遊・光の衣 ソム」（規定のソム・並びは打ち返しの行のまま）に改めた（指示書 PHASE434_SOM_VEIL_SETTLE_SPEC.md §1-6）。
         ("試遊・光の衣 ソム", Formation.Build(front1: UnitCatalog.Shiga, front3: UnitCatalog.Tsugi, center: UnitCatalog.Som, back1: UnitCatalog.Kata, back3: UnitCatalog.Mio)),
-        // 第436期: 逆しまのウツが萎縮を読む版 × 「試遊・呪い 席替え」（前1 ウツ ／ 前3 ムド ／ 中央 ネル ／ 後1 クビ ／ 後3 ワタ・クビの隣はウツとネルだけ）（design/PHASE436_UTSU_DAUNT.md）。
-        ("版・萎縮 ウツ", Formation.Build(front1: UnitCatalog.UtsuUd2, front3: UnitCatalog.Mudo, center: UnitCatalog.Nel, back1: UnitCatalog.Kubi, back3: UnitCatalog.Wata)),
+        // 第436期の「版・萎縮 ウツ」（台4 × U-d2）は第437期に外した（U-d2 を規定にした・並びは `utsu436` の中に固定）。
+        // 第437期: 「試遊・呪い」の 5 枚の 120 並びの U-d2 の 1 位（`utsu437 seats`・クビとウツが隣: 前1 ワタ ／ 前3 ムド ／ 中央 ウツ ／ 後1 クビ ／ 後3 ネル）。ボス 100・5.0T（今の試遊・呪いは 6.0T）。入れ替えるかはポン（design/PHASE437_UTSU_DAUNT_SETTLE.md）。
+        ("試遊・呪い 萎縮", Formation.Build(front1: UnitCatalog.Wata, front3: UnitCatalog.Mudo, center: UnitCatalog.Utsu, back1: UnitCatalog.Kubi, back3: UnitCatalog.Nel)),
     };
 
     /// <summary>第416期: 台・呪い（「試遊・呪い」のクビをリリに替え、ウツを矢面に: 前1 ウツ ／ 前3 ムド ／ 中央 ネル ／ 後1 ワタ ／ 後3 リリ）。既定は規定のリリ。</summary>

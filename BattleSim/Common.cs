@@ -856,7 +856,10 @@ public static readonly string[] VersionRows419 = { "版・呑み セッキ" };
 public static readonly string[] VersionRows426 = { "版・爆弾 ウケ" };   // 第426期: 爆弾の版の台も鎖の終端で外す（第427期に外した）
 public static readonly string[] VersionRows427 = { "版・導火線 チリ", "試遊・導火線 チリ" };   // 第429期: 「試遊・導火線 チリ」（改名）も鎖の終端で外す   // 第427期: 導火線のチリの版の台も鎖の終端で外す
 public static readonly string[] VersionRows431 = { "版・光の衣 ソム", "試遊・光の衣 ソム" };   // 第434期: 「試遊・光の衣 ソム」（改名）も鎖の終端で外す   // 第431期: ソムの光の衣の雷の返しの版の台も鎖の終端で外す
-public static readonly string[] VersionRows436 = { "版・萎縮 ウツ" };   // 第436期: ウツの萎縮の版の台も鎖の終端で外す
+public static readonly string[] VersionRows436 = { "版・萎縮 ウツ", "試遊・呪い 萎縮" };   // 第437期: 「試遊・呪い 萎縮」も鎖の終端で外す   // 第436期: ウツの萎縮の版の台も鎖の終端で外す
+/// <summary>第437期: 規定のウツ（U-d2・萎縮して迎えた一振りは全発が倍）→ 旧（`UtsuH435`・第354〜436期の規定）。<b>R426 により、現役網の内で照合に差が出た器具だけが使う</b>（外の器具は封印）。</summary>
+public static UnitDef PinU435(UnitDef d) => ReferenceEquals(d, UnitCatalog.Utsu) ? UnitCatalog.UtsuH435 : d;
+public static Formation Pin435(Formation f) { var g = f.Clone(); foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinU435(d); return g; }
 public static (string Name, Formation F)[] VersionsH407() => Presets.Versions.Where(r => !VersionRows436.Contains(r.Name) && !VersionRows410.Contains(r.Name) && !VersionRows412.Contains(r.Name) && !VersionRows416.Contains(r.Name) && !VersionRows417.Contains(r.Name) && !VersionRows418.Contains(r.Name) && !VersionRows419.Contains(r.Name) && !VersionRows426.Contains(r.Name) && !VersionRows427.Contains(r.Name) && !VersionRows431.Contains(r.Name)).ToArray();
 /// <summary>第411期: 第410期の一覧（第407期の一覧の末尾に「版・K-k 呪い」（K-k）と「版・カーズ 呪い」（KZ-90）・カリは旧）。第408〜410期の器具の試遊の台の項目が読む。</summary>
 public static (string Name, Formation F)[] VersionsH410() => VersionsH407().Select(r => (r.Name, F: Pin406(r.F)))

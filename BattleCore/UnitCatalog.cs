@@ -2560,10 +2560,11 @@ public static class UnitCatalog
     /// <summary>第354期 UT-o の文面の足し（第353期の `UtsuUTo` と同じ）。</summary>
     const string UtsuOverText354 = "。手数が上限に届いた後は、呪われた分だけ一撃が重くなる（上限を超えた下げ幅 1 につき攻撃力 +3）";
     /// <summary>
-    /// 逆しまのウツ（規定）。<b>第354期に UT-o（第353期の版・上限超え）を規定にした</b>（ポンの判断・指示書 design/PHASE354_UTSU_MUDO_SPEC.md §2）——
+    /// 第354〜436期の規定のウツ（UT-o・逆しま ＋ 上限超え）。<b>第354期に UT-o（第353期の版・上限超え）を規定にした</b>（ポンの判断・指示書 design/PHASE354_UTSU_MUDO_SPEC.md §2）——
     /// 旧（<see cref="UtsuH353"/>）に <see cref="TraitId.PerverseOver"/> を逆しまの後ろに足した。札と文面は第353期の <see cref="UtsuUTo"/> と同じ。
+    /// <b>第437期に U-d2 を規定にした</b>ので明示の定義として残す（中身は 1 文字も変えていない）。過去の器具は `Common.PinU435` ／ `Pin435` で固定する。
     /// </summary>
-    public static readonly UnitDef Utsu = new()
+    public static readonly UnitDef UtsuH435 = new()
     {
         Id = "utsu",
         Name = UtsuH353.Name,
@@ -2574,6 +2575,26 @@ public static class UnitCatalog
         PlusText = UtsuH353.PlusText + UtsuOverText354,
         MinusText = UtsuH353.MinusText,
         Flavor = UtsuH353.Flavor
+    };
+
+    /// <summary>第437期 U-d2 の文面の足し（第436期の `UtsuUd2` と同じ）。</summary>
+    public const string UtsuDauntVolleyText436 = "。萎縮して迎えた一振りは、すべての発が倍になる";
+    /// <summary>
+    /// 逆しまのウツ（規定）。<b>第437期に U-d2（第436期の版・萎縮して迎えた一振りは全発が倍）を規定にした</b>（ポンの判断・指示書 design/PHASE437_UTSU_DAUNT_SETTLE_SPEC.md §1）——
+    /// 旧（<see cref="UtsuH435"/>）の札の末尾に <see cref="TraitId.UtsuDauntVolley"/>。札と文面は第436期の <see cref="UtsuUd2"/> と同じ。
+    /// 採らなかった形: U-d1（萎縮した 1 発目だけ倍・手数の多いウツほど薄まる）／ U-d3（萎縮を自分への呪いに・ネルが要らなくなり手触りが消える・保留在庫）。
+    /// </summary>
+    public static readonly UnitDef Utsu = new()
+    {
+        Id = "utsu",
+        Name = UtsuH435.Name,
+        MaxHp = UtsuH435.MaxHp,
+        Attack = UtsuH435.Attack,
+        Speed = UtsuH435.Speed,
+        Traits = UtsuH435.Traits.Append(TraitId.UtsuDauntVolley).ToArray(),
+        PlusText = UtsuH435.PlusText + UtsuDauntVolleyText436,
+        MinusText = UtsuH435.MinusText,
+        Flavor = UtsuH435.Flavor
     };
 
     // 第313期（指示書 design/PHASE313_DOHA_PUSH_SPEC.md §2）—— ドハの手番の札（背を押す）。手番は術（`Actions = [Skill]`）。条件を満たさない手番は殴る。
@@ -5247,15 +5268,16 @@ public static class UnitCatalog
     public static readonly UnitDef SomRBbgx = SomOn431("。光の衣が砕けるとき、砕いた敵とその両隣が痺れる（1 ターンに 1 度・勇者には効かない）", TraitId.VeilShockBreak, TraitId.VeilShockOnceAll, TraitId.VeilShockSpareHero);
     /// <summary>第433期 RBb-lx（左右だけ・勇者なし）。規定 ＋ <see cref="TraitId.VeilShockBreak"/> ＋ <see cref="TraitId.VeilShockLateral"/> ＋ <see cref="TraitId.VeilShockSpareHero"/>。</summary>
     // 第436期 —— 逆しまのウツが萎縮を読む（指示書 design/PHASE436_UTSU_DAUNT_SPEC.md §2）。規定のウツに札を 1 枚足すだけ（HP ／ 攻 ／ 速は同じ）。`All` にも `Retired` にも入れない（採否はポン）。
+    // 第437期: U-d2 を規定にしたので、版は旧（`UtsuH435`）から作る（`UtsuUd2` は規定と同じ札の別の定義・残置）。
     /// <summary>第436期 U-d1 一撃が倍: 規定 ＋ <see cref="TraitId.UtsuDauntDouble"/>。</summary>
-    public static readonly UnitDef UtsuUd1 = Re351(Utsu, Utsu.Traits.Append(TraitId.UtsuDauntDouble).ToArray(), Utsu.Name,
-        Utsu.PlusText + "。怯えるほど腕が冴える——萎縮した次の一撃は、半分ではなく倍になる", Utsu.MinusText);
+    public static readonly UnitDef UtsuUd1 = Re351(UtsuH435, UtsuH435.Traits.Append(TraitId.UtsuDauntDouble).ToArray(), UtsuH435.Name,
+        UtsuH435.PlusText + "。怯えるほど腕が冴える——萎縮した次の一撃は、半分ではなく倍になる", UtsuH435.MinusText);
     /// <summary>第436期 U-d2 一振りが倍: 規定 ＋ <see cref="TraitId.UtsuDauntVolley"/>。</summary>
-    public static readonly UnitDef UtsuUd2 = Re351(Utsu, Utsu.Traits.Append(TraitId.UtsuDauntVolley).ToArray(), Utsu.Name,
-        Utsu.PlusText + "。萎縮して迎えた一振りは、すべての発が倍になる", Utsu.MinusText);
+    public static readonly UnitDef UtsuUd2 = Re351(UtsuH435, UtsuH435.Traits.Append(TraitId.UtsuDauntVolley).ToArray(), UtsuH435.Name,
+        UtsuH435.PlusText + UtsuDauntVolleyText436, UtsuH435.MinusText);
     /// <summary>第436期 U-d3 怯えを呪いに（比べるための版）: 規定 ＋ <see cref="TraitId.UtsuDauntCurse"/>。</summary>
-    public static readonly UnitDef UtsuUd3 = Re351(Utsu, Utsu.Traits.Append(TraitId.UtsuDauntCurse).ToArray(), Utsu.Name,
-        Utsu.PlusText + "。萎縮は呪いに変わる（半分にならず、消えるとき自分の攻撃力が 3 下がる）", Utsu.MinusText);
+    public static readonly UnitDef UtsuUd3 = Re351(UtsuH435, UtsuH435.Traits.Append(TraitId.UtsuDauntCurse).ToArray(), UtsuH435.Name,
+        UtsuH435.PlusText + "。萎縮は呪いに変わる（半分にならず、消えるとき自分の攻撃力が 3 下がる）", UtsuH435.MinusText);
 
     public static readonly UnitDef SomRBblx = SomOn431("。光の衣が砕けるとき、砕いた敵とその左右が痺れる（勇者には効かない）", TraitId.VeilShockBreak, TraitId.VeilShockLateral, TraitId.VeilShockSpareHero);
 
@@ -7816,8 +7838,9 @@ public static class UnitCatalog
     public static readonly UnitDef NelN50 = Re351(NelH355, NelH355.Traits.Append(TraitId.CurseScarHalf).ToArray(), NelH355.Name,
         NelH355.PlusText + "。呪われた者の傷は、癒えても元の体には戻らない（受けた傷の半分だけ最大HPが削れる）", NelH355.MinusText);
     /// <summary>第355期 U ウツの爪痕: 規定のウツ ＋ <see cref="TraitId.UtsuScar"/>（ウツの直の一撃で減らした HP と同じだけ相手の最大HPが削れる）。</summary>
-    public static readonly UnitDef UtsuU = Re351(Utsu, Utsu.Traits.Append(TraitId.UtsuScar).ToArray(), Utsu.Name,
-        Utsu.PlusText + "。呪われて振るう一撃は、相手の体に消えない爪痕を残す（最大HPを削る）", Utsu.MinusText);
+    // 第437期: 規定のウツが U-d2 になったので、爪痕の版は旧（`UtsuH435`）から作る（中身は第355〜436期と同じ）。
+    public static readonly UnitDef UtsuU = Re351(UtsuH435, UtsuH435.Traits.Append(TraitId.UtsuScar).ToArray(), UtsuH435.Name,
+        UtsuH435.PlusText + "。呪われて振るう一撃は、相手の体に消えない爪痕を残す（最大HPを削る）", UtsuH435.MinusText);
 
     // ---------------------------------------------------------------------------------
     // 第358期【軽い期】破片軸の立て直し①（指示書 design/PHASE358_SHARD_AXIS_SPEC.md §3）。版はヒビ ／ ガレの写し（Id ・数値は同じ・規定の上）。保持者 0 枚。

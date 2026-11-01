@@ -184,7 +184,7 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.VeilShockOnceAll] = (HcPlusL, "衣の雷は全体で 1 ターン 1 回（第433期・ソム RBb-gx・第434期から規定のソム）: どの味方の衣でも、そのターンに最初の砕けだけ返す"),
         [TraitId.VeilShockLateral] = (HcPlusL, "衣の雷は左右だけ（第433期・ソム RBb-lx）: 砕けの雷が同じ列の席番号 ±1 の駒（召喚枠を除く）にだけ走る。保持者 0 枚"),
         [TraitId.UtsuDauntDouble] = (HcPlusL, "萎縮が倍（第436期・ウツ U-d1）: 萎縮して振る一撃は半分ではなく倍。保持者 0 枚"),
-        [TraitId.UtsuDauntVolley] = (HcPlusL, "萎縮の一振りが倍（第436期・ウツ U-d2）: 萎縮して迎えた手番の一振りは全発が倍・萎縮は一振りの終わりで消える。保持者 0 枚"),
+        [TraitId.UtsuDauntVolley] = (HcPlusL, "萎縮の一振りが倍（第436期・ウツ U-d2・第437期から規定のウツ）: 萎縮して迎えた手番の一振りは全発が倍・萎縮は一振りの終わりで消える"),
         [TraitId.UtsuDauntCurse]  = (HcPlusL, "萎縮を呪いに（第436期・ウツ U-d3）: 萎縮した一撃は素のまま・消えるとき自分の攻撃力 -3。保持者 0 枚"),
         [TraitId.BombMirror]   = (HcPlusL,  "仲間の爆弾は向かいへ（第427期 BM-em・第429期から規定のチリ）: 隣の仲間にも置き、敵の刃で 3 度縮むと向かいの敵とその両隣に撒く（味方は巻き込まない）"),
         [TraitId.BombNoTick]   = (HcMinusL, "刻みでは縮まない（第427期 BM-ex・第429期から規定のチリ）: 燃焼 ／ 毒の刻みは導火線を縮めない（爆弾が軽いうちに鳴らない代わりに、燃焼 ／ 毒の駒が起爆装置にならない）"),
