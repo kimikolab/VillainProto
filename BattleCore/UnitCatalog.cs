@@ -5246,6 +5246,17 @@ public static class UnitCatalog
     /// <summary>第433期 RBb-gx（ソムの全体で 1 ターン 1 回・勇者なし）。規定 ＋ <see cref="TraitId.VeilShockBreak"/> ＋ <see cref="TraitId.VeilShockOnceAll"/> ＋ <see cref="TraitId.VeilShockSpareHero"/>。</summary>
     public static readonly UnitDef SomRBbgx = SomOn431("。光の衣が砕けるとき、砕いた敵とその両隣が痺れる（1 ターンに 1 度・勇者には効かない）", TraitId.VeilShockBreak, TraitId.VeilShockOnceAll, TraitId.VeilShockSpareHero);
     /// <summary>第433期 RBb-lx（左右だけ・勇者なし）。規定 ＋ <see cref="TraitId.VeilShockBreak"/> ＋ <see cref="TraitId.VeilShockLateral"/> ＋ <see cref="TraitId.VeilShockSpareHero"/>。</summary>
+    // 第436期 —— 逆しまのウツが萎縮を読む（指示書 design/PHASE436_UTSU_DAUNT_SPEC.md §2）。規定のウツに札を 1 枚足すだけ（HP ／ 攻 ／ 速は同じ）。`All` にも `Retired` にも入れない（採否はポン）。
+    /// <summary>第436期 U-d1 一撃が倍: 規定 ＋ <see cref="TraitId.UtsuDauntDouble"/>。</summary>
+    public static readonly UnitDef UtsuUd1 = Re351(Utsu, Utsu.Traits.Append(TraitId.UtsuDauntDouble).ToArray(), Utsu.Name,
+        Utsu.PlusText + "。怯えるほど腕が冴える——萎縮した次の一撃は、半分ではなく倍になる", Utsu.MinusText);
+    /// <summary>第436期 U-d2 一振りが倍: 規定 ＋ <see cref="TraitId.UtsuDauntVolley"/>。</summary>
+    public static readonly UnitDef UtsuUd2 = Re351(Utsu, Utsu.Traits.Append(TraitId.UtsuDauntVolley).ToArray(), Utsu.Name,
+        Utsu.PlusText + "。萎縮して迎えた一振りは、すべての発が倍になる", Utsu.MinusText);
+    /// <summary>第436期 U-d3 怯えを呪いに（比べるための版）: 規定 ＋ <see cref="TraitId.UtsuDauntCurse"/>。</summary>
+    public static readonly UnitDef UtsuUd3 = Re351(Utsu, Utsu.Traits.Append(TraitId.UtsuDauntCurse).ToArray(), Utsu.Name,
+        Utsu.PlusText + "。萎縮は呪いに変わる（半分にならず、消えるとき自分の攻撃力が 3 下がる）", Utsu.MinusText);
+
     public static readonly UnitDef SomRBblx = SomOn431("。光の衣が砕けるとき、砕いた敵とその左右が痺れる（勇者には効かない）", TraitId.VeilShockBreak, TraitId.VeilShockLateral, TraitId.VeilShockSpareHero);
 
     /// <summary>第323期 カタの版（返す）。規定のカタ ＋ <see cref="TraitId.ThunderPowderReturn"/>（濃さの保持者がいない戦では何も起きない）。</summary>

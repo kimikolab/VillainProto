@@ -1380,6 +1380,10 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 boss435 run             # 第435期: 3 軸（反撃 ／ 破片 ／ 自傷）× 2 台 ＋ 対照 3 台 × ボス ／ 本編 第4波 ／ 近衛 ／ 大隊・seed 0..199（勇者に入れた量と回復・手番ごと・起点・倒れ方・数秒）
     dotnet run --project BattleSim -c Release 0 boss435 probe [seed]    # 第435期: 勇者の HP を台本で追い、量と HpAfter が食い違う出来事を出す（最大 HP の削りの調べ）
     dotnet run --project BattleSim -c Release 0 boss435 check           # 第435期: 自己検査（台の顔ぶれ・勇者は 1 体・開始時の最大 HP 3,000・台本と駒の HP の帳尻・verbose の有無）
+    dotnet run --project BattleSim -c Release 0 utsu436 p0              # 第436期: ウツに萎縮が乗る出どころ（クビの漏れ ／ 敵のクビ ／ 感電の萎縮 ／ 痺れ慣れ ／ バネ）× 台 1〜4 ＋ `compare` のウツの行 × 6 波・seed 0..99（1 秒）
+    dotnet run --project BattleSim -c Release 0 utsu436 boards          # 第436期: 4 台 × {規定, U-d1, U-d2, U-d3} × ボス ／ 近衛 ／ 大隊 ／ 本編 第2・4・5波・seed 0..99（勝率・萎縮の一撃と倍の量・軛・ボスの 1 手番の最大・倒れた味方・席替えの差・§5 の線・3 秒）
+    dotnet run --project BattleSim -c Release 0 utsu436 log <0|d1|d2|d3> <台 1..4> <boss|guard|bat|m2|m4|m5> [seed]   # 第436期: 1 戦のログ
+    dotnet run --project BattleSim -c Release 0 utsu436 check           # 第436期: 自己検査（3 版の札・保持者 0 枚・試遊の台 ＝ 台4 × U-d2・隣の表・verbose の有無・規定は計数 0・U-d2 の一振り・U-d3 はちょうど 3・台3 は読まない）
     dotnet run --project BattleSim -c Release 0 nomi425 check           # 第425期: 自己検査（規定 ＝ 旧 − CarveOnce ＋ CarveReadCap・PinN424・試遊の台と鎖の終端・verbose の有無）
     dotnet run --project BattleSim -c Release 0 sh358 p0                # 第358期 §2 Phase 0: 破片の流れ（書いた ／ 敵の一撃で割れた ／ 読んだ ／ 残った）・ツギの板の返し（1回 ／ 同じ主へ集まった塊）・ヒビの砕けと倒れた T・ボスの1ターンの与ダメ ／ 回復（規定・代表台 3 × 5 波・seed 0..99・1 秒）
     dotnet run --project BattleSim -c Release 0 sh358 seats [版]        # 第358期 §4: ヒビ ／ ガレ ＋ 6枚（ウロ ／ ツギ ／ ササ ／ ガルド ／ ドルガ ／ ゴルム）から3枚 × 席の全並び ＝ 2,400 並び × ボス（seed 0..4）／ 近衛 ／ 大隊（seed 0..19）・版（既定 hbgr）と規定の両方（16 秒）

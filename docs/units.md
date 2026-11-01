@@ -752,6 +752,9 @@
 | `VeilShockSpareHero` | 背かれのソム |
 | `VeilShockOnceAll` | 背かれのソム |
 | `VeilShockLateral` | - |
+| `UtsuDauntDouble` | - |
+| `UtsuDauntVolley` | - |
+| `UtsuDauntCurse` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

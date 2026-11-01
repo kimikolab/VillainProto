@@ -1098,6 +1098,10 @@ public enum TraitId
     // --- 第433期で足した札（指示書 design/PHASE433_SOM_VEIL_BRAKE2_SPEC.md）。RB-b に重ねる歯止め②（版のみ・保持者 0 枚・札そのものは挙動を持たない・engine の `VeilShock431` が読む）---
     VeilShockOnceAll,     // ソムの全体で 1 ターン 1 回（RBb-gx）: どの味方の衣でも、そのターンに最初に砕けた 1 回だけ返す
     VeilShockLateral,     // 左右だけ（RBb-lx）: 両隣を `AreAdjacent` ではなく、同じ列で席番号が ±1 の駒（召喚枠を除く）にする
+    // --- 第436期で足した札（指示書 design/PHASE436_UTSU_DAUNT_SPEC.md）。逆しまのウツが萎縮を読む（版のみ・保持者 0 枚・札そのものは挙動を持たない・engine の萎縮の枝 `UtsuDaunt436` が読む）---
+    UtsuDauntDouble,      // 一撃が倍（U-d1）: 萎縮して振る一撃は半分ではなく倍。消費は今どおり 1 回で消える
+    UtsuDauntVolley,      // 一振りが倍（U-d2）: 萎縮して迎えた手番の一振りは全発が倍・萎縮はその一振りの終わりで消える（手番の外の 1 発は U-d1 と同じ）
+    UtsuDauntCurse,       // 怯えを呪いに（U-d3）: 萎縮した一撃は素のまま・萎縮が消えるとき自分に下げ幅 +3（`Dull`・この戦の間ずっと残る）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -18850,7 +18854,7 @@ public sealed class DauntTrait : Trait
             foreach (UnitState u in ctx.LivingMembers(pick.TeamId))
             {
                 if (u != pick && !FormationRules.AreAdjacent(pick, u)) continue;
-                if (Mark(ctx, self, u)) n++; else tally.DauntFoesAlready++;
+                if (Mark(ctx, self, u)) { n++; ctx.NoteDaunted436(u, u.TeamId == self.TeamId ? 0 : 1); } else tally.DauntFoesAlready++;
             }
             tally.DauntFoes += n;
             ctx.Log($"    {self.Name} の怯えが {pick.Name} とその隣へ伝染った（萎縮 {n} 体・次の一撃が半分）", LogKind.Trigger);
@@ -18862,7 +18866,7 @@ public sealed class DauntTrait : Trait
             foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
             {
                 if (ally == self || !FormationRules.AreAdjacent(self, ally)) continue;
-                if (Mark(ctx, self, ally)) m++;
+                if (Mark(ctx, self, ally)) { m++; ctx.NoteDaunted436(ally, 0); }
             }
             tally.DauntAllies += m;
             if (m > 0) ctx.Log($"    怯えは隣の味方 {m} 体にも伝染った（次の一撃が半分）", LogKind.FriendlyFire);
@@ -18874,7 +18878,7 @@ public sealed class DauntTrait : Trait
     {
         if (!u.IsAlive) return false;
         UnitTally t = ctx.TallyOf(hane);
-        if (Mark(ctx, hane, u)) { t.SpringDaunts++; return true; }
+        if (Mark(ctx, hane, u)) { t.SpringDaunts++; ctx.NoteDaunted436(u, 4); return true; }
         t.SpringDauntsAlready++;
         return false;
     }
@@ -20661,6 +20665,9 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.VeilShockSpareHero),               // 第432期（勇者には返さない RBb-x・印）
         new MarkOnlyTrait(TraitId.VeilShockOnceAll),                 // 第433期（全体で 1 ターン 1 回 RBb-gx・印）
         new MarkOnlyTrait(TraitId.VeilShockLateral),                 // 第433期（左右だけ RBb-lx・印）
+        new MarkOnlyTrait(TraitId.UtsuDauntDouble),                  // 第436期（萎縮が倍 U-d1・印）
+        new MarkOnlyTrait(TraitId.UtsuDauntVolley),                  // 第436期（萎縮の一振りが倍 U-d2・印）
+        new MarkOnlyTrait(TraitId.UtsuDauntCurse),                   // 第436期（萎縮を呪いに U-d3・印）
         new LastStandHoldOldScarTrait(),   // 第199期（対照・保持者 0 枚）
         new LastStandHoldNoStockTrait(),   // 第199期（対照・保持者 0 枚）
         new LastStandHoldMutualLossTrait(),// 第199期（対照・保持者 0 枚）

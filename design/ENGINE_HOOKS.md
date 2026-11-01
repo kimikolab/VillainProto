@@ -1832,3 +1832,9 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - `VeilShock431` の砕けの枝: 勇者 → 味方ごと 1 回（第432期）→ **全体で 1 回**（`_vsOnceAll433`・ソムが最後に返した `Turn`・戦ごとの int）→ 両隣 の順。勇者で止めた砕けは 1 回を使わない。
 - 両隣の走査で `VeilShockLateral` を持つなら `IsLateral433`（同じ `RowOf`・席番号 ±1・どちらも召喚枠でない）だけを当て、走らなかった `AreAdjacent` の隣を数える。X 字では 前1↔前3・後1↔後3 の 2 組だけ（`AreAdjacent` の隣ではない組）。
 - 計数のみ: `Vs433StopOnceAll` ／ `Vs433StopSide` ／ `Vs433BreakFoeMarked`（砕けで帯電させたうち砕いた敵）。札を持たない版では枝に入らない・乱数を引かない。
+
+## 第436期 —— 逆しまのウツが萎縮を読む（版のみ・`UtsuDauntDouble` ／ `UtsuDauntVolley` ／ `UtsuDauntCurse`・保持者 0 枚）
+
+- 萎縮の枝（`PerformAttackBody`・`atk` を作り終えた直後）の条件に `!(_ud436Live && UtsuDaunt436(actor, ref atk))` を足した。札を持たない駒は偽が返り、第189期の「半分にして消す」のまま。`_ud436Live` は保持者が `Add` で盤に来たときだけ立つ。
+- U-d1 は `atk += atk` で消す ／ U-d2 は `SwingTurnHits` が一振りの頭で萎縮していれば `_ud436Volley` に主を控え、一振りの間は消さずに全発を倍、ループの出口で消す（手番の外の 1 発は U-d1 と同じ）／ U-d3 は素のまま消して `Dull(ウツ, 3, DullRoute.Cower, ウツ)`。
+- 計数のみ: `Ud436Swings` ／ `Ud436Added` ／ `Ud436Curse` ／ `Ud436Volleys`、受けた側の `Dn436From[5]`（`NoteDaunted436`・クビの漏れ ／ 敵のクビ ／ 感電の萎縮 ／ 痺れ慣れ ／ バネの 4 箇所の書き手から）。

@@ -656,6 +656,7 @@ if (focusId == "som430") { Som430Diag.Run(args, stageIndex); return; }    // 第
 if (focusId == "som431") { Som431Diag.Run(args, stageIndex); return; }    // 第431期
 if (focusId == "som432") { Som432Diag.Run(args, stageIndex); return; }    // 第432期
 if (focusId == "som433") { Som433Diag.Run(args, stageIndex); return; }    // 第433期
+if (focusId == "utsu436") { Utsu436Diag.Run(args, stageIndex); return; }    // 第436期
 if (focusId == "som434") { Som434Diag.Run(args, stageIndex); return; }    // 第434期
 if (focusId == "boss435") { Boss435Diag.Run(args, stageIndex); return; }    // 第435期
 if (focusId == "sh358") { Sh358Diag.Run(args, stageIndex); return; }        // 第358期

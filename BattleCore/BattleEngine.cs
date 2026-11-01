@@ -3248,6 +3248,7 @@ public sealed class BattleContext
         {
             if (x.RawCounter(StatusKeys.Daunted) > 0) { t.ShockDauntAlready++; return; }
             t.ShockDaunted++;
+            NoteDaunted436(x, 2);   // 第436期（計数のみ）
             x.SetCounter(StatusKeys.Daunted, 1);
             EmitStatusGain(x, StatusKeys.Daunted, 1, ini);   // 表示専用（ShockSpent の直後）
             Log($"    {x.Name} は痺れない——代わりに腕が縮んだ（萎縮）", LogKind.Status);
@@ -3280,6 +3281,7 @@ public sealed class BattleContext
         UnitTally t = TallyOf(x);
         if (x.RawCounter(StatusKeys.Daunted) > 0) { t.St331GuardDauntAlready++; return; }
         t.St331GuardDaunted++;
+        NoteDaunted436(x, 3);   // 第436期（計数のみ）
         x.SetCounter(StatusKeys.Daunted, 1);
         EmitStatusGain(x, StatusKeys.Daunted, 1, ini);   // 表示専用（ShockSpent の直後・萎縮の規則と同じ出来事）
         Log($"    {x.Name} は痺れに慣れた——代わりに腕が縮んだ（萎縮）", LogKind.Status);
@@ -7745,6 +7747,10 @@ public sealed class BattleContext
 
     /// <summary>萎縮させる駒（第189期・<see cref="TraitId.Daunt"/>）が盤上に来たか。<b>偽なら萎縮の判定を比較1つで抜ける。</b></summary>
     bool _dauntLive;
+    /// <summary>第436期（ウツの萎縮の版 U-d1 ／ U-d2 ／ U-d3）の保持者が盤上に来たか。<b>偽なら萎縮の枝は第189期のまま</b>（比較1つ）。</summary>
+    bool _ud436Live;
+    /// <summary>第436期 U-d2: 萎縮して迎えた手番の一振りの主（一振りの間は萎縮を消さずに全発を倍にし、`SwingTurnHits` の出口で消す）。</summary>
+    UnitState? _ud436Volley;
     bool _confuseHalf;   // 第243期（④）
 
     /// <summary>痺れ毒（第195期・<see cref="TraitId.Numb"/>）の保持者が盤上に来たか。<b>偽なら痺れ毒の判定を比較1つで抜ける。</b>
@@ -9992,6 +9998,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Footing)) _shieldHolders.Add(u);
         if (u.HasTrait(TraitId.Planted)) _plantedLive = true;
         if (u.HasTrait(TraitId.Daunt)) _dauntLive = true;   // 第189期（萎縮の消費を短絡させる）
+        if (u.HasTrait(TraitId.UtsuDauntDouble) || u.HasTrait(TraitId.UtsuDauntVolley) || u.HasTrait(TraitId.UtsuDauntCurse)) _ud436Live = true;   // 第436期（萎縮の消費は萎縮の書き手が立てる `_dauntLive` の中だけ）
         if (u.HasTrait(TraitId.ShockDaunt)) { _shockDauntLive = true; _dauntLive = true; }   // 第311期（萎縮の規則の版）
         if (u.HasTrait(TraitId.SwarmCall)) _swarmLive = true;   // 第311期（群れ）
         NotePushHolder(u);                                  // 第313期（背を押す ／ 罪の在り処の窓・計数器 `PushCensus`）
@@ -13270,7 +13277,7 @@ public sealed class BattleContext
         // 突き・止め・薄刃の払い直しの**後**なので、この一撃の打点そのものが半分になる。§1 の +50%・萎縮 −30%・
         // ヒサの半減・層・軛・呪いの共有は `ApplyDamage` の中なので、**半分になった量に今までどおり掛かる**。
         // 式は萎縮の段と同じ切り捨て（攻1 は 1 のまま）。**保持者がいなければ比較1つで抜ける。**
-        if (_dauntLive && actor.RawCounter(StatusKeys.Daunted) > 0)
+        if (_dauntLive && actor.RawCounter(StatusKeys.Daunted) > 0 && !(_ud436Live && UtsuDaunt436(actor, ref atk)))
         {
             actor.SetCounter(StatusKeys.Daunted, 0);
             int cut = atk * DauntTrait.CowerPercent / 100;
@@ -15966,6 +15973,9 @@ public sealed class BattleContext
             if (hits >= 3 && vt.Z372Stage3Turn == 0) vt.Z372Stage3Turn = Math.Max(1, _turn);
         }
         _burstLock = null;
+        // 第436期（U-d2）: 萎縮して迎えた一振りは全発が倍——一振りの間は萎縮を消さず、出口で消す。**保持者がいなければ比較1つで抜ける。**
+        bool udVolley = _ud436Live && _dauntLive && actor.HasTrait(TraitId.UtsuDauntVolley) && actor.RawCounter(StatusKeys.Daunted) > 0;
+        if (udVolley) { _ud436Volley = actor; TallyOf(actor).Ud436Volleys++; }
         for (int i = 0; i < hits; i++)
         {
             if (!actor.IsAlive) break;
@@ -15979,7 +15989,46 @@ public sealed class BattleContext
                                patternOverride: act.PatternOverride);
             _flurryLater = null;
         }
+        if (udVolley)
+        {
+            _ud436Volley = null;
+            actor.SetCounter(StatusKeys.Daunted, 0);
+        }
     }
+
+    /// <summary>
+    /// 第436期（逆しまのウツが萎縮を読む・design/PHASE436_UTSU_DAUNT_SPEC.md §2）。萎縮の枝（`PerformAttackBody` が `atk` を作り終えた直後）から、
+    /// 萎縮している駒が版の札を持つときだけ呼ばれる。<b>札を持たなければ偽を返し、呼び出し側が第189期の「半分にして消す」を行う。</b>
+    /// U-d1 一撃が倍（消す）／ U-d2 一振りの中なら倍（消さない・出口で `SwingTurnHits` が消す）・手番の外の 1 発は U-d1 と同じ ／
+    /// U-d3 素のまま・消すとき自分に `Dull` 3。倍は `ApplyDamage` の前なので、§1 の +50%・軽減・軛は倍になった量に掛かる。<b>乱数を引かない</b>（`Dull` の横取りの候補が 2 体以上のときを除く）。
+    /// </summary>
+    bool UtsuDaunt436(UnitState actor, ref int atk)
+    {
+        bool d1 = actor.HasTrait(TraitId.UtsuDauntDouble), d2 = actor.HasTrait(TraitId.UtsuDauntVolley), d3 = actor.HasTrait(TraitId.UtsuDauntCurse);
+        if (!d1 && !d2 && !d3) return false;
+        UnitTally t = TallyOf(actor);
+        if (d3)
+        {
+            actor.SetCounter(StatusKeys.Daunted, 0);
+            int before = actor.AtkBonus;
+            Dull(actor, UtsuDauntCurse436, DullRoute.Cower, actor);
+            t.Ud436Swings++;
+            t.Ud436Curse += before - actor.AtkBonus;
+            Log($"    {actor.Name} の怯えは呪いに変わった（攻撃力 -{before - actor.AtkBonus}）", LogKind.Trigger);
+            return true;
+        }
+        if (!(d2 && _ud436Volley == actor)) actor.SetCounter(StatusKeys.Daunted, 0);   // U-d1 ／ U-d2 の手番の外の 1 発
+        int add = atk;
+        atk += add;
+        t.Ud436Swings++;
+        t.Ud436Added += add;
+        Log($"    {actor.Name} は怯えで腕が冴えた（この一撃 +{add}）", LogKind.Trigger);
+        return true;
+    }
+    /// <summary>第436期（計数のみ）: 萎縮した出どころを受けた側の帳簿に数える（<see cref="UnitTally.Dn436From"/> の添字）。</summary>
+    public void NoteDaunted436(UnitState u, int kind) => (TallyOf(u).Dn436From ??= new long[5])[kind]++;
+    /// <summary>第436期 U-d3: 萎縮が消えるときウツ自身に積む下げ幅。</summary>
+    public const int UtsuDauntCurse436 = 3;
 
     // =====================================================================================
     // 第294期 —— 守りの版（指示書 design/PHASE294_GUARD_SPEC.md §3）。ヒサの踏みとどまり（HS 土台）・橋（HS-c）・猶予（HS-d）／

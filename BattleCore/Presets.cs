@@ -1096,6 +1096,8 @@ public static class Presets
         // 第433期: 歯止め②の版 RBb-gx（ソムの全体で 1 ターン 1 回・勇者なし）に差し替えた（design/PHASE433_SOM_VEIL_BRAKE2.md）。
         // 第434期: RBb-gx を規定にしたので「試遊・光の衣 ソム」（規定のソム・並びは打ち返しの行のまま）に改めた（指示書 PHASE434_SOM_VEIL_SETTLE_SPEC.md §1-6）。
         ("試遊・光の衣 ソム", Formation.Build(front1: UnitCatalog.Shiga, front3: UnitCatalog.Tsugi, center: UnitCatalog.Som, back1: UnitCatalog.Kata, back3: UnitCatalog.Mio)),
+        // 第436期: 逆しまのウツが萎縮を読む版 × 「試遊・呪い 席替え」（前1 ウツ ／ 前3 ムド ／ 中央 ネル ／ 後1 クビ ／ 後3 ワタ・クビの隣はウツとネルだけ）（design/PHASE436_UTSU_DAUNT.md）。
+        ("版・萎縮 ウツ", Formation.Build(front1: UnitCatalog.UtsuUd2, front3: UnitCatalog.Mudo, center: UnitCatalog.Nel, back1: UnitCatalog.Kubi, back3: UnitCatalog.Wata)),
     };
 
     /// <summary>第416期: 台・呪い（「試遊・呪い」のクビをリリに替え、ウツを矢面に: 前1 ウツ ／ 前3 ムド ／ 中央 ネル ／ 後1 ワタ ／ 後3 リリ）。既定は規定のリリ。</summary>
