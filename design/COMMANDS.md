@@ -1366,6 +1366,9 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 chiri429 check          # 第429期: 自己検査（規定のチリ ＝ BM-emx・`All` 52 枚・ウロは `Retired` の末尾・ウロの 5 行・試遊の台と鎖の終端）
     dotnet run --project BattleSim -c Release 0 som430 robe             # 第430期 §2: ソムを含む台 7 枚 × ボス ／ 近衛 ／ 大隊 ／ 本編 第2・4波 × {規定, 衣なし, 上限なし}・seed 0..199（衣の出入り・受け止めた一撃の主・背きの雷の落ち先・6 秒）
     dotnet run --project BattleSim -c Release 0 som430 check            # 第430期: 自己検査（衣なしの対照・台・verbose の有無・内訳の合計）
+    dotnet run --project BattleSim -c Release 0 som431 boards           # 第431期: 第430期の 7 台 × {規定, RB-1, RB-b, RB-c} × ボス ／ 近衛 ／ 大隊 ／ 本編 第2・4波・seed 0..199（勝率・返しと輪・RB-c の放電・倒れた味方・§4 の線・7 秒）
+    dotnet run --project BattleSim -c Release 0 som431 log <0|1|b|c> <台 1..7> <boss|guard|bat|m2|m4> [seed]   # 第431期: 1 戦のログ
+    dotnet run --project BattleSim -c Release 0 som431 check            # 第431期: 自己検査（3 版の札・保持者 0 枚・試遊の台と鎖の終端・verbose の有無・規定は返さない）
     dotnet run --project BattleSim -c Release 0 nomi425 check           # 第425期: 自己検査（規定 ＝ 旧 − CarveOnce ＋ CarveReadCap・PinN424・試遊の台と鎖の終端・verbose の有無）
     dotnet run --project BattleSim -c Release 0 sh358 p0                # 第358期 §2 Phase 0: 破片の流れ（書いた ／ 敵の一撃で割れた ／ 読んだ ／ 残った）・ツギの板の返し（1回 ／ 同じ主へ集まった塊）・ヒビの砕けと倒れた T・ボスの1ターンの与ダメ ／ 回復（規定・代表台 3 × 5 波・seed 0..99・1 秒）
     dotnet run --project BattleSim -c Release 0 sh358 seats [版]        # 第358期 §4: ヒビ ／ ガレ ＋ 6枚（ウロ ／ ツギ ／ ササ ／ ガルド ／ ドルガ ／ ゴルム）から3枚 × 席の全並び ＝ 2,400 並び × ボス（seed 0..4）／ 近衛 ／ 大隊（seed 0..19）・版（既定 hbgr）と規定の両方（16 秒）

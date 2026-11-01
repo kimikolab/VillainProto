@@ -2300,6 +2300,7 @@ public sealed class BattleContext
                 bool ball = _silkBalls.Count > 0 && IsSilkBall(x);   // 第292期（糸玉が無ければ比較1つ）
                 if (ball && _batLive) (batBalls ??= new List<UnitState>()).Add(x);   // 第327期（電池）
                 if (_bcInfected.Count > 0 && _bcInfected.Remove(x.InstanceId)) TallyOf(_bcHolder!).Bc327Popped++;   // 第327期・計数のみ
+                if (_vsInfected431.Count > 0 && _vsInfected431.Remove(x.InstanceId)) { UnitTally vst = TallyOf(_veilShockSom!); vst.Vs431Popped++; if (ini is not null && BetrayedTrait.IsFodder(ini)) vst.Vs431PoppedBeast++; }   // 第431期・計数のみ（衣が返した帯電が弾けた・起こし手が獣）
                 if (_webLive && x.RawCounter(StatusKeys.Web) > 0 && WebOwner(x) is { } wo) TallyOf(wo).WebPops++;   // 第293期・計数のみ
                 if (ball)
                 {
@@ -2494,6 +2495,16 @@ public sealed class BattleContext
     UnitState? _veilSrc430;
     int _veilKind430 = -1;
     AttackPattern? _veilPat430;
+    // ---- 第431期: 光の衣の雷の返し（RB-1 ／ RB-b ／ RB-c・指示書 design/PHASE431_SOM_VEIL_SHOCK_SPEC.md）----
+    // 「削った一撃」の判定は第430期の計数の枝と同じ場所（`NoteVeilSoak430` の敵の刃の枝）。返しそのものは一撃の後始末（`ApplyDamageCore` の本体の後）で行う
+    //（板の返し `_reflectFrom` と同じ作法・入れ子の呼び出しは退避 ／ 復帰）。保持者がいなければ `_veilShockSom` の null の比較1つで抜ける。**乱数を引かない。**
+    UnitState? _veilShockSom;
+    UnitState? _vsFrom431;
+    bool _vsBroke431;
+    readonly HashSet<int> _vsInfected431 = new();
+    Dictionary<int, int>? _vdStore431;
+    /// <summary>第431期（RB-c）: 溜めの 1 割を撒く・1 回の上限。</summary>
+    public const int VeilDischargeDiv = 10, VeilDischargeCap = 20;
 
     // =================================================================================
     // 第310期 —— 弾ける獣（ソムの版 E1 ／ E2・design/PHASE310_SOM_BURST_SPEC.md §2-1）。
@@ -7924,8 +7935,9 @@ public sealed class BattleContext
             vt.SparkVeilSoaked += soak;
             (vt.SparkVeilSoakedT ??= new long[12])[Math.Min(_turn, 11)] += soak;
             u.SetCounter(SparkTrait.VeilKey, Math.Min(vk - soak, after));
-            if (Math.Min(vk - soak, after) <= 0) vt.VeilBreaks419++;   // 第419期・計数のみ（衣が砕けた回数・ソムの光の衣の下見）
-            NoteVeilSoak430(u, vt, soak);
+            bool broke = Math.Min(vk - soak, after) <= 0;
+            if (broke) vt.VeilBreaks419++;   // 第419期・計数のみ（衣が砕けた回数・ソムの光の衣の下見）
+            NoteVeilSoak430(u, vt, soak, broke);
         }
         if (u.RawCounter(StatusKeys.Plank) > 0)
         {
@@ -7941,7 +7953,7 @@ public sealed class BattleContext
     /// 第430期（<b>計数のみ</b>・光の衣の棚卸し）: 衣が受け止めた量 <paramref name="soak"/> を一撃の主で分ける（受けた味方の側）。
     /// 刻み ／ 中継 ／ 感電の連鎖の中（放電・弾け）／ 敵の刃（単体 ／ 範囲・うち感電した敵から）／ 背いた召喚獣 ／ 味方の巻き込み ／ 自傷（ハギの追い打ちの反動など）／ 刻み ／ 中継 ／ 破片の段の外（礫 ／ 鱗 ／ 移し）。盤面は動かさない。
     /// </summary>
-    void NoteVeilSoak430(UnitState u, UnitTally vt, int soak)
+    void NoteVeilSoak430(UnitState u, UnitTally vt, int soak, bool broke)
     {
         if (soak <= 0) return;
         vt.Veil430Hits++;
@@ -7958,6 +7970,64 @@ public sealed class BattleContext
         {
             if (_veilPat430 is null or AttackPattern.Single) vt.Veil430SoakFoe += soak; else vt.Veil430SoakFoeAoe += soak;
             if (s.RawCounter(StatusKeys.Shock) > 0) vt.Veil430SoakShocked += soak;
+            if (_veilShockSom is not null) { _vsFrom431 = s; _vsBroke431 |= broke; }   // 第431期: 返しは一撃の後始末で（敵の直の刃のときだけ）
+        }
+    }
+
+    /// <summary>第431期（RB-c）: 上限で捨てた光 <paramref name="amt"/> を、受けた味方 <paramref name="a"/> の溜めに足す（戦ごとの帳簿・乱数を引かない）。</summary>
+    internal void VeilStore431(UnitState som, UnitState a, int amt)
+    {
+        _vdStore431 ??= new Dictionary<int, int>();
+        _vdStore431[a.InstanceId] = _vdStore431.GetValueOrDefault(a.InstanceId) + amt;
+        TallyOf(som).Vd431Stored += amt;
+    }
+
+    /// <summary>
+    /// 第431期: 光の衣の雷の返し。<paramref name="holder"/> の衣を敵 <paramref name="foe"/> の直の刃が削った一撃の後始末で呼ぶ。
+    /// RB-1（`VeilShock`）: 削った敵が帯電（1撃1回）・砕けたら両隣も。RB-b（`VeilShockBreak`）: 砕けたときだけ、砕いた敵と両隣。
+    /// RB-c（`VeilDischarge`）: 砕けたら、その味方の溜めの 1 割（1回 <see cref="VeilDischargeCap"/> まで）を砕いた敵と両隣に雷の傷として撒き、溜めを 0 に。
+    /// 書き手はソム（倒れていても）。<b>乱数を引かない。</b>
+    /// </summary>
+    void VeilShock431(UnitState holder, UnitState foe, bool broke)
+    {
+        UnitState som = _veilShockSom!;
+        UnitTally t = TallyOf(som);
+        bool rb1 = som.HasTrait(TraitId.VeilShock), rbb = som.HasTrait(TraitId.VeilShockBreak);
+        if (rb1)
+        {
+            t.Vs431Hits++;
+            if (foe.IsAlive && foe.RawCounter(StatusKeys.Shock) > 0) t.Vs431Already++;
+            else if (MarkShock(foe, som)) { t.Vs431Marked++; _vsInfected431.Add(foe.InstanceId); }
+        }
+        if (!broke || !(rb1 || rbb)) return;
+        t.Vs431Breaks++;
+        var hit = new List<UnitState> { foe };
+        foreach (UnitState n in LivingMembers(foe.TeamId).OrderBy(n => n.Slot))
+            if (n != foe && !IsSilkBall(n) && FormationRules.AreAdjacent(foe, n)) hit.Add(n);
+        foreach (UnitState x in hit)
+        {
+            if (rb1 && x == foe) continue;   // RB-1 は削った敵を上で済ませた
+            if (!x.IsAlive) continue;
+            if (x.RawCounter(StatusKeys.Shock) > 0) { t.Vs431BreakAlready++; continue; }
+            if (MarkShock(x, som)) { t.Vs431BreakMarked++; _vsInfected431.Add(x.InstanceId); }
+        }
+        Log($"    {holder.Name} の光の衣が砕け、雷が {string.Join("・", hit.Where(x => x.IsAlive).Select(x => x.Name))} に走った", LogKind.Trigger);
+        if (!som.HasTrait(TraitId.VeilDischarge) || _vdStore431 is null) return;
+        int store = _vdStore431.GetValueOrDefault(holder.InstanceId);
+        if (!holder.IsAlive) { _vdStore431.Remove(holder.InstanceId); return; }
+        int amt = store / VeilDischargeDiv;
+        if (amt <= 0) return;
+        _vdStore431[holder.InstanceId] = 0;
+        if (amt > VeilDischargeCap) { t.Vd431Cut += amt - VeilDischargeCap; amt = VeilDischargeCap; }
+        t.Vd431Shots++;
+        Log($"    溢れて捨てた光が雷になって走る（{amt}）", LogKind.Trigger);
+        foreach (UnitState x in hit)
+        {
+            if (!x.IsAlive) continue;
+            int before = x.Hp + x.RawCounter(StatusKeys.Armor);
+            t.Vd431Amt += amt;
+            ApplyDamage(x, amt, som, singleHit: false, pattern: AttackPattern.All);
+            t.Vd431Dealt += before - (Math.Max(0, x.Hp) + x.RawCounter(StatusKeys.Armor));
         }
     }
 
@@ -9867,7 +9937,8 @@ public sealed class BattleContext
         NotePowderHolder(u);                                               // 第323期（粉の濃さ TD ／ 伝染 TP・規定のトウは計数だけ）
         if (u.HasTrait(TraitId.StoredCharge) || u.HasTrait(TraitId.Thunder)) _chainReaders.Add(u);   // 第289期（連鎖の後の口）
         if (IsSparkHolder(u)) { _sparkLive = true; _chainReaders.Add(u); }   // 第307期（ソムの光・連鎖の後の口）
-        if (u.HasTrait(TraitId.SparkVeil)) _veilLive = true;              // 第308期（光の衣の計数）
+        if (u.HasTrait(TraitId.SparkVeil)) _veilLive = true;
+        if (_veilShockSom is null && (u.HasTrait(TraitId.VeilShock) || u.HasTrait(TraitId.VeilShockBreak))) _veilShockSom = u;   // 第431期（雷の返し）              // 第308期（光の衣の計数）
         if (u.HasTrait(TraitId.Grapple)) _grappleLive = true;              // 第290期（クグの計数・糸の口の手前）
         if (u.HasTrait(TraitId.Thread)) _threadLive = true;                // 第290期（糸・KG-a〜）
         if (u.HasTrait(TraitId.LiveWireGuard)) _shockStunGuard = true;     // 第217期（G3H）
@@ -13682,6 +13753,8 @@ public sealed class BattleContext
         _reflectAmt = 0; _reflectFrom = null; _reflectRest = 0; _reflectRatio = 0;
         int prevH358 = _hretAmt358; UnitState? prevHF358 = _hretFrom358;   // 第358期（返しの破片）
         _hretAmt358 = 0; _hretFrom358 = null;
+        UnitState? prevVs431 = _vsFrom431; bool prevVsB431 = _vsBroke431;   // 第431期（光の衣の雷の返し）
+        _vsFrom431 = null; _vsBroke431 = false;
         if (_reboundLive && amount > 0) NoteFrameHit(target, source, burnTick);   // 第209期（計数のみ）
         // 第426期（爆弾の版）: 爆弾の持ち主なら、本体の前に HP と HP＋破片を控える（爆弾が1つも無い戦は null の比較1つで抜ける）。
         Bomb426? bomb426 = null; int bombHp426 = 0, bombHa426 = 0;
@@ -13694,6 +13767,7 @@ public sealed class BattleContext
         int relayBefore = relayProbe ? target.Hp + target.RawCounter(StatusKeys.Armor) : 0;
         int myAmt, myRest, myRatio; UnitState? myFrom;
         int myH358; UnitState? myHF358;
+        UnitState? myVs431; bool myVsB431;
         try
         {
             ApplyDamageBody(target, amount, source, isFriendlyFire, lethal, burnTick, relayed,
@@ -13707,6 +13781,8 @@ public sealed class BattleContext
             _reflectAmt = prevAmt; _reflectFrom = prevFrom; _reflectRest = prevRest; _reflectRatio = prevRatio;
             myH358 = _hretAmt358; myHF358 = _hretFrom358;
             _hretAmt358 = prevH358; _hretFrom358 = prevHF358;
+            myVs431 = _vsFrom431; myVsB431 = _vsBroke431;
+            _vsFrom431 = prevVs431; _vsBroke431 = prevVsB431;
         }
         if (burnHit && target.IsAlive && target.RawCounter(StatusKeys.Burn) > 0
             && target.Hp + target.RawCounter(StatusKeys.Armor) < burnHitBefore)
@@ -13724,6 +13800,7 @@ public sealed class BattleContext
         }
         if (myAmt > 0 && myFrom is not null) ReflectPlank(target, myFrom, myAmt, myRest, myRatio);
         if (myH358 > 0 && myHF358 is not null) ShardReturn358(target, myHF358, myH358);   // 第358期（HB-r）
+        if (myVs431 is not null) VeilShock431(target, myVs431, myVsB431);   // 第431期（光の衣の雷の返し・板の返しの後）
         if (bomb426 is not null) BombAfterHit426(bomb426, target, source, burnTick, pattern, bombHp426, bombHa426, poisonTick427, relayed || hexShare || levy);   // 第426期（導火線 ／ 誘爆 ／ 不発・一撃の後始末が済んでから）
     }
 

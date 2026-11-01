@@ -744,6 +744,9 @@
 | `BombPlantFoe` | 導火線のチリ |
 | `BombNoTick` | 導火線のチリ |
 | `BombMirror` | 導火線のチリ |
+| `VeilShock` | - |
+| `VeilShockBreak` | - |
+| `VeilDischarge` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

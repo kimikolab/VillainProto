@@ -1087,6 +1087,10 @@ public enum TraitId
     BombPlantFoe,         // 仕掛ける・敵だけ（BM-e・導火線のチリ）: 手番で、敵の最も前の列の席番号が若い 2 体（爆弾を持たない者）に爆弾を置く。爆弾はこちらの駒の直の一撃（と燃焼 ／ 毒の刻み）でしか縮まず、3 で浴びた量の半分を持ち主と隣の敵に撒く。誘爆あり。自分では殴らない（**判定は engine の `PlantBombs427` ／ `Fuses427`**）
     BombNoTick,           // 刻みでは縮まない（BM-ex）（**札そのものは挙動を持たない**・engine の `Fuses427` が読む）
     BombMirror,           // 味方の爆弾は向かいへ撒く（BM-em）: 隣の味方にも置く。味方の爆弾は敵の直の一撃でだけ縮み、爆ぜたら向かいの敵（同じ席番号）とその隣に撒く（味方は巻き込まない）（**札そのものは挙動を持たない**・engine の `PlantBombs427` ／ `MirrorBlast427` が読む）
+    // --- 第431期で足した札（指示書 design/PHASE431_SOM_VEIL_SHOCK_SPEC.md）。ソムの光の衣の雷の返し（版のみ・保持者 0 枚）。主が敵の直の刃のときだけ返す ---
+    VeilShock,            // 雷の返し（RB-1）: 光の衣が削れるたび、削った敵が帯電する（1撃1回）。衣が砕けた一撃では削った敵の両隣も帯電する（**札そのものは挙動を持たない**・engine の `VeilShock431` が読む）
+    VeilShockBreak,       // 砕けたときだけ（RB-b）: 衣が砕けた一撃でだけ、砕いた敵とその両隣が帯電する（同上）
+    VeilDischarge,        // 放電（RB-c・`VeilShock` と組む）: 上限で捨てた光を受けた味方ごとに溜め、その味方の衣が砕けたら溜めの 1 割（1回 20 まで）を砕いた敵と両隣に雷の傷として撒く（同上）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -15577,6 +15581,7 @@ public sealed class SparkTrait : Trait
         int add = over;
         if (cap) add = Math.Min(over, Math.Max(0, a.MaxHp * VeilCapPercent / 100 - armor));
         t.SparkVeilCapped += over - add;
+        if (over - add > 0 && som.HasTrait(TraitId.VeilDischarge)) ctx.VeilStore431(som, a, over - add);   // 第431期（RB-c）: 上限で捨てた光を受けた味方ごとに溜める
         if (add <= 0) return;
         t.SparkVeilAdded += add;
         t.Veil430Puts++;   // 第430期・計数のみ
@@ -20641,6 +20646,9 @@ public static class TraitCatalog
         new BombPlantFoeTrait(),                                     // 第427期（仕掛ける・敵だけ BM-e・爆発は engine）
         new MarkOnlyTrait(TraitId.BombNoTick),                       // 第427期（刻みでは縮まない BM-ex・印）
         new MarkOnlyTrait(TraitId.BombMirror),                       // 第427期（味方の爆弾は向かいへ BM-em・印）
+        new MarkOnlyTrait(TraitId.VeilShock),                        // 第431期（雷の返し RB-1・印）
+        new MarkOnlyTrait(TraitId.VeilShockBreak),                   // 第431期（砕けたときだけ RB-b・印）
+        new MarkOnlyTrait(TraitId.VeilDischarge),                    // 第431期（放電 RB-c・印）
         new LastStandHoldOldScarTrait(),   // 第199期（対照・保持者 0 枚）
         new LastStandHoldNoStockTrait(),   // 第199期（対照・保持者 0 枚）
         new LastStandHoldMutualLossTrait(),// 第199期（対照・保持者 0 枚）

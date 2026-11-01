@@ -17,7 +17,7 @@ static class Som430Diag
 {
     const string PredictFile = ".tmp/p430/predict.md";
     const int Seeds = 200;
-    static readonly I.W[] Waves = { I.Boss, I.Guard, I.Bat, I.M2, I.M4 };
+    internal static readonly I.W[] Waves = { I.Boss, I.Guard, I.Bat, I.M2, I.M4 };
 
     /// <summary>衣なしの対照（規定のソム − 光の衣の札）。版ではない・`All` ／ `Presets` に入れない。</summary>
     internal static readonly UnitDef SomNoVeil = new()
@@ -31,7 +31,7 @@ static class Som430Diag
         { ("0", "規定", UnitCatalog.Som), ("nv", "衣なし", SomNoVeil), ("nc", "上限なし", UnitCatalog.SomH332) };
 
     /// <summary>台。`compare` ／ 交差帯のソムを含む行（重複する台は1つにまとめる）＋ 試遊の感電の台 ＋ 参考の寄せ集め 2 台（後3 のソム）。</summary>
-    static List<(string Name, Formation F)> Boards()
+    internal static List<(string Name, Formation F)> Boards()
     {
         var list = new List<(string Name, Formation F)>();
         void Add(string n, Formation f)
@@ -51,7 +51,7 @@ static class Som430Diag
     static bool Same(Formation a, Formation b) =>
         a.Shape == b.Shape && Enumerable.Range(0, 5).All(i => ReferenceEquals(a[i], b[i]));
     static Formation Put(Formation f, int slot, UnitDef d) { var g = f.Clone(); g[slot] = d; return g; }
-    static Formation Swap(Formation f, UnitDef som)
+    internal static Formation Swap(Formation f, UnitDef som)
     {
         var g = f.Clone();
         foreach (var o in f.Occupied()) if (o.Def.Id == "som") g[o.Slot] = som;

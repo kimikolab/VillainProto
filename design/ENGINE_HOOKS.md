@@ -1813,3 +1813,10 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 
 - `NoteVeilSoak430`（`BattleEngine.cs`）: 破片の段が破片を減らす直前に一撃の主と種類（`_veilSrc430` ／ `_veilKind430` ／ `_veilPat430`）を立て、`NoteArmorLost` の衣の帳簿の段が受け止めた量を分ける（感電の連鎖 ／ 敵の単体 ／ 範囲（うち感電した敵から）／ 背いた召喚獣 ／ 味方 ／ 自傷 ／ 刻み ／ 中継 ／ 破片の段の外）。`_veilLive` が偽なら比較 1 つで抜ける。
 - `SparkTrait.Veil`: `Veil430Puts`（衣を張った回数）。`BeastThrow`: `Veil430ThrowVeiled` ／ `Veil430ThrowVeiledCharged`（背きの雷が衣をまとった味方に向かった ／ うち帯電）。
+
+## 第431期 —— 光の衣の雷の返し（版のみ・`VeilShock` ／ `VeilShockBreak` ／ `VeilDischarge`・保持者 0 枚）
+
+- `NoteVeilSoak430` の敵の刃の枝（敵の単体 ／ 範囲に落ちた一撃だけ・感電の連鎖 ／ 味方 ／ 中継 ／ 獣は除く）で `_vsFrom431` ／ `_vsBroke431` を控え、`ApplyDamageCore` の本体の後（板の返し ／ ヒビの返しの後）で `VeilShock431` を呼ぶ。枠は板の返しと同じく入れ子で退避 ／ 復帰する。
+- `VeilShock431`: RB-1 は削った敵を `MarkShock(敵, ソム)`・砕けたら `AreAdjacent` の隣（糸玉を除く）も。RB-b は砕けたときだけ削った敵と隣。RB-c は砕けたら溜め ÷ 10（1 回 20 まで）を同じ相手に `ApplyDamage(…, ソム, singleHit: false, pattern: All)`。
+- `VeilStore431`（`SparkTrait.Veil` の上限の枝）: RB-c の溜めは戦ごとの帳簿 `_vdStore431`（受けた味方の `InstanceId` → 量・`Counters` にも `StatusKeys.All` にも置かない）。
+- 計数: `ShockTrigger` の放電の段で `_vsInfected431`（衣が配った帯電が弾けた・起こし手が獣か）。保持者がいなければ `_veilShockSom` の null の比較 1 つで抜ける・乱数を引かない。

@@ -5187,6 +5187,20 @@ public static class UnitCatalog
     /// <summary>第332期 LV-d。規定のソム ＋ <see cref="TraitId.SparkVeilTemp"/>——衣で足した破片は、ソムの次の光の雨の頭で消える（ほかの書き手の破片は消さない）。</summary>
     public static readonly UnitDef SomLVd332 = SomOn332(TraitId.SparkVeilTemp, SomVeilTempClause);
 
+    // 第431期 —— ソムの光の衣の雷の返し（指示書 design/PHASE431_SOM_VEIL_SHOCK_SPEC.md §1）。規定のソムに札を足し、文面を 1 句足すだけ。`All` にも `Retired` にも入れない（採否はポン）。
+    static UnitDef SomOn431(string plus, params TraitId[] add) => new()
+    {
+        Id = Som.Id, Name = Som.Name, MaxHp = Som.MaxHp, Attack = Som.Attack, Speed = Som.Speed, Advances = Som.Advances, Pattern = Som.Pattern,
+        Traits = Som.Traits.Concat(add).ToArray(), Actions = Som.Actions,
+        PlusText = Som.PlusText + plus, MinusText = Som.MinusText, Flavor = Som.Flavor,
+    };
+    /// <summary>第431期 RB-1（一撃一感電）。規定 ＋ <see cref="TraitId.VeilShock"/>。</summary>
+    public static readonly UnitDef SomRB1 = SomOn431("。光の衣を削った敵は痺れる。衣が砕けるとき、その両隣も痺れる", TraitId.VeilShock);
+    /// <summary>第431期 RB-b（砕けたときだけ）。規定 ＋ <see cref="TraitId.VeilShockBreak"/>。</summary>
+    public static readonly UnitDef SomRBb = SomOn431("。光の衣が砕けるとき、砕いた敵とその両隣が痺れる", TraitId.VeilShockBreak);
+    /// <summary>第431期 RB-c（返し＋放電）。規定 ＋ <see cref="TraitId.VeilShock"/> ＋ <see cref="TraitId.VeilDischarge"/>。</summary>
+    public static readonly UnitDef SomRBc = SomOn431("。光の衣を削った敵は痺れる。衣が砕けるとき、溢れて捨てた光が雷となって砕いた敵と両隣を打つ", TraitId.VeilShock, TraitId.VeilDischarge);
+
     /// <summary>第323期 カタの版（返す）。規定のカタ ＋ <see cref="TraitId.ThunderPowderReturn"/>（濃さの保持者がいない戦では何も起きない）。</summary>
     public static readonly UnitDef KataTDR = On323(KataH324, new[] { TraitId.ThunderPowderReturn }, KataPowderReturnText);
     /// <summary>第323期 クグの版（返す）。規定のクグ ＋ <see cref="TraitId.ThreadPowderFlow"/>。</summary>
