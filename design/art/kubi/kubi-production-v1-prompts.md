@@ -1,0 +1,31 @@
+# 萎縮のクビ — ゲーム用立ち絵 v1
+
+生成方式: 内蔵 image_gen（2026-11-01）。
+参照: `kubi-alarm-bell-concept-v2.png`（キャラクター・衣装・絵柄）。
+出力: 1024×1536、RGBA透過PNG。画像加工なしでゲーム配置先へコピー。
+
+## 待機・編成画面
+
+原本: `kubi-front-v1.png`
+配置先: `DemoApp/assets/portraits/kubi.png`
+
+Use case: identity-preserve.
+Asset type: final in-game standing portrait cutout for Kubi, a small timid adult nonhuman bell-ringer, from the supplied approved concept.
+Input image 1 is the character identity and art style reference / edit target. Preserve this SAME character: delicate adult face, amber-brown anxious eyes, short tousled dark hair, pale ash-gray skin, long pointed ears held down/back, slender slight physique, muted purple loose tunic, worn brown short shoulder mantle and vest, narrow dark trousers, humble wrapped brown leather boots, worn shoulder strap and ONE portable old bronze bell with flared down-facing mouth and single old crack.
+CRITICAL CHARACTER ACTING: This is a fragile NONCOMBATANT SUPPORT character. Slightly hunched inward shoulders, anxious gentle expression, feet close, knees slightly bent. He lovingly hugs the bell close to his body with one arm while the other hand clearly grips/cups the clapper beneath the bell's open rim to prevent it ringing. The bell hangs on a physically attached leather shoulder strap. It is a treasured work tool, not a shield or weapon. Maintain the visible contact of the clapper-stilling hand and the coherent two-hand grip.
+STYLE: same fine dark anime contours, clean restrained color planes and subtle cel shading as the approved concept, coherent with the existing dark fantasy anime RPG roster. Readable silhouette and expressive face at small game size, controlled wear details. No realism, 3D or dense gritty textures.
+OUTPUT: one full-body character ONLY, ideally 1024x1536 portrait canvas, entire hair, ears, fingertips, bell, rope and both boot soles visible, at least 4 percent clear padding on all sides. REAL TRANSPARENT RGBA background, empty pixels genuinely alpha zero including between legs, behind ears and fingers. Preserve complete opaque character colors. No background, floor, cast shadow, vignette, checkerboard drawing, fog, glow, effects, text or watermark. Soft neutral character lighting. Exactly two arms, two hands and two feet. No new equipment, no extra bell, no armor, no weapon, no long neck, no giant collar, no child/chibi proportions.
+SPECIFIC VIEW — FORMATION / WAITING SCREEN: use a near-FRONTAL standing view, body and shoulders directed mostly toward the viewer, face almost forward but eyes nervously glance slightly to one side. Keep the expressive worried adult face fully visible, downturned pointed ears and small inward posture. Bell centered just in front of the torso, one palm across its outer dome/body, other hand reaching beneath the rim to hold the clapper. Make the face and bell-stilling gesture readable from the front. Match the approved concept's body proportions and costume without redesign. This is a transparent game portrait version of that concept, not a scene.
+
+## 戦闘用・右向き
+
+原本: `kubi-idle-right-v1.png`
+配置先: `DemoApp/assets/portraits/battle/kubi_idle_right.png`
+
+Use case: identity-preserve.
+Asset type: final in-game standing portrait cutout for Kubi, a small timid adult nonhuman bell-ringer, from the supplied approved concept.
+Input image 1 is the character identity and art style reference / edit target. Preserve this SAME character: delicate adult face, amber-brown anxious eyes, short tousled dark hair, pale ash-gray skin, long pointed ears held down/back, slender slight physique, muted purple loose tunic, worn brown short shoulder mantle and vest, narrow dark trousers, humble wrapped brown leather boots, worn shoulder strap and ONE portable old bronze bell with flared down-facing mouth and single old crack.
+CRITICAL CHARACTER ACTING: This is a fragile NONCOMBATANT SUPPORT character. Slightly hunched inward shoulders, anxious gentle expression, feet close, knees slightly bent. He lovingly hugs the bell close to his body with one arm while the other hand clearly grips/cups the clapper beneath the bell's open rim to prevent it ringing. The bell hangs on a physically attached leather shoulder strap. It is a treasured work tool, not a shield or weapon. Maintain the visible contact of the clapper-stilling hand and the coherent two-hand grip.
+STYLE: same fine dark anime contours, clean restrained color planes and subtle cel shading as the approved concept, coherent with the existing dark fantasy anime RPG roster. Readable silhouette and expressive face at small game size, controlled wear details. No realism, 3D or dense gritty textures.
+OUTPUT: one full-body character ONLY, ideally 1024x1536 portrait canvas, entire hair, ears, fingertips, bell, rope and both boot soles visible, at least 4 percent clear padding on all sides. REAL TRANSPARENT RGBA background, empty pixels genuinely alpha zero including between legs, behind ears and fingers. Preserve complete opaque character colors. No background, floor, cast shadow, vignette, checkerboard drawing, fog, glow, effects, text or watermark. Soft neutral character lighting. Exactly two arms, two hands and two feet. No new equipment, no extra bell, no armor, no weapon, no long neck, no giant collar, no child/chibi proportions.
+SPECIFIC VIEW — BATTLE IDLE FACING SCREEN RIGHT: REDRAW the character at a pronounced right-facing three-quarter SIDE angle suitable for a side-view battle, like a fighting game's idle frame for a timid support character. Nose, eyes, chest, knees and boot toes all point toward the RIGHT EDGE OF THE IMAGE. Show the near side of the face and enough far cheek to recognize him, not front-facing and not looking left. He draws his head back nervously while looking toward the enemy off-screen right; ear laid back, shoulders protectively raised. Bell held immediately in front of the body on screen-right, not blocking the face, hugged tightly. Visible near hand cups the clapper underneath the open bell rim, other arm steadies its outer body. Back and draped brown mantle sit toward screen-left. Feet are grounded close together in a stable shy standing pose, no walking, lunge, attack or heroic stance. Keep matching small slender adult proportions. True right-facing game sprite composition, clear silhouette.

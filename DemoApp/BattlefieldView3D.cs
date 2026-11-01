@@ -90,7 +90,7 @@ public partial class BattlefieldView3D : Control
         BuildOverlay();
         _attackAudio = new BattleAttackAudio();
         AddChild(_attackAudio);
-        VisibilityChanged += () => { if (!IsVisibleInTree()) { EndChiriPresentation(); _attackAudio.StopAll(); ResetLiliRite(); ResetFire(); EndShockMarkPresentation(); EndGolmPresentation(); ResetGaldSwordPresentation(); ResetPoisonPresentation(); ResetDeathPresentation(); } };
+        VisibilityChanged += () => { if (!IsVisibleInTree()) { EndChiriPresentation(); _attackAudio.StopAll(); ResetLiliRite(); ResetFire(); EndShockMarkPresentation(); EndGolmPresentation(); ResetGaldSwordPresentation(); ResetPoisonPresentation(); ResetDeathPresentation(); ResetKubiBellPresentation(); } };
     }
 
     private void BuildWorld()
@@ -292,6 +292,7 @@ public partial class BattlefieldView3D : Control
     public void BeginBattle(IReadOnlyList<DemoOpening> openings, string stageName, int stageIndex)
     {
         ResetChiriPresentation();
+        ResetKubiBellPresentation();
         ResetPoisonPresentation();
         ResetDeathPresentation();
         ResetGatherPresentation();

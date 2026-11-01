@@ -731,6 +731,7 @@ void fragment() {
         if (_unitId == "hagi" && (HagiPaused || _movementPortrait is "hagi_step" or "hagi_windup")) return;
         if (_unitId == "rica" && _ricaMotionPaused) return;
         if (_unitId == "utsu" && UtsuPaused) return;
+        if (KubiPaused) return;
         _phase += (float)delta * 2.1f;
         UpdateKataStakes();
         if (!_alive || _victory) return;
@@ -780,6 +781,7 @@ void fragment() {
         ShowGolmDiscardedPose();
         ApplyGatherRecoilPose();
         ProcessPoisonMotion((float)delta);
+        ProcessKubiBell(delta);
         SyncPoisonVisual();
         _shadow.Scale = new Vector3(1.0f - breath * 0.10f + shadowSpread, 1, 1.0f - breath * 0.10f - shadowSpread * 0.35f);
         _ring.Rotation = new Vector3(0, _phase * 0.15f, 0);
@@ -787,6 +789,7 @@ void fragment() {
 
     private void ResetStaggerPose()
     {
+        ClearKubiBell();
         _movementPoseTime = 0;
         _hushBrace = 0;
         _basaFlightTime = 0;

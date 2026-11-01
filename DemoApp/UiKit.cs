@@ -224,6 +224,7 @@ public static class UiKit
         "hagi" => 2.25f, // 大鎌込みの高さ。本人の体格はリィカと揃える。
         "vel" => 2.45f,
         "hiyo" => 2.10f, // リィカと同じ基準高。支援動作も同率で拡大する。
+        "kubi" => 2.05f, // 鐘を抱えた小柄で華奢な鐘番。
         "gan" => 2.85f,
         "yomi" => 2.35f,
         "basa" => 2.55f,
@@ -341,6 +342,7 @@ public static class UiKit
         "doha_receive" => 0.015625f, // 受け止め：下端24px。
         "doha_give" => 0.0162760f, // 力返し：下端25px。
         "kugu" => 0.02995f,
+        "kubi" => 33f / 1536f, // 右向き鐘番の靴底から下端までの透過余白。
         "shiga" => 0.03125f,
         "som" => 0.01953125f, // 1536px の下端から靴底まで30px。
         "som_summon" or "som_stunned" => 0.01953125f,

@@ -506,3 +506,9 @@ Godot_console.exe --path DemoApp res://ShockMarkCheck.tscn -- --dust-reaction --
 接触攻撃と伝染反応の差分を追加。殴られた敵から次の敵へ飛ぶ紫の滴、ラウの足元から味方へ滲む滴、死亡時の実際の受け手で咲く飛沫を描く。同じ経路で連続する対象へ同時に飛ばし、到着後に台本の量を表示する。
 
 `Godot_console.exe --headless --path DemoApp res://RauCheck.tscn` で接続・停止・倍速・中断・再戦を確認。画面保存は頭なし指定を外し、末尾に `-- --capture` を付ける。詳細・台本上の制限・画像生成プロンプトは [制作記録](../design/art/rau/rau-effects-v1-notes.md)。
+
+## 萎縮のクビの鐘番演出
+
+クビは小柄で華奢な鐘番。編成画面は正面絵、戦闘中は右向き絵を使う。実際の萎縮通知1組につきクビが小さく震え、鐘口から鈍い金色の波紋とくぐもった短い鐘音が漏れる。受け手へ広がる音の弧と、内側へ縮む輪を重ねる。味方への漏れは薄紫。波紋の到着を待って効果を決めない。光粒は購入済みEffectBlocksの `sparkle.png` を1枚だけ使い、共有素材は変更しない。波紋・震え・鐘音は再生時計で止まり、倍速に追従する。死亡・勝利・中断・再戦で片付ける。
+
+`Godot_console.exe --headless --path DemoApp res://KubiBellCheck.tscn --audio-driver Dummy` で本番の通知入口・付与1組1回・停止・4倍速・左右反転・後片付けを独立して検査できる。共通デバフ演出にも接続する。詳細は [立ち絵の適用](../design/art/kubi/demo-integration.md)・[クビの鐘音演出](../design/art/kubi/bell-effects-integration.md)。

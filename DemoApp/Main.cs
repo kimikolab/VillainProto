@@ -1479,6 +1479,7 @@ public partial class Main : Control
         int hushToken = _playToken;
         if (_chiri.DamageOwners.TryGetValue(eventIndex, out var bombDamage)) _battleField.ShowChiriDamage(bombDamage, target);
         if (await PlayChiri(e, eventIndex, actor, target) || hushToken != _playToken || !_battleMode) return;
+        ObserveKubiBell(e, eventIndex, actor);
         if (await PlaySom(e, eventIndex, actor, target) || hushToken != _playToken || !_battleMode) return;
         if (await PlayHush(e, eventIndex, actor, target) || hushToken != _playToken || !_battleMode) return;
         if (await PlayHisaCommand(e, eventIndex, actor, target)) return;
