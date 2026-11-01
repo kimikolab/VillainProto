@@ -313,6 +313,14 @@ public partial class Main : Control
             GetTree().Quit(pok ? 0 : 1);
             return;
         }
+        // 第438期 §5-2: 盤（マスのグラフ）の門。**画面を1つも作らない**（`MapGraphSmoke` に Godot の型は無い）。
+        if (bootArgs.Contains("--map11-graph-smoke", StringComparer.Ordinal))
+        {
+            bool gok = MapGraphSmoke.Run(GD.Print);
+            GD.Print($"MAP11_GRAPH_SMOKE_COMPLETE ok={gok}");
+            GetTree().Quit(gok ? 0 : 1);
+            return;
+        }
         string? verifyArg = bootArgs.FirstOrDefault(a => a.StartsWith("--map11-verify", StringComparison.Ordinal));
         if (verifyArg is not null)
         {

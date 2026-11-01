@@ -64,7 +64,7 @@ public static class Map11Verify
                     for (int road = 0; road < Map11.RoadCount; road++)
                         if (st.NextNode(road) is not null) { alt = road; break; }
                     if (alt < 0) break;
-                    sq.Road = alt;
+                    st.Send(s, alt);   // 第438期: 位置の書き手は `Map11State` の1箇所（同じ番号のまま道だけ替える＝第437期の `sq.Road = alt`）
                 }
 
                 if (st.Prepare(s) is not { } prep) continue;

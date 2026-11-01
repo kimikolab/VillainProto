@@ -205,13 +205,13 @@ public static class Map11Time
                 // 制圧した後——傷が残っていれば第2拠点で休み、満タンなら拠点へ戻って掃除する
                 // （勝ち条件は「制圧 ＋ 盤上の敵が 0」なので、残りを片付ける必要がある）。
                 if (St.Captured)
-                    return St.AtSecondBase(i) && St.Hurt(i) ? Dest.Portal(St.Squads[i].Road) : Dest.Home;
-                return Dest.Portal(Home[i]);
+                    return St.AtSecondBase(i) && St.Hurt(i) ? Dest.Portal(St.Graph, St.Squads[i].Road) : Dest.Home;
+                return Dest.Portal(St.Graph, Home[i]);
             }
             // 全快: 傷が残っていれば行き先を拠点にする（戻って休む）。全快したらまた出る。
             if (Pol == Policy.Full && St.Hurt(i)) return Dest.Home;
             int road = RoadFor(i);
-            return road < 0 ? Dest.Home : Dest.Deep(road);
+            return road < 0 ? Dest.Home : Dest.Deep(St.Graph, road);
         }
 
         /// <summary>

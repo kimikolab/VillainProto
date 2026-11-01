@@ -1798,6 +1798,9 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     Godot_console.exe --path DemoApp --headless -- --map11-verify[=N]
         # **遊ぶ側と同じ `Map11State`** を器具と同じ自動規則で N seed 回す（既定 800）。
         # 第168期 部B の5つの量と **差 0.0pt で一致する**のが受け入れ条件（R259）
+    Godot_console.exe --path DemoApp --headless -- --map11-graph-smoke
+        # **第438期 §5-2**: 盤（`MapGraph`・マスのグラフ）の門。画面なし・約 2 秒。(a) N2 → S1 の最短路が拠点を通り敵の拠点を通らない ／
+        # (b) N1 の敵で止まって戦闘 ／ (c) 南の先頭が 2 歩で拠点に着き迎撃 ＋ 玩具の盤（N1–S1）× 貪欲 100 seed（報告のみ）。合否は `MAP11_GRAPH_SMOKE_COMPLETE ok=`
     Godot_console.exe --path DemoApp --headless -- --map11-phase176
         # **第176期 Phase 0**: Q0-1〜Q0-5（`PortalOn = false` が第175期の 18 量と一致するか ／
         # 重なりと同点の割り方 ／ 湧いた部隊を満タンで作る口 ／ 方針の手順 ／ 走行時間）。約 1 秒

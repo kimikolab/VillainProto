@@ -359,14 +359,25 @@ public sealed class Map11State
         public required string Role { get; set; }
         /// <summary>盤上に出ている駒。<c>null</c> ＝ まだ出ていない（控え）／全滅した。</summary>
         public List<UnitState>? Units { get; set; }
-        /// <summary>向かっている道。-1 ＝ 拠点で待機。</summary>
-        public int Road { get; set; } = -1;
+        public required MapGraph Graph { get; init; }
         /// <summary>
-        /// 道の上のマス（第174期）。<b>-1 ＝ 拠点</b>で、0 が空きマス、1・2 が敵部隊の初期位置。
-        /// <b><c>Road</c> と必ず同時に動く</b>（<c>Road &gt;= 0</c> ⇔ <c>Cell &gt;= 0</c>）。
-        /// <b>時間を切った設定では誰も読まない。</b>
+        /// いるマス（第438期・盤 <see cref="MapGraph"/> の Id）。<b>位置の書き手はこれと <see cref="Via"/> だけ</b>
+        /// （<see cref="Map11State"/> の <c>Place</c> の1箇所が書く）。拠点にいる ＝ <c>Pos == Graph.Home</c>。
         /// </summary>
-        public int Cell { get; set; } = -1;
+        public int Pos { get; internal set; } = MapGraph.HomeId;
+        /// <summary>
+        /// 経路の外のマス（拠点・敵の拠点）で<b>どの経路にいることになっているか</b>（第438期）。
+        /// 敵の拠点では入ってきた経路——1-1 では北と南がそこで合流するので、出る経路と行き先の「（北）／（南）」がこれで決まる
+        /// （第437期の <c>Road</c> がそこで担っていた役目）。経路の上のマスでは読まない（そのマスの経路が決める）。
+        /// </summary>
+        public int Via { get; internal set; } = -1;
+        /// <summary>向かっている道（第437期の <c>Road</c>・<b>第438期から派生値</b>）。-1 ＝ 拠点で待機。</summary>
+        public int Road => Graph[Pos].Lane >= 0 ? Graph[Pos].Lane : Via;
+        /// <summary>
+        /// 道の上のマス（第174期・<b>第438期から派生値</b>＝経路の上の位置）。<b>-1 ＝ 拠点</b>で、0 が空きマス、1・2 が敵部隊の初期位置、
+        /// 敵の拠点は 3。<b>時間を切った設定では誰も読まない。</b>
+        /// </summary>
+        public int Cell => Pos == MapGraph.HomeId ? -1 : Graph.IndexOn(Road, Pos);
         /// <summary>
         /// <b>最初に送り出された道</b>（-1 ＝ まだ出していない）。
         /// <c>Cleared</c> はこの道で抜いた数だけを数える——第168期 <c>BandOnce</c> の
@@ -394,11 +405,14 @@ public sealed class Map11State
         public int DefMaxHp { get; init; }
         /// <summary>いまの残 HP（まだ当たっていない部隊は満タン）。</summary>
         public int HpNow { get; set; }
+        public required MapGraph Graph { get; init; }
         /// <summary>
-        /// いまいるマス（第174期）。初期値は <see cref="Map11.StartCellOf"/>。
-        /// <b>-1 ＝ 拠点まで来た</b>（迎撃戦）。<b>時間を切った設定では誰も読まない。</b>
+        /// いまいるマス（第438期・盤の Id）。初期値は盤の <see cref="MapGraph.FoeStarts"/>（第437期の <see cref="Map11.StartCellOf"/>）。
+        /// <b>拠点 ＝ 拠点まで来た</b>（迎撃戦）。<b>時間を切った設定では誰も読まない。</b>
         /// </summary>
-        public int Cell { get; set; }
+        public int Pos { get; set; }
+        /// <summary>経路 <c>Def.Road</c> の上の位置（第174期の <c>Cell</c>・<b>第438期から派生値</b>）。<b>-1 ＝ 拠点まで来た</b>。</summary>
+        public int Cell => Graph.IndexOn(Def.Road, Pos);
         /// <summary>
         /// この到着の迎撃でもう出した隊（同じ隊が1回の到着で何度も出ないようにするだけ）。
         /// <b>区画ごとに持つ</b>——2 本の道が同じ作戦ターンに拠点へ着くことがある。
@@ -407,6 +421,8 @@ public sealed class Map11State
     }
 
     public int Seed { get; }
+    /// <summary>盤（第438期）。<b>1-1 は <see cref="MapGraph.Build11"/></b>——敵の拠点のマスは <see cref="PortalRule.On"/> のときだけある。</summary>
+    public MapGraph Graph { get; }
     public int Battles { get; private set; }
     public Squad[] Squads { get; }
     public Node[][] Nodes { get; }
@@ -489,12 +505,17 @@ public sealed class Map11State
     /// </summary>
     public bool Draft { get; }
 
-    public Map11State(int seed, TimeRule? time = null, PortalRule? portal = null, bool draft = false)
+    /// <param name="graph">
+    /// 盤（第438期）。<b>省けば 1-1（<see cref="MapGraph.Build11"/>）</b>。渡す盤は 1-1 と同じ経路の数・長さ・敵の初期位置を持つこと
+    /// （区画の定義 <see cref="Map11.Roads"/> は 1-1 のまま）——いまは玩具の盤（`--map11-graph-smoke`）だけが渡す。
+    /// </param>
+    public Map11State(int seed, TimeRule? time = null, PortalRule? portal = null, bool draft = false, MapGraph? graph = null)
     {
         Seed = seed;
         Time = time ?? TimeRule.Off;
         Portal = portal ?? PortalRule.Off;
         Draft = draft;
+        Graph = graph ?? MapGraph.Build11(Portal.On);
         // 最初の1回まで S ターン（第176期の `Turn % S == 0` と同じ立ち上がり）。
         _portalReady = Portal.On ? Math.Max(0, Portal.SpawnEvery) : 0;
         // 第177期 §3: 自分で組む通しでは、**3 隊の 15 枚をばらして手札にする**。
@@ -506,6 +527,7 @@ public sealed class Map11State
         Squads = Map11.Squads.Select((d, i) => new Squad
         {
             Def = d,
+            Graph = Graph,
             Index = i,
             Label = draft ? $"第{i + 1}隊" : d.Name,
             Role = draft ? "自分で組んだ隊" : d.Role,
@@ -515,7 +537,7 @@ public sealed class Map11State
         Nodes = Map11.Roads.Select(r => r.Select(n =>
         {
             int hp = n.Enemy.Occupied().Sum(o => o.Def.MaxHp);
-            return new Node { Def = n, DefMaxHp = hp, HpNow = hp, Cell = Map11.StartCellOf(n.Index) };
+            return new Node { Def = n, Graph = Graph, DefMaxHp = hp, HpNow = hp, Pos = Graph.FoeStarts[n.Road][n.Index] };
         }).ToArray()).ToArray();
     }
 
@@ -560,8 +582,8 @@ public sealed class Map11State
     /// <summary>その道でいちばん拠点に近い敵部隊。<b>拠点なしでは <see cref="NextNode"/> と同じもの。</b></summary>
     public Node? FrontFoe(int road) => FoesOn(road).FirstOrDefault();
 
-    /// <summary>そのマスにいる敵部隊（手前の順で最初の1つ）。</summary>
-    public Node? FoeAt(int road, int cell) => FoesOn(road).FirstOrDefault(n => n.Cell == cell);
+    /// <summary>そのマスにいる敵部隊（道 <paramref name="road"/> の手前の順で最初の1つ）。</summary>
+    public Node? FoeAt(int road, int cellId) => FoesOn(road).FirstOrDefault(n => n.Pos == cellId);
 
     /// <summary>敵の拠点のマスにいる敵部隊（<b>道をまたいで数える</b>——北と南はそこで合流する）。</summary>
     public Node? PortalFoe()
@@ -569,7 +591,7 @@ public sealed class Map11State
         if (!Portal.On) return null;
         for (int road = 0; road < Map11.RoadCount; road++)
             foreach (Node n in FoesOn(road))
-                if (n.Cell >= Map11.PortalCell) return n;
+                if (n.Pos == Graph.Portal) return n;
         return null;
     }
 
@@ -581,9 +603,9 @@ public sealed class Map11State
     {
         Squad s = Squads[squadIndex];
         if (s.Units is null || s.Road < 0) return null;
-        if (Portal.On && s.Cell >= Map11.PortalCell) return PortalFoe();
+        if (Portal.On && s.Pos == Graph.Portal) return PortalFoe();
         Node? f = FrontFoe(s.Road);
-        return f is not null && f.Cell == s.Cell ? f : null;
+        return f is not null && f.Pos == s.Pos ? f : null;
     }
 
     /// <summary>
@@ -600,7 +622,7 @@ public sealed class Map11State
     {
         if (!Portal.On || Captured || PortalFoe() is not null) return;
         foreach (Squad s in Squads)
-            if (s.Units is not null && s.Cell >= Map11.PortalCell && s.Units.Any(u => u.IsAlive))
+            if (s.Units is not null && s.Pos == Graph.Portal && s.Units.Any(u => u.IsAlive))
             {
                 Captured = true;
                 CapturedTurn = Turn;
@@ -615,7 +637,7 @@ public sealed class Map11State
 
     /// <summary>その隊は制圧した第2拠点にいるか（<b>休む・組み直しができる</b>）。</summary>
     public bool AtSecondBase(int squadIndex)
-        => Captured && Squads[squadIndex].Units is not null && Squads[squadIndex].Cell >= Map11.PortalCell;
+        => Captured && Squads[squadIndex].Units is not null && Squads[squadIndex].Pos == Graph.Portal;
 
     /// <summary>出撃させる（拠点 → 道）。控えはここで初めて盤上に出る。</summary>
     public void Send(int squadIndex, int road)
@@ -623,7 +645,6 @@ public sealed class Map11State
         Squad s = Squads[squadIndex];
         if (s.Lost) return;
         if (!CanSend(squadIndex)) return;
-        s.Road = road;
         if (s.Home < 0) s.Home = road;
         // 組み直しで先に実体化していることがあるので `??=`。**第169期と同値**
         // ——あの版で「`Units` が null でなく `Deployed` が偽」になる道は1本も無かった。
@@ -631,7 +652,25 @@ public sealed class Map11State
         s.Deployed = true;
         // 第174期: 拠点から出たら道の先頭のマス（空きマス）に立つ。
         // **時間を切った設定では誰も読まない**ので、第169期と1ビットも違わない。
-        if (s.Cell < 0) s.Cell = 0;
+        // 道の上から呼ばれたら（時間なしの器具が隊を別の道へ回す）、同じ番号のまま道だけ替える（第437期の `Road = road`）。
+        Place(s, Graph.At(road, Math.Max(s.Cell, 0)), road);
+    }
+
+    /// <summary>
+    /// 隊の位置を書く<b>ただ1つの口</b>（第438期）。<paramref name="via"/> は経路の外のマスで
+    /// どの経路にいることになるか（拠点へ戻るなら -1・敵の拠点なら入ってきた経路）。
+    /// </summary>
+    private void Place(Squad s, int pos, int via)
+    {
+        s.Pos = pos;
+        s.Via = Graph[pos].Lane >= 0 ? -1 : via;
+    }
+
+    /// <summary>その隊は行き先に着いているか（敵の拠点なら、行き先の経路から入ったか）。<b>盤面は1ビットも動かさない。</b></summary>
+    public bool AtDest(int squadIndex, Dest dest)
+    {
+        Squad s = Squads[squadIndex];
+        return dest.AtHome ? s.Pos == Graph.Home : s.Pos == dest.Id && s.Road == dest.Road;
     }
 
     /// <summary>
@@ -652,8 +691,7 @@ public sealed class Map11State
     {
         Squad s = Squads[squadIndex];
         if (s.Lost || s.Units is null || s.Road < 0) return false;
-        s.Road = -1;
-        s.Cell = -1;
+        Place(s, Graph.Home, -1);
         return true;
     }
 
@@ -864,8 +902,7 @@ public sealed class Map11State
         {
             s.Units = null;
             s.Lost = true;
-            s.Road = -1;
-            s.Cell = -1;
+            Place(s, Graph.Home, -1);
         }
         else
         {
@@ -894,7 +931,7 @@ public sealed class Map11State
     public sealed record Encounter(int Squad, Node Node, bool Intercept);
 
     /// <summary>その隊は拠点にいるか。</summary>
-    public bool AtHome(int squadIndex) => Squads[squadIndex].Cell < 0;
+    public bool AtHome(int squadIndex) => Squads[squadIndex].Pos == Graph.Home;
 
     /// <summary>道 <paramref name="road"/> で次に当たる敵のマス（敵が残っていなければ null）。</summary>
     public int? FoeCell(int road) => NextNode(road)?.Cell;
@@ -909,7 +946,7 @@ public sealed class Map11State
         Squad s = Squads[squadIndex];
         if (s.Lost || !CanSend(squadIndex)) return null;
 
-        if (s.Cell < 0)
+        if (s.Pos == Graph.Home)
         {
             if (!CanHead(road)) return null;
             Send(squadIndex, road);
@@ -919,15 +956,32 @@ public sealed class Map11State
             road = s.Road;
             // **すでに敵と同じマスにいる**（前の戦闘が決着しなかった）ときは、その場でもう一度当たる。
             if (FoeFacing(squadIndex) is { } contact) return contact;
-            Node? front = FrontFoe(road);
-            int limit = front?.Cell ?? MaxCell;
-            int next = Math.Min(s.Cell + 1, Math.Min(limit, MaxCell));
-            if (next == s.Cell) return null;
-            s.Cell = next;
+            // 第438期: 道の奥（敵の拠点・無ければ経路の奥）への最短路の次のマスへ 1 歩。
+            // **道の先頭の敵より先へは行かない**——次のマスがその敵のマスなら入って戦闘、
+            // その敵が自分より拠点寄りにいる（決着しなかった戦闘の後に脇を抜けられた）ならそのマスへ引き返して当たる
+            // （第437期の `Math.Min(Cell + 1, 先頭の敵のマス)` をそのまま写した）。
+            int next = Graph.NextStep(s.Pos, road, Graph.At(road, MaxCell), road);
+            if (FrontFoe(road) is { } front && front.Cell < Graph.IndexOn(road, next)) next = front.Pos;
+            if (next == s.Pos) return null;
+            Place(s, next, road);
             // 敵の拠点のマスへ入って、そこに敵が1つも無ければ制圧（第176期 §1-3）。
             TryCapture();
         }
 
+        return FoeFacing(squadIndex);
+    }
+
+    /// <summary>
+    /// 経路をまたぐ辺で隣のマスへ移る（第438期・<b>1-1 には無い辺</b>——玩具の盤のために置いた）。
+    /// <b>移った先に敵がいれば、その場で戦闘</b>（<see cref="Advance"/> と同じ）。拠点へは入らない（<see cref="StepBack"/> の役目）。
+    /// </summary>
+    public Node? MoveTo(int squadIndex, int cell)
+    {
+        Squad s = Squads[squadIndex];
+        if (s.Lost || s.Units is null || !CanSend(squadIndex) || s.Pos == Graph.Home) return null;
+        if (FoeFacing(squadIndex) is { } contact) return contact;
+        if (!Graph[s.Pos].Neighbors.Contains(cell) || Graph.IsBase(cell)) return null;
+        Place(s, cell, s.Road);
         return FoeFacing(squadIndex);
     }
 
@@ -945,13 +999,11 @@ public sealed class Map11State
 
         if (dest.AtHome)
         {
-            s.Road = -1;
-            s.Cell = -1;
+            Place(s, Graph.Home, -1);
             return true;
         }
-        s.Road = dest.Road;
         if (s.Home < 0) s.Home = dest.Road;
-        s.Cell = Map11.PortalCell;
+        Place(s, Graph.Portal, dest.Road);
         s.Deployed = true;
         return true;
     }
@@ -963,16 +1015,17 @@ public sealed class Map11State
         Squad s = Squads[squadIndex];
         if (s.Lost || s.Units is null || !CanSend(squadIndex)) return false;
         if (dest.AtHome) return AtSecondBase(squadIndex);
-        return s.Cell < 0 && dest.Cell >= Map11.PortalCell && PortalFoe() is null;
+        return s.Pos == Graph.Home && dest.IsPortal && PortalFoe() is null;
     }
 
     /// <summary>戻る（拠点へ向かって 1 マス）。<b>一瞬では戻れない。</b></summary>
     public bool StepBack(int squadIndex)
     {
         Squad s = Squads[squadIndex];
-        if (s.Lost || s.Units is null || s.Cell < 0) return false;
-        s.Cell--;
-        if (s.Cell < 0) s.Road = -1;
+        if (s.Lost || s.Units is null || s.Pos == Graph.Home) return false;
+        // 第438期: 拠点への最短路を 1 歩（敵の拠点からは入ってきた経路へ出る）。
+        int next = Graph.NextStep(s.Pos, s.Road, Graph.Home, -1);
+        Place(s, next, next == Graph.Home ? -1 : s.Road);
         return true;
     }
 
@@ -985,7 +1038,7 @@ public sealed class Map11State
     {
         Squad s = Squads[squadIndex];
         if (s.Lost || Time.RestPercent <= 0) return false;
-        if (s.Cell >= 0 && !AtSecondBase(squadIndex)) return false;
+        if (s.Pos != Graph.Home && !AtSecondBase(squadIndex)) return false;
         if (s.Units is not { } u) return false;   // 未出撃の隊は満タンなので休む意味がない
         bool moved = false;
         foreach (UnitState x in u)
@@ -1023,15 +1076,16 @@ public sealed class Map11State
         // 戻り値が偽 ＝ 拠点が陥落したので、その場で打ち切る。
         bool Step(Node n)
         {
-            if (n.Cell >= 0) n.Cell--;
-            if (n.Cell < 0)
+            // 第438期: 経路の上で 1 つ拠点寄りのマスへ（敵の拠点からは経路の奥のマスへ）。
+            if (n.Pos != Graph.Home) n.Pos = Graph.TowardHome(n.Def.Road, n.Pos);
+            if (n.Pos == Graph.Home)
             {
                 BeginIntercept(n);
                 if (NextInterceptor(n) < 0) { Fallen = true; FallenRoad = n.Def.Road; return false; }
                 list.Add(new Encounter(-1, n, true));
                 return true;
             }
-            int sq = SquadAt(n.Def.Road, n.Cell);
+            int sq = SquadAt(n.Pos);
             if (sq >= 0) list.Add(new Encounter(sq, n, false));
             return true;
         }
@@ -1047,9 +1101,9 @@ public sealed class Map11State
             // 前が詰まっていればそのマスの手前で待つ。固定の4部隊も「詰まり」として数える。
             foreach (Node sp in FoesOn(road).Where(x => x.FromPortal).ToList())
             {
-                if (sp.Cell < 0) continue;
-                int target = sp.Cell - 1;
-                if (FoesOn(road).Any(x => !ReferenceEquals(x, sp) && x.Cell == target)) continue;
+                if (sp.Pos == Graph.Home) continue;
+                int target = Graph.TowardHome(road, sp.Pos);
+                if (FoesOn(road).Any(x => !ReferenceEquals(x, sp) && x.Pos == target)) continue;
                 if (!Step(sp)) return list;
             }
         }
@@ -1091,19 +1145,19 @@ public sealed class Map11State
         int hp = def.Enemy.Occupied().Sum(o => o.Def.MaxHp);
         Spawns.Add(new Node
         {
-            Def = def, FromPortal = true, DefMaxHp = hp, HpNow = hp, Cell = Map11.PortalCell,
+            Def = def, Graph = Graph, FromPortal = true, DefMaxHp = hp, HpNow = hp, Pos = Graph.Portal,
         });
         SpawnCount++;
         return list;
     }
 
     /// <summary>そのマスにいる隊のうち、いちばん番号の若いもの（いなければ -1）。</summary>
-    public int SquadAt(int road, int cell)
+    public int SquadAt(int cellId)
     {
         for (int i = 0; i < Squads.Length; i++)
         {
             Squad s = Squads[i];
-            if (s.Units is not null && s.Road == road && s.Cell == cell && s.Units.Any(u => u.IsAlive))
+            if (s.Units is not null && s.Pos == cellId && s.Units.Any(u => u.IsAlive))
                 return i;
         }
         return -1;
@@ -1117,7 +1171,7 @@ public sealed class Map11State
     {
         if (node.Cleared) return -1;
         for (int i = 0; i < Squads.Length; i++)
-            if (!node.Tried.Contains(i) && !Squads[i].Lost && Squads[i].Cell < 0 && CanSend(i)) return i;
+            if (!node.Tried.Contains(i) && !Squads[i].Lost && Squads[i].Pos == Graph.Home && CanSend(i)) return i;
         return -1;
     }
 
@@ -1145,7 +1199,7 @@ public sealed class Map11State
         if (node.Cleared) return;
         // **判定は「拠点に出せる隊が1つも無いか」の1本だけ**——この到着でもう出した隊が
         // 残っていても（決着しなかったなど）、まだ拠点にいるなら陥落ではない。
-        if (!Squads.Any(x => !x.Lost && x.Cell < 0 && CanSend(x.Index)))
+        if (!Squads.Any(x => !x.Lost && x.Pos == Graph.Home && CanSend(x.Index)))
         {
             Fallen = true;
             FallenRoad = node.Def.Road;

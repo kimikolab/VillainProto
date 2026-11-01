@@ -23,28 +23,25 @@ public partial class Map11Main : Node3D
     private static readonly Color GoldColor = Color.FromHtml("#f1c96b");
     private static readonly Color DeadColor = Color.FromHtml("#6d7370");
 
-    /// <summary>拠点。左端。</summary>
-    // 第170期に左のパネルが横に広がったので、拠点をその右へ寄せた（札が隠れていた）。
-    private static readonly Vector3 BasePos = new(-4.0f, 0, 2.0f);
+    /// <summary>
+    /// マスの位置（第438期）。<b>出どころは盤 <see cref="MapGraph"/> の <c>Pos</c> の1本</b>
+    /// ——第437期の <c>BasePos</c> ／ <c>NodePos</c> ／ <c>CellPos</c> ／ <c>PortalPos</c> と同じ値を
+    /// <see cref="MapGraph.Build11"/> が持つ（北の道が奥（-Z）、南の道が手前（+Z）、敵の拠点は北と南の真ん中）。
+    /// </summary>
+    private static Vector3 PosOf(int cellId)
+    {
+        var (x, z) = St.Graph[cellId].Pos;
+        return new Vector3(x, 0, z);
+    }
 
-    /// <summary>区画の位置（道 × 番号）。北の道が奥（-Z）、南の道が手前（+Z）。</summary>
-    private static Vector3 NodePos(int road, int index)
-        => new(3.0f + index * 11.0f, 0, road == 0 ? -8.5f : 8.5f);
+    /// <summary>拠点。左端（第170期に左のパネルが横に広がったので、拠点をその右へ寄せた）。</summary>
+    private static Vector3 BasePos => PosOf(St.Graph.Home);
 
     /// <summary>
     /// 敵の拠点（ワープポータル・第177期 §2）。<b>北と南はここで合流する</b>ので、
     /// 道ではなく<b>その真ん中</b>に置く（`Map11State.PortalFoe` が道をまたいで数えるのと同じ形）。
     /// </summary>
-    private static readonly Vector3 PortalPos = new(22.0f, 0, 0);
-
-    /// <summary>
-    /// マスの位置（第174期 §2-1）。<b>マス 0 は拠点と1つ目の敵のあいだの空きマス</b>で、
-    /// マス 1・2 は区画 0・1 と同じ場所（<see cref="NodePos"/>）。
-    /// <b>マス <see cref="Map11.PortalCell"/> 以上は敵の拠点</b>（道に依らない1点・第177期）。
-    /// </summary>
-    private static Vector3 CellPos(int road, int cell)
-        => cell >= Map11.PortalCell ? PortalPos
-         : cell <= 0 ? new(-0.6f, 0, road == 0 ? -8.5f : 8.5f) : NodePos(road, cell - 1);
+    private static Vector3 PortalPos => PosOf(St.Graph.Portal);
 
     /// <summary>
     /// 盤の上で重なる駒をずらす（拠点・敵の拠点は複数の隊が同じ1点に立つ）。
@@ -264,7 +261,7 @@ public partial class Map11Main : Node3D
         string path = parts[0];
         await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
         if (parts.Length > 1 && parts[1] == "encounter")
-        { PickDestination(Dest.Deep(1)); AdvanceTurn(); }
+        { PickDestination(Dest.Deep(St.Graph, 1)); AdvanceTurn(); }
         // 第171期: 図の札を1枚選んだ絵（関係の線と「何をする」が出ている状態）。
         else if (parts.Length > 1 && parts[1] == "pick") { _squadPick = 3; _foePick = 2; Refresh(); }
         // 第177期: **既定の3隊を配った後**の絵（手札から組む前の画面ではなく、遊んでいる姿）。
@@ -449,8 +446,8 @@ public partial class Map11Main : Node3D
             // 第177期 §2: **道を抜き切ったら敵の拠点へ。** 拠点なしの設定では奥が無いので
             // 第175期のまま拠点へ戻る（`CanHead` が偽なら `Plan` も出さない）。
             if (road < 0 && St.Portal.On && !St.Captured)
-            { Map11Session.SetDestination(i, Dest.Portal(home[i] < 0 ? 0 : home[i])); continue; }
-            Map11Session.SetDestination(i, road < 0 ? Dest.Home : Dest.Deep(road));
+            { Map11Session.SetDestination(i, Dest.Portal(St.Graph, home[i] < 0 ? 0 : home[i])); continue; }
+            Map11Session.SetDestination(i, road < 0 ? Dest.Home : Dest.Deep(St.Graph, road));
         }
     }
 
@@ -591,17 +588,9 @@ public partial class Map11Main : Node3D
 
         // 道（拠点 → 区画0 → 区画1 → 敵の拠点 の帯）。位置を教えるだけの板。
         // **第177期: 道の奥は敵の拠点で合流する**ので、最後の1本は2 本とも同じ点へ伸びる。
-        for (int road = 0; road < Map11.RoadCount; road++)
-        {
-            Vector3 from = BasePos;
-            for (int cell = 0; cell < Map11.RoadCells; cell++)
-            {
-                Vector3 to = CellPos(road, cell);
-                AddStrip(from, to, Color.FromHtml("#8b7756"));
-                from = to;
-            }
-            if (St.Portal.On) AddStrip(from, PortalPos, Color.FromHtml("#8b7756"));
-        }
+        // 第438期: **盤の辺から引く**（1-1 の辺は第437期の帯と同じ順に並んでいる）。
+        foreach ((int ea, int eb) in St.Graph.Edges)
+            AddStrip(PosOf(ea), PosOf(eb), Color.FromHtml("#8b7756"));
 
         // 第177期 §2: 道が1本伸びたぶん、カメラを引いて奥まで入れる。
         // 第177期 §2: 道が1本伸びたぶん、**引いて奥まで入れる**。
@@ -630,7 +619,7 @@ public partial class Map11Main : Node3D
         // 空きマス（第174期）。**位置を教えるためだけの薄い板**で、判定は1つも持たない。
         for (int road = 0; road < Map11.RoadCount; road++)
         {
-            var m = new Marker(this, CellPos(road, 0), Color.FromHtml("#6f6a52"), 1.1f);
+            var m = new Marker(this, PosOf(St.Graph.Lanes[road][0]), Color.FromHtml("#6f6a52"), 1.1f);
             m.Set("", Color.FromHtml("#6f6a52"));
             _cellMarkers.Add(m);
         }
@@ -638,7 +627,7 @@ public partial class Map11Main : Node3D
         for (int road = 0; road < Map11.RoadCount; road++)
             for (int i = 0; i < Map11.Roads[road].Count; i++)
             {
-                var m = new Marker(this, CellPos(road, Map11.StartCellOf(i)), EnemyColor, 2.0f);
+                var m = new Marker(this, PosOf(St.Graph.FoeStarts[road][i]), EnemyColor, 2.0f);
                 _nodeMarkers.Add(m);
             }
 
@@ -729,18 +718,20 @@ public partial class Map11Main : Node3D
         }
 
         // 札は<b>いつも板の真下</b>（道で揃える）。名前は板の上、前進の予告はさらにその上。
+        // 第438期: 札は**盤のマス**から引く（経路ごと・拠点の隣から奥へ）。
         Add(Dest.Home, BasePos, new Vector2(-70, 78));
-        for (int road = 0; road < Map11.RoadCount; road++)
-            for (int cell = 0; cell < Map11.RoadCells; cell++)
+        for (int road = 0; road < St.Graph.Lanes.Count; road++)
+            for (int cell = 0; cell < St.Graph.Lanes[road].Length; cell++)
                 // **空きマス（0）だけ1段下げる**——拠点のすぐ隣なので、同じ段だと札が重なる。
-                Add(new Dest(road, cell), CellPos(road, cell), new Vector2(-70, cell == 0 ? 62 : 32));
+                Add(Dest.Of(St.Graph, St.Graph.Lanes[road][cell]), PosOf(St.Graph.Lanes[road][cell]),
+                    new Vector2(-70, cell == 0 ? 62 : 32));
 
         // 第177期 §2 —— 敵の拠点。**北と南は同じ1点**なので、札は道ごとに縦に並べる
         // （どちらの道を通って向かうかは、行き先ではなく<b>道</b>が決める）。
         // **板の名前より下**に置く（上に置くと「湧くまで あと n」が隠れる）。
         if (!St.Portal.On) return;
-        for (int road = 0; road < Map11.RoadCount; road++)
-            Add(Dest.Portal(road), PortalPos, new Vector2(-70, road == 0 ? 40 : 70));
+        for (int road = 0; road < St.Graph.Lanes.Count; road++)
+            Add(Dest.Portal(St.Graph, road), PortalPos, new Vector2(-70, road == 0 ? 40 : 70));
     }
 
     /// <summary>
@@ -783,7 +774,7 @@ public partial class Map11Main : Node3D
             bool here = Map11Session.Destinations[_selected] == d.Dest;
             string place = d.Dest.AtHome ? "拠点"
                 : d.Dest.IsPortal ? (St.Captured ? "第2拠点" : "敵の拠点")
-                : d.Dest.Cell <= 0 ? "手前" : $"{d.Dest.Cell} 戦目";
+                : St.Graph.IndexOn(d.Dest.Road, d.Dest.Id) is var at && at <= 0 ? "手前" : $"{at} 戦目";
             if (d.Dest.IsPortal) place = $"{place}（{Map11.RoadNames[d.Dest.Road][0]}）";
             d.Node.Text = here ? $"◆ {place}"
                         : cleared ? place
@@ -1458,23 +1449,18 @@ public partial class Map11Main : Node3D
     private static int ArrowStopCell(int squad, Dest d)
     {
         Map11State.Squad s = St.Squads[squad];
-        if (d.AtHome || d.Road < 0) return d.Cell;
+        if (d.AtHome || d.Road < 0) return d.Id;
         // 別の道へ行くときはいったん拠点まで戻るので、途中の敵では止めない。
-        if (s.Cell >= 0 && s.Road != d.Road) return d.Cell;
-        int from = Math.Max(s.Cell, 0);
+        if (s.Cell >= 0 && s.Road != d.Road) return d.Id;
+        int from = Math.Max(s.Cell, 0), to = St.Graph.IndexOn(d.Road, d.Id);
         foreach (Map11State.Node n in St.FoesOn(d.Road))
-            if (n.Cell >= from && n.Cell <= d.Cell) return n.Cell;
-        return d.Cell;
+            if (n.Cell >= from && n.Cell <= to) return n.Pos;
+        return d.Id;
     }
 
-    /// <summary>その隊は行き先に着いているか。</summary>
+    /// <summary>その隊は行き先に着いているか（判定は <see cref="Map11State.AtDest"/> の1箇所）。</summary>
     private static bool AtDest(int squad)
-    {
-        Dest d = Map11Session.Destinations[squad];
-        Map11State.Squad s = St.Squads[squad];
-        if (s.Lost) return true;
-        return d.AtHome ? s.Cell < 0 : s.Road == d.Road && s.Cell == d.Cell;
-    }
+        => St.Squads[squad].Lost || St.AtDest(squad, Map11Session.Destinations[squad]);
 
     /// <summary>
     /// 1 作戦ターンが終わったところで、自動で回すのを止める理由（無ければ null）。
@@ -1494,7 +1480,7 @@ public partial class Map11Main : Node3D
             return $"{Map11.PortalName} から {St.SpawnCount - before.Spawns} 部隊が湧いた";
         for (int i = 0; i < St.Squads.Length; i++)
             if (!before.Arrived[i] && AtDest(i) && !St.Squads[i].Lost)
-                return $"{St.Squads[i].Label} が {Map11Orders.Where(Map11Session.Destinations[i])} に着いた";
+                return $"{St.Squads[i].Label} が {Map11Orders.Where(St.Graph, Map11Session.Destinations[i])} に着いた";
         for (int r = 0; r < Map11.RoadCount; r++)
             if (!before.Imminent[r] && St.NextNode(r) is { } n && n.Cell <= 0)
                 return $"{Map11.RoadNames[r]} の {n.Def.Name} が拠点の手前まで来た（次の前進で迎撃）";
@@ -2329,9 +2315,9 @@ public partial class Map11Main : Node3D
                 // **敵の拠点も1点に集まる**ので同じ扱い（第177期）。
                 // 敵の拠点は札が重なる（ポータル自身の札・湧いた部隊・複数の隊が同じ1点）ので、
                 // **隊は手前（拠点寄り）へずらしてから縦に並べる**（第177期・ポンの2巡目で読めなかった）。
-                Vector3 at = s.Cell < 0 ? Stack(BasePos, i)
-                    : s.Cell >= Map11.PortalCell ? Stack(PortalPos + new Vector3(-5.2f, 0, 0), i)
-                    : CellPos(s.Road, s.Cell) + new Vector3(-3.4f, 0, 0);
+                Vector3 at = s.Pos == St.Graph.Home ? Stack(BasePos, i)
+                    : s.Pos == St.Graph.Portal ? Stack(PortalPos + new Vector3(-5.2f, 0, 0), i)
+                    : PosOf(s.Pos) + new Vector3(-3.4f, 0, 0);
                 if (_firstRefresh) m.MoveTo(at); else m.SlideTo(at);
                 m.Set($"{s.Label}" + Nl
                       + (s.Units is { Count: 0 } ? "（空席）" : $"{alive}枚 {SquadHpPercent(s):F0}%"),
@@ -2345,8 +2331,8 @@ public partial class Map11Main : Node3D
                 if (arrived || St.Finished) _arrows[i].Hide();
                 else
                 {
-                    Vector3 goal = d.AtHome ? BasePos : CellPos(d.Road, d.Cell);
-                    Vector3 stop = d.AtHome ? goal : CellPos(d.Road, ArrowStopCell(i, d));
+                    Vector3 goal = PosOf(d.Id);
+                    Vector3 stop = d.AtHome ? goal : PosOf(ArrowStopCell(i, d));
                     _arrows[i].Set(at, stop, goal);
                 }
             }
@@ -2399,7 +2385,7 @@ public partial class Map11Main : Node3D
         _advanceTurn.Disabled = busy;
         // 第175期: **1 行にまとめた**（第174期は「いまの命令」と「行き先」で2行になっていた）。
         _orderHint.Text = St.Time.On
-            ? $"{sel.Label} の行き先: {Map11Orders.Where(Map11Session.Destinations[_selected])}"
+            ? $"{sel.Label} の行き先: {Map11Orders.Where(St.Graph, Map11Session.Destinations[_selected])}"
               + $"　→ この作戦ターン: {OrderText(_selected)}"
             : "";
         // 操作の案内は**まだ1戦もしていない間だけ**（観察ログ「操作方法が最初わからなかった」）。
@@ -2442,11 +2428,11 @@ public partial class Map11Main : Node3D
         int alive = n.Cleared ? 0 : n.Units?.Count(u => u.IsAlive) ?? n.Def.Enemy.Occupied().Count();
         if (!n.Cleared)
         {
-            Vector3 at = n.Cell < 0 ? BasePos + new Vector3(0, 0, road == 0 ? -3.4f : 3.4f)
-                       : n.Cell >= Map11.PortalCell
+            Vector3 at = n.Pos == St.Graph.Home ? BasePos + new Vector3(0, 0, road == 0 ? -3.4f : 3.4f)
+                       : n.Pos == St.Graph.Portal
                            ? PortalPos + new Vector3(3.2f + stackAtPortal * 0.9f, 0,
                                                      road == 0 ? -2.2f : 2.2f)
-                       : CellPos(road, n.Cell);
+                       : PosOf(n.Pos);
             // 第175期 §1-3: **前進した瞬間は1マス滑らせる**（瞬間移動させない）。
             if (_firstRefresh) m.MoveTo(at); else m.SlideTo(at);
         }

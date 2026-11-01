@@ -61,14 +61,14 @@ public sealed class Map11Smoke
                 // 隊 1 は北の道を抜いたら拠点へ戻る（湧いた敵を迎撃で受けるため）。隊 2 は拠点で待つ。
                 if (i != 0)
                 {
-                    set(i, i == 1 && st.NextNode(0) is not null ? Dest.Deep(0) : Dest.Home);
+                    set(i, i == 1 && st.NextNode(0) is not null ? Dest.Deep(st.Graph, 0) : Dest.Home);
                     continue;
                 }
                 // **湧いた 1 部隊がポータルのマスから離れるまで待つ。**
                 // 湧いた直後に入ると、そこで戦って勝った瞬間に盤上の敵が 0 になり、
                 // やはり「制圧 ＝ 勝利」で終わってしまう（ワープを通せない）。
                 bool go = st.SpawnCount > 0 && st.PortalFoe() is null;
-                set(i, go ? Dest.Portal(1) : new Dest(1, Map11.RoadCells - 1));
+                set(i, go ? Dest.Portal(st.Graph, 1) : Dest.Deep(st.Graph, 1));
                 continue;
             }
 
