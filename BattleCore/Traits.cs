@@ -1095,6 +1095,9 @@ public enum TraitId
     VeilShockOnce,        // 1 ターン 1 回（RBb-t）: 砕けの返しは味方 1 体につき 1 ターン 1 回（同じ味方の衣がそのターンに 2 度砕けても 2 度目は返さない）
     VeilShockLone,        // 砕いた敵だけ（RBb-n）: 砕けの返しが両隣に走らない
     VeilShockSpareHero,   // 勇者には返さない（RBb-x）: ボスの波の主（勇者 `boss_hero` ／ `boss_regular`）の一撃で砕けても何も起きない（両隣へも走らない）
+    // --- 第433期で足した札（指示書 design/PHASE433_SOM_VEIL_BRAKE2_SPEC.md）。RB-b に重ねる歯止め②（版のみ・保持者 0 枚・札そのものは挙動を持たない・engine の `VeilShock431` が読む）---
+    VeilShockOnceAll,     // ソムの全体で 1 ターン 1 回（RBb-gx）: どの味方の衣でも、そのターンに最初に砕けた 1 回だけ返す
+    VeilShockLateral,     // 左右だけ（RBb-lx）: 両隣を `AreAdjacent` ではなく、同じ列で席番号が ±1 の駒（召喚枠を除く）にする
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -20656,6 +20659,8 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.VeilShockOnce),                    // 第432期（1 ターン 1 回 RBb-t・印）
         new MarkOnlyTrait(TraitId.VeilShockLone),                    // 第432期（砕いた敵だけ RBb-n・印）
         new MarkOnlyTrait(TraitId.VeilShockSpareHero),               // 第432期（勇者には返さない RBb-x・印）
+        new MarkOnlyTrait(TraitId.VeilShockOnceAll),                 // 第433期（全体で 1 ターン 1 回 RBb-gx・印）
+        new MarkOnlyTrait(TraitId.VeilShockLateral),                 // 第433期（左右だけ RBb-lx・印）
         new LastStandHoldOldScarTrait(),   // 第199期（対照・保持者 0 枚）
         new LastStandHoldNoStockTrait(),   // 第199期（対照・保持者 0 枚）
         new LastStandHoldMutualLossTrait(),// 第199期（対照・保持者 0 枚）

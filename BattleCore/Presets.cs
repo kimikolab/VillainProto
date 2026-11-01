@@ -1093,7 +1093,8 @@ public static class Presets
         ("試遊・導火線 チリ", Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Gald, center: UnitCatalog.Hibi, back1: UnitCatalog.Chiri, back3: UnitCatalog.Gare)),
         // 第431期: ソムの光の衣の雷の返しの版 RB-b（砕けたときだけ）× 打ち返しの行の並び（design/PHASE431_SOM_VEIL_SHOCK.md）。光の盾の台は版でも動かないので、返しが勝敗に出る打ち返しの行にした。
         // 第432期: 歯止めの版 RBb-x（勇者には返さない）に差し替えた（design/PHASE432_SOM_VEIL_BRAKE.md）。打ち返しの行ではボスが規定に戻り（3.0）、精鋭の +4 ／ +3 が残る。
-        ("版・光の衣 ソム", Formation.Build(front1: UnitCatalog.Shiga, front3: UnitCatalog.Tsugi, center: UnitCatalog.SomRBbx, back1: UnitCatalog.Kata, back3: UnitCatalog.Mio)),
+        // 第433期: 歯止め②の版 RBb-gx（ソムの全体で 1 ターン 1 回・勇者なし）に差し替えた（design/PHASE433_SOM_VEIL_BRAKE2.md）。
+        ("版・光の衣 ソム", Formation.Build(front1: UnitCatalog.Shiga, front3: UnitCatalog.Tsugi, center: UnitCatalog.SomRBbgx, back1: UnitCatalog.Kata, back3: UnitCatalog.Mio)),
     };
 
     /// <summary>第416期: 台・呪い（「試遊・呪い」のクビをリリに替え、ウツを矢面に: 前1 ウツ ／ 前3 ムド ／ 中央 ネル ／ 後1 ワタ ／ 後3 リリ）。既定は規定のリリ。</summary>

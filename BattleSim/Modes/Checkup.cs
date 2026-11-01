@@ -181,6 +181,8 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.VeilShockOnce]  = (HcPlusL,  "衣の雷は 1 ターン 1 回（第432期・ソム RBb-t）: 砕けの雷は味方 1 体につき 1 ターン 1 回。保持者 0 枚"),
         [TraitId.VeilShockLone]  = (HcPlusL,  "衣の雷は砕いた敵だけ（第432期・ソム RBb-n）: 砕けの雷が両隣に走らない。保持者 0 枚"),
         [TraitId.VeilShockSpareHero] = (HcPlusL, "衣の雷は勇者に効かない（第432期・ソム RBb-x）: 勇者が砕いても返さない。保持者 0 枚"),
+        [TraitId.VeilShockOnceAll] = (HcPlusL, "衣の雷は全体で 1 ターン 1 回（第433期・ソム RBb-gx）: どの味方の衣でも、そのターンに最初の砕けだけ返す。保持者 0 枚"),
+        [TraitId.VeilShockLateral] = (HcPlusL, "衣の雷は左右だけ（第433期・ソム RBb-lx）: 砕けの雷が同じ列の席番号 ±1 の駒（召喚枠を除く）にだけ走る。保持者 0 枚"),
         [TraitId.BombMirror]   = (HcPlusL,  "仲間の爆弾は向かいへ（第427期 BM-em・第429期から規定のチリ）: 隣の仲間にも置き、敵の刃で 3 度縮むと向かいの敵とその両隣に撒く（味方は巻き込まない）"),
         [TraitId.BombNoTick]   = (HcMinusL, "刻みでは縮まない（第427期 BM-ex・第429期から規定のチリ）: 燃焼 ／ 毒の刻みは導火線を縮めない（爆弾が軽いうちに鳴らない代わりに、燃焼 ／ 毒の駒が起爆装置にならない）"),
         [TraitId.ChargedPowder]     = (HcPlusL,  "殴った相手に感電を付けるだけ（第279期・T1 ／ T2）。止めるのは弾けたとき（S3 の札と一緒に持つ）"),

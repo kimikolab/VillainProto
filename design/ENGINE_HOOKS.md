@@ -1826,3 +1826,9 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - `VeilShock431` の砕けの枝の頭に歯止めを 3 本（勇者 → 1 ターン 1 回 → 両隣 の順）。勇者は `IsBossHero432`（`boss_hero` ／ `boss_regular`・支え ／ 癒し手は含めない）。
 - 1 ターン 1 回は戦ごとの帳簿 `_vsOnce432`（衣の持ち主の `InstanceId` → 最後に返した `Turn`）。境界は `Turn` の値が変わること・`Counters` にも `StatusKeys.All` にも置かない。
 - 計数のみ: `Vs432StopOnce` ／ `Vs432StopNeighbors` ／ `Vs432StopHero`（`UnitTally`）。札を持たない版では枝に入らない（RB-1 ／ RB-b ／ RB-c の挙動は変わらない）・乱数を引かない。
+
+## 第433期 —— 雷の返しの歯止め②（版のみ・`VeilShockOnceAll` ／ `VeilShockLateral`・保持者 0 枚）
+
+- `VeilShock431` の砕けの枝: 勇者 → 味方ごと 1 回（第432期）→ **全体で 1 回**（`_vsOnceAll433`・ソムが最後に返した `Turn`・戦ごとの int）→ 両隣 の順。勇者で止めた砕けは 1 回を使わない。
+- 両隣の走査で `VeilShockLateral` を持つなら `IsLateral433`（同じ `RowOf`・席番号 ±1・どちらも召喚枠でない）だけを当て、走らなかった `AreAdjacent` の隣を数える。X 字では 前1↔前3・後1↔後3 の 2 組だけ（`AreAdjacent` の隣ではない組）。
+- 計数のみ: `Vs433StopOnceAll` ／ `Vs433StopSide` ／ `Vs433BreakFoeMarked`（砕けで帯電させたうち砕いた敵）。札を持たない版では枝に入らない・乱数を引かない。

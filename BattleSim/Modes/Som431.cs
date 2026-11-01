@@ -205,8 +205,8 @@ static class Som431Diag
 
         var boards = S430.Boards();
         var play = Presets.Versions.First(r => r.Name == "版・光の衣 ソム").F;
-        var want = S430.Swap(boards[0].F, UnitCatalog.SomRBbx);   // 第432期に RB-b → RBb-x へ差し替え（design/PHASE432_SOM_VEIL_BRAKE.md）
-        Req(Enumerable.Range(0, 5).All(i => ReferenceEquals(play[i], want[i])), "「版・光の衣 ソム」＝ 台 1（打ち返しの行）のソムを版に替えた並び（第431期 RB-b ／ 第432期から RBb-x）");
+        // 第433期: 台の版は期ごとに差し替える（第431期 RB-b → 第432期 RBb-x → 第433期 RBb-gx）ので、「台 1 の中央のソムを何かの版に替えた並び」で見る
+        Req(Enumerable.Range(0, 5).All(i => i == 2 ? play[i]?.Id == "som" && ReferenceEquals(boards[0].F[i], UnitCatalog.Som) : ReferenceEquals(play[i], boards[0].F[i])), "「版・光の衣 ソム」＝ 台 1（打ち返しの行）の中央のソムを版に替えた並び");
         bool same = true, rbbNoHit = true, defNone = true, ringSane = true;
         foreach (var b in boards)
             foreach (var w in S430.Waves)

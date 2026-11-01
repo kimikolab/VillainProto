@@ -2509,6 +2509,11 @@ public sealed class BattleContext
     Dictionary<int, int>? _vsOnce432;
     /// <summary>第432期（RBb-x）: ボスの波の主＝勇者（第265期の `boss_hero` ／ 第269期の規定形 `boss_regular`）。支え・癒し手（`boss_ward` ／ `boss_mender`）は含めない。</summary>
     static bool IsBossHero432(UnitState u) => u.Def.Id is "boss_hero" or "boss_regular";
+    /// <summary>第433期（RBb-gx）: ソムが最後に砕けの返しをしたターン（戦ごと・ソムは 1 戦に 1 人＝ `_veilShockSom`）。</summary>
+    int _vsOnceAll433 = -1;
+    /// <summary>第433期（RBb-lx）: 「左右」＝ 同じ列（`RowOf`）で席番号が ±1、かつ召喚枠ではない駒。X 字では 前1 ↔ 前3・後1 ↔ 後3 の 2 組だけ（乱数を引かない）。</summary>
+    static bool IsLateral433(UnitState foe, UnitState n)
+        => FormationRules.RowOf(n.Slot) == FormationRules.RowOf(foe.Slot) && Math.Abs(n.Slot - foe.Slot) == 1 && !FormationRules.IsSummonSlot(n) && !FormationRules.IsSummonSlot(foe);
 
     // =================================================================================
     // 第310期 —— 弾ける獣（ソムの版 E1 ／ E2・design/PHASE310_SOM_BURST_SPEC.md §2-1）。
@@ -8012,17 +8017,32 @@ public sealed class BattleContext
             if (_vsOnce432.TryGetValue(holder.InstanceId, out int last) && last == Turn) { t.Vs432StopOnce++; return; }
             _vsOnce432[holder.InstanceId] = Turn;   // ターンの境界は `Turn` の値が変わること（帳簿を消して回らない）
         }
-        bool lone = som.HasTrait(TraitId.VeilShockLone);
+        if (som.HasTrait(TraitId.VeilShockOnceAll))   // 第433期（RBb-gx）: ソムの全体で 1 ターン 1 回
+        {
+            if (_vsOnceAll433 == Turn) { t.Vs433StopOnceAll++; return; }
+            _vsOnceAll433 = Turn;
+        }
+        bool lone = som.HasTrait(TraitId.VeilShockLone), lateral = som.HasTrait(TraitId.VeilShockLateral);
         t.Vs431Breaks++;
         var hit = new List<UnitState> { foe };
         foreach (UnitState n in LivingMembers(foe.TeamId).OrderBy(n => n.Slot))
-            if (n != foe && !IsSilkBall(n) && FormationRules.AreAdjacent(foe, n)) { if (lone) t.Vs432StopNeighbors++; else hit.Add(n); }
+        {
+            if (n == foe || IsSilkBall(n)) continue;
+            bool adj = FormationRules.AreAdjacent(foe, n);
+            if (lateral)   // 第433期（RBb-lx）: 左右だけ（走らなかった隣を数える）
+            {
+                if (IsLateral433(foe, n)) hit.Add(n);
+                else if (adj) t.Vs433StopSide++;
+                continue;
+            }
+            if (adj) { if (lone) t.Vs432StopNeighbors++; else hit.Add(n); }
+        }
         foreach (UnitState x in hit)
         {
             if (rb1 && x == foe) continue;   // RB-1 は削った敵を上で済ませた
             if (!x.IsAlive) continue;
             if (x.RawCounter(StatusKeys.Shock) > 0) { t.Vs431BreakAlready++; continue; }
-            if (MarkShock(x, som)) { t.Vs431BreakMarked++; _vsInfected431.Add(x.InstanceId); }
+            if (MarkShock(x, som)) { t.Vs431BreakMarked++; if (x == foe) t.Vs433BreakFoeMarked++; _vsInfected431.Add(x.InstanceId); }
         }
         Log($"    {holder.Name} の光の衣が砕け、雷が {string.Join("・", hit.Where(x => x.IsAlive).Select(x => x.Name))} に走った", LogKind.Trigger);
         if (!som.HasTrait(TraitId.VeilDischarge) || _vdStore431 is null) return;

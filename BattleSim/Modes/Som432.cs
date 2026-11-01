@@ -223,8 +223,8 @@ static class Som432Diag
 
         var boards = S430.Boards();
         var play = Presets.Versions.First(r => r.Name == PlayRow).F;
-        var want = S430.Swap(boards[0].F, PlayDef);
-        Req(Enumerable.Range(0, 5).All(i => ReferenceEquals(play[i], want[i])), $"「{PlayRow}」＝ 台 1（打ち返しの行）のソムを {PlayLabel} に替えた並び");
+        // 第433期: 台の版は期ごとに差し替える（第432期 RBb-x → 第433期 RBb-gx）ので、「台 1 の中央のソムを何かの版に替えた並び」で見る
+        Req(Enumerable.Range(0, 5).All(i => i == 2 ? play[i]?.Id == "som" && ReferenceEquals(boards[0].F[i], UnitCatalog.Som) : ReferenceEquals(play[i], boards[0].F[i])), $"「{PlayRow}」＝ 台 1（打ち返しの行）の中央のソムを版に替えた並び（第432期は {PlayLabel}）");
         bool same = true, defNone = true, stops = true, rbbSame = true, sane = true;
         foreach (var b in boards)
             foreach (var w in S430.Waves)

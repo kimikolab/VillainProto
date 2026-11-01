@@ -2581,6 +2581,8 @@ public sealed class UnitTally
     public long Vs431Hits, Vs431Marked, Vs431Already, Vs431Breaks, Vs431BreakMarked, Vs431BreakAlready, Vs431Popped, Vs431PoppedBeast, Vd431Stored, Vd431Shots, Vd431Amt, Vd431Dealt, Vd431Cut;
     /// <summary>第432期（ソムの側・計数のみ）: 歯止めで止めた回数。<c>Vs432StopOnce</c> 同じ味方の 2 度目の砕け（RBb-t）／ <c>Vs432StopNeighbors</c> 走らなかった両隣の体数（RBb-n）／ <c>Vs432StopHero</c> 勇者が砕いた（RBb-x）。</summary>
     public long Vs432StopOnce, Vs432StopNeighbors, Vs432StopHero;
+    /// <summary>第433期（ソムの側・計数のみ）: <c>Vs433StopOnceAll</c> そのターンの 2 度目以降の砕け（RBb-gx）／ <c>Vs433StopSide</c> 走らなかった `AreAdjacent` の隣（RBb-lx）／ <c>Vs433BreakFoeMarked</c> 砕けで帯電させたうち砕いた敵（残りが両隣）。</summary>
+    public long Vs433StopOnceAll, Vs433StopSide, Vs433BreakFoeMarked;
     public long Sw419Gulped, Sw419GulpedLost, Sw419GulpedTurn, Sw419RallyRead, Sw419LampRead, Sw419FoeGulped, Sw419IdleHead, Sw419IdleHeadSold;
     /// <summary>第420期（計数のみ・セッキの版 SW-n ／ SW-nd）。セッキの側: 次のターンの終わりまで預かって吐き出した ／ 消化でその場で吐き出した回数・消化で仲間を癒した量 ／ 自分を消化した手番 ／ 消した溜め ／ 自分が癒えた量 ／ 決着のときにまだ呑んでいた。
     /// 呑まれた仲間の側: ゼリーの中で失った手番 ／ 前のターンに中にいた仲間を号令 ／ 灯が読んだ回数。</summary>
@@ -3965,6 +3967,7 @@ public sealed class UnitTally
         Vs431Hits += o.Vs431Hits; Vs431Marked += o.Vs431Marked; Vs431Already += o.Vs431Already; Vs431Breaks += o.Vs431Breaks; Vs431BreakMarked += o.Vs431BreakMarked; Vs431BreakAlready += o.Vs431BreakAlready;
         Vs431Popped += o.Vs431Popped; Vs431PoppedBeast += o.Vs431PoppedBeast; Vd431Stored += o.Vd431Stored; Vd431Shots += o.Vd431Shots; Vd431Amt += o.Vd431Amt; Vd431Dealt += o.Vd431Dealt; Vd431Cut += o.Vd431Cut;
         Vs432StopOnce += o.Vs432StopOnce; Vs432StopNeighbors += o.Vs432StopNeighbors; Vs432StopHero += o.Vs432StopHero;
+        Vs433StopOnceAll += o.Vs433StopOnceAll; Vs433StopSide += o.Vs433StopSide; Vs433BreakFoeMarked += o.Vs433BreakFoeMarked;
         Wd423Reads += o.Wd423Reads; Wd423ReadAmt += o.Wd423ReadAmt; Wd423Peak = Math.Max(Wd423Peak, o.Wd423Peak);   // 第423期
         Wd424TurnMax = Math.Max(Wd424TurnMax, o.Wd424TurnMax);   // 第424期
         Bm426PlantAlly += o.Bm426PlantAlly; Bm426PlantFoe += o.Bm426PlantFoe; Bm426BlastAlly += o.Bm426BlastAlly; Bm426BlastFoe += o.Bm426BlastFoe; Bm426Chain += o.Bm426Chain; Bm426WeightAlly += o.Bm426WeightAlly; Bm426WeightFoe += o.Bm426WeightFoe; Bm426WeightMax = Math.Max(Bm426WeightMax, o.Bm426WeightMax); Bm426AllyKilled += o.Bm426AllyKilled; Bm426FoeKilled += o.Bm426FoeKilled; Bm426Duds += o.Bm426Duds;   // 第426期

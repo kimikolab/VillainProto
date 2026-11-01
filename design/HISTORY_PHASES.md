@@ -4,6 +4,8 @@ description: 第259期に `CLAUDE.md` の「現状値」節を**逐語で**移�
 
 `CLAUDE.md` には直近の値1ブロックと、歯止め・情報セルの定義（規則）だけが残っている。**以後の期の報告はこのファイルの冒頭（`## 現状値` の直後）に足す**。`CLAUDE.md` の現状値ブロックは差し替える（増やさない）。
 
+**第433期は軽い期で、版 2 つ（規定は動かさない）**（指示書 `PHASE433_SOM_VEIL_BRAKE2_SPEC.md`・報告 `design/PHASE433_SOM_VEIL_BRAKE2.md`・器具 `som433`）。RB-b ＋ 勇者には返さない（x）に、ソムの全体で 1 ターン 1 回（RBb-gx）／ 左右だけ（RBb-lx）を重ねた版（`UnitCatalog.SomRBbgx` ／ `SomRBblx`・`All` の外）。ボスはどれも規定と同じ。寄せ集めの精鋭 3 セルのうち 2 セル以上を +20〜+40 に収める版は無く（継ぎ当ての近衛が崖）、推すのは gx。`compare` 0 セル・`docs/` は `units.md` の札の 2 行だけ・全66行 ／ 主判定19行 ／ 情報セルは動かない。試遊の台「版・光の衣 ソム」を RBb-gx に差し替えた。
+
 **第432期は軽い期で、版 3 つ（規定は動かさない）**（指示書 `PHASE432_SOM_VEIL_BRAKE_SPEC.md`・報告 `design/PHASE432_SOM_VEIL_BRAKE.md`・器具 `som432`）。第431期の RB-b に歯止めを 1 つずつ重ねた版 RBb-t（味方 1 体 1 ターン 1 回）／ RBb-n（砕いた敵だけ）／ RBb-x（勇者には返さない）（`UnitCatalog.SomRBbt` ／ `SomRBbn` ／ `SomRBbx`・`All` の外）。ボスを規定に戻すのは x だけで、寄せ集めの精鋭は t と n が台ごとに逆向きに外れ、線 1〜4 を全部通る版は無かった。`compare` 0 セル・`docs/` は `units.md` の札の 3 行だけ・全66行 ／ 主判定19行 ／ 情報セルは動かない。試遊の台「版・光の衣 ソム」を RBb-x に差し替えた。
 
 **第431期は軽い期で、版 3 つ（規定は動かさない）**（指示書 `PHASE431_SOM_VEIL_SHOCK_SPEC.md`・報告 `design/PHASE431_SOM_VEIL_SHOCK.md`・器具 `som431`）。ソムの光の衣に雷の返しを足す版 RB-1 ／ RB-b ／ RB-c（`UnitCatalog.SomRB1` ／ `SomRBb` ／ `SomRBc`・`All` の外）——敵の直の刃が衣を削る ／ 砕くと、その敵と隣が帯電する（RB-c は捨てた光を溜めて砕けたときに撒く）。感電の台の精鋭は動かず、寄せ集めの精鋭（0〜9 → 96〜100）と打ち返しの行のボス（3 → 59〜84）が大きく上がった。`compare` 0 セル・`docs/` は `units.md` の札の 3 行だけ・全66行 ／ 主判定19行 ／ 情報セルは動かない。試遊の台「版・光の衣 ソム」を足し、鎖の終端 `VersionsH407` が外す。

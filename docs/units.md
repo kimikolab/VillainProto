@@ -750,6 +750,8 @@
 | `VeilShockOnce` | - |
 | `VeilShockLone` | - |
 | `VeilShockSpareHero` | - |
+| `VeilShockOnceAll` | - |
+| `VeilShockLateral` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |
