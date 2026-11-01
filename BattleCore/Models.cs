@@ -2579,6 +2579,8 @@ public sealed class UnitTally
     /// <c>Vd431Stored</c> 溜めた光 ／ <c>Vd431Shots</c> 放電の回数 ／ <c>Vd431Amt</c> 撒いた名目 ／ <c>Vd431Dealt</c> 実際に減った HP＋破片 ／ <c>Vd431Cut</c> 上限 20 で切れた量。
     /// </summary>
     public long Vs431Hits, Vs431Marked, Vs431Already, Vs431Breaks, Vs431BreakMarked, Vs431BreakAlready, Vs431Popped, Vs431PoppedBeast, Vd431Stored, Vd431Shots, Vd431Amt, Vd431Dealt, Vd431Cut;
+    /// <summary>第432期（ソムの側・計数のみ）: 歯止めで止めた回数。<c>Vs432StopOnce</c> 同じ味方の 2 度目の砕け（RBb-t）／ <c>Vs432StopNeighbors</c> 走らなかった両隣の体数（RBb-n）／ <c>Vs432StopHero</c> 勇者が砕いた（RBb-x）。</summary>
+    public long Vs432StopOnce, Vs432StopNeighbors, Vs432StopHero;
     public long Sw419Gulped, Sw419GulpedLost, Sw419GulpedTurn, Sw419RallyRead, Sw419LampRead, Sw419FoeGulped, Sw419IdleHead, Sw419IdleHeadSold;
     /// <summary>第420期（計数のみ・セッキの版 SW-n ／ SW-nd）。セッキの側: 次のターンの終わりまで預かって吐き出した ／ 消化でその場で吐き出した回数・消化で仲間を癒した量 ／ 自分を消化した手番 ／ 消した溜め ／ 自分が癒えた量 ／ 決着のときにまだ呑んでいた。
     /// 呑まれた仲間の側: ゼリーの中で失った手番 ／ 前のターンに中にいた仲間を号令 ／ 灯が読んだ回数。</summary>
@@ -3962,6 +3964,7 @@ public sealed class UnitTally
         Veil430SoakAlly += o.Veil430SoakAlly; Veil430SoakSelf += o.Veil430SoakSelf; Veil430SoakTick += o.Veil430SoakTick; Veil430SoakRelay += o.Veil430SoakRelay; Veil430SoakOther += o.Veil430SoakOther; Veil430Puts += o.Veil430Puts; Veil430SoakChain += o.Veil430SoakChain; Veil430ThrowVeiled += o.Veil430ThrowVeiled; Veil430ThrowVeiledCharged += o.Veil430ThrowVeiledCharged;
         Vs431Hits += o.Vs431Hits; Vs431Marked += o.Vs431Marked; Vs431Already += o.Vs431Already; Vs431Breaks += o.Vs431Breaks; Vs431BreakMarked += o.Vs431BreakMarked; Vs431BreakAlready += o.Vs431BreakAlready;
         Vs431Popped += o.Vs431Popped; Vs431PoppedBeast += o.Vs431PoppedBeast; Vd431Stored += o.Vd431Stored; Vd431Shots += o.Vd431Shots; Vd431Amt += o.Vd431Amt; Vd431Dealt += o.Vd431Dealt; Vd431Cut += o.Vd431Cut;
+        Vs432StopOnce += o.Vs432StopOnce; Vs432StopNeighbors += o.Vs432StopNeighbors; Vs432StopHero += o.Vs432StopHero;
         Wd423Reads += o.Wd423Reads; Wd423ReadAmt += o.Wd423ReadAmt; Wd423Peak = Math.Max(Wd423Peak, o.Wd423Peak);   // 第423期
         Wd424TurnMax = Math.Max(Wd424TurnMax, o.Wd424TurnMax);   // 第424期
         Bm426PlantAlly += o.Bm426PlantAlly; Bm426PlantFoe += o.Bm426PlantFoe; Bm426BlastAlly += o.Bm426BlastAlly; Bm426BlastFoe += o.Bm426BlastFoe; Bm426Chain += o.Bm426Chain; Bm426WeightAlly += o.Bm426WeightAlly; Bm426WeightFoe += o.Bm426WeightFoe; Bm426WeightMax = Math.Max(Bm426WeightMax, o.Bm426WeightMax); Bm426AllyKilled += o.Bm426AllyKilled; Bm426FoeKilled += o.Bm426FoeKilled; Bm426Duds += o.Bm426Duds;   // 第426期

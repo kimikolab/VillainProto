@@ -747,6 +747,9 @@
 | `VeilShock` | - |
 | `VeilShockBreak` | - |
 | `VeilDischarge` | - |
+| `VeilShockOnce` | - |
+| `VeilShockLone` | - |
+| `VeilShockSpareHero` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

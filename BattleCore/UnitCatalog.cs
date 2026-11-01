@@ -5201,6 +5201,16 @@ public static class UnitCatalog
     /// <summary>第431期 RB-c（返し＋放電）。規定 ＋ <see cref="TraitId.VeilShock"/> ＋ <see cref="TraitId.VeilDischarge"/>。</summary>
     public static readonly UnitDef SomRBc = SomOn431("。光の衣を削った敵は痺れる。衣が砕けるとき、溢れて捨てた光が雷となって砕いた敵と両隣を打つ", TraitId.VeilShock, TraitId.VeilDischarge);
 
+    // 第432期 —— RB-b に歯止めを 1 つずつ重ねた版（指示書 design/PHASE432_SOM_VEIL_BRAKE_SPEC.md §1）。文面は RB-b の 1 句を版ごとに言い替える。`All` にも `Retired` にも入れない（採否はポン）。
+    /// <summary>第432期 RBb-t（1 ターン 1 回）。規定 ＋ <see cref="TraitId.VeilShockBreak"/> ＋ <see cref="TraitId.VeilShockOnce"/>。</summary>
+    public static readonly UnitDef SomRBbt = SomOn431("。光の衣が砕けるとき、砕いた敵とその両隣が痺れる（同じ者の衣は 1 ターンに 1 度まで）", TraitId.VeilShockBreak, TraitId.VeilShockOnce);
+    /// <summary>第432期 RBb-n（砕いた敵だけ）。規定 ＋ <see cref="TraitId.VeilShockBreak"/> ＋ <see cref="TraitId.VeilShockLone"/>。</summary>
+    public static readonly UnitDef SomRBbn = SomOn431("。光の衣が砕けるとき、砕いた敵が痺れる", TraitId.VeilShockBreak, TraitId.VeilShockLone);
+    /// <summary>第432期 RBb-x（勇者には返さない）。規定 ＋ <see cref="TraitId.VeilShockBreak"/> ＋ <see cref="TraitId.VeilShockSpareHero"/>。</summary>
+    public static readonly UnitDef SomRBbx = SomOn431("。光の衣が砕けるとき、砕いた敵とその両隣が痺れる（勇者には効かない）", TraitId.VeilShockBreak, TraitId.VeilShockSpareHero);
+    /// <summary>第432期: 器具の組み合わせ（RBb-tx ／ RBb-nx）を作る口。版の数は増やさない（`All` ／ `Versions` に載せない）。</summary>
+    public static UnitDef SomOn432(string plus, params TraitId[] add) => SomOn431(plus, add);
+
     /// <summary>第323期 カタの版（返す）。規定のカタ ＋ <see cref="TraitId.ThunderPowderReturn"/>（濃さの保持者がいない戦では何も起きない）。</summary>
     public static readonly UnitDef KataTDR = On323(KataH324, new[] { TraitId.ThunderPowderReturn }, KataPowderReturnText);
     /// <summary>第323期 クグの版（返す）。規定のクグ ＋ <see cref="TraitId.ThreadPowderFlow"/>。</summary>

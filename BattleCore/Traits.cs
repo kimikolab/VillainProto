@@ -1091,6 +1091,10 @@ public enum TraitId
     VeilShock,            // 雷の返し（RB-1）: 光の衣が削れるたび、削った敵が帯電する（1撃1回）。衣が砕けた一撃では削った敵の両隣も帯電する（**札そのものは挙動を持たない**・engine の `VeilShock431` が読む）
     VeilShockBreak,       // 砕けたときだけ（RB-b）: 衣が砕けた一撃でだけ、砕いた敵とその両隣が帯電する（同上）
     VeilDischarge,        // 放電（RB-c・`VeilShock` と組む）: 上限で捨てた光を受けた味方ごとに溜め、その味方の衣が砕けたら溜めの 1 割（1回 20 まで）を砕いた敵と両隣に雷の傷として撒く（同上）
+    // --- 第432期で足した札（指示書 design/PHASE432_SOM_VEIL_BRAKE_SPEC.md）。RB-b（`VeilShockBreak`）に重ねる歯止め（版のみ・保持者 0 枚・札そのものは挙動を持たない・engine の `VeilShock431` が読む）---
+    VeilShockOnce,        // 1 ターン 1 回（RBb-t）: 砕けの返しは味方 1 体につき 1 ターン 1 回（同じ味方の衣がそのターンに 2 度砕けても 2 度目は返さない）
+    VeilShockLone,        // 砕いた敵だけ（RBb-n）: 砕けの返しが両隣に走らない
+    VeilShockSpareHero,   // 勇者には返さない（RBb-x）: ボスの波の主（勇者 `boss_hero` ／ `boss_regular`）の一撃で砕けても何も起きない（両隣へも走らない）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -20649,6 +20653,9 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.VeilShock),                        // 第431期（雷の返し RB-1・印）
         new MarkOnlyTrait(TraitId.VeilShockBreak),                   // 第431期（砕けたときだけ RB-b・印）
         new MarkOnlyTrait(TraitId.VeilDischarge),                    // 第431期（放電 RB-c・印）
+        new MarkOnlyTrait(TraitId.VeilShockOnce),                    // 第432期（1 ターン 1 回 RBb-t・印）
+        new MarkOnlyTrait(TraitId.VeilShockLone),                    // 第432期（砕いた敵だけ RBb-n・印）
+        new MarkOnlyTrait(TraitId.VeilShockSpareHero),               // 第432期（勇者には返さない RBb-x・印）
         new LastStandHoldOldScarTrait(),   // 第199期（対照・保持者 0 枚）
         new LastStandHoldNoStockTrait(),   // 第199期（対照・保持者 0 枚）
         new LastStandHoldMutualLossTrait(),// 第199期（対照・保持者 0 枚）

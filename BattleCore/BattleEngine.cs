@@ -2505,6 +2505,10 @@ public sealed class BattleContext
     Dictionary<int, int>? _vdStore431;
     /// <summary>第431期（RB-c）: 溜めの 1 割を撒く・1 回の上限。</summary>
     public const int VeilDischargeDiv = 10, VeilDischargeCap = 20;
+    /// <summary>第432期（RBb-t）: 味方ごとに砕けの返しを最後に返したターン（戦ごとの帳簿・Counters に置かない＝会戦を跨がない・台本の指紋を動かさない）。</summary>
+    Dictionary<int, int>? _vsOnce432;
+    /// <summary>第432期（RBb-x）: ボスの波の主＝勇者（第265期の `boss_hero` ／ 第269期の規定形 `boss_regular`）。支え・癒し手（`boss_ward` ／ `boss_mender`）は含めない。</summary>
+    static bool IsBossHero432(UnitState u) => u.Def.Id is "boss_hero" or "boss_regular";
 
     // =================================================================================
     // 第310期 —— 弾ける獣（ソムの版 E1 ／ E2・design/PHASE310_SOM_BURST_SPEC.md §2-1）。
@@ -8000,10 +8004,19 @@ public sealed class BattleContext
             else if (MarkShock(foe, som)) { t.Vs431Marked++; _vsInfected431.Add(foe.InstanceId); }
         }
         if (!broke || !(rb1 || rbb)) return;
+        // 第432期: RB-b に重ねる歯止め（勇者 → 1 ターン 1 回 → 両隣 の順に見る・止めた回数は計数のみ）
+        if (som.HasTrait(TraitId.VeilShockSpareHero) && IsBossHero432(foe)) { t.Vs432StopHero++; return; }
+        if (som.HasTrait(TraitId.VeilShockOnce))
+        {
+            _vsOnce432 ??= new Dictionary<int, int>();
+            if (_vsOnce432.TryGetValue(holder.InstanceId, out int last) && last == Turn) { t.Vs432StopOnce++; return; }
+            _vsOnce432[holder.InstanceId] = Turn;   // ターンの境界は `Turn` の値が変わること（帳簿を消して回らない）
+        }
+        bool lone = som.HasTrait(TraitId.VeilShockLone);
         t.Vs431Breaks++;
         var hit = new List<UnitState> { foe };
         foreach (UnitState n in LivingMembers(foe.TeamId).OrderBy(n => n.Slot))
-            if (n != foe && !IsSilkBall(n) && FormationRules.AreAdjacent(foe, n)) hit.Add(n);
+            if (n != foe && !IsSilkBall(n) && FormationRules.AreAdjacent(foe, n)) { if (lone) t.Vs432StopNeighbors++; else hit.Add(n); }
         foreach (UnitState x in hit)
         {
             if (rb1 && x == foe) continue;   // RB-1 は削った敵を上で済ませた

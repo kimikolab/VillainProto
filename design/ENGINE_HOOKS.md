@@ -1820,3 +1820,9 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - `VeilShock431`: RB-1 は削った敵を `MarkShock(敵, ソム)`・砕けたら `AreAdjacent` の隣（糸玉を除く）も。RB-b は砕けたときだけ削った敵と隣。RB-c は砕けたら溜め ÷ 10（1 回 20 まで）を同じ相手に `ApplyDamage(…, ソム, singleHit: false, pattern: All)`。
 - `VeilStore431`（`SparkTrait.Veil` の上限の枝）: RB-c の溜めは戦ごとの帳簿 `_vdStore431`（受けた味方の `InstanceId` → 量・`Counters` にも `StatusKeys.All` にも置かない）。
 - 計数: `ShockTrigger` の放電の段で `_vsInfected431`（衣が配った帯電が弾けた・起こし手が獣か）。保持者がいなければ `_veilShockSom` の null の比較 1 つで抜ける・乱数を引かない。
+
+## 第432期 —— 雷の返しの歯止め（版のみ・`VeilShockOnce` ／ `VeilShockLone` ／ `VeilShockSpareHero`・保持者 0 枚）
+
+- `VeilShock431` の砕けの枝の頭に歯止めを 3 本（勇者 → 1 ターン 1 回 → 両隣 の順）。勇者は `IsBossHero432`（`boss_hero` ／ `boss_regular`・支え ／ 癒し手は含めない）。
+- 1 ターン 1 回は戦ごとの帳簿 `_vsOnce432`（衣の持ち主の `InstanceId` → 最後に返した `Turn`）。境界は `Turn` の値が変わること・`Counters` にも `StatusKeys.All` にも置かない。
+- 計数のみ: `Vs432StopOnce` ／ `Vs432StopNeighbors` ／ `Vs432StopHero`（`UnitTally`）。札を持たない版では枝に入らない（RB-1 ／ RB-b ／ RB-c の挙動は変わらない）・乱数を引かない。
