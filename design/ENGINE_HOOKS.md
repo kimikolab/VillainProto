@@ -1808,3 +1808,8 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - `bomb_blast`（`BombBlastText`）: `Blast426` の頭（範囲の `Damage` の前）。`ActorId` ＝ 仕掛けた駒・`Amount` ＝ 重さ。
 - `bomb_mirror`（`BombMirrorText`）: `MirrorBlast427` の頭。`TargetId` ＝ 持ち主（味方）・`FromId` ＝ 向かいの敵（同じ席番号・空なら最初に当たる敵）・`Amount` ＝ 重さ。
 - `bomb_dud`（`BombDudText`）: 不発（`BombAfterHit426` の中・持ち主の `Death` は本体の中で出た後）。`Amount` ＝ 0。`shockdigest` は 5 つとも `SkipGainTexts` で数えない。
+
+## 第430期 —— 光の衣の棚卸し（**計数のみ**・盤面は動かない）
+
+- `NoteVeilSoak430`（`BattleEngine.cs`）: 破片の段が破片を減らす直前に一撃の主と種類（`_veilSrc430` ／ `_veilKind430` ／ `_veilPat430`）を立て、`NoteArmorLost` の衣の帳簿の段が受け止めた量を分ける（感電の連鎖 ／ 敵の単体 ／ 範囲（うち感電した敵から）／ 背いた召喚獣 ／ 味方 ／ 自傷 ／ 刻み ／ 中継 ／ 破片の段の外）。`_veilLive` が偽なら比較 1 つで抜ける。
+- `SparkTrait.Veil`: `Veil430Puts`（衣を張った回数）。`BeastThrow`: `Veil430ThrowVeiled` ／ `Veil430ThrowVeiledCharged`（背きの雷が衣をまとった味方に向かった ／ うち帯電）。

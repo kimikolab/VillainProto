@@ -2566,6 +2566,13 @@ public sealed class UnitTally
     public long Sw419Gulps, Sw419GulpAmt, Sw419GulpMax, Sw419GulpRest, Sw419GulpSpent, Sw419WrapBlockedHits, Sw419WrapBlockedTurns;
     public long Sw419FoeGulps, Sw419FoeSpits, Sw419FoeHeldTurns, Sw419FoeSpitDmg, Sw419FoeSpitDealt, Sw419FoeSpitKilled, Sw419BurstBlocked, Sw419FoeNone;
     public long VeilBreaks419;   // 第419期・計数のみ: 光の衣が 0 まで減った回数（受けた味方の側）
+    /// <summary>
+    /// 第430期（<b>計数のみ</b>・光の衣の棚卸し）。受けた味方の側: <c>Veil430Hits</c> 衣が減った回数 ／ 衣が受け止めた量の一撃の主——
+    /// <c>Veil430SoakFoe</c> 敵の単体の刃 ／ <c>Veil430SoakFoeAoe</c> 敵の範囲 ／ <c>Veil430SoakShocked</c> うち感電した敵から ／ <c>Veil430SoakBeast</c> 背いた召喚獣 ／
+    /// <c>Veil430SoakChain</c> 感電の連鎖の中（放電 ／ 弾け・主を問わない・刻み ／ 中継より後で分ける）／ <c>Veil430SoakAlly</c> 味方の巻き込み ／ <c>Veil430SoakSelf</c> 自傷（追い打ちの反動など）／ <c>Veil430SoakTick</c> 刻み ／ <c>Veil430SoakRelay</c> 中継 ／ 徴収 ／ 共有 ／ <c>Veil430SoakOther</c> 破片の段の外（礫 ／ 鱗 ／ 移し）。
+    /// ソムの側: <c>Veil430Puts</c> 衣を張った回数（味方1体ごと・上限で 0 になった回は数えない）／ <c>Veil430ThrowVeiled</c> 背きの雷が衣をまとった味方に向かった回数 ／ <c>Veil430ThrowVeiledCharged</c> うちその味方が帯電していた（共鳴返しの口）。
+    /// </summary>
+    public long Veil430Hits, Veil430SoakFoe, Veil430SoakFoeAoe, Veil430SoakShocked, Veil430SoakBeast, Veil430SoakAlly, Veil430SoakSelf, Veil430SoakTick, Veil430SoakRelay, Veil430SoakOther, Veil430Puts, Veil430SoakChain, Veil430ThrowVeiled, Veil430ThrowVeiledCharged;
     public long Sw419Gulped, Sw419GulpedLost, Sw419GulpedTurn, Sw419RallyRead, Sw419LampRead, Sw419FoeGulped, Sw419IdleHead, Sw419IdleHeadSold;
     /// <summary>第420期（計数のみ・セッキの版 SW-n ／ SW-nd）。セッキの側: 次のターンの終わりまで預かって吐き出した ／ 消化でその場で吐き出した回数・消化で仲間を癒した量 ／ 自分を消化した手番 ／ 消した溜め ／ 自分が癒えた量 ／ 決着のときにまだ呑んでいた。
     /// 呑まれた仲間の側: ゼリーの中で失った手番 ／ 前のターンに中にいた仲間を号令 ／ 灯が読んだ回数。</summary>
@@ -3945,6 +3952,8 @@ public sealed class UnitTally
         Sw419Gulps += o.Sw419Gulps; Sw419GulpAmt += o.Sw419GulpAmt; Sw419GulpMax = Math.Max(Sw419GulpMax, o.Sw419GulpMax); Sw419GulpRest += o.Sw419GulpRest; Sw419GulpSpent += o.Sw419GulpSpent; Sw419WrapBlockedHits += o.Sw419WrapBlockedHits; Sw419WrapBlockedTurns += o.Sw419WrapBlockedTurns;   // 第419期
         Sw419FoeGulps += o.Sw419FoeGulps; Sw419FoeSpits += o.Sw419FoeSpits; Sw419FoeHeldTurns += o.Sw419FoeHeldTurns; Sw419FoeSpitDmg += o.Sw419FoeSpitDmg; Sw419FoeSpitDealt += o.Sw419FoeSpitDealt; Sw419FoeSpitKilled += o.Sw419FoeSpitKilled; Sw419BurstBlocked += o.Sw419BurstBlocked; Sw419FoeNone += o.Sw419FoeNone;
         VeilBreaks419 += o.VeilBreaks419;
+        Veil430Hits += o.Veil430Hits; Veil430SoakFoe += o.Veil430SoakFoe; Veil430SoakFoeAoe += o.Veil430SoakFoeAoe; Veil430SoakShocked += o.Veil430SoakShocked; Veil430SoakBeast += o.Veil430SoakBeast;
+        Veil430SoakAlly += o.Veil430SoakAlly; Veil430SoakSelf += o.Veil430SoakSelf; Veil430SoakTick += o.Veil430SoakTick; Veil430SoakRelay += o.Veil430SoakRelay; Veil430SoakOther += o.Veil430SoakOther; Veil430Puts += o.Veil430Puts; Veil430SoakChain += o.Veil430SoakChain; Veil430ThrowVeiled += o.Veil430ThrowVeiled; Veil430ThrowVeiledCharged += o.Veil430ThrowVeiledCharged;
         Wd423Reads += o.Wd423Reads; Wd423ReadAmt += o.Wd423ReadAmt; Wd423Peak = Math.Max(Wd423Peak, o.Wd423Peak);   // 第423期
         Wd424TurnMax = Math.Max(Wd424TurnMax, o.Wd424TurnMax);   // 第424期
         Bm426PlantAlly += o.Bm426PlantAlly; Bm426PlantFoe += o.Bm426PlantFoe; Bm426BlastAlly += o.Bm426BlastAlly; Bm426BlastFoe += o.Bm426BlastFoe; Bm426Chain += o.Bm426Chain; Bm426WeightAlly += o.Bm426WeightAlly; Bm426WeightFoe += o.Bm426WeightFoe; Bm426WeightMax = Math.Max(Bm426WeightMax, o.Bm426WeightMax); Bm426AllyKilled += o.Bm426AllyKilled; Bm426FoeKilled += o.Bm426FoeKilled; Bm426Duds += o.Bm426Duds;   // 第426期

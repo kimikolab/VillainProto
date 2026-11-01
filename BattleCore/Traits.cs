@@ -15579,6 +15579,7 @@ public sealed class SparkTrait : Trait
         t.SparkVeilCapped += over - add;
         if (add <= 0) return;
         t.SparkVeilAdded += add;
+        t.Veil430Puts++;   // 第430期・計数のみ
         a.SetCounter(StatusKeys.Armor, armor + add);
         a.SetCounter(VeilKey, a.RawCounter(VeilKey) + add);
         ctx.EmitSpark(som, SparkLabels.Veil, add, armor + add, a);   // 表示専用（衣になった量・その後の破片）

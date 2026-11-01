@@ -2490,6 +2490,10 @@ public sealed class BattleContext
 
     /// <summary>光の衣の保持者（LV-a ／ LV-c）が戦闘に出たか（第308期・<b>計数</b>の口を短絡させる）。</summary>
     bool _veilLive;
+    /// <summary>第430期（<b>計数のみ</b>・光の衣の吸い手）: 破片の段が破片を減らす直前に立てる一撃の主と種類（0 ＝ 刃 ／ 1 ＝ 刻み ／ 2 ＝ 中継 ／ 徴収 ／ 共有）。<see cref="NoteArmorLost"/> が読む。破片の段の外（礫 ／ 鱗 ／ 移し）では null。</summary>
+    UnitState? _veilSrc430;
+    int _veilKind430 = -1;
+    AttackPattern? _veilPat430;
 
     // =================================================================================
     // 第310期 —— 弾ける獣（ソムの版 E1 ／ E2・design/PHASE310_SOM_BURST_SPEC.md §2-1）。
@@ -2871,6 +2875,7 @@ public sealed class BattleContext
         (t.BtSlotHist ??= new long[9])[Math.Clamp(target.Slot, 0, 8)]++;
         bool charged0 = target.RawCounter(StatusKeys.Shock) > 0;
         NoteThrowTarget(t, beast, target, charged0);   // 第318期（計数のみ・盤面は読むだけ）
+        if (_veilLive && target.RawCounter(SparkTrait.VeilKey) > 0) { t.Veil430ThrowVeiled++; if (charged0) t.Veil430ThrowVeiledCharged++; }   // 第430期（計数のみ）: 衣をまとった味方に向かった雷 ／ うち帯電していた
         // ① 避雷針（第317期・本期の版では使わない。判定の順は第317期のまま最初）
         if (_rodLive)
         {
@@ -7920,6 +7925,7 @@ public sealed class BattleContext
             (vt.SparkVeilSoakedT ??= new long[12])[Math.Min(_turn, 11)] += soak;
             u.SetCounter(SparkTrait.VeilKey, Math.Min(vk - soak, after));
             if (Math.Min(vk - soak, after) <= 0) vt.VeilBreaks419++;   // 第419期・計数のみ（衣が砕けた回数・ソムの光の衣の下見）
+            NoteVeilSoak430(u, vt, soak);
         }
         if (u.RawCounter(StatusKeys.Plank) > 0)
         {
@@ -7929,6 +7935,30 @@ public sealed class BattleContext
         if (_scrapHolders.Count == 0) return;
         foreach (UnitState h in _scrapHolders)
             if (h.IsAlive && h.TeamId == u.TeamId) ScrapTrait.Pick(this, h, u, lost, fall: false);
+    }
+
+    /// <summary>
+    /// 第430期（<b>計数のみ</b>・光の衣の棚卸し）: 衣が受け止めた量 <paramref name="soak"/> を一撃の主で分ける（受けた味方の側）。
+    /// 刻み ／ 中継 ／ 感電の連鎖の中（放電・弾け）／ 敵の刃（単体 ／ 範囲・うち感電した敵から）／ 背いた召喚獣 ／ 味方の巻き込み ／ 自傷（ハギの追い打ちの反動など）／ 刻み ／ 中継 ／ 破片の段の外（礫 ／ 鱗 ／ 移し）。盤面は動かさない。
+    /// </summary>
+    void NoteVeilSoak430(UnitState u, UnitTally vt, int soak)
+    {
+        if (soak <= 0) return;
+        vt.Veil430Hits++;
+        UnitState? s = _veilSrc430;
+        if (_veilKind430 < 0) vt.Veil430SoakOther += soak;
+        else if (_veilKind430 == 1) vt.Veil430SoakTick += soak;
+        else if (_veilKind430 == 2) vt.Veil430SoakRelay += soak;
+        else if (_shockChaining) vt.Veil430SoakChain += soak;   // 感電の連鎖の中の削り（放電・弾け・獣の暴発の連鎖・主が味方でも敵でも）
+        else if (s is null) vt.Veil430SoakOther += soak;
+        else if (s == u) vt.Veil430SoakSelf += soak;
+        else if (s.TeamId == u.TeamId) vt.Veil430SoakAlly += soak;
+        else if (s.Def.Id == "fodder") vt.Veil430SoakBeast += soak;
+        else
+        {
+            if (_veilPat430 is null or AttackPattern.Single) vt.Veil430SoakFoe += soak; else vt.Veil430SoakFoeAoe += soak;
+            if (s.RawCounter(StatusKeys.Shock) > 0) vt.Veil430SoakShocked += soak;
+        }
     }
 
     /// <summary>第208期: 撃ち返す板（<see cref="TraitId.PlankRebound"/>）の保持者が盤上にいるか。偽なら破片の段は比較1つで抜ける。</summary>
@@ -14704,7 +14734,9 @@ public sealed class BattleContext
                 NotePlankSkill(soak);   // 第210期: 腕の累計（同じ条件・同じ量）
                 soak += hret358;
             }
+            if (_veilLive) { _veilSrc430 = source; _veilKind430 = burnTick || source is null ? 1 : relayed || levy || hexShare ? 2 : 0; _veilPat430 = pattern; }   // 第430期・計数のみ
             target.SetCounter(StatusKeys.Armor, armor - soak);
+            _veilSrc430 = null; _veilKind430 = -1; _veilPat430 = null;
             amount -= soak;
 
             // 集約が作った鎧が実際に吸った量。**砕け（ShatterTrait）の破片と混ざる**ので、
