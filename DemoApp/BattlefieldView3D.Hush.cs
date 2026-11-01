@@ -167,6 +167,7 @@ public partial class BattlefieldView3D
     }
     public override void _ExitTree()
     {
+        EndChiriPresentation();
         ResetGaldSwordPresentation();
         EndHushPresentation();
     }

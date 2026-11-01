@@ -20,6 +20,8 @@ public partial class BattlefieldView3D
         {
             pawn.HagiPaused = paused;
             pawn.UtsuPaused = paused;
+            pawn.ChiriIdlePaused = paused;
+            if (pawn.UnitId == "chiri") pawn.AnimationSpeed = _deathSpeed;
             if (pawn.UnitId == "utsu") pawn.AnimationSpeed = _deathSpeed;
             if (pawn.UnitId == "hagi") pawn.AnimationSpeed = _deathSpeed;
         }

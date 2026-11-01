@@ -1,0 +1,52 @@
+{
+  "source": "DemoApp\\assets\\portraits\\battle\\chiri_idle_right.png",
+  "source_sha256": "1386342e06c1804256075f6f5489590eb2763d6c55959a7a4237049ad0c6377e",
+  "status": "adopted_A",
+  "adopted": {
+    "label": "A",
+    "tag": "chiri_idle_v1_s2022",
+    "loop": "chiri",
+    "date": "2026-11-01"
+  },
+  "fps": 16,
+  "candidates": [
+    {
+      "label": "A",
+      "tag": "chiri_idle_v1_s2022",
+      "frames": 20,
+      "seconds": 1.25,
+      "size": [
+        640,
+        960
+      ],
+      "source_bottom": 938,
+      "bottom_range": [
+        937,
+        938
+      ],
+      "head_vertical_range_px": 3,
+      "max_opaque_border_pixels": 0,
+      "max_green_pixels": 0,
+      "frame_bytes": 18748698
+    },
+    {
+      "label": "B",
+      "tag": "chiri_idle_v1_s5055",
+      "frames": 33,
+      "seconds": 2.0625,
+      "size": [
+        640,
+        960
+      ],
+      "source_bottom": 938,
+      "bottom_range": [
+        937,
+        938
+      ],
+      "head_vertical_range_px": 2,
+      "max_opaque_border_pixels": 0,
+      "max_green_pixels": 0,
+      "frame_bytes": 31909697
+    }
+  ]
+}

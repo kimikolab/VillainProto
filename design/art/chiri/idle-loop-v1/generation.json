@@ -1,0 +1,27 @@
+{
+  "source": "DemoApp/assets/portraits/battle/chiri_idle_right.png",
+  "source_sha256": "1386342e06c1804256075f6f5489590eb2763d6c55959a7a4237049ad0c6377e",
+  "positive": "A 2D anime fighting game character idle animation, like a Street Fighter or Guilty Gear idle loop. Chiri, a cheerful mischievous young woman with ash-blonde low twin pigtails and teal eyes, in the exact right-facing three-quarter combat stance from the reference. Preserve her smiling face, charcoal ragged short cape, orange scarf, rolled cream blouse sleeves, black pumpkin-shaped short shorts with orange trim, orange-and-dark-charcoal striped over-knee socks, brown fingerless gloves, brown ankle boots and the heavy brown bomb satchel at her rear hip. One hand stays beside the satchel and the other holds ONE round black bomb in front of her waist, exactly as in the reference. The bomb has an UNLIT rope fuse.Like a lively fighting game character eager to cause trouble, she repeats THREE clearly visible springy ready-stance cycles over five seconds: both knees bend and straighten in a steady rhythm, her hips and torso sink and rise together, and her shoulders, elbows and hands follow the connected body motion. Keep her back upright and her head high, her confident playful smile unchanged. The movement comes from her knees and hips, not from leaning or rocking forward. Her bomb-holding forearm makes a small natural counter-motion while maintaining the same open presenting pose; she does not throw, plant, juggle, spin or light the bomb. Both boot soles remain planted in the exact same spots with a stable ground line.Both feet stay flat on the ground in exactly the same spots; she never jumps and never steps. Her body keeps facing right and does not turn toward the camera. Her short pigtails, scarf tails and ragged cape edges sway with a soft delayed follow-through. The satchel and star-shaped brass charms make a small weighted swing following her hips. The round bomb and its rope fuse keep their exact rigid shape and size; the bag retains its contents and outline. The shorts remain short pumpkin-shaped shorts and the socks keep their orange and dark charcoal stripes. No explosion, no sparks, no smoke, no glowing fuse, no particles or magic. Same face, same costume, same colors. Fixed camera, no zoom, full body always visible, flat plain green background.",
+  "negative": "static image, frozen pose, walking, moving across the frame, turning around, camera movement, zoom, cuts, jumping, hopping, feet leaving the ground, stepping, turning to face the camera, cropped feet, cropped ears, multiple characters, changing costume, changing face, extra limbs, extra fingers, deformed hands, flicker, text, watermark, background change, shadows on background, walking, stepping, hopping, jumping, lifting heels, foot sliding, forward lean, hunched back, crouching deeply, dancing, tossing bomb, juggling, throwing, placing bomb, ignition, lit fuse, fire, sparks, explosion, smoke, changing expression, mouth opening and closing, looking at camera, head turning, bomb swelling, melting bomb, flexible bomb, extra bombs in hand, bomb disappearing, hands changing grip, extra fingers, trousers, long shorts, white socks, white stripes",
+  "seeds": [
+    2022,
+    5055
+  ],
+  "generation_size": [
+    640,
+    960
+  ],
+  "generation_frames": 81,
+  "fps": 16,
+  "status": "candidate_A_adopted",
+  "jobs": [
+    {
+      "prompt_id": "a86c7ac6-95e8-427a-b716-a00c74545956",
+      "tag": "chiri_idle_v1_s2022_raw"
+    },
+    {
+      "prompt_id": "c6b13216-8650-481b-a83f-db04578441ee",
+      "tag": "chiri_idle_v1_s5055_raw"
+    }
+  ]
+}

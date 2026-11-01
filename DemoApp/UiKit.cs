@@ -250,6 +250,9 @@ public static class UiKit
     /// </summary>
     public static float BattlePortraitBottomPaddingRatio(string key) => key switch
     {
+        "chiri" => 34f / 1536f, // かぼちゃショートパンツ・膝上ソックス版の靴底までの余白。
+        "chiri_plant" => 48f / 1536f,
+        "chiri_release" => 47f / 1536f,
         "mudo" => 61f / 1515f,
         "mudo_erupt" => 16f / 1024f,
         "gare_load" => 20f / 1536f,

@@ -124,6 +124,7 @@ public partial class BattlefieldView3D
 
     private void ApplyCameraView()
     {
+        ResetChiriShake();
         float radians = Mathf.DegToRad(CameraElevation);
         float yaw = Mathf.DegToRad(CameraYaw);
         float radius = CameraRadius / CameraZoom;

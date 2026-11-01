@@ -1,0 +1,42 @@
+[
+  {
+    "Original": "chiri-standing-v2.png",
+    "GamePath": "C:\\works\\VillainProto\\DemoApp\\assets\\portraits\\chiri.png",
+    "OldSha256": "855AF226C825748746FC387B65A100F91158F3F60DB2A6737714EB7FFDE23F98",
+    "Sha256": "226B7B76390B728E7301BC85ACFFB0ED8A6755EBC748256E056B29662ABABCB1",
+    "Width": 1024,
+    "Height": 1536,
+    "BottomOpaqueRow": 1523,
+    "BottomPadding": 12
+  },
+  {
+    "Original": "chiri-battle-idle-right-v2.png",
+    "GamePath": "C:\\works\\VillainProto\\DemoApp\\assets\\portraits\\battle\\chiri_idle_right.png",
+    "OldSha256": "6CE068CA951D653C3DA3C9C53977A751083EA75A795F7E94FAACD1788D7F6A72",
+    "Sha256": "1386342E06C1804256075F6F5489590EB2763D6C55959A7A4237049AD0C6377E",
+    "Width": 1024,
+    "Height": 1536,
+    "BottomOpaqueRow": 1501,
+    "BottomPadding": 34
+  },
+  {
+    "Original": "chiri-battle-plant-right-v2.png",
+    "GamePath": "C:\\works\\VillainProto\\DemoApp\\assets\\portraits\\battle\\chiri_plant_idle_right.png",
+    "OldSha256": "E3F1A847C2836785765E4938E665B3E8BC2166ED1B519ABDE61B9DE33649A537",
+    "Sha256": "1E36B46A7F39A2AB7F54ADA6FA9E9D25E765EA062FB65DCD208B6CC3DED49893",
+    "Width": 1024,
+    "Height": 1536,
+    "BottomOpaqueRow": 1487,
+    "BottomPadding": 48
+  },
+  {
+    "Original": "chiri-battle-release-right-v2.png",
+    "GamePath": "C:\\works\\VillainProto\\DemoApp\\assets\\portraits\\battle\\chiri_release_idle_right.png",
+    "OldSha256": "B14CEB220F31C2BF82631FA35F2BB6B0B5FF2D908461E040C6730017BE3D9D88",
+    "Sha256": "38560DDCE430598467EFF96C8ADEA1F8EAD8DB0002FC9940916A166D718160AC",
+    "Width": 1024,
+    "Height": 1536,
+    "BottomOpaqueRow": 1488,
+    "BottomPadding": 47
+  }
+]

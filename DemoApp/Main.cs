@@ -1185,6 +1185,7 @@ public partial class Main : Control
         _seekCompletion = null;
         _seekTarget = null;
         if (_result is null) return;
+        _chiri = ChiriPresentation.Build(_result.Events);
         IndexStatusDamageEvents(_result.Events);
         _ticks = TickPresentation.Build(_result.Events);
         _turnTicks = TurnTickPresentation.Build(_result.Events);
@@ -1276,6 +1277,7 @@ public partial class Main : Control
         ResetLiliRitePlayback();
         ResetPlankPlayback();
         ResetSomPlayback();
+        _chiriFastEvent = false;
         _beniGiftGains.Clear();
         _playing = true;
         _paused = false;
@@ -1310,6 +1312,7 @@ public partial class Main : Control
                 && (_seekTarget is null || ticks.End <= _seekTarget))
                 await PlayTurnTicks(ticks, token);
             else await ApplyEvent(e, eventIndex);
+            _chiriFastEvent = false;
             await FinishDustBurst(eventIndex);
             _dohaFastEvent = false;
             if (token != _playToken || !_battleMode) return;
@@ -1354,6 +1357,9 @@ public partial class Main : Control
         if (token != _playToken || !_battleMode) return;
         FinishSekkiPlayback();
         _battleField.ClearDirgeAuras();
+        await _battleField.FinishChiriEffects();
+        if (token != _playToken || !_battleMode) return;
+        _battleField.EndChiriPresentation();
         _playing = false;
         if (ViewerMode) return;
         _battleField.EndGolmPresentation();
@@ -1453,6 +1459,7 @@ public partial class Main : Control
         BattlePawn3D? target = _battleField.FindPawn(e.TargetId);
         if (actor is not null) actor.AnimationSpeed = Math.Max(0.1, _speed);
         if (target is not null) target.AnimationSpeed = Math.Max(0.1, _speed);
+        _chiriFastEvent = _chiri.DamageOwners.ContainsKey(eventIndex) || _chiri.FuseHits.Contains(eventIndex);
         if (await PlayHagiEvent(e, eventIndex, actor, target)) return;
         if (await PlayDeathAxis(e, eventIndex, actor, target)) return;
         // 第125期 段2: 拍の境目でだけ画面を変える。**ここでは待たない**（間は下の switch の中だけ）。
@@ -1470,6 +1477,8 @@ public partial class Main : Control
         _golmFastEvent = _golm.FastEvents.Contains(eventIndex);
         _zanFastEvent = _zan.FastEvents.Contains(eventIndex);
         int hushToken = _playToken;
+        if (_chiri.DamageOwners.TryGetValue(eventIndex, out var bombDamage)) _battleField.ShowChiriDamage(bombDamage, target);
+        if (await PlayChiri(e, eventIndex, actor, target) || hushToken != _playToken || !_battleMode) return;
         if (await PlaySom(e, eventIndex, actor, target) || hushToken != _playToken || !_battleMode) return;
         if (await PlayHush(e, eventIndex, actor, target) || hushToken != _playToken || !_battleMode) return;
         if (await PlayHisaCommand(e, eventIndex, actor, target)) return;
@@ -2629,6 +2638,7 @@ public partial class Main : Control
 
     private async Task Delay(double seconds, bool raw = false)
     {
+        if (!raw && _chiriFastEvent) return;
         if (!raw && (_hagiFastEvent || _utsuFastEvent)) return;
         if (!raw && _dustChainFastEvent) return;
         if (!raw && _dohaFastEvent) seconds = Math.Min(seconds, 0.04);

@@ -1,0 +1,35 @@
+# 導火線のチリ — 通常・戦闘立ち絵 v1
+
+作成日: 2026-11-01
+生成方法: 内蔵 image_gen（CLI 不使用）。元の C 案のみを画像参照。
+
+- 原案: ../concepts-v1/chiri-c-prankster.png
+- 通常原本: chiri-standing-v1.png → DemoApp/assets/portraits/chiri.png
+- 戦闘原本: chiri-battle-idle-right-v1.png → DemoApp/assets/portraits/battle/chiri_idle_right.png
+- 仕様: 1024×1536、RGBA PNG。元の透過を維持してコピー。通常は正面寄り、戦闘は右向き。
+- 足元: 戦闘画像のアルファ128以上の最下行は y=1500。下端余白35/1536を UiKit.BattlePortraitBottomPaddingRatio の chiri に設定。
+- 読み込み: UiKit の既存 ID→ファイル名規則を利用。アニメーション・爆弾の演出は今回の対象外。
+
+## 生成プロンプト全文
+
+### standing
+
+```text
+Use case: identity-preserve.
+Asset type: production full-body standing character PNG for an existing Japanese fantasy RPG, 導火線のチリ.
+Input image 1 is the APPROVED ORIGINAL C concept sheet and sole character design reference. Create ONE standalone full-body portrait of that exact girl. Preserve her identity and ORIGINAL C design faithfully: ash blonde tousled short hair with two small low uneven ponytails, orange ties and little springy forelock; bright teal eyes, soot on nose/cheeks, cheerful mischievous friendly young adult woman; ragged charcoal short hooded cape with hood resting down, rust orange scarf, rolled-sleeve ivory work blouse, brown leather gloves, roomy dark charcoal below-knee culotte trousers with repair stitches, rust/cream striped socks and chunky strapped brown ankle boots. The large worn brown crossbody messenger satchel filled with closed black iron round bombs, brass star-cut spherical bag charm and orange tassel are signature features. Preserve original muted warm gray/cream/brown/orange palette, all material textures, proportions and face style. NO vermilion haori, NO floral or fireworks embroidery, NO side high ponytail, NO goggles, no design from the later B/C hybrid.
+Style: match approved image's beautiful fine anime linework and nuanced painterly cel shading, worn leather, soft blond hair, opaque solid clothes and skin. Refine for a crisp usable game asset while preserving the face and outfit. No parchment grain over the transparent area.
+Output: ONE character ONLY on a genuine transparent RGBA background. Entire body from forelock to complete boot soles, bag, scarf and prop inside canvas. Portrait 1024x1536 composition. Use canvas well with small clean transparent outer margins, top 3-4%, bottom about 1-2%, no edge clipping. All empty spaces between limbs, loose hair, scarf and bag also genuinely transparent. Fully opaque character interior, clean anti-aliased edge, no halo, no paper, no gray/black/white fill or painted checkerboard. NO ground/floor, NO ground or contact shadow, NO smoke, NO flames, NO loose sparks, NO glow, NO border, no text or letters, no head studies, no separate bomb diagram or extra figures. Bomb is a sealed whimsical black iron sphere with a short braided fuse and brass rim, no instructional details.
+POSE FOR NORMAL / CHARACTER SELECTION: Extract and faithfully recreate only the MAIN full-body figure from reference C as a standalone asset. Torso toward the viewer in a gentle three-quarter front pose, looking directly at viewer with the same open bright mischievous smile and small canine, inviting slight forward lean. One gloved hand extends diagonally toward viewer to offer a black spherical bomb like a present, other hand grips the satchel shoulder strap. Keep her recognizable original C silhouette and inviting expression. Do not exaggerate foreshortening; face and torso remain clearly visible, hand/bomb do not cover face. The original reference's small fuse spark is omitted for clean game compositing.
+```
+
+### battle-idle-right
+
+```text
+Use case: identity-preserve.
+Asset type: production full-body standing character PNG for an existing Japanese fantasy RPG, 導火線のチリ.
+Input image 1 is the APPROVED ORIGINAL C concept sheet and sole character design reference. Create ONE standalone full-body portrait of that exact girl. Preserve her identity and ORIGINAL C design faithfully: ash blonde tousled short hair with two small low uneven ponytails, orange ties and little springy forelock; bright teal eyes, soot on nose/cheeks, cheerful mischievous friendly young adult woman; ragged charcoal short hooded cape with hood resting down, rust orange scarf, rolled-sleeve ivory work blouse, brown leather gloves, roomy dark charcoal below-knee culotte trousers with repair stitches, rust/cream striped socks and chunky strapped brown ankle boots. The large worn brown crossbody messenger satchel filled with closed black iron round bombs, brass star-cut spherical bag charm and orange tassel are signature features. Preserve original muted warm gray/cream/brown/orange palette, all material textures, proportions and face style. NO vermilion haori, NO floral or fireworks embroidery, NO side high ponytail, NO goggles, no design from the later B/C hybrid.
+Style: match approved image's beautiful fine anime linework and nuanced painterly cel shading, worn leather, soft blond hair, opaque solid clothes and skin. Refine for a crisp usable game asset while preserving the face and outfit. No parchment grain over the transparent area.
+Output: ONE character ONLY on a genuine transparent RGBA background. Entire body from forelock to complete boot soles, bag, scarf and prop inside canvas. Portrait 1024x1536 composition. Use canvas well with small clean transparent outer margins, top 3-4%, bottom about 1-2%, no edge clipping. All empty spaces between limbs, loose hair, scarf and bag also genuinely transparent. Fully opaque character interior, clean anti-aliased edge, no halo, no paper, no gray/black/white fill or painted checkerboard. NO ground/floor, NO ground or contact shadow, NO smoke, NO flames, NO loose sparks, NO glow, NO border, no text or letters, no head studies, no separate bomb diagram or extra figures. Bomb is a sealed whimsical black iron sphere with a short braided fuse and brass rim, no instructional details.
+POSE FOR BATTLE IDLE: Repose the exact original C girl into a stable, lively combat-ready idle stance facing SCREEN RIGHT, a clear side / three-quarter side view suitable for a 2.5D battle sprite. Head, nose, chest, hips, knees and toes orient toward screen right; eyes look toward an opponent OFFSCREEN RIGHT, NEVER toward viewer. Show enough face to read her teal eye and cheerful confident little grin. Feet both planted, spaced comfortably, knees gently bent, not walking, not leaping or attacking. Torso slight forward lean. Her forward gloved hand cradles one black round bomb at lower chest/waist level in front of her toward screen right, elbow naturally bent (not fully extended); other gloved hand rests on the open top of her satchel at her near rear hip ready to take another bomb. Keep the bag visible with 2-3 bombs, star-cut brass charm and orange tassel. Scarf tails trail a little toward screen left, cape rests loosely rather than exaggerated flutter. Body silhouette reads as eager playful bomb specialist with a coherent balanced stance. Keep modest original clothes and young adult proportions. This is a calm held waiting pose with no active attack or dramatic fire effects, not a frontal selection portrait.
+```

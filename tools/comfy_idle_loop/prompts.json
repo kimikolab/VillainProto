@@ -316,6 +316,26 @@
       "crossfade": 0
     }
   },
+  "chiri": {
+    "still": "DemoApp/assets/portraits/battle/chiri_idle_right.png",
+    "pronoun": "she",
+    "char": "Chiri, a cheerful mischievous young woman with ash-blonde low twin pigtails and teal eyes, in the exact right-facing three-quarter combat stance from the reference. Preserve her smiling face, charcoal ragged short cape, orange scarf, rolled cream blouse sleeves, black pumpkin-shaped short shorts with orange trim, orange-and-dark-charcoal striped over-knee socks, brown fingerless gloves, brown ankle boots and the heavy brown bomb satchel at her rear hip. One hand stays beside the satchel and the other holds ONE round black bomb in front of her waist, exactly as in the reference. The bomb has an UNLIT rope fuse.",
+    "motion": "Like a lively fighting game character eager to cause trouble, she repeats THREE clearly visible springy ready-stance cycles over five seconds: both knees bend and straighten in a steady rhythm, her hips and torso sink and rise together, and her shoulders, elbows and hands follow the connected body motion. Keep her back upright and her head high, her confident playful smile unchanged. The movement comes from her knees and hips, not from leaning or rocking forward. Her bomb-holding forearm makes a small natural counter-motion while maintaining the same open presenting pose; she does not throw, plant, juggle, spin or light the bomb. Both boot soles remain planted in the exact same spots with a stable ground line.",
+    "sway": "Her short pigtails, scarf tails and ragged cape edges sway with a soft delayed follow-through. The satchel and star-shaped brass charms make a small weighted swing following her hips. The round bomb and its rope fuse keep their exact rigid shape and size; the bag retains its contents and outline. The shorts remain short pumpkin-shaped shorts and the socks keep their orange and dark charcoal stripes. No explosion, no sparks, no smoke, no glowing fuse, no particles or magic.",
+    "neg": "walking, stepping, hopping, jumping, lifting heels, foot sliding, forward lean, hunched back, crouching deeply, dancing, tossing bomb, juggling, throwing, placing bomb, ignition, lit fuse, fire, sparks, explosion, smoke, changing expression, mouth opening and closing, looking at camera, head turning, bomb swelling, melting bomb, flexible bomb, extra bombs in hand, bomb disappearing, hands changing grip, extra fingers, trousers, long shorts, white socks, white stripes",
+    "note": "2026-11-01 ユーザー依頼。現行の通常戦闘絵（かぼちゃショートパンツ・オレンジと暗色の膝上ソックス）から待機候補を作成。接地を固定し、明るいチリらしい膝の弾みと髪・マフラー・かばんの追従を付ける。爆弾設置・着火・爆発は焼き込まない。seed2022のAは20コマ1.25秒、seed5055のBは33コマ2.0625秒。両方とも接地差1px以内・緑と枠欠け0px。ユーザーの「Aで」を受け、Aを通常プレイへ導入。既存の停止時計へチリの連番も接続し、設置差分・死亡・勝利での停止と復帰を確認。記録はdesign/art/chiri/idle-loop-v1/notes.md。",
+    "adopted": {
+      "tag": "chiri_idle_v1_s2022",
+      "seed": 2022,
+      "frames": 20,
+      "fps": 16,
+      "loop": "chiri",
+      "type": "loop",
+      "date": "2026-11-01",
+      "candidate": "A",
+      "crossfade": 0
+    }
+  },
   "ere_performance_v2": {
     "still": "DemoApp/assets/portraits/battle/ere_singing_idle_right.png",
     "full": "A full-body 2D anime fantasy game animation of a bard actively PLAYING her lute, a clear deliberate three-second musical skill performance. Start performing immediately. The adult female bard Ere keeps the exact original right-facing three-quarter pose. Her RIGHT FOREARM and RIGHT HAND are the main moving parts: she lifts the strumming wrist above the round sound hole, makes a clearly visible broad DOWNSTROKE across all the lute strings, then raises the wrist for an UPSTROKE and repeats THREE rhythmic down-up strums. The whole forearm swings from the elbow; the hand travels a full palm-width across the soundboard on every stroke. This is visible purposeful lute playing, not just breathing, not a frozen hand resting on the strings. Keep the strumming hand in front of the sound hole. Her LEFT HAND keeps supporting the same straight lute neck while the fingers make small chord changes. Her chest and shoulders follow the musical rhythm with a graceful rise and release, and her head gives a small expressive upward nod on the final strong strum. Her eyes remain softly closed and the original mouth remains narrow and softly open. Preserve the same mature face, long chestnut braid, embroidered black cap and sheer veil, ivory sleeves, burgundy and black layered skirt, gold star jewelry and brown boots. ONE wooden pear-shaped lute stays rigid, keeping its exact outline, sound hole, neck, strings and pegs. Her braid, veil, sleeve cuffs, skirt hems and lute ribbon follow the arm and torso motion with soft delay. Both boots stay planted in the exact same positions throughout. Upright posture, no stepping, no jumping, no dancing spin, no turning towards the camera. Fixed camera, no zoom, entire body and both boots always visible. No floating music notes, no magic, no glow, no particles, no text. Plain solid green background.",

@@ -90,7 +90,7 @@ public partial class BattlefieldView3D : Control
         BuildOverlay();
         _attackAudio = new BattleAttackAudio();
         AddChild(_attackAudio);
-        VisibilityChanged += () => { if (!IsVisibleInTree()) { _attackAudio.StopAll(); ResetLiliRite(); ResetFire(); EndShockMarkPresentation(); EndGolmPresentation(); ResetGaldSwordPresentation(); ResetPoisonPresentation(); ResetDeathPresentation(); } };
+        VisibilityChanged += () => { if (!IsVisibleInTree()) { EndChiriPresentation(); _attackAudio.StopAll(); ResetLiliRite(); ResetFire(); EndShockMarkPresentation(); EndGolmPresentation(); ResetGaldSwordPresentation(); ResetPoisonPresentation(); ResetDeathPresentation(); } };
     }
 
     private void BuildWorld()
@@ -141,7 +141,9 @@ public partial class BattlefieldView3D : Control
         // 注視点も 1.0 → 1.35 へ上げた——駒の立ち絵は縦に長いので、足元を狙うと上が余る。
         _cameraHome = new Vector3(0, 8.5f, 12.9f);
         _camera = new Camera3D { Position = _cameraHome, Current = true, Fov = CameraFov, Near = 0.1f, Far = 80.0f };
-        _world.AddChild(_camera);
+        _chiriShakeRig = new Node3D { Name = "ChiriShakeRig" };
+        _world.AddChild(_chiriShakeRig);
+        _chiriShakeRig.AddChild(_camera);
         _camera.LookAt(CameraFocus, Vector3.Up);
 
         _scenery = CreateMeadowScenery();
@@ -289,6 +291,7 @@ public partial class BattlefieldView3D : Control
 
     public void BeginBattle(IReadOnlyList<DemoOpening> openings, string stageName, int stageIndex)
     {
+        ResetChiriPresentation();
         ResetPoisonPresentation();
         ResetDeathPresentation();
         ResetGatherPresentation();

@@ -37,6 +37,8 @@ public partial class IdleLoopCheck : Node3D
             Require(utsuFrames.All(frame => frame.GetSize() == new Vector2(640, 960)), "ウツの連番の寸法");
             var mudoFrames = BattlePawn3D.IdleLoopFramesOf("mudo");
             Require(mudoFrames.Length == 24 && mudoFrames.All(frame => frame.GetSize() == new Vector2(640, 960)), "ムドの採用Aは640×960の24コマ");
+            var chiriFrames = BattlePawn3D.IdleLoopFramesOf("chiri");
+            Require(chiriFrames.Length == 20 && chiriFrames.All(frame => frame.GetSize() == new Vector2(640, 960)), "チリの採用Aは640×960の20コマ");
             Require(BattlePawn3D.IdleLoopFramesOf("golm").Length == 0, "連番の無い駒は空");
             var still = UiKit.BattlePortrait(atlas, "hiyo");
 
@@ -62,6 +64,8 @@ public partial class IdleLoopCheck : Node3D
             var utsuEnemy = MakePawn(atlas, 19, BattleContext.EnemyTeam, 27.8f, "utsu");
             var mudo = MakePawn(atlas, 20, BattleContext.PlayerTeam, 29.6f, "mudo");
             var mudoEnemy = MakePawn(atlas, 21, BattleContext.EnemyTeam, 31.4f, "mudo");
+            var chiri = MakePawn(atlas, 22, BattleContext.PlayerTeam, 33.2f, "chiri");
+            var chiriEnemy = MakePawn(atlas, 23, BattleContext.EnemyTeam, 35.0f, "chiri");
             var sprite = SpriteOf(hiyo);
 
             // 開戦直後から連番。待機絵と同じ高さ（=同じ足元）で描く。
@@ -70,6 +74,37 @@ public partial class IdleLoopCheck : Node3D
             float worldHeight = sprite.Texture.GetHeight() * sprite.PixelSize;
             Require(Math.Abs(worldHeight - UiKit.PortraitWorldHeight("hiyo")) < 1e-4f, "待機絵と同じ高さ");
             Require(!golm.IdleLoopPlaying && SpriteOf(golm).Texture == UiKit.BattlePortrait(atlas, "golm"), "連番の無い駒は静止絵のまま");
+
+            Require(chiri.IdleLoopPlaying && chiriFrames.Contains(SpriteOf(chiri).Texture), "チリも開戦から待機A");
+            Require(Math.Abs(SpriteOf(chiri).PixelSize * 960 - UiKit.PortraitWorldHeight("chiri")) < 1e-4f, "チリも元絵と同じ高さ");
+            Require(Shader(SpriteOf(chiri)) == SpriteOf(chiri).Texture, "チリもシェーダーと同じ連番");
+            Require(CountDistinct(chiri, 1.4) == 20, "チリの全20コマが進み周期を跨ぐ");
+            chiri.ChiriIdlePaused = true; int chiriPausedFrame = chiri.IdleLoopFrame;
+            CountDistinct(chiri, .3);
+            Require(chiri.IdleLoopFrame == chiriPausedFrame, "チリも一時停止で待機を止める");
+            chiri.ChiriIdlePaused = false;
+            float chiriGround = SpriteOf(chiri).Position.Y - UiKit.PortraitWorldHeight("chiri")
+                * (0.5f - UiKit.BattlePortraitBottomPaddingRatio("chiri"));
+            foreach (string pose in new[] { "chiri_plant", "chiri_release" })
+            {
+                chiri.SetChiriPose(pose); CountDistinct(chiri, .3);
+                Require(!chiri.IdleLoopPlaying && SpriteOf(chiri).Texture == UiKit.BattlePortrait(atlas, pose)
+                    && Shader(SpriteOf(chiri)) == SpriteOf(chiri).Texture, "チリの設置差分を待機で上書きしない");
+                chiri.SetChiriPose(null);
+                Require(chiri.IdleLoopPlaying && chiriFrames.Contains(SpriteOf(chiri).Texture), "設置差分から待機Aへ復帰");
+            }
+            float chiriGroundAfter = SpriteOf(chiri).Position.Y - UiKit.PortraitWorldHeight("chiri")
+                * (0.5f - UiKit.BattlePortraitBottomPaddingRatio("chiri"));
+            Require(Math.Abs(chiriGroundAfter - chiriGround) < 1e-4f, "差分から戻ってもチリの足元を保つ");
+            chiri.AnimationSpeed = 2;
+            Require(CountDistinct(chiri, .3) >= 8, "チリも倍速で進む");
+            chiri.AnimationSpeed = 1;
+            chiri.SetBurning(true); Require(chiri.IdleLoopPlaying, "チリは燃焼中も待機A"); chiri.SetBurning(false);
+            chiri.AnimateDeath(); var chiriDead = SpriteOf(chiri).Texture; CountDistinct(chiri, .3);
+            Require(!chiri.IdleLoopPlaying && SpriteOf(chiri).Texture == chiriDead, "チリも死亡時に待機停止");
+            chiri.AnimateRevive();
+            Require(chiri.IdleLoopPlaying && chiriFrames.Contains(SpriteOf(chiri).Texture), "チリも蘇生後に待機A");
+            Require(chiriEnemy.IdleLoopPlaying && SpriteOf(chiriEnemy).FlipH, "敵側のチリも反転して待機A");
             Require(mudo.IdleLoopPlaying && mudoFrames.Contains(SpriteOf(mudo).Texture), "ムドも開戦から待機A");
             Require(Math.Abs(SpriteOf(mudo).PixelSize * 960 - UiKit.PortraitWorldHeight("mudo")) < 1e-4f, "ムドも元絵と同じキャンバス高");
             Require(CountDistinct(mudo, 1.6) == 24, "ムドの全24コマが進み周期を跨ぐ");
@@ -295,10 +330,13 @@ public partial class IdleLoopCheck : Node3D
             hagi.AnimateVictory();
             utsu.AnimateVictory();
             mudo.AnimateVictory();
+            chiri.AnimateVictory();
             await Wait(0.7);
             Require(!hiyo.IdleLoopPlaying && sprite.Texture == UiKit.Portrait(atlas, "hiyo"), "勝利絵を保つ");
             CountDistinct(mudo, 0.3);
             Require(!mudo.IdleLoopPlaying && SpriteOf(mudo).Texture == UiKit.Portrait(atlas, "mudo"), "ムドも勝利絵を保つ");
+            CountDistinct(chiri, .3);
+            Require(!chiri.IdleLoopPlaying && SpriteOf(chiri).Texture == UiKit.Portrait(atlas, "chiri"), "チリも勝利絵を保つ");
             Require(!galdWinner.IdleLoopPlaying && SpriteOf(galdWinner).Texture == UiKit.Portrait(atlas, "gald"), "ガルドも勝利絵を保つ");
             Require(!gare.IdleLoopPlaying && SpriteOf(gare).Texture == UiKit.Portrait(atlas, "gare"), "ガレも勝利絵を保つ");
             Require(!hibi.IdleLoopPlaying && SpriteOf(hibi).Texture == UiKit.Portrait(atlas, "hibi") && Shader(SpriteOf(hibi)) == SpriteOf(hibi).Texture, "ヒビも勝利絵を保つ");
@@ -309,7 +347,7 @@ public partial class IdleLoopCheck : Node3D
 
             CountDistinct(hagi, 0.3);
             Require(!hagi.IdleLoopPlaying && SpriteOf(hagi).Texture == UiKit.Portrait(atlas, "hagi") && Shader(SpriteOf(hagi)) == SpriteOf(hagi).Texture, "ハギも勝利絵を保つ");
-            GD.Print("IDLE_LOOP_CHECK_OK hiyo borg hota hota_burning gald gare hibi rica hagi ere ere_singing utsu mudo start advance speed pause action gift burning burning-variant death revive victory enemy fallback sword kneel ground");
+            GD.Print("IDLE_LOOP_CHECK_OK hiyo borg hota hota_burning gald gare hibi rica hagi ere ere_singing utsu mudo chiri start advance speed pause action gift burning burning-variant death revive victory enemy fallback sword kneel ground");
             GetTree().Quit();
         }
         catch (Exception e)

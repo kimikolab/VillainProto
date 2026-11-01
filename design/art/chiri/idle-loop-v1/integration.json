@@ -1,0 +1,93 @@
+{
+  "date": "2026-11-01",
+  "choice": "A",
+  "tag": "chiri_idle_v1_s2022",
+  "loop": "chiri",
+  "fps": 16,
+  "frames": 20,
+  "seconds": 1.25,
+  "bytes": 17204739,
+  "verified_pixels_equal_candidate": true,
+  "files": [
+    {
+      "file": "DemoApp/assets/portraits/battle/idle_loop/chiri/chiri_idle_00.png",
+      "rgba_sha256": "518617e9241bc794e91a28bee8bd2975459f911729ed990f09e12c232efde305"
+    },
+    {
+      "file": "DemoApp/assets/portraits/battle/idle_loop/chiri/chiri_idle_01.png",
+      "rgba_sha256": "125aae64a6a9d327cfc291666543e7633e366a09e99baf8331f5497d90fcbffb"
+    },
+    {
+      "file": "DemoApp/assets/portraits/battle/idle_loop/chiri/chiri_idle_02.png",
+      "rgba_sha256": "8b906f174ab048bb7e3f9d352b724d442a233e813146a5896002d98e0fbfd5f5"
+    },
+    {
+      "file": "DemoApp/assets/portraits/battle/idle_loop/chiri/chiri_idle_03.png",
+      "rgba_sha256": "65b4dedd1072fe400af4ce47632a87d65a38f659069f267e43262f283be34e0a"
+    },
+    {
+      "file": "DemoApp/assets/portraits/battle/idle_loop/chiri/chiri_idle_04.png",
+      "rgba_sha256": "02d1ffd76a5cdef57f73e902010e603f6c3346dad8bb6da8f60b85c013b292ec"
+    },
+    {
+      "file": "DemoApp/assets/portraits/battle/idle_loop/chiri/chiri_idle_05.png",
+      "rgba_sha256": "d587b398a33d357398d267de6c3fbbad9db1a59ce1b0dbf55cf5c96154075199"
+    },
+    {
+      "file": "DemoApp/assets/portraits/battle/idle_loop/chiri/chiri_idle_06.png",
+      "rgba_sha256": "80c9b718a866dbadf8cdf1e37caedc1a9eaf90e54aa7df968607dd49d976402c"
+    },
+    {
+      "file": "DemoApp/assets/portraits/battle/idle_loop/chiri/chiri_idle_07.png",
+      "rgba_sha256": "f9bc0faec1a9341ef9ca0284908baf775c01c288ddcd40be2899c143577df488"
+    },
+    {
+      "file": "DemoApp/assets/portraits/battle/idle_loop/chiri/chiri_idle_08.png",
+      "rgba_sha256": "17dd7a98a07edea73790672ac94c3c687527904de1092eb676a7fa3f3af4fac6"
+    },
+    {
+      "file": "DemoApp/assets/portraits/battle/idle_loop/chiri/chiri_idle_09.png",
+      "rgba_sha256": "e161eb42f6e330fdca2fc518368b6668e1fab796e085ec2cb127865d417883dd"
+    },
+    {
+      "file": "DemoApp/assets/portraits/battle/idle_loop/chiri/chiri_idle_10.png",
+      "rgba_sha256": "79cb02c129844f52ed648cb78d349d2c7c8172a4a9ca2cc2faf927a343d5cbf9"
+    },
+    {
+      "file": "DemoApp/assets/portraits/battle/idle_loop/chiri/chiri_idle_11.png",
+      "rgba_sha256": "b10939ff4f029cb1cb3a3176aaf4b3bc2c2d9e8a9ababd2e96c93ba18c319db6"
+    },
+    {
+      "file": "DemoApp/assets/portraits/battle/idle_loop/chiri/chiri_idle_12.png",
+      "rgba_sha256": "88d4c2ad08ad789c19d350a34df3d06b67272c46be93d4e03c5f2c50730934d4"
+    },
+    {
+      "file": "DemoApp/assets/portraits/battle/idle_loop/chiri/chiri_idle_13.png",
+      "rgba_sha256": "db39ea0534be7837cd16847cd934cb5d24c688020835f67f3c1dc67bc912b675"
+    },
+    {
+      "file": "DemoApp/assets/portraits/battle/idle_loop/chiri/chiri_idle_14.png",
+      "rgba_sha256": "4c7c2dec193b90c659bc53a4785ae0c1105af3e58ee8df6c63c06a0b24a97cb7"
+    },
+    {
+      "file": "DemoApp/assets/portraits/battle/idle_loop/chiri/chiri_idle_15.png",
+      "rgba_sha256": "b10ff266a41ee1514720a1d193647c13df63382fe3259463ef94e3c26bb01bf5"
+    },
+    {
+      "file": "DemoApp/assets/portraits/battle/idle_loop/chiri/chiri_idle_16.png",
+      "rgba_sha256": "9cf7fe1059a67b5321884bb057f3aaa7cb3c50a15b791e926fe61bd8bdb2d2a5"
+    },
+    {
+      "file": "DemoApp/assets/portraits/battle/idle_loop/chiri/chiri_idle_17.png",
+      "rgba_sha256": "a6a9c584fe8b52f7937a7b28557917998a31997f00ef5b4f9f245ac4ef3b0a68"
+    },
+    {
+      "file": "DemoApp/assets/portraits/battle/idle_loop/chiri/chiri_idle_18.png",
+      "rgba_sha256": "38da1c2e7805f49aa03d6682c1b3db987bd9486df12820ccf7d7891be6bb64dc"
+    },
+    {
+      "file": "DemoApp/assets/portraits/battle/idle_loop/chiri/chiri_idle_19.png",
+      "rgba_sha256": "184a6941796b6a0a2a3682b23e4f5243f084febcee0c8fddf2cea5b9a9b87ce3"
+    }
+  ]
+}
