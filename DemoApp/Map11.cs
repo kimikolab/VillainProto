@@ -428,6 +428,11 @@ public sealed class Map11State
     }
 
     public int Seed { get; }
+    /// <summary>
+    /// ステージ（第440期）。経路の数・名前・区画の敵・湧く部隊はここから引く。<b>省けば 1-1（<see cref="MapStage.Stage11"/>）</b>
+    /// ——器具と門はすべて 1-1 のまま。
+    /// </summary>
+    public MapStage Stage { get; }
     /// <summary>盤（第438期）。<b>1-1 は <see cref="MapGraph.Build11"/></b>——敵の拠点のマスは <see cref="PortalRule.On"/> のときだけある。</summary>
     public MapGraph Graph { get; }
     public int Battles { get; private set; }
@@ -516,13 +521,16 @@ public sealed class Map11State
     /// 盤（第438期）。<b>省けば 1-1（<see cref="MapGraph.Build11"/>）</b>。渡す盤は 1-1 と同じ経路の数・長さ・敵の初期位置を持つこと
     /// （区画の定義 <see cref="Map11.Roads"/> は 1-1 のまま）——いまは玩具の盤（`--map11-graph-smoke`）だけが渡す。
     /// </param>
-    public Map11State(int seed, TimeRule? time = null, PortalRule? portal = null, bool draft = false, MapGraph? graph = null)
+    /// <param name="stage">ステージ（第440期）。<b>省けば 1-1</b>。盤を渡さなければ盤もこのステージのもの。</param>
+    public Map11State(int seed, TimeRule? time = null, PortalRule? portal = null, bool draft = false, MapGraph? graph = null,
+                      MapStage? stage = null)
     {
         Seed = seed;
         Time = time ?? TimeRule.Off;
         Portal = portal ?? PortalRule.Off;
         Draft = draft;
-        Graph = graph ?? MapGraph.Build11(Portal.On);
+        Stage = stage ?? MapStage.Stage11;
+        Graph = graph ?? Stage.Board(Portal.On);
         // 最初の1回まで S ターン（第176期の `Turn % S == 0` と同じ立ち上がり）。
         _portalReady = Portal.On ? Math.Max(0, Portal.SpawnEvery) : 0;
         // 第177期 §3: 自分で組む通しでは、**3 隊の 15 枚をばらして手札にする**。
@@ -541,7 +549,7 @@ public sealed class Map11State
             // **空席で始める**（`null` ＝ 「定義のまま」なので、空のリストを置く）。
             Units = draft ? new List<UnitState>() : null,
         }).ToArray();
-        Nodes = Map11.Roads.Select(r => r.Select(n =>
+        Nodes = Stage.Lanes.Select(r => r.Select(n =>
         {
             int hp = n.Enemy.Occupied().Sum(o => o.Def.MaxHp);
             return new Node { Def = n, Graph = Graph, DefMaxHp = hp, HpNow = hp, Pos = Graph.FoeStarts[n.Road][n.Index] };
@@ -549,7 +557,7 @@ public sealed class Map11State
     }
 
     public int ClearedCount => Nodes.Sum(r => r.Count(n => n.Cleared));
-    public bool AllCleared => ClearedCount >= Map11.TotalNodes;
+    public bool AllCleared => ClearedCount >= Stage.TotalNodes;
 
     /// <summary>出せる隊が1つも残っていない（盤上に居らず、かつ出していないわけでもない）。</summary>
     public bool NoSquadsLeft => Squads.All(s => s.Units is null && (s.Lost || s.Deployed));
@@ -596,7 +604,7 @@ public sealed class Map11State
     public Node? PortalFoe()
     {
         if (!Portal.On) return null;
-        for (int road = 0; road < Map11.RoadCount; road++)
+        for (int road = 0; road < Stage.LaneCount; road++)
             foreach (Node n in FoesOn(road))
                 if (n.Pos == Graph.Portal) return n;
         return null;
@@ -1097,7 +1105,7 @@ public sealed class Map11State
             return true;
         }
 
-        for (int road = 0; road < Map11.RoadCount; road++)
+        for (int road = 0; road < Stage.LaneCount; road++)
         {
             // **最初からいる4部隊の規則は第175期のまま**（先頭だけが前進する・§1-1）。
             Node? n = NextNode(road);
@@ -1119,6 +1127,38 @@ public sealed class Map11State
     }
 
     /// <summary>
+    /// 次の敵の前進で、<b>どの敵部隊がどのマスへ入るか</b>（第440期・画面の敵の矢印）。<b>盤面は1ビットも動かさない。</b>
+    /// <see cref="AdvanceFoes"/> と<b>同じ順・同じ式</b>で、位置を写しの上で動かすだけ（列の詰まりも同じに見る）。
+    /// 拠点まで来て止まっている敵・陥落の後・前進しない作戦ターンは出さない。一致は `--map12-smoke` が確かめる。
+    /// </summary>
+    public List<(Node Node, int To)> PlannedFoeSteps()
+    {
+        var list = new List<(Node, int)>();
+        if (!Time.On || Fallen || Time.AdvanceEvery <= 0 || (Turn + 1) % Time.AdvanceEvery != 0) return list;
+        var moved = new Dictionary<Node, int>(ReferenceEqualityComparer.Instance);
+        int PosOf(Node x) => moved.TryGetValue(x, out int p) ? p : x.Pos;
+        for (int road = 0; road < Stage.LaneCount; road++)
+        {
+            if (NextNode(road) is { } n && n.Pos != Graph.Home)
+            {
+                int to = Graph.TowardHome(road, n.Pos);
+                list.Add((n, to));
+                moved[n] = to;
+            }
+            if (!Portal.On) continue;
+            foreach (Node sp in FoesOn(road).Where(x => x.FromPortal).ToList())
+            {
+                if (sp.Pos == Graph.Home) continue;
+                int target = Graph.TowardHome(road, sp.Pos);
+                if (FoesOn(road).Any(x => !ReferenceEquals(x, sp) && PosOf(x) == target)) continue;
+                list.Add((sp, target));
+                moved[sp] = target;
+            }
+        }
+        return list;
+    }
+
+    /// <summary>
     /// 第2拠点の明け渡し（第177期 §1「空の拠点は即占領」の味方側）。
     /// <b>敵が制圧済みの拠点のマスに立っていて、そこに出せる隊が1つも無ければ取り返される</b>
     /// ——防壁は置かない。取り返されれば湧きも再開する。
@@ -1136,7 +1176,7 @@ public sealed class Map11State
 
     /// <summary>
     /// 敵の拠点から1部隊湧かせる（第176期 §1-2）。<b>制圧していれば湧かない。</b>
-    /// 道は<b>北と南を交互</b>に選び、中身はその道の先遣（<see cref="Map11.SpawnEnemy"/>）。
+    /// 道は<b>経路を順に回す</b>（1-1 は北と南を交互・1-2 は北 → 中 → 南）。中身はステージが決める（<see cref="MapStage.Spawn"/>・1-1 はその道の先遣）。
     /// <b>満タンで湧く</b>——<c>Materialize</c> は戦闘の直前まで遅らせるので、ここでは箱だけ作る。
     /// </summary>
     private List<Encounter> SpawnIfDue(List<Encounter> list)
@@ -1146,9 +1186,9 @@ public sealed class Map11State
         if (Portal.SpawnEvery <= 0 || Turn <= 0 || !PortalReady) return list;
         _portalReady = Turn + Portal.SpawnEvery;
 
-        int road = SpawnCount % Map11.RoadCount;
-        var def = new Map11.RoadNode(road, Map11.RoadCells, Map11.SpawnName(road),
-                                     Map11.SpawnEnemy(road), Map11.SpawnStage(road));
+        int road = SpawnCount % Stage.LaneCount;
+        var (enemy, name, stageIndex) = Stage.Spawn(road);
+        var def = new Map11.RoadNode(road, Map11.RoadCells, name, enemy, stageIndex);
         int hp = def.Enemy.Occupied().Sum(o => o.Def.MaxHp);
         Spawns.Add(new Node
         {

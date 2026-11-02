@@ -81,7 +81,7 @@ public static class Map11Time
         int InterceptNorth, int InterceptSouth, int InterceptWins, int Rests,
         int[] BySquad, int[] WonBySquad,
         bool Captured, int CaptureTurn, int Spawns, bool Wiped, bool Stalled, int SecondFalls,
-        int FallenRoad);
+        int FallenRoad, int Moves);
 
     public sealed record Stat(
         double Full, double Intercept, double Fall, double TurnMedian,
@@ -89,7 +89,8 @@ public static class Map11Time
         double NorthShare, double InterceptWin, double Rests,
         int[] BySquad, int[] WonBySquad,
         double Capture, double CaptureTurnMedian, double SpawnMedian,
-        double Wipe, double Stall, int SecondFalls, double FallNorthShare);
+        double Wipe, double Stall, int SecondFalls, double FallNorthShare,
+        double MovesPerRun = 0);
 
     // =================================================================================
     // 1 マップぶん（方針が打つ手）
@@ -102,6 +103,8 @@ public static class Map11Time
         public int[] Home = null!;
         public bool ReserveSent;
         public int IntN, IntS, IntWins;
+        /// <summary>横の辺で経路を移った手の数（第440期・1-1 には横の辺が無いので常に 0）。</summary>
+        public int Moves;
         /// <summary>迎撃に出た回数と勝った回数（隊ごと・予測 W3 のため）。</summary>
         public readonly int[] IntBy = new int[Map11.Squads.Length];
         public readonly int[] IntWonBy = new int[Map11.Squads.Length];
@@ -181,7 +184,7 @@ public static class Map11Time
         {
             int want = Home[i];
             if (want >= 0 && St.NextNode(want) is not null) return want;
-            for (int r = 0; r < Map11.RoadCount; r++)
+            for (int r = 0; r < St.Stage.LaneCount; r++)
                 if (St.NextNode(r) is not null) return r;
             return -1;
         }
@@ -222,16 +225,17 @@ public static class Map11Time
         {
             Dest dest = DestFor(i);
             Map11Orders.Order order = Map11Orders.Plan(St, i, dest);
+            if (order == Map11Orders.Order.Move) Moves++;
             if (Map11Orders.Apply(St, i, dest, order) is { } node) Fight(i, node, intercept: false);
         }
     }
 
     private static Once RunOne(Policy pol, TimeRule time, int[] assign, int seed,
-                               PortalRule? portal = null)
+                               PortalRule? portal = null, MapStage? stage = null)
     {
         var run = new Run
         {
-            St = new Map11State(seed, time, portal),
+            St = new Map11State(seed, time, portal, stage: stage),
             Pol = pol,
             // 即出し（第175期 §3）: **1 作戦ターン目から3隊とも出す**。
             // 控え隊はかき回し隊と同じ道（北）へ——ポンの1・2プレイ目がその形だった。
@@ -269,7 +273,7 @@ public static class Map11Time
         return new Once(st.Won, st.Fallen, st.Intercepts > 0, st.Turn, st.Battles, st.Partial(),
                         run.IntN, run.IntS, run.IntWins, st.Rests, run.IntBy, run.IntWonBy,
                         st.Captured, st.CapturedTurn, st.SpawnCount, wiped, stalled, st.SecondBaseFalls,
-                        st.FallenRoad);
+                        st.FallenRoad, run.Moves);
     }
 
     private static double Median(IEnumerable<double> xs)
@@ -279,11 +283,12 @@ public static class Map11Time
         return a.Length % 2 == 1 ? a[a.Length / 2] : (a[a.Length / 2 - 1] + a[a.Length / 2]) / 2.0;
     }
 
+    /// <param name="stage">ステージ（第440期）。<b>省けば 1-1</b>——第439期までの表はすべてこの既定で回る。</param>
     public static Stat Band(Policy pol, TimeRule time, int[] assign, int seeds, int seed0 = 0,
-                            PortalRule? portal = null)
+                            PortalRule? portal = null, MapStage? stage = null)
     {
         var o = new Once[seeds];
-        Parallel.For(0, seeds, i => o[i] = RunOne(pol, time, assign, seed0 + i, portal));
+        Parallel.For(0, seeds, i => o[i] = RunOne(pol, time, assign, seed0 + i, portal, stage));
         var turns = o.Select(x => (double)x.Turns).OrderBy(x => x).ToArray();
         double med = turns.Length == 0 ? 0
             : turns.Length % 2 == 1 ? turns[turns.Length / 2]
@@ -310,7 +315,8 @@ public static class Map11Time
             100.0 * o.Count(x => x.Stalled) / seeds,
             o.Sum(x => x.SecondFalls),
             o.Count(x => x.Fallen) == 0 ? 0
-                : 100.0 * o.Count(x => x.Fallen && x.FallenRoad == 0) / o.Count(x => x.Fallen));
+                : 100.0 * o.Count(x => x.Fallen && x.FallenRoad == 0) / o.Count(x => x.Fallen),
+            o.Average(x => (double)x.Moves));
     }
     // =================================================================================
     // 表（第175期 §3）

@@ -66,12 +66,15 @@ public static class Map11Session
     /// <b>自分で 15 枚から組むか</b>（第177期 §3・既定）。偽にすると第176期までと同じ
     /// 「既定の3隊で始める」形になる。
     /// </param>
-    public static void Reset(int? seed = null, bool draft = true)
+    /// <param name="stage">ステージ（第440期）。<b>省けば 1-1</b>——器具と門はすべてこの既定で回る。</param>
+    public static void Reset(int? seed = null, bool draft = true, MapStage? stage = null)
     {
         Seed = seed ?? new Random().Next(0, 1_000_000);
+        stage ??= MapStage.Stage11;
         // 第177期 §1: **敵の拠点（ワープポータル）を遊ぶ側に載せた。**
         // 第176期は `PortalRule.Off` のままで、起動して遊べるものは第175期と同じだった。
-        State = new Map11State(Seed, Map11.AdoptedTime, Map11.AdoptedPortal, draft);
+        // 第440期: 時間と拠点の規則は**ステージが持つ**（1-1 は `Map11.AdoptedTime` ／ `AdoptedPortal` のまま）。
+        State = new Map11State(Seed, stage.Time, stage.Portal, draft, stage: stage);
         Drafting = draft;
         OpeningLines.Clear();
         BattleLog.Clear();
@@ -83,9 +86,15 @@ public static class Map11Session
         ResetTurn();
     }
 
+    /// <summary>
+    /// 編成画面で選んだステージ（第440期 §3-2・既定 1-1）。<b>選び直すと、次に作戦マップへ入ったときに通しを始め直す</b>
+    /// （<see cref="EnsureStarted"/>）——同じステージのままなら、戦闘から戻っても通しは続く。
+    /// </summary>
+    public static MapStage Chosen { get; set; } = MapStage.Stage11;
+
     public static void EnsureStarted()
     {
-        if (State is null) Reset();
+        if (State is null || !ReferenceEquals(State.Stage, Chosen)) Reset(stage: Chosen);
     }
 
     /// <summary>隊を道へ送る（プレイヤーの判断）。<b>記録は戦闘のたびに付ける</b>ので、ここでは残さない。</summary>
@@ -159,7 +168,7 @@ public static class Map11Session
         int alive = sq.Units?.Count(u => u.IsAlive) ?? 0;
         double hpPct = sq.Units is null || maxHp == 0
             ? 0 : 100.0 * sq.Units.Where(u => u.IsAlive).Sum(u => u.Hp) / maxHp;
-        BattleLog.Add(new Line(Battles, squadName, Map11.RoadNames[road],
+        BattleLog.Add(new Line(Battles, squadName, State.Stage.LaneNames[road],
                                $"{node.Def.Index + 1}. {node.Def.Name}",
                                playerWon, alive, hpPct, notes,
                                State.Turn, wasIntercept));

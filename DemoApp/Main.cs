@@ -114,6 +114,8 @@ public partial class Main : Control
     private Button _replay = null!;
     private Button _battleLogToggle = null!;
     private Button _campaignSetup = null!;
+    /// <summary>作戦マップのステージの選択（第440期 §3-2・1-1 ／ 1-2・既定 1-1）。</summary>
+    private Button _stagePick = null!;
 
     /// <summary>
     /// 「作戦マップへ」の戻り先。入場時に1回だけ決める（第169期）。
@@ -319,6 +321,14 @@ public partial class Main : Control
             bool gok = MapGraphSmoke.Run(GD.Print);
             GD.Print($"MAP11_GRAPH_SMOKE_COMPLETE ok={gok}");
             GetTree().Quit(gok ? 0 : 1);
+            return;
+        }
+        // 第440期 §5-2: 1-2 の門。**画面を1つも作らない**（`Map12Smoke` に Godot の型は無い）。
+        if (bootArgs.Contains("--map12-smoke", StringComparer.Ordinal))
+        {
+            bool mok = Map12Smoke.Run(GD.Print);
+            GD.Print($"MAP12_SMOKE_COMPLETE ok={mok}");
+            GetTree().Quit(mok ? 0 : 1);
             return;
         }
         string? verifyArg = bootArgs.FirstOrDefault(a => a.StartsWith("--map11-verify", StringComparison.Ordinal));
@@ -754,6 +764,19 @@ public partial class Main : Control
         _shapeButton = UiKit.ActionButton(ShapeButtonText(), UiKit.Player);
         _shapeButton.Pressed += ToggleShape;
         _setupActions.AddChild(_shapeButton);
+        // 第440期 §3-2: 「作戦マップへ」の隣にステージの選択（押すたびに 1-1 ⇔ 1-2）。
+        // **替えると、次に作戦マップへ入ったときに新しい通しになる**（同じステージなら通しは続く）。
+        _stagePick = UiKit.ActionButton(StagePickText());
+        _stagePick.TooltipText = "作戦マップのステージ（替えると次に入ったとき新しい通しになる）";
+        _stagePick.Pressed += () =>
+        {
+            var all = MapStage.All;
+            int at = 0;
+            for (int i = 0; i < all.Count; i++) if (ReferenceEquals(all[i], Map11Session.Chosen)) at = i;
+            Map11Session.Chosen = all[(at + 1) % all.Count];
+            _stagePick.Text = StagePickText();
+        };
+        _setupActions.AddChild(_stagePick);
         _campaignSetup = UiKit.ActionButton("作戦マップへ");
         _campaignSetup.Pressed += GoToCampaign;
         _setupActions.AddChild(_campaignSetup);
@@ -2798,6 +2821,8 @@ public partial class Main : Control
     /// そちらへ戻す——戻り先は入場時（<c>_Ready</c>）に決めてあり、
     /// 戦闘の勝敗で <c>HasPendingEncounter</c> が落ちても揺れない。
     /// </summary>
+    private static string StagePickText() => $"マップ {Map11Session.Chosen.Id}";
+
     private void GoToCampaign()
     {
         ++_playToken;

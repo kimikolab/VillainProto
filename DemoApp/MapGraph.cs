@@ -213,4 +213,48 @@ public sealed class MapGraph
         extra?.Invoke(b, lanes);
         return b.Build();
     }
+
+    /// <summary>
+    /// 辺 (a, b) が<b>経路をまたぐ横の辺</b>か（両端が別の経路の上のマス）。敵はこの辺を使わない
+    /// ——敵の前進は <see cref="TowardHome"/>（経路に沿う）だけなので、規則として足すものは無い。画面が色を変えるためだけに読む。
+    /// </summary>
+    public bool IsCross(int a, int b) => Cells[a].Lane >= 0 && Cells[b].Lane >= 0 && Cells[a].Lane != Cells[b].Lane;
+
+    /// <summary>1-2 の経路の名前（<see cref="MapStage.Stage12"/> と同じ並び）。</summary>
+    internal static readonly string[] Lanes12 = { "北の道", "中の道", "南の道" };
+
+    /// <summary>
+    /// 1-2 の盤（第440期 §2）。経路 3 本（北・中・南）は 1-1 と同じ形（拠点 → 手前 → 1 戦目 → 2 戦目 → 敵の拠点）で、
+    /// <b>横の辺 2 本（北1–中1・中1–南1）</b>を足した。<c>Pos</c> は 1-1 の並びを 3 段にしたもの（北を上・南を下）。
+    /// マスの名前は 1-1 と同じ作り方（「中の道 1 戦目の地点」など）。
+    /// </summary>
+    public static MapGraph Build12(bool portalOn)
+    {
+        var b = new Builder();
+        int home = b.Add("拠点", Kind.Home, (-10.0f, 0f));
+        float[] zs = { -12.0f, 0f, 12.0f };
+        var lanes = new int[Lanes12.Length][];
+        for (int lane = 0; lane < Lanes12.Length; lane++)
+        {
+            lanes[lane] = new int[Map11.RoadCells];
+            for (int cell = 0; cell < Map11.RoadCells; cell++)
+            {
+                float x = cell <= 0 ? -0.6f : 3.0f + (cell - 1) * 11.0f;
+                lanes[lane][cell] = b.Add($"{Lanes12[lane]} {Map11Orders.CellName(cell)}", Kind.Open, (x, zs[lane]), lane);
+            }
+        }
+        int portal = portalOn ? b.Add(Map11.PortalName, Kind.Portal, (24.0f, 0f)) : -1;
+        for (int lane = 0; lane < Lanes12.Length; lane++)
+        {
+            int from = home;
+            foreach (int c in lanes[lane]) { b.Link(from, c); from = c; }
+            if (portal >= 0) b.Link(from, portal);
+            // 敵の初期位置は 1-1 と同じ（1 戦目・2 戦目の地点）。
+            b.Lane(Lanes12[lane], lanes[lane], new[] { lanes[lane][Map11.StartCellOf(0)], lanes[lane][Map11.StartCellOf(1)] });
+        }
+        // 横の辺（隊だけが使う）。
+        b.Link(lanes[0][1], lanes[1][1]);
+        b.Link(lanes[1][1], lanes[2][1]);
+        return b.Build();
+    }
 }

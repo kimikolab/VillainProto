@@ -68,8 +68,11 @@ public partial class Map11Main : Node3D
     /// 第175期の「▶ 進める」と同じく<b>何かが起きるまで</b>作戦ターンを一気に回す。
     /// </summary>
     private Button _run = null!;
-    /// <summary>時計の速さ 1×／2×（第439期）。</summary>
-    private Button _speed = null!;
+    /// <summary>
+    /// 時計の速さ 1×／2×（第439期）。<b>第440期 §4-1 から札を 2 枚並べ、今の速さの方を光らせる</b>
+    /// （第439期の観察ログ「デフォルトがどっちだったかもわからない」——札 1 枚では状態か行き先か読めなかった）。
+    /// </summary>
+    private Button _speed1 = null!, _speed2 = null!;
     /// <summary>盤の上の「刻 n」と次の刻までの目盛り（第439期）。</summary>
     private Label _clockLabel = null!;
     private ProgressBar _clockGauge = null!;
@@ -84,6 +87,8 @@ public partial class Map11Main : Node3D
     private readonly List<DestButton> _destButtons = new();
     /// <summary>隊 → 行き先の矢印（隊ごとに1本）。</summary>
     private readonly List<Arrow> _arrows = new();
+    /// <summary>敵の経路の矢印（第440期 §3-2）。次の前進で動く敵部隊 1 つに 1 本・要るだけ足す。</summary>
+    private readonly List<Arrow> _foeArrows = new();
     /// <summary>自動で回している最中か。</summary>
     private bool _running;
     /// <summary>最初の引き直しだけは滑らせない（戦闘から戻ってきた直後に盤が動いて見えるため）。</summary>
@@ -167,6 +172,14 @@ public partial class Map11Main : Node3D
     private RichTextLabel _encounterBody = null!;
 
     private Control _resultOverlay = null!;
+    /// <summary>
+    /// 組み終わっていない隊の確認（第440期 §4-2）。<b>1 通しに 1 度だけ</b>出す
+    /// ——「このまま出る」を選んだ通しは <see cref="_incompleteOk"/> に覚え、二度と聞かない（シーンが作り直されても）。
+    /// </summary>
+    private Control _confirmOverlay = null!;
+    private Label _confirmBody = null!;
+    private System.Action? _confirmGo;
+    private static Map11State? _incompleteOk;
     private Label _resultTitle = null!;
     private Label _resultBody = null!;
 
@@ -182,6 +195,10 @@ public partial class Map11Main : Node3D
 
     public override void _Ready()
     {
+        // 第440期: `--map-stage=1-2` で編成画面を通らずにステージを選ぶ（絵を撮る・頭なしで確かめる口）。
+        if (OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--map-stage=", StringComparison.Ordinal)) is { } pick
+            && MapStage.All.FirstOrDefault(x => x.Id == pick["--map-stage=".Length..]) is { } chosen)
+            Map11Session.Chosen = chosen;
         Map11Session.EnsureStarted();
         // 第439期: 時計は通しに結び付ける（別の通しなら止めて目盛りを 0 に）。
         Map11Clock.Bind(St);
@@ -279,6 +296,9 @@ public partial class Map11Main : Node3D
         { PickDestination(Dest.Deep(St.Graph, 1)); AdvanceTurn(); }
         // 第171期: 図の札を1枚選んだ絵（関係の線と「何をする」が出ている状態）。
         else if (parts.Length > 1 && parts[1] == "pick") { _squadPick = 3; _foePick = 2; Refresh(); }
+        // 第440期 §4-2: 組み終わっていない隊の確認の絵（第1隊に 1 枚だけ配って ▶）。
+        else if (parts.Length > 1 && parts[1] == "confirm")
+        { St.SwapWithBench(0, 3, 0); Refresh(); ToggleClock(); }
         // 第177期: **既定の3隊を配った後**の絵（手札から組む前の画面ではなく、遊んでいる姿）。
         else if (parts.Length > 1 && parts[1] == "default")
         { UseDefaultSquads(); _reform = false; ClearHold(); Refresh(); }
@@ -361,7 +381,7 @@ public partial class Map11Main : Node3D
             GD.Print($"MAP11_DRAFT_SMOKE_COMPLETE battles={St.Battles} hand={St.Bench.Count}"
                 + $" ok={St.Battles > 0 && St.Bench.Count == 0}");
         GD.Print($"MAP11_FLOW_SMOKE_COMPLETE won={St.Won} cleared={St.ClearedCount}"
-            + $"/{Map11.TotalNodes} battles={St.Battles} seed={Map11Session.Seed}");
+            + $"/{St.Stage.TotalNodes} battles={St.Battles} seed={Map11Session.Seed}");
         foreach (Map11Session.Line l in Map11Session.BattleLog)
         {
             GD.Print("MAP11_LOG " + HistoryLine(l));
@@ -455,7 +475,7 @@ public partial class Map11Main : Node3D
             if (road < 0 || St.NextNode(road) is null)
             {
                 road = -1;
-                for (int r = 0; r < Map11.RoadCount; r++)
+                for (int r = 0; r < St.Stage.LaneCount; r++)
                     if (St.NextNode(r) is not null) { road = r; break; }
             }
             // 第177期 §2: **道を抜き切ったら敵の拠点へ。** 拠点なしの設定では奥が無いので
@@ -568,7 +588,7 @@ public partial class Map11Main : Node3D
     private void BuildWorld()
     {
         // 敵の拠点があるとカメラを引くので、盤の文字はそのぶん大きくする（距離の比）。
-        _labelScale = St.Portal.On ? 1.40f : 1.0f;
+        _labelScale = St.Stage.LaneCount > 2 ? WideLabelScale : St.Portal.On ? 1.40f : 1.0f;
 
         var sky = new ProceduralSkyMaterial
         {
@@ -604,20 +624,25 @@ public partial class Map11Main : Node3D
         // 道（拠点 → 区画0 → 区画1 → 敵の拠点 の帯）。位置を教えるだけの板。
         // **第177期: 道の奥は敵の拠点で合流する**ので、最後の1本は2 本とも同じ点へ伸びる。
         // 第438期: **盤の辺から引く**（1-1 の辺は第437期の帯と同じ順に並んでいる）。
+        // 第440期 §3-2: **横の辺（経路をまたぐ・敵は通らない）は色を変えて細く**する。
         foreach ((int ea, int eb) in St.Graph.Edges)
-            AddStrip(PosOf(ea), PosOf(eb), Color.FromHtml("#8b7756"));
+            if (St.Graph.IsCross(ea, eb)) AddStrip(PosOf(ea), PosOf(eb), CrossColor, 1.1f);
+            else AddStrip(PosOf(ea), PosOf(eb), Color.FromHtml("#8b7756"));
 
         // 第177期 §2: 道が1本伸びたぶん、カメラを引いて奥まで入れる。
         // 第177期 §2: 道が1本伸びたぶん、**引いて奥まで入れる**。
         // 左右のパネル（合わせて 800 px 強）に隠れない幅に収める必要がある。
         bool portal = St.Portal.On;
+        // 第440期: 経路が 3 本の盤（1-2）は**縦に 1.4 倍広い**ので、さらに引く（1-1 は第439期のまま）。
+        bool wide = St.Stage.LaneCount > 2;
         _camera = new Camera3D
         {
-            Position = portal ? new Vector3(9.0f, 45.0f, 35.0f) : new Vector3(8.0f, 31.0f, 26.0f),
+            Position = wide ? WideCamera
+                     : portal ? new Vector3(9.0f, 45.0f, 35.0f) : new Vector3(8.0f, 31.0f, 26.0f),
             Fov = 50,
         };
         AddChild(_camera);
-        _camera.LookAt(new Vector3(portal ? 9.0f : 8.0f, 0, 0), Vector3.Up);
+        _camera.LookAt(wide ? WideLook : new Vector3(portal ? 9.0f : 8.0f, 0, 0), Vector3.Up);
 
         // 拠点
         var home = new Node3D { Position = BasePos };
@@ -632,15 +657,15 @@ public partial class Map11Main : Node3D
         home.AddChild(_homeLabel);
 
         // 空きマス（第174期）。**位置を教えるためだけの薄い板**で、判定は1つも持たない。
-        for (int road = 0; road < Map11.RoadCount; road++)
+        for (int road = 0; road < St.Stage.LaneCount; road++)
         {
             var m = new Marker(this, PosOf(St.Graph.Lanes[road][0]), Color.FromHtml("#6f6a52"), 1.1f);
             m.Set("", Color.FromHtml("#6f6a52"));
             _cellMarkers.Add(m);
         }
 
-        for (int road = 0; road < Map11.RoadCount; road++)
-            for (int i = 0; i < Map11.Roads[road].Count; i++)
+        for (int road = 0; road < St.Stage.LaneCount; road++)
+            for (int i = 0; i < St.Stage.Lanes[road].Count; i++)
             {
                 var m = new Marker(this, PosOf(St.Graph.FoeStarts[road][i]), EnemyColor, 2.0f);
                 _nodeMarkers.Add(m);
@@ -746,7 +771,7 @@ public partial class Map11Main : Node3D
         // **板の名前より下**に置く（上に置くと「湧くまで あと n」が隠れる）。
         if (!St.Portal.On) return;
         for (int road = 0; road < St.Graph.Lanes.Count; road++)
-            Add(Dest.Portal(St.Graph, road), PortalPos, new Vector2(-70, road == 0 ? 40 : 70));
+            Add(Dest.Portal(St.Graph, road), PortalPos, new Vector2(-70, 40 + 30 * road));
     }
 
     /// <summary>
@@ -790,7 +815,7 @@ public partial class Map11Main : Node3D
             string place = d.Dest.AtHome ? "拠点"
                 : d.Dest.IsPortal ? (St.Captured ? "第2拠点" : "敵の拠点")
                 : St.Graph.IndexOn(d.Dest.Road, d.Dest.Id) is var at && at <= 0 ? "手前" : $"{at} 戦目";
-            if (d.Dest.IsPortal) place = $"{place}（{Map11.RoadNames[d.Dest.Road][0]}）";
+            if (d.Dest.IsPortal) place = $"{place}（{St.Stage.LaneMark(d.Dest.Road)}）";
             d.Node.Text = here ? $"◆ {place}"
                         : cleared ? place
                         : $"{place} ← {who}";
@@ -800,13 +825,21 @@ public partial class Map11Main : Node3D
         }
     }
 
-    private void AddStrip(Vector3 from, Vector3 to, Color color)
+    /// <summary>横の辺の色（第440期・道の土色と見分けが付く青灰）。</summary>
+    private static readonly Color CrossColor = Color.FromHtml("#6f8f99");
+
+    /// <summary>1-2（経路 3 本）のカメラと文字の大きさ（第440期・1-1 の値から縦の広さの比で引いた）。</summary>
+    private static readonly Vector3 WideCamera = new(9.0f, 48.0f, 38.0f);
+    private static readonly Vector3 WideLook = new(9.0f, 0, 1.0f);
+    private const float WideLabelScale = 1.45f;
+
+    private void AddStrip(Vector3 from, Vector3 to, Color color, float width = 1.6f)
     {
         Vector3 mid = (from + to) * 0.5f;
         float len = from.DistanceTo(to);
         var node = new MeshInstance3D
         {
-            Mesh = new BoxMesh { Size = new Vector3(1.6f, 0.04f, len) },
+            Mesh = new BoxMesh { Size = new Vector3(width, 0.04f, len) },
             Position = new Vector3(mid.X, 0.03f, mid.Z),
             MaterialOverride = CampaignMain.MakeMaterial(color, roughness: 1.0f),
         };
@@ -959,15 +992,20 @@ public partial class Map11Main : Node3D
         /// </summary>
         private readonly List<MeshInstance3D> _dashes = new();
 
-        public Arrow(Node parent, Color color)
+        private readonly float _y;
+
+        /// <param name="width">太さの倍率（第440期・敵の矢印は太く短く・味方は 1）。</param>
+        /// <param name="y">高さ（第440期・敵の矢印は板の上に浮かせる——板の下に隠れて見えなかった）。</param>
+        public Arrow(Node parent, Color color, float width = 1.0f, float y = 0.35f)
         {
+            _y = y;
             _root = new Node3D();
             parent.AddChild(_root);
             StandardMaterial3D mat = CampaignMain.MakeMaterial(color, roughness: 0.8f,
                                                                emission: color * 0.35f);
             _shaft = new MeshInstance3D
             {
-                Mesh = new BoxMesh { Size = new Vector3(0.34f, 0.05f, 1) },
+                Mesh = new BoxMesh { Size = new Vector3(0.34f * width, 0.05f, 1) },
                 MaterialOverride = mat,
             };
             _root.AddChild(_shaft);
@@ -975,7 +1013,7 @@ public partial class Map11Main : Node3D
             {
                 Mesh = new CylinderMesh
                 {
-                    TopRadius = 0, BottomRadius = 0.52f, Height = 1.1f, RadialSegments = 10,
+                    TopRadius = 0, BottomRadius = 0.52f * width, Height = 1.1f, RadialSegments = 10,
                 },
                 RotationDegrees = new Vector3(-90, 0, 0),   // +Y を -Z（LookAt の向き）へ倒す
                 MaterialOverride = mat,
@@ -1010,8 +1048,8 @@ public partial class Map11Main : Node3D
             else
             {
                 _root.Visible = true;
-                _root.Position = new Vector3(from.X, 0.35f, from.Z);
-                _root.LookAt(new Vector3(stop.X, 0.35f, stop.Z), Vector3.Up);
+                _root.Position = new Vector3(from.X, _y, from.Z);
+                _root.LookAt(new Vector3(stop.X, _y, stop.Z), Vector3.Up);
                 float body = Math.Max(0.2f, len - 1.1f);
                 _shaft.Position = new Vector3(0, 0, -body * 0.5f);
                 _shaft.Scale = new Vector3(1, 1, body);
@@ -1025,8 +1063,8 @@ public partial class Map11Main : Node3D
                 if (tail < 1.0f) { d.Visible = false; continue; }
                 Vector3 at = stop.Lerp(to, (i + 0.5f) / _dashes.Count);
                 d.Visible = true;
-                d.Position = new Vector3(at.X, 0.30f, at.Z);
-                d.LookAtFromPosition(d.Position, new Vector3(to.X, 0.30f, to.Z), Vector3.Up);
+                d.Position = new Vector3(at.X, _y - 0.05f, at.Z);
+                d.LookAtFromPosition(d.Position, new Vector3(to.X, _y - 0.05f, to.Z), Vector3.Up);
             }
         }
 
@@ -1158,10 +1196,17 @@ public partial class Map11Main : Node3D
         _run.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         _run.Pressed += ToggleClock;
         turnRow.AddChild(_run);
-        _speed = UiKit.ActionButton("1×", UiKit.Muted);
-        _speed.CustomMinimumSize = new Vector2(56, 38);
-        _speed.Pressed += () => { Map11Clock.Fast = !Map11Clock.Fast; RefreshClock(); };
-        turnRow.AddChild(_speed);
+        Button SpeedButton(string text, bool fast)
+        {
+            Button b = UiKit.ActionButton(text, UiKit.Muted);
+            b.CustomMinimumSize = new Vector2(46, 38);
+            b.TooltipText = fast ? "速さ 2×（1 刻 0.6 秒）" : "速さ 1×（1 刻 1.2 秒・既定）";
+            b.Pressed += () => { Map11Clock.Fast = fast; RefreshClock(); };
+            turnRow.AddChild(b);
+            return b;
+        }
+        _speed1 = SpeedButton("1×", fast: false);
+        _speed2 = SpeedButton("2×", fast: true);
         _advanceTurn = UiKit.ActionButton("1ターン", UiKit.Muted);
         _advanceTurn.CustomMinimumSize = new Vector2(96, 38);
         _advanceTurn.Pressed += AdvanceTurn;
@@ -1279,6 +1324,7 @@ public partial class Map11Main : Node3D
         BuildEncounterOverlay(root);
         BuildInterceptOverlay(root);
         BuildResultOverlay(root);
+        BuildConfirmOverlay(root);
     }
 
     /// <summary>
@@ -1404,6 +1450,52 @@ public partial class Map11Main : Node3D
         col.AddChild(_interceptList);
     }
 
+    private void BuildConfirmOverlay(Control root)
+    {
+        _confirmOverlay = Modal(root, 300, 72, out VBoxContainer col, "CHECK", GoldColor);
+        _confirmBody = UiKit.Text("", 16, Colors.White);
+        _confirmBody.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        col.AddChild(_confirmBody);
+        var row = new HBoxContainer();
+        row.AddThemeConstantOverride("separation", 10);
+        col.AddChild(row);
+        Button go = UiKit.ActionButton("このまま出る", GoldColor);
+        go.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        go.Pressed += () =>
+        {
+            _incompleteOk = St;
+            _confirmOverlay.Visible = false;
+            System.Action? next = _confirmGo;
+            _confirmGo = null;
+            next?.Invoke();
+        };
+        row.AddChild(go);
+        Button back = UiKit.ActionButton("組み直す", UiKit.Muted);
+        back.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        back.Pressed += () => { _confirmOverlay.Visible = false; _confirmGo = null; Refresh(); };
+        row.AddChild(back);
+    }
+
+    /// <summary>
+    /// 第440期 §4-2 —— <b>余りの駒があるのに 5 枚未満の隊がいる</b>まま始めようとしたら、1 度だけ聞く。
+    /// 聞いたら true（呼び手はそこで止まり、「このまま出る」で <paramref name="go"/> が呼ばれる）。
+    /// <b>1 枚の隊は禁止しない</b>（規則として正しい）。手札から組んでいる間（<see cref="Map11Session.Drafting"/>）だけで、
+    /// 「既定の3隊で始める」は余りが 0 枚になるので出ない。<b>1 枚も配っていない手は聞かない</b>
+    /// （第439期のまま——時計を動かせば 2 刻で陥落する）。
+    /// </summary>
+    private bool AskIncomplete(System.Action go)
+    {
+        if (!Map11Session.Drafting || St.Bench.Count == 0 || ReferenceEquals(_incompleteOk, St)) return false;
+        if (!St.Squads.Any(s => s.Units is { Count: > 0 })) return false;
+        var thin = St.Squads.Where(s => !s.Lost && (s.Units?.Count ?? 0) < FormationRules.PlayableSlots.Length).ToList();
+        if (thin.Count == 0) return false;
+        _confirmBody.Text = string.Join("・", thin.Select(s => $"{s.Label}は {s.Units?.Count ?? 0} 枚"))
+            + $"です（余り {St.Bench.Count} 枚）。このまま出ますか";
+        _confirmGo = go;
+        _confirmOverlay.Visible = true;
+        return true;
+    }
+
     private void BuildResultOverlay(Control root)
     {
         _resultOverlay = Modal(root, 340, 220, out VBoxContainer col, "RESULT", GoldColor);
@@ -1416,7 +1508,7 @@ public partial class Map11Main : Node3D
         Button again = UiKit.ActionButton("もう一度", GoldColor);
         again.Pressed += () =>
         {
-            Map11Session.Reset();
+            Map11Session.Reset(stage: St.Stage);
             GetTree().ReloadCurrentScene();
         };
         col.AddChild(again);
@@ -1463,6 +1555,7 @@ public partial class Map11Main : Node3D
         if (Map11Session.TurnRunning) return;
         // 第439期 §1: 時計があれば**誰も出ていなくても刻は進む**（門は時計を切ったときだけ）。
         if (!Map11Clock.On && NothingDeployed()) return;
+        if (AskIncomplete(AdvanceTurn)) return;
         Map11Clock.Stop();
         if (_reform) { _reform = false; ClearHold(); }
         Map11Session.BeginTurn();
@@ -1476,7 +1569,7 @@ public partial class Map11Main : Node3D
 
     private static Watch Take() => new(
         Enumerable.Range(0, St.Squads.Length).Select(AtDest).ToArray(),
-        Enumerable.Range(0, Map11.RoadCount)
+        Enumerable.Range(0, St.Stage.LaneCount)
                   .Select(r => St.NextNode(r) is { } n && n.Cell <= 0).ToArray(),
         St.SpawnCount, St.Captured);
 
@@ -1519,9 +1612,9 @@ public partial class Map11Main : Node3D
         for (int i = 0; i < St.Squads.Length; i++)
             if (!before.Arrived[i] && AtDest(i) && !St.Squads[i].Lost)
                 return $"{St.Squads[i].Label} が {Map11Orders.Where(St.Graph, Map11Session.Destinations[i])} に着いた";
-        for (int r = 0; r < Map11.RoadCount; r++)
+        for (int r = 0; r < St.Stage.LaneCount; r++)
             if (!before.Imminent[r] && St.NextNode(r) is { } n && n.Cell <= 0)
-                return $"{Map11.RoadNames[r]} の {n.Def.Name} が拠点の手前まで来た（次の前進で迎撃）";
+                return $"{St.Stage.LaneNames[r]} の {n.Def.Name} が拠点の手前まで来た（次の前進で迎撃）";
         return null;
     }
 
@@ -1539,6 +1632,7 @@ public partial class Map11Main : Node3D
         if (St.Finished) { ShowResult(); return; }
         if (Map11Session.TurnRunning) { Pump(); return; }
         if (NothingDeployed()) return;
+        if (AskIncomplete(RunUntilEvent)) return;
         if (_reform) { _reform = false; ClearHold(); }
         _running = true;
 
@@ -1594,6 +1688,7 @@ public partial class Map11Main : Node3D
         if (Map11Clock.Running) Map11Clock.Stop();
         else
         {
+            if (AskIncomplete(ToggleClock)) return;
             if (_reform) { _reform = false; ClearHold(); }
             Map11Clock.Start();
         }
@@ -1603,7 +1698,8 @@ public partial class Map11Main : Node3D
     /// <summary>刻んでよいか。<b>戦闘の最中・窓が出ている・組み直し中・終わった</b>あいだは刻まない。</summary>
     private bool ClockMayTick()
         => !St.Finished && !Map11Session.TurnRunning && !_reform
-           && !_encounterOverlay.Visible && !_interceptOverlay.Visible && !_resultOverlay.Visible;
+           && !_encounterOverlay.Visible && !_interceptOverlay.Visible && !_resultOverlay.Visible
+           && !_confirmOverlay.Visible;
 
     /// <summary>時計を 1 フレームぶん進める（<c>_Process</c> と時計の門が呼ぶ）。</summary>
     private void ClockStep(double delta)
@@ -1618,12 +1714,19 @@ public partial class Map11Main : Node3D
     {
         bool on = Map11Clock.On;
         _run.Text = !on ? "▶ 進める" : Map11Clock.Running ? "⏸ 一時停止" : "▶ 動かす";
-        _speed.Visible = on;
-        _speed.Text = Map11Clock.Fast ? "2×" : "1×";
+        // 第440期 §4-1: **今の速さの札を光らせ、もう一方は沈める**（押せるのは両方）。
+        _speed1.Visible = _speed2.Visible = on;
+        foreach ((Button b, bool fast) in new[] { (_speed1, false), (_speed2, true) })
+        {
+            bool now = Map11Clock.Fast == fast;
+            b.Text = now ? $"▸{(fast ? "2×" : "1×")}" : fast ? "2×" : "1×";
+            b.Modulate = now ? new Color(1.0f, 0.90f, 0.62f) : new Color(1, 1, 1, 0.45f);
+        }
         _clockLabel.Visible = _clockGauge.Visible = on && St.Time.On;
-        _clockLabel.Text = $"刻 {St.Turn}"
+        // 第440期 §4-1: **止まっているあいだも速さを出す**。
+        _clockLabel.Text = $"刻 {St.Turn} ・ 速さ {(Map11Clock.Fast ? "2×" : "1×")}"
             + (Map11Session.TurnRunning ? " ・ 戦闘中"
-               : Map11Clock.Running ? $" ・ ▶ {(Map11Clock.Fast ? "2×" : "1×")}" : " ・ ⏸ 止まっています");
+               : Map11Clock.Running ? " ・ ▶ 動いています" : " ・ ⏸ 止まっています");
         _clockGauge.Value = Map11Clock.Fraction;
     }
 
@@ -1709,7 +1812,7 @@ public partial class Map11Main : Node3D
         _encounterBody.Text =
             "[color=#8f9b90]" + (athome
                 ? "拠点まで来られた。ここで抜けなければ次の隊が出る。"
-                : $"{Map11.RoadNames[node.Def.Road]} {node.Def.Index + 1} 戦目。")
+                : $"{St.Stage.LaneNames[node.Def.Road]} {node.Def.Index + 1} 戦目。")
             + "戦えば、傷も死者もそのまま持ち込みます。[/color]\n\n"
             + $"[color=#{PlayerColor.ToHtml(false)}]この隊の勝ち筋[/color]"
             + $"　[color=#8f9b90]{s.Units.Count(u => u.IsAlive)} 体 ・ HP {SquadHpPercent(s):F0}%[/color]\n"
@@ -2257,7 +2360,7 @@ public partial class Map11Main : Node3D
         _foeMore.Text = _foeDetailBox.Visible ? "文章を畳む" : "くわしく（文章）";
 
         _foeDetail.AddChild(UiKit.Text(
-            $"{Map11.RoadNames[node.Def.Road]} {node.Def.Index + 1} 戦目 ・ {node.Def.Name}"
+            $"{St.Stage.LaneNames[node.Def.Road]} {node.Def.Index + 1} 戦目 ・ {node.Def.Name}"
             + (node.Cleared ? "（撃破済み）" : ""), 16, node.Cleared ? DeadColor : Colors.White));
 
         // 盤上に立っている駒があればその現在値、まだ当たっていなければ定義の値。
@@ -2326,7 +2429,9 @@ public partial class Map11Main : Node3D
         // **生存枚数は2つ出す**（第169期に画面内で数え方が2通りに割れていた）。
         var lines = new List<string>
         {
-            $"抜いた敵部隊 {St.ClearedCount} / {Map11.TotalNodes}（部分点 {St.Partial():F2}）",
+            // 第440期 §3-2: **ステージ名**を頭に。
+            St.Stage.Title,
+            $"抜いた敵部隊 {St.ClearedCount} / {St.Stage.TotalNodes}（部分点 {St.Partial():F2}）",
             $"盤上に残った枚数 {Map11Session.AliveOnMap} 枚"
             + $" ／ 未出撃を含む枚数 {Map11Session.AliveIncludingReserve} 枚",
             $"戦闘回数 {St.Battles} 回",
@@ -2391,11 +2496,11 @@ public partial class Map11Main : Node3D
         // 第177期 §2: 拠点ありでは**勝ち条件が「制圧 ＋ 盤上の敵 0」**なので、
         // 「抜いた敵部隊 n / 4」だけでは何が残っているか読めない——湧いたぶんも出す。
         int left = St.Nodes.Sum(r => r.Count(x => !x.Cleared)) + St.Spawns.Count(x => !x.Cleared);
-        _headline.Text = $"検証用マップ 1-1 ・ "
+        _headline.Text = $"{St.Stage.Title} ・ "
             + (St.Time.On ? $"作戦ターン {St.Turn + 1} ・ " : "")
             + (St.Portal.On
                 ? $"{(St.Captured ? "制圧済み" : Map11.PortalName + "は敵のもの")} ・ 残る敵部隊 {left}"
-                : $"抜いた敵部隊 {St.ClearedCount} / {Map11.TotalNodes}")
+                : $"抜いた敵部隊 {St.ClearedCount} / {St.Stage.TotalNodes}")
             + $" ・ 戦闘 {St.Battles} 回 ・ seed {Map11Session.Seed}";
 
         for (int i = 0; i < St.Squads.Length; i++)
@@ -2403,7 +2508,7 @@ public partial class Map11Main : Node3D
             Map11State.Squad s = St.Squads[i];
             string where = s.Lost ? "失われた"
                 : s.Cell < 0 ? (s.Units is null ? "未出撃（拠点）" : "拠点")
-                : $"{Map11.RoadNames[s.Road]} {CellName(s.Road, s.Cell)}";
+                : $"{St.Stage.LaneNames[s.Road]} {CellName(s.Road, s.Cell)}";
             // 第177期 §3: **1 枚も配っていない隊を「HP 0%」と書かない**（空席である）。
             string stat = s.Units is null
                 ? (s.Lost ? "—" : $"{s.Def.F.Occupied().Count()} 枚 ・ HP 100%")
@@ -2452,9 +2557,9 @@ public partial class Map11Main : Node3D
 
         foreach (Node child in _roadList.GetChildren()) child.QueueFree();
         int marker = 0;
-        for (int road = 0; road < Map11.RoadCount; road++)
+        for (int road = 0; road < St.Stage.LaneCount; road++)
         {
-            _roadList.AddChild(UiKit.Text(Map11.RoadNames[road], 16, GoldColor));
+            _roadList.AddChild(UiKit.Text(St.Stage.LaneNames[road], 16, GoldColor));
             for (int i = 0; i < St.Nodes[road].Length; i++)
             {
                 Map11State.Node n = St.Nodes[road][i];
@@ -2478,6 +2583,7 @@ public partial class Map11Main : Node3D
             Place(m, n, n.Def.Road, stackAtPortal: spawn);
         }
         for (int i = spawn; i < _spawnMarkers.Count; i++) _spawnMarkers[i].Set("", EnemyColor, false);
+        RefreshFoeArrows();
 
         RefreshPortal();
 
@@ -2541,10 +2647,10 @@ public partial class Map11Main : Node3D
         int alive = n.Cleared ? 0 : n.Units?.Count(u => u.IsAlive) ?? n.Def.Enemy.Occupied().Count();
         if (!n.Cleared)
         {
-            Vector3 at = n.Pos == St.Graph.Home ? BasePos + new Vector3(0, 0, road == 0 ? -3.4f : 3.4f)
+            Vector3 at = n.Pos == St.Graph.Home ? BasePos + new Vector3(0, 0, LaneSide(road) * 3.4f)
                        : n.Pos == St.Graph.Portal
                            ? PortalPos + new Vector3(3.2f + stackAtPortal * 0.9f, 0,
-                                                     road == 0 ? -2.2f : 2.2f)
+                                                     LaneSide(road) * 2.2f)
                        : PosOf(n.Pos);
             // 第175期 §1-3: **前進した瞬間は1マス滑らせる**（瞬間移動させない）。
             if (_firstRefresh) m.MoveTo(at); else m.SlideTo(at);
@@ -2561,6 +2667,32 @@ public partial class Map11Main : Node3D
         }
         else m.SetNote("", GoldColor, false);
     }
+
+    /// <summary>
+    /// 第440期 §3-2 —— <b>敵の経路の矢印</b>。次の前進で動く敵部隊から、入るマスへ短い矢印（敵の色・味方より太い）。
+    /// どれが動くかは <see cref="Map11State.PlannedFoeSteps"/> が決める（<b>画面は判定を持たない</b>）。
+    /// 矢印は板の上に浮かせ（高さ 1.6）、辺のほぼ全長に引く（隣のマスが近いので、短いと板に隠れる）。
+    /// </summary>
+    private void RefreshFoeArrows()
+    {
+        var steps = St.Finished ? new List<(Map11State.Node Node, int To)>() : St.PlannedFoeSteps();
+        while (_foeArrows.Count < steps.Count) _foeArrows.Add(new Arrow(this, EnemyColor, 2.6f, y: 1.6f));
+        for (int i = 0; i < _foeArrows.Count; i++)
+        {
+            if (i >= steps.Count) { _foeArrows[i].Hide(); continue; }
+            var (n, to) = steps[i];
+            Vector3 from = n.Pos == St.Graph.Portal ? PortalPos : PosOf(n.Pos);
+            Vector3 goal = PosOf(to);
+            _foeArrows[i].Set(from.Lerp(goal, 0.10f), from.Lerp(goal, 0.90f), from.Lerp(goal, 0.90f));
+        }
+    }
+
+    /// <summary>
+    /// 経路の上下の向き（第440期）。<b>北 −1 ・ 南 +1</b>（1-1 は第439期の <c>road == 0 ? -1 : +1</c> と同じ）、
+    /// 経路が 3 本なら中は 0。拠点・敵の拠点に重なった板をずらす向きにだけ使う。
+    /// </summary>
+    private static float LaneSide(int road)
+        => St.Stage.LaneCount <= 1 ? 0f : -1f + 2f * road / (St.Stage.LaneCount - 1);
 
     /// <summary>
     /// 第177期 §2 —— 敵の拠点（ワープポータル）の板。

@@ -1805,6 +1805,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
         # **第439期 §5-2**: 時計の門。間隔 0 で `ClockStep` を手で回す・約 2 秒。(a) 1 刻で 1 作戦ターン ／ (b) 接敵で止まり戦闘の最中は刻まない ／
         # (c) 一時停止中は動かない ／ (d) 誰も出さずに刻むと迎撃 ／ (d') 1 枚も配らずに ▶ で陥落 ＋ 待つ代金の表（報告のみ）。合否は `MAP11_CLOCK_SMOKE_COMPLETE ok=`
         # `--map11-no-clock`（どの Map11Main の起動にも付けられる）で時計を切る——▶ は第438期の「▶ 進める」と同じく出来事まで一気に回す
+    Godot_console.exe --path DemoApp --headless -- --map12-smoke
+        # **第440期 §5-2**: 1-2（`MapStage.Stage12`・経路 3 本 ＋ 横の辺 2 本）の門。画面なし・約 10 秒。(a) 盤 10 マス ＋ 敵の拠点・横の辺が両方向 ／
+        # (b) N1 → S1 が N1 → C1 → S1 ／ (c) 中の先頭が 2 刻で拠点に着き迎撃 ／ (d) 貪欲 100 seed で落ちない（数字は報告のみ）／ (e) 待ち伏せ
+        # ＋ 敵の矢印の予定（`PlannedFoeSteps`）と実際の前進の照合。合否は `MAP12_SMOKE_COMPLETE ok=`
+        # `--map-stage=1-2`（Map11Main の起動に付けられる）で編成画面を通らずに 1-2 を選ぶ（絵を撮る口）
     Godot_console.exe --path DemoApp --headless -- --map11-phase176
         # **第176期 Phase 0**: Q0-1〜Q0-5（`PortalOn = false` が第175期の 18 量と一致するか ／
         # 重なりと同点の割り方 ／ 湧いた部隊を満タンで作る口 ／ 方針の手順 ／ 走行時間）。約 1 秒
