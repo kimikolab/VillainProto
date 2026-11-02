@@ -172,7 +172,8 @@ public static class Map11Orders
     {
         // 第177期: **接敵するターンはそう書く**（「〜へ進む」だと何が起きるか読めない）。
         Order.Advance => Meeting(st, squad, dest) is { } foe
-            ? $"{st.Stage.LaneNames[foe.Def.Road]} {CellName(foe.Cell)} で {foe.Def.Name} と接敵"
+            ? (foe.Def.Road < 0 ? $"{Map11.PortalName} で {foe.Def.Name} と接敵"   // 第441期: 待機中の予備隊
+               : $"{st.Stage.LaneNames[foe.Def.Road]} {CellName(foe.Cell)} で {foe.Def.Name} と接敵")
             : $"{Where(st.Graph, dest)} へ進む",
         Order.Move => $"{Where(st.Graph, dest)} へ進む",
         Order.Back => dest.AtHome ? "拠点へ戻る" : $"{Where(st.Graph, dest)} へ（拠点を経由）",

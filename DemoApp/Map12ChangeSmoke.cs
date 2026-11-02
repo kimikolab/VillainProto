@@ -1,0 +1,311 @@
+using BattleCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+// =====================================================================================
+// 1-2 に「盤の上で変わるもの」を足した門（第441期 §5-3・`--map12-change-smoke`）
+//
+// **画面を1つも作らない。** `MapStage.Stage12`（途中到着・敵の予備隊・湧き S = 2）と `Map11State` / `Map11Orders` だけを回す。
+// **ここには Godot の型を1つも使わない**（`Map12Smoke` と同じ扱い）。
+//
+//   (a) 開始の手札が 10 枚で保証 3 条件を満たす・到着の列が 5 枚
+//   (b) A 刻ごとに手札が増え、5 枚届いたら止まる
+//   (c) 最初の接敵の後、予備隊が「味方のいない経路」へ出発し、その経路を 1 刻 1 マス進む
+//   (d) 予備隊が拠点に着いたら迎撃が立つ
+//   (e) S = 2 で制圧の前に湧きが 1 以上
+//   (f) 貪欲方針 100 seed で落ちない。踏破率・予備隊が着いた経路の分布・予備隊との戦闘が起きた率・湧いた数は**報告だけ**
+//
+// 「貪欲」は第438・440期の門と同じ選び方（各隊は盤の上でいちばん近い敵部隊へ・敵が尽きたら敵の拠点へ）。
+// 自分で組む通し（到着あり）で回す: 開始の 10 枚を第1隊・第2隊に 5 枚ずつ、届いた駒は拠点にいる第3隊へ。
+// =====================================================================================
+
+public static class Map12ChangeSmoke
+{
+    public const int Seeds = 100;
+
+    public static bool Run(Action<string> write)
+    {
+        bool ok = true;
+        void Req(bool c, string what) { write($"{(c ? "○" : "×")} {what}"); ok &= c; }
+        MapStage stage = MapStage.Stage12;
+
+        // ---- 保証の表（報告） ----
+        {
+            var t = MapDraw.Table;
+            string N(IEnumerable<string> ids) => string.Join("・", ids.Select(id => MapDraw.Pool.First(d => d.Id == id).Name));
+            write($"  保証の表（`Presets.Compare` から機械で引いた）: 回復役 {N(t.Healers)} ／ 前に立てる駒 {N(t.Front)}");
+            write($"  芯 {t.Cores.Count} 組: {string.Join("・", t.Cores.Select(c => c.Row))}");
+            Req(t.Healers.Count > 0 && t.Front.Count > 0 && t.Cores.Count > 0, "保証の表の 3 列がどれも空でない");
+        }
+
+        // ---- (a) 開始の手札 ----
+        {
+            var st = new Map11State(0, stage.Time, stage.Portal, draft: true, stage: stage);
+            var miss = MapDraw.Missing(st.Bench.Select(u => u.Def));
+            write($"  seed 0 の開始: 手札 {st.Bench.Count} 枚（{string.Join("・", st.Bench.Select(u => u.Def.Name))}）／ 到着の列 {st.Arrivals.Count} 枚"
+                + $"（{string.Join(" → ", st.Arrivals.Select(u => u.Def.Name))}）／ 引き直し {st.OpeningRerolls} 回");
+            Req(st.Bench.Count == 10 && st.Arrivals.Count == 5 && miss.Count == 0 && st.OpeningOk,
+                "(a) 開始の手札は 10 枚で保証 3 条件を満たし、到着の列は 5 枚");
+            int fail = 0, rerollSum = 0, rerollMax = 0;
+            for (int seed = 0; seed < Seeds; seed++)
+            {
+                MapDraw.Opening o = MapDraw.Draw(seed, stage.Arrival.Start, stage.Arrival.MinPer, stage.Arrival.MaxPer);
+                if (!o.Ok) fail++;
+                rerollSum += o.Rerolls;
+                rerollMax = Math.Max(rerollMax, o.Rerolls);
+            }
+            write($"  {Seeds} seed の引き: 保証を満たせなかった {fail} seed ／ 引き直し 平均 {(double)rerollSum / Seeds:F2} 回・最大 {rerollMax} 回");
+            var keep = new Map11State(0, stage.Time, stage.Portal, draft: true, stage: stage);
+            Req(keep.UseDefaultSquads() && keep.Arrivals.Count == 0 && keep.Squads.All(s => s.Units?.Count == 5) && keep.Bench.Count == 0,
+                "(a') 「既定の3隊で始める」は到着を使わない（まだ届いていない 5 枚もその場で配り切る）");
+            var off = new Map11State(0, stage.Time, stage.Portal, draft: false, stage: stage);
+            Req(off.Arrivals.Count == 0, "(a'') 既定の 3 隊の通し（draft でない）には到着の列が無い");
+        }
+
+        // ---- (b) A 刻ごとに届く ----
+        {
+            var st = new Map11State(0, stage.Time, stage.Portal, draft: true, stage: stage);
+            Deal(st, 0, 5);
+            Deal(st, 1, 5);
+            var trail = new List<string>();
+            bool regular = true;
+            for (int turn = 0; turn < 14 && !st.Finished; turn++)
+            {
+                int before = st.ArrivedCount;
+                st.AdvanceFoes();
+                int got = st.ArrivedCount - before;
+                if (got > 0) trail.Add($"T{st.Turn}+{got}（{string.Join("・", st.LastArrived.Select(u => u.Def.Name))}）");
+                bool due = st.Turn % stage.Arrival.Every == 0 && st.ArrivedCount - got < 5;
+                if ((got > 0) != due || got > stage.Arrival.MaxPer || (got > 0 && got < Math.Min(stage.Arrival.MinPer, 5 - (st.ArrivedCount - got))))
+                    regular = false;
+            }
+            write($"  到着: {string.Join(" ／ ", trail)} ／ 届いた総数 {st.ArrivedCount} ／ 手札 {st.Bench.Count} 枚 ／ 列 {st.Arrivals.Count}");
+            Req(regular && st.ArrivedCount == 5 && st.Arrivals.Count == 0 && st.Bench.Count == 5,
+                $"(b) {stage.Arrival.Every} 刻ごとに 1〜2 枚ずつ手札が増え、5 枚届いたら止まる");
+        }
+
+        // ---- (c)(d) 予備隊 ----
+        {
+            var st = new Map11State(0, stage.Time, stage.Portal, draft: true, stage: stage);
+            var g = st.Graph;
+            Deal(st, 0, 5);
+            Deal(st, 1, 5);
+            // 予備隊の経路を空けておく（固定の敵は北の 1 部隊だけ残す＝最初の接敵の相手）。
+            foreach (Map11State.Node n in st.Nodes.SelectMany(r => r)) if (!ReferenceEquals(n, st.Nodes[0][0])) n.Cleared = true;
+            Dest north = Dest.Deep(g, 0);
+            bool waitedBefore = st.ReserveWaiting && st.PortalFoe() is { IsReserve: true };
+            int firstBattleTurn = -1, targetAtDecision = -1;
+            bool emptyAtDecision = false;
+            var trail = new List<string>();
+            Map11State.Encounter? arrival = null;
+            int stepsOk = 0, stepsBad = 0;
+            for (int guard = 0; guard < 20 && arrival is null && !st.Finished; guard++)
+            {
+                if (Map11Orders.Apply(st, 0, north, Map11Orders.Plan(st, 0, north)) is { } met) Fight(st, 0, met, false);
+                if (firstBattleTurn < 0 && st.Battles > 0) firstBattleTurn = st.Turn;
+                if (st.ReserveWaiting && st.Battles > 0)
+                {
+                    targetAtDecision = st.ReserveTarget();
+                    emptyAtDecision = !st.Squads.Any(s => s.Units is { } u && u.Any(x => x.IsAlive) && s.Road == targetAtDecision);
+                }
+                int? from = st.ReserveWaiting ? null : st.Reserve!.Pos;
+                var plan = st.PlannedFoeSteps();
+                var enc = st.AdvanceFoes();
+                Map11State.Node r = st.Reserve!;
+                if (from is int f)
+                {
+                    int want = g.TowardHome(r.Def.Road, f);
+                    bool planned = plan.Any(p => ReferenceEquals(p.Node, r));
+                    if (planned ? r.Pos == want : r.Pos == f) stepsOk++; else stepsBad++;
+                }
+                if (!st.ReserveWaiting) trail.Add($"T{st.Turn}:{(r.Pos == g.Home ? "拠点" : r.Pos == g.Portal ? "敵の拠点" : g[r.Pos].Name)}");
+                foreach (var e in enc)
+                {
+                    if (e.Intercept && ReferenceEquals(e.Node, r)) { arrival = e; break; }
+                    if (e.Intercept)
+                    {
+                        while (!st.Finished && st.NextInterceptor(e.Node) is var j && j >= 0) { Fight(st, j, e.Node, true); if (e.Node.Cleared) break; }
+                        st.CloseIntercept(e.Node);
+                    }
+                    else Fight(st, e.Squad, e.Node, false);
+                }
+            }
+            Map11State.Node rv = st.Reserve!;
+            write($"  予備隊: 待機（敵の拠点のマスに数える {waitedBefore}）→ 最初の戦闘 T{firstBattleTurn} → 出発 T{st.ReserveDepartTurn}"
+                + $"・行き先 {st.LaneName(rv.Def.Road)}（決めた時点でその経路に味方なし {emptyAtDecision}）／ 道のり {string.Join(" → ", trail)}");
+            Req(waitedBefore && firstBattleTurn >= 0 && st.ReserveDepartTurn >= firstBattleTurn && st.ReserveDepartTurn <= firstBattleTurn + 1
+                && rv.Def.Road == targetAtDecision && emptyAtDecision && rv.Def.Road == 1,
+                "(c) 最初の接敵の後、予備隊は「味方のいない経路」（北に第1隊・第2隊は拠点 → 中の道）へ出発する");
+            Req(stepsOk >= 3 && stepsBad == 0, $"(c') 出発後は 1 刻 1 マス進む（照合 {stepsOk} 刻・食い違い {stepsBad}）");
+            Req(arrival is not null && rv.Pos == g.Home && st.NextInterceptor(rv) >= 0,
+                "(d) 予備隊が拠点に着くと迎撃が立つ（拠点の第2隊が受ける）");
+        }
+
+        // ---- (e)(f) 100 seed ----
+        // 2 つの方針: 「2 隊とも出す」（第440期の貪欲そのまま）と「番を置く」（拠点に出せる隊が 1 つだけなら、その隊は残る）。
+        foreach (bool guard in new[] { false, true })
+        {
+            string label = guard ? "貪欲＋番（拠点に 1 隊残す）" : "貪欲（2 隊とも出す）";
+            var runs = new List<Once>();
+            int crashed = 0;
+            for (int seed = 0; seed < Seeds; seed++)
+            {
+                try { runs.Add(Greedy(seed, stage, guard)); }
+                catch (Exception ex)
+                {
+                    crashed++;
+                    if (crashed <= 3) write($"  × {label} seed {seed}: {ex.GetType().Name}: {ex.Message}");
+                }
+            }
+            Once s0 = runs.FirstOrDefault(r => r.Seed == 0);
+            write($"  {label} seed 0: 踏破 {s0.Won} ／ 陥落 {s0.Fallen} ／ 制圧 T{s0.CapturedTurn} ／ 制圧までに湧いた {s0.SpawnsBeforeCapture} ／ 湧いた計 {s0.Spawns} ／ "
+                + $"予備隊 {(s0.ReserveLane < 0 ? "出発せず" : stage.LaneNames[s0.ReserveLane])}・戦闘 {s0.ReserveFought} ／ 届いた {s0.Arrived} 枚 ／ 戦闘 {s0.Battles} ／ 作戦ターン {s0.Turns}");
+            // (e) 敵の拠点は拠点から 4 マス奥なので、制圧は早くても 4 刻目——S = 2 の最初の湧き（2 刻目）は必ずその前に来る。
+            //     ここでは「制圧した通しはどれも、その前に 1 つ以上湧いていた」を数える（seed 0 だけでは制圧まで行かないことがある）。
+            if (guard)
+                Req(runs.Any(r => r.Captured) && runs.Where(r => r.Captured).All(r => r.SpawnsBeforeCapture >= 1),
+                    $"(e) S = 2 で、制圧した通しはどれも制圧の前に湧きが 1 つ以上あった（{label}・制圧 {runs.Count(r => r.Captured)} 通し）");
+            Req(crashed == 0, $"(f) {label}を {Seeds} seed 回して落ちない（数字は報告のみ・線は置かない）");
+            if (runs.Count > 0)
+            {
+                double P(Func<Once, bool> f) => 100.0 * runs.Count(f) / runs.Count;
+                var turns = runs.Select(r => r.Turns).OrderBy(x => x).ToArray();
+                string lanes = string.Join(" ／ ", Enumerable.Range(-1, stage.LaneCount + 1)
+                    .Select(l => $"{(l < 0 ? "出発せず" : stage.LaneNames[l])} {runs.Count(r => r.ReserveLane == l)}"));
+                write($"  {label} × {runs.Count} seed: 踏破 {P(r => r.Won):F1}% ／ 陥落 {P(r => r.Fallen):F1}% ／ 制圧 {P(r => r.Captured):F1}% ／ "
+                    + $"制圧の前に湧いた {P(r => r.SpawnsBeforeCapture >= 1):F1}% ／ 湧いた数 平均 {runs.Average(r => r.Spawns):F2} ／ 作戦ターン（中央値）{turns[turns.Length / 2]}"
+                    + $" ／ 陥落した作戦ターン（中央値）{(runs.Any(r => r.Fallen) ? runs.Where(r => r.Fallen).Select(r => r.Turns).OrderBy(x => x).ElementAt(runs.Count(r => r.Fallen) / 2) : 0)}");
+                write($"  予備隊の行き先: {lanes} ／ 予備隊との戦闘が起きた {P(r => r.ReserveFought):F1}%（うち拠点の迎撃 {P(r => r.ReserveAtHome):F1}%）／ "
+                    + $"予備隊を倒した {P(r => r.ReserveCleared):F1}%");
+                write($"  到着: 届いた枚数 平均 {runs.Average(r => r.Arrived):F2} ／ 第3隊が出撃した {P(r => r.ThirdOut):F1}% ／ 横の辺を通った手 平均 {runs.Average(r => r.Moves):F2}");
+            }
+        }
+        // ---- 報告のみ: 3 つの変更を 1 つずつ入れた 1-2（貪欲＋番 × 100 seed） ----
+        {
+            MapStage Mix(bool arrival, bool reserve, bool s2) => new()
+            {
+                Id = stage.Id, Title = stage.Title, Board = stage.Board, Lanes = stage.Lanes, LaneNames = stage.LaneNames,
+                Spawn = stage.Spawn, Time = stage.Time,
+                Portal = s2 ? stage.Portal : MapStage.Stage12H440.Portal,
+                Arrival = arrival ? stage.Arrival : ArrivalRule.Off,
+                Reserve = reserve ? stage.Reserve : ReserveRule.Off,
+            };
+            foreach (var (name, st2) in new[]
+                     {
+                         ("第440期（3 つとも切る）", Mix(false, false, false)),
+                         ("到着だけ", Mix(true, false, false)),
+                         ("予備隊だけ", Mix(false, true, false)),
+                         ("S=2 だけ", Mix(false, false, true)),
+                         ("到着＋予備隊", Mix(true, true, false)),
+                         ("第441期（3 つとも）", stage),
+                     })
+            {
+                var runs = Enumerable.Range(0, Seeds).Select(seed => Greedy(seed, st2, guard: true)).ToList();
+                double P(Func<Once, bool> f) => 100.0 * runs.Count(f) / runs.Count;
+                var turns = runs.Select(r => r.Turns).OrderBy(x => x).ToArray();
+                write($"  分解・{name}: 踏破 {P(r => r.Won):F1}% ／ 陥落 {P(r => r.Fallen):F1}% ／ 膠着 {P(r => !r.Won && !r.Fallen):F1}% ／ "
+                    + $"湧いた数 {runs.Average(r => r.Spawns):F2} ／ 予備隊との戦闘 {P(r => r.ReserveFought):F1}% ／ 作戦ターン（中央値）{turns[turns.Length / 2]}");
+            }
+        }
+        return ok;
+    }
+
+    /// <summary>手札の先頭から <paramref name="count"/> 枚を、その隊の空いた席（前1 から）へ配る。</summary>
+    private static void Deal(Map11State st, int squad, int count)
+    {
+        for (int k = 0; k < count && st.Bench.Count > 0; k++)
+        {
+            int slot = FormationRules.PlayableSlots.FirstOrDefault(sl => st.UnitAt(squad, sl) is null, -1);
+            if (slot < 0 || !st.SwapWithBench(squad, slot, 0)) return;
+        }
+    }
+
+    private static void Fight(Map11State st, int squad, Map11State.Node node, bool intercept)
+    {
+        var prep = intercept ? st.PrepareIntercept(squad, node) : st.Prepare(squad, node);
+        if (prep is not { } q) return;
+        BattleResult r = BattleEngine.Run(q.Players, q.Enemies, q.Seed, verbose: false);
+        st.Resolve(squad, q.Node, r.PlayerWon, intercept);
+    }
+
+    private readonly record struct Once(int Seed, bool Won, bool Fallen, bool Captured, int CapturedTurn, int Turns,
+                                        int Spawns, int SpawnsBeforeCapture, int ReserveLane, bool ReserveFought,
+                                        bool ReserveAtHome, bool ReserveCleared, int Arrived, bool ThirdOut, int Moves, int Battles);
+
+    /// <summary>
+    /// 貪欲方針で 1 マップ（自分で組む通し・到着あり）。開始の 10 枚を第1隊・第2隊へ 5 枚ずつ、届いた駒は拠点にいる第3隊へ配る。
+    /// 第3隊は 5 枚そろうか、もう届く駒が無くなったら出る。各隊の行き先は盤の上でいちばん近い敵部隊（敵が尽きたら敵の拠点・制圧後は拠点）。
+    /// <paramref name="guard"/> が真なら<b>番を置く</b>: 拠点にいて出せる隊がその隊しか無ければ、その隊は出ない（迎撃に残る）。
+    /// </summary>
+    private static Once Greedy(int seed, MapStage stage, bool guard)
+    {
+        var st = new Map11State(seed, stage.Time, stage.Portal, draft: true, stage: stage);
+        var g = st.Graph;
+        Deal(st, 0, 5);
+        Deal(st, 1, 5);
+        int moves = 0, spawnsAtCapture = -1;
+        bool reserveFought = false, reserveAtHome = false;
+        Map11State.Node? reserve = st.Reserve;
+
+        void Hit(int squad, Map11State.Node node, bool intercept)
+        {
+            if (node.IsReserve) { reserveFought = true; if (intercept) reserveAtHome = true; }
+            Fight(st, squad, node, intercept);
+        }
+
+        Dest DestFor(int i)
+        {
+            Map11State.Squad s = st.Squads[i];
+            if (s.Lost) return Dest.Home;
+            if (i == 2 && s.Pos == g.Home && (s.Units?.Count ?? 0) < 5 && st.Arrivals.Count > 0) return Dest.Home;
+            if (guard && s.Pos == g.Home && !st.Captured
+                && !Enumerable.Range(0, st.Squads.Length).Any(k => k != i && st.Squads[k].Pos == g.Home && !st.Squads[k].Lost && st.CanSend(k)))
+                return Dest.Home;
+            Map11State.Node? best = null;
+            int bestLen = int.MaxValue;
+            for (int road = 0; road < g.Lanes.Count; road++)
+                foreach (Map11State.Node n in st.FoesOn(road))
+                {
+                    if (n.Pos == g.Home) continue;
+                    int len = g.Path(s.Pos, s.Road, n.Pos, n.Pos == g.Portal ? n.Def.Road : -1).Count;
+                    if (len > 0 && len < bestLen) { bestLen = len; best = n; }
+                }
+            if (best is not null)
+                return best.Pos == g.Portal ? Dest.Portal(g, best.Def.Road) : Dest.Of(g, best.Pos);
+            if (!st.Captured) return Dest.Portal(g, s.Road >= 0 ? s.Road : 0);
+            return Dest.Home;
+        }
+
+        while (!st.Finished)
+        {
+            // 届いた駒は拠点にいる第3隊へ（空いた席から）。
+            if (st.Bench.Count > 0 && st.CanReform(2)) Deal(st, 2, st.Bench.Count);
+            for (int i = 0; i < st.Squads.Length && !st.Finished; i++)
+            {
+                Dest dest = DestFor(i);
+                Map11Orders.Order order = Map11Orders.Plan(st, i, dest);
+                if (order == Map11Orders.Order.Move) moves++;
+                if (Map11Orders.Apply(st, i, dest, order) is { } node) Hit(i, node, false);
+                if (spawnsAtCapture < 0 && st.Captured) spawnsAtCapture = st.SpawnCount;
+            }
+            if (st.Finished) break;
+            foreach (Map11State.Encounter e in st.AdvanceFoes())
+            {
+                if (st.Finished) break;
+                if (!e.Intercept) { Hit(e.Squad, e.Node, false); continue; }
+                while (!st.Finished && st.NextInterceptor(e.Node) is var j && j >= 0)
+                {
+                    Hit(j, e.Node, true);
+                    if (e.Node.Cleared) break;
+                }
+                st.CloseIntercept(e.Node);
+            }
+            if (spawnsAtCapture < 0 && st.Captured) spawnsAtCapture = st.SpawnCount;
+        }
+        return new Once(seed, st.Won, st.Fallen, st.Captured, st.CapturedTurn + 1, st.Turn, st.SpawnCount,
+                        Math.Max(0, spawnsAtCapture), reserve is null || st.ReserveDepartTurn < 0 ? -1 : reserve.Def.Road,
+                        reserveFought, reserveAtHome, reserve?.Cleared == true, st.ArrivedCount,
+                        st.Squads[2].Deployed, moves, st.Battles);
+    }
+}

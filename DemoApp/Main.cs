@@ -331,6 +331,14 @@ public partial class Main : Control
             GetTree().Quit(mok ? 0 : 1);
             return;
         }
+        // 第441期 §5-3: 1-2 に「盤の上で変わるもの」（途中到着・予備隊・湧き S=2）を足した門。画面なし。
+        if (bootArgs.Contains("--map12-change-smoke", StringComparer.Ordinal))
+        {
+            bool cok = Map12ChangeSmoke.Run(GD.Print);
+            GD.Print($"MAP12_CHANGE_SMOKE_COMPLETE ok={cok}");
+            GetTree().Quit(cok ? 0 : 1);
+            return;
+        }
         string? verifyArg = bootArgs.FirstOrDefault(a => a.StartsWith("--map11-verify", StringComparison.Ordinal));
         if (verifyArg is not null)
         {

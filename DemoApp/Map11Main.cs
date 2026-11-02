@@ -89,6 +89,8 @@ public partial class Map11Main : Node3D
     private readonly List<Arrow> _arrows = new();
     /// <summary>敵の経路の矢印（第440期 §3-2）。次の前進で動く敵部隊 1 つに 1 本・要るだけ足す。</summary>
     private readonly List<Arrow> _foeArrows = new();
+    /// <summary>予備隊の行き先の経路（拠点まで）の矢印（第441期 §3）。</summary>
+    private readonly List<Arrow> _reserveArrows = new();
     /// <summary>自動で回している最中か。</summary>
     private bool _running;
     /// <summary>最初の引き直しだけは滑らせない（戦闘から戻ってきた直後に盤が動いて見えるため）。</summary>
@@ -287,6 +289,15 @@ public partial class Map11Main : Node3D
     /// 画面の当たりを1枚だけ撮る（見た目の確認用。判定には一切使わない）。
     /// 書式は <c>--map11-capture=&lt;path&gt;[,detail|encounter]</c>。
     /// </summary>
+    /// <summary>絵を撮るためだけの 1 戦（頭なし・戦闘シーンへ行かない）。規則は `Map11State` の `Prepare` ／ `Resolve` のまま。</summary>
+    private static void CaptureFight(int squad, Map11State.Node node, bool intercept)
+    {
+        var prep = intercept ? St.PrepareIntercept(squad, node) : St.Prepare(squad, node);
+        if (prep is not { } q) return;
+        BattleResult r = BattleEngine.Run(q.Players, q.Enemies, q.Seed, verbose: false);
+        St.Resolve(squad, q.Node, r.PlayerWon, intercept);
+    }
+
     private async System.Threading.Tasks.Task Capture(string spec)
     {
         string[] parts = spec.Split(',');
@@ -296,6 +307,28 @@ public partial class Map11Main : Node3D
         { PickDestination(Dest.Deep(St.Graph, 1)); AdvanceTurn(); }
         // 第171期: 図の札を1枚選んだ絵（関係の線と「何をする」が出ている状態）。
         else if (parts.Length > 1 && parts[1] == "pick") { _squadPick = 3; _foePick = 2; Refresh(); }
+        // 第441期 §7: **予備隊が出発した直後**の絵（`--map-stage=1-2` と使う）。第1隊・第2隊に 5 枚ずつ配り、
+        // 第1隊を北へ出して最初の接敵を**頭なしで**決着させ（戦闘シーンへは行かない）、次の刻の終わりに予備隊が出る。
+        else if (parts.Length > 1 && parts[1] == "reserve")
+        {
+            for (int sq = 0; sq < 2; sq++)
+                foreach (int seat in FormationRules.PlayableSlots)
+                    if (St.Bench.Count > 0) St.SwapWithBench(sq, seat, 0);
+            Map11Session.TakeOpening();
+            Dest north = Dest.Deep(St.Graph, 0);
+            Map11Session.SetDestination(0, north);
+            Watch before = Take();
+            for (int guard = 0; guard < 6 && St.ReserveDepartTurn < 0 && !St.Finished; guard++)
+            {
+                before = Take();
+                if (Map11Orders.Apply(St, 0, north, Map11Orders.Plan(St, 0, north)) is { } met) CaptureFight(0, met, false);
+                foreach (Map11State.Encounter e in St.AdvanceFoes())
+                    if (e.Intercept) { if (St.NextInterceptor(e.Node) is var j && j >= 0) CaptureFight(j, e.Node, true); St.CloseIntercept(e.Node); }
+                    else CaptureFight(e.Squad, e.Node, false);
+            }
+            Refresh();
+            if (StopReason(before) is { } why) ShowToast(why, GoldColor, 30f);
+        }
         // 第440期 §4-2: 組み終わっていない隊の確認の絵（第1隊に 1 枚だけ配って ▶）。
         else if (parts.Length > 1 && parts[1] == "confirm")
         { St.SwapWithBench(0, 3, 0); Refresh(); ToggleClock(); }
@@ -1565,13 +1598,14 @@ public partial class Map11Main : Node3D
     // ---- 第175期 §1-2: 「▶ 進める」——何かが起きるまで作戦ターンを自動で回す ----
 
     /// <summary>止まる理由を調べるために、作戦ターンの前に写しておく盤面。</summary>
-    private readonly record struct Watch(bool[] Arrived, bool[] Imminent, int Spawns, bool Captured);
+    private readonly record struct Watch(bool[] Arrived, bool[] Imminent, int Spawns, bool Captured,
+                                         int Delivered = 0, int ReserveDepart = -1);
 
     private static Watch Take() => new(
         Enumerable.Range(0, St.Squads.Length).Select(AtDest).ToArray(),
         Enumerable.Range(0, St.Stage.LaneCount)
                   .Select(r => St.NextNode(r) is { } n && n.Cell <= 0).ToArray(),
-        St.SpawnCount, St.Captured);
+        St.SpawnCount, St.Captured, St.ArrivedCount, St.ReserveDepartTurn);
 
     /// <summary>
     /// 第177期 §2（第176期 §3-1 #2）—— <b>行き先までのあいだに立っている最初の敵のマス。</b>
@@ -1603,6 +1637,22 @@ public partial class Map11Main : Node3D
     /// <b>敵のマスで見る</b>。</para>
     /// </summary>
     private static string? StopReason(Watch before)
+    {
+        // 第441期: **駒が届いた瞬間と、予備隊の行き先が決まった瞬間**も止まる。同じ刻の他の理由とは「／」で並べる
+        // （1-1 ではどちらも起きないので、第440期までの文は 1 文字も変わらない）。
+        var now = new List<string>();
+        if (St.ArrivedCount > before.Delivered && St.LastArrived.Count > 0)
+            now.Add($"{string.Join("・", St.LastArrived.Select(u => u.Def.Name))} が拠点に着いた（控え {St.Bench.Count} 枚）");
+        if (before.ReserveDepart < 0 && St.ReserveDepartTurn >= 0 && St.Reserve is { } rv)
+            now.Add($"予備隊（{rv.Def.Name}）が {St.LaneName(rv.Def.Road)} へ向かう（拠点まで {St.ReserveEta ?? 0} 刻）");
+        string? old = StopReason440(before);
+        if (now.Count == 0) return old;
+        if (old is not null) now.Add(old);
+        return string.Join(" ／ ", now);
+    }
+
+    /// <summary>第440期までの止まる理由（1 つだけ返す・文は変えない）。</summary>
+    private static string? StopReason440(Watch before)
     {
         // 第177期 §2（第176期 §3 の停止条件）——**湧いた瞬間と制圧した瞬間**。
         if (!before.Captured && St.Captured)
@@ -1812,6 +1862,7 @@ public partial class Map11Main : Node3D
         _encounterBody.Text =
             "[color=#8f9b90]" + (athome
                 ? "拠点まで来られた。ここで抜けなければ次の隊が出る。"
+                : node.IsReserve ? $"{St.LaneName(node.Def.Road)} ・ 敵の予備隊。"
                 : $"{St.Stage.LaneNames[node.Def.Road]} {node.Def.Index + 1} 戦目。")
             + "戦えば、傷も死者もそのまま持ち込みます。[/color]\n\n"
             + $"[color=#{PlayerColor.ToHtml(false)}]この隊の勝ち筋[/color]"
@@ -2360,7 +2411,8 @@ public partial class Map11Main : Node3D
         _foeMore.Text = _foeDetailBox.Visible ? "文章を畳む" : "くわしく（文章）";
 
         _foeDetail.AddChild(UiKit.Text(
-            $"{St.Stage.LaneNames[node.Def.Road]} {node.Def.Index + 1} 戦目 ・ {node.Def.Name}"
+            (node.IsReserve ? $"{St.LaneName(node.Def.Road)} ・ 予備隊 ・ {node.Def.Name}"
+                : $"{St.Stage.LaneNames[node.Def.Road]} {node.Def.Index + 1} 戦目 ・ {node.Def.Name}")
             + (node.Cleared ? "（撃破済み）" : ""), 16, node.Cleared ? DeadColor : Colors.White));
 
         // 盤上に立っている駒があればその現在値、まだ当たっていなければ定義の値。
@@ -2443,13 +2495,22 @@ public partial class Map11Main : Node3D
                 ? $"{Map11.PortalName} を制圧したのは 作戦ターン {St.CapturedTurn + 1}"
                 : $"{Map11.PortalName} は制圧できなかった");
             lines.Add($"{Map11.PortalName} から湧いた敵部隊 {St.SpawnCount} 部隊"
-                + $"（うち抜いた {St.Spawns.Count(n => n.Cleared)} 部隊）");
+                + $"（うち抜いた {St.Spawns.Count(n => n.Cleared && !n.IsReserve)} 部隊）");
+            // 第441期 §3: 敵の予備隊。
+            if (St.Reserve is { } rv)
+                lines.Add(rv.Cleared ? $"敵の予備隊（{rv.Def.Name}）を抜いた（{St.LaneName(rv.Def.Road)}）"
+                    : St.ReserveWaiting ? $"敵の予備隊（{rv.Def.Name}）は {Map11.PortalName} で待機のまま"
+                    : $"敵の予備隊（{rv.Def.Name}）は {St.LaneName(rv.Def.Road)} に残った");
             if (St.SecondBaseFalls > 0) lines.Add($"第2拠点を取り返された {St.SecondBaseFalls} 回");
         }
         // 第177期 §3 —— **開始時に自分で組んだ編成**（次の期の材料）。
         lines.Add("");
         lines.Add("開始時の編成:");
         if (Map11Session.OpeningLines.Count == 0) lines.Add("　（出撃していません）");
+        // 第441期 §2: 途中到着（届いた枚数）と、開始の引きが保証 3 条件を満たせなかった印。
+        if (St.Stage.Arrival.On && St.Draft)
+            lines.Add($"　届いた駒 {St.ArrivedCount} 枚（まだ届いていない {St.Arrivals.Count} 枚）"
+                + (St.OpeningOk ? "" : $"　※ 開始の 10 枚が保証 3 条件を満たせなかった（引き直し {St.OpeningRerolls} 回）"));
         foreach (string line in Map11Session.OpeningLines) lines.Add("　" + line);
         lines.Add("");
         lines.Add("戦闘の記録:");
@@ -2495,7 +2556,8 @@ public partial class Map11Main : Node3D
         // 第174期 §2-2: **画面上部に「作戦ターン N」**。時間を切った設定では出さない。
         // 第177期 §2: 拠点ありでは**勝ち条件が「制圧 ＋ 盤上の敵 0」**なので、
         // 「抜いた敵部隊 n / 4」だけでは何が残っているか読めない——湧いたぶんも出す。
-        int left = St.Nodes.Sum(r => r.Count(x => !x.Cleared)) + St.Spawns.Count(x => !x.Cleared);
+        int left = St.Nodes.Sum(r => r.Count(x => !x.Cleared)) + St.Spawns.Count(x => !x.Cleared)
+                   + (St.ReserveWaiting ? 1 : 0);
         _headline.Text = $"{St.Stage.Title} ・ "
             + (St.Time.On ? $"作戦ターン {St.Turn + 1} ・ " : "")
             + (St.Portal.On
@@ -2575,15 +2637,26 @@ public partial class Map11Main : Node3D
                     _roadList.AddChild(FoeButton(n, "＋ "));
         }
 
+        // 第441期 §3: 待機中の予備隊（どの経路にも属さないので、経路の一覧の後ろに 1 行）。
+        if (St.ReserveWaiting && St.Reserve is { } idle)
+        {
+            _roadList.AddChild(UiKit.Text(Map11.PortalName, 16, GoldColor));
+            _roadList.AddChild(FoeButton(idle, "予備隊 ・ 待機中 ・ "));
+        }
+
         // 盤の上の湧きの板（道をまたいで、湧いた順に並べる）。
         int spawn = 0;
         foreach (Map11State.Node n in St.Spawns)
         {
             Marker m = SpawnMarker(spawn++);
             Place(m, n, n.Def.Road, stackAtPortal: spawn);
+            // 第441期 §3: **予備隊は行き先の経路と「あと n 刻」**（先頭の「◀ あと」より優先）。
+            if (n.IsReserve && !n.Cleared)
+                m.SetNote($"予備隊 → {St.LaneName(n.Def.Road)} あと {St.ReserveEta ?? 0} 刻", UiKit.Hurt, true);
         }
         for (int i = spawn; i < _spawnMarkers.Count; i++) _spawnMarkers[i].Set("", EnemyColor, false);
         RefreshFoeArrows();
+        RefreshReserveRoute();
 
         RefreshPortal();
 
@@ -2688,6 +2761,32 @@ public partial class Map11Main : Node3D
     }
 
     /// <summary>
+    /// 第441期 §3 —— <b>予備隊の行き先の経路を、拠点まで</b>赤い矢印でつなぐ（第440期の敵の矢印は次の 1 マスだけ）。
+    /// 経路の辺ごとに 1 本（いまのマス → … → 経路の手前 → 拠点）。待機中・倒した・終わったら消す。
+    /// </summary>
+    private void RefreshReserveRoute()
+    {
+        var hops = new List<(Vector3 A, Vector3 B)>();
+        if (!St.Finished && St.Reserve is { Cleared: false } r && r.Def.Road >= 0 && r.Pos != St.Graph.Home)
+        {
+            int at = r.Pos;
+            for (int guard = 0; guard < 8 && at != St.Graph.Home; guard++)
+            {
+                int next = St.Graph.TowardHome(r.Def.Road, at);
+                hops.Add((at == St.Graph.Portal ? PortalPos : PosOf(at), PosOf(next)));
+                at = next;
+            }
+        }
+        while (_reserveArrows.Count < hops.Count) _reserveArrows.Add(new Arrow(this, EnemyColor, 1.3f, y: 1.2f));
+        for (int i = 0; i < _reserveArrows.Count; i++)
+        {
+            if (i >= hops.Count) { _reserveArrows[i].Hide(); continue; }
+            var (a, b) = hops[i];
+            _reserveArrows[i].Set(a.Lerp(b, 0.12f), a.Lerp(b, 0.88f), a.Lerp(b, 0.88f));
+        }
+    }
+
+    /// <summary>
     /// 経路の上下の向き（第440期）。<b>北 −1 ・ 南 +1</b>（1-1 は第439期の <c>road == 0 ? -1 : +1</c> と同じ）、
     /// 経路が 3 本なら中は 0。拠点・敵の拠点に重なった板をずらす向きにだけ使う。
     /// </summary>
@@ -2709,6 +2808,8 @@ public partial class Map11Main : Node3D
         string body = mine
             ? (wait > 0 ? $"ワープまで あと {wait}" : "ワープできる")
             : (wait > 0 ? $"湧くまで あと {wait}" : "いつでも湧く");
+        // 第441期 §3: 待機中の予備隊は敵の拠点の札に 1 行（出発すると湧いた部隊と同じ板に移る）。
+        if (St.ReserveWaiting) body += Nl + "予備隊 ・ 待機中";
         _portalMarker.Set(head + Nl + body, tint);
         // **湧く瞬間（＝残り 0）に脈打つ**／制圧したら止める。
         _portalMarker.SetNote(mine ? "" : wait <= 1 ? "◀ 湧く" : "", UiKit.Hurt, true);

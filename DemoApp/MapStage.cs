@@ -43,6 +43,10 @@ public sealed class MapStage
     public required PortalRule Portal { get; init; }
     /// <summary>遊ぶときの時間の規則。</summary>
     public required TimeRule Time { get; init; }
+    /// <summary>途中到着の規則（第441期 §2）。<b>既定は Off</b>（15 枚を最初に全部配る・第440期まで）。</summary>
+    public ArrivalRule Arrival { get; init; } = ArrivalRule.Off;
+    /// <summary>敵の予備隊の規則（第441期 §3）。<b>既定は Off</b>（第440期まで）。</summary>
+    public ReserveRule Reserve { get; init; } = ReserveRule.Off;
 
     public int LaneCount => Lanes.Length;
     public int TotalNodes => Lanes.Sum(l => l.Count);
@@ -70,11 +74,11 @@ public sealed class MapStage
         => new(lane, index, s.Name, s.Enemy, stageIndex);
 
     /// <summary>
-    /// 1-2（第440期 §2）。北と南は 1-1 のまま、<b>中は軽い列</b>（第一波 ／ 物見の兵 → 第二波・先遣）。
-    /// 湧きは <b>S = 4・R = 3</b>（第177期の S = 8 は制圧前に効いていなかった）で、北 → 中 → 南の順に回す。
-    /// 時間は 1-1 と同じ（K = 1・休む 25%・道中の回復 50%）。
+    /// 1-2 の第440期の姿（§2）。北と南は 1-1 のまま、<b>中は軽い列</b>（第一波 ／ 物見の兵 → 第二波・先遣）。
+    /// 湧きは <b>S = 4・R = 3</b>、北 → 中 → 南の順に回す。時間は 1-1 と同じ（K = 1・休む 25%・道中の回復 50%）。
+    /// <b>到着も予備隊も無い。</b>第441期からは回帰の基準（`--map12-smoke`）だけが使う——遊ぶ 1-2 は <see cref="Stage12"/>。
     /// </summary>
-    public static MapStage Stage12 { get; } = new()
+    public static MapStage Stage12H440 { get; } = new()
     {
         Id = "1-2",
         Title = "検証用マップ 1-2",
@@ -96,6 +100,50 @@ public sealed class MapStage
         Time = Map11.AdoptedTime,
     };
 
+    /// <summary>
+    /// 1-2（第441期・遊ぶ版）。盤と敵の 6 部隊は第440期のまま（<see cref="Stage12H440"/>）に、「待つと変わるもの」を 3 つ足した:
+    /// <b>途中到着</b>（開始 10 枚・2 刻ごとに 1〜2 枚）／ <b>敵の予備隊</b>（第三波 ／ 討伐隊本隊・最初の接敵の後に手薄な経路へ）／
+    /// <b>湧き S = 2</b>（R = 3 のまま・制圧の前に湧く）。
+    /// </summary>
+    public static MapStage Stage12 { get; } = new()
+    {
+        Id = Stage12H440.Id,
+        Title = Stage12H440.Title,
+        Board = Stage12H440.Board,
+        Lanes = Stage12H440.Lanes,
+        LaneNames = Stage12H440.LaneNames,
+        Spawn = Stage12H440.Spawn,
+        Portal = PortalRule.Every(2, warpEvery: 3),
+        Time = Stage12H440.Time,
+        Arrival = ArrivalRule.Of(start: 10, every: 2, minPer: 1, maxPer: 2),
+        Reserve = new ReserveRule(true, EnemyCatalog.Stages[2].Enemy, EnemyCatalog.Stages[2].Name, 2),
+    };
+
     /// <summary>選べるステージ（編成画面の選択の並び）。</summary>
     public static IReadOnlyList<MapStage> All { get; } = new[] { Stage11, Stage12 };
+}
+
+/// <summary>
+/// 途中到着の規則（第441期 §2）。<b><c>On</c> が偽なら 15 枚を最初に全部手札に載せる</b>（第440期まで）。
+/// 自分で組む通し（<c>draft</c>）でだけ効く——「既定の3隊で始める」は残りを全部その場で配り切る。
+/// </summary>
+/// <param name="Start">開始時に手札へ載る枚数（10）。どの 10 枚かは seed で引く（<see cref="MapDraw.Draw"/>）。</param>
+/// <param name="Every">届く間隔（刻）。<c>A</c>。</param>
+/// <param name="MinPer">1 回に届く枚数の下限。</param>
+/// <param name="MaxPer">同・上限（1〜2 を seed で引く）。</param>
+public readonly record struct ArrivalRule(bool On, int Start, int Every, int MinPer, int MaxPer)
+{
+    public static readonly ArrivalRule Off = new(false, 0, 0, 0, 0);
+    public static ArrivalRule Of(int start, int every, int minPer, int maxPer) => new(true, start, every, minPer, maxPer);
+}
+
+/// <summary>
+/// 敵の予備隊の規則（第441期 §3）。<b><c>On</c> が偽なら予備隊はいない</b>（第440期まで）。
+/// 中身は既存の波の写し。<b>出発の引き金</b>（プレイヤーの最初の接敵が決着した刻の終わり）と
+/// <b>行き先の選び方</b>（味方のいない経路 → 無ければ生存枚数の合計が最少の経路）は 1 つずつしか無いので、値として持たない
+/// （`Map11State.ReserveIfDue`）。敵の拠点が無い設定では置かない。
+/// </summary>
+public readonly record struct ReserveRule(bool On, Formation? Enemy, string Name, int StageIndex)
+{
+    public static readonly ReserveRule Off = new(false, null, "", 0);
 }

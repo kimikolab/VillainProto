@@ -400,7 +400,13 @@ public sealed class Map11State
 
     public sealed class Node
     {
-        public required Map11.RoadNode Def { get; init; }
+        /// <summary>
+        /// 区画の定義。<b>書き換えるのは敵の予備隊の出発（<see cref="ReserveIfDue"/>）の 1 箇所だけ</b>（第441期）——
+        /// 待機中の予備隊は経路を持たず（<c>Road = -1</c>）、出発した刻に行き先の経路が入る。
+        /// </summary>
+        public required Map11.RoadNode Def { get; set; }
+        /// <summary>敵の予備隊か（第441期 §3）。湧いた数（<see cref="SpawnCount"/>）にも、湧きを抜いた数にも入れない。</summary>
+        public bool IsReserve { get; init; }
         /// <summary>
         /// 敵の拠点から湧いた部隊か（第176期）。<b>最初からいる4部隊は偽。</b>
         /// 2 本抜き（<see cref="Squad.Cleared"/>）の分子に入れないためだけの印で、
@@ -510,6 +516,30 @@ public sealed class Map11State
     /// </summary>
     public List<UnitState> Bench { get; }
 
+    // ---------------- 途中到着（第441期 §2） ----------------
+
+    /// <summary>まだ届いていない駒（届く順）。<b>到着を切った通しでは空。</b></summary>
+    public List<UnitState> Arrivals { get; } = new();
+    /// <summary>1 回に届く枚数の並び（<see cref="Arrivals"/> の先頭から順に使う）。</summary>
+    private readonly Queue<int> _arrivalBatches = new();
+    /// <summary>直前の刻に届いた駒（画面のトーストが読む・届かなかった刻は空）。</summary>
+    public List<UnitState> LastArrived { get; } = new();
+    /// <summary>届いた総数（測るためだけの計数）。</summary>
+    public int ArrivedCount { get; private set; }
+    /// <summary>開始の手札の引きで保証 3 条件を満たせたか（満たせなければ結果画面に印）。到着を切った通しでは真。</summary>
+    public bool OpeningOk { get; } = true;
+    /// <summary>開始の手札の引き直しの回数。</summary>
+    public int OpeningRerolls { get; }
+
+    // ---------------- 敵の予備隊（第441期 §3） ----------------
+
+    /// <summary>敵の予備隊（いなければ null）。<b>出発するまでは敵の拠点のマスで待ち、どの経路にも属さない</b>（<c>Def.Road = -1</c>）。</summary>
+    public Node? Reserve { get; }
+    /// <summary>予備隊が出発した作戦ターン（-1 ＝ まだ）。</summary>
+    public int ReserveDepartTurn { get; private set; } = -1;
+    /// <summary>予備隊は敵の拠点で待機中か。</summary>
+    public bool ReserveWaiting => Reserve is { Cleared: false } r && r.Def.Road < 0;
+
     /// <summary>
     /// <b>自分で組む通しか</b>（第177期 §3）。真なら<b>3 隊は空席で始まり、15 枚が手札に載る</b>
     /// ——控えの 7 枚（<see cref="Map11.Reserves"/>）はこの期では配らない。
@@ -534,11 +564,23 @@ public sealed class Map11State
         // 最初の1回まで S ターン（第176期の `Turn % S == 0` と同じ立ち上がり）。
         _portalReady = Portal.On ? Math.Max(0, Portal.SpawnEvery) : 0;
         // 第177期 §3: 自分で組む通しでは、**3 隊の 15 枚をばらして手札にする**。
-        Bench = (draft
-                ? Map11.Squads.SelectMany(s => s.F.Occupied().Select(o => o.Def))
-                : Map11.Reserves.AsEnumerable())
-            .Select(d => BattleEngine.Materialize(Formation.Build(front1: d), BattleContext.PlayerTeam)[0])
-            .ToList();
+        static UnitState One(UnitDef d) => BattleEngine.Materialize(Formation.Build(front1: d), BattleContext.PlayerTeam)[0];
+        if (draft && Stage.Arrival.On)
+        {
+            // 第441期 §2: **開始は 10 枚**。残りは到着の列に並ぶ（どれも seed で引く・戦闘の seed とは別の乱数）。
+            MapDraw.Opening o = MapDraw.Draw(seed, Stage.Arrival.Start, Stage.Arrival.MinPer, Stage.Arrival.MaxPer);
+            Bench = o.Start.Select(One).ToList();
+            Arrivals.AddRange(o.Queue.Select(One));
+            foreach (int k in o.Batches) _arrivalBatches.Enqueue(k);
+            OpeningOk = o.Ok;
+            OpeningRerolls = o.Rerolls;
+        }
+        else
+            Bench = (draft
+                    ? Map11.Squads.SelectMany(s => s.F.Occupied().Select(o => o.Def))
+                    : Map11.Reserves.AsEnumerable())
+                .Select(One)
+                .ToList();
         Squads = Map11.Squads.Select((d, i) => new Squad
         {
             Def = d,
@@ -554,6 +596,16 @@ public sealed class Map11State
             int hp = n.Enemy.Occupied().Sum(o => o.Def.MaxHp);
             return new Node { Def = n, Graph = Graph, DefMaxHp = hp, HpNow = hp, Pos = Graph.FoeStarts[n.Road][n.Index] };
         }).ToArray()).ToArray();
+        // 第441期 §3: 敵の予備隊は**敵の拠点のマス**で始まる（敵の拠点が無い設定では置かない）。
+        if (Stage.Reserve is { On: true, Enemy: { } re } rr && Portal.On && Graph.HasPortal)
+        {
+            int hp = re.Occupied().Sum(o => o.Def.MaxHp);
+            Reserve = new Node
+            {
+                Def = new Map11.RoadNode(-1, Map11.RoadCells, rr.Name, re, rr.StageIndex),
+                Graph = Graph, FromPortal = true, IsReserve = true, DefMaxHp = hp, HpNow = hp, Pos = Graph.Portal,
+            };
+        }
     }
 
     public int ClearedCount => Nodes.Sum(r => r.Count(n => n.Cleared));
@@ -563,7 +615,10 @@ public sealed class Map11State
     public bool NoSquadsLeft => Squads.All(s => s.Units is null && (s.Lost || s.Deployed));
 
     /// <summary>盤上に敵部隊が1つでも残っているか（<b>湧いたものも数える</b>）。</summary>
-    public bool FoesLeft => Nodes.Any(r => r.Any(n => !n.Cleared)) || Spawns.Any(n => !n.Cleared);
+    public bool FoesLeft => Nodes.Any(r => r.Any(n => !n.Cleared)) || Spawns.Any(n => !n.Cleared) || ReserveWaiting;
+
+    /// <summary>経路の名前（<b>-1 は敵の拠点</b>——待機中の予備隊は経路を持たない・第441期）。</summary>
+    public string LaneName(int road) => road < 0 ? Map11.PortalName : Stage.LaneNames[road];
 
     public bool Finished => (Portal.On ? Won : AllCleared) || NoSquadsLeft || Battles >= BattleCapNow
                             || Fallen || (Time.On && Turn >= Map11.TurnCap);
@@ -607,7 +662,8 @@ public sealed class Map11State
         for (int road = 0; road < Stage.LaneCount; road++)
             foreach (Node n in FoesOn(road))
                 if (n.Pos == Graph.Portal) return n;
-        return null;
+        // 第441期 §3: 待機中の予備隊も敵の拠点にいる（制圧するには先に倒すか、出発させてから入る）。
+        return ReserveWaiting ? Reserve : null;
     }
 
     /// <summary>
@@ -858,6 +914,13 @@ public sealed class Map11State
     public bool UseDefaultSquads()
     {
         if (Squads.Any(s => s.Lost || !CanReform(s.Index))) return false;
+        // 第441期 §2: 「既定の3隊で始める」は**到着を使わない**——まだ届いていない駒もその場で配り切る。
+        if (Arrivals.Count > 0)
+        {
+            Bench.AddRange(Arrivals);
+            Arrivals.Clear();
+            _arrivalBatches.Clear();
+        }
         for (int i = 0; i < Squads.Length; i++)
             if (!ResetSquad(i)) return false;
         // 名前も既定へ戻す（「第1隊」のままだと、中身と看板がまた食い違う）。
@@ -1084,8 +1147,9 @@ public sealed class Map11State
         var list = new List<Encounter>();
         if (!Time.On) return list;
         Turn++;
+        LastArrived.Clear();
         if (Time.AdvanceEvery <= 0 || Turn % Time.AdvanceEvery != 0)
-        { LoseSecondBaseIfEmpty(); return SpawnIfDue(list); }
+        { LoseSecondBaseIfEmpty(); ArriveIfDue(); ReserveIfDue(); return SpawnIfDue(list); }
 
         // 1 部隊ぶんの前進。**第175期の式をそのまま関数にしただけ**で、中身は1文字も変えていない。
         // 戻り値が偽 ＝ 拠点が陥落したので、その場で打ち切る。
@@ -1123,8 +1187,64 @@ public sealed class Map11State
             }
         }
         LoseSecondBaseIfEmpty();
+        // 第441期: 到着と予備隊の出発は**湧きの隣**（1 刻の終わり・敵が動いた後）。並びは 到着 → 予備隊 → 湧き。
+        ArriveIfDue();
+        ReserveIfDue();
         return SpawnIfDue(list);
     }
+
+    /// <summary>
+    /// 途中到着（第441期 §2）。<b>A 刻ごと</b>に到着の列の先頭から 1〜2 枚を手札（<see cref="Bench"/>）へ足す。
+    /// 届いた駒は<b>拠点にいる隊にだけ組める</b>（第172期の組み直しの規則のまま）。陥落の後は届かない。
+    /// </summary>
+    private void ArriveIfDue()
+    {
+        if (Arrivals.Count == 0 || Fallen || Stage.Arrival.Every <= 0 || Turn % Stage.Arrival.Every != 0) return;
+        int k = Math.Min(Arrivals.Count, _arrivalBatches.Count > 0 ? _arrivalBatches.Dequeue() : 1);
+        for (int i = 0; i < k; i++)
+        {
+            UnitState u = Arrivals[0];
+            Arrivals.RemoveAt(0);
+            Bench.Add(u);
+            LastArrived.Add(u);
+        }
+        ArrivedCount += k;
+    }
+
+    /// <summary>
+    /// 敵の予備隊の出発（第441期 §3）。<b>引き金はプレイヤーの最初の接敵が決着したこと</b>（戦闘が 1 回でも済んだ刻の終わり）。
+    /// 行き先は<b>味方の隊が 1 つもいない経路</b>（複数あれば番号の小さい方）、無ければ<b>生存枚数の合計が最少の経路</b>（同じなら番号の小さい方）。
+    /// <b>決まったら変えない</b>。出発した予備隊は湧いた部隊の列の最後尾に入り、以後は同じ規則で進む（1 刻 1 マス・前が詰まれば待つ・拠点に着けば迎撃）。
+    /// </summary>
+    private void ReserveIfDue()
+    {
+        if (!ReserveWaiting || Battles <= 0 || Fallen) return;
+        Node r = Reserve!;
+        r.Def = r.Def with { Road = ReserveTarget() };
+        Spawns.Add(r);
+        ReserveDepartTurn = Turn;
+    }
+
+    /// <summary>予備隊がいま出発するなら向かう経路（<b>盤面は1ビットも動かさない</b>・画面と門も読む）。</summary>
+    public int ReserveTarget()
+    {
+        var alive = new int[Stage.LaneCount];
+        var any = new bool[Stage.LaneCount];
+        foreach (Squad s in Squads)
+            if (!s.Lost && s.Units is { } u && s.Road >= 0 && s.Road < Stage.LaneCount && u.Any(x => x.IsAlive))
+            {
+                any[s.Road] = true;
+                alive[s.Road] += u.Count(x => x.IsAlive);
+            }
+        for (int lane = 0; lane < Stage.LaneCount; lane++) if (!any[lane]) return lane;
+        int best = 0;
+        for (int lane = 1; lane < Stage.LaneCount; lane++) if (alive[lane] < alive[best]) best = lane;
+        return best;
+    }
+
+    /// <summary>予備隊が拠点に着くまでの見込みの刻（出発していなければ null・前が詰まれば延びる）。</summary>
+    public int? ReserveEta => Reserve is { Cleared: false } r && r.Def.Road >= 0 && r.Pos != Graph.Home
+        ? Graph.IndexOn(r.Def.Road, r.Pos) + 1 : null;
 
     /// <summary>
     /// 次の敵の前進で、<b>どの敵部隊がどのマスへ入るか</b>（第440期・画面の敵の矢印）。<b>盤面は1ビットも動かさない。</b>

@@ -168,7 +168,7 @@ public static class Map11Session
         int alive = sq.Units?.Count(u => u.IsAlive) ?? 0;
         double hpPct = sq.Units is null || maxHp == 0
             ? 0 : 100.0 * sq.Units.Where(u => u.IsAlive).Sum(u => u.Hp) / maxHp;
-        BattleLog.Add(new Line(Battles, squadName, State.Stage.LaneNames[road],
+        BattleLog.Add(new Line(Battles, squadName, State.LaneName(road),
                                $"{node.Def.Index + 1}. {node.Def.Name}",
                                playerWon, alive, hpPct, notes,
                                State.Turn, wasIntercept));

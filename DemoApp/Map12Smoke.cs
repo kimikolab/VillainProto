@@ -6,7 +6,7 @@ using System.Linq;
 // =====================================================================================
 // 1-2 の門（第440期 §5-2・`--map12-smoke`）
 //
-// **画面を1つも作らない。** `MapStage.Stage12` の盤と `Map11State` / `Map11Orders` だけを回す（seed 0 から）。
+// **画面を1つも作らない。** `MapStage.Stage12H440`（第440期の 1-2・第441期から固定）の盤と `Map11State` / `Map11Orders` だけを回す（seed 0 から）。
 // **ここには Godot の型を1つも使わない**（`MapGraphSmoke` と同じ扱い）。
 //
 //   (a) 盤 10 マス（拠点 1 ＋ 9）＋ 敵の拠点・経路 3 本・横の辺 2 本が両方向
@@ -30,7 +30,7 @@ public static class Map12Smoke
     {
         bool ok = true;
         void Req(bool c, string what) { write($"{(c ? "○" : "×")} {what}"); ok &= c; }
-        MapStage stage = MapStage.Stage12;
+        MapStage stage = MapStage.Stage12H440;   // 第441期: 第440期の姿で固定（回帰の基準）
         string Names(MapGraph g, IEnumerable<int> path) => string.Join(" → ", path.Select(id => g[id].Name));
 
         // ---- (a) 盤 ----

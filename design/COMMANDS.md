@@ -1810,6 +1810,12 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
         # (b) N1 → S1 が N1 → C1 → S1 ／ (c) 中の先頭が 2 刻で拠点に着き迎撃 ／ (d) 貪欲 100 seed で落ちない（数字は報告のみ）／ (e) 待ち伏せ
         # ＋ 敵の矢印の予定（`PlannedFoeSteps`）と実際の前進の照合。合否は `MAP12_SMOKE_COMPLETE ok=`
         # `--map-stage=1-2`（Map11Main の起動に付けられる）で編成画面を通らずに 1-2 を選ぶ（絵を撮る口）
+        # **第441期から `--map12-smoke` は第440期の 1-2（`MapStage.Stage12H440`）で回す**（回帰の基準）
+    Godot_console.exe --path DemoApp --headless -- --map12-change-smoke
+        # **第441期 §5-3**: 1-2（`Stage12`・途中到着 ＋ 敵の予備隊 ＋ 湧き S=2）の門。画面なし・約 30 秒。(a) 開始 10 枚が保証 3 条件・到着の列 5 枚 ／
+        # (b) 2 刻ごとに届き 5 枚で止まる ／ (c) 最初の接敵の後に予備隊が味方のいない経路へ出て 1 刻 1 マス ／ (d) 拠点に着いて迎撃 ／ (e) 湧きが制圧より先 ／
+        # (f) 貪欲 2 つ × 100 seed で落ちない ＋ 3 つの変更の分解（数字は報告のみ）。合否は `MAP12_CHANGE_SMOKE_COMPLETE ok=`
+        # 絵: `res://Map11Main.tscn -- --map-stage=1-2 --map11-capture=<png>,reserve`（予備隊が出発した直後）
     Godot_console.exe --path DemoApp --headless -- --map11-phase176
         # **第176期 Phase 0**: Q0-1〜Q0-5（`PortalOn = false` が第175期の 18 量と一致するか ／
         # 重なりと同点の割り方 ／ 湧いた部隊を満タンで作る口 ／ 方針の手順 ／ 走行時間）。約 1 秒
