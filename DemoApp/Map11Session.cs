@@ -161,12 +161,15 @@ public static class Map11Session
         int road = node.Def.Road;
         // 第175期 §2: **迎撃で勝っても道中の回復は乗らない**（規則は `Map11State` が持つ）。
         int delivered = State.Deliveries.Count;
+        int golds = State.GoldLog.Count;
         State.Resolve(squad, node, playerWon, wasIntercept);
         Battles = State.Battles;
         if (wasIntercept && TurnRunning) _interceptFought = true;
 
         var notes = result is null ? new List<string>() : Map11Info.RuleNotes(result);
-        int maxHp = sq.Def.F.Occupied().Sum(o => o.Def.MaxHp);
+        // 第445期 §0-3: 分母は**いまのロスターの最大 HP**（画面の `SquadHpPercent` と同じ・第174期）。
+        // 第444期までは隊の定義（カド隊など）の 5 枚で割っていたので、自分で組んだ隊では 100% を超えることがあった。表示だけ。
+        int maxHp = sq.Units is { } roster ? roster.Sum(u => u.MaxHp) : sq.Def.F.Occupied().Sum(o => o.Def.MaxHp);
         int alive = sq.Units?.Count(u => u.IsAlive) ?? 0;
         double hpPct = sq.Units is null || maxHp == 0
             ? 0 : 100.0 * sq.Units.Where(u => u.IsAlive).Sum(u => u.Hp) / maxHp;
@@ -186,6 +189,15 @@ public static class Map11Session
                   + "もう一度当てても同じになる——引き返すか、別の隊を当てること";
         // 第444期 §0-2: この戦闘で届いた見返り（抜いた・中間拠点を取った）を同じトーストに添える。
         if (DeliveryText(State.Deliveries.Skip(delivered)) is { } got) LastOutcome += " ／ " + got;
+        // 第445期 §0-1: この戦闘で動いた金（「＋6（第三波を抜いた）」）。
+        if (GoldText(State.GoldLog.Skip(golds)) is { } gold) LastOutcome += " ／ " + gold;
+    }
+
+    /// <summary>金の出入りの 1 文（第445期）。「＋6（第三波を抜いた）・＋8（北の砦を取った）」。無ければ null。</summary>
+    public static string? GoldText(IEnumerable<Map11State.GoldEvent> events)
+    {
+        var parts = events.Select(e => $"{(e.Amount >= 0 ? "＋" : "−")}{Math.Abs(e.Amount)}（{e.Reason}）").ToList();
+        return parts.Count == 0 ? null : string.Join("・", parts);
     }
 
     /// <summary>

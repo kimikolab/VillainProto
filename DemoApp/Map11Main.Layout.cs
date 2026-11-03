@@ -362,7 +362,8 @@ public partial class Map11Main
             string info = $"{s.Label}　{alive}枚　HP {hp}";
             string order = s.Lost ? "失われた" : OrderText(s.Index);
             Button b = _squadButtons[s.Index];
-            b.Text = _reform ? info + Nl + (St.CanReform(s.Index) ? $"空席 {FormationRules.PlayableSlots.Length - SeatsOf(s.Index).Count}" : "道の上・編成不可")
+            b.Text = _reform ? info + Nl + (St.CanReform(s.Index) ? $"空席 {FormationRules.PlayableSlots.Length - SeatsOf(s.Index).Count}"
+                    : St.IsLocked(s.Index) ? $"枠を開けると使える（金 {St.Stage.Gold.Slot}）" : "道の上・編成不可")
                 : info + "　" + order;
             b.TooltipText = info + "　" + order;
         }
@@ -386,11 +387,26 @@ public partial class Map11Main
 
     private void RefreshMapPicks()
     {
+        RefreshPortalCaption();
         for (int i = 0; i < _squadMarkers.Count; i++) AddMapPick(_squadMarkers[i], null, i);
         int index = 0;
         foreach (var road in St.Nodes)
             foreach (var foe in road) AddMapPick(_nodeMarkers[index++], foe, -1);
         for (int i = 0; i < St.Spawns.Count; i++) AddMapPick(_spawnMarkers[i], St.Spawns[i], -1);
+        if (St.ReserveWaiting && St.Reserve is { } reserve)
+        {
+            if (_waitingReserveBadge is null)
+            {
+                _waitingReserveBadge = new MapUnitBadge();
+                _waitingReserveBadge.Pressed += () =>
+                {
+                    if (St.Reserve is not { } current) return;
+                    ShowFoe(current); _showFoes = true; _showSquadDetail = _showHistory = false; Refresh();
+                };
+                _mapPickLayer.AddChild(_waitingReserveBadge);
+            }
+            SetBadge(_waitingReserveBadge, reserve);
+        }
         PositionMapPicks();
     }
 
@@ -400,12 +416,13 @@ public partial class Map11Main
         if (existing >= 0)
         {
             _mapPicks[existing] = (_mapPicks[existing].Button, marker, foe, squad);
+            if (foe is null) SetBadge((MapUnitBadge)_mapPicks[existing].Button, St.Squads[squad]);
+            else SetBadge((MapUnitBadge)_mapPicks[existing].Button, foe);
             return;
         }
-        var b = new Button { Flat = true, FocusMode = Control.FocusModeEnum.None, Size = new Vector2(130, 48) };
-        b.TooltipText = foe?.Def.Name ?? St.Squads[squad].Label;
-        b.AddThemeStyleboxOverride("normal", new StyleBoxEmpty());
-        b.AddThemeStyleboxOverride("hover", UiKit.Box(new Color(1, 1, 1, 0.08f), foe is null ? PlayerColor : EnemyColor));
+        var b = new MapUnitBadge();
+        if (foe is null) SetBadge(b, St.Squads[squad]); else SetBadge(b, foe);
+        marker.UseBadge();
         b.Pressed += () =>
         {
             var current = _mapPicks.First(p => p.Marker == marker);
@@ -420,8 +437,21 @@ public partial class Map11Main
     {
         foreach (var pick in _mapPicks)
         {
-            pick.Button.Visible = !_reform && (pick.Foe is { } foe ? !foe.Cleared : !St.Squads[pick.Squad].Lost);
-            pick.Button.Position = _camera.UnprojectPosition(pick.Marker.Root.Position) + new Vector2(-65, -62);
+            pick.Button.Visible = !_reform && pick.Marker.Shown && (pick.Foe is { } foe ? !foe.Cleared
+                : !St.Squads[pick.Squad].Lost && !St.IsLocked(pick.Squad) && ((MapUnitBadge)pick.Button).Count > 0);
+            pick.Button.Position = _camera.UnprojectPosition(pick.Marker.Root.Position) + new Vector2(-41, -64);
+            ((MapUnitBadge)pick.Button).SetNotice(pick.Marker.Note, pick.Marker.NoteColor);
+        }
+        if (_waitingReserveBadge is not null)
+        {
+            _waitingReserveBadge.Visible = !_reform && St.ReserveWaiting;
+            _waitingReserveBadge.Position = _camera.UnprojectPosition(PortalPos) + new Vector2(70, -32);
+        }
+        if (_portalInfo is not null)
+        {
+            Vector2 at = _camera.UnprojectPosition(PortalPos);
+            _portalInfo.Position = new Vector2(Math.Min(at.X + 90, GetViewport().GetVisibleRect().Size.X - _portalInfo.Size.X - 20),
+                Math.Max(188, at.Y - 260));
         }
     }
 }

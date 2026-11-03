@@ -61,6 +61,12 @@ public sealed class MapStage
     /// 偽なら上限は第443期までと同じ「時間切れ」（結果は撤退）。勇者そのものは段C で入れる。
     /// </summary>
     public bool HeroAtCap { get; init; }
+    /// <summary>
+    /// 敵の拠点を制圧したら勝ち（第445期 §0-2・残った敵部隊は退く）。<b>偽なら第176期からの「制圧 ＋ 盤上の敵部隊が 0」</b>。
+    /// </summary>
+    public bool WinOnCapture { get; init; }
+    /// <summary>ゴールドの規則（第445期 §0-1・<b>既定は Off</b>）。</summary>
+    public GoldRule Gold { get; init; } = GoldRule.Off;
 
     public int LaneCount => Lanes.Length;
     public int TotalNodes => Lanes.Sum(l => l.Count);
@@ -179,12 +185,13 @@ public sealed class MapStage
     };
 
     /// <summary>
-    /// 1-2（第444期・遊ぶ版）。<b>攻めに出る理由を 3 つ同時に</b>（第443期の勝ち筋が籠城だった）:
+    /// 1-2 の第444期の姿。<b>攻めに出る理由を 3 つ同時に</b>（第443期の勝ち筋が籠城だった）:
     /// <b>中間拠点</b>（各経路の 3 マス目・取ると組み直す・届いた駒を受け取る・休む・<see cref="MapGraph.Build12F444"/>）／
     /// <b>増援は見返り</b>（時間では届かない・敵部隊を 1 つ抜くと 1 枚・中間拠点を取ると 2 枚）／
     /// <b>刻の上限 14 ＝ 勇者の予告</b>（上限で敗北）。隊 3・S=3・予備隊は第443期のまま。
+    /// 第445期からは回帰の基準だけが使う——遊ぶ 1-2 は <see cref="Stage12"/>。
     /// </summary>
-    public static MapStage Stage12 { get; } = new()
+    public static MapStage Stage12H444 { get; } = new()
     {
         Id = Stage12H443.Id,
         Title = Stage12H443.Title,
@@ -199,6 +206,31 @@ public sealed class MapStage
         SquadCap = 3,
         TurnCap = 14,
         HeroAtCap = true,
+    };
+
+    /// <summary>
+    /// 1-2（第445期・遊ぶ版）。盤（中間拠点つき）・敵・湧き・予備隊は第444期のまま（<see cref="Stage12H444"/>）に:
+    /// <b>駒の供給はゴールド</b>（抜くと +6・湧いた部隊は +3・中間拠点を取ると +8・呼ぶ 10・3 隊目の枠 12・売る +3・開始 0・<see cref="GoldRule"/>）／
+    /// 見返りで駒が届くのは切った（開始の 10 枚の保証つきの引きだけ残す・<see cref="ArrivalRule.OpeningOnly"/>）／
+    /// <b>隊は 2 つで始まり、枠を買うと 3</b> ／ <b>敵の拠点を制圧したら勝ち</b>（<see cref="WinOnCapture"/>）／ 勇者の予告は <b>12</b>。
+    /// </summary>
+    public static MapStage Stage12 { get; } = new()
+    {
+        Id = Stage12H444.Id,
+        Title = Stage12H444.Title,
+        Board = Stage12H444.Board,
+        Lanes = Stage12H444.Lanes,
+        LaneNames = Stage12H444.LaneNames,
+        Spawn = Stage12H444.Spawn,
+        Portal = Stage12H444.Portal,
+        Time = Stage12H444.Time,
+        Arrival = ArrivalRule.OpeningOnly(start: 10),
+        Reserve = Stage12H444.Reserve,
+        SquadCap = 3,
+        TurnCap = 12,
+        HeroAtCap = true,
+        WinOnCapture = true,
+        Gold = GoldRule.Of(),
     };
 
     /// <summary>選べるステージ（編成画面の選択の並び）。</summary>
@@ -222,6 +254,35 @@ public readonly record struct ArrivalRule(bool On, int Start, int Every, int Min
     public static ArrivalRule Of(int start, int every, int minPer, int maxPer) => new(true, start, every, minPer, maxPer);
     /// <summary>第444期: <b>時間では届かない</b>（<c>Every = 0</c>）。見返りでだけ届く。届く順は seed で決めた列のまま。</summary>
     public static ArrivalRule Rewards(int start, int onKill, int onOutpost) => new(true, start, 0, 1, 1, onKill, onOutpost);
+    /// <summary>
+    /// 第445期: <b>開始の手札（保証つきの引き）だけ</b>。残りは届かない（列は捨てる——ゴールドで呼ぶ候補に戻る）。
+    /// 指示書は `ArrivalRule.Off` だが、Off は開始の 10 枚の引きも切る（手札が 15 枚になる）ので、引きだけ残す値にした。
+    /// </summary>
+    public static ArrivalRule OpeningOnly(int start) => new(true, start, 0, 1, 1, 0, 0);
+    /// <summary>この規則で駒が後から届くか（時間・見返りのどちらか）。偽なら開始の引きの残りは捨てる。</summary>
+    public bool Delivers => Every > 0 || OnKill > 0 || OnOutpost > 0;
+}
+
+/// <summary>
+/// ゴールドの規則（第445期 §0-1・<b>小さく作る</b>——店・値段差・リロール・持ち越しは無い）。<b><c>On</c> が偽なら金は無い</b>（第444期まで）。
+/// </summary>
+/// <param name="Start">開始の金。</param>
+/// <param name="Kill">敵部隊を 1 つ抜く（最初からいる部隊・予備隊）。</param>
+/// <param name="SpawnKill">湧いた部隊を抜く。</param>
+/// <param name="Outpost">中間拠点を取る。</param>
+/// <param name="Recruit">呼ぶ（候補から 1 枚）。値段は全部同じ。</param>
+/// <param name="Slot">3 隊目の枠を開ける。</param>
+/// <param name="Sell">控えの駒を手放す（盤上の隊からは売れない）。</param>
+/// <param name="Offers">候補の枚数。</param>
+/// <param name="StartSquads">最初に使える隊の数（枠を買うと 1 つ増える・上限は <see cref="MapStage.SquadCap"/>）。</param>
+public readonly record struct GoldRule(bool On, int Start, int Kill, int SpawnKill, int Outpost, int Recruit, int Slot, int Sell,
+                                       int Offers, int StartSquads)
+{
+    public static readonly GoldRule Off = new(false, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    /// <summary>第445期の仮の値（ポンが遊んで決める）: 開始 0・抜く +6・湧き +3・中間拠点 +8・呼ぶ 10・枠 12・売る +3・候補 3・隊 2 で始まる。</summary>
+    public static GoldRule Of(int start = 0, int kill = 6, int spawnKill = 3, int outpost = 8, int recruit = 10, int slot = 12,
+                              int sell = 3, int offers = 3, int startSquads = 2)
+        => new(true, start, kill, spawnKill, outpost, recruit, slot, sell, offers, startSquads);
 }
 
 /// <summary>

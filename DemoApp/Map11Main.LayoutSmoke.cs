@@ -45,6 +45,33 @@ public partial class Map11Main
             Input.ParseInputEvent(new InputEventKey { Keycode = Key.Space, Pressed = false });
             await Frames();
             Check("formation-space", St.Turn == 0 && !Map11Clock.Running);
+            Check("hand-faces", _guideBenchButtons.All(b => b.GetChildren().OfType<UnitFaceIcon>().Count() == 1));
+            await Shot("00-hand");
+            if (directory is not null)
+            {
+                // 実際の描画部品で全立ち絵の顔の切り出しを一覧にする。
+                var sheet = Panel();
+                _uiRoot.AddChild(sheet);
+                Bounds(sheet, 20, 92, -20, -20, anchorRight: 1, anchorBottom: 1);
+                var grid = new GridContainer { Columns = 10 };
+                grid.AddThemeConstantOverride("h_separation", 10);
+                grid.AddThemeConstantOverride("v_separation", 8);
+                sheet.AddChild(grid);
+                foreach (string file in DirAccess.GetFilesAt("res://assets/portraits").Where(f => f.EndsWith(".png")).OrderBy(f => f))
+                {
+                    string id = System.IO.Path.GetFileNameWithoutExtension(file);
+                    UnitDef def = UnitCatalog.Everyone.FirstOrDefault(u => u.Id == id)
+                        ?? new UnitDef { Id = id, Name = id, MaxHp = 1, Attack = 1, Speed = 1, Traits = Array.Empty<TraitId>() };
+                    var cell = new VBoxContainer { CustomMinimumSize = new Vector2(126, 100) };
+                    var face = new UnitFaceIcon { CustomMinimumSize = new Vector2(68, 68), SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter };
+                    face.SetUnit(def); cell.AddChild(face);
+                    var label = UiKit.Text(id, 13); label.HorizontalAlignment = HorizontalAlignment.Center;
+                    cell.AddChild(label); grid.AddChild(cell);
+                }
+                await Shot("00-faces");
+                sheet.QueueFree();
+                await Frames();
+            }
             for (int squad = 0; squad < Math.Min(2, St.Squads.Length); squad++)
             {
                 await Click(_squadButtons[squad]);
@@ -56,6 +83,37 @@ public partial class Map11Main
                     Check($"seat-pick:{squad}:{slot}", !Holding && SeatsOf(squad).ContainsKey(slot));
                 }
             }
+            // 実クリックで前1を入れ替え、地図用の代表もその場で差し替わる。
+            await Click(_squadButtons[0]);
+            string first = Representative(St.Squads[0])!.Id;
+            string replacement = St.Squads[0].Units!.Single(u => u.Slot == 1).Def.Id;
+            await Click(_squadDiagram.CardAt(0)!);
+            await Click(_squadDiagram.CardAt(1)!);
+            MapUnitBadge badge = (MapUnitBadge)_mapPicks.Single(p => p.Squad == 0).Button;
+            Check("face-reform", badge.Face.UnitId == replacement && badge.Count == 5);
+            await Click(_squadDiagram.CardAt(0)!);
+            await Click(_squadDiagram.CardAt(1)!);
+            Check("face-restored", badge.Face.UnitId == first);
+            // 戦死後の表示 fixture。人数・HPの帯・代表の読み取りだけを検査し、元へ戻す。
+            UnitState front = St.Squads[0].Units!.Single(u => u.Slot == 0);
+            int savedHp = front.Hp;
+            front.Hp = 0;
+            Refresh();
+            Check("face-casualty", badge.Face.UnitId == replacement && badge.Count == 4 && badge.HpPercent < 100);
+            front.Hp = savedHp;
+            bool removed = St.SwapWithBench(0, 0, St.Bench.Count);
+            Refresh();
+            Check("face-empty-front", removed && badge.Face.UnitId == replacement && badge.Count == 4);
+            St.SwapWithBench(0, 0, St.Bench.Count - 1);
+            Refresh();
+            var fallback = new UnitFaceIcon();
+            {
+                fallback.SetUnit(new UnitDef { Id = "map_face_missing_fixture", Name = "仮の駒", MaxHp = 1, Attack = 1, Speed = 1, Traits = Array.Empty<TraitId>() });
+                Check("face-fallback", fallback.FaceTexture is null && fallback.Mark == "仮");
+            }
+            fallback.Free();
+            Check("face-cache", badge.Face.FaceTexture is not null && ReferenceEquals(badge.Face.FaceTexture, UnitFaceIcon.TextureFor(first)));
+            await Frames();
             await Shot("01-formation");
             string units = Snapshot();
             await Click(_reformButton);
@@ -63,6 +121,13 @@ public partial class Map11Main
                 && !_squadDrawer.Visible && !_foeDrawer.Visible && !_historyDrawer.Visible);
             Check("squad-lines", _squadButtons.All(b => !b.Text.Contains('\n') && VisibleRect(b)));
             Check("switch-read-only", Snapshot() == units && St.Turn == 0);
+            Check("locked-hidden", _mapPicks.Where(p => p.Squad >= 0 && St.IsLocked(p.Squad)).All(p => !p.Button.Visible));
+            Check("enemy-wave", _mapPicks.Where(p => p.Foe is not null).All(p => ((MapUnitBadge)p.Button).Face.FaceTexture is null
+                && ((MapUnitBadge)p.Button).Face.Mark == WaveMark(p.Foe!.Def.Name)));
+            Check("portal-caption", !St.Portal.On || (_portalCaption!.Text.Contains(Map11.PortalName) && VisibleRect(_portalInfo!)
+                && (St.HeroTurnsLeft is null || _portalCaption.Text.Contains("勇者パーティー"))));
+            Check("gold-caption", !St.Stage.Gold.On || _headline.Text.Contains($"金 {St.Gold}"));
+            Check("outposts-kept", _outpostMarks.Count == St.Graph.Cells.Count(c => c.Kind == MapGraph.Kind.Outpost));
             await Shot("02-operation");
             await Click(_squadButtons[0]);
             Check("selected-detail", _squadDrawer.Visible && _reformButton.IsVisibleInTree() && !_reformButton.Disabled);
@@ -100,6 +165,16 @@ public partial class Map11Main
             Check("history", _historyDrawer.Visible && !_foeDrawer.Visible);
             await Click(_historyToggle);
 
+            // 接敵の本物の表示経路。戦闘の起動は行わず、入力の遮りと収まりを確認。
+            Check("encounter-prepared", Map11Session.BeginBattle(0, foePick.Foe));
+            ShowEncounter();
+            await Frames();
+            Check("encounter-faces", _encounterFaces.GetChildren().OfType<MapUnitBadge>().Count() == 2
+                && _encounterFaces.GetChildren().OfType<MapUnitBadge>().First().Face.UnitId == first);
+            Check("encounter-fight-visible", VisibleRect(Descendants(_encounterOverlay).OfType<Button>().Single(b => b.Text == "戦う")));
+            await Shot("05b-encounter");
+            _encounterOverlay.Visible = false;
+
             // 長い結果の fixture。本文が画面より長くても再プレイのボタンは動かない。
             for (int i = 0; i < 12; i++)
                 Map11Session.BattleLog.Add(new Map11Session.Line(i + 1, St.Squads[i % St.Squads.Length].Label,
@@ -111,6 +186,7 @@ public partial class Map11Main
             Rect2 buttonRect = _replayButton.GetGlobalRect();
             Check("result-scroll", _resultScroll.GetVScrollBar().MaxValue > _resultScroll.GetVScrollBar().Page);
             Check("result-button", VisibleRect(_replayButton));
+            Check("result-faces", Descendants(_resultFaces).OfType<MapUnitBadge>().First().Face.UnitId == first);
             await Shot("06-result");
             _resultScroll.ScrollVertical = 100000;
             await Frames();

@@ -540,6 +540,25 @@ public sealed class Map11State
     /// <summary>中間拠点を取った回数 ／ 取り返された回数（測るためだけの計数）。</summary>
     public int OutpostCaptures { get; private set; }
     public int OutpostLosses { get; private set; }
+
+    // ---------------- ゴールド（第445期 §0-1） ----------------
+
+    /// <summary>いまの金。<b>金の無い盤では 0 のまま</b>。</summary>
+    public int Gold { get; private set; }
+    /// <summary>金の出入り（増えた・使った順・画面のトーストと結果画面が読む）。</summary>
+    public sealed record GoldEvent(int Amount, string Reason);
+    public List<GoldEvent> GoldLog { get; } = new();
+    /// <summary>呼べる候補（<see cref="GoldRule.Offers"/> 枚・<b>窓を閉じても変わらない</b>・買うとその位置に列の次の 1 枚）。</summary>
+    public List<UnitDef> Offers { get; } = new();
+    /// <summary>候補の列（現役の駒を seed で並べたもの・戦闘の seed とは別の乱数）。盤上・手札にいる駒は飛ばす。</summary>
+    private readonly Queue<UnitDef> _offerQueue = new();
+    /// <summary>使える隊の数（第445期: 2 で始まり、枠を買うと 3）。<b>金の無い盤では隊の数そのもの</b>。</summary>
+    public int SquadCap { get; private set; }
+    /// <summary>まだ枠を買っていない隊か（組み直せず・出せない）。</summary>
+    public bool IsLocked(int squadIndex) => squadIndex >= SquadCap;
+    /// <summary>呼んだ枚数 ／ 売った枚数（測るためだけの計数）。</summary>
+    public int Recruits { get; private set; }
+    public int Sold { get; private set; }
     /// <summary>開始の手札の引きで保証 3 条件を満たせたか（満たせなければ結果画面に印）。到着を切った通しでは真。</summary>
     public bool OpeningOk { get; } = true;
     /// <summary>開始の手札の引き直しの回数。</summary>
@@ -579,7 +598,6 @@ public sealed class Map11State
         // 最初の1回まで S ターン（第176期の `Turn % S == 0` と同じ立ち上がり）。
         _portalReady = Portal.On ? Math.Max(0, Portal.SpawnEvery) : 0;
         // 第177期 §3: 自分で組む通しでは、**3 隊の 15 枚をばらして手札にする**。
-        static UnitState One(UnitDef d) => BattleEngine.Materialize(Formation.Build(front1: d), BattleContext.PlayerTeam)[0];
         if (draft && Stage.Arrival.On)
         {
             // 第441期 §2: **開始は 10 枚**。残りは到着の列に並ぶ（どれも seed で引く・戦闘の seed とは別の乱数）。
@@ -589,6 +607,8 @@ public sealed class Map11State
             foreach (int k in o.Batches) _arrivalBatches.Enqueue(k);
             OpeningOk = o.Ok;
             OpeningRerolls = o.Rerolls;
+            // 第445期: 後から届かない規則（開始の引きだけ）なら、残りは捨てる——ゴールドで呼ぶ候補に戻る。
+            if (!Stage.Arrival.Delivers) { Arrivals.Clear(); _arrivalBatches.Clear(); }
         }
         else
             Bench = (draft
@@ -607,6 +627,8 @@ public sealed class Map11State
             // **空席で始める**（`null` ＝ 「定義のまま」なので、空のリストを置く）。
             Units = draft ? new List<UnitState>() : null,
         }).ToArray();
+        SquadCap = Stage.Gold.On ? Math.Min(Squads.Length, Stage.Gold.StartSquads) : Squads.Length;
+        Gold = Stage.Gold.On ? Stage.Gold.Start : 0;
         Nodes = Stage.Lanes.Select(r => r.Select(n =>
         {
             int hp = n.Enemy.Occupied().Sum(o => o.Def.MaxHp);
@@ -622,7 +644,93 @@ public sealed class Map11State
                 Graph = Graph, FromPortal = true, IsReserve = true, DefMaxHp = hp, HpNow = hp, Pos = Graph.Portal,
             };
         }
+        // 第445期 §0-1: 呼ぶ候補の列（現役 52 枚を seed で並べる）と最初の候補。
+        if (Stage.Gold.On)
+        {
+            var rng = new Random(unchecked(seed * 7919 + 445));
+            UnitDef[] pool = UnitCatalog.All.ToArray();
+            for (int i = pool.Length - 1; i > 0; i--) { int j = rng.Next(i + 1); (pool[i], pool[j]) = (pool[j], pool[i]); }
+            foreach (UnitDef d in pool) _offerQueue.Enqueue(d);
+            for (int k = 0; k < Stage.Gold.Offers; k++) if (NextOffer() is { } d) Offers.Add(d);
+        }
     }
+
+    /// <summary>その駒（の定義）がいま盤上（どの隊にでも・倒れていても）か手札にいるか。<b>同じキャラは盤上に 1 体まで</b>（第445期）。</summary>
+    public bool OnBoardOrHand(UnitDef d)
+        => Bench.Any(u => u.Def.Id == d.Id)
+           || Squads.Any(q => q.Units is { } u ? u.Any(x => x.Def.Id == d.Id) : q.Def.F.Occupied().Any(o => o.Def.Id == d.Id));
+
+    /// <summary>候補の列から、盤上・手札・候補にいない次の 1 枚（尽きたら null）。飛ばした駒は列に戻さない。</summary>
+    private UnitDef? NextOffer()
+    {
+        while (_offerQueue.Count > 0)
+        {
+            UnitDef d = _offerQueue.Dequeue();
+            if (!OnBoardOrHand(d) && Offers.All(o => o.Id != d.Id)) return d;
+        }
+        return null;
+    }
+
+    /// <summary>金を動かせるか（呼ぶ・枠・売る）。<b>拠点・取った中間拠点・第2拠点にいる隊がいて、組み直しの窓が開けるとき</b>（迎撃の合間も含む）。</summary>
+    public bool CanTrade => Stage.Gold.On && !Finished && Squads.Any(q => CanReform(q.Index));
+
+    /// <summary>呼べるか（候補 <paramref name="offer"/> 番目）。</summary>
+    public bool CanRecruit(int offer) => CanTrade && offer >= 0 && offer < Offers.Count && Gold >= Stage.Gold.Recruit;
+
+    /// <summary>呼ぶ（第445期 §0-1）。候補の駒を手札に入れ、その位置に列の次の 1 枚を補充する。</summary>
+    public bool Recruit(int offer)
+    {
+        if (!CanRecruit(offer)) return false;
+        UnitDef d = Offers[offer];
+        Spend(Stage.Gold.Recruit, $"{d.Name}を呼んだ");
+        Bench.Add(One(d));
+        Recruits++;
+        Offers.RemoveAt(offer);
+        if (NextOffer() is { } next) Offers.Insert(offer, next);
+        return true;
+    }
+
+    /// <summary>3 隊目の枠を買えるか。</summary>
+    public bool CanBuySlot => CanTrade && SquadCap < Squads.Length && Gold >= Stage.Gold.Slot;
+
+    /// <summary>隊の枠を 1 つ開ける（第445期 §0-1・2 → 3）。</summary>
+    public bool BuySlot()
+    {
+        if (!CanBuySlot) return false;
+        Spend(Stage.Gold.Slot, $"{SquadCap + 1}隊目の枠を開けた");
+        SquadCap++;
+        return true;
+    }
+
+    /// <summary>売れるか（手札の <paramref name="benchIndex"/> 番目・生きている駒だけ）。</summary>
+    public bool CanSell(int benchIndex) => CanTrade && benchIndex >= 0 && benchIndex < Bench.Count && Bench[benchIndex].IsAlive;
+
+    /// <summary>控えの駒を手放す（第445期 §0-1・盤上の隊からは売れない）。手放した駒は列には戻らない。</summary>
+    public bool Sell(int benchIndex)
+    {
+        if (!CanSell(benchIndex)) return false;
+        UnitState u = Bench[benchIndex];
+        Bench.RemoveAt(benchIndex);
+        Earn(Stage.Gold.Sell, $"{u.Def.Name}を手放した");
+        Sold++;
+        return true;
+    }
+
+    private void Earn(int amount, string reason)
+    {
+        if (!Stage.Gold.On || amount <= 0) return;
+        Gold += amount;
+        GoldLog.Add(new GoldEvent(amount, reason));
+    }
+
+    private void Spend(int amount, string reason)
+    {
+        Gold -= amount;
+        GoldLog.Add(new GoldEvent(-amount, reason));
+    }
+
+    /// <summary>1 枚を盤に立てられる形にする（開始の手札・呼んだ駒）。</summary>
+    private static UnitState One(UnitDef d) => BattleEngine.Materialize(Formation.Build(front1: d), BattleContext.PlayerTeam)[0];
 
     public int ClearedCount => Nodes.Sum(r => r.Count(n => n.Cleared));
     public bool AllCleared => ClearedCount >= Stage.TotalNodes;
@@ -652,7 +760,10 @@ public sealed class Map11State
     /// 勝ち。<b>拠点ありでは「制圧した ＋ 盤上の敵部隊が 0」</b>（第176期 §1-4）
     /// ——道を抜くだけでは終わらない。拠点なしでは第175期のまま。
     /// </summary>
-    public bool Won => Portal.On ? (Captured && !FoesLeft && !Fallen) : (AllCleared && !Fallen);
+    public bool Won => Portal.On ? (Captured && (Stage.WinOnCapture || !FoesLeft) && !Fallen) : (AllCleared && !Fallen);
+
+    /// <summary>盤に残っている敵部隊の数（第445期: 制圧で勝ったとき「退いた敵部隊」として結果に出す）。</summary>
+    public int FoesRemaining => Nodes.Sum(r => r.Count(n => !n.Cleared)) + Spawns.Count(n => !n.Cleared) + (ReserveWaiting ? 1 : 0);
 
     /// <summary>道 <paramref name="road"/> で次に当たる区画。道が抜け切っていれば null。</summary>
     public Node? NextNode(int road)
@@ -766,6 +877,7 @@ public sealed class Map11State
                 HeldOutposts.Add(cell);
                 OutpostCaptures++;
                 Deliver(Stage.Arrival.OnOutpost, Graph[cell].Name, $"{Graph[cell].Name}を取った");
+                Earn(Stage.Gold.Outpost, $"{Graph[cell].Name}を取った");
             }
             else if (foe && mine < 0)
             {
@@ -873,14 +985,14 @@ public sealed class Map11State
     public bool CanReform(int squadIndex)
     {
         Squad s = Squads[squadIndex];
-        return !s.Lost && (s.Road < 0 || AtForwardBase(squadIndex));
+        return !s.Lost && !IsLocked(squadIndex) && (s.Road < 0 || AtForwardBase(squadIndex));
     }
 
     /// <summary>出せるか。<b>0 枚の隊は出せない</b>（指示書 §1-1）。</summary>
     public bool CanSend(int squadIndex)
     {
         Squad s = Squads[squadIndex];
-        if (s.Lost) return false;
+        if (s.Lost || IsLocked(squadIndex)) return false;
         return s.Units is not { } u || u.Any(x => x.IsAlive);
     }
 
@@ -1001,7 +1113,8 @@ public sealed class Map11State
     /// </summary>
     public bool UseDefaultSquads()
     {
-        if (Squads.Any(s => s.Lost || !CanReform(s.Index))) return false;
+        // 第445期: まだ枠を買っていない隊は数えない（配る先にもならない）。
+        if (Squads.Any(s => !IsLocked(s.Index) && (s.Lost || !CanReform(s.Index)))) return false;
         // 第442期 §0-2: **到着のある盤では、拠点にある駒（開始の 10 枚）だけを配る**——まだ届いていない駒は列に残す
         // （第441期は列を配り切っていたので、既定で始めると途中到着が 1 度も起きなかった）。
         if (Draft && Stage.Arrival.On) return DealDefaultFromHome();
@@ -1031,7 +1144,7 @@ public sealed class Map11State
             if (!(Draft && Stage.Arrival.On)) return Squads.Length;
             int home = Bench.Count + Squads.Where(q => CanReform(q.Index)).Sum(q => q.Units?.Count ?? 0);
             int seats = FormationRules.PlayableSlots.Length;
-            return Math.Min(Squads.Length, (home + seats - 1) / seats);
+            return Math.Min(SquadCap, (home + seats - 1) / seats);
         }
     }
 
@@ -1069,7 +1182,9 @@ public sealed class Map11State
             SortBySlot(Roster(sq.Index));
             bool asDefined = sq.Def.F.Occupied().All(o => sq.Units!.Any(x => x.Def.Id == o.Def.Id && x.Slot == o.Slot));
             sq.Label = asDefined ? sq.Def.Name : $"第{sq.Index + 1}隊";
-            sq.Role = asDefined ? sq.Def.Role : sq.Units!.Count == 0 ? "届いた駒で組む隊" : "既定の組み方";
+            sq.Role = asDefined ? sq.Def.Role
+                    : IsLocked(sq.Index) ? "枠を開けると使える隊"
+                    : sq.Units!.Count == 0 ? (Stage.Gold.On ? "呼んだ駒で組む隊" : "届いた駒で組む隊") : "既定の組み方";
         }
         return true;
     }
@@ -1143,6 +1258,9 @@ public sealed class Map11State
         UpdateOutposts();
         if (node.Cleared && Stage.Arrival.OnKill > 0)
             Deliver(Stage.Arrival.OnKill, intercept ? "拠点" : DeliveryPlace(squadIndex), $"{node.Def.Name}を抜いた");
+        // 第445期: 抜いた見返りの金（湧いた部隊は安い）。
+        if (node.Cleared)
+            Earn(node.FromPortal && !node.IsReserve ? Stage.Gold.SpawnKill : Stage.Gold.Kill, $"{node.Def.Name}を抜いた");
     }
 
     // =============================================================================
@@ -1296,6 +1414,8 @@ public sealed class Map11State
     {
         var list = new List<Encounter>();
         if (!Time.On) return list;
+        // 第445期: 制圧で勝った盤では、勝った後に敵は動かない（残った敵部隊は退く）。
+        if (Stage.WinOnCapture && Won) return list;
         Turn++;
         LastArrived.Clear();
         if (Time.AdvanceEvery <= 0 || Turn % Time.AdvanceEvery != 0)

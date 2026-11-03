@@ -1828,6 +1828,10 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
         # (p) 刻 14 で勇者が着いて負け・予告が減る ／ (q) 籠城の踏破 0% の予測（外れても門は落とさない）＋ 4 方針 × 3 盤 × 100 seed（報告のみ）。約 25 秒
         # 絵: `res://Map11Main.tscn -- --map-stage=1-2 --map-seed=0 --map11-capture=<png>,outpost`（中間拠点を取った直後・`--headless` を外す・
         # `--map-seed=N` は絵の口と一緒のときだけ読む）
+        # **第445期 §1-2**: (m)〜(q) と第444期の表は第444期の 1-2（`Stage12H444`）で回す。遊ぶ 1-2（`Stage12`・ゴールド・制圧で勝ち・勇者の予告 12）に
+        # (r) 抜くと金・呼ぶと減り手札が増え候補が補充 ／ (s) 候補に盤上・手札の駒が出ない ／ (t) 3 隊目の枠 ／ (u) 制圧の刻に勝ち ／
+        # (v) 記録の HP が 100% を超えない ＋ 4 方針 × 3 盤 × 100 seed（器具は候補の先頭を呼ぶ・報告のみ）。約 40 秒
+        # 絵: `res://Map11Main.tscn -- --map-stage=1-2 --map-seed=0 --map11-capture=<png>,shop`（組み直しの窓に呼ぶ候補 3 枚・`--headless` を外す）
     Godot_console.exe --path DemoApp --headless -- --map11-phase176
         # **第176期 Phase 0**: Q0-1〜Q0-5（`PortalOn = false` が第175期の 18 量と一致するか ／
         # 重なりと同点の割り方 ／ 湧いた部隊を満タンで作る口 ／ 方針の手順 ／ 走行時間）。約 1 秒
@@ -1885,6 +1889,8 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     Godot_console.exe --path DemoApp --resolution 1440x900 res://Map11Main.tscn -- --map-layout-smoke [--map-stage=1-2] [--map-layout-capture=<ディレクトリ>]
         # 編成／作戦の切替。実際のマウス入力で手札→5席→出撃→行き先→時計→組み直し→再プレイを確認。
         # 編成・HP・命令の保持、道の上では編成不可、敵の詳細、長い結果のスクロールと固定ボタンも検査。
+        # 1-aの顔の札：前1の交換・空席・戦死後の代表、枚数・HP帯、画像なしの頭文字、敵の波印、接敵・結果での共用も確認。
+        # 保存先の 00-faces.png は既存立ち絵の切り出し一覧、05b-encounter.png は接敵ダイアログ。
         # `MAP_LAYOUT_SMOKE_COMPLETE stage=... ok=True` が門。1-1 / 1-2 と --resolution 1280x720 で確認する。
     Godot_console.exe --path DemoApp --headless res://Map11Main.tscn -- --map-guide-smoke [--map-stage=1-2]
         # 作戦マップの操作案内。手札→席→余り→出撃→隊→行き先→▶・確認から組み直す・出来事・停止。

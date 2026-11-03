@@ -316,6 +316,7 @@ public partial class Map11Main : Node3D
         // 第1隊を北へ出して最初の接敵を**頭なしで**決着させ（戦闘シーンへは行かない）、次の刻の終わりに予備隊が出る。
         else if (parts.Length > 1 && parts[1] == "reserve")
         {
+            _reform = false;
             for (int sq = 0; sq < 2; sq++)
                 foreach (int seat in FormationRules.PlayableSlots)
                     if (St.Bench.Count > 0) St.SwapWithBench(sq, seat, 0);
@@ -333,6 +334,29 @@ public partial class Map11Main : Node3D
             }
             Refresh();
             if (StopReason(before) is { } why) ShowToast(why, GoldColor, 30f);
+        }
+        // 第445期 §3: **組み直しの窓に呼ぶ候補 3 枚が出ている所**（`--map-stage=1-2` と使う）。既定の組み方で 2 隊を組み、第1隊を北へ出して
+        // 戦闘は**頭なしで**決着させ（戦闘シーンへは行かない）、金が呼ぶ ＋ 枠のぶん貯まったら、拠点の隊の組み直しを開く。
+        else if (parts.Length > 1 && parts[1] == "shop")
+        {
+            St.UseDefaultSquads();
+            Map11Session.TakeOpening();
+            Dest north = Dest.Deep(St.Graph, 0);
+            Map11Session.SetDestination(0, north);
+            int want = St.Stage.Gold.Recruit + St.Stage.Gold.Slot;
+            for (int guard = 0; guard < 8 && St.Gold < want && !St.Finished; guard++)
+            {
+                if (Map11Orders.Apply(St, 0, north, Map11Orders.Plan(St, 0, north)) is { } met) CaptureFight(0, met, false);
+                if (St.Gold >= want || St.Finished) break;
+                foreach (Map11State.Encounter e in St.AdvanceFoes())
+                    if (e.Intercept) { if (St.NextInterceptor(e.Node) is var j && j >= 0) CaptureFight(j, e.Node, true); St.CloseIntercept(e.Node); }
+                    else CaptureFight(e.Squad, e.Node, false);
+            }
+            _selected = Enumerable.Range(0, St.Squads.Length).FirstOrDefault(St.CanReform, 0);
+            _reform = St.CanReform(_selected);
+            ClearHold();
+            Refresh();
+            GD.Print($"MAP11_CAPTURE_SHOP seed={Map11Session.Seed} gold={St.Gold} turn={St.Turn} reform={_reform} offers={St.Offers.Count} lost={St.Squads.Count(q => q.Lost)}");
         }
         // 第444期 §3: **中間拠点を取った直後**の絵（`--map-stage=1-2` と使う）。既定の組み方で 2 隊を組み、第1隊を北の砦へ出し、
         // 第2隊は拠点で番をする。戦闘は**頭なしで**決着させ（戦闘シーンへは行かない）、砦を取った刻で止めて止まる理由をトーストに出す。
@@ -1003,6 +1027,14 @@ public partial class Map11Main : Node3D
     /// <summary>盤上の札（板1枚 ＋ 文字）。<b>数字を出すためだけの物</b>。</summary>
     private sealed class Marker
     {
+        private bool _unitBadge;
+        private bool _mapCaption;
+        public bool Shown { get; private set; }
+        public string Caption => _label.Text;
+        public string Note => Shown ? _note.Text : "";
+        public Color NoteColor => _note.Modulate;
+        public void UseBadge() { _unitBadge = true; _disc.Visible = _label.Visible = _note.Visible = false; }
+        public void UseMapCaption() { _mapCaption = true; _label.Visible = _note.Visible = false; }
         private readonly MeshInstance3D _disc;
         private readonly Label3D _label;
         /// <summary>第175期 §1-3 —— 盤の上の「あと n ／ →」。<b>札の下に大きめで出す。</b></summary>
@@ -1045,8 +1077,9 @@ public partial class Map11Main : Node3D
             _color = color;
             _material.AlbedoColor = color;
             _material.Emission = color * (_glow ? 0.85f : 0.25f);
-            _disc.Visible = visible;
-            _label.Visible = visible;
+            Shown = visible;
+            _disc.Visible = visible && !_unitBadge;
+            _label.Visible = visible && !_unitBadge && !_mapCaption;
             if (!visible) { _note.Visible = false; _pulse = false; _glow = false; }
         }
 
@@ -1068,8 +1101,8 @@ public partial class Map11Main : Node3D
         {
             _note.Text = text;
             _note.Modulate = color;
-            _note.Visible = text.Length > 0 && _disc.Visible;
-            _pulse = pulse && _note.Visible;
+            _note.Visible = text.Length > 0 && Shown && !_unitBadge && !_mapCaption;
+            _pulse = pulse && text.Length > 0 && Shown;
         }
 
         public void MoveTo(Vector3 position)
@@ -1290,6 +1323,9 @@ public partial class Map11Main : Node3D
         _encounterOverlay = Modal(root, 360, 200, out VBoxContainer col, "ENCOUNTER", EnemyColor);
         _encounterTitle = UiKit.Text("", 24, Colors.White);
         col.AddChild(_encounterTitle);
+        _encounterFaces = new HBoxContainer();
+        _encounterFaces.AddThemeConstantOverride("separation", 18);
+        col.AddChild(_encounterFaces);
         // 第171期 §1-3 ——「決める瞬間の隣」に、**隊の勝ち筋**と**敵のルール**を上下に並べる。
         // **同じ語は同じ色**（ターン外の行動／回復／1発）。**良し悪しの語は足さない**（案B のまま）。
         _encounterBody = new RichTextLabel
@@ -1398,7 +1434,11 @@ public partial class Map11Main : Node3D
         col.AddChild(_resultTitle);
         _resultBody = UiKit.Text("", 14, Color.FromHtml("#ccd5cb"));
         _resultBody.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        ScrollContainer bodyScroll = Scroll(_resultBody, 0);
+        var resultContent = new VBoxContainer();
+        _resultFaces = new VBoxContainer();
+        resultContent.AddChild(_resultFaces);
+        resultContent.AddChild(_resultBody);
+        ScrollContainer bodyScroll = Scroll(resultContent, 0);
         _resultScroll = bodyScroll;
         bodyScroll.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
         col.AddChild(bodyScroll);
@@ -1517,7 +1557,9 @@ public partial class Map11Main : Node3D
         if (St.ArrivedCount > before.Delivered && St.LastArrived.Count > 0)
             now.Add($"{string.Join("・", St.LastArrived.Select(u => u.Def.Name))} が拠点に着いた（控え {St.Bench.Count} 枚）");
         // 第444期: 中間拠点を取った・取り返された瞬間と、見返りの駒が届いた瞬間。
-        if (St.OutpostCaptures > before.OutpostCaptures) now.Add("中間拠点を取った（組み直し・休む・届いた駒を受け取るができる）");
+        if (St.OutpostCaptures > before.OutpostCaptures)
+            now.Add("中間拠点を取った（組み直し・休む・届いた駒を受け取るができる）"
+                    + (St.Stage.Gold.On ? $"（金 ＋{St.Stage.Gold.Outpost}）" : ""));
         if (St.OutpostLosses > before.OutpostLosses) now.Add("中間拠点を取り返された");
         if (Map11Session.DeliveryText(St.Deliveries.Skip(before.Rewards)) is { } got) now.Add(got);
         if (St.HeroTurnsLeft is 3 or 1 && St.Turn > 0 && !St.Finished) now.Add($"勇者パーティーが あと {St.HeroTurnsLeft} 刻で現れる");
@@ -1767,6 +1809,7 @@ public partial class Map11Main : Node3D
         int alive = node.Units?.Count(u => u.IsAlive) ?? node.Def.Enemy.Occupied().Count();
         bool athome = node.Cell < 0;
         _encounterTitle.Text = (athome ? "迎撃  " : "") + $"{s.Label} × {node.Def.Name}";
+        RefreshEncounterFaces(s, node);
         // 第177期 §3: 自分で組んだ隊には既定の「勝ち筋」が当てはまらないので、そう書く。
         string plan = PlanOf(s).Replace("**", "");
         if (plan.Length == 0) plan = "自分で組んだ隊です（この5枚がどう噛み合うかは、左の図の線で読めます）。";
@@ -1886,7 +1929,9 @@ public partial class Map11Main : Node3D
     {
         if (!_reform && !St.CanReform(_selected))
         {
-            ShowToast($"{St.Squads[_selected].Label} は拠点にいません（道の上の隊は組み直せません）",
+            ShowToast(St.IsLocked(_selected)
+                ? $"{St.Squads[_selected].Label} はまだ使えません（組み直しの窓で枠を開ける: 金 {St.Stage.Gold.Slot}）"
+                : $"{St.Squads[_selected].Label} は拠点にいません（道の上の隊は組み直せません）",
                       EnemyColor, 3.0f);
             return;
         }
@@ -2032,7 +2077,7 @@ public partial class Map11Main : Node3D
             int index = i;
             var b = new Button
             {
-                Text = $"{u.Def.Name}   HP {u.Hp}/{u.MaxHp} ・ 攻{u.Def.Attack} ・ 速{u.Def.Speed}",
+                Text = $"{u.Def.Name}\nHP {u.Hp}/{u.MaxHp} ・ 攻{u.Def.Attack} ・ 速{u.Def.Speed}",
                 Alignment = HorizontalAlignment.Left,
                 FocusMode = Control.FocusModeEnum.None,
                 CustomMinimumSize = new Vector2(0, 42),
@@ -2042,6 +2087,7 @@ public partial class Map11Main : Node3D
             b.AddThemeFontSizeOverride("font_size", 14);
             b.Pressed += () => OnBenchPressed(index);
             _benchList.AddChild(b);
+            AddHandFace(b, u.Def);
             _guideBenchButtons.Add(b);
         }
         int tail = St.Bench.Count;
@@ -2056,6 +2102,58 @@ public partial class Map11Main : Node3D
         down.AddThemeFontSizeOverride("font_size", 12);
         down.Pressed += () => OnBenchPressed(tail);
         _benchList.AddChild(down);
+        RefreshShop();
+    }
+
+    /// <summary>
+    /// 第445期 §0-1 —— 金の使い道（呼ぶ・枠・売る）。<b>組み直しの窓の手札の下</b>に並べる。
+    /// 押せるかどうかは `Map11State` の `CanRecruit` ／ `CanBuySlot` ／ `CanSell` だけを読む（画面は判定を持たない）。
+    /// </summary>
+    private void RefreshShop()
+    {
+        if (!St.Stage.Gold.On) return;
+        GoldRule g = St.Stage.Gold;
+        _benchList.AddChild(UiKit.Text($"金 {St.Gold}", 18, GoldColor));
+        for (int k = 0; k < St.Offers.Count; k++)
+        {
+            UnitDef d = St.Offers[k];
+            int index = k;
+            Button b = UiKit.ActionButton($"呼ぶ（{g.Recruit}）  {d.Name}   HP {d.MaxHp} ・ 攻{d.Attack} ・ 速{d.Speed}", GoldColor);
+            b.Alignment = HorizontalAlignment.Left;
+            b.Disabled = !_reform || !St.CanRecruit(index);
+            b.Pressed += () =>
+            {
+                if (!St.Recruit(index)) { ShowToast("いまは呼べません", EnemyColor, 3.0f); return; }
+                ShowToast($"{d.Name} を呼んだ（金 −{g.Recruit}・残り {St.Gold}）", GoldColor, 3.0f);
+                ClearHold();
+                Refresh();
+            };
+            _benchList.AddChild(b);
+        }
+        if (St.SquadCap < St.Squads.Length)
+        {
+            Button slot = UiKit.ActionButton($"{St.SquadCap + 1}隊目の枠を開ける（{g.Slot}）", UiKit.Muted);
+            slot.Disabled = !_reform || !St.CanBuySlot;
+            slot.Pressed += () =>
+            {
+                if (!St.BuySlot()) return;
+                ShowToast($"{St.Squads[St.SquadCap - 1].Label} が使えるようになった（金 −{g.Slot}・残り {St.Gold}）", GoldColor, 3.0f);
+                Refresh();
+            };
+            _benchList.AddChild(slot);
+        }
+        string held = _holdBench >= 0 && _holdBench < St.Bench.Count ? St.Bench[_holdBench].Def.Name : "控えの駒を選んで";
+        Button sell = UiKit.ActionButton($"売る（＋{g.Sell}）  {held}", UiKit.Muted);
+        sell.Disabled = !_reform || !St.CanSell(_holdBench);
+        sell.Pressed += () =>
+        {
+            string name = St.Bench[_holdBench].Def.Name;
+            if (!St.Sell(_holdBench)) return;
+            ShowToast($"{name} を手放した（金 ＋{g.Sell}・残り {St.Gold}）", GoldColor, 3.0f);
+            ClearHold();
+            Refresh();
+        };
+        _benchList.AddChild(sell);
     }
 
     /// <summary>組み直しの案内（いま何ができるか・何をつまんでいるか）。</summary>
@@ -2070,7 +2168,7 @@ public partial class Map11Main : Node3D
         // 第442期 §0-2・§0-3: 隊の数はステージが持つ。到着のある盤では拠点にある駒だけを配る（まだ届いていない駒は配らない）。
         // 第443期: 配る隊の数は `Map11State.DefaultSquadsFilled`（隊が 3 つでも 10 枚なら 2 隊・3 隊目は届いた駒で組む）。
         _defaultButton.Text = St.Stage.Arrival.On ? $"既定の組み方で{St.DefaultSquadsFilled}隊を組む" : $"既定の{St.Squads.Length}隊で始める";
-        _defaultButton.Disabled = St.Squads.Any(x => x.Lost || !St.CanReform(x.Index));
+        _defaultButton.Disabled = St.Squads.Any(x => !St.IsLocked(x.Index) && (x.Lost || !St.CanReform(x.Index)));
         _benchTitle.Text = St.Draft && Map11Session.Drafting
             ? $"手札（残り {St.Bench.Count} 枚）"
             : "控えの駒（拠点で交代できます）";
@@ -2431,13 +2529,18 @@ public partial class Map11Main : Node3D
             if (St.Deliveries.Count > 0)
                 lines.Add("見返りの増援: " + string.Join(" ／ ", St.Deliveries.Select(d => $"{d.Unit.Def.Name}（{d.Reason}・{d.Place}）")));
             if (St.HeroArrived) lines.Add($"作戦ターン {St.Stage.TurnCap} で勇者パーティーが着いた");
+            // 第445期: 制圧で勝った盤は、掃除をしなかった敵部隊を「退いた」と出す。金の出入り。
+            if (St.Stage.WinOnCapture && St.Won) lines.Add($"退いた敵部隊 {St.FoesRemaining}（制圧で勝ち・残りは退いた）");
+            if (St.Stage.Gold.On)
+                lines.Add($"金: 稼いだ {St.GoldLog.Where(e => e.Amount > 0).Sum(e => e.Amount)} ・ 使った {-St.GoldLog.Where(e => e.Amount < 0).Sum(e => e.Amount)}"
+                          + $" ・ 余り {St.Gold} ・ 呼んだ {St.Recruits} 枚 ・ 売った {St.Sold} 枚 ・ 使えた隊 {St.SquadCap}");
         }
         // 第177期 §3 —— **開始時に自分で組んだ編成**（次の期の材料）。
         lines.Add("");
         lines.Add("開始時の編成:");
         if (Map11Session.OpeningLines.Count == 0) lines.Add("　（出撃していません）");
         // 第441期 §2: 途中到着（届いた枚数）と、開始の引きが保証 3 条件を満たせなかった印。
-        if (St.Stage.Arrival.On && St.Draft)
+        if (St.Stage.Arrival.On && St.Stage.Arrival.Delivers && St.Draft)
             lines.Add($"　届いた駒 {St.ArrivedCount} 枚（まだ届いていない {St.Arrivals.Count} 枚）"
                 + (St.OpeningOk ? "" : $"　※ 開始の 10 枚が保証 3 条件を満たせなかった（引き直し {St.OpeningRerolls} 回）"));
         foreach (string line in Map11Session.OpeningLines) lines.Add("　" + line);
@@ -2452,6 +2555,7 @@ public partial class Map11Main : Node3D
         lines.Add("");
         lines.Add($"seed {Map11Session.Seed}（この数字を控えれば同じ通しを再現できます）");
         _resultBody.Text = string.Join("\n", lines);
+        RefreshResultFaces();
         _resultScroll.ScrollVertical = 0;
         _resultOverlay.Visible = true;
     }
@@ -2493,7 +2597,9 @@ public partial class Map11Main : Node3D
             + (St.Portal.On
                 ? $"{(St.Captured ? "制圧済み" : Map11.PortalName + "は敵のもの")} ・ 残る敵部隊 {left}"
                 : $"抜いた敵部隊 {St.ClearedCount} / {St.Stage.TotalNodes}")
-            + $" ・ 戦闘 {St.Battles} 回 ・ seed {Map11Session.Seed}";
+            + $" ・ 戦闘 {St.Battles} 回 ・ seed {Map11Session.Seed}"
+            // 第445期 §0-1: 金（金のある盤だけ）。
+            + (St.Stage.Gold.On ? $" ・ 金 {St.Gold}" : "");
 
         for (int i = 0; i < St.Squads.Length; i++)
         {
