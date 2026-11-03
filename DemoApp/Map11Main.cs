@@ -827,7 +827,7 @@ public partial class Map11Main : Node3D
         for (int road = 0; road < St.Stage.LaneCount; road++)
             for (int i = 0; i < St.Stage.Lanes[road].Count; i++)
             {
-                var m = new Marker(this, PosOf(St.Graph.FoeStarts[road][i]), EnemyColor, 2.0f);
+                var m = new Marker(this, PosOf(St.Nodes[road][i].Pos), EnemyColor, 2.0f);   // 第449期: 動かない守備隊は敵の拠点に立つ（盤の出発点の数を超える）
                 _nodeMarkers.Add(m);
             }
 

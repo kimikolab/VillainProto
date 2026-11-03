@@ -108,7 +108,9 @@ public static class Map11
     /// 道の 1 区画。<c>Index</c> は 0 が手前（先に当たる側）。
     /// <c>StageIndex</c> は<b>背景の選択にしか使わない</b>（先遣も元の波と同じ背景で描く）。
     /// </summary>
-    public sealed record RoadNode(int Road, int Index, string Name, Formation Enemy, int StageIndex);
+    /// <para><c>Stationary</c>（第449期 §0-3）は<b>動かない区画</b>——敵の拠点のマスに立ち、前進しない（「先頭だけが前進する」は飛ばして次を先頭と見る）。
+    /// 制圧するには抜く必要がある（<see cref="Map11State.PortalFoe"/> に数える）。湧きの列は塞がない。</para>
+    public sealed record RoadNode(int Road, int Index, string Name, Formation Enemy, int StageIndex, bool Stationary = false);
 
     /// <summary>道ごとの敵部隊。<b>手前を抜かないと奥に当たれない。</b></summary>
     public static IReadOnlyList<RoadNode>[] Roads { get; } =
@@ -658,7 +660,9 @@ public sealed class Map11State
         Nodes = Stage.Lanes.Select(r => r.Select(n =>
         {
             int hp = n.Enemy.Occupied().Sum(o => o.Def.MaxHp);
-            return new Node { Def = n, Graph = Graph, DefMaxHp = hp, HpNow = hp, Pos = Graph.FoeStarts[n.Road][n.Index] };
+            // 第449期: 動かない区画（守備隊）は敵の拠点のマスに立つ。
+            int pos = n.Stationary && Graph.HasPortal ? Graph.Portal : Graph.FoeStarts[n.Road][n.Index];
+            return new Node { Def = n, Graph = Graph, DefMaxHp = hp, HpNow = hp, Pos = pos };
         }).ToArray()).ToArray();
         // 第441期 §3: 敵の予備隊は**敵の拠点のマス**で始まる（敵の拠点が無い設定では置かない）。
         if (Stage.Reserve is { On: true, Enemy: { } re } rr && Portal.On && Graph.HasPortal)
@@ -677,7 +681,7 @@ public sealed class Map11State
             UnitDef[] pool = UnitCatalog.All.ToArray();
             for (int i = pool.Length - 1; i > 0; i--) { int j = rng.Next(i + 1); (pool[i], pool[j]) = (pool[j], pool[i]); }
             foreach (UnitDef d in pool) _offerQueue.Enqueue(d);
-            for (int k = 0; k < Stage.Gold.Offers; k++) if (NextOffer() is { } d) Offers.Add(d);
+            for (int k = 0; k < Stage.Gold.Offers; k++) if ((k == 0 ? FirstOffer() : NextOffer()) is { } d) Offers.Add(d);
         }
     }
 
@@ -714,6 +718,47 @@ public sealed class Map11State
         return true;
     }
 
+    /// <summary><c>Presets.Compare</c> の行ごとの駒の Id（第449期 §0-5・噛む駒の判定）。</summary>
+    private static readonly HashSet<string>[] CompareRows
+        = Presets.Compare.Select(r => r.F.Occupied().Select(o => o.Def.Id).ToHashSet()).ToArray();
+
+    /// <summary>
+    /// いま盤上・手札にいる（生きている・<b>組んでいない既定の隊は定義のまま</b>）駒と、<c>Presets.Compare</c> の同じ行に載る駒の Id（手持ち自身は除く）。
+    /// </summary>
+    public HashSet<string> MatchIds()
+    {
+        var own = new HashSet<string>(Bench.Where(u => u.IsAlive).Select(u => u.Def.Id));
+        foreach (Squad q in Squads)
+        {
+            if (q.Units is { } u) own.UnionWith(u.Where(x => x.IsAlive).Select(x => x.Def.Id));
+            else if (!q.Lost) own.UnionWith(q.Def.F.Occupied().Select(o => o.Def.Id));
+        }
+        var mates = new HashSet<string>();
+        foreach (HashSet<string> row in CompareRows)
+            if (row.Overlaps(own)) mates.UnionWith(row);
+        mates.ExceptWith(own);
+        return mates;
+    }
+
+    /// <summary>
+    /// 候補の 1 枚目（第449期 §0-5）。<see cref="MapStage.MatchOffer"/> の盤では、列のうち<b>手持ちと噛む駒（<see cref="MatchIds"/>）の最初の 1 枚</b>を抜き出す
+    /// （ほかの駒の列の並びは変えない）。無ければ・偽の盤ではふつうの引き（<see cref="NextOffer"/>）。乱数は引かない。
+    /// </summary>
+    private UnitDef? FirstOffer()
+    {
+        if (!Stage.MatchOffer) return NextOffer();
+        HashSet<string> mates = MatchIds();
+        int n = _offerQueue.Count;
+        UnitDef? hit = null;
+        for (int i = 0; i < n; i++)
+        {
+            UnitDef d = _offerQueue.Dequeue();
+            if (hit is null && mates.Contains(d.Id) && !OnBoardOrHand(d) && Offers.All(o => o.Id != d.Id)) { hit = d; continue; }
+            _offerQueue.Enqueue(d);
+        }
+        return hit ?? NextOffer();
+    }
+
     /// <summary>候補の列から、盤上・手札・候補にいない次の 1 枚（尽きたら null）。飛ばした駒は列に戻さない。</summary>
     private UnitDef? NextOffer()
     {
@@ -742,7 +787,7 @@ public sealed class Map11State
         Bench.Add(One(d));
         Recruits++;
         Offers.RemoveAt(offer);
-        if (NextOffer() is { } next) Offers.Insert(offer, next);
+        if ((offer == 0 ? FirstOffer() : NextOffer()) is { } next) Offers.Insert(offer, next);
         return true;
     }
 
@@ -779,7 +824,7 @@ public sealed class Map11State
         Spend(Stage.Gold.Reroll, "候補を引き直した");
         var old = Offers.ToList();
         Offers.Clear();
-        for (int k = 0; k < Stage.Gold.Offers; k++) if (NextOffer() is { } d) Offers.Add(d);
+        for (int k = 0; k < Stage.Gold.Offers; k++) if ((k == 0 ? FirstOffer() : NextOffer()) is { } d) Offers.Add(d);
         foreach (UnitDef d in old) _offerQueue.Enqueue(d);
         // 列の残りが候補の枚数に満たなかったときは、戻した駒から足りないぶんを補う。
         while (Offers.Count < Stage.Gold.Offers && NextOffer() is { } more) Offers.Add(more);
@@ -857,9 +902,10 @@ public sealed class Map11State
     public int FoesRemaining => Nodes.Sum(r => r.Count(n => !n.Cleared)) + Spawns.Count(n => !n.Cleared) + (ReserveWaiting ? 1 : 0);
 
     /// <summary>道 <paramref name="road"/> で次に当たる区画。道が抜け切っていれば null。</summary>
+    /// 第449期: <b>動かない区画（<see cref="Map11.RoadNode.Stationary"/>）は飛ばす</b>——前進するのは次の動く区画。
     public Node? NextNode(int road)
     {
-        foreach (Node n in Nodes[road]) if (!n.Cleared) return n;
+        foreach (Node n in Nodes[road]) if (!n.Cleared && !n.Def.Stationary) return n;
         return null;
     }
 
@@ -870,10 +916,12 @@ public sealed class Map11State
     /// <b>固定の4部隊は必ず湧きより手前にいる</b>——湧きは敵の拠点から出て、
     /// 前が詰まっていれば進めない（<see cref="AdvanceFoes"/>）ので、この並びが位置の順になる。
     /// </summary>
+    /// 第449期: 動かない区画（敵の拠点の守備隊）は<b>いちばん奥</b>なので最後に返す。
     public IEnumerable<Node> FoesOn(int road)
     {
-        foreach (Node n in Nodes[road]) if (!n.Cleared) yield return n;
+        foreach (Node n in Nodes[road]) if (!n.Cleared && !n.Def.Stationary) yield return n;
         foreach (Node n in Spawns) if (!n.Cleared && n.Def.Road == road) yield return n;
+        foreach (Node n in Nodes[road]) if (!n.Cleared && n.Def.Stationary) yield return n;
     }
 
     /// <summary>その道でいちばん拠点に近い敵部隊。<b>拠点なしでは <see cref="NextNode"/> と同じもの。</b></summary>
@@ -1355,8 +1403,12 @@ public sealed class Map11State
             Deliver(Stage.Arrival.OnKill, intercept ? "拠点" : DeliveryPlace(squadIndex), $"{node.Def.Name}を抜いた");
         // 第445期: 抜いた見返りの金（湧いた部隊は安い）。
         if (node.Cleared)
-            Earn(node.FromPortal && !node.IsReserve ? Stage.Gold.SpawnKill : Stage.Gold.Kill, $"{node.Def.Name}を抜いた", node.Pos);
+            Earn(KillGold(node), $"{node.Def.Name}を抜いた", node.Pos);
     }
+
+    /// <summary>その敵部隊を抜いたときの金（第449期: 本陣の守りは <see cref="GoldRule.Garrison"/>・湧いた部隊は安い）。画面の札も同じ値を読む。</summary>
+    public int KillGold(Node node)
+        => node.Def.Stationary ? Stage.Gold.Garrison : node.FromPortal && !node.IsReserve ? Stage.Gold.SpawnKill : Stage.Gold.Kill;
 
     // =============================================================================
     // 時間（第174期 部B）

@@ -1108,7 +1108,10 @@ public enum TraitId
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
     Drought,     // 渇き: 保持者が生きている間、回復が一切通らない。**両陣営に等しくかかる**
     Yoke,        // 軛: 保持者が生きている間、1回のダメージが上限で切られる。**両陣営に等しくかかる**
-    Hush         // 粛: 保持者が生きている間、ターン外の行動が一切通らない。**両陣営に等しくかかる**
+    Hush,        // 粛: 保持者が生きている間、ターン外の行動が一切通らない。**両陣営に等しくかかる**
+
+    // --- 第449期 作戦マップの敵（帯 B）だけが持つ札。`Stages` の敵も `UnitCatalog.All` も持たない ---
+    MiasmaFront  // 前の瘴気: 毎ターン、相手の前列に毒 +1（毒霧の司祭）。味方への漏れはない
 }
 
 /// <summary>
@@ -6205,6 +6208,32 @@ public sealed class MiasmaTrait : Trait
         mt.Mia367ToFoe += foes.Count * per; mt.Mia367ToAlly += allies.Count * AllyLeak;
 
         ctx.Log($"    {self.Name} が瘴気を撒いた（敵 毒 +{per} / 味方 毒 +{AllyLeak}）", LogKind.FriendlyFire);
+    }
+}
+
+/// <summary>
+/// 前の瘴気（第449期・作戦マップの敵「毒霧の司祭」・指示書 design/PHASE449_ENEMY_BAND_B_SPEC.md §0-1）。
+/// <b>毎ターン、相手の前列（生きている駒）に毒 +1。</b>瘴気（<see cref="MiasmaTrait"/>・グザ）の撒く先を前列に絞り、味方への漏れを外した形。
+/// 毒は窓口（<see cref="PoisonRoute.Miasma"/>）を通す。行動パターンを持たない保持者なのでターン頭に撒く（瘴気と同じ枝）。
+/// <b>保持者は作戦マップの敵だけ</b>（`Stages` にも `UnitCatalog.All` にもいない）なので `compare` は動かない。乱数を引かない。
+/// </summary>
+public sealed class MiasmaFrontTrait : Trait
+{
+    public const int PerTurn = 1;
+    public override TraitId Id => TraitId.MiasmaFront;
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action) => Spread(ctx, self);
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!ActsOnPattern(self)) Spread(ctx, self);
+    }
+    private static void Spread(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+        var front = ctx.LivingMembers(ctx.Opponent(self.TeamId)).Where(u => u.Row == Row.Front).ToList();
+        if (front.Count == 0) return;
+        foreach (UnitState foe in front)
+            ctx.Poison(foe, PerTurn, self, PoisonRoute.Miasma);
+        ctx.Log($"    {self.Name} が前列に毒霧を撒いた（{front.Count} 体に 毒 +{PerTurn}）", LogKind.Status);
     }
 }
 
@@ -20240,6 +20269,7 @@ public static class TraitCatalog
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),
+        new MiasmaFrontTrait(),                               // 第449期（作戦マップの敵・毒霧の司祭）
         new ImmobileTrait(),
         new HavocTrait(),
         new ParalyzeTrait(),

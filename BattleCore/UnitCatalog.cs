@@ -8455,7 +8455,8 @@ public static class EnemyCatalog
         Traits = new[] { TraitId.Condemn }, Pattern = AttackPattern.All
     };
     // 第五波では使わない。第六波以降の素材として置いておく。
-    public static readonly UnitDef Champion = Make("champion", "聖騎士長", 130, 22, 9, TraitId.Executioner);
+    public static readonly UnitDef Champion = Make("champion", "聖騎士長", 130, 22, 9,
+        "1体倒すたびに攻撃力が上がる（処刑）—— 放っておくと後半ほど重くなる。攻22 の前衛", TraitId.Executioner);
 
     // ここから第5期・勾配列（design/ENGAGEMENT_PLAN_5.md）の候補素材。既存の波が参照しない限り
     // 何も動かない（compare 差分ゼロが受け入れ条件）。採用が決まるまで Stages / Columns には
@@ -8948,6 +8949,41 @@ public static readonly UnitDef Inverter = MakeStill("inverter", "逆位の祭司
         new Stage("第五波・パターン3", Formation.BuildSpear(a: Seer, b: Hero2, c: Martyr, d: Lancer, e: Accuser)),
     };
 
+    // ---- 第449期 帯 B（燃焼・毒の餌になる敵）。体は既存の兵の数値のまま、札は味方の書き手の流用 ----
+    // **`Stages` / `Columns` / 会戦には載せない**（作戦マップの部隊 `MapSquads` だけが使う）。燃焼の脆さ（+25%）は敵の火では乗らない（`BrittleApplies`）——そのまま。
+
+    /// <summary>火の魔術師（第449期）。詠唱兵（70/8/5・溜めて全体）の体に、ボルグの書き手（火の粉 ＋ 火の粉・広）。当てた相手全員に火を点け、隣の味方にも燃え移る。</summary>
+    public static readonly UnitDef Pyromancer = new()
+    {
+        Id = "pyromancer", Name = "火の魔術師", MaxHp = 70, Attack = 8, Speed = 5,
+        Advances = false,
+        PlusText = "全員を焼く。燃えている者は火が広がる——1ターン魔力を集め、次のターンに2倍の全体攻撃（溜め）。当てた全員に火を点け、隣の味方にも燃え移る",
+        Traits = new[] { TraitId.Cinder, TraitId.CinderWide }, Pattern = AttackPattern.All,
+        Actions = new UnitAction[]
+        {
+            new(ActionKind.Charge, Label: "火を集めている"),
+            new(ActionKind.Attack, 200),
+        }
+    };
+
+    /// <summary>火矢の射手（第449期）。狙撃手（38/14/11・溜めて貫き）の体に、ボルグの書き手（火の粉 ＋ 火の粉・広）。広があるので貫いた全員に火が点く。</summary>
+    public static readonly UnitDef FireArcher = new()
+    {
+        Id = "fire_archer", Name = "火矢の射手", MaxHp = 38, Attack = 14, Speed = 11,
+        Advances = false,
+        PlusText = "貫いた者に火を点ける——1ターン狙いを定め、次のターンに2倍の貫き（溜め）。隣の味方にも燃え移る",
+        Traits = new[] { TraitId.Cinder, TraitId.CinderWide }, Pattern = AttackPattern.Pierce,
+        Actions = new UnitAction[]
+        {
+            new(ActionKind.Charge, Label: "火矢をつがえている"),
+            new(ActionKind.Attack, 200),
+        }
+    };
+
+    /// <summary>毒霧の司祭（第449期）。従軍司祭（40/9/8・踏み込まない）の体に、前の瘴気（<see cref="TraitId.MiasmaFront"/>・グザの瘴気の撒く先を前列に絞った形）。</summary>
+    public static readonly UnitDef MiasmaPriest = MakeStill("miasma_priest", "毒霧の司祭", 40, 9, 8,
+        "毎ターン前列に毒を撒く（毒 +1・ターンの頭）。その場から殴る", TraitId.MiasmaFront);
+
     /// <summary>作戦マップの敵部隊（第448期）。<paramref name="Line"/> は画面の敵部隊の札と接敵の窓に出す 1 行。</summary>
     public sealed record MapSquad(string Id, string Name, string Line, Formation Enemy);
 
@@ -8968,6 +9004,13 @@ public static readonly UnitDef Inverter = MakeStill("inverter", "逆位の祭司
             Formation.Build(front1: Knight, front3: Knight, center: Priest, back1: ZealotSquire, back3: ZealotSquire)),
         new MapSquad("band_sellswords", "傭兵崩れ", "攻めは強いが守りは薄い。先に叩けば脆い",
             Formation.Build(front1: Drifter, front3: Drifter, center: Axeman, back1: Drifter, back3: Axeman)),
+        // 第449期 帯 B ＋ 本陣の守り。
+        new MapSquad("band_fire", "火の魔術師の部隊", "前が硬く、火が飛んでくる。燃焼を力にする隊なら化ける",
+            Formation.Build(front1: Warden, front3: Recruit, center: Pyromancer, back1: FireArcher, back3: Recruit)),
+        new MapSquad("band_miasma", "毒霧の部隊", "前が硬く、毎ターン前列に毒。長引くほど削られる",
+            Formation.Build(front1: Warden, front3: Warden, center: MiasmaPriest, back1: Priest, back3: Recruit)),
+        new MapSquad("band_garrison", "本陣の守り", "敵の拠点から動かない守備隊。抜かなければ制圧できない",
+            Formation.Build(front1: Champion, front3: Knight, center: Priest, back1: Archer, back3: Knight)),
     };
 
     /// <summary>作戦マップの敵部隊を Id で引く（第448期）。</summary>

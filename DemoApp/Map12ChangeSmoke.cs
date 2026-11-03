@@ -68,6 +68,14 @@ using System.Linq;
 //   (ac) 1-2 の 7 部隊（6 ＋ 予備隊）と湧き 3 種の中身が指示書の表どおり
 //   (ad) 波ルール持ちは北の中間拠点の 1 部隊だけ
 //   3 方針 × 100 seed の表 ＋ 部隊ごとの「1 戦あたりの失った枚数」（報告だけ）
+// **第449期からは (ac)(ad) と第448期の表は第448期の盤（`MapStage.Stage12H448`）で回す**（回帰の基準）。
+//
+// 第449期（§1・遊ぶ 1-2 ＝ `MapStage.Stage12`・帯 B と本陣の守り・候補の 1 枚目を噛む駒に）:
+//   (ae) 火の魔術師の全体攻撃で味方全員に燃焼が付く・火矢の貫きで付く範囲（何体か）
+//   (af) 毒霧の司祭で毎ターン味方の前列（だけ）に毒
+//   (ag) 本陣の守りは刻を進めても敵の拠点から動かず、抜かないと制圧できない（抜くと ＋10）
+//   (ah) 候補の 1 枚目が手持ちと同じ `Presets.Compare` の行の駒（行がある seed で・リロールでも）
+//   3 方針 × 100 seed の表 ＋ 守備隊との戦いで失った枚数（報告だけ）
 //
 // 「貪欲」は第438・440期の門と同じ選び方（各隊は盤の上でいちばん近い敵部隊へ・敵が尽きたら敵の拠点へ）。
 // 自分で組む通し（到着あり）で回す: 開始の 10 枚を第1隊・第2隊に 5 枚ずつ、届いた駒は拠点にいる第3隊へ。
@@ -269,6 +277,7 @@ public static class Map12ChangeSmoke
         Phase446(write, Req);
         Phase447(write, Req);
         Phase448(write, Req);
+        Phase449(write, Req);
         return ok;
     }
 
@@ -1059,11 +1068,11 @@ public static class Map12ChangeSmoke
         Req(crashed == 0, $"第447期の 2 つの盤 × 3 方針を {Seeds} seed ずつ回して落ちない（数字は報告のみ・線は置かない）");
     }
 
-    /// <summary>第448期 —— 遊ぶ 1-2（`MapStage.Stage12`）の (ac)(ad) と、3 方針の表・部隊ごとの失った枚数（報告だけ）。</summary>
+    /// <summary>第448期 —— 第448期の 1-2（`MapStage.Stage12H448`）の (ac)(ad) と、3 方針の表・部隊ごとの失った枚数（報告だけ）。</summary>
     private static void Phase448(Action<string> write, Action<bool, string> Req)
     {
-        MapStage stage = MapStage.Stage12;
-        write("  ---- 第448期（遊ぶ 1-2・道中を帯 A に・封じる敵は北の中間拠点だけ） ----");
+        MapStage stage = MapStage.Stage12H448;
+        write("  ---- 第448期の 1-2（`Stage12H448`・道中を帯 A に・封じる敵は北の中間拠点だけ） ----");
         string Seats(Formation f) => string.Join("・", f.Occupied().OrderBy(o => o.Slot).Select(o => $"{FormationRules.SeatNames[o.Slot]} {o.Def.Id}"));
 
         // ---- (ac) 中身が表どおり ----
@@ -1152,6 +1161,218 @@ public static class Map12ChangeSmoke
                 write($"  | {bname} | {k} | {v.Battles} | {(double)v.Lost / Math.Max(1, v.Battles):F2} |");
     }
 
+    /// <summary>第449期 —— 遊ぶ 1-2（`MapStage.Stage12`）の (ae)〜(ah) と、3 方針の表・守備隊との戦いで失った枚数（報告だけ）。</summary>
+    private static void Phase449(Action<string> write, Action<bool, string> Req)
+    {
+        MapStage stage = MapStage.Stage12;
+        write("  ---- 第449期（遊ぶ 1-2・帯 B（火の魔術師の部隊・毒霧の部隊）・本陣の守り・候補の 1 枚目を噛む駒に） ----");
+
+        // 1 戦を台本つきで回し、(味方, 敵, 結果) を返す。味方は 5 枚の重装兵（長持ちさせて書き手の手番を見る）。
+        (List<UnitState> P, List<UnitState> E, BattleResult R) Duel(Formation enemy, int seed)
+        {
+            var w = EnemyCatalog.Warden;
+            var p = BattleEngine.Materialize(Formation.Build(front1: w, front3: w, center: w, back1: w, back3: w), BattleContext.PlayerTeam);
+            var e = BattleEngine.Materialize(enemy, BattleContext.EnemyTeam);
+            return (p, e, BattleEngine.Run(p, e, seed, verbose: true));
+        }
+        // 書き手 actor が、その最初の「付けた刻」に key を付けた相手（味方 ／ 敵）の数。
+        (int Turn, int Players, int Foes) FirstWrite(List<UnitState> p, BattleResult r, UnitState actor, string key)
+        {
+            var gains = r.Events.Where(ev => ev.Kind == BattleEventKind.StatusGain && ev.ActorId == actor.InstanceId && ev.Text == key).ToList();
+            if (gains.Count == 0) return (0, 0, 0);
+            int t = gains[0].Turn;
+            var ids = gains.Where(ev => ev.Turn == t).Select(ev => ev.TargetId).Distinct().ToList();
+            int pl = ids.Count(id => p.Any(u => u.InstanceId == id));
+            return (t, pl, ids.Count - pl);
+        }
+
+        // ---- (ae) 火の魔術師・火矢の射手 ----
+        {
+            var w = EnemyCatalog.Warden;
+            var pyro = new List<string>();
+            int pyroAll = 0, pyroN = 0;
+            var arch = new List<string>();
+            int archMax = 0, archN = 0;
+            for (int seed = 0; seed < 10; seed++)
+            {
+                var (p, e, r) = Duel(Formation.Build(front1: w, front3: w, center: EnemyCatalog.Pyromancer), seed);
+                UnitState mage = e.First(u => u.Def.Id == "pyromancer");
+                var f = FirstWrite(p, r, mage, StatusKeys.Burn);
+                if (f.Turn > 0) { pyroN++; if (f.Players == 5) pyroAll++; }
+                pyro.Add($"{f.Players}+{f.Foes}");
+                var (p2, e2, r2) = Duel(Formation.Build(front1: w, front3: w, back1: EnemyCatalog.FireArcher), seed);
+                UnitState fa = e2.First(u => u.Def.Id == "fire_archer");
+                var f2 = FirstWrite(p2, r2, fa, StatusKeys.Burn);
+                if (f2.Turn > 0) { archN++; archMax = Math.Max(archMax, f2.Players); }
+                arch.Add($"{f2.Players}+{f2.Foes}");
+            }
+            write($"  (ae) 火の魔術師の最初の全体攻撃で燃えた数（味方＋敵の味方）seed 0〜9: {string.Join(" ／ ", pyro)} ——味方 5 体すべてに点いた seed {pyroAll}/{pyroN}");
+            write($"       火矢の射手の最初の貫きで燃えた数（味方＋敵の味方）seed 0〜9: {string.Join(" ／ ", arch)} ——味方の最大 {archMax} 体（1 体なら主目標だけ・2 体以上なら貫いた先にも付く）");
+            Req(pyroN == 10 && pyroAll == 10 && archN == 10 && archMax >= 2,
+                "(ae) 火の魔術師の全体攻撃で味方 5 体すべてに燃焼が付き、火矢の射手の貫きは貫いた先（2 体以上）にも燃焼が付く");
+        }
+
+        // ---- (af) 毒霧の司祭 ----
+        {
+            var w = EnemyCatalog.Warden;
+            int bad = 0, turnsSeen = 0;
+            var line = new List<string>();
+            for (int seed = 0; seed < 5; seed++)
+            {
+                var (p, e, r) = Duel(Formation.Build(front1: w, front3: w, center: EnemyCatalog.MiasmaPriest), seed);
+                UnitState priest = e.First(u => u.Def.Id == "miasma_priest");
+                var front = p.Where(u => FormationRules.RowOf(u.Slot) == Row.Front).Select(u => u.InstanceId).ToHashSet();
+                int last = r.Events.Where(ev => ev.Kind == BattleEventKind.Death && ev.TargetId == priest.InstanceId).Select(ev => ev.Turn).DefaultIfEmpty(int.MaxValue).First();
+                var per = new List<string>();
+                for (int t = 1; t <= 4 && t < last && r.Events.Any(ev => ev.Turn == t); t++)
+                {
+                    var ids = r.Events.Where(ev => ev.Kind == BattleEventKind.StatusGain && ev.Turn == t && ev.ActorId == priest.InstanceId && ev.Text == StatusKeys.Poison)
+                                      .Select(ev => ev.TargetId!.Value).ToList();
+                    turnsSeen++;
+                    if (ids.Count != front.Count || !ids.All(front.Contains)) bad++;
+                    per.Add($"刻{t} {ids.Count}体");
+                }
+                line.Add(string.Join("・", per));
+            }
+            write($"  (af) 毒霧の司祭が毒を付けた相手（seed 0〜4・刻 1〜4）: {string.Join(" ／ ", line)} ——前列 2 体ちょうどでなかった刻 {bad}/{turnsSeen}");
+            Req(turnsSeen >= 15 && bad == 0, "(af) 毒霧の司祭は毎ターン、味方の前列 2 体だけに毒を付ける");
+        }
+
+        // ---- (ag) 本陣の守り ----
+        {
+            int moved = 0, capturedAlive = 0, blockedTicks = 0, runsCaptured = 0, gold10 = 0, cleared = 0, nextIsGarrison = 0;
+            for (int seed = 0; seed < Seeds; seed++)
+            {
+                Map11State.Node? gar = null;
+                bool sawGold = false;
+                Greedy(seed, stage, guard: true, split: true, watch: st =>
+                {
+                    gar ??= st.Nodes.SelectMany(r => r).First(n => n.Def.Stationary);
+                    if (gar.Pos != st.Graph.Portal) moved++;
+                    if (!gar.Cleared && st.Captured) capturedAlive++;
+                    if (!gar.Cleared && st.Squads.Any(q => q.Units is { } u && u.Any(x => x.IsAlive) && q.Pos == st.Graph.Portal)) blockedTicks++;
+                    for (int road = 0; road < st.Stage.LaneCount; road++) if (st.NextNode(road) is { Def.Stationary: true }) nextIsGarrison++;
+                    if (st.GoldLog.Any(gv => gv.Amount == 10 && gv.Reason == $"{gar.Def.Name}を抜いた")) sawGold = true;
+                    if (st.Finished)
+                    {
+                        if (st.Captured) runsCaptured++;
+                        if (gar.Cleared) cleared++;
+                        if (sawGold) gold10++;
+                    }
+                });
+            }
+            write($"  (ag) 本陣の守り（分担＋戻り番 × {Seeds} seed）: 動いた刻 {moved} ／ 守りが生きたまま制圧 {capturedAlive}"
+                + $" ／ 先頭（前進する区画）に選ばれた刻 {nextIsGarrison} ／ 制圧した {runsCaptured} ／ 守りを抜いた {cleared} ／ 抜いて ＋10 {gold10}");
+            // 直に歩かせる: 第1隊を中の道から敵の拠点まで進め、当たった相手は勝ったことにする（刻は進めない）。
+            // 敵の拠点に立って守りと向き合った時点で制圧されていないこと・守りを抜くと ＋10・残りの予備隊を抜くと制圧。
+            {
+                var st = new Map11State(0, stage.Time, stage.Portal, draft: true, stage: stage);
+                st.UseDefaultSquads();
+                Map11State.Node gar = st.Nodes.SelectMany(r => r).First(n => n.Def.Stationary);
+                Dest deep = Dest.Portal(st.Graph, 1);
+                var met = new List<string>();
+                int gain = -1;
+                for (int k = 0; k < 30 && !st.Captured && !st.Finished; k++)
+                {
+                    if (Map11Orders.Apply(st, 0, deep, Map11Orders.Plan(st, 0, deep)) is not { } foe) continue;
+                    if (ReferenceEquals(foe, gar))
+                    {
+                        if (st.Squads[0].Pos == st.Graph.Portal && !st.Captured && ReferenceEquals(st.PortalFoe(), gar)) blockedTicks++;
+                        int g0 = st.Gold;
+                        var prep = st.Prepare(0, foe);
+                        foreach (UnitState u in prep!.Value.Enemies) u.Hp = 0;
+                        st.Resolve(0, foe, true, false);
+                        gain = st.Gold - g0;
+                    }
+                    else
+                    {
+                        var prep = st.Prepare(0, foe);
+                        foreach (UnitState u in prep!.Value.Enemies) u.Hp = 0;
+                        st.Resolve(0, foe, true, false);
+                    }
+                    met.Add(foe.Def.Name);
+                }
+                write($"       直に歩かせた第1隊（中の道 → 敵の拠点）が当たった順: {string.Join(" → ", met)} ——守りと向き合った時点で未制圧 {blockedTicks > 0} ／ 守りを抜いた金 ＋{gain} ／ 最後に制圧 {st.Captured}");
+                if (gain != 10 || !st.Captured) blockedTicks = 0;
+            }
+            Req(moved == 0 && capturedAlive == 0 && nextIsGarrison == 0 && blockedTicks > 0 && cleared >= runsCaptured && gold10 == cleared,
+                "(ag) 本陣の守りは刻を進めても敵の拠点から動かず（先頭にもならず）、生きている間は制圧できない（抜くと ＋10）");
+        }
+
+        // ---- (ah) 候補の 1 枚目 ----
+        {
+            int withRow = 0, hit = 0, rerollRow = 0, rerollHit = 0, oldHit = 0;
+            for (int seed = 0; seed < Seeds; seed++)
+            {
+                foreach (bool now in new[] { true, false })
+                {
+                    var st = new Map11State(seed, stage.Time, stage.Portal, draft: true, stage: now ? stage : MapStage.Stage12H448);
+                    Deal(st, 0, 5);
+                    Deal(st, 1, 5);
+                    HashSet<string> Avail() { var m = st.MatchIds(); return UnitCatalog.All.Where(d => m.Contains(d.Id) && !st.OnBoardOrHand(d)).Select(d => d.Id).ToHashSet(); }
+                    // 開始の候補は手札を配る前に引いている（手札は配る前から手札にいる）。
+                    var av = Avail();
+                    bool m0 = st.Offers.Count > 0 && av.Contains(st.Offers[0].Id);
+                    if (!now) { if (m0) oldHit++; continue; }
+                    if (av.Count > 0) { withRow++; if (m0) hit++; }
+                    if (st.Reroll())
+                    {
+                        var av2 = Avail();
+                        if (av2.Count > 0) { rerollRow++; if (st.Offers.Count > 0 && av2.Contains(st.Offers[0].Id)) rerollHit++; }
+                    }
+                }
+            }
+            write($"  (ah) 候補の 1 枚目が手持ちと同じ行の駒: 開始 {hit}/{withRow}（行のある seed）・リロール後 {rerollHit}/{rerollRow} ——対照（第448期の盤・規則なし）は開始で {oldHit}/{Seeds}");
+            Req(withRow > 0 && hit == withRow && rerollRow > 0 && rerollHit == rerollRow,
+                "(ah) 候補の 1 枚目は、手持ちと同じ `Presets.Compare` の行の駒がいれば必ずその駒（開始とリロール）");
+        }
+
+        // ---- 報告のみ: 3 方針 × 100 seed ＋ 部隊ごとの失った枚数 ----
+        var boards = new[] { ("第448期の既定", MapStage.Stage12H448), ("第449期の既定", stage) };
+        var policies = new[] { ("1 隊残す", true, false, false), ("分担＋戻り番", true, true, false), ("籠城", true, true, true) };
+        write("");
+        write("  | 盤 | 方針 | 踏破 | 陥落 | 時間切れ | 制圧の刻（中央値） | 戦闘（平均） | 1 戦あたりの失った枚数 | 守備隊との戦い（計） | 守備隊との戦いで失った枚数（1 戦あたり） | 呼んだ枚数（平均） | 呼び戻した枚数（平均） |");
+        write("  |---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+        int crashed = 0;
+        string garName = EnemyCatalog.MapSquadOf("band_garrison").Name;
+        var foes = new Dictionary<string, Dictionary<string, (int Battles, int Lost)>>();
+        foreach (var (bname, board) in boards)
+        {
+            var byFoe = new Dictionary<string, (int Battles, int Lost)>();
+            foes[bname] = byFoe;
+            foreach (var (pname, guard, split, turtle) in policies)
+            {
+                var runs = new List<Once>();
+                var local = new Dictionary<string, (int Battles, int Lost)>();
+                for (int seed = 0; seed < Seeds; seed++)
+                {
+                    try { runs.Add(Greedy(seed, board, guard, split, turtle, local)); }
+                    catch (Exception ex)
+                    {
+                        crashed++;
+                        if (crashed <= 3) write($"  × 第449期 {bname} {pname} seed {seed}: {ex.GetType().Name}: {ex.Message}");
+                    }
+                }
+                foreach (var (k, v) in local) { byFoe.TryGetValue(k, out var acc); byFoe[k] = (acc.Battles + v.Battles, acc.Lost + v.Lost); }
+                if (runs.Count == 0) continue;
+                double P(Func<Once, bool> f) => 100.0 * runs.Count(f) / runs.Count;
+                var cap = runs.Where(r => r.Captured).Select(r => r.CapturedTurn).OrderBy(x => x).ToArray();
+                int b = local.Values.Sum(v => v.Battles), lost = local.Values.Sum(v => v.Lost);
+                local.TryGetValue(garName, out var gv);
+                write($"  | {bname} | {pname} | {P(r => r.Won):F0} | {P(r => r.Fallen):F0} | {P(r => r.TimedOut):F0} | {(cap.Length == 0 ? "—" : cap[cap.Length / 2].ToString())} | "
+                    + $"{runs.Average(r => r.Battles):F1} | {(b == 0 ? 0 : (double)lost / b):F2} | {gv.Battles} | {(gv.Battles == 0 ? "—" : ((double)gv.Lost / gv.Battles).ToString("F2"))} | "
+                    + $"{runs.Average(r => r.Recruits):F2} | {runs.Average(r => r.Revives):F2} |");
+            }
+        }
+        Req(crashed == 0, $"第449期の 2 つの盤 × 3 方針を {Seeds} seed ずつ回して落ちない（数字は報告のみ・線は置かない）");
+        write("");
+        write("  | 盤 | 部隊 | 戦闘（3 方針 × 100 seed の計） | 1 戦あたりの失った枚数 |");
+        write("  |---|---|--:|--:|");
+        foreach (var (bname, byFoe) in foes)
+            foreach (var (k, v) in byFoe.OrderByDescending(kv => (double)kv.Value.Lost / Math.Max(1, kv.Value.Battles)))
+                write($"  | {bname} | {k} | {v.Battles} | {(double)v.Lost / Math.Max(1, v.Battles):F2} |");
+    }
+
     /// <summary>手札の先頭から <paramref name="count"/> 枚を、その隊の空いた席（前1 から）へ配る。</summary>
     private static void Deal(Map11State st, int squad, int count)
     {
@@ -1202,7 +1423,7 @@ public static class Map12ChangeSmoke
     /// 番の規則は最初の接敵の後からで、そのとき拠点に出せる隊が 1 つもいなければ、拠点にいちばん近い隊が戻る。
     /// </summary>
     private static Once Greedy(int seed, MapStage stage, bool guard, bool split = false, bool turtle = false,
-                               Dictionary<string, (int Battles, int Lost)>? byFoe = null)
+                               Dictionary<string, (int Battles, int Lost)>? byFoe = null, Action<Map11State>? watch = null)
     {
         int recruits = 0;
         bool slotBought = false, thirdFull = false;
@@ -1323,7 +1544,9 @@ public static class Map12ChangeSmoke
                 st.CloseIntercept(e.Node);
             }
             if (spawnsAtCapture < 0 && st.Captured) spawnsAtCapture = st.SpawnCount;
+            watch?.Invoke(st);   // 第449期: 刻ごとに盤を覗く（門 (ag)・盤面は変えない）
         }
+        watch?.Invoke(st);
         return new Once(seed, st.Won, st.Fallen, st.Captured, st.CapturedTurn + 1, st.Turn, st.SpawnCount,
                         Math.Max(0, spawnsAtCapture), reserve is null || st.ReserveDepartTurn < 0 ? -1 : reserve.Def.Road,
                         reserveFought, reserveAtHome, reserve?.Cleared == true, st.ArrivedCount,

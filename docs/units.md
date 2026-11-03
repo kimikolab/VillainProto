@@ -759,6 +759,7 @@
 | `Drought` | - |
 | `Yoke` | - |
 | `Hush` | - |
+| `MiasmaFront` | - |
 
 ## 燃焼の規則
 

@@ -72,6 +72,11 @@ public sealed class MapStage
     /// 勇者の予告（<see cref="HeroAtCap"/>）の言い換えで、規則は同じ。
     /// </summary>
     public bool TimeLimit { get; init; }
+    /// <summary>
+    /// 候補の 1 枚目を「いま盤上・手札にいる駒と同じ <c>Presets.Compare</c> の行に載る駒」から引く（第449期 §0-5・無ければふつうの引き）。
+    /// 残りの候補はふつう。リロール・呼んだ後の補充でも 1 枚目は同じ規則。<b>噛むかどうかは画面に出さない。</b>偽なら第448期まで。
+    /// </summary>
+    public bool MatchOffer { get; init; }
 
     public int LaneCount => Lanes.Length;
     public int TotalNodes => Lanes.Sum(l => l.Count);
@@ -297,11 +302,12 @@ public sealed class MapStage
     }
 
     /// <summary>
-    /// 1-2（第448期・遊ぶ版）。<b>道中を帯 A（雑兵の部隊・`EnemyCatalog.MapSquads`）に置き直した</b>——「第2〜第4の波ばかりで制限のある戦いばかり」（ポン）を、
+    /// 1-2 の第448期の姿。<b>道中を帯 A（雑兵の部隊・`EnemyCatalog.MapSquads`）に置き直した</b>——「第2〜第4の波ばかりで制限のある戦いばかり」（ポン）を、
     /// 抜いて爽快な側へ。<b>封じる敵（波ルール持ち）は北の中間拠点の 1 部隊だけ</b>（第二波・先遣・粛）。第三波・第五波・軛は 1-2 から外した（<see cref="Stage12H447"/> に残る）。
-    /// 盤・金・期限・隊の枠は第447期のまま。中と南の中間拠点（騎士の小隊・傭兵崩れ）は<b>仮</b>（第449期に帯 B と入れ替える）。
+    /// 盤・金・期限・隊の枠は第447期のまま。中と南の中間拠点（騎士の小隊・傭兵崩れ）は<b>仮</b>（第449期に帯 B と入れ替えた）。
+    /// 第449期からは回帰の基準だけが使う——遊ぶ 1-2 は <see cref="Stage12"/>。
     /// </summary>
-    public static MapStage Stage12 { get; } = new()
+    public static MapStage Stage12H448 { get; } = new()
     {
         Id = Stage12H447.Id,
         Title = Stage12H447.Title,
@@ -328,6 +334,43 @@ public sealed class MapStage
         TimeLimit = Stage12H447.TimeLimit,
         WinOnCapture = Stage12H447.WinOnCapture,
         Gold = Stage12H447.Gold,
+    };
+
+    /// <summary>
+    /// 敵の拠点に立つ動かない守備隊（第449期 §0-3）。<b>経路 <paramref name="lane"/> の区画の最後</b>に置き、位置は敵の拠点のマス（<see cref="Map11.RoadNode.Stationary"/>）。
+    /// 経路は表示と「その道の敵」の数え方にしか効かない（制圧の判定 <c>PortalFoe</c> は道をまたいで数える）。
+    /// </summary>
+    private static Map11.RoadNode Garrison(int lane, int index, string id, int backdrop)
+        => Band(lane, index, id, backdrop) with { Stationary = true };
+
+    /// <summary>
+    /// 1-2（第449期・遊ぶ版）。帯 B（燃焼・毒の餌になる敵）と本陣の守備隊（ポン案）:
+    /// 中の中間拠点を<b>火の魔術師の部隊</b>、南の中間拠点を<b>毒霧の部隊</b>に替え、敵の拠点に<b>本陣の守り（動かない・抜かないと制圧できない・抜くと ＋10）</b>を置いた。
+    /// 候補の 1 枚目は手持ちと噛む駒（<see cref="MatchOffer"/>）。北・湧き・予備隊・盤・金（守備隊の ＋10 のほか）・期限・隊の枠は第448期（<see cref="Stage12H448"/>）のまま。
+    /// </summary>
+    public static MapStage Stage12 { get; } = new()
+    {
+        Id = Stage12H448.Id,
+        Title = Stage12H448.Title,
+        Board = Stage12H448.Board,
+        Lanes = new IReadOnlyList<Map11.RoadNode>[]
+        {
+            new[] { Band(0, 0, "band_archers", 2), Node(0, 1, EnemyCatalog.Vanguards[0], 1) },
+            new[] { Node(1, 0, EnemyCatalog.Stages[0], 0), Band(1, 1, "band_fire", 3), Garrison(1, 2, "band_garrison", 4) },
+            new[] { Band(2, 0, "band_shields", 3), Band(2, 1, "band_miasma", 2) },
+        },
+        LaneNames = Stage12H448.LaneNames,
+        Spawn = Stage12H448.Spawn,
+        Portal = Stage12H448.Portal,
+        Time = Stage12H448.Time,
+        Arrival = Stage12H448.Arrival,
+        Reserve = Stage12H448.Reserve,
+        SquadCap = Stage12H448.SquadCap,
+        TurnCap = Stage12H448.TurnCap,
+        TimeLimit = Stage12H448.TimeLimit,
+        WinOnCapture = Stage12H448.WinOnCapture,
+        Gold = GoldRule.V449(),
+        MatchOffer = true,
     };
 
     /// <summary>選べるステージ（編成画面の選択の並び）。</summary>
@@ -377,9 +420,10 @@ public readonly record struct ArrivalRule(bool On, int Start, int Every, int Min
 /// <param name="SlotStep">枠を 1 つ買うごとに次の枠が上がる額（第447期: 3 隊目 8 → 4 隊目 12 なら 4）。0 なら値は同じ。</param>
 /// <param name="Revive">倒れた駒を呼び戻す値段（第447期）。<b>0 なら呼び戻しは無く、倒れた駒の扱いは第446期まで</b>。</param>
 /// <param name="RevivePercent">呼び戻した駒の HP（最大 HP に対する割合）。</param>
+/// <param name="Garrison">動かない守備隊（<see cref="Map11.RoadNode.Stationary"/>）を抜く（第449期）。0 の盤には守備隊がいない。</param>
 public readonly record struct GoldRule(bool On, int Start, int Kill, int SpawnKill, int Outpost, int Recruit, int Slot, int Sell,
                                        int Offers, int StartSquads, int Reroll = 0, bool SlotFreePick = false,
-                                       int SlotStep = 0, int Revive = 0, int RevivePercent = 50)
+                                       int SlotStep = 0, int Revive = 0, int RevivePercent = 50, int Garrison = 0)
 {
     public static readonly GoldRule Off = new(false, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     /// <summary>
@@ -392,6 +436,8 @@ public readonly record struct GoldRule(bool On, int Start, int Kill, int SpawnKi
     /// </summary>
     public static GoldRule V447()
         => new(true, 8, 6, 3, 8, 4, 8, 2, 3, 2, Reroll: 2, SlotFreePick: true, SlotStep: 4, Revive: 6, RevivePercent: 50);
+    /// <summary>第449期の値: 第447期に「本陣の守り（動かない守備隊）を抜く ＋10」を足した。</summary>
+    public static GoldRule V449() => V447() with { Garrison = 10 };
     /// <summary>第445期の仮の値（ポンが遊んで決める）: 開始 0・抜く +6・湧き +3・中間拠点 +8・呼ぶ 10・枠 12・売る +3・候補 3・隊 2 で始まる。</summary>
     public static GoldRule Of(int start = 0, int kill = 6, int spawnKill = 3, int outpost = 8, int recruit = 10, int slot = 12,
                               int sell = 3, int offers = 3, int startSquads = 2)
