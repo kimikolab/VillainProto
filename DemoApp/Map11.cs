@@ -754,11 +754,64 @@ public sealed class Map11State
         if (RelicOffer.Count > 0) { _relicPending++; return; }
         for (int k = 0; k < Stage.Relic.Offers && _relicQueue.Count > 0; k++)
         {
-            TraitId r = _relicQueue.Dequeue();
+            TraitId r = k == 0 && Stage.Relic.Bridge ? FirstRelic() : _relicQueue.Dequeue();
             RelicOffer.Add(r);
             RelicShown[r] = RelicShown.GetValueOrDefault(r) + 1;
         }
     }
+
+    /// <summary>
+    /// 第453期 §0-2: 候補の 1 枚目。列のうち<b>両端が手持ちにある札</b>（<see cref="RelicFit"/> ＝ 2）の最初の 1 枚、無ければ<b>片端</b>（1）の最初の 1 枚、
+    /// 無ければ列の先頭。抜き出した札のほかは列の並びを変えない。乱数は引かない。どれだったかは <see cref="RelicFirstFit"/> に数える（測るためだけ）。
+    /// </summary>
+    private TraitId FirstRelic()
+    {
+        var own = OwnedTags();
+        TraitId[] q = _relicQueue.ToArray();
+        int pick = -1;
+        for (int want = 3; want >= 1 && pick < 0; want--) pick = Array.FindIndex(q, r => RelicFit(r, own) == want);
+        int fit = pick < 0 ? 0 : RelicFit(q[pick], own);
+        if (pick < 0) pick = 0;
+        _relicQueue.Clear();
+        for (int i = 0; i < q.Length; i++) if (i != pick) _relicQueue.Enqueue(q[i]);
+        RelicFirstFit[fit]++;
+        return q[pick];
+    }
+
+    /// <summary>候補の 1 枚目が 無関係（0）／ 片端（1）／ 両端・誰でも ＋ 1 語（2）／ 両端・2 語（3）だった回数（第453期・測るためだけ）。</summary>
+    public int[] RelicFirstFit { get; } = new int[4];
+
+    /// <summary>いま盤上（生きている駒・組んでいない既定の隊は定義のまま）と手札にいる駒のタグの語（軸と役割）。</summary>
+    public HashSet<string> OwnedTags()
+    {
+        var tags = new HashSet<string>(Bench.Where(u => u.IsAlive).SelectMany(u => u.Def.Tags));
+        foreach (Squad q in Squads)
+        {
+            if (q.Units is { } u) tags.UnionWith(u.Where(x => x.IsAlive).SelectMany(x => x.Def.Tags));
+            else if (!q.Lost) tags.UnionWith(q.Def.F.Occupied().SelectMany(o => o.Def.Tags));
+        }
+        return tags;
+    }
+
+    /// <summary>
+    /// 札が手持ちと噛む度合い（第453期）: <b>3 ＝ 両端・2 語</b>（引き金も効果も語のある端で、両方が手持ちのタグにある＝本当の繋ぎ）／
+    /// <b>2 ＝ 両端・誰でも ＋ 1 語</b>（片方の端が「誰でも」で、語のある端が手持ちにある）／
+    /// <b>1 ＝ 片端</b>（語のある端の 1 つだけが手持ちにある）／ <b>0 ＝ 無関係</b>。
+    /// 指示書 §0-2 の「両端」は 3 と 2 の両方——<b>同じ「両端」なら 2 語の札を先に引く</b>（誰でもの端は誰でも満たすので、2 だけだと「繋ぐ」にならない札が先に来る）。
+    /// </summary>
+    public static int RelicFit(TraitId relic, IReadOnlySet<string> own)
+    {
+        if (RelicBridges.Of(relic) is not RelicEnds e) return 0;
+        var ends = new[] { e.Trigger, e.Effect }.Where(x => x.Length > 0).ToArray();
+        int hit = ends.Count(own.Contains);
+        if (ends.Length == 0 || hit == 0) return 0;
+        if (hit < ends.Length) return 1;
+        return ends.Length == 2 ? 3 : 2;
+    }
+
+    /// <summary>その札をいま持っている駒（隊・手札・倒れた駒のどこか・無ければ null）。</summary>
+    public UnitState? RelicHolder(TraitId relic)
+        => Squads.Where(q => q.Units is not null).SelectMany(q => q.Units!).Concat(Bench).FirstOrDefault(u => u.IsAlive && u.Relic == relic);
 
     /// <summary>候補の <paramref name="index"/> 番目を得る（-1 で見送る）。見送った札と選ばなかった札は列に戻さない。</summary>
     public bool ChooseRelic(int index)

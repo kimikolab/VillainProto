@@ -53,6 +53,7 @@ public static void Run(string[] args, int stageIndex)
         ("reseat.md",   "reseat",  true,  true),
         ("elite.md",    "elite",   true,  false),   // 第284期
         ("tags.md",     "tags",    false, false),   // 第450期
+        ("relics.md",   "relics",  false, false),   // 第453期
     };
 
     Console.WriteLine($"現行の編成数: {names.Length}");

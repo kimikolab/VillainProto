@@ -453,12 +453,17 @@ public partial class Map11Main : Node3D
             }
             bool got = St.ChooseRelic(0);
             UnitState? holder = St.Squads[0].Units?.Where(u => u.IsAlive).OrderBy(u => u.Slot).FirstOrDefault();
-            bool equipped = got && holder is not null && St.EquipRelic(holder, St.RelicHand[0]);
             _selected = 0;
             _reform = St.CanReform(0);
+            // 第453期: 画面の「つまむ → 駒の札を押す」の作法そのもので持たせる（`OnSquadSlot` を通す）。
+            TraitId? picked = got ? St.RelicHand[0] : null;
+            _holdRelic = picked;
+            if (holder is not null) OnSquadSlot(holder.Slot);
+            bool equipped = picked is TraitId pr && St.RelicHolder(pr) is { } h && h.Def.Id == holder?.Def.Id;
             _squadPick = holder?.Slot ?? -1;
+            if (parts.Length > 2 && parts[2] == "book") ShowRelicCatalog();   // 第453期: 一覧の絵（`relic,book`）
             Refresh();
-            GD.Print($"MAP11_CAPTURE_RELIC seed={Map11Session.Seed} got={got} equipped={equipped} holder={holder?.Def.Name} reform={_reform}");
+            GD.Print($"MAP11_CAPTURE_RELIC seed={Map11Session.Seed} got={got} equipped={equipped} holder={holder?.Def.Name} reform={_reform} pickPath=True");
         }
         // 第443期 §0-1: **迎撃の合間**の絵（`--map-stage=1-2` と使う）。既定の組み方で 2 隊を組み、北と南の先頭だけを残して
         // 拠点で待つ。2 刻目に 2 部隊が同時に着くので、1 戦目を**頭なしで**決着させ（戦闘シーンへは行かない）、2 戦目の迎撃の窓を出す。
@@ -1949,7 +1954,7 @@ public partial class Map11Main : Node3D
     // 「どの札を押したか」を渡して、結果を引き直すことだけ。
     // =================================================================================
 
-    private void ClearHold() { _holdSquad = -1; _holdSlot = -1; _holdBench = -1; }
+    private void ClearHold() { _holdSquad = -1; _holdSlot = -1; _holdBench = -1; _holdRelic = null; }
 
     // ---- 第174期 部A #2: 組み直しで関係が変わったら1行出す ----
 
@@ -2088,6 +2093,8 @@ public partial class Map11Main : Node3D
     /// </summary>
     private void OnSquadSlot(int slot)
     {
+        // 第453期 §0-4: レリックをつまんでいれば、押した席の駒に持たせる。
+        if (_holdRelic is TraitId hr) { EquipHeldRelic(St.Squads[_selected].Units?.FirstOrDefault(u => u.Slot == slot && u.IsAlive), hr); _squadPick = slot; Refresh(); return; }
         if (!_reform)
         {
             _squadPick = _squadPick == slot ? -1 : slot;
@@ -2136,6 +2143,8 @@ public partial class Map11Main : Node3D
 
     private void OnBenchPressed(int index)
     {
+        // 第453期 §0-4: レリックをつまんでいれば、押した手札の駒に持たせる。
+        if (_holdRelic is TraitId hr) { EquipHeldRelic(index >= 0 && index < St.Bench.Count ? St.Bench[index] : null, hr); Refresh(); return; }
         if (!_reform) { ShowToast("「組み直す」を押してから選んでください", UiKit.Muted, 3.0f); return; }
         if (_holdSlot >= 0)
         {
@@ -2381,6 +2390,8 @@ public partial class Map11Main : Node3D
         _squadFocus.AddChild(UiKit.Text(
             $"{(held is not null ? "手札" : FormationRules.SeatNames[_squadPick])}  {d.Name}"
             + (pick.Alive ? "" : "（戦死）"), 15, pick.Alive ? Colors.White : DeadColor));
+        // 第453期 §0-4: レリックを持たせる／外すは説明の「上」に（第452期は下で、説明の長い駒では隠れた）。
+        AddRelicButtons(_squadFocus, held ?? s.Units?.FirstOrDefault(x => x.Slot == _squadPick && x.IsAlive));
         FocusLine(_squadFocus, $"何をする: {d.PlusText}", UiKit.Muted);
         if (d.MinusText.Length > 0) FocusLine(_squadFocus, $"代わりに: {d.MinusText}", UiKit.Faint);
         if (Map11.LineOf(d.Id) is { } line) FocusLine(_squadFocus, $"どの道で: {line}", GoldColor);
@@ -2388,8 +2399,6 @@ public partial class Map11Main : Node3D
         // **色は線と同じ 得／損／両方**（第173期 §1-1・出どころは `SeatLinks.ColorOf` の1本）。
         foreach ((string rel, Color tint) in RelationWordsFor(cells, held is not null ? -1 : _squadPick))
             FocusLine(_squadFocus, rel, tint);
-        // 第452期: レリックを持たせる／外す（選んだ駒が手札か、組み直しのできる隊にいるとき）。
-        AddRelicButtons(_squadFocus, held ?? s.Units?.FirstOrDefault(x => x.Slot == _squadPick && x.IsAlive));
     }
 
     /// <summary>

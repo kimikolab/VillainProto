@@ -27,6 +27,9 @@ public static class UnitTagChips
         return box;
     }
 
+    /// <summary>語 1 つの小札（第453期: レリックの両端にも使う・「誰でも」は灰色）。</summary>
+    public static PanelContainer Word(string word, int fontSize = 10) => Chip(word, fontSize);
+
     private static PanelContainer Chip(string word, int fontSize)
     {
         Color tint = UnitTags.Axes.Contains(word) ? UiKit.Gold

@@ -439,10 +439,11 @@ public sealed class MapStage
     };
 
     /// <summary>
-    /// 1-2（第452期・遊ぶ版）。第451期（<see cref="Stage12H451"/>）に<b>作戦マップのレリック</b>（<see cref="RelicRule.V452"/>）を足しただけ——
+    /// 1-2 の第452期の姿。第451期（<see cref="Stage12H451"/>）に<b>作戦マップのレリック</b>（<see cref="RelicRule.V452"/>）を足しただけ——
     /// 中間拠点を初めて取った刻に候補 3 枚から 1 枚（選ばないこともできる）。1 マップ限り（持ち越さない）。
+    /// 第453期からは回帰の基準だけが使う——遊ぶ 1-2 は <see cref="Stage12"/>。
     /// </summary>
-    public static MapStage Stage12 { get; } = new()
+    public static MapStage Stage12H452 { get; } = new()
     {
         Id = Stage12H451.Id,
         Title = Stage12H451.Title,
@@ -462,6 +463,31 @@ public sealed class MapStage
         MatchOffer = Stage12H451.MatchOffer,
         PortalGate = Stage12H451.PortalGate,
         Relic = RelicRule.V452,
+    };
+
+    /// <summary>
+    /// 1-2（第453期・遊ぶ版）。第452期（<see cref="Stage12H452"/>）のレリックの候補の 1 枚目を<b>両端が手持ちにある札</b>から引く（<see cref="RelicRule.V453"/>）。ほかは第452期のまま。
+    /// </summary>
+    public static MapStage Stage12 { get; } = new()
+    {
+        Id = Stage12H452.Id,
+        Title = Stage12H452.Title,
+        Board = Stage12H452.Board,
+        Lanes = Stage12H452.Lanes,
+        LaneNames = Stage12H452.LaneNames,
+        Spawn = Stage12H452.Spawn,
+        Portal = Stage12H452.Portal,
+        Time = Stage12H452.Time,
+        Arrival = Stage12H452.Arrival,
+        Reserve = Stage12H452.Reserve,
+        SquadCap = Stage12H452.SquadCap,
+        TurnCap = Stage12H452.TurnCap,
+        TimeLimit = Stage12H452.TimeLimit,
+        WinOnCapture = Stage12H452.WinOnCapture,
+        Gold = Stage12H452.Gold,
+        MatchOffer = Stage12H452.MatchOffer,
+        PortalGate = Stage12H452.PortalGate,
+        Relic = RelicRule.V453,
     };
 
     /// <summary>選べるステージ（編成画面の選択の並び）。</summary>
@@ -541,11 +567,17 @@ public readonly record struct GoldRule(bool On, int Start, int Kill, int SpawnKi
 /// <b>出るのは中間拠点を初めて取った刻だけ</b>（敵を抜いても・制圧しても出ない——レリックは「場所を取った」見返り、金は「敵を抜いた」見返り）。
 /// </summary>
 /// <param name="Offers">候補の枚数。</param>
-public readonly record struct RelicRule(bool On, int Offers)
+/// <param name="Bridge">
+/// 候補の 1 枚目を「両端が手持ちにある札」（無ければ片端・無ければふつう）から引く（第453期 §0-2・両端は `RelicBridges`）。
+/// 残りはふつう。<b>噛むかどうかは画面に出さない</b>。偽なら第452期まで。
+/// </param>
+public readonly record struct RelicRule(bool On, int Offers, bool Bridge = false)
 {
     public static readonly RelicRule Off = new(false, 0);
     /// <summary>第452期の値: 候補 3 枚から 1 枚。</summary>
     public static readonly RelicRule V452 = new(true, 3);
+    /// <summary>第453期の値: 第452期 ＋ 1 枚目を両端の札から。</summary>
+    public static readonly RelicRule V453 = new(true, 3, Bridge: true);
 }
 
 /// <summary>

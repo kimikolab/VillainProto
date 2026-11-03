@@ -19,6 +19,7 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 dump > docs/units.md      # ユニット・特性・ステージ一覧
     dotnet run --project BattleSim -c Release 0 tags > docs/tags.md       # **第450期**: 駒のタグ（軸・役割・表示だけ）の確定版。表は `UnitTags`（`BattleCore/UnitCatalog.cs`）。戦闘0回
     dotnet run --project BattleSim -c Release 0 fire452                   # **第452期 段0**: 「試遊・火の部隊 × ホタ」（`Presets.MapBoards`）× 火の魔術師の部隊 ／ 盾の列（対照）を seed 0..199（勝率・ホタの燃焼）。報告のみ・約 5 秒
+    dotnet run --project BattleSim -c Release 0 relics > docs/relics.md   # **第453期**: レリックの 12 枚と両端（引き金 → 効果・`RelicBridges`）。戦闘0回
     dotnet run --project BattleSim -c Release 0 layout      # 代表編成の全配置総当たり（並列・決定的。**第140期に波別最良の測り直しも並列にした**）
     dotnet run --project BattleSim -c Release 0 reseat [絞り込み] [skip] [take]  # 配置候補を seed 200 で測り直す
     dotnet run --project BattleSim -c Release 0 confirm     # 差し替え候補を別 seed で追試する
@@ -1858,6 +1859,9 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
         # (an) 中間拠点で候補 3 枚・同じ札は 2 度出ない ／ (ao) 持たせた札が戦闘に入る ／ (ap) 倒れたら手持ちに戻る・呼び戻した駒には無い ／
         # (aq) 次の通しに持ち越さない・1-1 には出ない ＋ 3 方針 × 100 seed と札ごとの出た回数（報告のみ）。約 70 秒
         # 絵: `res://Map11Main.tscn -- --map-stage=1-2 --map-seed=0 --map11-capture=<png>,outpost`（候補の窓）・`,relic`（持たせた駒の札）
+        # **第453期**: (an)〜(aq) と第452期の表は第452期の 1-2（`Stage12H452`・両端の規則なし）で回す。遊ぶ 1-2（`Stage12`・1 枚目を両端の札から）に
+        # (ar) 移動と燃焼がいる seed で 1 枚目が両端 ／ (as) 1 枚目はいちばん噛む札・残りはそれより噛まない ／ (at) 持たせる・外す ＋ 1 枚目の種類の表（報告のみ）。約 80 秒
+        # 絵: `,relic` は「つまむ → 駒の札を押す」（`OnSquadSlot`）で持たせる・`,relic,book` で一覧の窓
     Godot_console.exe --path DemoApp --headless -- --map11-phase176
         # **第176期 Phase 0**: Q0-1〜Q0-5（`PortalOn = false` が第175期の 18 量と一致するか ／
         # 重なりと同点の割り方 ／ 湧いた部隊を満タンで作る口 ／ 方針の手順 ／ 走行時間）。約 1 秒

@@ -88,6 +88,41 @@ public static class RelicCatalog
 }
 
 /// <summary>
+/// 札の「両端」（第453期・指示書 design/PHASE453_RELIC_BRIDGE_SPEC.md §0-1）。<b>表示と作戦マップの候補の規則だけが読む・どの戦闘の規則も読まない。</b>
+/// <c>Trigger</c> ＝ 何が起きると働くか、<c>Effect</c> ＝ 何になるか。語は駒のタグ（<see cref="UnitTags"/> の軸と役割）で書き、
+/// <b>空文字は「誰でも」</b>（その端はどの駒でも満たす）。手で書く表（`RelicInfo.Text` ／ `Bridge` から読んだ・ポンが直す）。
+/// </summary>
+public sealed record RelicEnds(string Trigger, string Effect);
+
+public static class RelicBridges
+{
+    /// <summary>「誰でも」の端。</summary>
+    public const string Anyone = "";
+
+    private static readonly Dictionary<TraitId, RelicEnds> Map = new()
+    {
+        [TraitId.RelicCreak]        = new("移動", Anyone),       // 動かされるたび攻撃力 +2（移動 → 火力）
+        [TraitId.RelicFireArrow]    = new(Anyone, "燃焼"),       // 攻撃が当たった敵に火（攻撃 → 燃焼）
+        [TraitId.RelicVenomStep]    = new("移動", "毒"),         // 動かされるたび向かいの敵に毒（移動 → 毒）
+        [TraitId.Spring]            = new("タンク", "移動"),     // 殴られると殴った敵を弾く（被弾 → 敵の移動）
+        [TraitId.RelicWilt]         = new(Anyone, "呪い"),       // 殴られて削られると攻撃力が下がる（ゴミ・読み手はウツ＝呪いの活用）
+        [TraitId.RelicNumbStep]     = new("移動", "手番"),       // 動かされると次の手番を失う（ゴミ・読み手はガン＝手番）
+        [TraitId.RelicHarden]       = new(Anyone, "タンク"),     // 開戦時に攻撃力を最大HPに変える（攻 → HP・壁化）
+        [TraitId.RelicShockStep]    = new("移動", "感電"),       // 動かされたとき自分が感電していれば向かいの敵に感電（移動 → 感電）
+        [TraitId.RelicVenomShove]   = new("毒", "移動"),         // 毒を帯びた敵を殴ると押す（毒 → 敵の移動）
+        [TraitId.RelicOverflowEdge] = new("ヒーラー", Anyone),   // 回復が溢れた分だけ攻撃力（回復 → 火力）
+        [TraitId.RelicMomentum]     = new(Anyone, "移動"),       // 敵を倒すと隣の味方と入れ替わる（撃破 → 移動）
+        [TraitId.RelicPoisonMagnet] = new("毒", "毒"),           // 受ける毒の層が 2 倍（ゴミ・読み手はベニ ／ ヴィオ＝毒の活用）
+    };
+
+    /// <summary>札の両端（`RelicCatalog.All` の 12 枚だけ。版の札は無い）。</summary>
+    public static RelicEnds? Of(TraitId relic) => Map.GetValueOrDefault(relic);
+
+    /// <summary>端の表示の語（空文字は「誰でも」）。</summary>
+    public static string Label(string end) => end.Length == 0 ? "誰でも" : end;
+}
+
+/// <summary>
 /// 軋む足（第270期・レリック・繋ぎ: 移動 → 火力）。動かされるたび（誰が動かしても・自分で動いても）攻撃力 +2。
 /// ヨミの軋み（<see cref="DisplacedTrait"/> の +9 ／ 突き出し +22 と割り込み）を<b>数値だけ汎用化して割り込みを外した</b>もの。
 /// <b>自己強化なので <c>AtkBonus</c> を直に足す</b>（窓口 <c>Whet</c> を通さない＝横取りされない・支援拒否にも止められない）。
