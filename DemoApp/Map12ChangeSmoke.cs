@@ -89,6 +89,14 @@ using System.Linq;
 //   (al) 取り返されて 1 つに戻ると門が閉じる
 //   (am) ハネ（付与）・エレ（生贄・自傷）・「活用」（ベニ・ヴィオ・ウツ・ホタ）とタグの 1 行が表に入っている
 //   3 方針 × 100 seed の表 ＋ 帯 B（火の魔術師の部隊・毒霧の部隊）と戦った率（報告だけ・器具は門が閉じている間は敵の拠点の敵を狙わず、取っていない中間拠点へ向かう）
+// **第452期からは (ak)〜(am) と第451期の表は第451期の盤（`MapStage.Stage12H451`・レリックなし）で回す**（回帰の基準）。
+//
+// 第452期（§2・遊ぶ 1-2 ＝ `MapStage.Stage12`・作戦マップのレリック）:
+//   (an) 中間拠点を取ると候補 3 枚が出て 1 枚を得る・同じ札は 2 度出ない（3 つ取って 9 枚が全部違う）
+//   (ao) 持たせた駒のレリックが戦闘に持ち込まれる（`Prepare` の駒の札の末尾に入る）
+//   (ap) 倒れても札は手持ちに戻る・呼び戻した駒には付いていない
+//   (aq) ステージが終わると消える（新しい通しの手持ちは空）・1-1 には出ない
+//   3 方針 × 100 seed（器具は候補の先頭を取り、タグが噛む駒に持たせる・いなければ前1）の表（報告だけ）
 //
 // 「貪欲」は第438・440期の門と同じ選び方（各隊は盤の上でいちばん近い敵部隊へ・敵が尽きたら敵の拠点へ）。
 // 自分で組む通し（到着あり）で回す: 開始の 10 枚を第1隊・第2隊に 5 枚ずつ、届いた駒は拠点にいる第3隊へ。
@@ -293,6 +301,7 @@ public static class Map12ChangeSmoke
         Phase449(write, Req);
         Phase450(write, Req);
         Phase451(write, Req);
+        Phase452(write, Req);
         return ok;
     }
 
@@ -1486,8 +1495,8 @@ public static class Map12ChangeSmoke
     /// <summary>第451期 —— 遊ぶ 1-2（`MapStage.Stage12`）の (ak)(al)(am) と、3 方針の表・帯 B と戦った率（報告だけ）。</summary>
     private static void Phase451(Action<string> write, Action<bool, string> Req)
     {
-        MapStage stage = MapStage.Stage12;
-        write("  ---- 第451期（遊ぶ 1-2・本陣の門 ＝ 中間拠点 2 つ・タグの直し） ----");
+        MapStage stage = MapStage.Stage12H451;
+        write("  ---- 第451期の 1-2（`Stage12H451`・本陣の門 ＝ 中間拠点 2 つ・タグの直し） ----");
         void Win(Map11State st, int squad, Map11State.Node node)
         {
             var prep = st.Prepare(squad, node);
@@ -1586,6 +1595,150 @@ public static class Map12ChangeSmoke
         Req(crashed == 0, $"第451期の 2 つの盤 × 3 方針を {Seeds} seed ずつ回して落ちない（数字は報告のみ・線は置かない）");
     }
 
+    /// <summary>器具がレリックの持たせ先を選ぶ語（第452期・器具だけ・札の「何を何に変えるか」をタグの語に引き直した）。</summary>
+    private static string[] RelicWords(TraitId r) => r switch
+    {
+        TraitId.RelicCreak or TraitId.Spring or TraitId.RelicMomentum => new[] { "移動" },
+        TraitId.RelicFireArrow => new[] { "燃焼" },
+        TraitId.RelicVenomStep or TraitId.RelicVenomShove or TraitId.RelicPoisonMagnet => new[] { "毒" },
+        TraitId.RelicWilt => new[] { "呪い" },
+        TraitId.RelicNumbStep => new[] { "手番" },
+        TraitId.RelicHarden => new[] { "タンク" },
+        TraitId.RelicShockStep => new[] { "感電" },
+        TraitId.RelicOverflowEdge => new[] { "ヒーラー" },
+        _ => Array.Empty<string>(),
+    };
+
+    /// <summary>第452期 —— 遊ぶ 1-2（`MapStage.Stage12`）の (an)〜(aq) と、3 方針の表（報告だけ）。</summary>
+    private static void Phase452(Action<string> write, Action<bool, string> Req)
+    {
+        MapStage stage = MapStage.Stage12;
+        write("  ---- 第452期（遊ぶ 1-2・作戦マップのレリック＝中間拠点の見返り） ----");
+        void Win(Map11State st, int squad, Map11State.Node node)
+        {
+            var prep = st.Prepare(squad, node);
+            foreach (UnitState u in prep!.Value.Enemies) u.Hp = 0;
+            st.Resolve(squad, node, true, false);
+        }
+        void Walk(Map11State st, int squad, Dest dest, int steps = 30)
+        {
+            for (int k = 0; k < steps && !st.Finished; k++)
+            {
+                if (st.FoeFacing(squad) is { } here) { Win(st, squad, here); continue; }
+                if (st.Squads[squad].Pos == dest.Id) break;
+                if (Map11Orders.Apply(st, squad, dest, Map11Orders.Plan(st, squad, dest)) is { } foe) Win(st, squad, foe);
+            }
+        }
+        string Names(IEnumerable<TraitId> rs) => string.Join("・", rs.Select(r => RelicCatalog.Info(r).Name));
+
+        var st = new Map11State(0, stage.Time, stage.Portal, draft: true, stage: stage);
+        st.UseDefaultSquads();
+        var g = st.Graph;
+        int north = g.Lanes[0][^1], mid = g.Lanes[1][^1], south = g.Lanes[2][^1];
+
+        // ---- (an) 候補 3 枚・同じ札は 2 度出ない ----
+        {
+            var shown = new List<TraitId>();
+            var lines = new List<string>();
+            int gold0 = st.Gold;
+            bool before = st.RelicOffer.Count == 0;
+            foreach (var (squad, cell, name) in new[] { (0, north, "北の砦"), (1, mid, "浅瀬の野営地"), (1, south, "南の関所") })
+            {
+                Walk(st, squad, Dest.Of(g, cell));
+                var offer = st.RelicOffer.ToList();
+                shown.AddRange(offer);
+                lines.Add($"{name}: 候補 {offer.Count} 枚（{Names(offer)}）");
+                int goldBefore = st.Gold;
+                st.ChooseRelic(0);
+                if (st.Gold != goldBefore) lines.Add("× 金が動いた");
+            }
+            write($"  (an) {string.Join(" ／ ", lines)} ——手持ち {Names(st.RelicHand)}");
+            Req(before && shown.Count == 9 && shown.Distinct().Count() == 9 && st.RelicHand.Count == 3 && st.RelicsGained == 3,
+                "(an) 中間拠点を取るたび候補 3 枚から 1 枚を得る（金はかからない）・3 つで出た 9 枚は全部違う");
+        }
+
+        // ---- (ao) 持たせた駒の札が戦闘に入る ----
+        {
+            UnitState holder = st.Squads[1].Units!.First(u => u.IsAlive);
+            TraitId r = st.RelicHand[0];
+            bool equipped = st.EquipRelic(holder, r);
+            UnitState now = st.Squads[1].Units!.First(u => u.Def.Id == holder.Def.Id);
+            Map11State.Node foe = st.Nodes.SelectMany(x => x).First(n => n.Def.Stationary);
+            var prep = st.Prepare(1, foe);
+            UnitState? inBattle = prep?.Players.FirstOrDefault(u => u.Def.Id == holder.Def.Id);
+            bool carried = inBattle is not null && inBattle.Relic == r && inBattle.Traits.Any(t => t.Id == r) && ReferenceEquals(inBattle, now);
+            write($"  (ao) 第2隊の {holder.Def.Name} に「{RelicCatalog.Info(r).Name}」を持たせた {equipped} ——戦闘の駒の札の末尾 {inBattle?.Traits.LastOrDefault()?.Id}・印 {inBattle?.Relic}・手持ち {st.RelicHand.Count} 枚");
+            Req(equipped && carried && st.RelicHand.Count == 2, "(ao) 持たせた駒のレリックが戦闘に持ち込まれる（駒の札の末尾・`Relic` の印）");
+
+            // ---- (ap) 倒れたら手持ちに戻る・呼び戻した駒には付いていない ----
+            foreach (UnitState u in prep!.Value.Enemies) u.Hp = 0;
+            inBattle!.Hp = 0;
+            st.Resolve(1, foe, true, false);
+            bool back = st.RelicHand.Count == 3 && st.RelicHand.Contains(r);
+            int fi = st.FallenUnits.FindIndex(u => u.Def.Id == holder.Def.Id);
+            bool fallenBare = fi >= 0 && st.FallenUnits[fi].Relic is null && !st.FallenUnits[fi].Traits.Any(t => t.Id == r && !holder.Def.Traits.Contains(r));
+            string fallenMark = fi >= 0 ? (st.FallenUnits[fi].Relic?.ToString() ?? "なし") : "（列に無い）";
+            // 呼び戻す（金が足りなければ足して試す——器具の都合）。
+            bool revived = false;
+            if (fi >= 0)
+            {
+                while (st.Gold < stage.Gold.Revive) st.GetType().GetMethod("Earn", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+                                                    .Invoke(st, new object[] { 10, "器具", -1 });
+                revived = st.CanRevive(fi) && st.Revive(fi);
+            }
+            UnitState? rv = st.Bench.FirstOrDefault(u => u.Def.Id == holder.Def.Id);
+            write($"  (ap) {holder.Def.Name} が倒れたあと: 手持ち {st.RelicHand.Count} 枚（{Names(st.RelicHand)}）・倒れた駒の印 {fallenMark} ／ 呼び戻した {revived}・その駒の印 {rv?.Relic?.ToString() ?? "なし"}");
+            Req(back && fallenBare && revived && rv is not null && rv.Relic is null, "(ap) 倒れても札は手持ちに戻り、呼び戻した駒には付いていない");
+        }
+
+        // ---- (aq) ステージの終わりで消える・1-1 には出ない ----
+        {
+            var fresh = new Map11State(0, stage.Time, stage.Portal, draft: true, stage: stage);
+            var one = new Map11State(0, MapStage.Stage11.Time, MapStage.Stage11.Portal, draft: true, stage: MapStage.Stage11);
+            write($"  (aq) 新しい通しの手持ち {fresh.RelicHand.Count} 枚・候補 {fresh.RelicOffer.Count} 枚 ／ 1-1 のレリック {(MapStage.Stage11.Relic.On ? "あり" : "なし")}・第451期の盤 {(MapStage.Stage12H451.Relic.On ? "あり" : "なし")}");
+            Req(fresh.RelicHand.Count == 0 && fresh.RelicOffer.Count == 0 && !MapStage.Stage11.Relic.On && !MapStage.Stage12H451.Relic.On,
+                "(aq) 次の通しには持ち越さない（新しい通しの手持ちは空）・1-1 と第451期までの盤にはレリックが出ない");
+        }
+
+        // ---- 報告のみ: 3 方針 × 100 seed ----
+        var policies = new[] { ("1 隊残す", true, false, false), ("分担＋戻り番", true, true, false), ("籠城", true, true, true) };
+        write("");
+        write("  | 盤 | 方針 | 踏破 | 陥落 | 時間切れ | 制圧の刻（中央値） | 得た札（平均） | 持たせた回数 ÷ 得た札（延べ・倒れて戻った札を持たせ直すと 100% を超える） | 1 戦あたりの失った枚数 |");
+        write("  |---|---|--:|--:|--:|--:|--:|--:|--:|");
+        int crashed = 0;
+        var shownAll = new Dictionary<TraitId, int>();
+        foreach (var (bname, board) in new[] { ("第451期の既定（レリックなし）", MapStage.Stage12H451), ("第452期の既定（レリック）", stage) })
+            foreach (var (pname, guard, split, turtle) in policies)
+            {
+                var runs = new List<Once>();
+                int b = 0, lost = 0;
+                for (int seed = 0; seed < Seeds; seed++)
+                {
+                    var local = new Dictionary<string, (int Battles, int Lost)>();
+                    try
+                    {
+                        runs.Add(Greedy(seed, board, guard, split, turtle, local, watch: board.Relic.On ? q =>
+                        {
+                            if (!q.Finished) return;
+                            foreach (var (r, n) in q.RelicShown) shownAll[r] = shownAll.GetValueOrDefault(r) + n;
+                        } : null));
+                    }
+                    catch (Exception ex) { crashed++; if (crashed <= 3) write($"  × 第452期 {bname} {pname} seed {seed}: {ex.GetType().Name}: {ex.Message}"); continue; }
+                    b += local.Values.Sum(v => v.Battles); lost += local.Values.Sum(v => v.Lost);
+                }
+                if (runs.Count == 0) continue;
+                double P(Func<Once, bool> pr) => 100.0 * runs.Count(pr) / runs.Count;
+                var cap = runs.Where(r => r.Captured).Select(r => r.CapturedTurn).OrderBy(x => x).ToArray();
+                int got = runs.Sum(r => r.RelicsGot), eq = runs.Sum(r => r.RelicsEquipped);
+                write($"  | {bname} | {pname} | {P(r => r.Won):F0} | {P(r => r.Fallen):F0} | {P(r => r.TimedOut):F0} | {(cap.Length == 0 ? "—" : cap[cap.Length / 2].ToString())} | "
+                    + $"{(double)got / runs.Count:F2} | {(got == 0 ? "—" : $"{100.0 * eq / got:F0}%")} | {(b == 0 ? 0 : (double)lost / b):F2} |");
+            }
+        Req(crashed == 0, $"第452期の 2 つの盤 × 3 方針を {Seeds} seed ずつ回して落ちない（数字は報告のみ・線は置かない）");
+        write("");
+        write($"  札ごとの候補に出た回数（第452期の盤・3 方針 × {Seeds} seed の計）: "
+            + string.Join(" ／ ", RelicCatalog.All.Select(r => $"{r.Name} {shownAll.GetValueOrDefault(r.Id)}")));
+    }
+
     /// <summary>手札の先頭から <paramref name="count"/> 枚を、その隊の空いた席（前1 から）へ配る。</summary>
     private static void Deal(Map11State st, int squad, int count)
     {
@@ -1626,7 +1779,7 @@ public static class Map12ChangeSmoke
                                         int Refilled, bool DoubleAtHome, bool WipedOnSecond,
                                         bool TimedOut = false, int Outposts = 0, bool Released = false,
                                         int Recruits = 0, int GoldLeft = 0, bool SlotBought = false, bool ThirdFull = false,
-                                        int Revives = 0, int SquadsOpen = 0);
+                                        int Revives = 0, int SquadsOpen = 0, int RelicsGot = 0, int RelicsEquipped = 0);
 
     /// <summary>
     /// 貪欲方針で 1 マップ（自分で組む通し・到着あり）。開始の 10 枚を第1隊・第2隊へ 5 枚ずつ、届いた駒は拠点にいる第3隊へ配る。
@@ -1638,7 +1791,7 @@ public static class Map12ChangeSmoke
     private static Once Greedy(int seed, MapStage stage, bool guard, bool split = false, bool turtle = false,
                                Dictionary<string, (int Battles, int Lost)>? byFoe = null, Action<Map11State>? watch = null)
     {
-        int recruits = 0;
+        int recruits = 0, relicsEquipped = 0;
         bool slotBought = false, thirdFull = false;
         int revives = 0;
         var st = new Map11State(seed, stage.Time, stage.Portal, draft: true, stage: stage);
@@ -1733,6 +1886,19 @@ public static class Map12ChangeSmoke
                 while (Holes() > Spare() && st.Recruit(0)) recruits++;
             }
             if (turtle || stage.Gold.On) for (int k = 0; k < st.Squads.Length; k++) { if (st.CanReform(k)) refilled += Refill(st, k); }
+            // 第452期: レリック（レリックのある盤だけ）——候補の先頭を取り、タグが噛む駒（同じ語）に持たせる・いなければ前1。
+            if (stage.Relic.On)
+            {
+                while (st.RelicOffer.Count > 0) st.ChooseRelic(0);
+                foreach (TraitId r in st.RelicHand.ToList())
+                {
+                    var pool = st.Squads.Where(q => st.CanReform(q.Index) && q.Units is not null).SelectMany(q => q.Units!)
+                        .Where(u => u.IsAlive && u.Relic is null && st.CanEquip(u)).ToList();
+                    UnitState? to = pool.FirstOrDefault(u => u.Def.Tags.Intersect(RelicWords(r)).Any())
+                                    ?? pool.OrderBy(u => u.Slot).FirstOrDefault();
+                    if (to is not null && st.EquipRelic(to, r)) relicsEquipped++;
+                }
+            }
             else if (st.Squads.Length > 2) { if (st.Bench.Count > 0 && st.CanReform(2)) Deal(st, 2, st.Bench.Count); }
             else for (int k = 0; k < st.Squads.Length; k++) if (st.CanReform(k)) refilled += Refill(st, k);
             // 第446期: 3 隊目が生きた 5 枚になったことがあるか（報告だけ）。
@@ -1777,6 +1943,7 @@ public static class Map12ChangeSmoke
                         reserveFought, reserveAtHome, reserve?.Cleared == true, st.ArrivedCount,
                         st.Squads.Length > 2 && st.Squads[2].Deployed, moves, st.Battles, refilled,
                         doubleAtHome, wipedOnSecond, st.HeroArrived || (!st.Won && !st.Fallen && st.Turn >= stage.TurnCap),
-                        st.OutpostCaptures, released, recruits, st.Gold, slotBought, thirdFull, revives, st.SquadCap);
+                        st.OutpostCaptures, released, recruits, st.Gold, slotBought, thirdFull, revives, st.SquadCap,
+                        st.RelicsGained, relicsEquipped);
     }
 }

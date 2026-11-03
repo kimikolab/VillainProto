@@ -102,7 +102,7 @@ public partial class Main : Control
     private static int PlaytestStageBase => EnemyCatalog.Stages.Count + 1 + EnemyCatalog.TestStages.Count + 1;
     private EnemyCatalog.PlaytestStage? SelectedPlaytestStage =>
         _stagePicker.Selected >= PlaytestStageBase
-            ? EnemyCatalog.PlaytestStages[_stagePicker.Selected - PlaytestStageBase]
+            ? DemoPlaytestWaves.All[_stagePicker.Selected - PlaytestStageBase]   // 第452期: 作戦マップの敵部隊を末尾に
             : null;
     private string SelectedStageName => SelectedPlaytestStage?.Name ?? SelectedTestStage?.Name
         ?? EnemyCatalog.Stages[_stagePicker.Selected].Name;
@@ -137,7 +137,7 @@ public partial class Main : Control
     private static (string Name, Formation F)[]? _presetRows;
 
     private static (string Name, Formation F)[] PresetRows() =>
-        _presetRows ??= Presets.Compare.Concat(Presets.Cross).Concat(Presets.Playtest).Concat(Presets.Versions).ToArray();   // 第291期: 試遊の行を末尾に・第327期: 版の台（「版・」）をさらに後ろに
+        _presetRows ??= Presets.Compare.Concat(Presets.Cross).Concat(Presets.Playtest).Concat(Presets.Versions).Concat(Presets.MapBoards).ToArray();   // 第452期: 作戦マップの敵と当てる台を末尾に   // 第291期: 試遊の行を末尾に・第327期: 版の台（「版・」）をさらに後ろに
 
     private int _presetIndex;
     private bool _presetDirty;
@@ -393,7 +393,7 @@ public partial class Main : Control
         if (playtestStageArg is not null
             && int.TryParse(playtestStageArg["--demo-playtest-stage=".Length..], out int requestedPlaytestStage)
             && requestedPlaytestStage >= 0
-            && requestedPlaytestStage < EnemyCatalog.PlaytestStages.Count
+            && requestedPlaytestStage < DemoPlaytestWaves.All.Count
             && !CampaignSession.HasPendingEncounter && !CampaignSession.HasCarriedBattle)
             _stagePicker.Selected = PlaytestStageBase + requestedPlaytestStage;
 
@@ -582,7 +582,7 @@ public partial class Main : Control
         _stagePicker.AddSeparator("── 検証 ──");
         foreach (var stage in EnemyCatalog.TestStages) _stagePicker.AddItem(stage.Name);
         _stagePicker.AddSeparator("── 試遊 ──");   // 第291期
-        foreach (var stage in EnemyCatalog.PlaytestStages) _stagePicker.AddItem(stage.Name);
+        foreach (var stage in DemoPlaytestWaves.All) _stagePicker.AddItem(stage.Name);   // 第452期: 作戦マップの敵部隊を末尾に
         _stagePicker.ItemSelected += index =>
         {
             UpdateStageHeader();
@@ -977,7 +977,7 @@ public partial class Main : Control
             ? $"交差帯 {_presetIndex - Presets.Compare.Length + 1}/{Presets.Cross.Length}"
             : _presetIndex < Presets.Compare.Length + Presets.Cross.Length + Presets.Playtest.Length
             ? $"試遊 {_presetIndex - Presets.Compare.Length - Presets.Cross.Length + 1}/{Presets.Playtest.Length}"   // 第291期
-            : $"追加 {_presetIndex - Presets.Compare.Length - Presets.Cross.Length - Presets.Playtest.Length + 1}/{Presets.Versions.Length}";   // 第327期（版の台）・第328期: 試遊の台も置くので「追加」
+            : $"追加 {_presetIndex - Presets.Compare.Length - Presets.Cross.Length - Presets.Playtest.Length + 1}/{Presets.Versions.Length + Presets.MapBoards.Length}";   // 第327期（版の台）・第328期: 試遊の台も置くので「追加」
         _presetState.Text = _presetDirty
             ? $"{band}・プリセットから変更あり"
             : $"{band}・プリセット通り（全 {rows.Length} 行）";

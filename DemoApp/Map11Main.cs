@@ -432,6 +432,34 @@ public partial class Map11Main : Node3D
             GD.Print($"MAP11_CAPTURE_OUTPOST seed={Map11Session.Seed} held={St.HeldOutposts.Contains(fort)} turn={St.Turn} "
                      + $"lost={St.Squads.Count(q => q.Lost)} delivered={St.Deliveries.Count}");
         }
+        // 第452期 §4: **レリックを持たせた駒**の絵（`--map-stage=1-2` と使う）。`outpost` と同じ手で北の砦を取り、候補の先頭を得て、
+        // 第1隊（砦にいる＝組み直しができる）の前1 の駒に持たせ、その隊の組み直しを開いてその駒を選んだところ。候補の窓の絵は `outpost` で撮る。
+        else if (parts.Length > 1 && parts[1] == "relic")
+        {
+            St.UseDefaultSquads();
+            _reform = false;
+            ClearHold();
+            Map11Session.TakeOpening();
+            int fort = St.Graph.Lanes[0][^1];
+            Dest to = Dest.Of(St.Graph, fort);
+            Map11Session.SetDestination(0, to);
+            for (int guard = 0; guard < 10 && !St.HeldOutposts.Contains(fort) && !St.Finished; guard++)
+            {
+                if (Map11Orders.Apply(St, 0, to, Map11Orders.Plan(St, 0, to)) is { } met) CaptureFight(0, met, false);
+                if (St.HeldOutposts.Contains(fort)) break;
+                foreach (Map11State.Encounter e in St.AdvanceFoes())
+                    if (e.Intercept) { if (St.NextInterceptor(e.Node) is var j && j >= 0) CaptureFight(j, e.Node, true); St.CloseIntercept(e.Node); }
+                    else CaptureFight(e.Squad, e.Node, false);
+            }
+            bool got = St.ChooseRelic(0);
+            UnitState? holder = St.Squads[0].Units?.Where(u => u.IsAlive).OrderBy(u => u.Slot).FirstOrDefault();
+            bool equipped = got && holder is not null && St.EquipRelic(holder, St.RelicHand[0]);
+            _selected = 0;
+            _reform = St.CanReform(0);
+            _squadPick = holder?.Slot ?? -1;
+            Refresh();
+            GD.Print($"MAP11_CAPTURE_RELIC seed={Map11Session.Seed} got={got} equipped={equipped} holder={holder?.Def.Name} reform={_reform}");
+        }
         // 第443期 §0-1: **迎撃の合間**の絵（`--map-stage=1-2` と使う）。既定の組み方で 2 隊を組み、北と南の先頭だけを残して
         // 拠点で待つ。2 刻目に 2 部隊が同時に着くので、1 戦目を**頭なしで**決着させ（戦闘シーンへは行かない）、2 戦目の迎撃の窓を出す。
         else if (parts.Length > 1 && parts[1] == "break")
@@ -2135,7 +2163,7 @@ public partial class Map11Main : Node3D
             int index = i;
             var b = new Button
             {
-                Text = $"{u.Def.Name}\nHP {u.Hp}/{u.MaxHp} ・ 攻{u.Def.Attack} ・ 速{u.Def.Speed}",
+                Text = $"{u.Def.Name}{(u.Relic is TraitId rl ? $"  ◆{RelicCatalog.Info(rl).Name}" : "")}\nHP {u.Hp}/{u.MaxHp} ・ 攻{u.Def.Attack} ・ 速{u.Def.Speed}",   // 第452期: レリックの印
                 Alignment = HorizontalAlignment.Left,
                 FocusMode = Control.FocusModeEnum.None,
                 CustomMinimumSize = new Vector2(0, 42),
@@ -2256,6 +2284,7 @@ public partial class Map11Main : Node3D
                 _benchList.AddChild(rv);
             }
         }
+        AddRelicRows();   // 第452期: 手札の隣の「レリック」の段
         string held = _holdBench >= 0 && _holdBench < St.Bench.Count ? St.Bench[_holdBench].Def.Name : "控えの駒を選んで";
         Button sell = UiKit.ActionButton($"売る ＋{g.Sell}  {held}", UiKit.Muted);
         Fit(sell);
@@ -2314,7 +2343,7 @@ public partial class Map11Main : Node3D
         var cells = new List<SeatDiagram.Cell>();
         if (s.Units is { } units)
             foreach (UnitState u in units.Where(u => !u.Def.Traits.Contains(TraitId.Ephemeral)))
-                cells.Add(new SeatDiagram.Cell(u.Slot, u.Def, Math.Max(0, u.Hp), u.MaxHp, u.IsAlive));
+                cells.Add(new SeatDiagram.Cell(u.Slot, u.Def, Math.Max(0, u.Hp), u.MaxHp, u.IsAlive, u.Relic));
         else
             // **失われた隊を満タンの既定編成で描かない**（第173期 §1-3 #3）——全滅すると
             // `Units` が null になるので、第172期はここで定義の値を満タンで描いていた。
@@ -2346,7 +2375,7 @@ public partial class Map11Main : Node3D
             return;
         }
         SeatDiagram.Cell pick = held is not null
-            ? new SeatDiagram.Cell(-1, held.Def, held.Hp, held.MaxHp, held.IsAlive)
+            ? new SeatDiagram.Cell(-1, held.Def, held.Hp, held.MaxHp, held.IsAlive, held.Relic)
             : cells.First(c => c.Slot == _squadPick);
         UnitDef d = pick.Def!;
         _squadFocus.AddChild(UiKit.Text(
@@ -2359,6 +2388,8 @@ public partial class Map11Main : Node3D
         // **色は線と同じ 得／損／両方**（第173期 §1-1・出どころは `SeatLinks.ColorOf` の1本）。
         foreach ((string rel, Color tint) in RelationWordsFor(cells, held is not null ? -1 : _squadPick))
             FocusLine(_squadFocus, rel, tint);
+        // 第452期: レリックを持たせる／外す（選んだ駒が手札か、組み直しのできる隊にいるとき）。
+        AddRelicButtons(_squadFocus, held ?? s.Units?.FirstOrDefault(x => x.Slot == _squadPick && x.IsAlive));
     }
 
     /// <summary>
@@ -2705,6 +2736,7 @@ public partial class Map11Main : Node3D
 
     private void Refresh()
     {
+        RefreshRelicOffer();   // 第452期: 中間拠点を取った刻のレリックの候補
         // 第174期 §2-2: **画面上部に「作戦ターン N」**。時間を切った設定では出さない。
         // 第177期 §2: 拠点ありでは**勝ち条件が「制圧 ＋ 盤上の敵 0」**なので、
         // 「抜いた敵部隊 n / 4」だけでは何が残っているか読めない——湧いたぶんも出す。

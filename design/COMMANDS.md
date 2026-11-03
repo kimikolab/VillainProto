@@ -18,6 +18,7 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 compare quality > docs/quality.md  # 勝ち方の質（残存/圧勝率/**完全勝利**/全滅勝ち・第2〜5波）
     dotnet run --project BattleSim -c Release 0 dump > docs/units.md      # ユニット・特性・ステージ一覧
     dotnet run --project BattleSim -c Release 0 tags > docs/tags.md       # **第450期**: 駒のタグ（軸・役割・表示だけ）の確定版。表は `UnitTags`（`BattleCore/UnitCatalog.cs`）。戦闘0回
+    dotnet run --project BattleSim -c Release 0 fire452                   # **第452期 段0**: 「試遊・火の部隊 × ホタ」（`Presets.MapBoards`）× 火の魔術師の部隊 ／ 盾の列（対照）を seed 0..199（勝率・ホタの燃焼）。報告のみ・約 5 秒
     dotnet run --project BattleSim -c Release 0 layout      # 代表編成の全配置総当たり（並列・決定的。**第140期に波別最良の測り直しも並列にした**）
     dotnet run --project BattleSim -c Release 0 reseat [絞り込み] [skip] [take]  # 配置候補を seed 200 で測り直す
     dotnet run --project BattleSim -c Release 0 confirm     # 差し替え候補を別 seed で追試する
@@ -1853,6 +1854,10 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
         # **第451期**: (ai)(aj) と第450期の表は第450期の 1-2（`Stage12H450`・門なし）で回す。遊ぶ 1-2（`Stage12`・本陣の門 2）に
         # (ak) 中間拠点 1 つでは敵の拠点へ入れず 2 つで入れる（直に歩かせた隊で制圧まで）／ (al) 取り返されて 1 つに戻ると門が閉じる ／
         # (am) ハネ・エレ・「活用」とタグの 1 行 ＋ 3 方針 × 100 seed と帯 B と戦った率（報告のみ）。約 60 秒
+        # **第452期**: (ak)〜(am) と第451期の表は第451期の 1-2（`Stage12H451`・レリックなし）で回す。遊ぶ 1-2（`Stage12`・レリック）に
+        # (an) 中間拠点で候補 3 枚・同じ札は 2 度出ない ／ (ao) 持たせた札が戦闘に入る ／ (ap) 倒れたら手持ちに戻る・呼び戻した駒には無い ／
+        # (aq) 次の通しに持ち越さない・1-1 には出ない ＋ 3 方針 × 100 seed と札ごとの出た回数（報告のみ）。約 70 秒
+        # 絵: `res://Map11Main.tscn -- --map-stage=1-2 --map-seed=0 --map11-capture=<png>,outpost`（候補の窓）・`,relic`（持たせた駒の札）
     Godot_console.exe --path DemoApp --headless -- --map11-phase176
         # **第176期 Phase 0**: Q0-1〜Q0-5（`PortalOn = false` が第175期の 18 量と一致するか ／
         # 重なりと同点の割り方 ／ 湧いた部隊を満タンで作る口 ／ 方針の手順 ／ 走行時間）。約 1 秒

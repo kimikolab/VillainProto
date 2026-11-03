@@ -22,7 +22,8 @@ using System.Linq;
 public partial class SeatDiagram : Control
 {
     /// <summary>1 席ぶんの中身。<c>Def</c> が null の席は<b>空席として描く</b>（先遣の後1 が見える）。</summary>
-    public readonly record struct Cell(int Slot, UnitDef? Def, int Hp, int MaxHp, bool Alive);
+    /// <param name="Relic">持っているレリック（第452期・表示だけ・札の最後の行に「◆名前」）。</param>
+    public readonly record struct Cell(int Slot, UnitDef? Def, int Hp, int MaxHp, bool Alive, TraitId? Relic = null);
 
     private const float CardW = 124f;
     private const float CardH = 64f;
@@ -194,7 +195,8 @@ public partial class SeatDiagram : Control
             // 盤面ルールの語は ★ の札がもう出しているので重ねない。
             string tags = UnitTagChips.Text(cell.Def, tag);
             bool big = DisplayScale > 1.1f;
-            string last = string.Join("  ", new[] { big ? "" : tags, tag }.Where(x => x.Length > 0));
+            string relic = cell.Relic is TraitId rl ? "◆" + RelicCatalog.Info(rl).Name : "";   // 第452期
+            string last = string.Join("  ", new[] { big ? "" : tags, tag, relic }.Where(x => x.Length > 0));
             card.Text = cell.Alive
                 ? $"{head}{(big ? (tags.Length > 0 ? "  " + tags : "") + "\n" : "  ")}{cell.Def.Name}\nHP {cell.Hp}/{cell.MaxHp}  攻{cell.Def.Attack} 速{cell.Def.Speed}"
                   + (last.Length > 0 ? "\n" + last : "")

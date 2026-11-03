@@ -125,6 +125,14 @@ public partial class Map11Main
                     chips.Alignment = BoxContainer.AlignmentMode.Center;
                     cell.AddChild(chips);
                     cell.TooltipText = unit.Def.Name + "\n" + UnitTagChips.Help(unit.Def);
+                    // 第452期: レリックを持っていれば顔の下に「◆名前」。
+                    if (unit.Relic is TraitId rl)
+                    {
+                        Label mark = UiKit.Text("◆" + RelicCatalog.Info(rl).Name, 9, GoldColor);
+                        mark.HorizontalAlignment = HorizontalAlignment.Center;
+                        cell.AddChild(mark);
+                        cell.TooltipText += $"\n◆{RelicCatalog.Info(rl).Name}: {RelicCatalog.Info(rl).Text}";
+                    }
                     members.AddChild(cell);
                 }
             row.AddChild(members);

@@ -82,6 +82,8 @@ public sealed class MapStage
     /// 取り返されて数を割れば門は閉じる（中にいる隊はそのまま・新しく入れないだけ）。湧き・予備隊・敵の前進は門と無関係。<b>0 なら門は無い</b>（第450期まで）。
     /// </summary>
     public int PortalGate { get; init; }
+    /// <summary>作戦マップのレリック（第452期 §1・<b>既定は Off</b>）。</summary>
+    public RelicRule Relic { get; init; } = RelicRule.Off;
 
     public int LaneCount => Lanes.Length;
     public int TotalNodes => Lanes.Sum(l => l.Count);
@@ -411,10 +413,11 @@ public sealed class MapStage
     };
 
     /// <summary>
-    /// 1-2（第451期・遊ぶ版）。第450期（<see cref="Stage12H450"/>）に<b>本陣の門</b>（<see cref="PortalGate"/> ＝ 2）を足しただけ——
+    /// 1-2 の第451期の姿。第450期（<see cref="Stage12H450"/>）に<b>本陣の門</b>（<see cref="PortalGate"/> ＝ 2）を足しただけ——
     /// 中間拠点を 3 つのうち 2 つ取るまで敵の拠点へ入れない。北（粛）・中（物見と火の魔術師の部隊が同じマス）・南（毒霧）のどの 2 つでも、火か毒には必ず当たる。
+    /// 第452期からは回帰の基準だけが使う——遊ぶ 1-2 は <see cref="Stage12"/>。
     /// </summary>
-    public static MapStage Stage12 { get; } = new()
+    public static MapStage Stage12H451 { get; } = new()
     {
         Id = Stage12H450.Id,
         Title = Stage12H450.Title,
@@ -433,6 +436,32 @@ public sealed class MapStage
         Gold = Stage12H450.Gold,
         MatchOffer = Stage12H450.MatchOffer,
         PortalGate = 2,
+    };
+
+    /// <summary>
+    /// 1-2（第452期・遊ぶ版）。第451期（<see cref="Stage12H451"/>）に<b>作戦マップのレリック</b>（<see cref="RelicRule.V452"/>）を足しただけ——
+    /// 中間拠点を初めて取った刻に候補 3 枚から 1 枚（選ばないこともできる）。1 マップ限り（持ち越さない）。
+    /// </summary>
+    public static MapStage Stage12 { get; } = new()
+    {
+        Id = Stage12H451.Id,
+        Title = Stage12H451.Title,
+        Board = Stage12H451.Board,
+        Lanes = Stage12H451.Lanes,
+        LaneNames = Stage12H451.LaneNames,
+        Spawn = Stage12H451.Spawn,
+        Portal = Stage12H451.Portal,
+        Time = Stage12H451.Time,
+        Arrival = Stage12H451.Arrival,
+        Reserve = Stage12H451.Reserve,
+        SquadCap = Stage12H451.SquadCap,
+        TurnCap = Stage12H451.TurnCap,
+        TimeLimit = Stage12H451.TimeLimit,
+        WinOnCapture = Stage12H451.WinOnCapture,
+        Gold = Stage12H451.Gold,
+        MatchOffer = Stage12H451.MatchOffer,
+        PortalGate = Stage12H451.PortalGate,
+        Relic = RelicRule.V452,
     };
 
     /// <summary>選べるステージ（編成画面の選択の並び）。</summary>
@@ -504,6 +533,19 @@ public readonly record struct GoldRule(bool On, int Start, int Kill, int SpawnKi
     public static GoldRule Of(int start = 0, int kill = 6, int spawnKill = 3, int outpost = 8, int recruit = 10, int slot = 12,
                               int sell = 3, int offers = 3, int startSquads = 2)
         => new(true, start, kill, spawnKill, outpost, recruit, slot, sell, offers, startSquads);
+}
+
+/// <summary>
+/// 作戦マップのレリック（第452期 §1）。<b><c>On</c> が偽ならレリックは出ない</b>（第451期まで・1-1）。
+/// 札は `RelicCatalog.All`（12 枚）から seed で並べた列の先頭から引く——<b>同じ札は 1 マップに 1 度しか出ない</b>（引いた札は列に戻さない）。
+/// <b>出るのは中間拠点を初めて取った刻だけ</b>（敵を抜いても・制圧しても出ない——レリックは「場所を取った」見返り、金は「敵を抜いた」見返り）。
+/// </summary>
+/// <param name="Offers">候補の枚数。</param>
+public readonly record struct RelicRule(bool On, int Offers)
+{
+    public static readonly RelicRule Off = new(false, 0);
+    /// <summary>第452期の値: 候補 3 枚から 1 枚。</summary>
+    public static readonly RelicRule V452 = new(true, 3);
 }
 
 /// <summary>

@@ -681,6 +681,14 @@ public sealed class Map11State
             UnitDef[] pool = UnitCatalog.All.ToArray();
             for (int i = pool.Length - 1; i > 0; i--) { int j = rng.Next(i + 1); (pool[i], pool[j]) = (pool[j], pool[i]); }
             foreach (UnitDef d in pool) _offerQueue.Enqueue(d);
+            // 第452期 §1-1: レリックの列（12 枚を別の乱数で並べる・戦闘の seed とも候補の列とも別）。
+            if (Stage.Relic.On)
+            {
+                var relicRng = new Random(unchecked(seed * 7919 + 452));
+                TraitId[] relics = RelicCatalog.All.Select(r => r.Id).ToArray();
+                for (int i = relics.Length - 1; i > 0; i--) { int j = relicRng.Next(i + 1); (relics[i], relics[j]) = (relics[j], relics[i]); }
+                foreach (TraitId r in relics) _relicQueue.Enqueue(r);
+            }
             for (int k = 0; k < Stage.Gold.Offers; k++) if ((k == 0 ? FirstOffer() : NextOffer()) is { } d) Offers.Add(d);
         }
     }
@@ -716,6 +724,96 @@ public sealed class Map11State
         Bench.Add(u);
         Revives++;
         return true;
+    }
+
+    // ---------------- 作戦マップのレリック（第452期 §1） ----------------
+
+    /// <summary>手持ちのレリック（まだ誰にも持たせていない札・得た順）。</summary>
+    public List<TraitId> RelicHand { get; } = new();
+    /// <summary>いま選べる候補（中間拠点を取った刻に <see cref="RelicRule.Offers"/> 枚・選ぶか見送るまで残る）。空なら候補は出ていない。</summary>
+    public List<TraitId> RelicOffer { get; } = new();
+    /// <summary>レリックの列（12 枚を seed で並べたもの・引いた札は戻さない）。</summary>
+    private readonly Queue<TraitId> _relicQueue = new();
+    /// <summary>レリックを出した中間拠点（初めて取った刻だけ出す）。</summary>
+    private readonly HashSet<int> _relicCells = new();
+    /// <summary>候補が出ている間に次の中間拠点を取ったとき、後で出す候補の数。</summary>
+    private int _relicPending;
+    /// <summary>得た枚数 ／ 見送った回数 ／ 候補に出た札の回数（測るためだけの計数）。</summary>
+    public int RelicsGained { get; private set; }
+    public int RelicsDeclined { get; private set; }
+    public Dictionary<TraitId, int> RelicShown { get; } = new();
+
+    /// <summary>その駒がいまレリックを持たせ直せる場所にいるか（手札・組み直しのできる隊）。</summary>
+    public bool CanEquip(UnitState u)
+        => Stage.Relic.On && !Finished && u.IsAlive
+           && (Bench.Contains(u) || Squads.Any(q => q.Units is { } us && us.Contains(u) && CanReform(q.Index)));
+
+    /// <summary>候補を出す（中間拠点を初めて取った刻・<see cref="UpdateOutposts"/> だけが呼ぶ）。</summary>
+    private void OfferRelics()
+    {
+        if (RelicOffer.Count > 0) { _relicPending++; return; }
+        for (int k = 0; k < Stage.Relic.Offers && _relicQueue.Count > 0; k++)
+        {
+            TraitId r = _relicQueue.Dequeue();
+            RelicOffer.Add(r);
+            RelicShown[r] = RelicShown.GetValueOrDefault(r) + 1;
+        }
+    }
+
+    /// <summary>候補の <paramref name="index"/> 番目を得る（-1 で見送る）。見送った札と選ばなかった札は列に戻さない。</summary>
+    public bool ChooseRelic(int index)
+    {
+        if (RelicOffer.Count == 0 || index >= RelicOffer.Count) return false;
+        if (index >= 0) { RelicHand.Add(RelicOffer[index]); RelicsGained++; }
+        else RelicsDeclined++;
+        RelicOffer.Clear();
+        if (_relicPending > 0) { _relicPending--; OfferRelics(); }
+        return true;
+    }
+
+    /// <summary>手持ちのレリック <paramref name="relic"/> を駒に持たせる（1 駒 1 枚・持っている札は手持ちに戻して置き換える）。</summary>
+    public bool EquipRelic(UnitState u, TraitId relic)
+    {
+        if (!CanEquip(u) || !RelicHand.Contains(relic)) return false;
+        RelicHand.Remove(relic);
+        if (u.Relic is TraitId old) RelicHand.Add(old);
+        ReplaceUnit(u, WithRelic(u, relic));
+        return true;
+    }
+
+    /// <summary>駒からレリックを外して手持ちに戻す。</summary>
+    public bool UnequipRelic(UnitState u)
+    {
+        if (!CanEquip(u) || u.Relic is not TraitId old) return false;
+        RelicHand.Add(old);
+        ReplaceUnit(u, WithRelic(u, null));
+        return true;
+    }
+
+    /// <summary>
+    /// レリックを付け替えた写し（第452期）。<b>`UnitState` の札の列は作るときにしか決まらない</b>ので、駒を作り直して置き換える
+    /// （札の付け方は `BattleEngine.Materialize` と同じ `RelicCatalog.Attach`）。HP・席・私有のカウンタは写す（戦闘の外なので状態異常と強化は 0）。
+    /// </summary>
+    private static UnitState WithRelic(UnitState u, TraitId? relic)
+    {
+        var n = new UnitState
+        {
+            Def = u.Def, TeamId = u.TeamId, Shape = u.Shape, Slot = u.Slot, Hp = u.Hp, MaxHp = u.MaxHp,
+            Traits = relic is TraitId r ? RelicCatalog.Attach(u.Def.Traits, r) : TraitCatalog.Resolve(u.Def.Traits),
+            Relic = relic,
+            HasFallenBack = u.HasFallenBack, ActionIndex = u.ActionIndex, LastDeathTurn = u.LastDeathTurn, TakenTurn = u.TakenTurn,
+        };
+        foreach (var (k, v) in u.Counters) n.Counters[k] = v;
+        return n;
+    }
+
+    /// <summary>駒を写しに置き換える（隊・手札・倒れた駒の列のどこにいても）。</summary>
+    private void ReplaceUnit(UnitState from, UnitState to)
+    {
+        foreach (Squad q in Squads)
+            if (q.Units is { } us && us.IndexOf(from) is int i && i >= 0) us[i] = to;
+        if (Bench.IndexOf(from) is int b && b >= 0) Bench[b] = to;
+        if (FallenUnits.IndexOf(from) is int f && f >= 0) FallenUnits[f] = to;
     }
 
     /// <summary><c>Presets.Compare</c> の行ごとの駒の Id（第449期 §0-5・噛む駒の判定）。</summary>
@@ -1024,6 +1122,7 @@ public sealed class Map11State
                 if (mine < 0 || foe) continue;
                 HeldOutposts.Add(cell);
                 OutpostCaptures++;
+                if (Stage.Relic.On && _relicCells.Add(cell)) OfferRelics();   // 第452期: 初めて取った中間拠点だけ
                 Deliver(Stage.Arrival.OnOutpost, Graph[cell].Name, $"{Graph[cell].Name}を取った");
                 Earn(Stage.Gold.Outpost, $"{Graph[cell].Name}を取った", cell);
             }
@@ -1374,6 +1473,14 @@ public sealed class Map11State
 
         var aliveP = pu.Where(u => u.IsAlive).ToList();
         var aliveE = eu.Where(u => u.IsAlive).ToList();
+        // 第452期 §1-2: 倒れた駒のレリックは手持ちに戻る（倒れた駒の列には札の無い写しを置く——呼び戻した駒には付いていない）。
+        foreach (UnitState u in pu.Where(x => !x.IsAlive && x.Relic is not null).ToList())
+        {
+            RelicHand.Add(u.Relic!.Value);
+            UnitState bare = WithRelic(u, null);
+            int at = pu.IndexOf(u);
+            pu[at] = bare;
+        }
         // 第447期: 呼び戻しのある盤では、この戦闘で倒れた駒を記録する（境界で隊から外れるので、ここで拾わないと消える）。
         if (Stage.Gold.Revive > 0)
             foreach (UnitState u in pu)

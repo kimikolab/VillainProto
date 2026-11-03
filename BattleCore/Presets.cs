@@ -943,6 +943,17 @@ public static class Presets
     public static Formation WataGift413(UnitDef wata) =>
         Formation.Build(front1: wata, front3: UnitCatalog.Mudo, center: UnitCatalog.Nel, back1: UnitCatalog.Kubi, back3: UnitCatalog.Utsu);
 
+    /// <summary>
+    /// 作戦マップの敵と当てて見る試遊の台（第452期 段0）。<b>`Versions` には入れない</b>——過去の器具が `Versions` の並び・数を読むので（第410期の鎖の件）、
+    /// DemoApp の行の一覧の末尾だけに出す（BattleSim の器具はどれも読まない・`compare` は動かない）。
+    /// </summary>
+    public static (string Name, Formation F)[] MapBoards => new (string, Formation)[]
+    {
+        // 第452期 段0: 火の部隊 × ホタ。燃焼の行（`火選り (ヒヨ×ホタ)` ほか）から<b>ボルグを抜いた</b>形で、指示書の例の並びのまま
+        // （前1 ガルド ／ 前3 ヒヨ ／ 中央 ホタ ／ 後1 ヴェル ／ 後3 ヨミ）——ホタが燃えるのは敵の火（火の魔術師・火矢の射手）だけになる。
+        ("試遊・火の部隊 × ホタ", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Hiyo, center: UnitCatalog.Hota, back1: UnitCatalog.Vel, back3: UnitCatalog.Yomi)),
+    };
+
     public static (string Name, Formation F)[] Versions => new (string, Formation)[]
     {
         ("試遊・感電 ポンの台", Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Shiga, center: UnitCatalog.Tou, back1: UnitCatalog.Kugu, back3: UnitCatalog.Som)),
