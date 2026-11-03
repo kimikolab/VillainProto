@@ -526,6 +526,20 @@ public sealed class Map11State
     public List<UnitState> LastArrived { get; } = new();
     /// <summary>届いた総数（測るためだけの計数）。</summary>
     public int ArrivedCount { get; private set; }
+
+    // ---------------- 中間拠点・見返りの増援（第444期 §0-1・§0-2） ----------------
+
+    /// <summary>見返りで届いた駒の記録（届いた順・画面のトーストと結果画面が読む）。時間で届いた駒は入れない。</summary>
+    public sealed record Delivery(UnitState Unit, string Place, string Reason);
+    /// <summary>見返りで届いた駒（届いた順）。<b>見返りの無い盤では空。</b></summary>
+    public List<Delivery> Deliveries { get; } = new();
+    /// <summary>盤の中間拠点のマス（<see cref="MapGraph.Kind.Outpost"/>）。<b>無い盤では空</b>——中間拠点の判定は全部ここで抜ける。</summary>
+    private readonly int[] _outposts;
+    /// <summary>いま味方のものになっている中間拠点のマス。</summary>
+    public HashSet<int> HeldOutposts { get; } = new();
+    /// <summary>中間拠点を取った回数 ／ 取り返された回数（測るためだけの計数）。</summary>
+    public int OutpostCaptures { get; private set; }
+    public int OutpostLosses { get; private set; }
     /// <summary>開始の手札の引きで保証 3 条件を満たせたか（満たせなければ結果画面に印）。到着を切った通しでは真。</summary>
     public bool OpeningOk { get; } = true;
     /// <summary>開始の手札の引き直しの回数。</summary>
@@ -561,6 +575,7 @@ public sealed class Map11State
         Draft = draft;
         Stage = stage ?? MapStage.Stage11;
         Graph = graph ?? Stage.Board(Portal.On);
+        _outposts = Graph.Cells.Where(c => c.Kind == MapGraph.Kind.Outpost).Select(c => c.Id).ToArray();
         // 最初の1回まで S ターン（第176期の `Turn % S == 0` と同じ立ち上がり）。
         _portalReady = Portal.On ? Math.Max(0, Portal.SpawnEvery) : 0;
         // 第177期 §3: 自分で組む通しでは、**3 隊の 15 枚をばらして手札にする**。
@@ -622,7 +637,16 @@ public sealed class Map11State
     public string LaneName(int road) => road < 0 ? Map11.PortalName : Stage.LaneNames[road];
 
     public bool Finished => (Portal.On ? Won : AllCleared) || NoSquadsLeft || Battles >= BattleCapNow
-                            || Fallen || (Time.On && Turn >= Map11.TurnCap);
+                            || Fallen || (Time.On && Turn >= Stage.TurnCap);
+
+    /// <summary>
+    /// 勇者パーティーが着いて負けた（第444期 §0-3）。<b>上限を勇者の予告にした盤（<see cref="MapStage.HeroAtCap"/>）で、
+    /// 刻の上限に達したときに勝っていなければ真。</b>勇者そのものはまだ盤に出ない（段C）。
+    /// </summary>
+    public bool HeroArrived => Stage.HeroAtCap && Time.On && Turn >= Stage.TurnCap && !Won && !Fallen;
+
+    /// <summary>勇者パーティーが現れるまでの刻（予告の札「あと n 刻」）。予告の無い盤では null。</summary>
+    public int? HeroTurnsLeft => Stage.HeroAtCap && Time.On ? Math.Max(0, Stage.TurnCap - Turn) : null;
 
     /// <summary>
     /// 勝ち。<b>拠点ありでは「制圧した ＋ 盤上の敵部隊が 0」</b>（第176期 §1-4）
@@ -711,6 +735,68 @@ public sealed class Map11State
     public bool AtSecondBase(int squadIndex)
         => Captured && Squads[squadIndex].Units is not null && Squads[squadIndex].Pos == Graph.Portal;
 
+    /// <summary>その隊は味方のものになった中間拠点にいるか（第444期 §0-1・<b>休む・組み直し・届いた駒を受け取るができる</b>）。</summary>
+    public bool AtOutpost(int squadIndex)
+        => _outposts.Length > 0 && Squads[squadIndex].Units is not null && HeldOutposts.Contains(Squads[squadIndex].Pos);
+
+    /// <summary>
+    /// 拠点の外で、拠点と同じことができる場所にいるか（第2拠点か、取った中間拠点）。
+    /// <b>ワープ（<see cref="CanWarp"/>）と第2拠点の明け渡しは第2拠点だけ</b>——中間拠点は経路の途中のマスなので飛べない。
+    /// </summary>
+    public bool AtForwardBase(int squadIndex) => AtSecondBase(squadIndex) || AtOutpost(squadIndex);
+
+    /// <summary>
+    /// 中間拠点の取り合い（第444期 §0-1・<b>ここ1箇所だけ</b>）。<see cref="TryCapture"/> と <see cref="LoseSecondBaseIfEmpty"/> を中間拠点に広げたもの:
+    /// <b>味方の隊（生きている駒あり）がいて敵部隊がいなければ取る</b>（見返りに <see cref="ArrivalRule.OnOutpost"/> 枚）／
+    /// <b>敵部隊がいて出せる隊がいなければ取り返される</b>。隊の位置が動くたび（<see cref="Place"/>）・戦闘の精算・敵の前進の後に呼ぶ。
+    /// </summary>
+    private void UpdateOutposts()
+    {
+        if (_outposts.Length == 0 || Nodes is null) return;
+        foreach (int cell in _outposts)
+        {
+            int lane = Graph[cell].Lane;
+            bool foe = FoesOn(lane).Any(n => n.Pos == cell);
+            int mine = -1;
+            for (int i = 0; i < Squads.Length; i++)
+                if (!Squads[i].Lost && Squads[i].Units is { } u && Squads[i].Pos == cell && u.Any(x => x.IsAlive)) { mine = i; break; }
+            if (!HeldOutposts.Contains(cell))
+            {
+                if (mine < 0 || foe) continue;
+                HeldOutposts.Add(cell);
+                OutpostCaptures++;
+                Deliver(Stage.Arrival.OnOutpost, Graph[cell].Name, $"{Graph[cell].Name}を取った");
+            }
+            else if (foe && mine < 0)
+            {
+                HeldOutposts.Remove(cell);
+                OutpostLosses++;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 見返りの増援（第444期 §0-2）。到着の列の先頭から <paramref name="count"/> 枚を手札（<see cref="Bench"/>）へ。
+    /// <b>手札は拠点・第2拠点・中間拠点で共有</b>（第2拠点と同じ扱い）——<paramref name="place"/> は記録と画面の文のためだけ。
+    /// </summary>
+    private void Deliver(int count, string place, string reason)
+    {
+        for (int k = 0; k < count && Arrivals.Count > 0 && !Fallen; k++)
+        {
+            UnitState u = Arrivals[0];
+            Arrivals.RemoveAt(0);
+            Bench.Add(u);
+            ArrivedCount++;
+            Deliveries.Add(new Delivery(u, place, reason));
+        }
+    }
+
+    /// <summary>見返りの届く先の名前（<b>その隊がいる拠点</b>・道の上や迎撃なら味方の拠点）。</summary>
+    private string DeliveryPlace(int squadIndex)
+        => AtOutpost(squadIndex) ? Graph[Squads[squadIndex].Pos].Name
+         : AtSecondBase(squadIndex) ? Map11.PortalName
+         : "拠点";
+
     /// <summary>出撃させる（拠点 → 道）。控えはここで初めて盤上に出る。</summary>
     public void Send(int squadIndex, int road)
     {
@@ -736,6 +822,7 @@ public sealed class Map11State
     {
         s.Pos = pos;
         s.Via = Graph[pos].Lane >= 0 ? -1 : via;
+        UpdateOutposts();
     }
 
     /// <summary>その隊は行き先に着いているか（敵の拠点なら、行き先の経路から入ったか）。<b>盤面は1ビットも動かさない。</b></summary>
@@ -786,7 +873,7 @@ public sealed class Map11State
     public bool CanReform(int squadIndex)
     {
         Squad s = Squads[squadIndex];
-        return !s.Lost && (s.Road < 0 || AtSecondBase(squadIndex));
+        return !s.Lost && (s.Road < 0 || AtForwardBase(squadIndex));
     }
 
     /// <summary>出せるか。<b>0 枚の隊は出せない</b>（指示書 §1-1）。</summary>
@@ -1052,6 +1139,10 @@ public sealed class Map11State
 
         // 敵の拠点のマスで最後の1つを抜いたら、その場で制圧になる（第176期 §1-3）。
         TryCapture();
+        // 第444期: 中間拠点の取り合い → 抜いた見返り（先に中間拠点を取ってから、その隊がいる拠点へ届ける）。
+        UpdateOutposts();
+        if (node.Cleared && Stage.Arrival.OnKill > 0)
+            Deliver(Stage.Arrival.OnKill, intercept ? "拠点" : DeliveryPlace(squadIndex), $"{node.Def.Name}を抜いた");
     }
 
     // =============================================================================
@@ -1175,7 +1266,7 @@ public sealed class Map11State
     {
         Squad s = Squads[squadIndex];
         if (s.Lost || Time.RestPercent <= 0) return false;
-        if (s.Pos != Graph.Home && !AtSecondBase(squadIndex)) return false;
+        if (s.Pos != Graph.Home && !AtForwardBase(squadIndex)) return false;
         if (s.Units is not { } u) return false;   // 未出撃の隊は満タンなので休む意味がない
         bool moved = false;
         foreach (UnitState x in u)
@@ -1208,7 +1299,7 @@ public sealed class Map11State
         Turn++;
         LastArrived.Clear();
         if (Time.AdvanceEvery <= 0 || Turn % Time.AdvanceEvery != 0)
-        { LoseSecondBaseIfEmpty(); ArriveIfDue(); ReserveIfDue(); return SpawnIfDue(list); }
+        { LoseSecondBaseIfEmpty(); UpdateOutposts(); ArriveIfDue(); ReserveIfDue(); return SpawnIfDue(list); }
 
         // 1 部隊ぶんの前進。**第175期の式をそのまま関数にしただけ**で、中身は1文字も変えていない。
         // 戻り値が偽 ＝ 拠点が陥落したので、その場で打ち切る。
@@ -1246,6 +1337,7 @@ public sealed class Map11State
             }
         }
         LoseSecondBaseIfEmpty();
+        UpdateOutposts();
         // 第441期: 到着と予備隊の出発は**湧きの隣**（1 刻の終わり・敵が動いた後）。並びは 到着 → 予備隊 → 湧き。
         ArriveIfDue();
         ReserveIfDue();

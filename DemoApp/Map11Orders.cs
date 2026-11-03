@@ -91,8 +91,8 @@ public static class Map11Orders
         {
             // 着いている。敵が同じマスまで来ていれば、もう一度当たる。
             if (st.FoeFacing(squad) is not null) return Order.Advance;
-            // 制圧した敵の拠点（第2拠点）に立っているなら、傷が残っていれば休む。
-            return st.AtSecondBase(squad) && st.Hurt(squad) ? Order.Rest : Order.Wait;
+            // 制圧した敵の拠点（第2拠点）か、取った中間拠点（第444期）に立っているなら、傷が残っていれば休む。
+            return st.AtForwardBase(squad) && st.Hurt(squad) ? Order.Rest : Order.Wait;
         }
         return Toward(st, squad, Next(st, squad, dest));
     }
@@ -177,7 +177,8 @@ public static class Map11Orders
             : $"{Where(st.Graph, dest)} へ進む",
         Order.Move => $"{Where(st.Graph, dest)} へ進む",
         Order.Back => dest.AtHome ? "拠点へ戻る" : $"{Where(st.Graph, dest)} へ（拠点を経由）",
-        Order.Rest => st.AtSecondBase(squad) ? $"休む（{Map11.PortalName}）" : "休む（拠点）",
+        Order.Rest => st.AtSecondBase(squad) ? $"休む（{Map11.PortalName}）"
+                      : st.AtOutpost(squad) ? $"休む（{st.Graph[st.Squads[squad].Pos].Name}）" : "休む（拠点）",
         Order.Warp => dest.AtHome ? "拠点へワープ" : $"{Map11.PortalName} へワープ",
         _ => dest.AtHome ? "拠点で待つ" : $"{Where(st.Graph, dest)} に到着（待機）",
     };

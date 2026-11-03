@@ -160,6 +160,7 @@ public static class Map11Session
         string squadName = sq.Label;
         int road = node.Def.Road;
         // 第175期 §2: **迎撃で勝っても道中の回復は乗らない**（規則は `Map11State` が持つ）。
+        int delivered = State.Deliveries.Count;
         State.Resolve(squad, node, playerWon, wasIntercept);
         Battles = State.Battles;
         if (wasIntercept && TurnRunning) _interceptFought = true;
@@ -183,6 +184,20 @@ public static class Map11Session
                 ? $"{squadName} は {node.Def.Name} に全滅した"
                 : $"{squadName} は {node.Def.Name} と 30 ターン決着せず（両軍とも残っている）。"
                   + "もう一度当てても同じになる——引き返すか、別の隊を当てること";
+        // 第444期 §0-2: この戦闘で届いた見返り（抜いた・中間拠点を取った）を同じトーストに添える。
+        if (DeliveryText(State.Deliveries.Skip(delivered)) is { } got) LastOutcome += " ／ " + got;
+    }
+
+    /// <summary>
+    /// 見返りで届いた駒の 1 文（第444期 §0-2）。届く先と理由ごとにまとめる——
+    /// 「ヒヨ・ドルガ が 北の砦 に着いた（見返り: 北の砦を取った）」。届いていなければ null。
+    /// </summary>
+    public static string? DeliveryText(IEnumerable<Map11State.Delivery> got)
+    {
+        var parts = got.GroupBy(d => (d.Place, d.Reason))
+            .Select(g => $"{string.Join("・", g.Select(d => d.Unit.Def.Name))} が {g.Key.Place} に着いた（見返り: {g.Key.Reason}）")
+            .ToList();
+        return parts.Count == 0 ? null : string.Join(" ／ ", parts);
     }
 
     // =================================================================================

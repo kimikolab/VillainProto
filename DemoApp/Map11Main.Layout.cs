@@ -449,6 +449,7 @@ public partial class MapOverview : Control
             Vector2 at = Point(c.Id);
             Color color = c.Id == State.Graph.Home ? UiKit.Heal : c.Id == State.Graph.Portal ? UiKit.Enemy : UiKit.Muted;
             if (c.Kind == MapGraph.Kind.Home) DrawRect(new Rect2(at - Vector2.One * 7, Vector2.One * 14), color);
+            else if (c.Kind == MapGraph.Kind.Outpost) DrawRect(new Rect2(at - Vector2.One * 5, Vector2.One * 10), color, false, 2);
             else DrawCircle(at, c.Kind == MapGraph.Kind.Portal ? 8 : 4, color);
         }
         foreach (var s in State.Squads.Where(s => !s.Lost && State.CanSend(s.Index)))

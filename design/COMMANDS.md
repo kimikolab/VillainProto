@@ -1823,6 +1823,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
         # (j) 同じ刻の 2 連続の迎撃で 1 戦目の後は合間（`Map11Session.InterceptBreak`）・手札から入れ替えて 2 戦目へ（`Map11Session` の流れをそのまま回す）／
         # (k) 3 隊目は空で始まり届いた駒で組める ／ (l) 既定の値 ＋ 5 つの盤 × 3 方針 × 100 seed（報告のみ）。約 15 秒
         # 絵: `res://Map11Main.tscn -- --map-stage=1-2 --map11-capture=<png>,break`（迎撃の合間の窓・`--headless` を外す）
+        # **第444期 §1-2**: (j)〜(l) と第443期の表は第443期の 1-2（`Stage12H443`）で回す。遊ぶ 1-2（`Stage12`・中間拠点・見返りの増援・刻の上限 14）に
+        # (m) 北の砦を取る・組み直す・休む ／ (n) 隊のいない砦に敵が入ると取り返される ／ (o) 抜くと 1 枚・取ると 2 枚・届く先 ／
+        # (p) 刻 14 で勇者が着いて負け・予告が減る ／ (q) 籠城の踏破 0% の予測（外れても門は落とさない）＋ 4 方針 × 3 盤 × 100 seed（報告のみ）。約 25 秒
+        # 絵: `res://Map11Main.tscn -- --map-stage=1-2 --map-seed=0 --map11-capture=<png>,outpost`（中間拠点を取った直後・`--headless` を外す・
+        # `--map-seed=N` は絵の口と一緒のときだけ読む）
     Godot_console.exe --path DemoApp --headless -- --map11-phase176
         # **第176期 Phase 0**: Q0-1〜Q0-5（`PortalOn = false` が第175期の 18 量と一致するか ／
         # 重なりと同点の割り方 ／ 湧いた部隊を満タンで作る口 ／ 方針の手順 ／ 走行時間）。約 1 秒

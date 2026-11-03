@@ -52,6 +52,15 @@ public sealed class MapStage
     /// 少なくすると `Map11.Squads` の先頭から数えて、それより後ろの隊は<b>作らない</b>（画面にも出ない・組めない）。
     /// </summary>
     public int SquadCap { get; init; } = Map11.Squads.Length;
+    /// <summary>
+    /// 作戦ターンの上限（第444期 §0-3）。<b>既定は <see cref="Map11.TurnCap"/>（60）</b>——第443期までと同じ。
+    /// </summary>
+    public int TurnCap { get; init; } = Map11.TurnCap;
+    /// <summary>
+    /// 上限を「勇者パーティーの到着」として盤に予告し、上限で<b>敗北</b>にするか（第444期 §0-3・骨子 §5 の予告）。
+    /// 偽なら上限は第443期までと同じ「時間切れ」（結果は撤退）。勇者そのものは段C で入れる。
+    /// </summary>
+    public bool HeroAtCap { get; init; }
 
     public int LaneCount => Lanes.Length;
     public int TotalNodes => Lanes.Sum(l => l.Count);
@@ -148,12 +157,13 @@ public sealed class MapStage
     };
 
     /// <summary>
-    /// 1-2（第443期・遊ぶ版）。第442期（<see cref="Stage12H442"/>）の判断の仕組み（途中到着・予備隊・中の先頭は 1 マス奥）は残し、
+    /// 1-2 の第443期の姿。第442期（<see cref="Stage12H442"/>）の判断の仕組み（途中到着・予備隊・中の先頭は 1 マス奥）は残し、
     /// <b>量の釣り合い</b>を直した（第442期の試遊で 2 巡とも陥落）:
     /// <b>隊は 3 つ</b>（開始の 10 枚で組めるのは 2 隊・<b>3 隊目は届いた駒で組む</b>）／ <b>到着は 2 刻ごとに 2 枚</b>（5 枚が刻 6 までに揃う）／
     /// <b>湧き S = 3</b>（R = 3 のまま）／ <b>予備隊は第二波・先遣</b>（4 体・粛）。最初からいる 6 部隊はそのまま。
+    /// 第444期からは回帰の基準だけが使う——遊ぶ 1-2 は <see cref="Stage12"/>。
     /// </summary>
-    public static MapStage Stage12 { get; } = new()
+    public static MapStage Stage12H443 { get; } = new()
     {
         Id = Stage12H442.Id,
         Title = Stage12H442.Title,
@@ -166,6 +176,29 @@ public sealed class MapStage
         Arrival = ArrivalRule.Of(start: 10, every: 2, minPer: 2, maxPer: 2),
         Reserve = new ReserveRule(true, EnemyCatalog.Vanguards[0].Enemy, EnemyCatalog.Vanguards[0].Name, 1),
         SquadCap = 3,
+    };
+
+    /// <summary>
+    /// 1-2（第444期・遊ぶ版）。<b>攻めに出る理由を 3 つ同時に</b>（第443期の勝ち筋が籠城だった）:
+    /// <b>中間拠点</b>（各経路の 3 マス目・取ると組み直す・届いた駒を受け取る・休む・<see cref="MapGraph.Build12F444"/>）／
+    /// <b>増援は見返り</b>（時間では届かない・敵部隊を 1 つ抜くと 1 枚・中間拠点を取ると 2 枚）／
+    /// <b>刻の上限 14 ＝ 勇者の予告</b>（上限で敗北）。隊 3・S=3・予備隊は第443期のまま。
+    /// </summary>
+    public static MapStage Stage12 { get; } = new()
+    {
+        Id = Stage12H443.Id,
+        Title = Stage12H443.Title,
+        Board = MapGraph.Build12F444,
+        Lanes = Stage12H443.Lanes,
+        LaneNames = Stage12H443.LaneNames,
+        Spawn = Stage12H443.Spawn,
+        Portal = Stage12H443.Portal,
+        Time = Stage12H443.Time,
+        Arrival = ArrivalRule.Rewards(start: 10, onKill: 1, onOutpost: 2),
+        Reserve = Stage12H443.Reserve,
+        SquadCap = 3,
+        TurnCap = 14,
+        HeroAtCap = true,
     };
 
     /// <summary>選べるステージ（編成画面の選択の並び）。</summary>
@@ -181,10 +214,14 @@ public sealed class MapStage
 /// <param name="Every">届く間隔（刻）。<c>A</c>。</param>
 /// <param name="MinPer">1 回に届く枚数の下限。</param>
 /// <param name="MaxPer">同・上限（1〜2 を seed で引く）。</param>
-public readonly record struct ArrivalRule(bool On, int Start, int Every, int MinPer, int MaxPer)
+/// <param name="OnKill">第444期 §0-2: 敵部隊を 1 つ抜くと届く枚数（道の上の勝ちも迎撃の勝ちも）。0 なら見返りで届かない。</param>
+/// <param name="OnOutpost">第444期 §0-2: 中間拠点を取ると届く枚数。</param>
+public readonly record struct ArrivalRule(bool On, int Start, int Every, int MinPer, int MaxPer, int OnKill = 0, int OnOutpost = 0)
 {
     public static readonly ArrivalRule Off = new(false, 0, 0, 0, 0);
     public static ArrivalRule Of(int start, int every, int minPer, int maxPer) => new(true, start, every, minPer, maxPer);
+    /// <summary>第444期: <b>時間では届かない</b>（<c>Every = 0</c>）。見返りでだけ届く。届く順は seed で決めた列のまま。</summary>
+    public static ArrivalRule Rewards(int start, int onKill, int onOutpost) => new(true, start, 0, 1, 1, onKill, onOutpost);
 }
 
 /// <summary>

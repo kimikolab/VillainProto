@@ -26,7 +26,8 @@ using System.Linq;
 /// <summary>作戦マップの盤（マスのグラフ）。<b>静的な内容だけ</b>で、進行の状態は <see cref="Map11State"/> が持つ。</summary>
 public sealed class MapGraph
 {
-    public enum Kind { Home, Open, Portal }
+    /// <summary>マスの種類。<b>Outpost（中間拠点・第444期）は経路の途中のマス</b>で、通り抜けられる（拠点・敵の拠点とは違う）。</summary>
+    public enum Kind { Home, Open, Portal, Outpost }
 
     /// <summary>
     /// マス1つ。<c>Lane</c> はそのマスが属する敵の経路（属さなければ -1）、
@@ -58,7 +59,10 @@ public sealed class MapGraph
 
     public Cell this[int id] => Cells[id];
     public bool HasPortal => Portal >= 0;
-    public bool IsBase(int id) => Cells[id].Kind != Kind.Open;
+    public bool IsBase(int id) => Cells[id].Kind is Kind.Home or Kind.Portal;
+
+    /// <summary>中間拠点のマスか（第444期）。</summary>
+    public bool IsOutpost(int id) => Cells[id].Kind == Kind.Outpost;
 
     /// <summary>
     /// 経路 <paramref name="lane"/> の上の位置（第437期の「マスの番号」）。
@@ -237,7 +241,16 @@ public sealed class MapGraph
     /// </summary>
     public static MapGraph Build12F442(bool portalOn) => Build12(portalOn, midLead: Map11.StartCellOf(1));
 
-    private static MapGraph Build12(bool portalOn, int midLead)
+    /// <summary>1-2 の中間拠点の名前（第444期・仮・Codex 発注書 §4 の仮名と揃えた）。経路の 3 マス目（2 戦目の地点）。</summary>
+    internal static readonly string[] Outposts12 = { "北の砦", "浅瀬の野営地", "南の関所" };
+
+    /// <summary>
+    /// 1-2 の盤・第444期（§0-1）。<see cref="Build12F442"/> の各経路の <b>3 マス目（2 戦目の地点）を中間拠点</b>にした
+    /// （<see cref="Kind.Outpost"/>・名前は <see cref="Outposts12"/>）。辺・座標・敵の初期位置は第442期のまま。
+    /// </summary>
+    public static MapGraph Build12F444(bool portalOn) => Build12(portalOn, midLead: Map11.StartCellOf(1), outposts: true);
+
+    private static MapGraph Build12(bool portalOn, int midLead, bool outposts = false)
     {
         var b = new Builder();
         int home = b.Add("拠点", Kind.Home, (-10.0f, 0f));
@@ -249,7 +262,9 @@ public sealed class MapGraph
             for (int cell = 0; cell < Map11.RoadCells; cell++)
             {
                 float x = cell <= 0 ? -0.6f : 3.0f + (cell - 1) * 11.0f;
-                lanes[lane][cell] = b.Add($"{Lanes12[lane]} {Map11Orders.CellName(cell)}", Kind.Open, (x, zs[lane]), lane);
+                bool outpost = outposts && cell == Map11.RoadCells - 1;
+                lanes[lane][cell] = b.Add(outpost ? Outposts12[lane] : $"{Lanes12[lane]} {Map11Orders.CellName(cell)}",
+                                          outpost ? Kind.Outpost : Kind.Open, (x, zs[lane]), lane);
             }
         }
         int portal = portalOn ? b.Add(Map11.PortalName, Kind.Portal, (24.0f, 0f)) : -1;

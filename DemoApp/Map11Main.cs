@@ -104,6 +104,8 @@ public partial class Map11Main : Node3D
 
     /// <summary>敵の拠点の板。<b>湧くまでの残りと、制圧したかを出す。</b></summary>
     private Marker _portalMarker = null!;
+    /// <summary>中間拠点の砦の印（第444期 §0-1・マス・台・名札）。<b>持ち主で色を変えるだけ</b>（取り合いの判定は `Map11State.UpdateOutposts`）。</summary>
+    private readonly List<(int Cell, StandardMaterial3D Mat, Label3D Name)> _outpostMarks = new();
     /// <summary>拠点どうしを結ぶ点線（<b>制圧してから</b>出す＝ワープできる道）。</summary>
     private readonly List<MeshInstance3D> _warpDashes = new();
     /// <summary>湧いた敵部隊の板（足りなくなったら増やす）。</summary>
@@ -200,6 +202,13 @@ public partial class Map11Main : Node3D
         if (OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--map-stage=", StringComparison.Ordinal)) is { } pick
             && MapStage.All.FirstOrDefault(x => x.Id == pick["--map-stage=".Length..]) is { } chosen)
             Map11Session.Chosen = chosen;
+        // 第444期: 絵の口（`--map11-capture=`）だけ `--map-seed=N` で通しの seed を決められる（同じ絵を撮り直すため・遊ぶ起動では読まない）。
+        string[] user = OS.GetCmdlineUserArgs();
+        if (user.Any(a => a.StartsWith("--map11-capture=", StringComparison.Ordinal))
+            && user.FirstOrDefault(a => a.StartsWith("--map-seed=", StringComparison.Ordinal)) is { } seedArg
+            && int.TryParse(seedArg["--map-seed=".Length..], out int capSeed)
+            && !(Map11Session.State is { } cur && cur.Seed == capSeed && ReferenceEquals(cur.Stage, Map11Session.Chosen)))
+            Map11Session.Reset(capSeed, stage: Map11Session.Chosen);
         Map11Session.EnsureStarted();
         // 第439期: 時計は通しに結び付ける（別の通しなら止めて目盛りを 0 に）。
         Map11Clock.Bind(St);
@@ -325,11 +334,40 @@ public partial class Map11Main : Node3D
             Refresh();
             if (StopReason(before) is { } why) ShowToast(why, GoldColor, 30f);
         }
+        // 第444期 §3: **中間拠点を取った直後**の絵（`--map-stage=1-2` と使う）。既定の組み方で 2 隊を組み、第1隊を北の砦へ出し、
+        // 第2隊は拠点で番をする。戦闘は**頭なしで**決着させ（戦闘シーンへは行かない）、砦を取った刻で止めて止まる理由をトーストに出す。
+        else if (parts.Length > 1 && parts[1] == "outpost")
+        {
+            St.UseDefaultSquads();
+            _reform = false;
+            ClearHold();
+            Map11Session.TakeOpening();
+            int fort = St.Graph.Lanes[0][^1];
+            Dest to = Dest.Of(St.Graph, fort);
+            Map11Session.SetDestination(0, to);
+            _selected = 0;
+            Watch before = Take();
+            for (int guard = 0; guard < 10 && !St.HeldOutposts.Contains(fort) && !St.Finished; guard++)
+            {
+                before = Take();
+                if (Map11Orders.Apply(St, 0, to, Map11Orders.Plan(St, 0, to)) is { } met) CaptureFight(0, met, false);
+                if (St.HeldOutposts.Contains(fort)) break;
+                foreach (Map11State.Encounter e in St.AdvanceFoes())
+                    if (e.Intercept) { if (St.NextInterceptor(e.Node) is var j && j >= 0) CaptureFight(j, e.Node, true); St.CloseIntercept(e.Node); }
+                    else CaptureFight(e.Squad, e.Node, false);
+            }
+            Refresh();
+            if (StopReason(before) is { } why) ShowToast(why, GoldColor, 30f);
+            GD.Print($"MAP11_CAPTURE_OUTPOST seed={Map11Session.Seed} held={St.HeldOutposts.Contains(fort)} turn={St.Turn} "
+                     + $"lost={St.Squads.Count(q => q.Lost)} delivered={St.Deliveries.Count}");
+        }
         // 第443期 §0-1: **迎撃の合間**の絵（`--map-stage=1-2` と使う）。既定の組み方で 2 隊を組み、北と南の先頭だけを残して
         // 拠点で待つ。2 刻目に 2 部隊が同時に着くので、1 戦目を**頭なしで**決着させ（戦闘シーンへは行かない）、2 戦目の迎撃の窓を出す。
         else if (parts.Length > 1 && parts[1] == "break")
         {
             St.UseDefaultSquads();
+            _reform = false;
+            ClearHold();
             Map11Session.TakeOpening();
             foreach (Map11State.Node n in St.Nodes.SelectMany(r => r))
                 if (!(n.Def.Index == 0 && n.Def.Road != 1)) n.Cleared = true;
@@ -742,6 +780,23 @@ public partial class Map11Main : Node3D
             MaterialOverride = CampaignMain.MakeMaterial(Color.FromHtml("#5b4a6b"), roughness: 0.75f),
         });
         _portalMarker = new Marker(this, PortalPos, EnemyColor, 2.2f);
+
+        // 第444期 §0-1: 中間拠点は**四角い台**（丸い敵の板・輪の敵の拠点と形で分ける）と名札。台は敵の板の下に敷く。
+        foreach (MapGraph.Cell c in St.Graph.Cells.Where(c => c.Kind == MapGraph.Kind.Outpost))
+        {
+            StandardMaterial3D mat = CampaignMain.MakeMaterial(EnemyColor, roughness: 0.8f);
+            Vector3 at = PosOf(c.Id);
+            AddChild(new MeshInstance3D
+            {
+                Mesh = new BoxMesh { Size = new Vector3(5.2f, 0.18f, 5.2f) },
+                Position = new Vector3(at.X, 0.06f, at.Z),
+                RotationDegrees = new Vector3(0, 45, 0),
+                MaterialOverride = mat,
+            });
+            Label3D name = WorldLabel(c.Name, new Vector3(at.X, 0.6f, at.Z + 3.6f), 30, EnemyColor);
+            AddChild(name);
+            _outpostMarks.Add((c.Id, mat, name));
+        }
 
         // 拠点どうしを結ぶ点線。**制圧してから見せる**（それまでは通れない）。
         Vector3 a = BasePos, b = PortalPos;
@@ -1415,13 +1470,15 @@ public partial class Map11Main : Node3D
 
     /// <summary>止まる理由を調べるために、作戦ターンの前に写しておく盤面。</summary>
     private readonly record struct Watch(bool[] Arrived, bool[] Imminent, int Spawns, bool Captured,
-                                         int Delivered = 0, int ReserveDepart = -1);
+                                         int Delivered = 0, int ReserveDepart = -1,
+                                         int Rewards = 0, int OutpostCaptures = 0, int OutpostLosses = 0);
 
     private static Watch Take() => new(
         Enumerable.Range(0, St.Squads.Length).Select(AtDest).ToArray(),
         Enumerable.Range(0, St.Stage.LaneCount)
                   .Select(r => St.NextNode(r) is { } n && n.Cell <= 0).ToArray(),
-        St.SpawnCount, St.Captured, St.ArrivedCount, St.ReserveDepartTurn);
+        St.SpawnCount, St.Captured, St.ArrivedCount, St.ReserveDepartTurn,
+        St.Deliveries.Count, St.OutpostCaptures, St.OutpostLosses);
 
     /// <summary>
     /// 第177期 §2（第176期 §3-1 #2）—— <b>行き先までのあいだに立っている最初の敵のマス。</b>
@@ -1459,6 +1516,11 @@ public partial class Map11Main : Node3D
         var now = new List<string>();
         if (St.ArrivedCount > before.Delivered && St.LastArrived.Count > 0)
             now.Add($"{string.Join("・", St.LastArrived.Select(u => u.Def.Name))} が拠点に着いた（控え {St.Bench.Count} 枚）");
+        // 第444期: 中間拠点を取った・取り返された瞬間と、見返りの駒が届いた瞬間。
+        if (St.OutpostCaptures > before.OutpostCaptures) now.Add("中間拠点を取った（組み直し・休む・届いた駒を受け取るができる）");
+        if (St.OutpostLosses > before.OutpostLosses) now.Add("中間拠点を取り返された");
+        if (Map11Session.DeliveryText(St.Deliveries.Skip(before.Rewards)) is { } got) now.Add(got);
+        if (St.HeroTurnsLeft is 3 or 1 && St.Turn > 0 && !St.Finished) now.Add($"勇者パーティーが あと {St.HeroTurnsLeft} 刻で現れる");
         if (before.ReserveDepart < 0 && St.ReserveDepartTurn >= 0 && St.Reserve is { } rv)
             now.Add($"予備隊（{rv.Def.Name}）が {St.LaneName(rv.Def.Road)} へ向かう（拠点まで {St.ReserveEta ?? 0} 刻）");
         string? old = StopReason440(before);
@@ -2338,7 +2400,7 @@ public partial class Map11Main : Node3D
 
     private void ShowResult()
     {
-        _resultTitle.Text = St.Won ? "踏破" : St.Fallen ? "拠点 陥落" : "撤退";
+        _resultTitle.Text = St.Won ? "踏破" : St.Fallen ? "拠点 陥落" : St.HeroArrived ? "勇者が到着した" : "撤退";
         // **生存枚数は2つ出す**（第169期に画面内で数え方が2通りに割れていた）。
         var lines = new List<string>
         {
@@ -2363,6 +2425,12 @@ public partial class Map11Main : Node3D
                     : St.ReserveWaiting ? $"敵の予備隊（{rv.Def.Name}）は {Map11.PortalName} で待機のまま"
                     : $"敵の予備隊（{rv.Def.Name}）は {St.LaneName(rv.Def.Road)} に残った");
             if (St.SecondBaseFalls > 0) lines.Add($"第2拠点を取り返された {St.SecondBaseFalls} 回");
+            // 第444期: 中間拠点と見返りの増援・勇者の予告。
+            if (St.Graph.Cells.Any(c => c.Kind == MapGraph.Kind.Outpost))
+                lines.Add($"中間拠点を取った {St.OutpostCaptures} 回（取り返された {St.OutpostLosses} 回・いま味方 {St.HeldOutposts.Count} か所）");
+            if (St.Deliveries.Count > 0)
+                lines.Add("見返りの増援: " + string.Join(" ／ ", St.Deliveries.Select(d => $"{d.Unit.Def.Name}（{d.Reason}・{d.Place}）")));
+            if (St.HeroArrived) lines.Add($"作戦ターン {St.Stage.TurnCap} で勇者パーティーが着いた");
         }
         // 第177期 §3 —— **開始時に自分で組んだ編成**（次の期の材料）。
         lines.Add("");
@@ -2520,6 +2588,7 @@ public partial class Map11Main : Node3D
         RefreshReserveRoute();
 
         RefreshPortal();
+        RefreshOutposts();
 
         int waiting = St.Squads.Count(x => !x.Lost && x.Road < 0);
         _homeLabel.Text = waiting == 0 ? "拠点" : $"拠点（待機 {waiting} 隊）";
@@ -2678,11 +2747,26 @@ public partial class Map11Main : Node3D
             : (wait > 0 ? $"湧くまで あと {wait}" : "いつでも湧く");
         // 第441期 §3: 待機中の予備隊は敵の拠点の札に 1 行（出発すると湧いた部隊と同じ板に移る）。
         if (St.ReserveWaiting) body += Nl + "予備隊 ・ 待機中";
+        // 第444期 §0-3: **勇者の予告**（刻の上限を盤ごとに持つ盤だけ）。上限で負け。
+        if (St.HeroTurnsLeft is { } hero) body += Nl + $"勇者パーティー あと {hero} 刻";
         _portalMarker.Set(head + Nl + body, tint);
         // **湧く瞬間（＝残り 0）に脈打つ**／制圧したら止める。
         _portalMarker.SetNote(mine ? "" : wait <= 1 ? "◀ 湧く" : "", UiKit.Hurt, true);
         _portalMarker.SetGlow(!mine && wait <= 1);
         foreach (MeshInstance3D d in _warpDashes) d.Visible = mine;
+    }
+
+    /// <summary>第444期 §0-1: 中間拠点の印を持ち主の色にする（味方 ＝ 味方の色・敵 ＝ 敵の色）。</summary>
+    private void RefreshOutposts()
+    {
+        foreach (var (cell, mat, name) in _outpostMarks)
+        {
+            bool mine = St.HeldOutposts.Contains(cell);
+            Color c = mine ? PlayerColor : EnemyColor;
+            mat.AlbedoColor = c.Darkened(0.35f);
+            name.Modulate = c;
+            name.Text = St.Graph[cell].Name + (mine ? "（味方）" : "");
+        }
     }
 
     private void ShowToast(string text, Color color, float seconds)
