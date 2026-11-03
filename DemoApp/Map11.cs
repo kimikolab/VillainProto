@@ -422,6 +422,8 @@ public sealed class Map11State
         public required Map11.RoadNode Def { get; set; }
         /// <summary>敵の予備隊か（第441期 §3）。湧いた数（<see cref="SpawnCount"/>）にも、湧きを抜いた数にも入れない。</summary>
         public bool IsReserve { get; init; }
+        /// <summary>作戦マップの勇者か（第454期 §2）。湧いた数・湧きを抜いた数には入れない。</summary>
+        public bool IsHero { get; init; }
         /// <summary>
         /// 敵の拠点から湧いた部隊か（第176期）。<b>最初からいる4部隊は偽。</b>
         /// 2 本抜き（<see cref="Squad.Cleared"/>）の分子に入れないためだけの印で、
@@ -767,19 +769,23 @@ public sealed class Map11State
     private TraitId FirstRelic()
     {
         var own = OwnedTags();
+        bool axis = Stage.Relic.AxisOnly;
         TraitId[] q = _relicQueue.ToArray();
         int pick = -1;
-        for (int want = 3; want >= 1 && pick < 0; want--) pick = Array.FindIndex(q, r => RelicFit(r, own) == want);
-        int fit = pick < 0 ? 0 : RelicFit(q[pick], own);
+        for (int want = 3; want >= 1 && pick < 0; want--) pick = Array.FindIndex(q, r => RelicFit(r, own, axis) == want);
+        int fit = pick < 0 ? 0 : RelicFit(q[pick], own, axis);
         if (pick < 0) pick = 0;
         _relicQueue.Clear();
         for (int i = 0; i < q.Length; i++) if (i != pick) _relicQueue.Enqueue(q[i]);
         RelicFirstFit[fit]++;
+        RelicFirstShown[q[pick]] = RelicFirstShown.GetValueOrDefault(q[pick]) + 1;   // 第454期（測るためだけ）
         return q[pick];
     }
 
     /// <summary>候補の 1 枚目が 無関係（0）／ 片端（1）／ 両端・誰でも ＋ 1 語（2）／ 両端・2 語（3）だった回数（第453期・測るためだけ）。</summary>
     public int[] RelicFirstFit { get; } = new int[4];
+    /// <summary>候補の 1 枚目に出た札の回数（第454期・測るためだけ）。</summary>
+    public Dictionary<TraitId, int> RelicFirstShown { get; } = new();
 
     /// <summary>いま盤上（生きている駒・組んでいない既定の隊は定義のまま）と手札にいる駒のタグの語（軸と役割）。</summary>
     public HashSet<string> OwnedTags()
@@ -799,10 +805,11 @@ public sealed class Map11State
     /// <b>1 ＝ 片端</b>（語のある端の 1 つだけが手持ちにある）／ <b>0 ＝ 無関係</b>。
     /// 指示書 §0-2 の「両端」は 3 と 2 の両方——<b>同じ「両端」なら 2 語の札を先に引く</b>（誰でもの端は誰でも満たすので、2 だけだと「繋ぐ」にならない札が先に来る）。
     /// </summary>
-    public static int RelicFit(TraitId relic, IReadOnlySet<string> own)
+    /// <param name="axisOnly">第454期: 役割の語（タンク・ヒーラーなど）の端を「誰でも」と同じに扱う（軸の語だけで両端を見る）。</param>
+    public static int RelicFit(TraitId relic, IReadOnlySet<string> own, bool axisOnly = false)
     {
         if (RelicBridges.Of(relic) is not RelicEnds e) return 0;
-        var ends = new[] { e.Trigger, e.Effect }.Where(x => x.Length > 0).ToArray();
+        var ends = new[] { e.Trigger, e.Effect }.Where(x => x.Length > 0 && (!axisOnly || UnitTags.Axes.Contains(x))).ToArray();
         int hit = ends.Count(own.Contains);
         if (ends.Length == 0 || hit == 0) return 0;
         if (hit < ends.Length) return 1;
@@ -1523,6 +1530,7 @@ public sealed class Map11State
         List<UnitState> pu = s.Units!;
         List<UnitState> eu = node.Units!;
         Battles++;
+        if (node.IsHero) { HeroBattles++; HeroSquads.Add(squadIndex); }   // 第454期（測るためだけ）
 
         var aliveP = pu.Where(u => u.IsAlive).ToList();
         var aliveE = eu.Where(u => u.IsAlive).ToList();
@@ -1601,7 +1609,8 @@ public sealed class Map11State
 
     /// <summary>その敵部隊を抜いたときの金（第449期: 本陣の守りは <see cref="GoldRule.Garrison"/>・湧いた部隊は安い）。画面の札も同じ値を読む。</summary>
     public int KillGold(Node node)
-        => node.Def.Stationary ? Stage.Gold.Garrison : node.FromPortal && !node.IsReserve ? Stage.Gold.SpawnKill : Stage.Gold.Kill;
+        => node.IsHero ? Stage.Hero.Gold   // 第454期: 勇者
+           : node.Def.Stationary ? Stage.Gold.Garrison : node.FromPortal && !node.IsReserve ? Stage.Gold.SpawnKill : Stage.Gold.Kill;
 
     // =============================================================================
     // 時間（第174期 部B）
@@ -1761,7 +1770,7 @@ public sealed class Map11State
         Turn++;
         LastArrived.Clear();
         if (Time.AdvanceEvery <= 0 || Turn % Time.AdvanceEvery != 0)
-        { LoseSecondBaseIfEmpty(); UpdateOutposts(); ArriveIfDue(); ReserveIfDue(); return SpawnIfDue(list); }
+        { LoseSecondBaseIfEmpty(); UpdateOutposts(); ArriveIfDue(); ReserveIfDue(); HeroIfDue(); return SpawnIfDue(list); }
 
         // 1 部隊ぶんの前進。**第175期の式をそのまま関数にしただけ**で、中身は1文字も変えていない。
         // 戻り値が偽 ＝ 拠点が陥落したので、その場で打ち切る。
@@ -1793,6 +1802,8 @@ public sealed class Map11State
             foreach (Node sp in FoesOn(road).Where(x => x.FromPortal).ToList())
             {
                 if (sp.Pos == Graph.Home) continue;
+                // 第454期: 勇者は StepEvery 刻に 1 マス（現れた刻からかぞえて）。
+                if (sp.IsHero && Stage.Hero.StepEvery > 1 && (Turn - HeroTurn) % Stage.Hero.StepEvery != 0) continue;
                 int target = Graph.TowardHome(road, sp.Pos);
                 if (FoesOn(road).Any(x => !ReferenceEquals(x, sp) && x.Pos == target)) continue;
                 if (!Step(sp)) return list;
@@ -1803,8 +1814,49 @@ public sealed class Map11State
         // 第441期: 到着と予備隊の出発は**湧きの隣**（1 刻の終わり・敵が動いた後）。並びは 到着 → 予備隊 → 湧き。
         ArriveIfDue();
         ReserveIfDue();
+        HeroIfDue();
         return SpawnIfDue(list);
     }
+
+    // ---------------- 作戦マップの勇者（第454期 §2） ----------------
+
+    /// <summary>勇者（現れていなければ null）。</summary>
+    public Node? Hero { get; private set; }
+    /// <summary>門が初めて開いた刻（敵の前進の終わりで見る・開いていなければ -1）。</summary>
+    public int GateOpenedTurn { get; private set; } = -1;
+    /// <summary>勇者が現れた刻（-1 ＝ まだ）。</summary>
+    public int HeroTurn { get; private set; } = -1;
+    /// <summary>勇者と戦った回数（迎撃も含む・測るためだけ）。</summary>
+    public int HeroBattles { get; internal set; }
+    /// <summary>勇者に当てた隊（隊の番号・重ねない・測るためだけ）。</summary>
+    public HashSet<int> HeroSquads { get; } = new();
+
+    /// <summary>
+    /// 勇者を出す（敵の前進の終わり・到着と予備隊の後・湧きの前）。門が初めて開いた刻を記録し、その <see cref="HeroRule.AfterGate"/> 刻後に
+    /// 敵の拠点のマスへ立てる（行き先は予備隊と同じ選び方 <see cref="ReserveTarget"/>）。制圧の後・陥落の後は出さない。
+    /// </summary>
+    private void HeroIfDue()
+    {
+        if (!Stage.Hero.On || Stage.Hero.Unit is not UnitDef hero || !Portal.On || !Graph.HasPortal) return;
+        if (GateOpenedTurn < 0 && Stage.PortalGate > 0 && GateOpen) GateOpenedTurn = Turn;
+        if (Hero is not null || GateOpenedTurn < 0 || Turn < GateOpenedTurn + Stage.Hero.AfterGate || Captured || Fallen) return;
+        var f = Formation.Build(center: hero);
+        var def = new Map11.RoadNode(ReserveTarget(), Map11.RoadCells, hero.Name, f, EnemyCatalog.Stages.Count - 1);
+        Hero = new Node
+        {
+            Def = def, Graph = Graph, FromPortal = true, IsHero = true, DefMaxHp = hero.MaxHp, HpNow = hero.MaxHp, Pos = Graph.Portal,
+        };
+        Spawns.Add(Hero);
+        HeroTurn = Turn;
+    }
+
+    /// <summary>勇者のその後（結果画面の 1 行・表示だけ）。</summary>
+    public string HeroOutcome
+        => Hero is null ? "現れなかった"
+           : Hero.Cleared ? "倒した"
+           : Fallen ? "着かれた（拠点が陥落）"
+           : Captured ? "逃げ切った（着く前に制圧）"
+           : "まだ盤上にいる";
 
     /// <summary>
     /// 途中到着（第441期 §2）。<b>A 刻ごと</b>に到着の列の先頭から 1〜2 枚を手札（<see cref="Bench"/>）へ足す。
@@ -1882,6 +1934,7 @@ public sealed class Map11State
             foreach (Node sp in FoesOn(road).Where(x => x.FromPortal).ToList())
             {
                 if (sp.Pos == Graph.Home) continue;
+                if (sp.IsHero && Stage.Hero.StepEvery > 1 && (Turn + 1 - HeroTurn) % Stage.Hero.StepEvery != 0) continue;   // 第454期（同じ式・次の刻）
                 int target = Graph.TowardHome(road, sp.Pos);
                 if (FoesOn(road).Any(x => !ReferenceEquals(x, sp) && PosOf(x) == target)) continue;
                 list.Add((sp, target));

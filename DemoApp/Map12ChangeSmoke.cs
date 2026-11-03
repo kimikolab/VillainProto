@@ -104,6 +104,15 @@ using System.Linq;
 //   (as) どの seed でも 1 枚目は「12 枚のうちいちばん噛む度合い」の札（両端が無ければ片端・それも無ければ今までどおり）・2 ／ 3 枚目は 1 枚目より噛まない
 //   (at) 持たせる・外すが通る（状態の側。画面のつまむ作法は絵の口 `relic` が `OnSquadSlot` を通して確かめる）
 //   3 方針 × 100 seed の 1 枚目が 両端 ／ 片端 ／ 無関係 だった回数と持たせた回数（報告だけ）
+// **第454期からは (ar)〜(at) と第453期の表は第453期の盤（`MapStage.Stage12H453`・勇者なし）で回す**（回帰の基準）。
+//
+// 第454期（§3・遊ぶ 1-2 ＝ `MapStage.Stage12`・勇者・札が働いたことを見せる・両端は軸の語だけ）:
+//   (au) 門が開いて 2 刻後に勇者が敵の拠点に現れ、2 刻に 1 マス進む
+//   (av) 勇者と 2 戦して HP が持ち越される（2 戦目で倒すと ＋20）
+//   (aw) 勇者が味方の拠点に着いて出せる隊が無ければ陥落
+//   (ax) 札の出来事（`BattleEventKind.Relic`）が台本に積まれる・素の札として持つ駒では積まない（`compare` 0 セルは docs の照合で）
+//   (ay) は戦闘側の編成画面なので頭なしの戦闘（`--demo-relic`）の `DEMO_RELIC` の行で確かめる（報告）
+//   3 方針 × 100 seed の踏破（逃げ切り ／ 倒して制圧）・陥落・勇者と戦った回数・当てた隊・1 枚目の札の分布（前後）（報告だけ）
 //
 // 「貪欲」は第438・440期の門と同じ選び方（各隊は盤の上でいちばん近い敵部隊へ・敵が尽きたら敵の拠点へ）。
 // 自分で組む通し（到着あり）で回す: 開始の 10 枚を第1隊・第2隊に 5 枚ずつ、届いた駒は拠点にいる第3隊へ。
@@ -310,6 +319,7 @@ public static class Map12ChangeSmoke
         Phase451(write, Req);
         Phase452(write, Req);
         Phase453(write, Req);
+        Phase454(write, Req);
         return ok;
     }
 
@@ -1750,8 +1760,8 @@ public static class Map12ChangeSmoke
     /// <summary>第453期 —— 遊ぶ 1-2（`MapStage.Stage12`）の (ar)(as)(at) と、3 方針の表（報告だけ）。</summary>
     private static void Phase453(Action<string> write, Action<bool, string> Req)
     {
-        MapStage stage = MapStage.Stage12;
-        write("  ---- 第453期（遊ぶ 1-2・レリックの候補の 1 枚目を両端の札から） ----");
+        MapStage stage = MapStage.Stage12H453;
+        write("  ---- 第453期の 1-2（`Stage12H453`・レリックの候補の 1 枚目を両端の札から） ----");
         void Win(Map11State st, int squad, Map11State.Node node)
         {
             var prep = st.Prepare(squad, node);
@@ -1821,7 +1831,7 @@ public static class Map12ChangeSmoke
         write("  | 盤 | 方針 | 踏破 | 制圧の刻（中央値） | 得た札（平均） | 1 枚目 両端・2 語 | 両端・誰でも＋1 語 | 片端 | 無関係 | 持たせた回数 ÷ 得た札（延べ） |");
         write("  |---|---|--:|--:|--:|--:|--:|--:|--:|--:|");
         int crashed = 0;
-        foreach (var (bname, board) in new[] { ("第452期の既定（両端なし）", MapStage.Stage12H452), ("第453期の既定（両端）", stage) })
+        foreach (var (bname, board) in new[] { ("第452期の既定（両端なし）", MapStage.Stage12H452), ("第453期の既定（両端）", stage) })   // 第454期: 「第453期の既定」は `Stage12H453`
             foreach (var (pname, guard, split, turtle) in policies)
             {
                 var runs = new List<Once>();
@@ -1848,6 +1858,174 @@ public static class Map12ChangeSmoke
                     + $"{F(3)} | {F(2)} | {F(1)} | {F(0)} | {(got == 0 ? "—" : $"{100.0 * eq / got:F0}%")} |");
             }
         Req(crashed == 0, $"第453期の 2 つの盤 × 3 方針を {Seeds} seed ずつ回して落ちない（数字は報告のみ・線は置かない）");
+    }
+
+    /// <summary>第454期 —— 遊ぶ 1-2（`MapStage.Stage12`）の (au)〜(ax) と、3 方針の表（報告だけ）。</summary>
+    private static void Phase454(Action<string> write, Action<bool, string> Req)
+    {
+        MapStage stage = MapStage.Stage12;
+        write("  ---- 第454期（遊ぶ 1-2・勇者（門の 2 刻後・2 刻に 1 マス）・札が働いたことを見せる・両端は軸の語だけ） ----");
+        void Win(Map11State st, int squad, Map11State.Node node)
+        {
+            var prep = st.Prepare(squad, node);
+            foreach (UnitState u in prep!.Value.Enemies) u.Hp = 0;
+            st.Resolve(squad, node, true, false);
+        }
+        void Walk(Map11State st, int squad, Dest dest, int steps = 30)
+        {
+            for (int k = 0; k < steps && !st.Finished; k++)
+            {
+                if (st.FoeFacing(squad) is { } here) { Win(st, squad, here); continue; }
+                if (st.Squads[squad].Pos == dest.Id) break;
+                if (Map11Orders.Apply(st, squad, dest, Map11Orders.Plan(st, squad, dest)) is { } foe) Win(st, squad, foe);
+            }
+        }
+        // 門を開けた状態（第1隊が北の砦・第2隊が野営地）。
+        Map11State Opened(int seed)
+        {
+            var st = new Map11State(seed, stage.Time, stage.Portal, draft: true, stage: stage);
+            st.UseDefaultSquads();
+            Walk(st, 0, Dest.Of(st.Graph, st.Graph.Lanes[0][^1]));
+            Walk(st, 1, Dest.Of(st.Graph, st.Graph.Lanes[1][^1]));
+            return st;
+        }
+        // 勇者のほかの敵を全部抜いたことにする（勇者だけを動かして見るため・器具の都合）。
+        void ClearOthers(Map11State st)
+        {
+            foreach (var n in st.Nodes.SelectMany(r => r).Concat(st.Spawns))
+                if (!n.IsHero && !n.Def.Stationary) n.Cleared = true;
+        }
+
+        // ---- (au) 門の 2 刻後に現れ、2 刻に 1 マス ----
+        {
+            var st = Opened(0);
+            bool open = st.GateOpen;
+            ClearOthers(st);
+            var track = new List<string>();
+            int lastPos = -1, movedOn = 0, movedOff = 0;
+            for (int k = 0; k < 10 && !st.Finished; k++)
+            {
+                ClearOthers(st);
+                st.AdvanceFoes();
+                if (st.Hero is { } h)
+                {
+                    if (lastPos >= 0 && h.Pos != lastPos)
+                    {
+                        if ((st.Turn - st.HeroTurn) % stage.Hero.StepEvery == 0) movedOn++; else movedOff++;
+                    }
+                    lastPos = h.Pos;
+                    track.Add($"刻{st.Turn}:{st.Graph[h.Pos].Name}");
+                }
+            }
+            write($"  (au) 門が開いた {open}・開いた刻 {st.GateOpenedTurn}・勇者が現れた刻 {st.HeroTurn}（{st.LaneName(st.Hero?.Def.Road ?? 0)}）・動いた刻 2 刻目ごと {movedOn} 回 ／ それ以外 {movedOff} 回");
+            write($"       {string.Join(" → ", track)}");
+            Req(open && st.GateOpenedTurn >= 0 && st.HeroTurn == st.GateOpenedTurn + stage.Hero.AfterGate && track.Count > 0 && track[0].EndsWith(Map11.PortalName)
+                && movedOn > 0 && movedOff == 0,
+                "(au) 門が開いた刻の 2 刻後に勇者が敵の拠点に現れ、2 刻に 1 マスずつ味方の拠点へ進む");
+        }
+
+        // ---- (av) HP の持ち越し ----
+        {
+            var st = Opened(0);
+            ClearOthers(st);
+            for (int k = 0; k < 6 && st.Hero is null; k++) { ClearOthers(st); st.AdvanceFoes(); }
+            Map11State.Node hero = st.Hero!;
+            var prep = st.Prepare(0, hero)!.Value;
+            UnitState h = prep.Enemies[0];
+            int full = h.Hp;
+            h.Hp = full - 1000;                                   // 1 戦目: 1,000 削って決着しない（30 ターン）ことにする
+            st.Resolve(0, hero, false, false);
+            int carried = hero.Units?.FirstOrDefault()?.Hp ?? -1;
+            var prep2 = st.Prepare(0, hero)!.Value;
+            int second = prep2.Enemies[0].Hp;
+            int g0 = st.Gold;
+            foreach (UnitState u in prep2.Enemies) u.Hp = 0;      // 2 戦目で倒す
+            st.Resolve(0, hero, true, false);
+            write($"  (av) 勇者 HP {full} → 1 戦目の後 {carried} → 2 戦目の始め {second} ／ 2 戦目で倒した {hero.Cleared}・金 ＋{st.Gold - g0}・戦った {st.HeroBattles} 回");
+            Req(full == EnemyCatalog.HeroMap.MaxHp && carried == full - 1000 && second == full - 1000 && hero.Cleared && st.Gold - g0 == stage.Hero.Gold && st.HeroBattles == 2,
+                "(av) 勇者の HP は戦闘をまたいで持ち越し、倒すと ＋20");
+        }
+
+        // ---- (aw) 拠点に着いて出せる隊が無ければ陥落 ----
+        {
+            var st = Opened(0);
+            int ticks = 0;
+            for (; ticks < 40 && !st.Finished; ticks++) { ClearOthers(st); st.AdvanceFoes(); }
+            bool heroHome = st.Hero is { } hh && hh.Pos == st.Graph.Home;
+            write($"  (aw) 第1隊・第2隊は中間拠点のまま・拠点に隊なし: {ticks} 刻で 陥落 {st.Fallen}・勇者は拠点に {heroHome}・結果の 1 行「{st.HeroOutcome}」");
+            Req(st.Fallen && heroHome && st.HeroOutcome.StartsWith("着かれた"), "(aw) 勇者が味方の拠点に着いて出せる隊が無ければ陥落");
+        }
+
+        // ---- (ax) 札の出来事 ----
+        {
+            var w = EnemyCatalog.Warden;
+            var f = Formation.Build(front1: w, front3: w, center: w, back1: w, back3: w);
+            f.SetRelic(0, TraitId.RelicFireArrow);
+            var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
+            var e = BattleEngine.Materialize(EnemyCatalog.MapSquadOf("band_shields").Enemy, BattleContext.EnemyTeam, EnemyCatalog.PlaytestStages[0].Scale);
+            BattleResult r = BattleEngine.Run(p, e, 0, verbose: true);
+            int fire = r.Events.Count(ev => ev.Kind == BattleEventKind.Relic && ev.Text == nameof(TraitId.RelicFireArrow) && ev.ActorId == p[0].InstanceId);
+            int other = r.Events.Count(ev => ev.Kind == BattleEventKind.Relic && ev.ActorId != p[0].InstanceId);
+            // 素の札として弾き返しを持つ駒（ハネ）だけの台では積まない。
+            var hf = Formation.Build(front1: UnitCatalog.Hane, front3: w, center: w, back1: w, back3: w);
+            var hp = BattleEngine.Materialize(hf, BattleContext.PlayerTeam);
+            var he = BattleEngine.Materialize(EnemyCatalog.MapSquadOf("band_shields").Enemy, BattleContext.EnemyTeam, EnemyCatalog.PlaytestStages[0].Scale);
+            BattleResult hr = BattleEngine.Run(hp, he, 0, verbose: true);
+            int native = hr.Events.Count(ev => ev.Kind == BattleEventKind.Relic);
+            // 同じ戦闘を verbose なしで回して決着が同じ（出来事を積んでも盤面は変わらない）。
+            var p2 = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
+            var e2 = BattleEngine.Materialize(EnemyCatalog.MapSquadOf("band_shields").Enemy, BattleContext.EnemyTeam, EnemyCatalog.PlaytestStages[0].Scale);
+            BattleResult q = BattleEngine.Run(p2, e2, 0, verbose: false);
+            bool same = q.PlayerWon == r.PlayerWon && q.Turns == r.Turns && p2.Select(u => u.Hp).SequenceEqual(p.Select(u => u.Hp));
+            write($"  (ax) 前1 に火付けの矢: 「働いた」{fire} 回（ほかの駒 {other}）／ 素の弾き返しのハネ: {native} 回 ／ verbose なしと決着・HP が同じ {same}");
+            Req(fire > 0 && other == 0 && native == 0 && same, "(ax) 札が働いた出来事が持ち主に積まれる・素の札では積まない・積んでも盤面は同じ");
+        }
+
+        // ---- 報告のみ: 3 方針 × 100 seed ----
+        var policies = new[] { ("1 隊残す", true, false, false), ("分担＋戻り番", true, true, false), ("籠城", true, true, true) };
+        write("");
+        write("  | 盤 | 方針 | 踏破 | うち勇者を倒して | うち逃げ切り | 陥落 | うち勇者に着かれて | 時間切れ | 勇者が現れた | 勇者と戦った（平均） | 当てた隊（平均・現れた通し） |");
+        write("  |---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+        int crashed = 0;
+        var firsts = new Dictionary<string, Dictionary<TraitId, int>>();
+        foreach (var (bname, board) in new[] { ("第453期の既定（勇者なし）", MapStage.Stage12H453), ("第454期の既定（勇者）", stage) })
+        {
+            var fd = new Dictionary<TraitId, int>();
+            firsts[bname] = fd;
+            foreach (var (pname, guard, split, turtle) in policies)
+            {
+                var runs = new List<Once>();
+                int heroSeen = 0, heroKilled = 0, escaped = 0, fellToHero = 0, battles = 0, squads = 0;
+                for (int seed = 0; seed < Seeds; seed++)
+                {
+                    var local = new Dictionary<string, (int Battles, int Lost)>();
+                    try
+                    {
+                        runs.Add(Greedy(seed, board, guard, split, turtle, local, watch: q =>
+                        {
+                            if (!q.Finished) return;
+                            foreach (var (r, n) in q.RelicFirstShown) fd[r] = fd.GetValueOrDefault(r) + n;
+                            if (q.Hero is not { } h) return;
+                            heroSeen++;
+                            battles += q.HeroBattles; squads += q.HeroSquads.Count;
+                            if (h.Cleared && q.Won) heroKilled++;
+                            if (!h.Cleared && q.Won) escaped++;
+                            if (q.Fallen && h.Pos == q.Graph.Home) fellToHero++;
+                        }));
+                    }
+                    catch (Exception ex) { crashed++; if (crashed <= 3) write($"  × 第454期 {bname} {pname} seed {seed}: {ex.GetType().Name}: {ex.Message}"); }
+                }
+                if (runs.Count == 0) continue;
+                double P(Func<Once, bool> pr) => 100.0 * runs.Count(pr) / runs.Count;
+                double R(int n) => 100.0 * n / runs.Count;
+                write($"  | {bname} | {pname} | {P(r => r.Won):F0} | {R(heroKilled):F0} | {R(escaped):F0} | {P(r => r.Fallen):F0} | {R(fellToHero):F0} | {P(r => r.TimedOut):F0} | "
+                    + $"{R(heroSeen):F0}% | {(heroSeen == 0 ? "—" : ((double)battles / heroSeen).ToString("F2"))} | {(heroSeen == 0 ? "—" : ((double)squads / heroSeen).ToString("F2"))} |");
+            }
+        }
+        Req(crashed == 0, $"第454期の 2 つの盤 × 3 方針を {Seeds} seed ずつ回して落ちない（数字は報告のみ・線は置かない）");
+        write("");
+        foreach (var (bname, fd) in firsts)
+            write($"  候補の 1 枚目に来た札（{bname}・3 方針 × {Seeds} seed の計）: {string.Join(" ／ ", fd.OrderByDescending(kv => kv.Value).Select(kv => $"{RelicCatalog.Info(kv.Key).Name} {kv.Value}"))}");
     }
 
     /// <summary>手札の先頭から <paramref name="count"/> 枚を、その隊の空いた席（前1 から）へ配る。</summary>

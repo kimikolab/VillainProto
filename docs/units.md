@@ -761,6 +761,7 @@
 | `Hush` | - |
 | `MiasmaFront` | - |
 | `CinderFoe` | - |
+| `BossMend300` | - |
 
 ## 燃焼の規則
 

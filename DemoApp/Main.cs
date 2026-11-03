@@ -669,6 +669,7 @@ public partial class Main : Control
         _search.TextChanged += FilterRoster;
         col.AddChild(_search);
 
+        col.AddChild(BuildRelicStrip());   // 第454期 段0: レリック（試遊だけ）
         var hint = UiKit.Text("クリックで空席へ / ドラッグで席を指定", 10, UiKit.Muted);
         col.AddChild(hint);
 
@@ -907,6 +908,7 @@ public partial class Main : Control
     private void OnSetupSlotClicked(int slot)
     {
         if (_battleMode) return;
+        if (TryPlaceRelic(slot)) return;   // 第454期 段0: レリックをつまんでいれば持たせる
         if (_formation[slot] is { } current)
         {
             _armedUnitId = current.Id;
@@ -954,6 +956,7 @@ public partial class Main : Control
         // 第201期: パターン2のときは X 字の行を前1 → 前衛の規則で詰め替える（`XToDiamond`）。
         if (ReferenceEquals(_shape, FormationShape.Diamond)) XToDiamond(_formation);
         _presetDirty = false;
+        ClearRelics();   // 第454期 段0: 行を選び直すとレリックは外れる
         if (_presetPicker.Selected != _presetIndex) _presetPicker.Selected = _presetIndex;
         _armedUnitId = _formation.FirstOrDefault()?.Id;
         Notice($"プリセット「{preset.Name}」を席ごと配置しました");
@@ -1131,6 +1134,7 @@ public partial class Main : Control
         else
             GD.Print($"DEMO_SHAPE shape={formation.Shape.Name} source=setup " + string.Join(" ",
                 formation.Occupied().Select(o => $"{formation.Shape.FrameNames[o.Slot]}:{o.Def.Name}")));
+        ApplyRelics(formation);   // 第454期 段0: 試遊だけのレリック（行には記録しない）
         int stageIndex = _stagePicker.Selected;
         int seed = (int)_seed.Value;
 

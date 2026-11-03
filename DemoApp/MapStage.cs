@@ -84,6 +84,8 @@ public sealed class MapStage
     public int PortalGate { get; init; }
     /// <summary>作戦マップのレリック（第452期 §1・<b>既定は Off</b>）。</summary>
     public RelicRule Relic { get; init; } = RelicRule.Off;
+    /// <summary>作戦マップの勇者（第454期 §2・<b>既定は Off</b>）。</summary>
+    public HeroRule Hero { get; init; } = HeroRule.Off;
 
     public int LaneCount => Lanes.Length;
     public int TotalNodes => Lanes.Sum(l => l.Count);
@@ -466,9 +468,10 @@ public sealed class MapStage
     };
 
     /// <summary>
-    /// 1-2（第453期・遊ぶ版）。第452期（<see cref="Stage12H452"/>）のレリックの候補の 1 枚目を<b>両端が手持ちにある札</b>から引く（<see cref="RelicRule.V453"/>）。ほかは第452期のまま。
+    /// 1-2 の第453期の姿。第452期（<see cref="Stage12H452"/>）のレリックの候補の 1 枚目を<b>両端が手持ちにある札</b>から引く（<see cref="RelicRule.V453"/>）。ほかは第452期のまま。
+    /// 第454期からは回帰の基準だけが使う——遊ぶ 1-2 は <see cref="Stage12"/>。
     /// </summary>
-    public static MapStage Stage12 { get; } = new()
+    public static MapStage Stage12H453 { get; } = new()
     {
         Id = Stage12H452.Id,
         Title = Stage12H452.Title,
@@ -488,6 +491,33 @@ public sealed class MapStage
         MatchOffer = Stage12H452.MatchOffer,
         PortalGate = Stage12H452.PortalGate,
         Relic = RelicRule.V453,
+    };
+
+    /// <summary>
+    /// 1-2（第454期・遊ぶ版）。第453期（<see cref="Stage12H453"/>）に<b>勇者</b>（<see cref="HeroRule.V454"/>・門が開いた刻の 2 刻後に予告なしで敵の拠点に現れ、2 刻に 1 マス味方の拠点へ進む）と、
+    /// レリックの両端を軸の語だけで見る規則（<see cref="RelicRule.V454"/>）を足した。勝ちは制圧のまま（勇者が着く前に制圧すれば逃げ切り）。
+    /// </summary>
+    public static MapStage Stage12 { get; } = new()
+    {
+        Id = Stage12H453.Id,
+        Title = Stage12H453.Title,
+        Board = Stage12H453.Board,
+        Lanes = Stage12H453.Lanes,
+        LaneNames = Stage12H453.LaneNames,
+        Spawn = Stage12H453.Spawn,
+        Portal = Stage12H453.Portal,
+        Time = Stage12H453.Time,
+        Arrival = Stage12H453.Arrival,
+        Reserve = Stage12H453.Reserve,
+        SquadCap = Stage12H453.SquadCap,
+        TurnCap = Stage12H453.TurnCap,
+        TimeLimit = Stage12H453.TimeLimit,
+        WinOnCapture = Stage12H453.WinOnCapture,
+        Gold = Stage12H453.Gold,
+        MatchOffer = Stage12H453.MatchOffer,
+        PortalGate = Stage12H453.PortalGate,
+        Relic = RelicRule.V454,
+        Hero = HeroRule.V454,
     };
 
     /// <summary>選べるステージ（編成画面の選択の並び）。</summary>
@@ -571,13 +601,34 @@ public readonly record struct GoldRule(bool On, int Start, int Kill, int SpawnKi
 /// 候補の 1 枚目を「両端が手持ちにある札」（無ければ片端・無ければふつう）から引く（第453期 §0-2・両端は `RelicBridges`）。
 /// 残りはふつう。<b>噛むかどうかは画面に出さない</b>。偽なら第452期まで。
 /// </param>
-public readonly record struct RelicRule(bool On, int Offers, bool Bridge = false)
+/// <param name="AxisOnly">
+/// 両端の判定を<b>軸の語だけ</b>で見る（第454期 §1・役割の語（タンク・ヒーラーなど）の端は「誰でも」と同じに扱う）——
+/// 第453期は 1 枚目が弾性（タンク → 移動）・痺れる足に偏った（初期の手持ちにタンクがほぼ必ずいる）。
+/// </param>
+public readonly record struct RelicRule(bool On, int Offers, bool Bridge = false, bool AxisOnly = false)
 {
     public static readonly RelicRule Off = new(false, 0);
     /// <summary>第452期の値: 候補 3 枚から 1 枚。</summary>
     public static readonly RelicRule V452 = new(true, 3);
     /// <summary>第453期の値: 第452期 ＋ 1 枚目を両端の札から。</summary>
     public static readonly RelicRule V453 = new(true, 3, Bridge: true);
+    /// <summary>第454期の値: 第453期 ＋ 両端は軸の語だけで見る。</summary>
+    public static readonly RelicRule V454 = new(true, 3, Bridge: true, AxisOnly: true);
+}
+
+/// <summary>
+/// 作戦マップの勇者（第454期 §2・骨子の段C）。<b><c>On</c> が偽なら勇者は出ない</b>。
+/// <b>門が開いた刻の <c>AfterGate</c> 刻後</b>に敵の拠点のマスへ<b>予告なしに</b>現れ（札も「あと n」も出さない）、<b><c>StepEvery</c> 刻に 1 マス</b>味方の拠点へ進む
+/// （経路は予備隊と同じ選び方・前が詰まれば待つ・味方のいるマスへ入れば戦闘・拠点に着けば迎撃）。HP は戦闘をまたいで持ち越す（敵部隊と同じ）。
+/// 勝ちは制圧のまま——倒しても勝ちではないが、倒せば <c>Gold</c>。
+/// </summary>
+public readonly record struct HeroRule(bool On, int AfterGate, int StepEvery, UnitDef? Unit, int Gold)
+{
+    public static readonly HeroRule Off = new(false, 0, 0, null, 0);
+    /// <summary>第454期の値: 門の 2 刻後・2 刻に 1 マス・版 B（`EnemyCatalog.HeroMap`・固定 300 回復）・倒して ＋20。</summary>
+    public static readonly HeroRule V454 = new(true, 2, 2, EnemyCatalog.HeroMap, 20);
+    /// <summary>版 A（回復は最大HPの 40%）。遊ぶのは <see cref="V454"/>。</summary>
+    public static readonly HeroRule V454A = new(true, 2, 2, EnemyCatalog.HeroMapA, 20);
 }
 
 /// <summary>

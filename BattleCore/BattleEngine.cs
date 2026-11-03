@@ -4230,7 +4230,7 @@ public sealed class BattleContext
         }
 
         // 第273期（レリック・毒を招く）: 受ける層を2倍（滲みの後・書く直前）。保持者がいない戦は比較1つで抜ける。
-        if (_poisonMagnetLive && target.HasTrait(TraitId.RelicPoisonMagnet)) add *= RelicPoisonMagnetTrait.Factor;
+        if (_poisonMagnetLive && target.HasTrait(TraitId.RelicPoisonMagnet)) { add *= RelicPoisonMagnetTrait.Factor; NoteRelic(target, TraitId.RelicPoisonMagnet, writer); }   // 第454期: 表示専用
         target.SetCounter(StatusKeys.Poison, target.RawCounter(StatusKeys.Poison) + add);
         if (_ventLive) NoteVentWrite(target, add);   // 第369期（噴き出しの段の累計・保持者がいなければ比較1つで抜ける）
         BurstBook.PoisonWrites[(int)route]++; BurstBook.PoisonAmount[(int)route] += add;   // 第220期・**計数のみ**
@@ -10235,6 +10235,16 @@ public sealed class BattleContext
     {
         if (!_verbose) return;
         _events.Add(e);
+    }
+
+    /// <summary>
+    /// レリックが働いた（第454期・<b>表示専用</b>）。<paramref name="holder"/> が札を<b>レリックとして</b>持っているときだけ台本に積む
+    /// （素の札として持つ駒では積まない）。<b>盤面・乱数・計数は変えない</b>——verbose でなければ何もしない。
+    /// </summary>
+    public void NoteRelic(UnitState holder, TraitId relic, UnitState? target = null)
+    {
+        if (!_verbose || holder.Relic != relic) return;
+        Emit(new BattleEvent { Kind = BattleEventKind.Relic, Turn = _turn, ActorId = holder.InstanceId, TargetId = target?.InstanceId, Text = relic.ToString() });
     }
 
     /// <summary>ターンの区切りを台本に打つ。再生側はここで間を置く。</summary>
@@ -20574,7 +20584,7 @@ public sealed class BattleContext
         // 第273期（レリック・溢れの刃）: 溢れた分（最大HPで切られた分）を札へ渡す。全快で 0 しか増えなかった回復も溢れに数える。
         // 支援拒否・渇き・反転の裏で止まった回復はここまで来ない。保持者がいない戦は比較1つで抜ける。
         if (_overflowLive && amount - (target.Hp - before) > 0 && target.HasTrait(TraitId.RelicOverflowEdge))
-            RelicOverflowEdgeTrait.Gain(this, target, amount - (target.Hp - before));
+            { RelicOverflowEdgeTrait.Gain(this, target, amount - (target.Hp - before)); NoteRelic(target, TraitId.RelicOverflowEdge); }   // 第454期: 表示専用
         if (target.Hp == before) return HealOutcome.Full;
 
         // 実際に増えた分だけを数える（上限で切られた分は「払い戻し」になっていない）。

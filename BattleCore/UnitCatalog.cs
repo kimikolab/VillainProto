@@ -9127,6 +9127,26 @@ public static readonly UnitDef Inverter = MakeStill("inverter", "逆位の祭司
     /// <summary>ボスの規定形の波（第269期・中央に1体）。</summary>
     public static EnemyWave BossRegularWave => EnemyWave.Of((2, BossRegular));
 
+    /// <summary>
+    /// 作戦マップの勇者（第454期・骨子 §5 の版 B・指示書 design/PHASE454_HERO_SPEC.md §2-2）。ボスの規定形（<see cref="BossRegular"/>）の写しで、
+    /// <b>HP 2,400・毎手番の頭に固定 300 回復（<see cref="TraitId.BossMend300"/>）・蝕み無し</b>。全体・攻 12・速 14・天井 +11・動じないは同じ。
+    /// <c>Id</c> は規定形と同じ（「勇者には効かない」の判定 <c>IsBossHero432</c> がそのまま効く）。<b>器具のボス（`bosswave`）は触らない</b>——`Stages` にも試遊の波にも載せない。
+    /// 作戦マップでは HP が戦闘をまたいで持ち越す（敵部隊と同じ）ので、1 隊で削り切れなくても次の隊で押し切れる。
+    /// </summary>
+    public static readonly UnitDef HeroMap = new()
+    {
+        Id = BossRegular.Id, Name = "勇者", MaxHp = 2400, Attack = 12, Speed = 14, Pattern = AttackPattern.All,
+        Traits = new[] { TraitId.BossRise11, TraitId.BossMend300, TraitId.BossSteadfast },
+        PlusText = "全員を薙ぎ払い、毎ターン攻撃力が 11 上がる。転ばず痺れない。ターン頭に 300 癒える。傷は戦いをまたいで残る",
+    };
+    /// <summary>作戦マップの勇者の版 A（第454期・回復は規定形と同じ最大HPの 40%）。遊ぶのは版 B（<see cref="HeroMap"/>）。</summary>
+    public static readonly UnitDef HeroMapA = new()
+    {
+        Id = BossRegular.Id, Name = "勇者", MaxHp = 2400, Attack = 12, Speed = 14, Pattern = AttackPattern.All,
+        Traits = new[] { TraitId.BossRise11, TraitId.BossMend40, TraitId.BossSteadfast },
+        PlusText = "全員を薙ぎ払い、毎ターン攻撃力が 11 上がる。転ばず痺れない。ターン頭に最大HPの 40% 癒える。傷は戦いをまたいで残る",
+    };
+
     // ---------------------------------------------------------------------------------
     // 第284期 —— **精鋭の波**（評価軸・design/PHASE284_ELITE_WAVE.md）。第291期に `BattleSim/Modes/Elite.cs` の中から移した（DemoApp の試遊から引くため）。
     // 素の構成 × 倍率（HP 1000% ／ 攻 300%）・波ルールなし。倍率は既定の 115/115 の<b>代わりに</b>掛ける（相乗しない）。

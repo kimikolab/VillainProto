@@ -137,6 +137,7 @@ public sealed class RelicCreakTrait : Trait
     {
         self.AtkBonus += Gain;
         ctx.Log($"    {self.Name} の軋む足（攻撃 +{Gain} → {self.CurrentAttack}）", LogKind.Trigger);
+        ctx.NoteRelic(self, Id);   // 第454期: 表示専用（攻撃が上がった回数）
     }
 }
 
@@ -154,6 +155,7 @@ public sealed class RelicFireArrowTrait : Trait
         if (dealt <= 0 || !target.IsAlive || target.TeamId == self.TeamId) return;
         ctx.Ignite(target, friendly: false, source: self);
         ctx.Log($"    {self.Name} の火付けの矢が {target.Name} に火を点けた", LogKind.Trigger);
+        ctx.NoteRelic(self, Id, target);   // 第454期: 表示専用（火を点けた回数）
     }
 }
 
@@ -187,6 +189,7 @@ public sealed class RelicVenomStepTrait : Trait
         {
             ctx.Poison(f, Amount, self, PoisonRoute.Arrow);
             ctx.Log($"    {self.Name} の毒の足跡が {f.Name} に毒を残した（+{Amount}）", LogKind.Status);
+            ctx.NoteRelic(self, Id, f);   // 第454期: 表示専用（毒を残した回数）
         }
     }
 }
@@ -207,6 +210,7 @@ public sealed class RelicWiltTrait : Trait
         if (dmg <= 0 || source is null || source.TeamId == self.TeamId) return;
         self.AtkBonus -= Loss;
         ctx.Log($"    {self.Name} の心が萎えた（攻撃 −{Loss} → {self.CurrentAttack}）", LogKind.Trigger);
+        ctx.NoteRelic(self, Id, source);   // 第454期: 表示専用（攻撃が下がった回数）
     }
 }
 
@@ -225,7 +229,10 @@ public sealed class RelicNumbStepTrait : Trait
         if (!self.IsAlive) return;
         self.SetCounter(StatusKeys.Stagger, 1);
         if (self.RawCounter(StatusKeys.Stagger) > 0)
+        {
             ctx.Log($"    {self.Name} は足が痺れて転んだ（次の手番を失う）", LogKind.Trigger);
+            ctx.NoteRelic(self, Id);   // 第454期: 表示専用（転んだ回数）
+        }
     }
 }
 
@@ -249,6 +256,7 @@ public sealed class RelicHardenTrait : Trait
         self.MaxHp += add;
         self.Hp += add;
         ctx.Log($"    {self.Name} は身を固めた（最大HP +{add} → {self.MaxHp}・攻撃 0）", LogKind.Trigger);
+        ctx.NoteRelic(self, Id);   // 第454期: 表示専用（身を固めた回数＝1 戦 1 回）
     }
 
     public override int ModifyAttack(UnitState self, int atk) => 0;
@@ -312,7 +320,10 @@ public sealed class RelicShockStepTrait : Trait
         if (!self.IsAlive || self.RawCounter(StatusKeys.Shock) <= 0) return;
         foreach (UnitState f in RelicLanes.Facing(ctx, self))
             if (ctx.MarkShock(f, self))
+            {
                 ctx.Log($"    {self.Name} の帯電の足が {f.Name} に感電を移した", LogKind.Status);
+                ctx.NoteRelic(self, Id, f);   // 第454期: 表示専用（感電を移した回数）
+            }
     }
 }
 
@@ -352,7 +363,10 @@ public sealed class RelicVenomShoveTrait : Trait
         int dest = SpringTrait.DestOf(ctx, target);
         if (dest < 0) return;
         if (ctx.SwapSlots(target, dest, self))
+        {
             ctx.Log($"    {self.Name} の押し毒が {target.Name} を後ろへ押した", LogKind.Trigger);
+            ctx.NoteRelic(self, Id, target);   // 第454期: 表示専用（押した回数）
+        }
     }
 }
 
@@ -404,7 +418,7 @@ public sealed class RelicMomentumTrait : Trait
         if (with is null) return;
         bool moved = false;
         ctx.Shoving(() => moved = ctx.SwapSlots(self, with.Slot, self));
-        if (moved) ctx.Log($"    {self.Name} は勢い余って {with.Name} と入れ替わった", LogKind.Trigger);
+        if (moved) { ctx.Log($"    {self.Name} は勢い余って {with.Name} と入れ替わった", LogKind.Trigger); ctx.NoteRelic(self, Id, with); }   // 第454期: 表示専用（入れ替わった回数）
     }
 }
 

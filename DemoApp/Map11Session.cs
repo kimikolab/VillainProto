@@ -70,6 +70,7 @@ public static class Map11Session
     public static void Reset(int? seed = null, bool draft = true, MapStage? stage = null)
     {
         Seed = seed ?? new Random().Next(0, 1_000_000);
+        RelicWorked.Clear();   // 第454期
         stage ??= MapStage.Stage11;
         // 第177期 §1: **敵の拠点（ワープポータル）を遊ぶ側に載せた。**
         // 第176期は `PortalRule.Off` のままで、起動して遊べるものは第175期と同じだった。
@@ -162,11 +163,14 @@ public static class Map11Session
         // 第175期 §2: **迎撃で勝っても道中の回復は乗らない**（規則は `Map11State` が持つ）。
         int delivered = State.Deliveries.Count;
         int golds = State.GoldLog.Count;
+        var unitsBefore = sq.Units?.ToList() ?? new List<UnitState>();   // 第454期: 札の持ち主を台本の番号で引くため（精算で倒れた駒は隊から外れる）
         State.Resolve(squad, node, playerWon, wasIntercept);
         Battles = State.Battles;
         if (wasIntercept && TurnRunning) _interceptFought = true;
 
         var notes = result is null ? new List<string>() : Map11Info.RuleNotes(result);
+        // 第454期 §1: レリックが働いた回数（台本の `BattleEventKind.Relic`・表示だけ）。駒は戦闘の前の隊の駒（InstanceId はこの戦闘で振られた番号）。
+        if (result is not null && RelicNotes(result, unitsBefore) is { Count: > 0 } relicNotes) notes.AddRange(relicNotes);
         // 第445期 §0-3: 分母は**いまのロスターの最大 HP**（画面の `SquadHpPercent` と同じ・第174期）。
         // 第444期までは隊の定義（カド隊など）の 5 枚で割っていたので、自分で組んだ隊では 100% を超えることがあった。表示だけ。
         int maxHp = sq.Units is { } roster ? roster.Sum(u => u.MaxHp) : sq.Def.F.Occupied().Sum(o => o.Def.MaxHp);
@@ -191,6 +195,25 @@ public static class Map11Session
         if (DeliveryText(State.Deliveries.Skip(delivered)) is { } got) LastOutcome += " ／ " + got;
         // 第445期 §0-1: この戦闘で動いた金（「＋6（第三波を抜いた）」）。
         if (GoldText(State.GoldLog.Skip(golds)) is { } gold) LastOutcome += " ／ " + gold;
+    }
+
+    /// <summary>このマップでレリックが働いた回数（第454期・駒の名前と札 → 回数・結果画面が読む・表示だけ）。</summary>
+    public static Dictionary<(string Unit, TraitId Relic), int> RelicWorked { get; } = new();
+
+    /// <summary>1 戦の台本からレリックが働いた回数を数え、「◆札（駒）: n 回」の行にする（<see cref="RelicWorked"/> にも足す）。</summary>
+    internal static List<string> RelicNotes(BattleResult result, List<UnitState> squad)
+    {
+        var lines = new List<string>();
+        foreach (var g in result.Events.Where(e => e.Kind == BattleEventKind.Relic && e.ActorId is not null)
+                                       .GroupBy(e => (e.ActorId!.Value, e.Text)))
+        {
+            UnitState? u = squad.FirstOrDefault(x => x.InstanceId == g.Key.Item1);
+            if (u is null || !Enum.TryParse(g.Key.Item2, out TraitId relic) || !RelicCatalog.IsRelic(relic)) continue;
+            string name = RelicCatalog.Info(relic).Name;
+            lines.Add($"◆{name}（{u.Def.Name}）: {g.Count()} 回");
+            RelicWorked[(u.Def.Name, relic)] = RelicWorked.GetValueOrDefault((u.Def.Name, relic)) + g.Count();
+        }
+        return lines;
     }
 
     /// <summary>金の出入りの 1 文（第445期）。「＋6（第三波を抜いた）・＋8（北の砦を取った）」。無ければ null。</summary>

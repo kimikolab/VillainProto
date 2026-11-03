@@ -4948,6 +4948,13 @@ public enum BattleEventKind
     /// どの規則も読まない。盤面・乱数・計数は変更しない。
     /// </summary>
     Dirge,
+
+    /// <summary>
+    /// 第454期（<b>表示専用</b>）: レリックが働いた。<c>ActorId</c> ＝ 札の持ち主、<c>TargetId</c> ＝ 札が触れた相手（いなければ null）、
+    /// <c>Text</c> ＝ 札の <c>TraitId</c> の名前。<b>札を「レリックとして持っている」駒（<c>UnitState.Relic</c>）だけ</b>——素の札として持つ駒（ハネの弾き返しなど）では積まない。
+    /// 何を「働いた」と数えるかは札ごと（`BattleContext.NoteRelic` を呼ぶ場所・design/PHASE454_HERO.md の表）。どの規則も読まない。盤面・乱数・計数は変更しない。
+    /// </summary>
+    Relic,
 }
 
 public static class DirgeLabels

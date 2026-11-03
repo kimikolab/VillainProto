@@ -465,6 +465,51 @@ public partial class Map11Main : Node3D
             Refresh();
             GD.Print($"MAP11_CAPTURE_RELIC seed={Map11Session.Seed} got={got} equipped={equipped} holder={holder?.Def.Name} reform={_reform} pickPath=True");
         }
+        // 第454期 §5: **勇者が現れた直後**の絵（`--map-stage=1-2` と使う）。北の砦を取って候補の先頭を第1隊の前1 に持たせ、野営地も取って門を開け、
+        // 勇者が現れるまで刻を進める。戦闘は頭なし（台本つきで回し、レリックが働いた回数を結果画面と同じ帳簿に足す）。
+        else if (parts.Length > 1 && parts[1] == "hero")
+        {
+            St.UseDefaultSquads();
+            _reform = false;
+            ClearHold();
+            Map11Session.TakeOpening();
+            void Fight(int squad, Map11State.Node node, bool intercept)
+            {
+                var prep = intercept ? St.PrepareIntercept(squad, node) : St.Prepare(squad, node);
+                if (prep is not { } q) return;
+                var before = q.Players.ToList();
+                BattleResult r = BattleEngine.Run(q.Players, q.Enemies, q.Seed, verbose: true);
+                Map11Session.RelicNotes(r, before);
+                St.Resolve(squad, q.Node, r.PlayerWon, intercept);
+            }
+            void Go(int squad, Dest to)
+            {
+                for (int guard = 0; guard < 12 && St.Squads[squad].Pos != to.Id && !St.Finished; guard++)
+                {
+                    if (St.FoeFacing(squad) is { } here) { Fight(squad, here, false); continue; }
+                    if (Map11Orders.Apply(St, squad, to, Map11Orders.Plan(St, squad, to)) is { } met) Fight(squad, met, false);
+                }
+                while (St.FoeFacing(squad) is { } here && !St.Finished) Fight(squad, here, false);
+            }
+            Go(0, Dest.Of(St.Graph, St.Graph.Lanes[0][^1]));
+            if (St.ChooseRelic(0) && St.Squads[0].Units?.Where(u => u.IsAlive).OrderBy(u => u.Slot).FirstOrDefault() is { } holder)
+                St.EquipRelic(holder, St.RelicHand[0]);
+            Go(1, Dest.Of(St.Graph, St.Graph.Lanes[1][^1]));
+            if (St.RelicOffer.Count > 0) St.ChooseRelic(0);
+            Go(1, Dest.Home);   // 拠点を空にすると湧いた部隊が着いて陥落するので、第2隊は拠点へ戻して迎え撃たせる
+            Watch before = Take();
+            for (int guard = 0; guard < 8 && St.Hero is null && !St.Finished; guard++)
+            {
+                before = Take();
+                foreach (Map11State.Encounter e in St.AdvanceFoes())
+                    if (e.Intercept) { if (St.NextInterceptor(e.Node) is var j && j >= 0) Fight(j, e.Node, true); St.CloseIntercept(e.Node); }
+                    else Fight(e.Squad, e.Node, false);
+            }
+            Refresh();
+            if (StopReason(before) is { } why) ShowToast(why, GoldColor, 30f);
+            GD.Print($"MAP11_CAPTURE_HERO seed={Map11Session.Seed} turn={St.Turn} fallen={St.Fallen} finished={St.Finished} held={St.HeldOutposts.Count} gate={St.GateOpen} gateTurn={St.GateOpenedTurn} heroTurn={St.HeroTurn} hero={(St.Hero is { } h ? St.Graph[h.Pos].Name : "-")} "
+                     + "relics=" + string.Join("/", Map11Session.RelicWorked.Select(kv => $"{RelicCatalog.Info(kv.Key.Relic).Name}({kv.Key.Unit}):{kv.Value}")));
+        }
         // 第443期 §0-1: **迎撃の合間**の絵（`--map-stage=1-2` と使う）。既定の組み方で 2 隊を組み、北と南の先頭だけを残して
         // 拠点で待つ。2 刻目に 2 部隊が同時に着くので、1 戦目を**頭なしで**決着させ（戦闘シーンへは行かない）、2 戦目の迎撃の窓を出す。
         else if (parts.Length > 1 && parts[1] == "break")
@@ -1589,14 +1634,14 @@ public partial class Map11Main : Node3D
     /// <summary>止まる理由を調べるために、作戦ターンの前に写しておく盤面。</summary>
     private readonly record struct Watch(bool[] Arrived, bool[] Imminent, int Spawns, bool Captured,
                                          int Delivered = 0, int ReserveDepart = -1,
-                                         int Rewards = 0, int OutpostCaptures = 0, int OutpostLosses = 0, bool GateOpen = true);
+                                         int Rewards = 0, int OutpostCaptures = 0, int OutpostLosses = 0, bool GateOpen = true, int HeroTurn = -1);
 
     private static Watch Take() => new(
         Enumerable.Range(0, St.Squads.Length).Select(AtDest).ToArray(),
         Enumerable.Range(0, St.Stage.LaneCount)
                   .Select(r => St.NextNode(r) is { } n && n.Cell <= 0).ToArray(),
         St.SpawnCount, St.Captured, St.ArrivedCount, St.ReserveDepartTurn,
-        St.Deliveries.Count, St.OutpostCaptures, St.OutpostLosses, St.GateOpen);
+        St.Deliveries.Count, St.OutpostCaptures, St.OutpostLosses, St.GateOpen, St.HeroTurn);
 
     /// <summary>
     /// 第177期 §2（第176期 §3-1 #2）—— <b>行き先までのあいだに立っている最初の敵のマス。</b>
@@ -1642,6 +1687,9 @@ public partial class Map11Main : Node3D
         // 第451期: 本陣の門が開いた・閉じた瞬間（門の無い盤では常に開いているので出ない）。
         if (!before.GateOpen && St.GateOpen) now.Add("本陣の門が開いた（敵の拠点へ入れる）");
         if (before.GateOpen && !St.GateOpen) now.Add($"本陣の門が閉じた（中間拠点 あと {St.GateNeed}）");
+        // 第454期 §2-1: 勇者が現れた刻（予告は無い・ここで初めて知らせる）。
+        if (before.HeroTurn < 0 && St.HeroTurn >= 0 && St.Hero is { } hero)
+            now.Add($"勇者が現れた（{Map11.PortalName}から{St.LaneName(hero.Def.Road)}へ向かう・2 刻に 1 マス）");
         if (Map11Session.DeliveryText(St.Deliveries.Skip(before.Rewards)) is { } got) now.Add(got);
         if (St.HeroTurnsLeft is 3 or 1 && St.Turn > 0 && !St.Finished) now.Add($"勇者パーティーが あと {St.HeroTurnsLeft} 刻で現れる");
         if (St.TimeLimitLeft is 3 or 1 && St.Turn > 0 && !St.Finished) now.Add($"制圧の期限まで あと {St.TimeLimitLeft} 作戦ターン");
@@ -2684,6 +2732,12 @@ public partial class Map11Main : Node3D
             if (St.Deliveries.Count > 0)
                 lines.Add("見返りの増援: " + string.Join(" ／ ", St.Deliveries.Select(d => $"{d.Unit.Def.Name}（{d.Reason}・{d.Place}）")));
             if (St.HeroArrived) lines.Add($"作戦ターン {St.Stage.TurnCap} で勇者パーティーが着いた");
+            // 第454期: 勇者（現れた刻・その後）とレリックが働いた回数。
+            if (St.Stage.Hero.On)
+                lines.Add(St.HeroTurn < 0 ? "勇者: 現れなかった"
+                    : $"勇者: 作戦ターン {St.HeroTurn} に現れた・{St.HeroOutcome}（戦った {St.HeroBattles} 回・当てた隊 {St.HeroSquads.Count}）");
+            if (Map11Session.RelicWorked.Count > 0)
+                lines.Add("レリックが働いた: " + string.Join(" ／ ", Map11Session.RelicWorked.Select(kv => $"◆{RelicCatalog.Info(kv.Key.Relic).Name}（{kv.Key.Unit}）{kv.Value} 回")));
             if (St.TimeUp) lines.Add($"{St.Stage.TurnCap} 作戦ターン以内に {Map11.PortalName} を制圧できなかった（時間切れ）");
             // 第445期: 制圧で勝った盤は、掃除をしなかった敵部隊を「退いた」と出す。金の出入り。
             if (St.Stage.WinOnCapture && St.Won) lines.Add($"退いた敵部隊 {St.FoesRemaining}（制圧で勝ち・残りは退いた）");

@@ -1112,7 +1112,8 @@ public enum TraitId
 
     // --- 第449期 作戦マップの敵（帯 B）だけが持つ札。`Stages` の敵も `UnitCatalog.All` も持たない ---
     MiasmaFront, // 前の瘴気: 毎ターン、相手の前列に毒 +1（毒霧の司祭）。味方への漏れはない
-    CinderFoe    // 敵の火の粉（第450期）: 当てた相手全員に火を点ける。隣の味方へは燃え移らない（火の魔術師・火矢の射手）
+    CinderFoe,   // 敵の火の粉（第450期）: 当てた相手全員に火を点ける。隣の味方へは燃え移らない（火の魔術師・火矢の射手）
+    BossMend300  // 自前の回復・固定 300（第454期・作戦マップの勇者 `EnemyCatalog.HeroMap`）: ターン頭に自分を 300 回復（割合ではなく固定量）
 }
 
 /// <summary>
@@ -17754,15 +17755,19 @@ public sealed class PartyMendPctTrait : Trait
 public sealed class BossMendTrait : Trait
 {
     public const int HalfPct = 50;
+    /// <summary>第454期: 作戦マップの勇者の固定量（`BossMend300`）。</summary>
+    public const int Fixed300 = 300;
     readonly TraitId _id;
     public int Percent { get; }
-    public BossMendTrait(TraitId id, int percent) { _id = id; Percent = percent; }
+    /// <summary>固定量（第454期・0 なら割合）。</summary>
+    public int Fixed { get; }
+    public BossMendTrait(TraitId id, int percent, int fixedAmount = 0) { _id = id; Percent = percent; Fixed = fixedAmount; }
     public override TraitId Id => _id;
 
     public override void OnTurnStart(BattleContext ctx, UnitState self)
     {
         if (!self.IsAlive) return;
-        int amount = Percent >= 100 ? self.MaxHp - self.Hp : self.MaxHp * Percent / 100;
+        int amount = Fixed > 0 ? Fixed : Percent >= 100 ? self.MaxHp - self.Hp : self.MaxHp * Percent / 100;
         // 第268期: 蝕み（`VenomTaxTrait`）。回復が入る直前に「毒の層 × N」だけ減らす（下限 0・層は消費しない）。札が無ければ何もしない。
         if (amount > 0) amount = VenomTaxTrait.Apply(ctx, self, amount);
         if (amount <= 0) return;
@@ -19365,6 +19370,7 @@ public sealed class SpringTrait : Trait
         self.SetCounter(TurnKey, ctx.Turn + 1);
         self.SetCounter(CountKey, used + 1);
         ctx.Interrupt(() => ctx.SpringSwap(self, foe, dest, guarded));
+        ctx.NoteRelic(self, TraitId.Spring, foe);   // 第454期: 表示専用（弾き返そうとした回数・レリックとして持つ駒だけ）
     }
 }
 
@@ -20612,6 +20618,7 @@ public static class TraitCatalog
         new HeroWardTrait(),                                           // 第265期
         new HeroMendTrait(),                                           // 第265期
         new BossMendTrait(TraitId.BossMend40, PartyMendPctTrait.Pct),  // 第266期（bosswave の勇者だけ）
+        new BossMendTrait(TraitId.BossMend300, 0, BossMendTrait.Fixed300), // 第454期（作戦マップの勇者だけ）
         new IndomitableTrait(TraitId.Indomitable0, 0),                 // 第266期
         new IndomitableTrait(TraitId.Indomitable11, IndomitableTrait.Mid), // 第266期
         new IndomitableTrait(TraitId.Indomitable22, IndomitableTrait.High), // 第266期
