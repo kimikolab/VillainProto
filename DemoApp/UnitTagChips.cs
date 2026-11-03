@@ -10,6 +10,10 @@ using System.Linq;
 /// </summary>
 public static class UnitTagChips
 {
+    /// <summary>タグごとの 1 行の説明（第451期・`UnitTags.Lines`）を改行でつないだもの（触れたときの説明に使う）。</summary>
+    public static string Help(UnitDef d)
+        => string.Join("\n", d.Tags.Select(t => UnitTags.LineOf(t) is { Length: > 0 } l ? $"{t}: {l}" : t));
+
     /// <summary>タグを「・」でつないだ 1 行（説明・札の文字に使う）。<paramref name="skip"/> の語は除く。</summary>
     public static string Text(UnitDef d, string skip = "")
         => string.Join("・", d.Tags.Where(t => skip.Length == 0 || !skip.Contains(t)));
@@ -36,7 +40,8 @@ public static class UnitTagChips
         };
         style.SetBorderWidthAll(1);
         style.SetCornerRadiusAll(3);
-        var chip = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+        // 第451期: 触れるとそのタグの 1 行（`Pass` なので押した操作は下の札へ流れる）。
+        var chip = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Pass, TooltipText = UnitTags.LineOf(word) is { Length: > 0 } l ? $"{word}: {l}" : word };
         chip.AddThemeStyleboxOverride("panel", style);
         Label label = UiKit.Text(word, fontSize, tint);
         label.MouseFilter = Control.MouseFilterEnum.Ignore;

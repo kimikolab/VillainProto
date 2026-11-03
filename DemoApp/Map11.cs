@@ -985,6 +985,15 @@ public sealed class Map11State
     public bool AtSecondBase(int squadIndex)
         => Captured && Squads[squadIndex].Units is not null && Squads[squadIndex].Pos == Graph.Portal;
 
+    /// <summary>本陣の門が開いているか（第451期 §0-1・門の無い盤では常に真）。<b>入れるかの判定はここ1箇所</b>。</summary>
+    public bool GateOpen => Stage.PortalGate <= 0 || HeldOutposts.Count >= Stage.PortalGate;
+
+    /// <summary>門が開くまでに取る中間拠点の残り（門の無い盤・開いていれば 0）。</summary>
+    public int GateNeed => Math.Max(0, Stage.PortalGate - HeldOutposts.Count);
+
+    /// <summary>その隊はいまそのマスへ入れるか（第451期: 門が閉じている間は敵の拠点のマスへ新しく入れない）。</summary>
+    public bool CanEnter(int squadIndex, int cell) => cell != Graph.Portal || GateOpen || Squads[squadIndex].Pos == Graph.Portal;
+
     /// <summary>その隊は味方のものになった中間拠点にいるか（第444期 §0-1・<b>休む・組み直し・届いた駒を受け取るができる</b>）。</summary>
     public bool AtOutpost(int squadIndex)
         => _outposts.Length > 0 && Squads[squadIndex].Units is not null && HeldOutposts.Contains(Squads[squadIndex].Pos);
@@ -1393,6 +1402,7 @@ public sealed class Map11State
                            && (!intercept || Time.InterceptRecover);
             s.Units = EngagementEngine.CrossBoundary(aliveP, pu,
                 recover ? new RecoverRule(Map11.RecoverPercent, false) : null);
+            RepairSeats(s.Units);
         }
 
         // 敵の拠点のマスで最後の1つを抜いたら、その場で制圧になる（第176期 §1-3）。
@@ -1404,6 +1414,29 @@ public sealed class Map11State
         // 第445期: 抜いた見返りの金（湧いた部隊は安い）。
         if (node.Cleared)
             Earn(KillGold(node), $"{node.Def.Name}を抜いた", node.Pos);
+    }
+
+    /// <summary>同じ席の直し（第451期 §0-4）を何回したか（測るためだけの計数）。</summary>
+    public int SeatRepairs { get; private set; }
+
+    /// <summary>
+    /// 同じ席の直し（第451期 §0-4・<b>不具合の修正・規則の変更ではない</b>）。戦闘の後、生きている駒が 2 体以上同じ席にいたら、
+    /// 後ろの駒（隊の並びで後ろ）を同じ列の空いた席へ、無ければ空いた席の若い順へ移す。
+    /// 戦闘の中の入れ替え（ヨミの「勢い余って」と他の移動の重なり・第450期の seed 4）で生きている駒が同じ席に残ることがある——
+    /// 画面（<c>SeatsOf</c>）が席を辞書の鍵にしていて落ちるので、隊に戻す時点で 1 席 1 体に揃える。戦闘の中の振る舞いは触らない。
+    /// </summary>
+    private void RepairSeats(List<UnitState> units)
+    {
+        var taken = new HashSet<int>();
+        foreach (UnitState u in units.Where(x => x.IsAlive && !x.Def.Traits.Contains(TraitId.Ephemeral)))
+        {
+            if (taken.Add(u.Slot)) continue;
+            int to = FormationRules.PlayableSlotsOfRow(u.Row).Concat(FormationRules.PlayableSlots).FirstOrDefault(sl => !taken.Contains(sl), -1);
+            if (to < 0) continue;
+            u.Slot = to;
+            taken.Add(to);
+            SeatRepairs++;
+        }
     }
 
     /// <summary>その敵部隊を抜いたときの金（第449期: 本陣の守りは <see cref="GoldRule.Garrison"/>・湧いた部隊は安い）。画面の札も同じ値を読む。</summary>
@@ -1455,6 +1488,8 @@ public sealed class Map11State
             // （第437期の `Math.Min(Cell + 1, 先頭の敵のマス)` をそのまま写した）。
             int next = Graph.NextStep(s.Pos, road, Graph.At(road, MaxCell), road);
             if (FrontFoe(road) is { } front && front.Cell < Graph.IndexOn(road, next)) next = front.Pos;
+            // 第451期: 本陣の門が閉じていれば、敵の拠点のマスの手前で止まる。
+            if (!CanEnter(squadIndex, next)) return null;
             if (next == s.Pos) return null;
             Place(s, next, road);
             // 敵の拠点のマスへ入って、そこに敵が1つも無ければ制圧（第176期 §1-3）。

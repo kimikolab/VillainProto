@@ -9189,8 +9189,39 @@ public static class UnitTags
 {
     /// <summary>軸の語（10）。</summary>
     public static readonly string[] Axes = { "燃焼", "毒", "感電", "呪い", "移動", "標", "生贄", "破片", "自傷", "手番" };
-    /// <summary>役割の語（6）。「付与」＝ 状態を相手に付ける ／「反応」＝ 状態がある場面で強くなる。</summary>
-    public static readonly string[] Roles = { "タンク", "アタッカー", "サポート", "ヒーラー", "付与", "反応" };
+    /// <summary>役割の語（6）。「付与」＝ 状態を相手に付ける ／「活用」＝ 状態がある場面で化ける（第451期に「反応」から替えた）。</summary>
+    public static readonly string[] Roles = { "タンク", "アタッカー", "サポート", "ヒーラー", "付与", "活用" };
+
+    /// <summary>
+    /// タグの 1 行（第451期 §0-2・手で書く）。<b>タグに触れると出る説明</b>——「呪い」「標」のような作中の語を初見で読めるように。盤面ルールの語の 1 行も置く。
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, string> Lines = new Dictionary<string, string>
+    {
+        ["燃焼"] = "火。燃えている者は毎ターン傷み、火を力にする駒がいる",
+        ["毒"] = "毎ターン傷む。層が重なるほど痛い",
+        ["感電"] = "痺れて手番を失う。帯電した者は殴られると弾ける",
+        ["呪い"] = "攻撃力を下げる。呪われた者どうしは痛みを分け合う",
+        ["移動"] = "隊列を動かす。動かされて強くなる駒がいる",
+        ["標"] = "印を付けた敵を味方が狙う",
+        ["生贄"] = "味方が倒れると働く。倒れることが力になる",
+        ["破片"] = "傷を受け止める欠片。配る・拾う・撃つ",
+        ["自傷"] = "殴られるほど、傷つくほど強くなる",
+        ["手番"] = "手番の順や回数で働く",
+        ["タンク"] = "前に立って受ける",
+        ["アタッカー"] = "殴って削る",
+        ["サポート"] = "味方を強くする・守る",
+        ["ヒーラー"] = "回復する",
+        ["付与"] = "状態を相手に付ける",
+        ["活用"] = "状態がある場面で化ける",
+        ["粛"] = "盤面ルール: 生きている間、敵味方ともターン外の行動が止まる",
+        ["渇き"] = "盤面ルール: 生きている間、敵味方とも回復が通らない",
+        ["軛"] = "盤面ルール: 生きている間、1 回のダメージに上限がかかる",
+        ["逆位"] = "盤面ルール: 生きている間、行動順が遅い順になる",
+        ["断罪"] = "この駒の札（断罪）を持つ",
+    };
+
+    /// <summary>タグの 1 行（無ければ空）。</summary>
+    public static string LineOf(string tag) => Lines.TryGetValue(tag, out string? l) ? l : "";
 
     /// <summary>表の 1 行（軸 1〜2・役割 1）。</summary>
     public sealed record Entry(IReadOnlyList<string> Axes, string Role);
@@ -9221,21 +9252,21 @@ public static class UnitTags
         A(UnitCatalog.Rau, "付与", "毒");
         A(UnitCatalog.Guza, "付与", "毒");
         A(UnitCatalog.Tou, "付与", "感電");
-        A(UnitCatalog.Beni, "反応", "毒");
+        A(UnitCatalog.Beni, "活用", "毒");
         A(UnitCatalog.Gan, "サポート", "手番");
-        A(UnitCatalog.Vio, "反応", "毒");
+        A(UnitCatalog.Vio, "活用", "毒");
         A(UnitCatalog.Yomi, "アタッカー", "移動");
         A(UnitCatalog.Basa, "付与", "移動");
         A(UnitCatalog.Kugu, "サポート", "感電");
         A(UnitCatalog.Ban, "サポート", "手番");
         A(UnitCatalog.Shio, "サポート", "移動");
-        A(UnitCatalog.Utsu, "反応", "呪い");
+        A(UnitCatalog.Utsu, "活用", "呪い");
         A(UnitCatalog.Doha, "サポート", "標");
         A(UnitCatalog.Sasa, "サポート", "破片", "移動");
         A(UnitCatalog.Kubi, "付与", "呪い");
         A(UnitCatalog.Hagi, "アタッカー", "生贄");
         A(UnitCatalog.Sekki, "タンク", "手番");
-        A(UnitCatalog.Hota, "反応", "燃焼");
+        A(UnitCatalog.Hota, "活用", "燃焼");
         A(UnitCatalog.Hibi, "サポート", "破片");
         A(UnitCatalog.Tsugi, "タンク", "破片");
         A(UnitCatalog.Shiga, "アタッカー", "感電");
@@ -9245,8 +9276,8 @@ public static class UnitTags
         A(UnitCatalog.Nomi, "アタッカー", "自傷");
         A(UnitCatalog.Kata, "アタッカー", "感電");
         A(UnitCatalog.Tomo, "サポート", "手番");
-        A(UnitCatalog.Hane, "タンク", "移動");
-        A(UnitCatalog.Ere, "サポート", "生贄");
+        A(UnitCatalog.Hane, "付与", "移動");   // 第451期: タンク → 付与（ポン）
+        A(UnitCatalog.Ere, "サポート", "生贄", "自傷");   // 第451期: 自傷を足した（ポン）
         A(UnitCatalog.Wata, "サポート", "呪い");
         A(UnitCatalog.Chiri, "アタッカー", "燃焼");
         A(UnitCatalog.Sora, "タンク", "自傷");

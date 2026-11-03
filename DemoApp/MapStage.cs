@@ -77,6 +77,11 @@ public sealed class MapStage
     /// 残りの候補はふつう。リロール・呼んだ後の補充でも 1 枚目は同じ規則。<b>噛むかどうかは画面に出さない。</b>偽なら第448期まで。
     /// </summary>
     public bool MatchOffer { get; init; }
+    /// <summary>
+    /// 本陣の門（第451期 §0-1）。<b>中間拠点をこの数以上味方のものにするまで、敵の拠点のマスへ入れない</b>（本陣の守りと戦えない・制圧できない）。
+    /// 取り返されて数を割れば門は閉じる（中にいる隊はそのまま・新しく入れないだけ）。湧き・予備隊・敵の前進は門と無関係。<b>0 なら門は無い</b>（第450期まで）。
+    /// </summary>
+    public int PortalGate { get; init; }
 
     public int LaneCount => Lanes.Length;
     public int TotalNodes => Lanes.Sum(l => l.Count);
@@ -376,10 +381,11 @@ public sealed class MapStage
     };
 
     /// <summary>
-    /// 1-2（第450期・遊ぶ版）。第449期（<see cref="Stage12H449"/>）から<b>火の魔術師の部隊だけ</b>を替えた——火の魔術師・火矢の射手の火は
+    /// 1-2 の第450期の姿。第449期（<see cref="Stage12H449"/>）から<b>火の魔術師の部隊だけ</b>を替えた——火の魔術師・火矢の射手の火は
     /// 敵の火の粉（`CinderFoe`・当てた相手全員に点く・<b>自分の部隊の隣へは燃え移らない</b>）。盤・部隊の並び・金・候補の規則は第449期のまま。
+    /// 第451期からは回帰の基準だけが使う——遊ぶ 1-2 は <see cref="Stage12"/>。
     /// </summary>
-    public static MapStage Stage12 { get; } = new()
+    public static MapStage Stage12H450 { get; } = new()
     {
         Id = Stage12H449.Id,
         Title = Stage12H449.Title,
@@ -402,6 +408,31 @@ public sealed class MapStage
         WinOnCapture = Stage12H449.WinOnCapture,
         Gold = Stage12H449.Gold,
         MatchOffer = Stage12H449.MatchOffer,
+    };
+
+    /// <summary>
+    /// 1-2（第451期・遊ぶ版）。第450期（<see cref="Stage12H450"/>）に<b>本陣の門</b>（<see cref="PortalGate"/> ＝ 2）を足しただけ——
+    /// 中間拠点を 3 つのうち 2 つ取るまで敵の拠点へ入れない。北（粛）・中（物見と火の魔術師の部隊が同じマス）・南（毒霧）のどの 2 つでも、火か毒には必ず当たる。
+    /// </summary>
+    public static MapStage Stage12 { get; } = new()
+    {
+        Id = Stage12H450.Id,
+        Title = Stage12H450.Title,
+        Board = Stage12H450.Board,
+        Lanes = Stage12H450.Lanes,
+        LaneNames = Stage12H450.LaneNames,
+        Spawn = Stage12H450.Spawn,
+        Portal = Stage12H450.Portal,
+        Time = Stage12H450.Time,
+        Arrival = Stage12H450.Arrival,
+        Reserve = Stage12H450.Reserve,
+        SquadCap = Stage12H450.SquadCap,
+        TurnCap = Stage12H450.TurnCap,
+        TimeLimit = Stage12H450.TimeLimit,
+        WinOnCapture = Stage12H450.WinOnCapture,
+        Gold = Stage12H450.Gold,
+        MatchOffer = Stage12H450.MatchOffer,
+        PortalGate = 2,
     };
 
     /// <summary>選べるステージ（編成画面の選択の並び）。</summary>

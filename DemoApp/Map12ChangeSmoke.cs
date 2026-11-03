@@ -82,6 +82,13 @@ using System.Linq;
 //   (ai) 火の魔術師の全体攻撃・火矢の射手の貫きで、敵の味方（自分の部隊）が燃えない（味方 5 体 ／ 3 体には今までどおり点く）
 //   (aj) 編成に選べる 52 枚すべてに 軸 1〜2 個と役割 1 個（表の語だけ）がある
 //   3 方針 × 100 seed の表と火の魔術師の部隊の重さ（報告だけ）
+// **第451期からは (ai)(aj) と第450期の表は第450期の盤（`MapStage.Stage12H450`・門なし）で回す**（回帰の基準）。
+//
+// 第451期（§1・遊ぶ 1-2 ＝ `MapStage.Stage12`・本陣の門 ＝ 中間拠点 2 つ・タグの直し）:
+//   (ak) 中間拠点 1 つでは敵の拠点へ入れず、2 つ取ると入れる（直に歩かせた隊で・制圧まで）
+//   (al) 取り返されて 1 つに戻ると門が閉じる
+//   (am) ハネ（付与）・エレ（生贄・自傷）・「活用」（ベニ・ヴィオ・ウツ・ホタ）とタグの 1 行が表に入っている
+//   3 方針 × 100 seed の表 ＋ 帯 B（火の魔術師の部隊・毒霧の部隊）と戦った率（報告だけ・器具は門が閉じている間は敵の拠点の敵を狙わず、取っていない中間拠点へ向かう）
 //
 // 「貪欲」は第438・440期の門と同じ選び方（各隊は盤の上でいちばん近い敵部隊へ・敵が尽きたら敵の拠点へ）。
 // 自分で組む通し（到着あり）で回す: 開始の 10 枚を第1隊・第2隊に 5 枚ずつ、届いた駒は拠点にいる第3隊へ。
@@ -285,6 +292,7 @@ public static class Map12ChangeSmoke
         Phase448(write, Req);
         Phase449(write, Req);
         Phase450(write, Req);
+        Phase451(write, Req);
         return ok;
     }
 
@@ -1383,8 +1391,8 @@ public static class Map12ChangeSmoke
     /// <summary>第450期 —— 遊ぶ 1-2（`MapStage.Stage12`）の (ai)(aj) と、3 方針の表・火の魔術師の部隊の重さ（報告だけ）。</summary>
     private static void Phase450(Action<string> write, Action<bool, string> Req)
     {
-        MapStage stage = MapStage.Stage12;
-        write("  ---- 第450期（遊ぶ 1-2・敵の火から燃え移りを外した・駒のタグ） ----");
+        MapStage stage = MapStage.Stage12H450;
+        write("  ---- 第450期の 1-2（`Stage12H450`・敵の火から燃え移りを外した・駒のタグ） ----");
         (List<UnitState> P, List<UnitState> E, BattleResult R) Duel(Formation enemy, int seed)
         {
             var w = EnemyCatalog.Warden;
@@ -1473,6 +1481,109 @@ public static class Map12ChangeSmoke
         write("");
         foreach (var (bname, v) in fire)
             write($"  火の魔術師の部隊（{bname}・3 方針の計）: 戦闘 {v.Battles} ／ 1 戦あたりの失った枚数 {(double)v.Lost / Math.Max(1, v.Battles):F2}");
+    }
+
+    /// <summary>第451期 —— 遊ぶ 1-2（`MapStage.Stage12`）の (ak)(al)(am) と、3 方針の表・帯 B と戦った率（報告だけ）。</summary>
+    private static void Phase451(Action<string> write, Action<bool, string> Req)
+    {
+        MapStage stage = MapStage.Stage12;
+        write("  ---- 第451期（遊ぶ 1-2・本陣の門 ＝ 中間拠点 2 つ・タグの直し） ----");
+        void Win(Map11State st, int squad, Map11State.Node node)
+        {
+            var prep = st.Prepare(squad, node);
+            foreach (UnitState u in prep!.Value.Enemies) u.Hp = 0;
+            st.Resolve(squad, node, true, false);
+        }
+        // 隊を行き先へ歩かせ、当たった相手は勝ったことにする（刻は進めない）。歩いた先のマスを返す。
+        List<string> Walk(Map11State st, int squad, Dest dest, int steps = 30)
+        {
+            var met = new List<string>();
+            for (int k = 0; k < steps && !st.Finished; k++)
+            {
+                // 行き先に着いても、同じマスに敵が残っていれば続けて当たる（野営地には物見と火の魔術師の部隊が重なっている）。
+                if (st.FoeFacing(squad) is { } here) { met.Add(here.Def.Name); Win(st, squad, here); continue; }
+                if (st.Squads[squad].Pos == dest.Id) break;
+                if (Map11Orders.Apply(st, squad, dest, Map11Orders.Plan(st, squad, dest)) is { } foe) { met.Add(foe.Def.Name); Win(st, squad, foe); }
+            }
+            return met;
+        }
+
+        // ---- (ak)(al) 門 ----
+        {
+            var st = new Map11State(0, stage.Time, stage.Portal, draft: true, stage: stage);
+            st.UseDefaultSquads();
+            var g = st.Graph;
+            int north = g.Lanes[0][^1], mid = g.Lanes[1][^1];
+            // 第1隊を北の道から敵の拠点へ: 北の砦を取ったところで、門（あと 1）の手前で止まる。
+            var m1 = Walk(st, 0, Dest.Portal(g, 0));
+            bool stopped = st.Squads[0].Pos != g.Portal && !st.Captured && !st.GateOpen && st.GateNeed == 1 && st.HeldOutposts.Count == 1;
+            write($"  (ak) 第1隊（北の道 → 敵の拠点）が当たった順: {string.Join(" → ", m1)} ——中間拠点 {st.HeldOutposts.Count} つ・門 {(st.GateOpen ? "開" : "閉")}（あと {st.GateNeed}）・いるマス {g[st.Squads[0].Pos].Name}・制圧 {st.Captured}");
+            // 第2隊を中の道の野営地へ: 物見と火の魔術師の部隊を抜いて野営地を取る → 門が開く。
+            var m2 = Walk(st, 1, Dest.Of(g, mid));
+            bool opened = st.GateOpen && st.HeldOutposts.Count == 2;
+            write($"       第2隊（中の道 → 浅瀬の野営地）が当たった順: {string.Join(" → ", m2)} ——中間拠点 {st.HeldOutposts.Count} つ・門 {(st.GateOpen ? "開" : "閉")}");
+
+            // (al) 第2隊を拠点へ戻し、野営地に敵（本陣の守りを置いて試す）を立てて取り返させる → 門が閉じる。
+            Map11State.Node gar = st.Nodes.SelectMany(r => r).First(n => n.Def.Stationary);
+            int garPos = gar.Pos;
+            Walk(st, 1, Dest.Home, 6);
+            gar.Pos = mid;
+            st.AdvanceFoes();
+            bool closed = !st.GateOpen && st.HeldOutposts.Count == 1 && !st.CanEnter(0, g.Portal);
+            write($"  (al) 野営地を取り返されたあと: 中間拠点 {st.HeldOutposts.Count} つ・門 {(st.GateOpen ? "開" : "閉")}（あと {st.GateNeed}）・第1隊は敵の拠点へ入れる {st.CanEnter(0, g.Portal)}");
+            // 戻して門を開け直し、第1隊で敵の拠点へ: 本陣の守り・予備隊を抜いて制圧。
+            gar.Pos = garPos;
+            var m3 = Walk(st, 1, Dest.Of(g, mid));
+            var m4 = Walk(st, 0, Dest.Portal(g, 0));
+            write($"       野営地を取り直した第2隊 {string.Join(" → ", m3.DefaultIfEmpty("（相手なし）"))} ／ 第1隊が敵の拠点で当たった順: {string.Join(" → ", m4)} ——制圧 {st.Captured}");
+            Req(stopped && opened && st.Captured, "(ak) 中間拠点 1 つでは敵の拠点へ入れず、2 つ取ると入れる（そのまま制圧まで）");
+            Req(closed, "(al) 取り返されて中間拠点が 1 つに戻ると門が閉じる（敵の拠点へ新しく入れない）");
+        }
+
+        // ---- (am) タグの直し ----
+        {
+            string Tag(UnitDef d) => UnitTags.EntryOf(d.Id) is { } e ? $"{string.Join("・", e.Axes)} ／ {e.Role}" : "（無い）";
+            var useRole = UnitCatalog.All.Where(u => UnitTags.EntryOf(u.Id)?.Role == "活用").Select(u => u.Name).ToList();
+            var noLine = UnitTags.Axes.Concat(UnitTags.Roles).Where(t => UnitTags.LineOf(t).Length == 0).ToList();
+            write($"  (am) ハネ {Tag(UnitCatalog.Hane)} ／ エレ {Tag(UnitCatalog.Ere)} ／ 「活用」{string.Join("・", useRole)} ／ 役割の語 {string.Join("・", UnitTags.Roles)} ／ 1 行の無いタグ {noLine.Count}");
+            Req(UnitTags.EntryOf(UnitCatalog.Hane.Id)?.Role == "付与"
+                && UnitTags.EntryOf(UnitCatalog.Ere.Id) is { } ere && ere.Axes.SequenceEqual(new[] { "生贄", "自傷" })
+                && !UnitTags.Roles.Contains("反応") && useRole.Count == 4 && noLine.Count == 0,
+                "(am) ハネは付与・エレは生贄・自傷・「反応」は「活用」に（ベニ・ヴィオ・ウツ・ホタ）・16 語すべてに 1 行");
+        }
+
+        // ---- 報告のみ: 3 方針 × 100 seed ＋ 帯 B と戦った率 ----
+        var boards = new[] { ("第450期の既定（門なし）", MapStage.Stage12H450), ("第451期の既定（門 2）", stage) };
+        var policies = new[] { ("1 隊残す", true, false, false), ("分担＋戻り番", true, true, false), ("籠城", true, true, true) };
+        string fire = EnemyCatalog.MapSquadOf("band_fire").Name, mist = EnemyCatalog.MapSquadOf("band_miasma").Name;
+        write("");
+        write("  | 盤 | 方針 | 踏破 | 陥落 | 時間切れ | 制圧の刻（中央値） | 戦闘（平均） | 帯 B と戦った | 火の部隊と | 毒霧の部隊と | 1 戦あたりの失った枚数 |");
+        write("  |---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+        int crashed = 0;
+        foreach (var (bname, board) in boards)
+            foreach (var (pname, guard, split, turtle) in policies)
+            {
+                var runs = new List<Once>();
+                int anyB = 0, withFire = 0, withMist = 0, b = 0, lost = 0;
+                for (int seed = 0; seed < Seeds; seed++)
+                {
+                    var local = new Dictionary<string, (int Battles, int Lost)>();
+                    try { runs.Add(Greedy(seed, board, guard, split, turtle, local)); }
+                    catch (Exception ex) { crashed++; if (crashed <= 3) write($"  × 第451期 {bname} {pname} seed {seed}: {ex.GetType().Name}: {ex.Message}"); continue; }
+                    bool f = local.TryGetValue(fire, out var fv) && fv.Battles > 0, m = local.TryGetValue(mist, out var mv) && mv.Battles > 0;
+                    if (f || m) anyB++;
+                    if (f) withFire++;
+                    if (m) withMist++;
+                    b += local.Values.Sum(v => v.Battles); lost += local.Values.Sum(v => v.Lost);
+                }
+                if (runs.Count == 0) continue;
+                double P(Func<Once, bool> pr) => 100.0 * runs.Count(pr) / runs.Count;
+                double R(int n) => 100.0 * n / runs.Count;
+                var cap = runs.Where(r => r.Captured).Select(r => r.CapturedTurn).OrderBy(x => x).ToArray();
+                write($"  | {bname} | {pname} | {P(r => r.Won):F0} | {P(r => r.Fallen):F0} | {P(r => r.TimedOut):F0} | {(cap.Length == 0 ? "—" : cap[cap.Length / 2].ToString())} | "
+                    + $"{runs.Average(r => r.Battles):F1} | {R(anyB):F0}% | {R(withFire):F0}% | {R(withMist):F0}% | {(b == 0 ? 0 : (double)lost / b):F2} |");
+            }
+        Req(crashed == 0, $"第451期の 2 つの盤 × 3 方針を {Seeds} seed ずつ回して落ちない（数字は報告のみ・線は置かない）");
     }
 
     /// <summary>手札の先頭から <paramref name="count"/> 枚を、その隊の空いた席（前1 から）へ配る。</summary>
@@ -1583,12 +1694,24 @@ public static class Map12ChangeSmoke
                 foreach (Map11State.Node n in st.FoesOn(road))
                 {
                     if (n.Pos == g.Home || (split && taken.Contains(n))) continue;
+                    if (!st.CanEnter(i, n.Pos)) continue;   // 第451期: 門が閉じている間は敵の拠点の敵を狙わない（門の無い盤では常に真）
                     int len = g.Path(s.Pos, s.Road, n.Pos, n.Pos == g.Portal ? n.Def.Road : -1).Count;
                     if (len > 0 && len < bestLen) { bestLen = len; best = n; }
                 }
             if (best is not null && split) taken.Add(best);
             if (best is not null)
                 return best.Pos == g.Portal ? Dest.Portal(g, best.Def.Road) : Dest.Of(g, best.Pos);
+            // 第451期: 門が閉じていれば、まだ取っていない中間拠点のいちばん近いマスへ（門の無い盤では通らない）。
+            if (!st.Captured && !st.GateOpen)
+            {
+                int bestCell = -1, bestPath = int.MaxValue;
+                foreach (var c in g.Cells.Where(c => c.Kind == MapGraph.Kind.Outpost && !st.HeldOutposts.Contains(c.Id)))
+                {
+                    int len = g.Path(s.Pos, s.Road, c.Id, -1).Count;
+                    if (len > 0 && len < bestPath) { bestPath = len; bestCell = c.Id; }
+                }
+                if (bestCell >= 0) return Dest.Of(g, bestCell);
+            }
             if (!st.Captured) return Dest.Portal(g, s.Road >= 0 ? s.Road : 0);
             return Dest.Home;
         }

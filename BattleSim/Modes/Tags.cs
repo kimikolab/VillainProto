@@ -18,7 +18,14 @@ static class TagsDiag
         Console.WriteLine("`dotnet run --project BattleSim -c Release 0 tags > docs/tags.md` の出力。手で編集しない。表は `UnitTags`（`BattleCore/UnitCatalog.cs`・手で書く・`Id` で引く）。**表示だけで、どの規則も読まない。**");
         Console.WriteLine();
         Console.WriteLine($"- 軸（何で働くか・1〜2 個）: {string.Join("・", UnitTags.Axes)}");
-        Console.WriteLine($"- 役割（隊の中で何をするか・1 個）: {string.Join("・", UnitTags.Roles)}——「付与」＝ 状態を相手に付ける ／「反応」＝ 状態がある場面で強くなる");
+        Console.WriteLine($"- 役割（隊の中で何をするか・1 個）: {string.Join("・", UnitTags.Roles)}");
+        Console.WriteLine();
+        Console.WriteLine("## タグの 1 行（タグに触れると出る説明）");
+        Console.WriteLine();
+        Console.WriteLine("| タグ | 種類 | 1 行 |");
+        Console.WriteLine("|---|---|---|");
+        foreach (var (tag, line) in UnitTags.Lines)
+            Console.WriteLine($"| {tag} | {(UnitTags.Axes.Contains(tag) ? "軸" : UnitTags.Roles.Contains(tag) ? "役割" : "盤面ルール")} | {line} |");
         Console.WriteLine();
         Console.WriteLine("## 編成に選べる駒");
         Console.WriteLine();

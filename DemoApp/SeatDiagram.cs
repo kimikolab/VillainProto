@@ -175,6 +175,7 @@ public partial class SeatDiagram : Control
             if (cell.Def is null)
             {
                 card.Text = (slot == Selected ? "▶ " : "") + $"{seat}\n（空席）";
+                card.TooltipText = "";   // 第451期: 前に座っていた駒のタグの説明を残さない
                 card.AddThemeColorOverride("font_color", AllowEmptyPress ? UiKit.Ink : UiKit.Faint);
                 card.Modulate = slot == Selected ? new Color(1.0f, 0.90f, 0.62f)
                                                  : new Color(1, 1, 1, AllowEmptyPress ? 1f : 0.45f);
@@ -198,6 +199,8 @@ public partial class SeatDiagram : Control
                 ? $"{head}{(big ? (tags.Length > 0 ? "  " + tags : "") + "\n" : "  ")}{cell.Def.Name}\nHP {cell.Hp}/{cell.MaxHp}  攻{cell.Def.Attack} 速{cell.Def.Speed}"
                   + (last.Length > 0 ? "\n" + last : "")
                 : $"{head}  {cell.Def.Name}\n{DeadLabel}";
+            // 第451期: 触れるとタグの 1 行。
+            card.TooltipText = cell.Def.Tags.Count > 0 ? cell.Def.Name + "\n" + UnitTagChips.Help(cell.Def) : "";
             card.AddThemeColorOverride("font_color",
                 !cell.Alive ? UiKit.Faint
                 : pct <= 30 ? UiKit.Hurt

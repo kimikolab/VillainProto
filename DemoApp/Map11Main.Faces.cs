@@ -74,13 +74,13 @@ public partial class Map11Main
         var face = new UnitFaceIcon { Position = new Vector2(5, 5), Size = new Vector2(42, 42) };
         face.SetUnit(def);
         button.AddChild(face);
-        button.CustomMinimumSize = new Vector2(0, 62);
+        button.CustomMinimumSize = new Vector2(0, 74);   // 第451期: 手札の 2 行の文に小札がかぶらないよう 1 段高く
         button.ClipText = true;
         // 第450期: 駒のタグ（軸・役割）を札の下の段に小札で。説明（触れたとき）にも同じ語を足す。
         HBoxContainer chips = UnitTagChips.Make(def, 10);
-        chips.Position = new Vector2(54, 44);
+        chips.Position = new Vector2(54, 54);
         button.AddChild(chips);
-        if (def.Tags.Count > 0) button.TooltipText = (button.TooltipText ?? "") + $"\nタグ: {UnitTagChips.Text(def)}";
+        if (def.Tags.Count > 0) button.TooltipText = (button.TooltipText ?? "") + "\n" + UnitTagChips.Help(def);
         foreach (string state in new[] { "normal", "hover", "pressed", "disabled" })
         {
             var style = (StyleBox)button.GetThemeStylebox(state).Duplicate();
@@ -124,7 +124,7 @@ public partial class Map11Main
                     HBoxContainer chips = UnitTagChips.Make(unit.Def, 9);
                     chips.Alignment = BoxContainer.AlignmentMode.Center;
                     cell.AddChild(chips);
-                    cell.TooltipText = $"{unit.Def.Name}　{UnitTagChips.Text(unit.Def)}";
+                    cell.TooltipText = unit.Def.Name + "\n" + UnitTagChips.Help(unit.Def);
                     members.AddChild(cell);
                 }
             row.AddChild(members);

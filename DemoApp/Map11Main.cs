@@ -1556,14 +1556,14 @@ public partial class Map11Main : Node3D
     /// <summary>止まる理由を調べるために、作戦ターンの前に写しておく盤面。</summary>
     private readonly record struct Watch(bool[] Arrived, bool[] Imminent, int Spawns, bool Captured,
                                          int Delivered = 0, int ReserveDepart = -1,
-                                         int Rewards = 0, int OutpostCaptures = 0, int OutpostLosses = 0);
+                                         int Rewards = 0, int OutpostCaptures = 0, int OutpostLosses = 0, bool GateOpen = true);
 
     private static Watch Take() => new(
         Enumerable.Range(0, St.Squads.Length).Select(AtDest).ToArray(),
         Enumerable.Range(0, St.Stage.LaneCount)
                   .Select(r => St.NextNode(r) is { } n && n.Cell <= 0).ToArray(),
         St.SpawnCount, St.Captured, St.ArrivedCount, St.ReserveDepartTurn,
-        St.Deliveries.Count, St.OutpostCaptures, St.OutpostLosses);
+        St.Deliveries.Count, St.OutpostCaptures, St.OutpostLosses, St.GateOpen);
 
     /// <summary>
     /// 第177期 §2（第176期 §3-1 #2）—— <b>行き先までのあいだに立っている最初の敵のマス。</b>
@@ -1606,6 +1606,9 @@ public partial class Map11Main : Node3D
             now.Add("中間拠点を取った（組み直し・休む・届いた駒を受け取るができる）"
                     + (St.Stage.Gold.On ? $"（金 ＋{St.Stage.Gold.Outpost}）" : ""));
         if (St.OutpostLosses > before.OutpostLosses) now.Add("中間拠点を取り返された");
+        // 第451期: 本陣の門が開いた・閉じた瞬間（門の無い盤では常に開いているので出ない）。
+        if (!before.GateOpen && St.GateOpen) now.Add("本陣の門が開いた（敵の拠点へ入れる）");
+        if (before.GateOpen && !St.GateOpen) now.Add($"本陣の門が閉じた（中間拠点 あと {St.GateNeed}）");
         if (Map11Session.DeliveryText(St.Deliveries.Skip(before.Rewards)) is { } got) now.Add(got);
         if (St.HeroTurnsLeft is 3 or 1 && St.Turn > 0 && !St.Finished) now.Add($"勇者パーティーが あと {St.HeroTurnsLeft} 刻で現れる");
         if (St.TimeLimitLeft is 3 or 1 && St.Turn > 0 && !St.Finished) now.Add($"制圧の期限まで あと {St.TimeLimitLeft} 作戦ターン");
@@ -2974,6 +2977,8 @@ public partial class Map11Main : Node3D
             : (wait > 0 ? $"湧くまで あと {wait}" : "いつでも湧く");
         // 第441期 §3: 待機中の予備隊は敵の拠点の札に 1 行（出発すると湧いた部隊と同じ板に移る）。
         if (St.ReserveWaiting) body += Nl + "予備隊 ・ 待機中";
+        // 第451期 §0-1: 本陣の門が閉じている間は「門 ・ 中間拠点 あと n」。
+        if (!mine && !St.GateOpen) body += Nl + $"門 ・ 中間拠点 あと {St.GateNeed}";
         // 第444期 §0-3: **勇者の予告**（刻の上限を盤ごとに持つ盤だけ）。上限で負け。
         if (St.HeroTurnsLeft is { } hero) body += Nl + $"勇者パーティー あと {hero} 刻";
         _portalMarker.Set(head + Nl + body, tint);

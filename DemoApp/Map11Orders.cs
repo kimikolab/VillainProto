@@ -164,6 +164,8 @@ public static class Map11Orders
         Map11State.Node? front = st.FrontFoe(road);
         int limit = front?.Cell ?? st.MaxCell;
         int next = Math.Min(s.Cell < 0 ? 0 : s.Cell + 1, Math.Min(limit, st.MaxCell));
+        // 第451期: 本陣の門が閉じていれば敵の拠点のマスの相手には当たらない。
+        if (front is not null && front.Pos == st.Graph.Portal && !st.CanEnter(squad, front.Pos)) return null;
         return front is not null && front.Cell == next ? front : null;
     }
 
