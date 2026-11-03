@@ -126,12 +126,13 @@ public sealed class MapStage
     };
 
     /// <summary>
-    /// 1-2（第442期・遊ぶ版）。第441期の 3 つ（<see cref="Stage12H441"/>）を<b>試遊で必ず働く形</b>にした:
+    /// 1-2 の第442期の姿。第441期の 3 つ（<see cref="Stage12H441"/>）を<b>試遊で必ず働く形</b>にした:
     /// <b>隊は 2 つ</b>（経路 3 本より少ない・`SquadCap`）／ <b>中の道の先頭（物見）は 1 マス奥</b>から始まり拠点まで 3 刻
     /// （<see cref="MapGraph.Build12F442"/>・最初の駒が届く 2 刻目より前に負けが決まらないように）。
     /// 到着・予備隊・湧きの値は第441期のまま。
+    /// 第443期からは回帰の基準（`--map12-change-smoke` の (g)〜(i) と第442期の器具の表）だけが使う——遊ぶ 1-2 は <see cref="Stage12"/>。
     /// </summary>
-    public static MapStage Stage12 { get; } = new()
+    public static MapStage Stage12H442 { get; } = new()
     {
         Id = Stage12H441.Id,
         Title = Stage12H441.Title,
@@ -144,6 +145,27 @@ public sealed class MapStage
         Arrival = Stage12H441.Arrival,
         Reserve = Stage12H441.Reserve,
         SquadCap = 2,
+    };
+
+    /// <summary>
+    /// 1-2（第443期・遊ぶ版）。第442期（<see cref="Stage12H442"/>）の判断の仕組み（途中到着・予備隊・中の先頭は 1 マス奥）は残し、
+    /// <b>量の釣り合い</b>を直した（第442期の試遊で 2 巡とも陥落）:
+    /// <b>隊は 3 つ</b>（開始の 10 枚で組めるのは 2 隊・<b>3 隊目は届いた駒で組む</b>）／ <b>到着は 2 刻ごとに 2 枚</b>（5 枚が刻 6 までに揃う）／
+    /// <b>湧き S = 3</b>（R = 3 のまま）／ <b>予備隊は第二波・先遣</b>（4 体・粛）。最初からいる 6 部隊はそのまま。
+    /// </summary>
+    public static MapStage Stage12 { get; } = new()
+    {
+        Id = Stage12H442.Id,
+        Title = Stage12H442.Title,
+        Board = Stage12H442.Board,
+        Lanes = Stage12H442.Lanes,
+        LaneNames = Stage12H442.LaneNames,
+        Spawn = Stage12H442.Spawn,
+        Portal = PortalRule.Every(3, warpEvery: 3),
+        Time = Stage12H442.Time,
+        Arrival = ArrivalRule.Of(start: 10, every: 2, minPer: 2, maxPer: 2),
+        Reserve = new ReserveRule(true, EnemyCatalog.Vanguards[0].Enemy, EnemyCatalog.Vanguards[0].Name, 1),
+        SquadCap = 3,
     };
 
     /// <summary>選べるステージ（編成画面の選択の並び）。</summary>

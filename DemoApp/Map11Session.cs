@@ -162,6 +162,7 @@ public static class Map11Session
         // 第175期 §2: **迎撃で勝っても道中の回復は乗らない**（規則は `Map11State` が持つ）。
         State.Resolve(squad, node, playerWon, wasIntercept);
         Battles = State.Battles;
+        if (wasIntercept && TurnRunning) _interceptFought = true;
 
         var notes = result is null ? new List<string>() : Map11Info.RuleNotes(result);
         int maxHp = sq.Def.F.Occupied().Sum(o => o.Def.MaxHp);
@@ -208,6 +209,18 @@ public static class Map11Session
     /// <summary>プレイヤーが迎撃に出す隊を選ぶ相手（null ＝ いま選ぶところではない）。</summary>
     public static Map11State.Node? InterceptNode { get; private set; }
 
+    /// <summary>
+    /// <b>迎撃の合間</b>（第443期 §0-1）。この作戦ターンに拠点の迎撃を 1 戦以上済ませ、<b>次の迎撃の相手を待っている</b>。
+    /// このあいだは時計が止まったまま拠点で組み直せる（届いた駒を入れる・席を替える・迎撃に出す隊を替える）。
+    /// <b>休むは使えない</b>（命令は隊の行動の段でしか実行されない・時間は進んでいない）。
+    /// 組み直しそのものは <see cref="Map11State.CanReform"/>（拠点にいる隊）の規則のまま——ここは「いまが合間か」を言うだけ。
+    /// 器具（`Map11Time` ／ `Map11Portal` ／ `Map12ChangeSmoke` の方針）はこの窓で何もしない。
+    /// </summary>
+    public static bool InterceptBreak => TurnRunning && InterceptNode is not null && _interceptFought;
+
+    /// <summary>この作戦ターンに迎撃を 1 戦以上済ませたか（<see cref="InterceptBreak"/> の材料）。</summary>
+    private static bool _interceptFought;
+
     private static int _cursor;
     private static List<Map11State.Encounter>? _foes;
     private static int _foeIndex;
@@ -221,6 +234,7 @@ public static class Map11Session
         _cursor = 0;
         _foes = null;
         _foeIndex = 0;
+        _interceptFought = false;
     }
 
     /// <summary>行き先を決める（プレイヤーの判断）。<b>盤面は1ビットも動かない。</b></summary>
@@ -243,6 +257,7 @@ public static class Map11Session
         _cursor = 0;
         _foes = null;
         _foeIndex = 0;
+        _interceptFought = false;
     }
 
     /// <summary>
@@ -290,6 +305,7 @@ public static class Map11Session
 
         TurnRunning = false;
         InterceptNode = null;
+        _interceptFought = false;
         _foes = null;
         _cursor = 0;
         // **行き先は引きずる**（第175期 §1-1「一度でも出した隊は、行き先を変えるまで前へ進み続ける」）

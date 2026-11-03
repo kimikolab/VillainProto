@@ -1819,6 +1819,10 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
         # **第442期 §1**: (a)〜(f) と分解は第441期の 1-2（`MapStage.Stage12H441`・3 隊）で回す（(a') だけ「既定は到着の列を残す」に作り替え）。
         # 遊ぶ 1-2（`Stage12`・隊 2 つ・中の先頭は 1 マス奥）に (g) 既定の組み方で 10 枚が 2 隊へ・列 5 枚 ／ (h) 3 隊目が作れない ／
         # (i) 中の先頭が拠点に着くのは 3 刻目 ＋ 貪欲 2 つ × 100 seed（報告のみ）。約 40 秒
+        # **第443期 §1-3**: (g)〜(i) と第442期の表は第442期の 1-2（`Stage12H442`）で回す。遊ぶ 1-2（`Stage12`・隊 3・到着 2 刻ごと 2 枚・S=3・予備隊は第二波・先遣）に
+        # (j) 同じ刻の 2 連続の迎撃で 1 戦目の後は合間（`Map11Session.InterceptBreak`）・手札から入れ替えて 2 戦目へ（`Map11Session` の流れをそのまま回す）／
+        # (k) 3 隊目は空で始まり届いた駒で組める ／ (l) 既定の値 ＋ 5 つの盤 × 3 方針 × 100 seed（報告のみ）。約 15 秒
+        # 絵: `res://Map11Main.tscn -- --map-stage=1-2 --map11-capture=<png>,break`（迎撃の合間の窓・`--headless` を外す）
     Godot_console.exe --path DemoApp --headless -- --map11-phase176
         # **第176期 Phase 0**: Q0-1〜Q0-5（`PortalOn = false` が第175期の 18 量と一致するか ／
         # 重なりと同点の割り方 ／ 湧いた部隊を満タンで作る口 ／ 方針の手順 ／ 走行時間）。約 1 秒
@@ -1873,6 +1877,14 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
         # **他の通しは全部 `AutoStep` という別のループ**なので、ボタンの経路には門が1つも無かった（R283）。
         # 見るのは1つだけ——**終わっているのに結果画面が出ていない状態を作らないこと**。
         # 合否は `MAP11_RUN_SMOKE_COMPLETE ok=True`
+    Godot_console.exe --path DemoApp --resolution 1440x900 res://Map11Main.tscn -- --map-layout-smoke [--map-stage=1-2] [--map-layout-capture=<ディレクトリ>]
+        # 編成／作戦の切替。実際のマウス入力で手札→5席→出撃→行き先→時計→組み直し→再プレイを確認。
+        # 編成・HP・命令の保持、道の上では編成不可、敵の詳細、長い結果のスクロールと固定ボタンも検査。
+        # `MAP_LAYOUT_SMOKE_COMPLETE stage=... ok=True` が門。1-1 / 1-2 と --resolution 1280x720 で確認する。
+    Godot_console.exe --path DemoApp --headless res://Map11Main.tscn -- --map-guide-smoke [--map-stage=1-2]
+        # 作戦マップの操作案内。手札→席→余り→出撃→隊→行き先→▶・確認から組み直す・出来事・停止。
+        # `MAP_GUIDE_SMOKE_COMPLETE stage=... ok=True` が門。画面保存は --headless を外して
+        # --map-guide-capture=<ディレクトリ> を付ける。1-1 と 1-2 を別々に確認する。
     Godot_console.exe --path DemoApp --headless --quit-after 120000 -- --demo-autoplay --demo-quit --demo-fast --demo-preset=<行名の部分一致> --demo-stage=<0始まり> --demo-seed=<n>
         # 単発の戦闘を頭なしで最後まで再生する。**合否は `DEMO_SMOKE_COMPLETE` の行で読む**（終了コードではない）。
         # **第178期に計数を2つ足した**——`attackPlays`（`Attack` の絵を流した回数）と

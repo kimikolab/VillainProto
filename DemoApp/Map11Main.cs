@@ -55,11 +55,10 @@ public partial class Map11Main : Node3D
     private readonly List<Marker> _squadMarkers = new();
     private readonly List<Marker> _nodeMarkers = new();
 
-    private VBoxContainer _squadList = null!;
+    private BoxContainer _squadList = null!;
     private VBoxContainer _roadList = null!;
     private Label _headline = null!;
     private Label _toast = null!;
-    private Label _hint = null!;
 
     // ---- 第174期 部B: 作戦ターン ／ 第175期 §1-2: 行き先指定 ----
 
@@ -223,11 +222,6 @@ public partial class Map11Main : Node3D
             ShowToast(outcome, GoldColor, 6.0f);
             Map11Session.LastOutcome = null;
         }
-        else if (Map11Session.Drafting && St.Bench.Count > 0)
-            ShowToast("手札の駒を押して、席の札を押すと配れます（「既定の3隊で始める」でも可）",
-                      GoldColor, 8.0f);
-        else ShowToast("隊を押してから、盤の行き先を押してください（拠点を押せば引き返す）",
-                       GoldColor, 6.0f);
 
         if (St.Finished) ShowResult();
 
@@ -257,7 +251,9 @@ public partial class Map11Main : Node3D
             Map11Session.Reset(PortalSmokeSeed);
         if (_draftSmoke && St.Turn == 0 && St.Battles == 0 && !Map11Session.TurnRunning)
             Map11Session.Reset(0);
-        if (_clockSmoke) Callable.From(ClockSmoke).CallDeferred();
+        if (args.Contains("--map-layout-smoke", StringComparer.Ordinal)) Callable.From(LayoutSmoke).CallDeferred();
+        else if (args.Contains("--map-guide-smoke", StringComparer.Ordinal)) Callable.From(GuideSmoke).CallDeferred();
+        else if (_clockSmoke) Callable.From(ClockSmoke).CallDeferred();
         else if (_runSmoke)
         {
             if (Map11Session.Drafting && St.Bench.Count > 0) St.UseDefaultSquads();
@@ -328,6 +324,28 @@ public partial class Map11Main : Node3D
             }
             Refresh();
             if (StopReason(before) is { } why) ShowToast(why, GoldColor, 30f);
+        }
+        // 第443期 §0-1: **迎撃の合間**の絵（`--map-stage=1-2` と使う）。既定の組み方で 2 隊を組み、北と南の先頭だけを残して
+        // 拠点で待つ。2 刻目に 2 部隊が同時に着くので、1 戦目を**頭なしで**決着させ（戦闘シーンへは行かない）、2 戦目の迎撃の窓を出す。
+        else if (parts.Length > 1 && parts[1] == "break")
+        {
+            St.UseDefaultSquads();
+            Map11Session.TakeOpening();
+            foreach (Map11State.Node n in St.Nodes.SelectMany(r => r))
+                if (!(n.Def.Index == 0 && n.Def.Road != 1)) n.Cleared = true;
+            for (int guard = 0; guard < 12 && !St.Finished; guard++)
+            {
+                if (!Map11Session.TurnRunning) Map11Session.BeginTurn();
+                if (Map11Session.StepTurn() != Map11Session.StepKind.Intercept) continue;
+                if (Map11Session.InterceptBreak) break;
+                if (!Map11Session.ChooseInterceptor(St.NextInterceptor(Map11Session.InterceptNode!))) break;
+                BattleResult r = BattleEngine.Run(CampaignSession.CarriedPlayers!, CampaignSession.CarriedEnemies!,
+                                                  CampaignSession.CarriedSeed, verbose: false);
+                CampaignSession.ClearCarriedBattle();
+                Map11Session.CompleteBattle(r.PlayerWon, r);
+            }
+            Refresh();
+            ShowIntercept();
         }
         // 第440期 §4-2: 組み終わっていない隊の確認の絵（第1隊に 1 枚だけ配って ▶）。
         else if (parts.Length > 1 && parts[1] == "confirm")
@@ -821,6 +839,8 @@ public partial class Map11Main : Node3D
 
         if (_reform) { _reform = false; ClearHold(); }
         Map11Session.SetDestination(_selected, dest);
+        _guideSquadChosen = _guideDestinationChosen = true;
+        _guideEventCell = null;
         // 行き先の道の中身を右に出しておく（決める瞬間の隣に相手を置く・第171期 §1-3）。
         if (!dest.AtHome && (St.FrontFoe(dest.Road) ?? St.PortalFoe()) is { } next)
             ShowFoe(next);
@@ -839,12 +859,13 @@ public partial class Map11Main : Node3D
             ? sel.Label[..^1] : sel.Label;
         foreach (DestButton d in _destButtons)
         {
+            d.Node.Visible = !_reform && (_guideSquadChosen || (_guideEventCell is not null && _toastClock > 0));
             Vector2 p = _camera.UnprojectPosition(d.World);
             d.Node.Position = p + d.Offset;
             // **行けない行き先は押せない**——抜け切った道（拠点なしのとき）と、
             // 敵の拠点がない設定での敵の拠点。
             bool cleared = !d.Dest.AtHome && !St.CanHead(d.Dest.Road);
-            d.Node.Disabled = busy || sel.Lost || cleared;
+            d.Node.Disabled = busy || sel.Lost || cleared || (!d.Dest.AtHome && !St.CanSend(_selected));
             bool here = Map11Session.Destinations[_selected] == d.Dest;
             string place = d.Dest.AtHome ? "拠点"
                 : d.Dest.IsPortal ? (St.Captured ? "第2拠点" : "敵の拠点")
@@ -1132,254 +1153,6 @@ public partial class Map11Main : Node3D
     // UI
     // =================================================================================
 
-    private void BuildUi()
-    {
-        var layer = new CanvasLayer();
-        AddChild(layer);
-        var root = new Control
-        {
-            MouseFilter = Control.MouseFilterEnum.Ignore,
-            Theme = new Theme
-            {
-                DefaultFont = new SystemFont
-                {
-                    FontNames = new[] { "Yu Gothic UI", "Meiryo", "Noto Sans CJK JP", "Segoe UI" },
-                    AllowSystemFallback = true,
-                },
-                DefaultFontSize = 14,
-            },
-        };
-        root.SetAnchorsPreset(Control.LayoutPreset.FullRect);
-        layer.AddChild(root);
-
-        _headline = UiKit.Text("検証用マップ 1-1", 22, UiKit.Ink);
-        _headline.Position = new Vector2(24, 18);
-        _headline.Size = new Vector2(900, 30);
-        root.AddChild(_headline);
-
-        _toast = UiKit.Text("", 15, GoldColor);
-        _toast.Position = new Vector2(24, 52);
-        _toast.Size = new Vector2(900, 26);
-        root.AddChild(_toast);
-
-        // 第439期 §3: 盤の上に**刻の数と次の刻までの目盛り**（文字は 1 行）。
-        var clockRow = new HBoxContainer { Position = new Vector2(392, 92), Size = new Vector2(600, 24) };
-        clockRow.AddThemeConstantOverride("separation", 10);
-        clockRow.MouseFilter = Control.MouseFilterEnum.Ignore;
-        root.AddChild(clockRow);
-        _clockLabel = UiKit.Text("", 14, UiKit.Ink);
-        clockRow.AddChild(_clockLabel);
-        _clockGauge = new ProgressBar
-        {
-            MinValue = 0, MaxValue = 1, Step = 0, ShowPercentage = false,
-            CustomMinimumSize = new Vector2(140, 8),
-            SizeFlagsVertical = Control.SizeFlags.ShrinkCenter,
-            MouseFilter = Control.MouseFilterEnum.Ignore,
-        };
-        clockRow.AddChild(_clockGauge);
-
-        BuildDestButtons(root);
-
-        // ---- 左: 隊 ----
-        // **高さを画面の中に止め、中身は縦に流す**（第172期 §1-3）——第171期の観察ログ
-        // 「くわしくを押したが**下側で見切れて読めない**」（問い5）は、パネル自身が
-        // 画面の下へ伸びていたため。中の欄だけをスクロールにしても外側が溢れていた。
-        PanelContainer left = Panel();
-        left.AnchorTop = 0;
-        left.AnchorBottom = 1;
-        left.OffsetLeft = 20;
-        left.OffsetRight = 20 + 352;
-        left.OffsetTop = 90;
-        left.OffsetBottom = -20;
-        root.AddChild(left);
-        var leftCol = new VBoxContainer();
-        leftCol.AddThemeConstantOverride("separation", 8);
-        leftCol.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        _leftScroll = Scroll(leftCol, 0);
-        left.AddChild(_leftScroll);
-        _hint = UiKit.Text(St.Draft
-            ? "① 手札の駒を押す → ② 席の札を押す（15 枚を 1〜3 隊に好きに分ける）"
-              + " → ③ 隊を押して盤の行き先を押す → ④「▶」で時計が動く（Space で一時停止）。"
-              + "道の奥には敵の拠点があり、制圧すれば湧きが止まって第2拠点になります"
-            : "① 隊を押す → ② 盤の行き先を押す（拠点を押せば引き返す）"
-              + " → ③「▶」で時計が動く（Space で一時停止）。出来事が起きると止まり、敵も1マスずつ近づきます",
-            13, GoldColor);
-        _hint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        leftCol.AddChild(_hint);
-        leftCol.AddChild(UiKit.Text("部隊", 12, UiKit.Faint));
-        _squadList = new VBoxContainer();
-        _squadList.AddThemeConstantOverride("separation", 6);
-        leftCol.AddChild(_squadList);
-
-        for (int i = 0; i < St.Squads.Length; i++)
-        {
-            int index = i;
-            var button = new Button
-            {
-                CustomMinimumSize = new Vector2(0, 74),
-                Alignment = HorizontalAlignment.Left,
-                FocusMode = Control.FocusModeEnum.None,
-            };
-            button.Pressed += () => Select(index);
-            _squadList.AddChild(button);
-            _squadButtons.Add(button);
-        }
-
-        // 第174期 部A #1・#4 —— **押さなくても読める**関係と、隊全体にかかる札。
-        // <b>指示書は「図の下に」だが、隊の札のすぐ下に置いた</b>——左のパネルは
-        // 第172期の時点で図が画面の下端近くにあり、その下に置くと
-        // <b>スクロールしないと読めない</b>（第171期 問い5「下側で見切れて読めない」の再発になる）。
-        // 「押さなくても読める」が指示書の狙いなので、**場所のほうを動かした**。
-        _squadSummary = new VBoxContainer();
-        _squadSummary.AddThemeConstantOverride("separation", 2);
-        leftCol.AddChild(Scroll(_squadSummary, 128));
-
-        // 第175期 §1-2 —— **命令ボタンの列は消した。** 行き先は盤のマスを押して決める
-        // （隊を押す → マスを押す の2クリック）。第174期は1作戦ターンに最大7クリックかかっていた。
-        _orderHint = UiKit.Text("", 12, GoldColor);
-        _orderHint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        leftCol.AddChild(_orderHint);
-
-        var turnRow = new HBoxContainer();
-        turnRow.AddThemeConstantOverride("separation", 8);
-        leftCol.AddChild(turnRow);
-        // 第439期 §3: 「▶ 進める」を外し、**時計の ▶／⏸ と 1×／2×** を同じ行に置く。
-        _run = UiKit.ActionButton("▶", GoldColor);
-        _run.CustomMinimumSize = new Vector2(0, 38);
-        _run.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        _run.Pressed += ToggleClock;
-        turnRow.AddChild(_run);
-        Button SpeedButton(string text, bool fast)
-        {
-            Button b = UiKit.ActionButton(text, UiKit.Muted);
-            b.CustomMinimumSize = new Vector2(46, 38);
-            b.TooltipText = fast ? "速さ 2×（1 刻 0.6 秒）" : "速さ 1×（1 刻 1.2 秒・既定）";
-            b.Pressed += () => { Map11Clock.Fast = fast; RefreshClock(); };
-            turnRow.AddChild(b);
-            return b;
-        }
-        _speed1 = SpeedButton("1×", fast: false);
-        _speed2 = SpeedButton("2×", fast: true);
-        _advanceTurn = UiKit.ActionButton("1ターン", UiKit.Muted);
-        _advanceTurn.CustomMinimumSize = new Vector2(96, 38);
-        _advanceTurn.Pressed += AdvanceTurn;
-        turnRow.AddChild(_advanceTurn);
-
-        // 第171期 部A —— **文章ではなく図。**
-        // 第170期の観察ログ「隊の中身、文章が長すぎて毎回読んでいられない」（問い5）と
-        // 「どう配置されているかが良く見ないと分からない」（問い2）は同じことの表裏で、
-        // **足りないのは量ではなく形**。説明文は札を押したときだけ下に出す。
-        // 第172期 部A —— **図をそのまま編成の道具にする。**
-        // 観察ログ「編成UIにこれは欲しい」（第171期 問い1）と、2 期続けて出た
-        // 「カドを動かしたい・ヒヨを替えたい」（問い6）への答え。
-        var reformRow = new HBoxContainer();
-        reformRow.AddThemeConstantOverride("separation", 8);
-        leftCol.AddChild(reformRow);
-        _reformButton = UiKit.ActionButton("組み直す", GoldColor);
-        _reformButton.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        _reformButton.Pressed += ToggleReform;
-        reformRow.AddChild(_reformButton);
-        _resetButton = UiKit.ActionButton("元に戻す", UiKit.Muted);
-        _resetButton.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        _resetButton.Pressed += ResetSquad;
-        reformRow.AddChild(_resetButton);
-        // 第177期 §3 —— **15 枚から自分で組む。** 面倒なときの逃げ道として
-        // 「既定の3隊で始める」を残す（回帰確認の口でもある）。
-        _defaultButton = UiKit.ActionButton("既定の3隊で始める", PlayerColor);
-        _defaultButton.Pressed += UseDefaultSquads;
-        leftCol.AddChild(_defaultButton);
-        _reformHint = UiKit.Text("", 12, GoldColor);
-        _reformHint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        leftCol.AddChild(_reformHint);
-
-        // 第177期 §3: **自分で組む通しでは、手札を図より上に置く**
-        // ——案内が「① 手札の駒を押す → ② 席の札を押す」なのに、
-        // 手札が図の下にあるとスクロールしないと1手目が見えない。
-        if (St.Draft) AddBench(leftCol);
-
-        leftCol.AddChild(UiKit.Text("この隊の配置（押すと、その駒が何をするか出ます）", 12, UiKit.Faint));
-        leftCol.AddChild(LinkLegend());
-        _squadDiagram = new SeatDiagram();
-        _squadDiagram.SlotSelected += OnSquadSlot;
-        leftCol.AddChild(_squadDiagram);
-        _squadFocus = new VBoxContainer();
-        _squadFocus.AddThemeConstantOverride("separation", 3);
-        // **高さを止める。** `PlusText` は長い駒がいる（カドは2文）ので、
-        // そのまま伸ばすと左のパネルが画面の下へ抜ける（第170期の「長すぎる」の再発になる）。
-        leftCol.AddChild(Scroll(_squadFocus, 128));
-
-        if (!St.Draft) AddBench(leftCol);
-
-        // 第170期の文章のパネルは**畳む**（消さない）。
-        _squadMore = UiKit.ActionButton("くわしく", UiKit.Muted);
-        _squadMore.Pressed += () => { _squadDetailBox.Visible = !_squadDetailBox.Visible; Refresh(); };
-        leftCol.AddChild(_squadMore);
-        _squadDetail = new VBoxContainer();
-        _squadDetail.AddThemeConstantOverride("separation", 4);
-        _squadDetailBox = Scroll(_squadDetail, 230);
-        _squadDetailBox.Visible = false;
-        leftCol.AddChild(_squadDetailBox);
-
-        // ---- 右: 道 ----
-        PanelContainer right = Panel();
-        right.AnchorLeft = 1;
-        right.AnchorRight = 1;
-        right.OffsetLeft = -430;
-        right.OffsetRight = -20;
-        right.OffsetTop = 90;
-        right.AnchorBottom = 1;
-        right.OffsetBottom = -20;
-        root.AddChild(right);
-        var rightCol = new VBoxContainer();
-        rightCol.AddThemeConstantOverride("separation", 8);
-        rightCol.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        right.AddChild(Scroll(rightCol, 0));
-        rightCol.AddChild(UiKit.Text("道と敵部隊（押すと中身が出ます）", 12, UiKit.Faint));
-        _roadList = new VBoxContainer();
-        _roadList.AddThemeConstantOverride("separation", 6);
-        rightCol.AddChild(_roadList);
-        // 第171期 部A —— 敵も同じ図。**空席は空席として描く**（先遣は後1 が空いているのが見える）。
-        rightCol.AddChild(UiKit.Text("この部隊の配置（押すと、その駒が何をするか出ます）", 12, UiKit.Faint));
-        rightCol.AddChild(LinkLegend());
-        _foeDiagram = new SeatDiagram();
-        _foeDiagram.SlotSelected += slot => { _foePick = _foePick == slot ? -1 : slot; Refresh(); };
-        rightCol.AddChild(_foeDiagram);
-        _foeFocus = new VBoxContainer();
-        _foeFocus.AddThemeConstantOverride("separation", 3);
-        rightCol.AddChild(Scroll(_foeFocus, 128));
-
-        _foeMore = UiKit.ActionButton("くわしく", UiKit.Muted);
-        _foeMore.Pressed += () => { _foeDetailBox.Visible = !_foeDetailBox.Visible; Refresh(); };
-        rightCol.AddChild(_foeMore);
-        _foeDetail = new VBoxContainer();
-        _foeDetail.AddThemeConstantOverride("separation", 4);
-        _foeDetailBox = Scroll(_foeDetail, 230);
-        _foeDetailBox.Visible = false;
-        rightCol.AddChild(_foeDetailBox);
-
-        // ---- 下中央: 戦闘の記録（**戦闘1回につき1行**） ----
-        PanelContainer bottom = Panel();
-        bottom.AnchorTop = 1;
-        bottom.AnchorBottom = 1;
-        bottom.OffsetTop = -210;
-        bottom.OffsetBottom = -20;
-        bottom.OffsetLeft = 470;
-        bottom.OffsetRight = -450;
-        root.AddChild(bottom);
-        var bottomCol = new VBoxContainer();
-        bottomCol.AddThemeConstantOverride("separation", 6);
-        bottom.AddChild(bottomCol);
-        bottomCol.AddChild(UiKit.Text("戦闘の記録", 12, UiKit.Faint));
-        _history = new VBoxContainer();
-        _history.AddThemeConstantOverride("separation", 3);
-        bottomCol.AddChild(Scroll(_history, 150));
-
-        BuildEncounterOverlay(root);
-        BuildInterceptOverlay(root);
-        BuildResultOverlay(root);
-        BuildConfirmOverlay(root);
-    }
-
     /// <summary>
     /// 控えの駒（第172期 §1-2）。<b>組み直しの最中だけ押せる。</b>
     /// 第177期 §3: 自分で組む通しでは、ここが<b>手札</b>になる（15 枚）。
@@ -1525,7 +1298,14 @@ public partial class Map11Main : Node3D
         row.AddChild(go);
         Button back = UiKit.ActionButton("組み直す", UiKit.Muted);
         back.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        back.Pressed += () => { _confirmOverlay.Visible = false; _confirmGo = null; Refresh(); };
+        back.Pressed += () =>
+        {
+            _confirmOverlay.Visible = false;
+            _confirmGo = null;
+            _reform = St.CanReform(_selected);
+            ClearHold();
+            Refresh();
+        };
         row.AddChild(back);
     }
 
@@ -1554,14 +1334,22 @@ public partial class Map11Main : Node3D
         // 第442期 §0-1: **本文は箱の中でスクロールする**（第441期は本文が伸びて「もう一度」が画面の外へ押し出され、
         // 再起動しないと遊び直せなかった）。箱の高さは固定し、ボタンは常に箱の下。
         _resultOverlay = Modal(root, 340, 300, out VBoxContainer col, "RESULT", GoldColor);
+        Control resultPanel = (Control)_resultOverlay.GetChild(0);
+        resultPanel.AnchorTop = 0;
+        resultPanel.AnchorBottom = 1;
+        resultPanel.OffsetTop = 90;
+        resultPanel.OffsetBottom = -90;
         _resultTitle = UiKit.Text("", 26, Colors.White);
         col.AddChild(_resultTitle);
         _resultBody = UiKit.Text("", 14, Color.FromHtml("#ccd5cb"));
         _resultBody.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         ScrollContainer bodyScroll = Scroll(_resultBody, 0);
+        _resultScroll = bodyScroll;
         bodyScroll.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
         col.AddChild(bodyScroll);
         Button again = UiKit.ActionButton("もう一度", GoldColor);
+        _replayButton = again;
+        again.CustomMinimumSize = new Vector2(0, 44);
         again.Pressed += () =>
         {
             Map11Session.Reset(stage: St.Stage);
@@ -1576,6 +1364,11 @@ public partial class Map11Main : Node3D
 
     private void Select(int index)
     {
+        _showSquadDetail = !_reform;
+        _showFoes = _showHistory = false;
+        _guideSquadChosen = true;
+        _guideDestinationChosen = false;
+        _guideEventCell = null;
         // 隊を替えたら図の選択は外す（前の隊の席が選ばれたまま残ると読み違える）。
         if (_selected != index) _squadPick = -1;
         _selected = index;
@@ -1742,7 +1535,13 @@ public partial class Map11Main : Node3D
         // 「▶ 進める」も `Finished` で押せなくなって**先へ進めなくなる**。
         if (St.Finished) { _running = false; Refresh(); ShowResult(); return true; }
         if (StopReason(before) is { } why)
-        { _running = false; ShowToast(why, GoldColor, 5.0f); Refresh(); return true; }
+        {
+            _running = false;
+            ShowToast(why, GoldColor, 5.0f);
+            GuideEvent(before);
+            Refresh();
+            return true;
+        }
         return false;
     }
 
@@ -1754,6 +1553,7 @@ public partial class Map11Main : Node3D
     /// </summary>
     private void ToggleClock()
     {
+        _guideEventCell = null;
         if (!Map11Clock.On) { RunUntilEvent(); return; }
         if (St.Finished) { ShowResult(); return; }
         // 戦闘の途中（窓を閉じた）なら作戦ターンの続きを流す（第438期の「▶ 進める」と同じ枝）。
@@ -1806,7 +1606,9 @@ public partial class Map11Main : Node3D
     public override void _UnhandledInput(InputEvent e)
     {
         // 第439期 §1: **Space でも ▶／⏸**（ボタンと同じ1本）。
-        if (e is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Space } && !_run.Disabled)
+        if (e is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Space } && !_run.Disabled
+            && !_reform && !_confirmOverlay.Visible && !_encounterOverlay.Visible
+            && !_interceptOverlay.Visible && !_resultOverlay.Visible)
         {
             ToggleClock();
             GetViewport().SetInputAsHandled();
@@ -1846,7 +1648,31 @@ public partial class Map11Main : Node3D
             b.Pressed += () => ChooseInterceptor(index);
             _interceptList.AddChild(b);
         }
+        // 第443期 §0-1: **迎撃の合間**（この刻に 1 戦済ませた後）は、時計を止めたまま拠点で組み直せる。
+        // 「いまが合間か」は `Map11Session.InterceptBreak`、組み直せる隊は `Map11State.CanReform` が決める（画面は判定を持たない）。
+        if (Map11Session.InterceptBreak && Enumerable.Range(0, St.Squads.Length).Any(St.CanReform))
+        {
+            Button re = UiKit.ActionButton(St.Bench.Count > 0
+                ? $"拠点で組み直す（控え {St.Bench.Count} 枚・休むは使えない）"
+                : "拠点で組み直す（席・隊を替える・休むは使えない）", UiKit.Muted);
+            re.Pressed += OpenBreakReform;
+            _interceptList.AddChild(re);
+        }
         _interceptOverlay.Visible = true;
+    }
+
+    /// <summary>
+    /// 第443期 §0-1 —— 迎撃の合間の組み直しを開く。閉じると（<see cref="ToggleReform"/>）迎撃の窓へ戻る。
+    /// 開く隊は拠点にいる隊の若い方（組み直しの中で別の隊へ移れる）。
+    /// </summary>
+    private void OpenBreakReform()
+    {
+        int pick = Enumerable.Range(0, St.Squads.Length).FirstOrDefault(St.CanReform, -1);
+        if (pick < 0) return;
+        _interceptOverlay.Visible = false;
+        _selected = pick;
+        _squadPick = -1;
+        ToggleReform();
     }
 
     private void ChooseInterceptor(int squad)
@@ -2003,13 +1829,16 @@ public partial class Map11Main : Node3D
             return;
         }
         _reform = !_reform;
+        _showSquadDetail = _showFoes = _showHistory = false;
+        _guideSquadChosen = _guideDestinationChosen = false;
+        _guideEventCell = null;
         ClearHold();
         // 第439期 §3: 組み直しを開いたら時計は止まる（閉じても勝手に再開しない）。
         if (_reform) Map11Clock.Stop();
-        ShowToast(_reform
-            ? "組み直し中——札を2枚押すと入れ替わります（控えの駒も同じ）"
-            : "組み直しを終えました", GoldColor, 3.0f);
+        ShowToast(_reform ? "組み直し中" : "編成を終えました", GoldColor, 3.0f);
         Refresh();
+        // 第443期 §0-1: 迎撃の合間に開いた組み直しを閉じたら、待っている迎撃の窓へ戻る。
+        if (!_reform && Map11Session.InterceptBreak) ShowIntercept();
     }
 
     /// <summary>
@@ -2020,7 +1849,7 @@ public partial class Map11Main : Node3D
     {
         bool done = St.UseDefaultSquads();
         ShowToast(done
-            ? (St.Stage.Arrival.On ? $"既定の組み方で{St.Squads.Length}隊を組みました（残りの駒は途中で拠点に届きます・あとから組み直せます）"
+            ? (St.Stage.Arrival.On ? $"既定の組み方で{St.Squads.Count(q => q.Units is { Count: > 0 })}隊を組みました（残りの駒は途中で拠点に届きます・あとから組み直せます）"
                : $"既定の{St.Squads.Length}隊で始めます（あとから組み直せます）")
             : "駒が拠点に揃っていません（道の上に出した隊があります）",
             done ? PlayerColor : EnemyColor, 4.0f);
@@ -2133,6 +1962,7 @@ public partial class Map11Main : Node3D
     /// <summary>控えの駒の一覧。<b>末尾に「ここへ下げる」の枠</b>（席を空にする操作）。</summary>
     private void RefreshBench()
     {
+        _guideBenchButtons.Clear();
         foreach (Node child in _benchList.GetChildren()) child.QueueFree();
         for (int i = 0; i < St.Bench.Count; i++)
         {
@@ -2143,13 +1973,14 @@ public partial class Map11Main : Node3D
                 Text = $"{u.Def.Name}   HP {u.Hp}/{u.MaxHp} ・ 攻{u.Def.Attack} ・ 速{u.Def.Speed}",
                 Alignment = HorizontalAlignment.Left,
                 FocusMode = Control.FocusModeEnum.None,
-                CustomMinimumSize = new Vector2(0, 26),
-                Disabled = !_reform,
+                CustomMinimumSize = new Vector2(0, 42),
+                Disabled = !_reform || !St.CanReform(_selected),
                 Modulate = _holdBench == index ? new Color(1.0f, 0.90f, 0.62f) : Colors.White,
             };
-            b.AddThemeFontSizeOverride("font_size", 12);
+            b.AddThemeFontSizeOverride("font_size", 14);
             b.Pressed += () => OnBenchPressed(index);
             _benchList.AddChild(b);
+            _guideBenchButtons.Add(b);
         }
         int tail = St.Bench.Count;
         var down = new Button
@@ -2170,15 +2001,16 @@ public partial class Map11Main : Node3D
     {
         bool can = St.CanReform(_selected) && !St.Finished;
         _reformButton.Disabled = !can && !_reform;
-        _reformButton.Text = _reform ? "組み直しを終える" : "組み直す";
+        _reformButton.Text = _reform ? (Map11Session.Drafting ? "出撃" : "作戦に戻る") : "組み直す";
         _resetButton.Disabled = !can;
         // 第177期 §3: 逃げ道は**まだ組み始める前だけ**（出したあとに配り直せると意味が変わる）。
         _defaultButton.Visible = Map11Session.Drafting;
         // 第442期 §0-2・§0-3: 隊の数はステージが持つ。到着のある盤では拠点にある駒だけを配る（まだ届いていない駒は配らない）。
-        _defaultButton.Text = St.Stage.Arrival.On ? $"既定の組み方で{St.Squads.Length}隊を組む" : $"既定の{St.Squads.Length}隊で始める";
+        // 第443期: 配る隊の数は `Map11State.DefaultSquadsFilled`（隊が 3 つでも 10 枚なら 2 隊・3 隊目は届いた駒で組む）。
+        _defaultButton.Text = St.Stage.Arrival.On ? $"既定の組み方で{St.DefaultSquadsFilled}隊を組む" : $"既定の{St.Squads.Length}隊で始める";
         _defaultButton.Disabled = St.Squads.Any(x => x.Lost || !St.CanReform(x.Index));
         _benchTitle.Text = St.Draft && Map11Session.Drafting
-            ? $"手札（残り {St.Bench.Count} 枚）—— 席の札と押し合わせて配ります"
+            ? $"手札（残り {St.Bench.Count} 枚）"
             : "控えの駒（拠点で交代できます）";
 
         string held = _holdBench >= 0 && _holdBench < St.Bench.Count
@@ -2189,8 +2021,8 @@ public partial class Map11Main : Node3D
         _reformHint.Text = !_reform
             ? (can ? "" : $"{St.Squads[_selected].Label} は道の上です（拠点の隊だけ組み直せます）")
             : held.Length > 0
-                ? $"つまんでいる: {held} —— もう1枚押すと入れ替わります"
-                : "動かしたい札（または控えの駒）を押してください";
+                ? $"選択中: {held}"
+                : "";
         _reformHint.AddThemeColorOverride("font_color", can || _reform ? GoldColor : UiKit.Faint);
     }
 
@@ -2221,12 +2053,13 @@ public partial class Map11Main : Node3D
         cells.Sort((x, y) => x.Slot.CompareTo(y.Slot));
 
         RenderSquadSummary(cells, s);
-        _squadDiagram.AllowEmptyPress = _reform;
+        _squadDiagram.AllowEmptyPress = _reform && St.CanReform(_selected);
         _squadDiagram.DeadLabel = s.Lost ? "（失われた）" : "（戦死）";
         _squadDiagram.Render(cells, _squadPick);
 
         foreach (Node child in _squadFocus.GetChildren()) child.QueueFree();
-        if (_squadPick < 0 || cells.First(c => c.Slot == _squadPick).Def is null)
+        UnitState? held = _reform && _holdBench >= 0 && _holdBench < St.Bench.Count ? St.Bench[_holdBench] : null;
+        if (held is null && (_squadPick < 0 || cells.First(c => c.Slot == _squadPick).Def is null))
         {
             FocusHint(_squadFocus, _reform
                 ? "札を押すとつまみます。もう1枚押すと入れ替わります"
@@ -2237,17 +2070,19 @@ public partial class Map11Main : Node3D
                         : "札を押すと、その駒が何をするか出ます");
             return;
         }
-        SeatDiagram.Cell pick = cells.First(c => c.Slot == _squadPick);
+        SeatDiagram.Cell pick = held is not null
+            ? new SeatDiagram.Cell(-1, held.Def, held.Hp, held.MaxHp, held.IsAlive)
+            : cells.First(c => c.Slot == _squadPick);
         UnitDef d = pick.Def!;
         _squadFocus.AddChild(UiKit.Text(
-            $"{FormationRules.SeatNames[_squadPick]}  {d.Name}"
+            $"{(held is not null ? "手札" : FormationRules.SeatNames[_squadPick])}  {d.Name}"
             + (pick.Alive ? "" : "（戦死）"), 15, pick.Alive ? Colors.White : DeadColor));
         FocusLine(_squadFocus, $"何をする: {d.PlusText}", UiKit.Muted);
         if (d.MinusText.Length > 0) FocusLine(_squadFocus, $"代わりに: {d.MinusText}", UiKit.Faint);
         if (Map11.LineOf(d.Id) is { } line) FocusLine(_squadFocus, $"どの道で: {line}", GoldColor);
         // その駒から出ている線の説明（図に描いた語をそのまま文字でも出す）。
         // **色は線と同じ 得／損／両方**（第173期 §1-1・出どころは `SeatLinks.ColorOf` の1本）。
-        foreach ((string rel, Color tint) in RelationWordsFor(cells, _squadPick))
+        foreach ((string rel, Color tint) in RelationWordsFor(cells, held is not null ? -1 : _squadPick))
             FocusLine(_squadFocus, rel, tint);
     }
 
@@ -2549,6 +2384,7 @@ public partial class Map11Main : Node3D
         lines.Add("");
         lines.Add($"seed {Map11Session.Seed}（この数字を控えれば同じ通しを再現できます）");
         _resultBody.Text = string.Join("\n", lines);
+        _resultScroll.ScrollVertical = 0;
         _resultOverlay.Visible = true;
     }
 
@@ -2584,7 +2420,7 @@ public partial class Map11Main : Node3D
         // 「抜いた敵部隊 n / 4」だけでは何が残っているか読めない——湧いたぶんも出す。
         int left = St.Nodes.Sum(r => r.Count(x => !x.Cleared)) + St.Spawns.Count(x => !x.Cleared)
                    + (St.ReserveWaiting ? 1 : 0);
-        _headline.Text = $"{St.Stage.Title} ・ "
+        _mapHeadlineText = $"{St.Stage.Title} ・ "
             + (St.Time.On ? $"作戦ターン {St.Turn + 1} ・ " : "")
             + (St.Portal.On
                 ? $"{(St.Captured ? "制圧済み" : Map11.PortalName + "は敵のもの")} ・ 残る敵部隊 {left}"
@@ -2627,8 +2463,7 @@ public partial class Map11Main : Node3D
                 m.Set($"{s.Label}" + Nl
                       + (s.Units is { Count: 0 } ? "（空席）" : $"{alive}枚 {SquadHpPercent(s):F0}%"),
                       PlayerColor);
-                // 第177期 §2（第176期 §3-1 #3）—— **選んでいる隊を盤の上で光らせる。**
-                m.SetGlow(i == _selected && !St.Finished);
+                // 操作案内の点滅は MapActionGuide の1箇所。隊の選択色は左の札に残す。
                 // 第175期 §1-2 —— **隊から行き先へ矢印**。
                 // 第177期: **途中に敵がいればそこで止め、その先は点線**（第176期 §3-1 #2）。
                 Dest d = Map11Session.Destinations[i];
@@ -2706,8 +2541,8 @@ public partial class Map11Main : Node3D
             ? $"{sel.Label} の行き先: {Map11Orders.Where(St.Graph, Map11Session.Destinations[_selected])}"
               + $"　→ この作戦ターン: {OrderText(_selected)}"
             : "";
-        // 操作の案内は**まだ1戦もしていない間だけ**（観察ログ「操作方法が最初わからなかった」）。
-        _hint.Visible = Map11Session.BattleLog.Count == 0;
+        RefreshScreen();
+        RefreshGuide();
         _firstRefresh = false;
     }
 
@@ -2750,7 +2585,7 @@ public partial class Map11Main : Node3D
                        : n.Pos == St.Graph.Portal
                            ? PortalPos + new Vector3(3.2f + stackAtPortal * 0.9f, 0,
                                                      LaneSide(road) * 2.2f)
-                       : PosOf(n.Pos) + new Vector3(SharedCellIndex(n, road) * 3.6f, 0, 0);
+                       : PosOf(n.Pos) + SharedCellIndex(n, road) * new Vector3(3.6f, 0, 4.8f);
             // 第175期 §1-3: **前進した瞬間は1マス滑らせる**（瞬間移動させない）。
             if (_firstRefresh) m.MoveTo(at); else m.SlideTo(at);
         }
@@ -2769,7 +2604,7 @@ public partial class Map11Main : Node3D
 
     /// <summary>
     /// 同じマスにいる敵部隊のうち、自分より手前に何部隊いるか（0 ＝ ずらさない）。第442期の 1-2 は中の道の 2 戦目の地点に
-    /// 物見と先遣が重なって始まるので、後ろの板を敵の拠点の側へずらす。<b>位置を読むだけ</b>（判定は持たない）。
+    /// 物見と先遣が重なって始まるので、後ろの板を斜めにずらして名前も読めるようにする。<b>位置を読むだけ</b>（判定は持たない）。
     /// </summary>
     private int SharedCellIndex(Map11State.Node n, int road)
         => St.FoesOn(road).TakeWhile(x => !ReferenceEquals(x, n)).Count(x => x.Pos == n.Pos);
@@ -2859,6 +2694,7 @@ public partial class Map11Main : Node3D
 
     public override void _Process(double delta)
     {
+        if (_layoutSize != GetViewport().GetVisibleRect().Size) RefreshScreen();
         // 第175期 §1-3: 盤の札を滑らせる／脈打たせる。**判定は1つも通らない**（見た目だけ）。
         foreach (Marker m in _squadMarkers) m.Tick(delta);
         foreach (Marker m in _nodeMarkers) m.Tick(delta);
@@ -2868,8 +2704,10 @@ public partial class Map11Main : Node3D
         // 画面の大きさが変わると札の位置がずれるので、毎フレーム引き直す（7 枚だけ）。
         foreach (DestButton d in _destButtons)
             d.Node.Position = _camera.UnprojectPosition(d.World) + d.Offset;
+        PositionMapPicks();
         // 第439期: 時計。**時計の門の最中は門が自分で回す**（フレームの分まで刻ませない）。
         if (!_clockSmoke) ClockStep(delta);
+        ProcessGuide(delta);
 
         if (_toastClock <= 0) return;
         _toastClock -= (float)delta;

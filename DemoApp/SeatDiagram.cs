@@ -43,6 +43,17 @@ public partial class SeatDiagram : Control
     private static readonly float RowStep = CardH + GapY;
 
     public static readonly Vector2 Size2 = new(CardW + ColStep * 2, CardH + RowStep * 2);
+    public float DisplayScale { get; private set; } = 1f;
+
+    /// <summary>編成画面では座標とフォントを大きく描き直す（画像の引き伸ばしにしない）。</summary>
+    public void SetDisplayScale(float scale)
+    {
+        if (Mathf.IsEqualApprox(DisplayScale, scale)) return;
+        DisplayScale = scale;
+        CustomMinimumSize = Size2 * scale;
+        Size = CustomMinimumSize;
+        Render(_cells.Values.ToArray(), Selected);
+    }
 
     /// <summary>
     /// 札を押したときに呼ばれる（席番号）。<b>第172期に「押された席をそのまま渡す」へ変えた</b>
@@ -66,6 +77,8 @@ public partial class SeatDiagram : Control
     public int Selected { get; private set; } = -1;
 
     private readonly Dictionary<int, Button> _cards = new();
+    /// <summary>操作案内の枠を重ねる札。選択・配置の判定は呼び出し側が持つ。</summary>
+    public Button? CardAt(int slot) => _cards.GetValueOrDefault(slot);
     /// <summary>札の下端の HP バー（指示書 §1-1）。<b>数字とは別に、長さで残りが分かるように。</b></summary>
     private readonly Dictionary<int, ColorRect> _bars = new();
     /// <summary>同・下敷き。<b>空席では下敷きごと消す</b>（残していると「HP 0 の駒」に見える）。</summary>
@@ -151,14 +164,20 @@ public partial class SeatDiagram : Control
                 _cards[slot] = card;
             }
 
+            card.Position = PosOf(slot) * DisplayScale;
+            card.CustomMinimumSize = new Vector2(CardW, CardH) * DisplayScale;
+            card.Size = card.CustomMinimumSize;
+            card.AddThemeFontSizeOverride("font_size", (int)Math.Round(11 * DisplayScale));
+            _bars[slot].Position = _barBacks[slot].Position = new Vector2(6, CardH - 8) * DisplayScale;
+            _barBacks[slot].Size = new Vector2(CardW - 12, 4) * DisplayScale;
             Cell cell = _cells.TryGetValue(slot, out Cell c2) ? c2 : new Cell(slot, null, 0, 0, false);
             string seat = FormationRules.SeatNames[slot];
             if (cell.Def is null)
             {
                 card.Text = (slot == Selected ? "▶ " : "") + $"{seat}\n（空席）";
-                card.AddThemeColorOverride("font_color", UiKit.Faint);
+                card.AddThemeColorOverride("font_color", AllowEmptyPress ? UiKit.Ink : UiKit.Faint);
                 card.Modulate = slot == Selected ? new Color(1.0f, 0.90f, 0.62f)
-                                                 : new Color(1, 1, 1, 0.45f);
+                                                 : new Color(1, 1, 1, AllowEmptyPress ? 1f : 0.45f);
                 card.Disabled = !AllowEmptyPress;
                 _bars[slot].Visible = false;
                 _barBacks[slot].Visible = false;
@@ -171,7 +190,7 @@ public partial class SeatDiagram : Control
             string tag = BoardRuleTags.LabelFor(cell.Def.Traits);
             string head = (slot == Selected ? "▶ " : "") + seat;
             card.Text = cell.Alive
-                ? $"{head}  {cell.Def.Name}\nHP {cell.Hp}/{cell.MaxHp}  攻{cell.Def.Attack} 速{cell.Def.Speed}"
+                ? $"{head}{(DisplayScale > 1.1f ? "\n" : "  ")}{cell.Def.Name}\nHP {cell.Hp}/{cell.MaxHp}  攻{cell.Def.Attack} 速{cell.Def.Speed}"
                   + (tag.Length > 0 ? "\n" + tag : "")
                 : $"{head}  {cell.Def.Name}\n{DeadLabel}";
             card.AddThemeColorOverride("font_color",
@@ -184,7 +203,7 @@ public partial class SeatDiagram : Control
             ColorRect bar = _bars[slot];
             bar.Visible = true;
             _barBacks[slot].Visible = true;
-            bar.Size = new Vector2((CardW - 12) * Math.Clamp(pct / 100f, 0f, 1f), 4);
+            bar.Size = new Vector2((CardW - 12) * Math.Clamp(pct / 100f, 0f, 1f), 4) * DisplayScale;
             bar.Color = !cell.Alive ? UiKit.Faint
                       : pct <= 30 ? UiKit.Hurt
                       : pct <= 60 ? UiKit.Gold
@@ -196,8 +215,8 @@ public partial class SeatDiagram : Control
             .Where(c => c.Def is not null && c.Alive)
             .ToDictionary(c => c.Slot, c => c.Def!);
         var links = Map11Relations.Of(seats);
-        _lines.Set(links, Selected);
-        _words.Set(links, Selected);
+        _lines.Set(links, Selected, DisplayScale);
+        _words.Set(links, Selected, DisplayScale);
     }
 
     /// <summary>
@@ -215,15 +234,18 @@ public partial class SeatDiagram : Control
 
         private IReadOnlyList<Map11Relations.Link> _links = Array.Empty<Map11Relations.Link>();
         private int _selected = -1;
+        private float _displayScale = 1;
 
-        public void Set(IReadOnlyList<Map11Relations.Link> links, int selected)
+        public void Set(IReadOnlyList<Map11Relations.Link> links, int selected, float displayScale)
         {
             _links = links;
             _selected = selected;
+            _displayScale = displayScale;
             QueueRedraw();
         }
 
         public override void _Draw()
-            => SeatLinks.Draw(this, _links, _selected, RectOf, DrawWords);
+            => SeatLinks.Draw(this, _links, _selected,
+                slot => new Rect2(RectOf(slot).Position * _displayScale, RectOf(slot).Size * _displayScale), DrawWords);
     }
 }
