@@ -6,7 +6,8 @@ using System.Linq;
 // =====================================================================================
 // 1-2 に「盤の上で変わるもの」を足した門（第441期 §5-3・`--map12-change-smoke`）
 //
-// **画面を1つも作らない。** `MapStage.Stage12`（途中到着・敵の予備隊・湧き S = 2）と `Map11State` / `Map11Orders` だけを回す。
+// **画面を1つも作らない。** 1-2（途中到着・敵の予備隊・湧き S = 2）と `Map11State` / `Map11Orders` だけを回す。
+// **(a)〜(f) と分解は第441期の盤（`MapStage.Stage12H441`・3 隊）**で回す（回帰の基準）。(a') だけは第442期 §0-2 で作り替えた。
 // **ここには Godot の型を1つも使わない**（`Map12Smoke` と同じ扱い）。
 //
 //   (a) 開始の手札が 10 枚で保証 3 条件を満たす・到着の列が 5 枚
@@ -15,6 +16,12 @@ using System.Linq;
 //   (d) 予備隊が拠点に着いたら迎撃が立つ
 //   (e) S = 2 で制圧の前に湧きが 1 以上
 //   (f) 貪欲方針 100 seed で落ちない。踏破率・予備隊が着いた経路の分布・予備隊との戦闘が起きた率・湧いた数は**報告だけ**
+//
+// 第442期（§1・遊ぶ 1-2 ＝ `MapStage.Stage12`・隊 2 つ・中の道の先頭は 1 マス奥）:
+//   (g) 既定の組み方で始めると、開始の 10 枚が 2 隊に配られ、到着の列は 5 枚のまま
+//   (h) 3 隊目は作れない
+//   (i) 中の道の先頭が拠点に着くのは 3 刻目（北・南は 2 刻目のまま）
+//   貪欲 100 seed（2 隊とも出す ／ 1 隊残す）の数字は**報告だけ**（第441期と並べる）
 //
 // 「貪欲」は第438・440期の門と同じ選び方（各隊は盤の上でいちばん近い敵部隊へ・敵が尽きたら敵の拠点へ）。
 // 自分で組む通し（到着あり）で回す: 開始の 10 枚を第1隊・第2隊に 5 枚ずつ、届いた駒は拠点にいる第3隊へ。
@@ -28,7 +35,7 @@ public static class Map12ChangeSmoke
     {
         bool ok = true;
         void Req(bool c, string what) { write($"{(c ? "○" : "×")} {what}"); ok &= c; }
-        MapStage stage = MapStage.Stage12;
+        MapStage stage = MapStage.Stage12H441;
 
         // ---- 保証の表（報告） ----
         {
@@ -56,9 +63,10 @@ public static class Map12ChangeSmoke
                 rerollMax = Math.Max(rerollMax, o.Rerolls);
             }
             write($"  {Seeds} seed の引き: 保証を満たせなかった {fail} seed ／ 引き直し 平均 {(double)rerollSum / Seeds:F2} 回・最大 {rerollMax} 回");
+            // 第442期 §0-2: 到着のある盤の「既定」は**拠点にある駒だけ**を配る（第441期は列を配り切っていた）。
             var keep = new Map11State(0, stage.Time, stage.Portal, draft: true, stage: stage);
-            Req(keep.UseDefaultSquads() && keep.Arrivals.Count == 0 && keep.Squads.All(s => s.Units?.Count == 5) && keep.Bench.Count == 0,
-                "(a') 「既定の3隊で始める」は到着を使わない（まだ届いていない 5 枚もその場で配り切る）");
+            Req(keep.UseDefaultSquads() && keep.Arrivals.Count == 5 && keep.Squads.Sum(s => s.Units?.Count ?? 0) == 10 && keep.Bench.Count == 0,
+                "(a') 「既定」は到着の列を残す（開始の 10 枚だけを隊へ配る・第442期 §0-2 で作り替え）");
             var off = new Map11State(0, stage.Time, stage.Portal, draft: false, stage: stage);
             Req(off.Arrivals.Count == 0, "(a'') 既定の 3 隊の通し（draft でない）には到着の列が無い");
         }
@@ -208,7 +216,105 @@ public static class Map12ChangeSmoke
                     + $"湧いた数 {runs.Average(r => r.Spawns):F2} ／ 予備隊との戦闘 {P(r => r.ReserveFought):F1}% ／ 作戦ターン（中央値）{turns[turns.Length / 2]}");
             }
         }
+        Phase442(write, Req);
         return ok;
+    }
+
+    /// <summary>第442期 §1 —— 遊ぶ 1-2（`MapStage.Stage12`）の (g)(h)(i) と、貪欲 100 seed（報告だけ）。</summary>
+    private static void Phase442(Action<string> write, Action<bool, string> Req)
+    {
+        MapStage stage = MapStage.Stage12, old = MapStage.Stage12H441;
+        write("  ---- 第442期（遊ぶ 1-2・隊 2 つ・中の道の先頭は 1 マス奥） ----");
+
+        // ---- (g) 既定の組み方 ----
+        {
+            var st = new Map11State(0, stage.Time, stage.Portal, draft: true, stage: stage);
+            int benchBefore = st.Bench.Count;
+            bool done = st.UseDefaultSquads();
+            string Line(Map11State.Squad q) => $"{q.Label}（{string.Join("・", q.Units!.Select(u => $"{FormationRules.SeatNames[u.Slot]} {u.Def.Name}"))}）";
+            write($"  seed 0 の既定の組み方: {string.Join(" ／ ", st.Squads.Select(Line))} ／ 手札 {st.Bench.Count} 枚 ／ 到着の列 {st.Arrivals.Count} 枚");
+            int bad = 0, asDefined = 0;
+            for (int seed = 0; seed < Seeds; seed++)
+            {
+                var t = new Map11State(seed, stage.Time, stage.Portal, draft: true, stage: stage);
+                if (!t.UseDefaultSquads() || t.Squads.Length != 2 || t.Squads.Any(q => q.Units?.Count != 5)
+                    || t.Bench.Count != 0 || t.Arrivals.Count != 5) bad++;
+                asDefined += t.Squads.Count(q => q.Label == q.Def.Name);
+            }
+            write($"  {Seeds} seed の既定の組み方: 定義どおりの 5 枚がそろって名前が既定に戻った隊 {asDefined} / {2 * Seeds}");
+            Req(done && benchBefore == 10 && st.Squads.Length == 2 && st.Squads.All(q => q.Units?.Count == 5)
+                && st.Bench.Count == 0 && st.Arrivals.Count == 5 && bad == 0,
+                $"(g) 既定の組み方で始めると、開始の手札 10 枚が 2 隊に 5 枚ずつ配られ、到着の列は 5 枚のまま（{Seeds} seed で外れ {bad}）");
+        }
+
+        // ---- (h) 隊の数 ----
+        {
+            var draft = new Map11State(0, stage.Time, stage.Portal, draft: true, stage: stage);
+            var fixedSq = new Map11State(0, stage.Time, stage.Portal, draft: false, stage: stage);
+            var one1 = new Map11State(0, MapStage.Stage11.Time, MapStage.Stage11.Portal, draft: true, stage: MapStage.Stage11);
+            var o441 = new Map11State(0, old.Time, old.Portal, draft: true, stage: old);
+            write($"  隊の数: 1-2（第442期）自分で組む {draft.Squads.Length} ・ 既定 {fixedSq.Squads.Length} ／ 1-1 {one1.Squads.Length} ／ 1-2（第441期）{o441.Squads.Length}");
+            Req(stage.SquadCap == 2 && draft.Squads.Length == 2 && fixedSq.Squads.Length == 2 && one1.Squads.Length == 3 && o441.Squads.Length == 3,
+                "(h) 1-2 では 3 隊目が作れない（隊は 2 つ・1-1 と第441期の 1-2 は 3 つのまま）");
+        }
+
+        // ---- (i) 中の道の先頭が拠点に着く刻 ----
+        {
+            static int[] Steps(MapGraph g) => Enumerable.Range(0, g.Lanes.Count).Select(l =>
+            {
+                int pos = g.FoeStarts[l][0], n = 0;
+                while (pos != g.Home && n < 20) { pos = g.TowardHome(l, pos); n++; }
+                return n;
+            }).ToArray();
+            int[] now = Steps(stage.Board(true)), before = Steps(old.Board(true));
+            // 盤の上でも確かめる: 中の道の 2 部隊だけを残し、隊は拠点（既定の組み方）で、先頭が何刻目に拠点へ入るか。
+            var st = new Map11State(0, stage.Time, stage.Portal, draft: true, stage: stage);
+            st.UseDefaultSquads();
+            foreach (Map11State.Node n in st.Nodes.SelectMany(r => r)) if (n.Def.Road != 1) n.Cleared = true;
+            Map11State.Node lead = st.Nodes[1][0];
+            bool shared = lead.Pos == st.Nodes[1][1].Pos;
+            int reached = -1;
+            for (int k = 0; k < 6 && reached < 0 && !st.Finished; k++)
+            {
+                st.AdvanceFoes();
+                if (lead.Pos == st.Graph.Home) reached = st.Turn;
+            }
+            write($"  拠点まで（刻）: 第442期 {string.Join(" ／ ", now.Select((x, l) => $"{stage.LaneNames[l]} {x}"))}"
+                + $" ／ 第441期 {string.Join(" ／ ", before.Select((x, l) => $"{old.LaneNames[l]} {x}"))}"
+                + $" ／ 盤の上で中の先頭が拠点に入った刻 T{reached}（始まりは先遣と同じマス {shared}）");
+            Req(now[1] == 3 && now[0] == 2 && now[2] == 2 && before.All(x => x == 2) && reached == 3,
+                "(i) 中の道の先頭が拠点に着くのは 3 刻目（北・南は 2 刻目のまま・第441期は 3 本とも 2 刻目）");
+        }
+
+        // ---- 報告のみ: 貪欲 100 seed（第441期の 2 つ ＋ 第442期の「分担＋戻り番」） ----
+        foreach (var (guard, split) in new[] { (false, false), (true, false), (true, true) })
+        {
+            string label = split ? "分担＋戻り番（最初は 2 隊で別々の敵へ・接敵の後は拠点が空なら近い隊が戻る）"
+                : guard ? "貪欲＋番（拠点に 1 隊残す）" : "貪欲（2 隊とも出す）";
+            var runs = new List<Once>();
+            int crashed = 0;
+            for (int seed = 0; seed < Seeds; seed++)
+            {
+                try { runs.Add(Greedy(seed, stage, guard, split)); }
+                catch (Exception ex)
+                {
+                    crashed++;
+                    if (crashed <= 3) write($"  × 第442期 {label} seed {seed}: {ex.GetType().Name}: {ex.Message}");
+                }
+            }
+            Req(crashed == 0, $"第442期の 1-2 を{label}で {Seeds} seed 回して落ちない（数字は報告のみ）");
+            if (runs.Count == 0) continue;
+            double P(Func<Once, bool> f) => 100.0 * runs.Count(f) / runs.Count;
+            var turns = runs.Select(r => r.Turns).OrderBy(x => x).ToArray();
+            var fallen = runs.Where(r => r.Fallen).Select(r => r.Turns).OrderBy(x => x).ToArray();
+            string lanes = string.Join(" ／ ", Enumerable.Range(-1, stage.LaneCount + 1)
+                .Select(l => $"{(l < 0 ? "出発せず" : stage.LaneNames[l])} {runs.Count(r => r.ReserveLane == l)}"));
+            write($"  第442期 {label} × {runs.Count} seed: 踏破 {P(r => r.Won):F1}% ／ 陥落 {P(r => r.Fallen):F1}% ／ 膠着 {P(r => !r.Won && !r.Fallen):F1}% ／ "
+                + $"制圧 {P(r => r.Captured):F1}% ／ 湧いた数 平均 {runs.Average(r => r.Spawns):F2} ／ 作戦ターン（中央値）{turns[turns.Length / 2]}"
+                + $" ／ 陥落した作戦ターン（中央値）{(fallen.Length > 0 ? fallen[fallen.Length / 2] : 0)}");
+            write($"    予備隊の行き先: {lanes} ／ 予備隊との戦闘 {P(r => r.ReserveFought):F1}%（うち拠点の迎撃 {P(r => r.ReserveAtHome):F1}%）／ "
+                + $"届いた枚数 平均 {runs.Average(r => r.Arrived):F2} ／ 届いた駒を隊へ入れた 平均 {runs.Average(r => r.Refilled):F2} 枚 ／ 横の辺を通った手 平均 {runs.Average(r => r.Moves):F2}");
+        }
     }
 
     /// <summary>手札の先頭から <paramref name="count"/> 枚を、その隊の空いた席（前1 から）へ配る。</summary>
@@ -221,6 +327,22 @@ public static class Map12ChangeSmoke
         }
     }
 
+    /// <summary>
+    /// 拠点にいる隊の倒れた駒・空いた席を、手札の生きている駒と替える（第442期・隊が 2 つの盤の貪欲）。替えた枚数を返す。
+    /// </summary>
+    private static int Refill(Map11State st, int squad)
+    {
+        int n = 0;
+        foreach (int slot in FormationRules.PlayableSlots)
+        {
+            int b = st.Bench.FindIndex(x => x.IsAlive);
+            if (b < 0) break;
+            if (st.UnitAt(squad, slot) is { IsAlive: true }) continue;
+            if (st.SwapWithBench(squad, slot, b)) n++;
+        }
+        return n;
+    }
+
     private static void Fight(Map11State st, int squad, Map11State.Node node, bool intercept)
     {
         var prep = intercept ? st.PrepareIntercept(squad, node) : st.Prepare(squad, node);
@@ -231,20 +353,23 @@ public static class Map12ChangeSmoke
 
     private readonly record struct Once(int Seed, bool Won, bool Fallen, bool Captured, int CapturedTurn, int Turns,
                                         int Spawns, int SpawnsBeforeCapture, int ReserveLane, bool ReserveFought,
-                                        bool ReserveAtHome, bool ReserveCleared, int Arrived, bool ThirdOut, int Moves, int Battles);
+                                        bool ReserveAtHome, bool ReserveCleared, int Arrived, bool ThirdOut, int Moves, int Battles,
+                                        int Refilled);
 
     /// <summary>
     /// 貪欲方針で 1 マップ（自分で組む通し・到着あり）。開始の 10 枚を第1隊・第2隊へ 5 枚ずつ、届いた駒は拠点にいる第3隊へ配る。
     /// 第3隊は 5 枚そろうか、もう届く駒が無くなったら出る。各隊の行き先は盤の上でいちばん近い敵部隊（敵が尽きたら敵の拠点・制圧後は拠点）。
     /// <paramref name="guard"/> が真なら<b>番を置く</b>: 拠点にいて出せる隊がその隊しか無ければ、その隊は出ない（迎撃に残る）。
+    /// <paramref name="split"/> が真なら（第442期・報告だけ）<b>分担＋戻り番</b>: 同じ刻に 2 隊が同じ敵を狙わない（若い隊から順に取る）。
+    /// 番の規則は最初の接敵の後からで、そのとき拠点に出せる隊が 1 つもいなければ、拠点にいちばん近い隊が戻る。
     /// </summary>
-    private static Once Greedy(int seed, MapStage stage, bool guard)
+    private static Once Greedy(int seed, MapStage stage, bool guard, bool split = false)
     {
         var st = new Map11State(seed, stage.Time, stage.Portal, draft: true, stage: stage);
         var g = st.Graph;
         Deal(st, 0, 5);
         Deal(st, 1, 5);
-        int moves = 0, spawnsAtCapture = -1;
+        int moves = 0, spawnsAtCapture = -1, refilled = 0;
         bool reserveFought = false, reserveAtHome = false;
         Map11State.Node? reserve = st.Reserve;
 
@@ -254,12 +379,17 @@ public static class Map12ChangeSmoke
             Fight(st, squad, node, intercept);
         }
 
+        var taken = new HashSet<Map11State.Node>(ReferenceEqualityComparer.Instance);
+        int homeGuard = -1;
+        bool Ready(int k) => !st.Squads[k].Lost && st.CanSend(k);
+
         Dest DestFor(int i)
         {
             Map11State.Squad s = st.Squads[i];
             if (s.Lost) return Dest.Home;
             if (i == 2 && s.Pos == g.Home && (s.Units?.Count ?? 0) < 5 && st.Arrivals.Count > 0) return Dest.Home;
-            if (guard && s.Pos == g.Home && !st.Captured
+            if (split && i == homeGuard) return Dest.Home;
+            if (guard && (!split || st.Battles > 0) && s.Pos == g.Home && !st.Captured
                 && !Enumerable.Range(0, st.Squads.Length).Any(k => k != i && st.Squads[k].Pos == g.Home && !st.Squads[k].Lost && st.CanSend(k)))
                 return Dest.Home;
             Map11State.Node? best = null;
@@ -267,10 +397,11 @@ public static class Map12ChangeSmoke
             for (int road = 0; road < g.Lanes.Count; road++)
                 foreach (Map11State.Node n in st.FoesOn(road))
                 {
-                    if (n.Pos == g.Home) continue;
+                    if (n.Pos == g.Home || (split && taken.Contains(n))) continue;
                     int len = g.Path(s.Pos, s.Road, n.Pos, n.Pos == g.Portal ? n.Def.Road : -1).Count;
                     if (len > 0 && len < bestLen) { bestLen = len; best = n; }
                 }
+            if (best is not null && split) taken.Add(best);
             if (best is not null)
                 return best.Pos == g.Portal ? Dest.Portal(g, best.Def.Road) : Dest.Of(g, best.Pos);
             if (!st.Captured) return Dest.Portal(g, s.Road >= 0 ? s.Road : 0);
@@ -279,8 +410,15 @@ public static class Map12ChangeSmoke
 
         while (!st.Finished)
         {
-            // 届いた駒は拠点にいる第3隊へ（空いた席から）。
-            if (st.Bench.Count > 0 && st.CanReform(2)) Deal(st, 2, st.Bench.Count);
+            // 届いた駒は拠点にいる第3隊へ（空いた席から）。隊が 2 つの盤（第442期）では、拠点にいる隊の倒れた駒・空いた席と替える。
+            if (st.Squads.Length > 2) { if (st.Bench.Count > 0 && st.CanReform(2)) Deal(st, 2, st.Bench.Count); }
+            else for (int k = 0; k < st.Squads.Length; k++) if (st.CanReform(k)) refilled += Refill(st, k);
+            taken.Clear();
+            homeGuard = -1;
+            if (split && st.Battles > 0 && !st.Captured
+                && !Enumerable.Range(0, st.Squads.Length).Any(k => Ready(k) && st.Squads[k].Pos == g.Home))
+                homeGuard = Enumerable.Range(0, st.Squads.Length).Where(Ready)
+                    .OrderBy(k => g.Path(st.Squads[k].Pos, st.Squads[k].Road, g.Home, -1).Count).DefaultIfEmpty(-1).First();
             for (int i = 0; i < st.Squads.Length && !st.Finished; i++)
             {
                 Dest dest = DestFor(i);
@@ -306,6 +444,6 @@ public static class Map12ChangeSmoke
         return new Once(seed, st.Won, st.Fallen, st.Captured, st.CapturedTurn + 1, st.Turn, st.SpawnCount,
                         Math.Max(0, spawnsAtCapture), reserve is null || st.ReserveDepartTurn < 0 ? -1 : reserve.Def.Road,
                         reserveFought, reserveAtHome, reserve?.Cleared == true, st.ArrivedCount,
-                        st.Squads[2].Deployed, moves, st.Battles);
+                        st.Squads.Length > 2 && st.Squads[2].Deployed, moves, st.Battles, refilled);
     }
 }

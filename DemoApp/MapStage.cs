@@ -47,6 +47,11 @@ public sealed class MapStage
     public ArrivalRule Arrival { get; init; } = ArrivalRule.Off;
     /// <summary>敵の予備隊の規則（第441期 §3）。<b>既定は Off</b>（第440期まで）。</summary>
     public ReserveRule Reserve { get; init; } = ReserveRule.Off;
+    /// <summary>
+    /// 隊の数（第442期 §0-3）。<b>既定は 3</b>（`Map11.Squads` の 3 隊・第441期まで）。
+    /// 少なくすると `Map11.Squads` の先頭から数えて、それより後ろの隊は<b>作らない</b>（画面にも出ない・組めない）。
+    /// </summary>
+    public int SquadCap { get; init; } = Map11.Squads.Length;
 
     public int LaneCount => Lanes.Length;
     public int TotalNodes => Lanes.Sum(l => l.Count);
@@ -101,11 +106,12 @@ public sealed class MapStage
     };
 
     /// <summary>
-    /// 1-2（第441期・遊ぶ版）。盤と敵の 6 部隊は第440期のまま（<see cref="Stage12H440"/>）に、「待つと変わるもの」を 3 つ足した:
+    /// 1-2 の第441期の姿。盤と敵の 6 部隊は第440期のまま（<see cref="Stage12H440"/>）に、「待つと変わるもの」を 3 つ足した:
     /// <b>途中到着</b>（開始 10 枚・2 刻ごとに 1〜2 枚）／ <b>敵の予備隊</b>（第三波 ／ 討伐隊本隊・最初の接敵の後に手薄な経路へ）／
-    /// <b>湧き S = 2</b>（R = 3 のまま・制圧の前に湧く）。
+    /// <b>湧き S = 2</b>（R = 3 のまま・制圧の前に湧く）。隊は 3 つ。
+    /// 第442期からは回帰の基準（`--map12-change-smoke` の (a)〜(f)）だけが使う——遊ぶ 1-2 は <see cref="Stage12"/>。
     /// </summary>
-    public static MapStage Stage12 { get; } = new()
+    public static MapStage Stage12H441 { get; } = new()
     {
         Id = Stage12H440.Id,
         Title = Stage12H440.Title,
@@ -119,13 +125,35 @@ public sealed class MapStage
         Reserve = new ReserveRule(true, EnemyCatalog.Stages[2].Enemy, EnemyCatalog.Stages[2].Name, 2),
     };
 
+    /// <summary>
+    /// 1-2（第442期・遊ぶ版）。第441期の 3 つ（<see cref="Stage12H441"/>）を<b>試遊で必ず働く形</b>にした:
+    /// <b>隊は 2 つ</b>（経路 3 本より少ない・`SquadCap`）／ <b>中の道の先頭（物見）は 1 マス奥</b>から始まり拠点まで 3 刻
+    /// （<see cref="MapGraph.Build12F442"/>・最初の駒が届く 2 刻目より前に負けが決まらないように）。
+    /// 到着・予備隊・湧きの値は第441期のまま。
+    /// </summary>
+    public static MapStage Stage12 { get; } = new()
+    {
+        Id = Stage12H441.Id,
+        Title = Stage12H441.Title,
+        Board = MapGraph.Build12F442,
+        Lanes = Stage12H441.Lanes,
+        LaneNames = Stage12H441.LaneNames,
+        Spawn = Stage12H441.Spawn,
+        Portal = Stage12H441.Portal,
+        Time = Stage12H441.Time,
+        Arrival = Stage12H441.Arrival,
+        Reserve = Stage12H441.Reserve,
+        SquadCap = 2,
+    };
+
     /// <summary>選べるステージ（編成画面の選択の並び）。</summary>
     public static IReadOnlyList<MapStage> All { get; } = new[] { Stage11, Stage12 };
 }
 
 /// <summary>
 /// 途中到着の規則（第441期 §2）。<b><c>On</c> が偽なら 15 枚を最初に全部手札に載せる</b>（第440期まで）。
-/// 自分で組む通し（<c>draft</c>）でだけ効く——「既定の3隊で始める」は残りを全部その場で配り切る。
+/// 自分で組む通し（<c>draft</c>）でだけ効く。<b>「既定の3隊で始める」も開始の枚数だけを配る</b>（第442期 §0-2・残りは到着の列のまま。
+/// 第441期は残りを全部その場で配り切っていた）。
 /// </summary>
 /// <param name="Start">開始時に手札へ載る枚数（10）。どの 10 枚かは seed で引く（<see cref="MapDraw.Draw"/>）。</param>
 /// <param name="Every">届く間隔（刻）。<c>A</c>。</param>

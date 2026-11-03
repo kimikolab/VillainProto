@@ -228,7 +228,16 @@ public sealed class MapGraph
     /// <b>横の辺 2 本（北1–中1・中1–南1）</b>を足した。<c>Pos</c> は 1-1 の並びを 3 段にしたもの（北を上・南を下）。
     /// マスの名前は 1-1 と同じ作り方（「中の道 1 戦目の地点」など）。
     /// </summary>
-    public static MapGraph Build12(bool portalOn)
+    public static MapGraph Build12(bool portalOn) => Build12(portalOn, midLead: Map11.StartCellOf(0));
+
+    /// <summary>
+    /// 1-2 の盤・第442期（§0-4）。<b>中の道の先頭（物見）だけが 1 マス奥（2 戦目の地点）</b>から始まる
+    /// ——拠点まで 3 刻（北・南は 2 刻のまま）。2 戦目の地点には第二波・先遣もいるので、<b>同じマスに 2 部隊</b>で始まる
+    /// （先頭だけが前進する規則なので、物見が出ていけば先遣は元のマスに残る・`Map11State.AdvanceFoes`）。
+    /// </summary>
+    public static MapGraph Build12F442(bool portalOn) => Build12(portalOn, midLead: Map11.StartCellOf(1));
+
+    private static MapGraph Build12(bool portalOn, int midLead)
     {
         var b = new Builder();
         int home = b.Add("拠点", Kind.Home, (-10.0f, 0f));
@@ -249,8 +258,9 @@ public sealed class MapGraph
             int from = home;
             foreach (int c in lanes[lane]) { b.Link(from, c); from = c; }
             if (portal >= 0) b.Link(from, portal);
-            // 敵の初期位置は 1-1 と同じ（1 戦目・2 戦目の地点）。
-            b.Lane(Lanes12[lane], lanes[lane], new[] { lanes[lane][Map11.StartCellOf(0)], lanes[lane][Map11.StartCellOf(1)] });
+            // 敵の初期位置は 1-1 と同じ（1 戦目・2 戦目の地点）。第442期は中の道の先頭だけ <paramref name="midLead"/>。
+            int lead = lane == 1 ? midLead : Map11.StartCellOf(0);
+            b.Lane(Lanes12[lane], lanes[lane], new[] { lanes[lane][lead], lanes[lane][Map11.StartCellOf(1)] });
         }
         // 横の辺（隊だけが使う）。
         b.Link(lanes[0][1], lanes[1][1]);

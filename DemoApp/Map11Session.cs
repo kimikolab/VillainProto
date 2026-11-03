@@ -214,7 +214,7 @@ public static class Map11Session
 
     private static void ResetTurn()
     {
-        int n = Map11.Squads.Length;
+        int n = State?.Squads.Length ?? Map11.Squads.Length;  // 第442期: 隊の数はステージが持つ
         Destinations = Enumerable.Repeat(Dest.Home, n).ToArray();
         TurnRunning = false;
         InterceptNode = null;

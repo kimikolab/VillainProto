@@ -658,8 +658,9 @@ public partial class Map11Main : Node3D
         // **第177期: 道の奥は敵の拠点で合流する**ので、最後の1本は2 本とも同じ点へ伸びる。
         // 第438期: **盤の辺から引く**（1-1 の辺は第437期の帯と同じ順に並んでいる）。
         // 第440期 §3-2: **横の辺（経路をまたぐ・敵は通らない）は色を変えて細く**する。
+        // 第442期 §0-5: 色だけでは「行き来できる道」に読めなかった（第441期 問い8）——**点線**にして形で分ける。
         foreach ((int ea, int eb) in St.Graph.Edges)
-            if (St.Graph.IsCross(ea, eb)) AddStrip(PosOf(ea), PosOf(eb), CrossColor, 1.1f);
+            if (St.Graph.IsCross(ea, eb)) AddDashedStrip(PosOf(ea), PosOf(eb), CrossColor, 1.3f);
             else AddStrip(PosOf(ea), PosOf(eb), Color.FromHtml("#8b7756"));
 
         // 第177期 §2: 道が1本伸びたぶん、カメラを引いて奥まで入れる。
@@ -878,6 +879,25 @@ public partial class Map11Main : Node3D
         };
         node.LookAtFromPosition(node.Position, new Vector3(to.X, 0.03f, to.Z), Vector3.Up);
         AddChild(node);
+    }
+
+    /// <summary>
+    /// 点線の帯（第442期 §0-5・横の辺）。長さ <c>Dash</c> の板を <c>Gap</c> おきに並べる。両端は少し空ける（マスの板に食い込ませない）。
+    /// </summary>
+    private void AddDashedStrip(Vector3 from, Vector3 to, Color color, float width)
+    {
+        const float Dash = 1.3f, Gap = 0.8f, Margin = 1.2f;
+        float len = from.DistanceTo(to) - 2 * Margin;
+        if (len <= Dash) { AddStrip(from, to, color, width); return; }
+        Vector3 dir = (to - from).Normalized();
+        int n = Math.Max(1, (int)((len + Gap) / (Dash + Gap)));
+        float used = n * Dash + (n - 1) * Gap;
+        Vector3 start = from + dir * (Margin + (len - used) / 2);
+        for (int i = 0; i < n; i++)
+        {
+            Vector3 a = start + dir * (i * (Dash + Gap));
+            AddStrip(a, a + dir * Dash, color, width);
+        }
     }
 
     /// <summary>
@@ -1531,13 +1551,16 @@ public partial class Map11Main : Node3D
 
     private void BuildResultOverlay(Control root)
     {
-        _resultOverlay = Modal(root, 340, 220, out VBoxContainer col, "RESULT", GoldColor);
+        // 第442期 §0-1: **本文は箱の中でスクロールする**（第441期は本文が伸びて「もう一度」が画面の外へ押し出され、
+        // 再起動しないと遊び直せなかった）。箱の高さは固定し、ボタンは常に箱の下。
+        _resultOverlay = Modal(root, 340, 300, out VBoxContainer col, "RESULT", GoldColor);
         _resultTitle = UiKit.Text("", 26, Colors.White);
         col.AddChild(_resultTitle);
         _resultBody = UiKit.Text("", 14, Color.FromHtml("#ccd5cb"));
         _resultBody.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        _resultBody.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
-        col.AddChild(_resultBody);
+        ScrollContainer bodyScroll = Scroll(_resultBody, 0);
+        bodyScroll.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
+        col.AddChild(bodyScroll);
         Button again = UiKit.ActionButton("もう一度", GoldColor);
         again.Pressed += () =>
         {
@@ -1577,7 +1600,7 @@ public partial class Map11Main : Node3D
     {
         if (!Map11Session.Drafting) return false;
         if (St.Squads.Any(s => s.Units is { Count: > 0 })) return false;
-        ShowToast("まだ1枚も配っていません（手札の駒を席へ置くか、「既定の3隊で始める」を押してください）",
+        ShowToast($"まだ1枚も配っていません（手札の駒を席へ置くか、「{_defaultButton.Text}」を押してください）",
                   EnemyColor, 5.0f);
         return true;
     }
@@ -1997,7 +2020,8 @@ public partial class Map11Main : Node3D
     {
         bool done = St.UseDefaultSquads();
         ShowToast(done
-            ? "既定の3隊で始めます（あとから組み直せます）"
+            ? (St.Stage.Arrival.On ? $"既定の組み方で{St.Squads.Length}隊を組みました（残りの駒は途中で拠点に届きます・あとから組み直せます）"
+               : $"既定の{St.Squads.Length}隊で始めます（あとから組み直せます）")
             : "駒が拠点に揃っていません（道の上に出した隊があります）",
             done ? PlayerColor : EnemyColor, 4.0f);
         ClearHold();
@@ -2150,6 +2174,8 @@ public partial class Map11Main : Node3D
         _resetButton.Disabled = !can;
         // 第177期 §3: 逃げ道は**まだ組み始める前だけ**（出したあとに配り直せると意味が変わる）。
         _defaultButton.Visible = Map11Session.Drafting;
+        // 第442期 §0-2・§0-3: 隊の数はステージが持つ。到着のある盤では拠点にある駒だけを配る（まだ届いていない駒は配らない）。
+        _defaultButton.Text = St.Stage.Arrival.On ? $"既定の組み方で{St.Squads.Length}隊を組む" : $"既定の{St.Squads.Length}隊で始める";
         _defaultButton.Disabled = St.Squads.Any(x => x.Lost || !St.CanReform(x.Index));
         _benchTitle.Text = St.Draft && Map11Session.Drafting
             ? $"手札（残り {St.Bench.Count} 枚）—— 席の札と押し合わせて配ります"
@@ -2724,7 +2750,7 @@ public partial class Map11Main : Node3D
                        : n.Pos == St.Graph.Portal
                            ? PortalPos + new Vector3(3.2f + stackAtPortal * 0.9f, 0,
                                                      LaneSide(road) * 2.2f)
-                       : PosOf(n.Pos);
+                       : PosOf(n.Pos) + new Vector3(SharedCellIndex(n, road) * 3.6f, 0, 0);
             // 第175期 §1-3: **前進した瞬間は1マス滑らせる**（瞬間移動させない）。
             if (_firstRefresh) m.MoveTo(at); else m.SlideTo(at);
         }
@@ -2740,6 +2766,13 @@ public partial class Map11Main : Node3D
         }
         else m.SetNote("", GoldColor, false);
     }
+
+    /// <summary>
+    /// 同じマスにいる敵部隊のうち、自分より手前に何部隊いるか（0 ＝ ずらさない）。第442期の 1-2 は中の道の 2 戦目の地点に
+    /// 物見と先遣が重なって始まるので、後ろの板を敵の拠点の側へずらす。<b>位置を読むだけ</b>（判定は持たない）。
+    /// </summary>
+    private int SharedCellIndex(Map11State.Node n, int road)
+        => St.FoesOn(road).TakeWhile(x => !ReferenceEquals(x, n)).Count(x => x.Pos == n.Pos);
 
     /// <summary>
     /// 第440期 §3-2 —— <b>敵の経路の矢印</b>。次の前進で動く敵部隊から、入るマスへ短い矢印（敵の色・味方より太い）。

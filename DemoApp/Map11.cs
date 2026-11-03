@@ -581,7 +581,8 @@ public sealed class Map11State
                     : Map11.Reserves.AsEnumerable())
                 .Select(One)
                 .ToList();
-        Squads = Map11.Squads.Select((d, i) => new Squad
+        // 第442期 §0-3: 隊の数はステージが持つ（`SquadCap`・1-1 は 3 のまま）。後ろの隊は作らない。
+        Squads = Map11.Squads.Take(Stage.SquadCap).Select((d, i) => new Squad
         {
             Def = d,
             Graph = Graph,
@@ -914,17 +915,57 @@ public sealed class Map11State
     public bool UseDefaultSquads()
     {
         if (Squads.Any(s => s.Lost || !CanReform(s.Index))) return false;
-        // 第441期 §2: 「既定の3隊で始める」は**到着を使わない**——まだ届いていない駒もその場で配り切る。
-        if (Arrivals.Count > 0)
-        {
-            Bench.AddRange(Arrivals);
-            Arrivals.Clear();
-            _arrivalBatches.Clear();
-        }
+        // 第442期 §0-2: **到着のある盤では、拠点にある駒（開始の 10 枚）だけを配る**——まだ届いていない駒は列に残す
+        // （第441期は列を配り切っていたので、既定で始めると途中到着が 1 度も起きなかった）。
+        if (Draft && Stage.Arrival.On) return DealDefaultFromHome();
         for (int i = 0; i < Squads.Length; i++)
             if (!ResetSquad(i)) return false;
         // 名前も既定へ戻す（「第1隊」のままだと、中身と看板がまた食い違う）。
         foreach (Squad s in Squads) { s.Label = s.Def.Name; s.Role = s.Def.Role; }
+        return true;
+    }
+
+    /// <summary>
+    /// 既定の組み方で、<b>拠点にある駒だけ</b>を隊へ配る（第442期 §0-2・到着のある盤の「既定」）。
+    /// 1. 各隊に、その隊の定義（`Map11.Squads`）の駒が拠点にあれば、定義の席へ
+    /// 2. 残った駒は、定義の席が空いている隊の番号の若い方へ。どの隊もその席が埋まっていれば、空いている隊の空いている席の若い方へ
+    /// 乱数を引かない。どの隊も 5 席が埋まったら残りは控えに置く。<b>定義どおりの 5 枚がそろった隊だけ</b>名前を既定に戻す。
+    /// </summary>
+    private bool DealDefaultFromHome()
+    {
+        // いったん全部を控えへ引き上げる（並びは配った順を決めるので、定義の順に揃える）。
+        for (int s = 0; s < Squads.Length; s++)
+            if (Squads[s].Units is { } u) { Bench.AddRange(u); u.Clear(); }
+        var order = Map11.Squads.SelectMany(d => d.F.Occupied().Select(o => o.Def.Id)).ToList();
+        Bench.Sort((a, b) => order.IndexOf(a.Def.Id).CompareTo(order.IndexOf(b.Def.Id)));
+        int DefSlot(UnitState u)
+            => Map11.Squads.SelectMany(d => d.F.Occupied()).First(o => o.Def.Id == u.Def.Id).Slot;
+        bool Free(int squad, int slot) => Roster(squad).All(x => x.Slot != slot);
+        void Put(UnitState u, int squad, int slot) { Bench.Remove(u); u.Slot = slot; Roster(squad).Add(u); }
+
+        for (int i = 0; i < Squads.Length; i++)
+            foreach (var want in Squads[i].Def.F.Occupied())
+                if (Bench.FirstOrDefault(x => x.Def.Id == want.Def.Id) is { } hit && Free(i, want.Slot))
+                    Put(hit, i, want.Slot);
+        foreach (UnitState u in Bench.ToList())
+        {
+            int slot = DefSlot(u);
+            int squad = Enumerable.Range(0, Squads.Length).FirstOrDefault(k => Roster(k).Count < 5 && Free(k, slot), -1);
+            if (squad < 0)
+            {
+                squad = Enumerable.Range(0, Squads.Length).FirstOrDefault(k => Roster(k).Count < 5, -1);
+                if (squad < 0) break;
+                slot = FormationRules.PlayableSlots.First(sl => Free(squad, sl));
+            }
+            Put(u, squad, slot);
+        }
+        foreach (Squad sq in Squads)
+        {
+            SortBySlot(Roster(sq.Index));
+            bool asDefined = sq.Def.F.Occupied().All(o => sq.Units!.Any(x => x.Def.Id == o.Def.Id && x.Slot == o.Slot));
+            sq.Label = asDefined ? sq.Def.Name : $"第{sq.Index + 1}隊";
+            sq.Role = asDefined ? sq.Def.Role : "既定の組み方";
+        }
         return true;
     }
 
