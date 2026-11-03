@@ -259,6 +259,13 @@ public static class Map11
     public static string? LineOf(string unitId) => Lines.GetValueOrDefault(unitId);
 
     /// <summary>この部隊が持つ盤面ルール／敵側の札のうち、名前を出す価値のあるもの。</summary>
+    /// <summary>
+    /// 作戦マップの敵部隊の 1 行（第448期・`EnemyCatalog.MapSquads` の <c>Line</c>）。<b>部隊の名前で引く</b>——湧いた部隊・予備隊も同じ名前なので同じ行になる。
+    /// 帯 A でない部隊（波の写し）は空。
+    /// </summary>
+    public static string SquadLineOf(string name)
+        => EnemyCatalog.MapSquads.FirstOrDefault(m => m.Name == name)?.Line ?? "";
+
     public static string RuleLineOf(Formation f)
     {
         var names = new List<string>();

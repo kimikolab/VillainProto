@@ -43,7 +43,10 @@ public partial class Map11Main
     private static string WaveMark(string name)
     {
         Match match = Regex.Match(name, "第([^波]+)波");
-        return match.Success ? match.Groups[1].Value : name.Contains("勇者") ? "勇" : "敵";
+        if (match.Success) return match.Groups[1].Value;
+        // 第448期: 帯 A の部隊（波の名前を持たない）は名前の頭の 1 文字（弓・盾・騎・傭・徴）。
+        if (Map11.SquadLineOf(name).Length > 0) return name[..1];
+        return name.Contains("勇者") ? "勇" : "敵";
     }
 
     private static void SetBadge(MapUnitBadge badge, Map11State.Squad squad)
@@ -58,9 +61,12 @@ public partial class Map11Main
         // 第447期 §0-2: 抜くと入る金を札に出す（湧いた部隊は安い・予備隊は最初からいる部隊と同じ）。
         GoldRule g = St.Stage.Gold;
         string reward = g.On && !foe.Cleared ? $" ＋{(foe.FromPortal && !foe.IsReserve ? g.SpawnKill : g.Kill)}" : "";
-        badge.ShowUnit(Representative(foe), count, NodeHpPercent(foe), (foe.IsReserve ? "予備隊" : "第" + WaveMark(foe.Def.Name) + "波") + reward,
+        string head = foe.IsReserve ? "予備隊"
+            : Regex.IsMatch(foe.Def.Name, "第[^波]+波") ? "第" + WaveMark(foe.Def.Name) + "波" : foe.Def.Name;   // 第448期: 帯 A は部隊の名前
+        badge.ShowUnit(Representative(foe), count, NodeHpPercent(foe), head + reward,
             enemy: true, wave: WaveMark(foe.Def.Name));
-        badge.TooltipText = $"{foe.Def.Name}　{Representative(foe)?.Name}　{count}体　HP {NodeHpPercent(foe):F0}%";
+        badge.TooltipText = $"{foe.Def.Name}　{Representative(foe)?.Name}　{count}体　HP {NodeHpPercent(foe):F0}%"
+            + (Map11.SquadLineOf(foe.Def.Name) is { Length: > 0 } line ? $"\n{line}" : "");
     }
 
     private static void AddHandFace(Button button, UnitDef def)

@@ -8264,7 +8264,8 @@ public static class EnemyCatalog
         PlusText = plus
     };
 
-    public static readonly UnitDef Recruit = Make("recruit", "討伐隊の新兵", 45, 11, 6);
+    public static readonly UnitDef Recruit = Make("recruit", "討伐隊の新兵", 45, 11, 6,
+        "毎ターン、目の前の1体を殴る。特性は1つも持たない——数をそろえるための兵");
     public static readonly UnitDef Axeman = new()
     {
         Id = "axeman", Name = "戦斧兵", MaxHp = 55, Attack = 12, Speed = 5,
@@ -8466,7 +8467,8 @@ public static class EnemyCatalog
     // 置いた値。攻撃 8 は6体並べて 48/T——第一波(34/T)を上回るが、1体落ちるごとに 8 ずつ
     // 急落するので「早く減らした編成ほど安く抜けられる」勾配を作る。速さ 6 は新兵と同じ
     // （この波の個性は数だけ。速度で個性を作らない）。
-    public static readonly UnitDef Levy = Make("levy", "駆り出された農兵", 30, 8, 6);
+    public static readonly UnitDef Levy = Make("levy", "駆り出された農兵", 30, 8, 6,
+        "毎ターン、目の前の1体を殴る。特性は1つも持たない——HP30 の頭数");
 
     // 従軍司祭長: 精鋭波の「回復役入り」候補のための、実際に回復する司祭。
     // 既存の従軍司祭(priest)は回復役という設定コメントだけで特性を持たない（素の 40/9/8）ので、
@@ -8512,7 +8514,8 @@ public static class EnemyCatalog
     // 6体で総HP 270（農兵6の 180 の1.5倍）・総攻 36/T（同 48/T の0.75倍）——総HPで戦闘を伸ばし、
     // 総攻撃力で代金を抑える。HP 45 は実測中央値の5発圏・上位1割の1発圏で、「範囲で薙いでも
     // 1手では落ちない」側に意図的に置いた値（落ちないぶん戦闘が伸びる。H1 の主張そのもの）。
-    public static readonly UnitDef Laborer = Make("laborer", "駆り出された人足", 45, 6, 6);
+    public static readonly UnitDef Laborer = Make("laborer", "駆り出された人足", 45, 6, 6,
+        "毎ターン、目の前の1体を殴る。特性は1つも持たない——攻6 の弱い頭数");
 
     // 狂信者3種（H2 用）: 攻撃 16 を固定して個体HPだけを振った軸。攻16 は農兵の2倍で、
     // 5体並べて 80/T——1体落とすごとに 16 ずつ落ちるので、1キルの価値が農兵の2倍になる。
@@ -8528,7 +8531,8 @@ public static class EnemyCatalog
     // 傭兵崩れ（中間点）: 農兵(30/8)・人足(45/6)・狂信者(16〜32/16) の中間。36/11 は
     // 5体で総HP 180・総攻 55/T。総HP × 1体あたり攻撃 の2軸で候補を散らすための4点目で、
     // 「向きが出るとしたら軸のどちら側か」を単調性で読むために置く（H1 でも H2 でもない対照）。
-    public static readonly UnitDef Drifter = Make("drifter", "傭兵崩れ", 36, 11, 6);
+    public static readonly UnitDef Drifter = Make("drifter", "傭兵崩れ", 36, 11, 6,
+        "毎ターン、目の前の1体を殴る。特性は1つも持たない——攻11 に対して HP36 と脆い");
 
     // ここから第7期・高い波の反転（design/ENGAGEMENT_PLAN_7.md）の候補素材。
     // 第6期で「代金の向きの正体は 1手で何体落ちるか」だと分かった（攻16 固定で個体HPを
@@ -8567,7 +8571,8 @@ public static class EnemyCatalog
     // 10編成が勝率 0% に落ち、**高くつくはずの編成が集計から消える打ち切りバイアス**が
     // 乗ったため。攻撃だけを 10 に下げて 60/T にすると、同じ「6体・一撃圏の外」の盤面を
     // 全編成が勝ち切れる範囲に収められる。HP 90・速さ 5 は重甲と同値（軸を1つだけ動かす）。
-    public static readonly UnitDef ZealotSquire = Make("zealot_squire", "重甲の従卒", 90, 10, 5);
+    public static readonly UnitDef ZealotSquire = Make("zealot_squire", "重甲の従卒", 90, 10, 5,
+        "毎ターン、目の前の1体を殴る。特性は1つも持たない——HP90 の盾役");
 
     // ここから第8期・合計代金を振る（design/ENGAGEMENT_PLAN_8.md Phase V）の候補素材。
     // 狙いは「第3波を安くしつつ、範囲に高くつく向きを保つ」こと。
@@ -8942,6 +8947,31 @@ public static readonly UnitDef Inverter = MakeStill("inverter", "逆位の祭司
         new Stage("第三波・パターン3", Formation.BuildSpear(a: Archer, b: Hero, c: Knight, d: Axeman, e: Droughter)),
         new Stage("第五波・パターン3", Formation.BuildSpear(a: Seer, b: Hero2, c: Martyr, d: Lancer, e: Accuser)),
     };
+
+    /// <summary>作戦マップの敵部隊（第448期）。<paramref name="Line"/> は画面の敵部隊の札と接敵の窓に出す 1 行。</summary>
+    public sealed record MapSquad(string Id, string Name, string Line, Formation Enemy);
+
+    /// <summary>
+    /// <b>第448期</b> —— 帯 A（雑兵の部隊）。<b>既存の素の兵を組み合わせただけ</b>（数値も特性も変えない・新しい駒は 0）。
+    /// <b>`Stages` / `Columns` / 会戦には載せない</b>——作戦マップの道中を「抜いて爽快」側に寄せるための部隊で、
+    /// `compare` ／ `docs/` は `Stages` だけを数えるので 1 行も動かない（第447期の Phase 0 §6-3）。名前は仮（ポンが直す）。
+    /// </summary>
+    public static IReadOnlyList<MapSquad> MapSquads { get; } = new[]
+    {
+        new MapSquad("band_levy", "徴募兵", "数ばかりの農兵。範囲で薙げば気持ちよく崩れる",
+            Formation.Build(front1: Levy, front3: Levy, center: Laborer, back1: Levy, back3: Levy)),
+        new MapSquad("band_archers", "弓隊", "後列の狙撃手が貫いてくる",
+            Formation.Build(front1: Recruit, front3: Recruit, center: Priest, back1: Archer, back3: Archer)),
+        new MapSquad("band_shields", "盾の列", "前の重装兵が硬い。燃やす・毒・貫きで崩す",
+            Formation.Build(front1: Warden, front3: Warden, center: Recruit, back1: Recruit, back3: Recruit)),
+        new MapSquad("band_knights", "騎士の小隊", "巡礼騎士 2 枚が前で殴る。中くらいの手応え",
+            Formation.Build(front1: Knight, front3: Knight, center: Priest, back1: ZealotSquire, back3: ZealotSquire)),
+        new MapSquad("band_sellswords", "傭兵崩れ", "攻めは強いが守りは薄い。先に叩けば脆い",
+            Formation.Build(front1: Drifter, front3: Drifter, center: Axeman, back1: Drifter, back3: Axeman)),
+    };
+
+    /// <summary>作戦マップの敵部隊を Id で引く（第448期）。</summary>
+    public static MapSquad MapSquadOf(string id) => MapSquads.First(m => m.Id == id);
 
     /// <summary>検証の波（第221期）。敵専用の9枠（<see cref="EnemyWave"/>）で組む。</summary>
     public sealed record TestStage(string Name, EnemyWave Enemy);

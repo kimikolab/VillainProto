@@ -335,6 +335,19 @@ public partial class Map11Main : Node3D
             Refresh();
             if (StopReason(before) is { } why) ShowToast(why, GoldColor, 30f);
         }
+        // 第448期 §3: **1-2 の開始時**（`--map-stage=1-2` と使う）。既定の組み方で組んで作戦の地図へ。敵部隊の一覧を開き、北の弓隊の詳細を出す
+        // ——帯 A の部隊の 1 行（`EnemyCatalog.MapSquad.Line`）が一覧・詳細に出ている所。
+        else if (parts.Length > 1 && parts[1] == "bands")
+        {
+            St.UseDefaultSquads();
+            Map11Session.TakeOpening();
+            _reform = false;
+            ClearHold();
+            _showFoes = true;
+            ShowFoe(St.Nodes[0][0]);
+            Refresh();
+            GD.Print($"MAP11_CAPTURE_BANDS seed={Map11Session.Seed} foe={St.Nodes[0][0].Def.Name}");
+        }
         // 第447期 §3: **呼び戻しの窓**（`--map-stage=1-2` と使う）。既定の組み方で 2 隊を組み、南の先頭を拠点の迎撃で抜いた形にする
         // ——そのとき第1隊の前1 が倒れた形にして、北の先頭も抜いて金を足す（戦闘は回さない・相手を倒した形で精算）。
         else if (parts.Length > 1 && parts[1] == "revive")
@@ -1858,6 +1871,8 @@ public partial class Map11Main : Node3D
             + Shared(plan) + "\n\n"
             + $"[color=#{EnemyColor.ToHtml(false)}]この部隊のルール[/color]"
             + $"　[color=#8f9b90]{alive} 体 ・ HP {NodeHpPercent(node):F0}%[/color]\n"
+            // 第448期: 帯 A の部隊は 1 行の説明を先に。
+            + (Map11.SquadLineOf(node.Def.Name) is { Length: > 0 } line ? $"[color=#8f9b90]{line}[/color]\n" : "")
             + Shared(Map11.RuleLineOf(node.Def.Enemy));
         _encounterOverlay.Visible = true;
     }
@@ -2833,7 +2848,9 @@ public partial class Map11Main : Node3D
         // 第175期 §1-3: **「あと n ターンで前進」はパネルから消して盤の上へ移した。**
         string text = n.Cleared
             ? $"{prefix}{n.Def.Name} — 撃破"
-            : $"{prefix}{n.Def.Name}" + Nl + Map11.RuleLineOf(n.Def.Enemy) + Nl
+            : $"{prefix}{n.Def.Name}" + Nl
+              + (Map11.SquadLineOf(n.Def.Name) is { Length: > 0 } line ? line + Nl : "")
+              + Map11.RuleLineOf(n.Def.Enemy) + Nl
               + $"{alive} 体 ・ 残り HP {NodeHpPercent(n):F0}%"
               + (n.Cell >= Map11.PortalCell ? $"（{Map11.PortalName}）" : "");
         var button = new Button

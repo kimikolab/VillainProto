@@ -1840,6 +1840,9 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
         # (z) 倒れた駒は候補に出ない・呼び戻すと HP 50% で手札へ ／ (aa) 4 隊目の枠 12 と無料の 1 枚 ／ (ab) 刻 12 で時間切れ（勇者の予告は出ない）＋
         # 3 方針 × 100 seed（器具は穴があれば先に呼び戻す・報告のみ）。約 70 秒
         # 絵: `res://Map11Main.tscn -- --map-stage=1-2 --map-seed=0 --map11-capture=<png>,revive`（呼び戻しの窓）・`,outpost` で敵の札の「＋6」が出た地図
+        # **第448期**: (z)〜(ab) と第447期の表は第447期の 1-2（`Stage12H447`）で回す。遊ぶ 1-2（`Stage12`・道中を帯 A（`EnemyCatalog.MapSquads`）に）に
+        # (ac) 7 部隊と湧き 3 種の中身が表どおり ／ (ad) 波ルール持ちは北の中間拠点の 1 部隊だけ ＋ 3 方針 × 100 seed と部隊ごとの 1 戦あたりの失った枚数（報告のみ）。約 90 秒
+        # 絵: `res://Map11Main.tscn -- --map-stage=1-2 --map-seed=0 --map11-capture=<png>,bands`（1-2 の開始時・敵部隊の一覧に部隊の 1 行）
     Godot_console.exe --path DemoApp --headless -- --map11-phase176
         # **第176期 Phase 0**: Q0-1〜Q0-5（`PortalOn = false` が第175期の 18 量と一致するか ／
         # 重なりと同点の割り方 ／ 湧いた部隊を満タンで作る口 ／ 方針の手順 ／ 走行時間）。約 1 秒

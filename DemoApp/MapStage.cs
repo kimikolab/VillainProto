@@ -265,11 +265,12 @@ public sealed class MapStage
     };
 
     /// <summary>
-    /// 1-2（第447期・遊ぶ版）。第446期（<see cref="Stage12H446"/>）の金の遊びの仕上げ（<see cref="GoldRule.V447"/>）:
+    /// 1-2 の第447期の姿。第446期（<see cref="Stage12H446"/>）の金の遊びの仕上げ（<see cref="GoldRule.V447"/>）:
     /// <b>倒れた駒を呼び戻す（6・HP 50%）</b> ／ リロール 1 → <b>2</b> ／ <b>隊の枠は 4 つ</b>（3 隊目 8 → 4 隊目 12・どちらも無料で 1 枚つき）／
     /// 勇者の予告をやめ、<b>「12 作戦ターン以内に敵の拠点を制圧」</b>の勝ち条件の文に（上限で「時間切れ」・<see cref="TimeLimit"/>）。
+    /// 第448期からは回帰の基準だけが使う——遊ぶ 1-2 は <see cref="Stage12"/>。
     /// </summary>
-    public static MapStage Stage12 { get; } = new()
+    public static MapStage Stage12H447 { get; } = new()
     {
         Id = Stage12H446.Id,
         Title = Stage12H446.Title,
@@ -286,6 +287,47 @@ public sealed class MapStage
         TimeLimit = true,
         WinOnCapture = Stage12H446.WinOnCapture,
         Gold = GoldRule.V447(),
+    };
+
+    /// <summary>作戦マップの敵部隊（第448期・`EnemyCatalog.MapSquads`）を区画にする。<paramref name="backdrop"/> は戦闘の背景の波（0〜4・表示だけ）。</summary>
+    private static Map11.RoadNode Band(int lane, int index, string id, int backdrop)
+    {
+        EnemyCatalog.MapSquad m = EnemyCatalog.MapSquadOf(id);
+        return new(lane, index, m.Name, m.Enemy, backdrop);
+    }
+
+    /// <summary>
+    /// 1-2（第448期・遊ぶ版）。<b>道中を帯 A（雑兵の部隊・`EnemyCatalog.MapSquads`）に置き直した</b>——「第2〜第4の波ばかりで制限のある戦いばかり」（ポン）を、
+    /// 抜いて爽快な側へ。<b>封じる敵（波ルール持ち）は北の中間拠点の 1 部隊だけ</b>（第二波・先遣・粛）。第三波・第五波・軛は 1-2 から外した（<see cref="Stage12H447"/> に残る）。
+    /// 盤・金・期限・隊の枠は第447期のまま。中と南の中間拠点（騎士の小隊・傭兵崩れ）は<b>仮</b>（第449期に帯 B と入れ替える）。
+    /// </summary>
+    public static MapStage Stage12 { get; } = new()
+    {
+        Id = Stage12H447.Id,
+        Title = Stage12H447.Title,
+        Board = Stage12H447.Board,
+        Lanes = new IReadOnlyList<Map11.RoadNode>[]
+        {
+            new[] { Band(0, 0, "band_archers", 2), Node(0, 1, EnemyCatalog.Vanguards[0], 1) },
+            new[] { Node(1, 0, EnemyCatalog.Stages[0], 0), Band(1, 1, "band_knights", 1) },
+            new[] { Band(2, 0, "band_shields", 3), Band(2, 1, "band_sellswords", 2) },
+        },
+        LaneNames = Stage12H447.LaneNames,
+        Spawn = lane => lane switch
+        {
+            0 => (EnemyCatalog.MapSquadOf("band_levy").Enemy, EnemyCatalog.MapSquadOf("band_levy").Name, 0),
+            1 => (EnemyCatalog.Stages[0].Enemy, EnemyCatalog.Stages[0].Name, 0),
+            _ => (EnemyCatalog.MapSquadOf("band_sellswords").Enemy, EnemyCatalog.MapSquadOf("band_sellswords").Name, 2),
+        },
+        Portal = Stage12H447.Portal,
+        Time = Stage12H447.Time,
+        Arrival = Stage12H447.Arrival,
+        Reserve = new ReserveRule(true, EnemyCatalog.MapSquadOf("band_knights").Enemy, EnemyCatalog.MapSquadOf("band_knights").Name, 1),
+        SquadCap = Stage12H447.SquadCap,
+        TurnCap = Stage12H447.TurnCap,
+        TimeLimit = Stage12H447.TimeLimit,
+        WinOnCapture = Stage12H447.WinOnCapture,
+        Gold = Stage12H447.Gold,
     };
 
     /// <summary>選べるステージ（編成画面の選択の並び）。</summary>
