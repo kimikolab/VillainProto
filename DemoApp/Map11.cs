@@ -160,6 +160,12 @@ public static class Map11
     /// バサ・ヨミ・ウツ・ドルガで、<b>看板に偽りがあった</b>（`Id` は `hane` のまま。
     /// 器具（第168期）の行名と突き合わせるときに追えなくなるため）。
     /// </summary>
+    /// <summary>
+    /// 4 隊目の定義（第447期・<b>隊の枠を 4 つにした盤だけが使う</b>）。中身は空——呼んだ駒で組む。
+    /// <see cref="Squads"/>（器具が 3 隊として読む）には入れない。
+    /// </summary>
+    public static readonly SquadDef ExtraSquad = new("extra", "第4隊", "呼んだ駒で組む隊", Formation.Build());
+
     public static SquadDef[] Squads { get; } =
     {
         new("kado", "カド隊", "反撃・棘", RowOf(RowKado)),
@@ -546,7 +552,7 @@ public sealed class Map11State
     /// <summary>いまの金。<b>金の無い盤では 0 のまま</b>。</summary>
     public int Gold { get; private set; }
     /// <summary>金の出入り（増えた・使った順・画面のトーストと結果画面が読む）。</summary>
-    public sealed record GoldEvent(int Amount, string Reason);
+    public sealed record GoldEvent(int Amount, string Reason, int Cell = -1);
     public List<GoldEvent> GoldLog { get; } = new();
     /// <summary>呼べる候補（<see cref="GoldRule.Offers"/> 枚・<b>窓を閉じても変わらない</b>・買うとその位置に列の次の 1 枚）。</summary>
     public List<UnitDef> Offers { get; } = new();
@@ -563,6 +569,14 @@ public sealed class Map11State
     public int Rerolls { get; private set; }
     /// <summary>無料で呼べる残り（第446期: 枠を買うと 1）。<b>残っているあいだは呼ぶ値段が 0</b>。</summary>
     public int FreePicks { get; private set; }
+    /// <summary>
+    /// 倒れた駒（第447期・倒れた順）。<b>呼び戻しのある盤（<see cref="GoldRule.Revive"/> ＞ 0）だけ</b>記録する。
+    /// 戦闘の境界で倒れた駒は隊から外れる（`EngagementEngine.CrossBoundary` は生き残りだけを返す）ので、ここが唯一の記録。召喚された駒は入れない。
+    /// </summary>
+    public List<UnitState> FallenUnits { get; } = new();
+    /// <summary>呼び戻した枚数（測るためだけの計数）。</summary>
+    public int Revives { get; private set; }
+    private static readonly HashSet<string> RosterIds = UnitCatalog.All.Select(d => d.Id).ToHashSet();
     /// <summary>開始の手札の引きで保証 3 条件を満たせたか（満たせなければ結果画面に印）。到着を切った通しでは真。</summary>
     public bool OpeningOk { get; } = true;
     /// <summary>開始の手札の引き直しの回数。</summary>
@@ -621,7 +635,8 @@ public sealed class Map11State
                 .Select(One)
                 .ToList();
         // 第442期 §0-3: 隊の数はステージが持つ（`SquadCap`・1-1 は 3 のまま）。後ろの隊は作らない。
-        Squads = Map11.Squads.Take(Stage.SquadCap).Select((d, i) => new Squad
+        // 第447期: 隊の枠が 4 つの盤は 4 隊目の定義（空）を足す。
+        Squads = Map11.Squads.Append(Map11.ExtraSquad).Take(Stage.SquadCap).Select((d, i) => new Squad
         {
             Def = d,
             Graph = Graph,
@@ -661,8 +676,36 @@ public sealed class Map11State
 
     /// <summary>その駒（の定義）がいま盤上（どの隊にでも・倒れていても）か手札にいるか。<b>同じキャラは盤上に 1 体まで</b>（第445期）。</summary>
     public bool OnBoardOrHand(UnitDef d)
-        => Bench.Any(u => u.Def.Id == d.Id)
-           || Squads.Any(q => q.Units is { } u ? u.Any(x => x.Def.Id == d.Id) : q.Def.F.Occupied().Any(o => o.Def.Id == d.Id));
+        => Stage.Gold.Revive > 0
+            // 第447期: 呼び戻しのある盤では、盤上と手札は<b>生きている駒だけ</b>を数え、倒れた駒は呼び戻しの口（<see cref="FallenUnits"/>）にいる——候補には出ない。
+            ? AliveAnywhere(d) || FallenUnits.Any(u => u.Def.Id == d.Id)
+            : Bench.Any(u => u.Def.Id == d.Id)
+              || Squads.Any(q => q.Units is { } u ? u.Any(x => x.Def.Id == d.Id) : q.Def.F.Occupied().Any(o => o.Def.Id == d.Id));
+
+    /// <summary>その駒が生きて盤上（どの隊でも）か手札にいるか（第447期）。</summary>
+    public bool AliveAnywhere(UnitDef d)
+        => Bench.Any(u => u.IsAlive && u.Def.Id == d.Id)
+           || Squads.Any(q => q.Units is { } u ? u.Any(x => x.IsAlive && x.Def.Id == d.Id) : !q.Lost && q.Def.F.Occupied().Any(o => o.Def.Id == d.Id));
+
+    /// <summary>呼び戻せるか（倒れた駒の <paramref name="index"/> 番目）。同じキャラが生きていれば戻せない。</summary>
+    public bool CanRevive(int index)
+        => CanTrade && Stage.Gold.Revive > 0 && index >= 0 && index < FallenUnits.Count && Gold >= Stage.Gold.Revive
+           && !AliveAnywhere(FallenUnits[index].Def);
+
+    /// <summary>倒れた駒を呼び戻す（第447期 §0-1）。HP は最大の <see cref="GoldRule.RevivePercent"/>% で手札に入る。候補の列には混ぜない。</summary>
+    public bool Revive(int index)
+    {
+        if (!CanRevive(index)) return false;
+        UnitState u = FallenUnits[index];
+        Spend(Stage.Gold.Revive, $"{u.Def.Name}を呼び戻した");
+        FallenUnits.RemoveAt(index);
+        foreach (Squad q in Squads) q.Units?.Remove(u);
+        Bench.Remove(u);
+        u.Hp = Math.Max(1, u.MaxHp * Stage.Gold.RevivePercent / 100);
+        Bench.Add(u);
+        Revives++;
+        return true;
+    }
 
     /// <summary>候補の列から、盤上・手札・候補にいない次の 1 枚（尽きたら null）。飛ばした駒は列に戻さない。</summary>
     private UnitDef? NextOffer()
@@ -696,14 +739,20 @@ public sealed class Map11State
         return true;
     }
 
-    /// <summary>3 隊目の枠を買えるか。</summary>
-    public bool CanBuySlot => CanTrade && SquadCap < Squads.Length && Gold >= Stage.Gold.Slot;
+    /// <summary>次の枠の値段（第447期: 枠を 1 つ買うごとに <see cref="GoldRule.SlotStep"/> 上がる）。</summary>
+    public int SlotPrice => SlotPriceFor(SquadCap);
+
+    /// <summary>隊 <paramref name="squadIndex"/>（0 から）の枠の値段（画面の閉じた隊の札が読む）。</summary>
+    public int SlotPriceFor(int squadIndex) => Stage.Gold.Slot + Math.Max(0, squadIndex - Stage.Gold.StartSquads) * Stage.Gold.SlotStep;
+
+    /// <summary>次の隊の枠を買えるか。</summary>
+    public bool CanBuySlot => CanTrade && SquadCap < Squads.Length && Gold >= SlotPrice;
 
     /// <summary>隊の枠を 1 つ開ける（第445期 §0-1・2 → 3）。</summary>
     public bool BuySlot()
     {
         if (!CanBuySlot) return false;
-        Spend(Stage.Gold.Slot, $"{SquadCap + 1}隊目の枠を開けた");
+        Spend(SlotPrice, $"{SquadCap + 1}隊目の枠を開けた");
         SquadCap++;
         // 第446期: 買うとその場で候補から 1 枚を無料で選べる（「枠を先に買うと空のまま」を規則で潰す）。
         if (Stage.Gold.SlotFreePick) FreePicks++;
@@ -745,11 +794,11 @@ public sealed class Map11State
         return true;
     }
 
-    private void Earn(int amount, string reason)
+    private void Earn(int amount, string reason, int cell = -1)
     {
         if (!Stage.Gold.On || amount <= 0) return;
         Gold += amount;
-        GoldLog.Add(new GoldEvent(amount, reason));
+        GoldLog.Add(new GoldEvent(amount, reason, cell));
     }
 
     private void Spend(int amount, string reason)
@@ -784,6 +833,12 @@ public sealed class Map11State
 
     /// <summary>勇者パーティーが現れるまでの刻（予告の札「あと n 刻」）。予告の無い盤では null。</summary>
     public int? HeroTurnsLeft => Stage.HeroAtCap && Time.On ? Math.Max(0, Stage.TurnCap - Turn) : null;
+
+    /// <summary>「n 作戦ターン以内に制圧」の残り（第447期・勝ち条件の文を出す盤だけ）。</summary>
+    public int? TimeLimitLeft => Stage.TimeLimit && Time.On ? Math.Max(0, Stage.TurnCap - Turn) : null;
+
+    /// <summary>時間切れで負けた（第447期・勝ち条件の文を出す盤で、上限の刻に勝っていない）。</summary>
+    public bool TimeUp => Stage.TimeLimit && Time.On && Turn >= Stage.TurnCap && !Won && !Fallen;
 
     /// <summary>
     /// 勝ち。<b>拠点ありでは「制圧した ＋ 盤上の敵部隊が 0」</b>（第176期 §1-4）
@@ -906,7 +961,7 @@ public sealed class Map11State
                 HeldOutposts.Add(cell);
                 OutpostCaptures++;
                 Deliver(Stage.Arrival.OnOutpost, Graph[cell].Name, $"{Graph[cell].Name}を取った");
-                Earn(Stage.Gold.Outpost, $"{Graph[cell].Name}を取った");
+                Earn(Stage.Gold.Outpost, $"{Graph[cell].Name}を取った", cell);
             }
             else if (foe && mine < 0)
             {
@@ -1255,6 +1310,10 @@ public sealed class Map11State
 
         var aliveP = pu.Where(u => u.IsAlive).ToList();
         var aliveE = eu.Where(u => u.IsAlive).ToList();
+        // 第447期: 呼び戻しのある盤では、この戦闘で倒れた駒を記録する（境界で隊から外れるので、ここで拾わないと消える）。
+        if (Stage.Gold.Revive > 0)
+            foreach (UnitState u in pu)
+                if (!u.IsAlive && RosterIds.Contains(u.Def.Id) && !FallenUnits.Contains(u)) FallenUnits.Add(u);
         node.HpNow = aliveE.Sum(u => u.Hp);
 
         if (aliveE.Count == 0)
@@ -1289,7 +1348,7 @@ public sealed class Map11State
             Deliver(Stage.Arrival.OnKill, intercept ? "拠点" : DeliveryPlace(squadIndex), $"{node.Def.Name}を抜いた");
         // 第445期: 抜いた見返りの金（湧いた部隊は安い）。
         if (node.Cleared)
-            Earn(node.FromPortal && !node.IsReserve ? Stage.Gold.SpawnKill : Stage.Gold.Kill, $"{node.Def.Name}を抜いた");
+            Earn(node.FromPortal && !node.IsReserve ? Stage.Gold.SpawnKill : Stage.Gold.Kill, $"{node.Def.Name}を抜いた", node.Pos);
     }
 
     // =============================================================================

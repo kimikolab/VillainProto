@@ -55,6 +55,13 @@ using System.Linq;
 //   (x) リロールで候補が入れ替わり、金が 1 減る（捨てた候補は列の最後へ・盤上と手札の駒は出ない）
 //   (y) 枠を買うと候補から 1 枚が無料で入り、3 隊目に置ける
 //   呼ぶ {3, 4, 5} × 枠 {6, 8} の 6 点 × 3 方針 × 100 seed（器具はリロールしない）の表（報告だけ）
+// **第447期からは (w)〜(y) と第446期の表は第446期の盤（`MapStage.Stage12H446`）で回す**（回帰の基準）。
+//
+// 第447期（§1・遊ぶ 1-2 ＝ `MapStage.Stage12`・呼び戻す 6・リロール 2・隊の枠 4 つ（8 → 12）・「12 作戦ターン以内に制圧」）:
+//   (z) 倒れた駒は候補に出ない・「呼び戻す」で HP 50% で手札に戻り金が 6 減る
+//   (aa) 4 隊目の枠が 12 で買え、無料の 1 枚が入る
+//   (ab) 刻 12 で「時間切れ」（勇者の予告は出ない）
+//   3 方針 × 100 seed（器具は穴があるとき、倒れた駒がいれば先に呼び戻す）の表（報告だけ）
 //
 // 「貪欲」は第438・440期の門と同じ選び方（各隊は盤の上でいちばん近い敵部隊へ・敵が尽きたら敵の拠点へ）。
 // 自分で組む通し（到着あり）で回す: 開始の 10 枚を第1隊・第2隊に 5 枚ずつ、届いた駒は拠点にいる第3隊へ。
@@ -254,6 +261,7 @@ public static class Map12ChangeSmoke
         Phase444(write, Req);
         Phase445(write, Req);
         Phase446(write, Req);
+        Phase447(write, Req);
         return ok;
     }
 
@@ -822,9 +830,9 @@ public static class Map12ChangeSmoke
     /// <summary>第446期 —— 遊ぶ 1-2（`MapStage.Stage12`）の (w)(x)(y) と、値の 6 点の表（報告だけ）。</summary>
     private static void Phase446(Action<string> write, Action<bool, string> Req)
     {
-        MapStage stage = MapStage.Stage12;
+        MapStage stage = MapStage.Stage12H446;
         GoldRule gr = stage.Gold;
-        write("  ---- 第446期（遊ぶ 1-2・開始 8・呼ぶ 4・枠 8（無料で 1 枚）・リロール 1・売る ＋2） ----");
+        write("  ---- 第446期の 1-2（`Stage12H446`・開始 8・呼ぶ 4・枠 8（無料で 1 枚）・リロール 1・売る ＋2） ----");
         void Win(Map11State st, int squad, Map11State.Node node, bool intercept)
         {
             var prep = intercept ? st.PrepareIntercept(squad, node) : st.Prepare(squad, node);
@@ -935,6 +943,115 @@ public static class Map12ChangeSmoke
         Req(up, "既定（呼ぶ 4・枠 8）は「3 隊目が 5 枚になった率」が 3 方針とも第445期より上がる");
     }
 
+    /// <summary>第447期 —— 遊ぶ 1-2（`MapStage.Stage12`）の (z)(aa)(ab) と、3 方針の表（報告だけ）。</summary>
+    private static void Phase447(Action<string> write, Action<bool, string> Req)
+    {
+        MapStage stage = MapStage.Stage12;
+        GoldRule gr = stage.Gold;
+        write("  ---- 第447期（遊ぶ 1-2・呼び戻す 6・リロール 2・隊の枠 4 つ（8 → 12）・12 作戦ターン以内に制圧） ----");
+        // 相手を倒した形で精算する（seed に依らない）。lose に入れた味方は倒れた形にする。
+        void Win(Map11State st, int squad, Map11State.Node node, bool intercept, int lose = -1)
+        {
+            var prep = intercept ? st.PrepareIntercept(squad, node) : st.Prepare(squad, node);
+            foreach (UnitState u in prep!.Value.Enemies) u.Hp = 0;
+            if (lose >= 0) prep.Value.Players[lose].Hp = 0;
+            st.Resolve(squad, node, true, intercept);
+        }
+
+        // ---- (z) 倒れた駒・呼び戻す ----
+        {
+            var st = new Map11State(0, stage.Time, stage.Portal, draft: true, stage: stage);
+            st.UseDefaultSquads();
+            Map11State.Node lead = st.Nodes[2][0];
+            lead.Pos = st.Graph.Home;
+            UnitState victim = st.Squads[0].Units![0];
+            Win(st, 0, lead, true, lose: 0);
+            bool recorded = st.FallenUnits.Count == 1 && ReferenceEquals(st.FallenUnits[0], victim) && !st.Squads[0].Units!.Contains(victim);
+            int offered = 0;
+            for (int k = 0; k < 6; k++) { if (st.Offers.Any(o => o.Id == victim.Def.Id)) offered++; st.Reroll(); }
+            // 金を足して（敵部隊をもう 1 つ抜いた形）呼び戻す。
+            Map11State.Node north = st.Nodes[0][0];
+            north.Pos = st.Graph.Home;
+            Win(st, 1, north, true);
+            int g0 = st.Gold, bench0 = st.Bench.Count;
+            bool back = st.Revive(0);
+            UnitState? got = st.Bench.LastOrDefault();
+            write($"  (z) {victim.Def.Name} が倒れた: 記録 {recorded}・リロール 6 回で候補に出た {offered} 回 → 呼び戻す {back}: 金 {g0} → {st.Gold}・手札 {bench0} → {st.Bench.Count}"
+                + $"・HP {got?.Hp}/{got?.MaxHp}・倒れた駒 {st.FallenUnits.Count} ／ 第446期の盤は呼び戻しが無い {MapStage.Stage12H446.Gold.Revive == 0}");
+            Req(recorded && offered == 0 && back && st.Gold == g0 - gr.Revive && ReferenceEquals(got, victim) && got!.Hp == got.MaxHp * gr.RevivePercent / 100
+                && st.FallenUnits.Count == 0 && MapStage.Stage12H446.Gold.Revive == 0,
+                $"(z) 倒れた駒は候補に出ない・「呼び戻す」で HP {gr.RevivePercent}% で手札に戻り金が {gr.Revive} 減る（第446期までの盤には無い）");
+        }
+
+        // ---- (aa) 4 隊目の枠 ----
+        {
+            var st = new Map11State(0, stage.Time, stage.Portal, draft: true, stage: stage);
+            st.UseDefaultSquads();
+            int p3 = st.SlotPrice;
+            bool b3 = st.BuySlot();
+            bool f3 = st.Recruit(0);
+            // 金を貯める（敵部隊を抜いた形）。
+            foreach (Map11State.Node n in st.Nodes.SelectMany(r => r).Take(3)) { n.Pos = st.Graph.Home; Win(st, 1, n, true); }
+            int p4 = st.SlotPrice, g0 = st.Gold;
+            bool b4 = st.BuySlot();
+            int free = st.FreePicks;
+            string name = st.Offers[0].Name;
+            bool f4 = st.Recruit(0);
+            int idx = st.Bench.FindIndex(u => u.Def.Name == name);
+            bool placed = idx >= 0 && st.SwapWithBench(3, FormationRules.PlayableSlots[0], idx);
+            write($"  (aa) 隊 {st.Squads.Length} つ（定義 {string.Join("・", st.Squads.Select(q => q.Def.Name))}）: 3 隊目の枠 {p3} {b3}・無料 {f3} → 金 {g0} で 4 隊目の枠 {p4} {b4}・無料 {free} → {name} {f4}"
+                + $" → 4 隊目に置いた {placed}・使える隊 {st.SquadCap}・金 {st.Gold}");
+            Req(st.Squads.Length == 4 && p3 == gr.Slot && b3 && f3 && p4 == gr.Slot + gr.SlotStep && p4 == 12 && b4 && free == 1 && f4 && st.Gold == g0 - p4
+                && placed && st.SquadCap == 4 && st.CanSend(3),
+                "(aa) 4 隊目の枠が 12 で買え（3 隊目 8 → 4 隊目 12）、無料の 1 枚が入って 4 隊目に置ける");
+        }
+
+        // ---- (ab) 12 作戦ターンで時間切れ ----
+        {
+            var st = new Map11State(0, stage.Time, stage.Portal, draft: true, stage: stage);
+            st.UseDefaultSquads();
+            foreach (Map11State.Node n in st.Nodes.SelectMany(r => r)) n.Cleared = true;
+            var left = new List<int> { st.TimeLimitLeft ?? -1 };
+            for (int k = 0; k < 20 && !st.Finished; k++) { st.AdvanceFoes(); left.Add(st.TimeLimitLeft ?? -1); }
+            var old = new Map11State(0, MapStage.Stage12H446.Time, MapStage.Stage12H446.Portal, draft: true, stage: MapStage.Stage12H446);
+            write($"  (ab) 期限: {string.Join(" → ", left)} ／ 刻 {st.Turn} で終わり・時間切れ {st.TimeUp}・勇者の予告 {(st.HeroTurnsLeft is null ? "なし" : "あり")}"
+                + $"・勇者が着いた {st.HeroArrived} ／ 第446期の盤: 勇者の予告 {(old.HeroTurnsLeft is null ? "なし" : "あり")}・期限の文 {(old.TimeLimitLeft is null ? "なし" : "あり")}");
+            Req(stage.TurnCap == 12 && left[0] == 12 && st.Turn == 12 && st.Finished && st.TimeUp && !st.Won && st.HeroTurnsLeft is null && !st.HeroArrived
+                && old.HeroTurnsLeft is not null && old.TimeLimitLeft is null,
+                "(ab) 刻 12 で時間切れ（勇者の予告は出ない・「12 作戦ターン以内に制圧」の残りが 12 から減る）。第446期の盤は勇者の予告のまま");
+        }
+
+        // ---- 報告のみ: 3 方針 × 100 seed ----
+        var boards = new[] { ("第446期の既定", MapStage.Stage12H446), ("第447期の既定", stage) };
+        var policies = new[] { ("1 隊残す", true, false, false), ("分担＋戻り番", true, true, false), ("籠城", true, true, true) };
+        write("");
+        write("  | 盤 | 方針 | 踏破 | 陥落 | 時間切れ | 制圧の刻（中央値） | 呼んだ枚数（平均） | 呼び戻した枚数（平均・最大） | 呼び戻した通し | 3 隊目を開けた | 4 隊目を開けた | 金の余り（中央値） |");
+        write("  |---|---|--:|--:|--:|--:|--:|---|--:|--:|--:|--:|");
+        int crashed = 0;
+        foreach (var (bname, board) in boards)
+            foreach (var (pname, guard, split, turtle) in policies)
+            {
+                var runs = new List<Once>();
+                for (int seed = 0; seed < Seeds; seed++)
+                {
+                    try { runs.Add(Greedy(seed, board, guard, split, turtle)); }
+                    catch (Exception ex)
+                    {
+                        crashed++;
+                        if (crashed <= 3) write($"  × 第447期 {bname} {pname} seed {seed}: {ex.GetType().Name}: {ex.Message}");
+                    }
+                }
+                if (runs.Count == 0) continue;
+                double P(Func<Once, bool> f) => 100.0 * runs.Count(f) / runs.Count;
+                var cap = runs.Where(r => r.Captured).Select(r => r.CapturedTurn).OrderBy(x => x).ToArray();
+                var gold = runs.Select(r => r.GoldLeft).OrderBy(x => x).ToArray();
+                write($"  | {bname} | {pname} | {P(r => r.Won):F0} | {P(r => r.Fallen):F0} | {P(r => r.TimedOut):F0} | {(cap.Length == 0 ? "—" : cap[cap.Length / 2].ToString())} | "
+                    + $"{runs.Average(r => r.Recruits):F2} | {runs.Average(r => r.Revives):F2}・{runs.Max(r => r.Revives)} | {P(r => r.Revives > 0):F0} | "
+                    + $"{P(r => r.SquadsOpen >= 3):F0} | {P(r => r.SquadsOpen >= 4):F0} | {gold[gold.Length / 2]} |");
+            }
+        Req(crashed == 0, $"第447期の 2 つの盤 × 3 方針を {Seeds} seed ずつ回して落ちない（数字は報告のみ・線は置かない）");
+    }
+
     /// <summary>手札の先頭から <paramref name="count"/> 枚を、その隊の空いた席（前1 から）へ配る。</summary>
     private static void Deal(Map11State st, int squad, int count)
     {
@@ -974,7 +1091,8 @@ public static class Map12ChangeSmoke
                                         bool ReserveAtHome, bool ReserveCleared, int Arrived, bool ThirdOut, int Moves, int Battles,
                                         int Refilled, bool DoubleAtHome, bool WipedOnSecond,
                                         bool TimedOut = false, int Outposts = 0, bool Released = false,
-                                        int Recruits = 0, int GoldLeft = 0, bool SlotBought = false, bool ThirdFull = false);
+                                        int Recruits = 0, int GoldLeft = 0, bool SlotBought = false, bool ThirdFull = false,
+                                        int Revives = 0, int SquadsOpen = 0);
 
     /// <summary>
     /// 貪欲方針で 1 マップ（自分で組む通し・到着あり）。開始の 10 枚を第1隊・第2隊へ 5 枚ずつ、届いた駒は拠点にいる第3隊へ配る。
@@ -987,6 +1105,7 @@ public static class Map12ChangeSmoke
     {
         int recruits = 0;
         bool slotBought = false, thirdFull = false;
+        int revives = 0;
         var st = new Map11State(seed, stage.Time, stage.Portal, draft: true, stage: stage);
         var g = st.Graph;
         Deal(st, 0, 5);
@@ -1016,7 +1135,8 @@ public static class Map12ChangeSmoke
         {
             Map11State.Squad s = st.Squads[i];
             if (s.Lost) return Dest.Home;
-            if (i == 2 && s.Pos == g.Home && (stage.Gold.On ? s.Units?.Count(x => x.IsAlive) ?? 0 : s.Units?.Count ?? 0) < 5
+            if ((i == 2 || (stage.Gold.On && i >= stage.Gold.StartSquads)) && s.Pos == g.Home
+                && (stage.Gold.On ? s.Units?.Count(x => x.IsAlive) ?? 0 : s.Units?.Count ?? 0) < 5
                 && (st.Arrivals.Count > 0 || stage.Gold.On)) return Dest.Home;
             if (split && i == homeGuard) return Dest.Home;
             // 第444期: 籠城——全隊（失った隊を除く）が生きた 5 枚になるまで拠点で待つ。そろったら分担＋戻り番で出る。
@@ -1049,6 +1169,9 @@ public static class Map12ChangeSmoke
                 int Holes() => Enumerable.Range(0, st.SquadCap).Where(st.CanReform)
                     .Sum(k => 5 - (st.Squads[k].Units?.Count(x => x.IsAlive) ?? 5));
                 int Spare() => st.Bench.Count(x => x.IsAlive);
+                // 第447期: 倒れた駒がいれば、呼ぶより先に呼び戻す（器具は軸の芯を見分けないので、倒れた順に）。
+                while (Holes() > Spare() && Enumerable.Range(0, st.FallenUnits.Count).FirstOrDefault(st.CanRevive, -1) is var rv && rv >= 0)
+                { st.Revive(rv); revives++; }
                 while (Holes() > Spare() && st.Recruit(0)) recruits++;
                 if (Holes() <= Spare() && st.BuySlot()) slotBought = true;
                 while (Holes() > Spare() && st.Recruit(0)) recruits++;
@@ -1096,6 +1219,6 @@ public static class Map12ChangeSmoke
                         reserveFought, reserveAtHome, reserve?.Cleared == true, st.ArrivedCount,
                         st.Squads.Length > 2 && st.Squads[2].Deployed, moves, st.Battles, refilled,
                         doubleAtHome, wipedOnSecond, st.HeroArrived || (!st.Won && !st.Fallen && st.Turn >= stage.TurnCap),
-                        st.OutpostCaptures, released, recruits, st.Gold, slotBought, thirdFull);
+                        st.OutpostCaptures, released, recruits, st.Gold, slotBought, thirdFull, revives, st.SquadCap);
     }
 }

@@ -363,7 +363,7 @@ public partial class Map11Main
             string order = s.Lost ? "失われた" : OrderText(s.Index);
             Button b = _squadButtons[s.Index];
             b.Text = _reform ? info + Nl + (St.CanReform(s.Index) ? $"空席 {FormationRules.PlayableSlots.Length - SeatsOf(s.Index).Count}"
-                    : St.IsLocked(s.Index) ? $"枠を開けると使える（金 {St.Stage.Gold.Slot}）" : "道の上・編成不可")
+                    : St.IsLocked(s.Index) ? $"枠を開けると使える（金 {St.SlotPriceFor(s.Index)}）" : "道の上・編成不可")
                 : info + "　" + order;
             b.TooltipText = info + "　" + order;
         }

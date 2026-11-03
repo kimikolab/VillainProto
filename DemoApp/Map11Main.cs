@@ -335,6 +335,28 @@ public partial class Map11Main : Node3D
             Refresh();
             if (StopReason(before) is { } why) ShowToast(why, GoldColor, 30f);
         }
+        // 第447期 §3: **呼び戻しの窓**（`--map-stage=1-2` と使う）。既定の組み方で 2 隊を組み、南の先頭を拠点の迎撃で抜いた形にする
+        // ——そのとき第1隊の前1 が倒れた形にして、北の先頭も抜いて金を足す（戦闘は回さない・相手を倒した形で精算）。
+        else if (parts.Length > 1 && parts[1] == "revive")
+        {
+            St.UseDefaultSquads();
+            Map11Session.TakeOpening();
+            void WinAt(Map11State.Node node, int squad, bool loseFront)
+            {
+                node.Pos = St.Graph.Home;
+                if (St.PrepareIntercept(squad, node) is not { } prep) return;
+                foreach (UnitState e in prep.Enemies) e.Hp = 0;
+                if (loseFront) prep.Players[0].Hp = 0;
+                St.Resolve(squad, node, true, intercept: true);
+            }
+            WinAt(St.Nodes[2][0], 0, loseFront: true);
+            WinAt(St.Nodes[0][0], 1, loseFront: false);
+            _selected = 0;
+            _reform = true;
+            ClearHold();
+            Refresh();
+            GD.Print($"MAP11_CAPTURE_REVIVE seed={Map11Session.Seed} fallen={St.FallenUnits.Count} gold={St.Gold}");
+        }
         // 第446期 §3: **枠を買った直後の「無料で 1 枚」**（`--map-stage=1-2` と使う）。開始の金 8 で、出撃前に 3 隊目の枠を買う。
         else if (parts.Length > 1 && parts[1] == "freepick")
         {
@@ -1574,6 +1596,7 @@ public partial class Map11Main : Node3D
         if (St.OutpostLosses > before.OutpostLosses) now.Add("中間拠点を取り返された");
         if (Map11Session.DeliveryText(St.Deliveries.Skip(before.Rewards)) is { } got) now.Add(got);
         if (St.HeroTurnsLeft is 3 or 1 && St.Turn > 0 && !St.Finished) now.Add($"勇者パーティーが あと {St.HeroTurnsLeft} 刻で現れる");
+        if (St.TimeLimitLeft is 3 or 1 && St.Turn > 0 && !St.Finished) now.Add($"制圧の期限まで あと {St.TimeLimitLeft} 作戦ターン");
         if (before.ReserveDepart < 0 && St.ReserveDepartTurn >= 0 && St.Reserve is { } rv)
             now.Add($"予備隊（{rv.Def.Name}）が {St.LaneName(rv.Def.Road)} へ向かう（拠点まで {St.ReserveEta ?? 0} 刻）");
         string? old = StopReason440(before);
@@ -1947,7 +1970,7 @@ public partial class Map11Main : Node3D
         if (!_reform && !St.CanReform(_selected))
         {
             ShowToast(St.IsLocked(_selected)
-                ? $"{St.Squads[_selected].Label} はまだ使えません（組み直しの窓で枠を開ける: 金 {St.Stage.Gold.Slot}）"
+                ? $"{St.Squads[_selected].Label} はまだ使えません（組み直しの窓で枠を開ける: 金 {St.SlotPrice}）"
                 : $"{St.Squads[_selected].Label} は拠点にいません（道の上の隊は組み直せません）",
                       EnemyColor, 3.0f);
             return;
@@ -2176,18 +2199,42 @@ public partial class Map11Main : Node3D
         }
         if (St.SquadCap < St.Squads.Length)
         {
-            Button slot = UiKit.ActionButton($"{St.SquadCap + 1}隊目の枠 {g.Slot}"
-                + (g.SlotFreePick ? "（1 枚無料つき）" : "") + Short(g.Slot), UiKit.Muted);
+            Button slot = UiKit.ActionButton($"{St.SquadCap + 1}隊目の枠 {St.SlotPrice}"
+                + (g.SlotFreePick ? "（1 枚無料つき）" : "") + Short(St.SlotPrice), UiKit.Muted);
             Fit(slot);
             slot.Disabled = !_reform || !St.CanBuySlot;
+            int price = St.SlotPrice;
             slot.Pressed += () =>
             {
                 if (!St.BuySlot()) return;
-                ShowToast($"{St.Squads[St.SquadCap - 1].Label} が使えるようになった（金 −{g.Slot}・残り {St.Gold}）"
+                ShowToast($"{St.Squads[St.SquadCap - 1].Label} が使えるようになった（金 −{price}・残り {St.Gold}）"
                           + (St.FreePicks > 0 ? "——候補から 1 枚を無料で選んでください" : ""), GoldColor, 4.0f);
                 Refresh();
             };
             _benchList.AddChild(slot);
+        }
+        // 第447期 §0-1: 倒れた駒を呼び戻す（候補とは別の口・HP は半分で手札に戻る）。
+        if (g.Revive > 0 && St.FallenUnits.Count > 0)
+        {
+            _benchList.AddChild(UiKit.Text($"倒れた駒（呼び戻す {g.Revive}・HP {g.RevivePercent}% で戻る）", 13, UiKit.Muted));
+            for (int k = 0; k < St.FallenUnits.Count; k++)
+            {
+                UnitState f = St.FallenUnits[k];
+                int index = k;
+                string why = St.AliveAnywhere(f.Def) ? "・同じ駒が生きている" : Short(g.Revive);
+                Button rv = UiKit.ActionButton($"呼び戻す {g.Revive}  {f.Def.Name}{why}", UiKit.Hurt);
+                rv.Alignment = HorizontalAlignment.Left;
+                Fit(rv);
+                rv.Disabled = !_reform || !St.CanRevive(index);
+                rv.Pressed += () =>
+                {
+                    if (!St.Revive(index)) return;
+                    ShowToast($"{f.Def.Name} を呼び戻した（HP {f.Hp}/{f.MaxHp}・金 −{g.Revive}・残り {St.Gold}）", GoldColor, 3.0f);
+                    ClearHold();
+                    Refresh();
+                };
+                _benchList.AddChild(rv);
+            }
         }
         string held = _holdBench >= 0 && _holdBench < St.Bench.Count ? St.Bench[_holdBench].Def.Name : "控えの駒を選んで";
         Button sell = UiKit.ActionButton($"売る ＋{g.Sell}  {held}", UiKit.Muted);
@@ -2546,7 +2593,7 @@ public partial class Map11Main : Node3D
 
     private void ShowResult()
     {
-        _resultTitle.Text = St.Won ? "踏破" : St.Fallen ? "拠点 陥落" : St.HeroArrived ? "勇者が到着した" : "撤退";
+        _resultTitle.Text = St.Won ? "踏破" : St.Fallen ? "拠点 陥落" : St.HeroArrived ? "勇者が到着した" : St.TimeUp ? "時間切れ" : "撤退";
         // **生存枚数は2つ出す**（第169期に画面内で数え方が2通りに割れていた）。
         var lines = new List<string>
         {
@@ -2577,12 +2624,14 @@ public partial class Map11Main : Node3D
             if (St.Deliveries.Count > 0)
                 lines.Add("見返りの増援: " + string.Join(" ／ ", St.Deliveries.Select(d => $"{d.Unit.Def.Name}（{d.Reason}・{d.Place}）")));
             if (St.HeroArrived) lines.Add($"作戦ターン {St.Stage.TurnCap} で勇者パーティーが着いた");
+            if (St.TimeUp) lines.Add($"{St.Stage.TurnCap} 作戦ターン以内に {Map11.PortalName} を制圧できなかった（時間切れ）");
             // 第445期: 制圧で勝った盤は、掃除をしなかった敵部隊を「退いた」と出す。金の出入り。
             if (St.Stage.WinOnCapture && St.Won) lines.Add($"退いた敵部隊 {St.FoesRemaining}（制圧で勝ち・残りは退いた）");
             if (St.Stage.Gold.On)
                 lines.Add($"金: 稼いだ {St.GoldLog.Where(e => e.Amount > 0).Sum(e => e.Amount)} ・ 使った {-St.GoldLog.Where(e => e.Amount < 0).Sum(e => e.Amount)}"
                           + $" ・ 余り {St.Gold} ・ 呼んだ {St.Recruits} 枚 ・ 売った {St.Sold} 枚 ・ 使えた隊 {St.SquadCap}"
-                          + (St.Stage.Gold.Reroll > 0 ? $" ・ リロール {St.Rerolls} 回" : ""));
+                          + (St.Stage.Gold.Reroll > 0 ? $" ・ リロール {St.Rerolls} 回" : "")
+                          + (St.Stage.Gold.Revive > 0 ? $" ・ 呼び戻した {St.Revives} 枚" : ""));
         }
         // 第177期 §3 —— **開始時に自分で組んだ編成**（次の期の材料）。
         lines.Add("");
@@ -2642,13 +2691,16 @@ public partial class Map11Main : Node3D
         int left = St.Nodes.Sum(r => r.Count(x => !x.Cleared)) + St.Spawns.Count(x => !x.Cleared)
                    + (St.ReserveWaiting ? 1 : 0);
         _mapHeadlineText = $"{St.Stage.Title} ・ "
+            // 第447期 §0-3: 勝ち条件の文（勇者の予告の言い換え）と金は題の直後（長い行の右端は切れるので、seed を最後に回す）。
+            + (St.TimeLimitLeft is { } limit ? $"{St.Stage.TurnCap} 作戦ターン以内に{Map11.PortalName}を制圧（あと {limit}） ・ " : "")
+            // 第445期 §0-1: 金（金のある盤だけ）。
+            + (St.Stage.Gold.On ? $"金 {St.Gold} ・ " : "")
             + (St.Time.On ? $"作戦ターン {St.Turn + 1} ・ " : "")
             + (St.Portal.On
                 ? $"{(St.Captured ? "制圧済み" : Map11.PortalName + "は敵のもの")} ・ 残る敵部隊 {left}"
                 : $"抜いた敵部隊 {St.ClearedCount} / {St.Stage.TotalNodes}")
-            + $" ・ 戦闘 {St.Battles} 回 ・ seed {Map11Session.Seed}"
-            // 第445期 §0-1: 金（金のある盤だけ）。
-            + (St.Stage.Gold.On ? $" ・ 金 {St.Gold}" : "");
+            + $" ・ 戦闘 {St.Battles} 回"
+            + $" ・ seed {Map11Session.Seed}";
 
         for (int i = 0; i < St.Squads.Length; i++)
         {
@@ -2744,6 +2796,7 @@ public partial class Map11Main : Node3D
 
         RefreshPortal();
         RefreshOutposts();
+        FloatNewGold();
 
         int waiting = St.Squads.Count(x => !x.Lost && x.Road < 0);
         _homeLabel.Text = waiting == 0 ? "拠点" : $"拠点（待機 {waiting} 隊）";
@@ -2911,6 +2964,37 @@ public partial class Map11Main : Node3D
         foreach (MeshInstance3D d in _warpDashes) d.Visible = mine;
     }
 
+    /// <summary>金の出入りのうち、浮かせ終えた件数（第447期・戦闘のシーンをまたいで覚える）。</summary>
+    private static int _goldShown;
+
+    /// <summary>
+    /// 第447期 §0-2 —— 稼いだ瞬間に、その場所から「＋6」を浮かせて上の行（金 n）へ飛ばす（仮の演出・豪華にするのは Codex）。
+    /// 金の出入り（`Map11State.GoldLog`）の新しい分だけを読む。場所の無い出入り（呼ぶ・売るなど）は飛ばさない。
+    /// </summary>
+    private void FloatNewGold()
+    {
+        if (!St.Stage.Gold.On) return;
+        if (_goldShown > St.GoldLog.Count) _goldShown = 0;   // 新しい通し
+        for (; _goldShown < St.GoldLog.Count; _goldShown++)
+        {
+            Map11State.GoldEvent e = St.GoldLog[_goldShown];
+            if (e.Amount <= 0 || e.Cell < 0 || _camera is null || !IsInstanceValid(_headline)) continue;
+            Vector2 from = _camera.UnprojectPosition(PosOf(e.Cell) + new Vector3(0, 2.0f, 0));
+            Rect2 head = _headline.GetGlobalRect();
+            Vector2 to = new(head.End.X - 80, head.Position.Y);
+            Label label = UiKit.Text($"＋{e.Amount}", 26, GoldColor);
+            label.MouseFilter = Control.MouseFilterEnum.Ignore;
+            label.Position = from;
+            label.ZIndex = 50;
+            _uiRoot.AddChild(label);
+            Tween tw = label.CreateTween();
+            tw.TweenProperty(label, "position", from + new Vector2(0, -36), 0.45);
+            tw.TweenProperty(label, "position", to, 0.65).SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
+            tw.Parallel().TweenProperty(label, "modulate:a", 0.0f, 0.65).SetDelay(0.2);
+            tw.TweenCallback(Callable.From(label.QueueFree));
+        }
+    }
+
     /// <summary>第444期 §0-1: 中間拠点の印を持ち主の色にする（味方 ＝ 味方の色・敵 ＝ 敵の色）。</summary>
     private void RefreshOutposts()
     {
@@ -2920,7 +3004,7 @@ public partial class Map11Main : Node3D
             Color c = mine ? PlayerColor : EnemyColor;
             mat.AlbedoColor = c.Darkened(0.35f);
             name.Modulate = c;
-            name.Text = St.Graph[cell].Name + (mine ? "（味方）" : "");
+            name.Text = St.Graph[cell].Name + (mine ? "（味方）" : St.Stage.Gold.On && St.Stage.Gold.Outpost > 0 ? $"  ＋{St.Stage.Gold.Outpost}" : "");
         }
     }
 

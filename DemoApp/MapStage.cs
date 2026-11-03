@@ -67,6 +67,11 @@ public sealed class MapStage
     public bool WinOnCapture { get; init; }
     /// <summary>ゴールドの規則（第445期 §0-1・<b>既定は Off</b>）。</summary>
     public GoldRule Gold { get; init; } = GoldRule.Off;
+    /// <summary>
+    /// 上限（<see cref="TurnCap"/>）を「n 作戦ターン以内に敵の拠点を制圧」という<b>勝ち条件の文</b>として出し、上限で「時間切れ」の負け（第447期 §0-3）。
+    /// 勇者の予告（<see cref="HeroAtCap"/>）の言い換えで、規則は同じ。
+    /// </summary>
+    public bool TimeLimit { get; init; }
 
     public int LaneCount => Lanes.Length;
     public int TotalNodes => Lanes.Sum(l => l.Count);
@@ -235,11 +240,12 @@ public sealed class MapStage
     };
 
     /// <summary>
-    /// 1-2（第446期・遊ぶ版・軽い期）。第445期（<see cref="Stage12H445"/>）の<b>金の値だけ</b>を変えた（<see cref="GoldRule.V446"/>）:
+    /// 1-2 の第446期の姿（軽い期）。第445期（<see cref="Stage12H445"/>）の<b>金の値だけ</b>を変えた（<see cref="GoldRule.V446"/>）:
     /// 開始 0 → <b>8</b>・呼ぶ 10 → <b>4</b>・3 隊目の枠 12 → <b>8</b>（買うと<b>その場で候補から 1 枚を無料で選べる</b>）・
     /// <b>リロール 1</b>（新・候補 3 枚を引き直す・回数の上限なし）・売る ＋3 → <b>＋2</b>。稼ぎ（＋6 ／ ＋3 ／ ＋8）は変えない。
+    /// 第447期からは回帰の基準だけが使う——遊ぶ 1-2 は <see cref="Stage12"/>。
     /// </summary>
-    public static MapStage Stage12 { get; } = new()
+    public static MapStage Stage12H446 { get; } = new()
     {
         Id = Stage12H445.Id,
         Title = Stage12H445.Title,
@@ -256,6 +262,30 @@ public sealed class MapStage
         HeroAtCap = Stage12H445.HeroAtCap,
         WinOnCapture = Stage12H445.WinOnCapture,
         Gold = GoldRule.V446(),
+    };
+
+    /// <summary>
+    /// 1-2（第447期・遊ぶ版）。第446期（<see cref="Stage12H446"/>）の金の遊びの仕上げ（<see cref="GoldRule.V447"/>）:
+    /// <b>倒れた駒を呼び戻す（6・HP 50%）</b> ／ リロール 1 → <b>2</b> ／ <b>隊の枠は 4 つ</b>（3 隊目 8 → 4 隊目 12・どちらも無料で 1 枚つき）／
+    /// 勇者の予告をやめ、<b>「12 作戦ターン以内に敵の拠点を制圧」</b>の勝ち条件の文に（上限で「時間切れ」・<see cref="TimeLimit"/>）。
+    /// </summary>
+    public static MapStage Stage12 { get; } = new()
+    {
+        Id = Stage12H446.Id,
+        Title = Stage12H446.Title,
+        Board = Stage12H446.Board,
+        Lanes = Stage12H446.Lanes,
+        LaneNames = Stage12H446.LaneNames,
+        Spawn = Stage12H446.Spawn,
+        Portal = Stage12H446.Portal,
+        Time = Stage12H446.Time,
+        Arrival = Stage12H446.Arrival,
+        Reserve = Stage12H446.Reserve,
+        SquadCap = 4,
+        TurnCap = Stage12H446.TurnCap,
+        TimeLimit = true,
+        WinOnCapture = Stage12H446.WinOnCapture,
+        Gold = GoldRule.V447(),
     };
 
     /// <summary>選べるステージ（編成画面の選択の並び）。</summary>
@@ -302,8 +332,12 @@ public readonly record struct ArrivalRule(bool On, int Start, int Every, int Min
 /// <param name="StartSquads">最初に使える隊の数（枠を買うと 1 つ増える・上限は <see cref="MapStage.SquadCap"/>）。</param>
 /// <param name="Reroll">候補を引き直す値段（第446期）。<b>0 ならリロールは無い</b>（第445期）。</param>
 /// <param name="SlotFreePick">枠を買うと、その場で候補から 1 枚を無料で選べる（第446期）。</param>
+/// <param name="SlotStep">枠を 1 つ買うごとに次の枠が上がる額（第447期: 3 隊目 8 → 4 隊目 12 なら 4）。0 なら値は同じ。</param>
+/// <param name="Revive">倒れた駒を呼び戻す値段（第447期）。<b>0 なら呼び戻しは無く、倒れた駒の扱いは第446期まで</b>。</param>
+/// <param name="RevivePercent">呼び戻した駒の HP（最大 HP に対する割合）。</param>
 public readonly record struct GoldRule(bool On, int Start, int Kill, int SpawnKill, int Outpost, int Recruit, int Slot, int Sell,
-                                       int Offers, int StartSquads, int Reroll = 0, bool SlotFreePick = false)
+                                       int Offers, int StartSquads, int Reroll = 0, bool SlotFreePick = false,
+                                       int SlotStep = 0, int Revive = 0, int RevivePercent = 50)
 {
     public static readonly GoldRule Off = new(false, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     /// <summary>
@@ -311,6 +345,11 @@ public readonly record struct GoldRule(bool On, int Start, int Kill, int SpawnKi
     /// </summary>
     public static GoldRule V446(int recruit = 4, int slot = 8)
         => new(true, 8, 6, 3, 8, recruit, slot, 2, 3, 2, Reroll: 1, SlotFreePick: true);
+    /// <summary>
+    /// 第447期の値（仮）: 第446期に リロール 2・枠の逓増 ＋4（3 隊目 8 → 4 隊目 12）・呼び戻す 6（HP 50%）を足した。
+    /// </summary>
+    public static GoldRule V447()
+        => new(true, 8, 6, 3, 8, 4, 8, 2, 3, 2, Reroll: 2, SlotFreePick: true, SlotStep: 4, Revive: 6, RevivePercent: 50);
     /// <summary>第445期の仮の値（ポンが遊んで決める）: 開始 0・抜く +6・湧き +3・中間拠点 +8・呼ぶ 10・枠 12・売る +3・候補 3・隊 2 で始まる。</summary>
     public static GoldRule Of(int start = 0, int kill = 6, int spawnKill = 3, int outpost = 8, int recruit = 10, int slot = 12,
                               int sell = 3, int offers = 3, int startSquads = 2)

@@ -55,7 +55,10 @@ public partial class Map11Main
     private static void SetBadge(MapUnitBadge badge, Map11State.Node foe)
     {
         int count = foe.Cleared ? 0 : foe.Units?.Count(u => u.IsAlive) ?? foe.Def.Enemy.Occupied().Count();
-        badge.ShowUnit(Representative(foe), count, NodeHpPercent(foe), foe.IsReserve ? "予備隊" : "第" + WaveMark(foe.Def.Name) + "波",
+        // 第447期 §0-2: 抜くと入る金を札に出す（湧いた部隊は安い・予備隊は最初からいる部隊と同じ）。
+        GoldRule g = St.Stage.Gold;
+        string reward = g.On && !foe.Cleared ? $" ＋{(foe.FromPortal && !foe.IsReserve ? g.SpawnKill : g.Kill)}" : "";
+        badge.ShowUnit(Representative(foe), count, NodeHpPercent(foe), (foe.IsReserve ? "予備隊" : "第" + WaveMark(foe.Def.Name) + "波") + reward,
             enemy: true, wave: WaveMark(foe.Def.Name));
         badge.TooltipText = $"{foe.Def.Name}　{Representative(foe)?.Name}　{count}体　HP {NodeHpPercent(foe):F0}%";
     }
