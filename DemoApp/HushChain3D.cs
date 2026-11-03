@@ -13,15 +13,21 @@ public partial class HushChain3D : Node3D
     private float _breakTime = -1;
     private Vector3[]? _brokenPositions;
 
-    public void Configure(BattlePawn3D holder, BattlePawn3D target)
+    private Func<(bool Paused, double Speed)>? _clock;
+    internal float Elapsed => _elapsed;
+    public void SetClock(Func<(bool Paused, double Speed)> clock) => _clock = clock;
+    private Color _tint = new(.65f, .52f, .76f);
+
+    public void Configure(BattlePawn3D holder, BattlePawn3D target, Color? tint = null)
     {
+        _tint = tint ?? new Color(.65f, .52f, .76f);
         _holder = holder;
         _target = target;
         _material = new StandardMaterial3D
         {
             ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
             Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
-            AlbedoColor = new Color(0.65f, 0.52f, 0.76f, 0.22f),
+            AlbedoColor = new Color(_tint, .22f),
             NoDepthTest = true,
         };
         var mesh = new TorusMesh { InnerRadius = 0.075f, OuterRadius = 0.115f, Rings = 12, RingSegments = 6 };
@@ -49,6 +55,12 @@ public partial class HushChain3D : Node3D
 
     public override void _Process(double delta)
     {
+        if (_clock is { } clock)
+        {
+            var time = clock();
+            if (time.Paused) return;
+            delta *= Math.Max(.1, time.Speed);
+        }
         _elapsed += (float)delta;
         _pulse = Math.Max(0, _pulse - (float)delta / 0.55f);
         if (_breakTime >= 0)
@@ -63,7 +75,7 @@ public partial class HushChain3D : Node3D
                     Mathf.Sin(angle) * _breakTime);
                 _links[i].RotateX((float)delta * (i % 2 == 0 ? 5 : -5));
             }
-            _material.AlbedoColor = new Color(0.8f, 0.9f, 1, Math.Max(0, 1 - _breakTime / 0.7f));
+            _material.AlbedoColor = new Color(_tint.Lightened(.4f), Math.Max(0, 1 - _breakTime / 0.7f));
             if (_breakTime >= 0.7f) QueueFree();
             return;
         }
@@ -92,7 +104,7 @@ public partial class HushChain3D : Node3D
             _links[i].Scale = new Vector3(Math.Max(1, a.DistanceTo(b) / 7.4f), 1, 0.72f);
         }
         _material.AlbedoColor = new Color(
-            new Color(0.65f, 0.52f, 0.76f).Lerp(new Color(1, 0.76f, 1), _pulse),
+            _tint.Lerp(_tint.Lightened(.45f), _pulse),
             0.16f + 0.78f * _pulse + 0.025f * Mathf.Sin(_elapsed * 2));
     }
 }

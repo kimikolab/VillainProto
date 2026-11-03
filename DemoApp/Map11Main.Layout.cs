@@ -56,6 +56,7 @@ public partial class Map11Main
         _toast.ClipText = true;
         _uiRoot.AddChild(_toast);
 
+        BuildRoutePreview();
         _mapPickLayer = new Control { MouseFilter = Control.MouseFilterEnum.Ignore };
         _uiRoot.AddChild(_mapPickLayer);
         _mapPickLayer.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);

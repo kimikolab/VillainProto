@@ -19,6 +19,7 @@ public partial class BattlefieldView3D
 
     private void EndHushPresentation()
     {
+        ClearRuleChains();
         _sealGeneration++;
         SetHushAtmosphere(false);
         foreach (var gauge in _hushGauges.Values)

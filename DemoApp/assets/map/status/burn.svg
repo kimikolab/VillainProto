@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <title>燃焼</title>
+  <circle cx="32" cy="32" r="29" fill="#231c1a" stroke="#f0a35d" stroke-width="3"/>
+  <path d="M34 7C42 24 52 26 51 40C50 52 42 57 31 56C17 56 11 47 14 36C16 29 21 26 22 19C25 23 27 27 27 31C35 25 38 18 34 7Z" fill="#ed703c" stroke="#ffc47a" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M33 30C39 36 44 40 41 47C38 55 27 56 23 49C19 42 27 39 28 34L30 42C34 39 35 35 33 30Z" fill="#ffe5a3"/>
+</svg>

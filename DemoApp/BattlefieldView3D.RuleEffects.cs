@@ -15,6 +15,7 @@ public partial class BattlefieldView3D
     public void ShowYokeSeal(BattlePawn3D? target, int cut)
     {
         if (target is null) return;
+        TightenRuleChains(SealedLabels.Yoke, target);
         _attackAudio.PlayYoke();
         Color color = RuleColor(SealedLabels.Yoke);
         float strength = Math.Clamp(cut / 60f, 0.15f, 1f);
@@ -43,6 +44,7 @@ public partial class BattlefieldView3D
     public void ShowDroughtSeal(BattlePawn3D? target, int blocked)
     {
         if (target is null) return;
+        TightenRuleChains(SealedLabels.Drought, target);
         _attackAudio.PlayDrought();
         // 渇きの台本は回復の書き手を持たない。架空の出発点を他の駒に結ばない。
         Vector3 center = target.FxPoint;

@@ -1934,6 +1934,15 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
 
 `BattleSim` の表に戻る。
 
+作戦マップ追記の確認（`design/MAP_SCREEN_ADDENDUM_IMPLEMENTATION.md`）:
+
+    Godot_console.exe --path DemoApp --headless res://Map11Main.tscn -- --map-addendum-smoke --map-stage=1-2
+        # 経路のホバー・敵の顔・中間拠点・無料の候補・稼ぎの表示。1-1 は --map-stage を省略。
+        # 絵も保存: --headless を外して --map-addendum-capture=<保存先> を追加。
+    Godot_console.exe --path DemoApp --headless res://RuleChainCheck.tscn
+        # 黄・緑の鎖: 複数保持者、停止、2倍速、移動、死亡、蘇生、再戦。
+        # 絵も保存: --headless を外して --capture-dir=<保存先> を追加。
+
     dotnet run --project BattleSim -c Release 0 gust scan probe  # **第152期 段0**: 埋め草の強さを掃引して台を帯（40〜95%）へ戻す
     dotnet run --project BattleSim -c Release 0 sweep [上限秒] [絞り込み]  # **全診断の exit 検査**（第141期・本体は `Sweep.cs`）。この表を自分で読んで引数の穴の無い本を子プロセスで回す。引数なしは `full`（規約 (G17)）
     dotnet run --project BattleSim -c Release 0 sweep full      # 第278期 全量（指紋照合あり・直列）。鍵が動かなかった本は走らせず前回の結果を `（照合）` で返す。**第280期から「全量」は現役網（`SweepDiag.Active`・57 本）**——ほかは凍結庫。作法は「日中は fast・full は夜間（`sweep nightly`）」

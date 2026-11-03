@@ -30,6 +30,7 @@ public partial class BattlefieldView3D
         if (opening.Traits?.Contains(TraitId.Hush) == true)
             _hushHolders.Add(opening.InstanceId);
         RegisterHushGauge(opening);
+        RegisterRuleChains(opening);
     }
 
     private void ConnectSeals()
@@ -78,7 +79,7 @@ public partial class BattlefieldView3D
     {
         if (pawn is null) return;
         _fallenForSeal.Add(pawn.InstanceId);
-        bool shattered = false;
+        bool shattered = BreakRuleChains(pawn.InstanceId);
         foreach (var key in _hushChains.Keys.Where(k => k.Holder == pawn.InstanceId || k.Target == pawn.InstanceId).ToArray())
         {
             // 保持者の死亡だけが鎖を砕く。封じられた側の死亡は静かに消す。
@@ -98,6 +99,7 @@ public partial class BattlefieldView3D
     public void SealPawnRevived(BattlePawn3D pawn)
     {
         _fallenForSeal.Remove(pawn.InstanceId);
+        ConnectRuleChains();
         ConnectSeals();
         SetHushAtmosphere(_hushHolders.Any(HushActive));
     }

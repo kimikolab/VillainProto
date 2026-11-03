@@ -105,7 +105,7 @@ public partial class Map11Main : Node3D
     /// <summary>敵の拠点の板。<b>湧くまでの残りと、制圧したかを出す。</b></summary>
     private Marker _portalMarker = null!;
     /// <summary>中間拠点の砦の印（第444期 §0-1・マス・台・名札）。<b>持ち主で色を変えるだけ</b>（取り合いの判定は `Map11State.UpdateOutposts`）。</summary>
-    private readonly List<(int Cell, StandardMaterial3D Mat, Label3D Name)> _outpostMarks = new();
+    private readonly List<(int Cell, Label3D Name)> _outpostMarks = new();
     /// <summary>拠点どうしを結ぶ点線（<b>制圧してから</b>出す＝ワープできる道）。</summary>
     private readonly List<MeshInstance3D> _warpDashes = new();
     /// <summary>湧いた敵部隊の板（足りなくなったら増やす）。</summary>
@@ -260,7 +260,8 @@ public partial class Map11Main : Node3D
             Map11Session.Reset(PortalSmokeSeed);
         if (_draftSmoke && St.Turn == 0 && St.Battles == 0 && !Map11Session.TurnRunning)
             Map11Session.Reset(0);
-        if (args.Contains("--map-layout-smoke", StringComparer.Ordinal)) Callable.From(LayoutSmoke).CallDeferred();
+        if (args.Contains("--map-addendum-smoke", StringComparer.Ordinal)) Callable.From(AddendumSmoke).CallDeferred();
+        else if (args.Contains("--map-layout-smoke", StringComparer.Ordinal)) Callable.From(LayoutSmoke).CallDeferred();
         else if (args.Contains("--map-guide-smoke", StringComparer.Ordinal)) Callable.From(GuideSmoke).CallDeferred();
         else if (_clockSmoke) Callable.From(ClockSmoke).CallDeferred();
         else if (_runSmoke)
@@ -784,9 +785,9 @@ public partial class Map11Main : Node3D
         // **第177期: 道の奥は敵の拠点で合流する**ので、最後の1本は2 本とも同じ点へ伸びる。
         // 第438期: **盤の辺から引く**（1-1 の辺は第437期の帯と同じ順に並んでいる）。
         // 第440期 §3-2: **横の辺（経路をまたぐ・敵は通らない）は色を変えて細く**する。
-        // 第442期 §0-5: 色だけでは「行き来できる道」に読めなかった（第441期 問い8）——**点線**にして形で分ける。
+        // 第442期 §0-5: 色だけでは「行き来できる道」に読めなかった（第441期 問い8）——**点線**にして形で分けた。追記 B4 で床板・欄干のある小橋へ。
         foreach ((int ea, int eb) in St.Graph.Edges)
-            if (St.Graph.IsCross(ea, eb)) AddDashedStrip(PosOf(ea), PosOf(eb), CrossColor, 1.3f);
+            if (St.Graph.IsCross(ea, eb)) AddFootbridge(PosOf(ea), PosOf(eb));
             else AddStrip(PosOf(ea), PosOf(eb), Color.FromHtml("#8b7756"));
 
         // 第177期 §2: 道が1本伸びたぶん、カメラを引いて奥まで入れる。
@@ -851,21 +852,14 @@ public partial class Map11Main : Node3D
         });
         _portalMarker = new Marker(this, PortalPos, EnemyColor, 2.2f);
 
-        // 第444期 §0-1: 中間拠点は**四角い台**（丸い敵の板・輪の敵の拠点と形で分ける）と名札。台は敵の板の下に敷く。
+        // 中間拠点は砦・野営地・関所の絵と名札。所有者は State の値だけを読む。
         foreach (MapGraph.Cell c in St.Graph.Cells.Where(c => c.Kind == MapGraph.Kind.Outpost))
         {
-            StandardMaterial3D mat = CampaignMain.MakeMaterial(EnemyColor, roughness: 0.8f);
             Vector3 at = PosOf(c.Id);
-            AddChild(new MeshInstance3D
-            {
-                Mesh = new BoxMesh { Size = new Vector3(5.2f, 0.18f, 5.2f) },
-                Position = new Vector3(at.X, 0.06f, at.Z),
-                RotationDegrees = new Vector3(0, 45, 0),
-                MaterialOverride = mat,
-            });
-            Label3D name = WorldLabel(c.Name, new Vector3(at.X, 0.6f, at.Z + 3.6f), 30, EnemyColor);
+            AddOutpostArt(c.Id);
+            Label3D name = WorldLabel(c.Name, new Vector3(at.X - (c.Lane == 1 ? 5.5f : 0), 0.6f, at.Z + 5.8f), 30, EnemyColor);
             AddChild(name);
-            _outpostMarks.Add((c.Id, mat, name));
+            _outpostMarks.Add((c.Id, name));
         }
 
         // 拠点どうしを結ぶ点線。**制圧してから見せる**（それまでは通れない）。
@@ -931,7 +925,12 @@ public partial class Map11Main : Node3D
             b.AddThemeFontSizeOverride("font_size", 12);
             b.Pressed += () => PickDestination(dest);
             layer.AddChild(b);
-            _destButtons.Add(new DestButton { Dest = dest, Node = b, World = world, Offset = offset });
+            var pick = new DestButton { Dest = dest, Node = b, World = world, Offset = offset };
+            _destButtons.Add(pick);
+            b.MouseEntered += () => _hoverDestination = pick;
+            b.MouseExited += () => { if (_hoverDestination == pick) _hoverDestination = null; };
+            b.FocusEntered += () => _hoverDestination = pick;
+            b.FocusExited += () => { if (_hoverDestination == pick) _hoverDestination = null; };
         }
 
         // 札は<b>いつも板の真下</b>（道で揃える）。名前は板の上、前進の予告はさらにその上。
@@ -2125,6 +2124,7 @@ public partial class Map11Main : Node3D
     private void RefreshBench()
     {
         _guideBenchButtons.Clear();
+        _freeOfferButtons.Clear();
         foreach (Node child in _benchList.GetChildren()) child.QueueFree();
         for (int i = 0; i < St.Bench.Count; i++)
         {
@@ -2189,6 +2189,8 @@ public partial class Map11Main : Node3D
             b.Alignment = HorizontalAlignment.Left;
             Fit(b);
             b.Disabled = !_reform || !St.CanRecruit(index);
+            if (free) _freeOfferButtons.Add(b);
+            AddHandFace(b, d);
             b.Pressed += () =>
             {
                 bool wasFree = St.FreePicks > 0;
@@ -2811,7 +2813,6 @@ public partial class Map11Main : Node3D
 
         RefreshPortal();
         RefreshOutposts();
-        FloatNewGold();
 
         int waiting = St.Squads.Count(x => !x.Lost && x.Road < 0);
         _homeLabel.Text = waiting == 0 ? "拠点" : $"拠点（待機 {waiting} 隊）";
@@ -2834,6 +2835,7 @@ public partial class Map11Main : Node3D
               + $"　→ この作戦ターン: {OrderText(_selected)}"
             : "";
         RefreshScreen();
+        FloatNewGold();
         RefreshGuide();
         _firstRefresh = false;
     }
@@ -2983,14 +2985,16 @@ public partial class Map11Main : Node3D
 
     /// <summary>金の出入りのうち、浮かせ終えた件数（第447期・戦闘のシーンをまたいで覚える）。</summary>
     private static int _goldShown;
+    private static Map11State? _goldOwner;
 
     /// <summary>
-    /// 第447期 §0-2 —— 稼いだ瞬間に、その場所から「＋6」を浮かせて上の行（金 n）へ飛ばす（仮の演出・豪華にするのは Codex）。
+    /// 第447期 §0-2 —— 稼いだ瞬間に、その場所から「＋6」を浮かせて上の行（金 n）へ飛ばす。追記 B2 で金貨が弾けて集まる演出を重ねた。
     /// 金の出入り（`Map11State.GoldLog`）の新しい分だけを読む。場所の無い出入り（呼ぶ・売るなど）は飛ばさない。
     /// </summary>
     private void FloatNewGold()
     {
         if (!St.Stage.Gold.On) return;
+        if (!ReferenceEquals(_goldOwner, St)) { _goldOwner = St; _goldShown = 0; }
         if (_goldShown > St.GoldLog.Count) _goldShown = 0;   // 新しい通し
         for (; _goldShown < St.GoldLog.Count; _goldShown++)
         {
@@ -2998,7 +3002,14 @@ public partial class Map11Main : Node3D
             if (e.Amount <= 0 || e.Cell < 0 || _camera is null || !IsInstanceValid(_headline)) continue;
             Vector2 from = _camera.UnprojectPosition(PosOf(e.Cell) + new Vector3(0, 2.0f, 0));
             Rect2 head = _headline.GetGlobalRect();
-            Vector2 to = new(head.End.X - 80, head.Position.Y);
+            int goldStart = _headline.Text.IndexOf("金 ", StringComparison.Ordinal);
+            Font font = _headline.GetThemeFont("font");
+            int fontSize = _headline.GetThemeFontSize("font_size");
+            float prefix = goldStart < 0 ? 0 : font.GetStringSize(_headline.Text[..goldStart], fontSize: fontSize).X;
+            Vector2 to = head.Position + new Vector2(prefix + 24, 16);
+            var coins = new MapGoldBurst();
+            coins.Start(from, to, e.Amount);
+            _uiRoot.AddChild(coins);
             Label label = UiKit.Text($"＋{e.Amount}", 26, GoldColor);
             label.MouseFilter = Control.MouseFilterEnum.Ignore;
             label.Position = from;
@@ -3015,11 +3026,11 @@ public partial class Map11Main : Node3D
     /// <summary>第444期 §0-1: 中間拠点の印を持ち主の色にする（味方 ＝ 味方の色・敵 ＝ 敵の色）。</summary>
     private void RefreshOutposts()
     {
-        foreach (var (cell, mat, name) in _outpostMarks)
+        foreach (var (cell, name) in _outpostMarks)
         {
             bool mine = St.HeldOutposts.Contains(cell);
             Color c = mine ? PlayerColor : EnemyColor;
-            mat.AlbedoColor = c.Darkened(0.35f);
+            if (_outpostArt.TryGetValue(cell, out var art)) art.Texture = OutpostTexture(cell, mine);
             name.Modulate = c;
             name.Text = St.Graph[cell].Name + (mine ? "（味方）" : St.Stage.Gold.On && St.Stage.Gold.Outpost > 0 ? $"  ＋{St.Stage.Gold.Outpost}" : "");
         }
@@ -3048,6 +3059,7 @@ public partial class Map11Main : Node3D
         // 第439期: 時計。**時計の門の最中は門が自分で回す**（フレームの分まで刻ませない）。
         if (!_clockSmoke) ClockStep(delta);
         ProcessGuide(delta);
+        UpdateRoutePreview();
 
         if (_toastClock <= 0) return;
         _toastClock -= (float)delta;

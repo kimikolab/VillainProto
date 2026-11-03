@@ -122,10 +122,11 @@ public partial class Map11Main
             Check("squad-lines", _squadButtons.All(b => !b.Text.Contains('\n') && VisibleRect(b)));
             Check("switch-read-only", Snapshot() == units && St.Turn == 0);
             Check("locked-hidden", _mapPicks.Where(p => p.Squad >= 0 && St.IsLocked(p.Squad)).All(p => !p.Button.Visible));
-            Check("enemy-wave", _mapPicks.Where(p => p.Foe is not null).All(p => ((MapUnitBadge)p.Button).Face.FaceTexture is null
+            Check("enemy-face", _mapPicks.Where(p => p.Foe is not null).All(p =>
+                ((MapUnitBadge)p.Button).Face.FaceTexture == UnitFaceIcon.TextureFor(Representative(p.Foe!)!.Id)
                 && ((MapUnitBadge)p.Button).Face.Mark == WaveMark(p.Foe!.Def.Name)));
             Check("portal-caption", !St.Portal.On || (_portalCaption!.Text.Contains(Map11.PortalName) && VisibleRect(_portalInfo!)
-                && (St.HeroTurnsLeft is null || _portalCaption.Text.Contains("勇者パーティー"))));
+                && (St.HeroTurnsLeft is null || (_portalCaption.Text.Contains("勇者パーティー") || _portalCaption.Text.Contains("制圧")))));
             Check("gold-caption", !St.Stage.Gold.On || _headline.Text.Contains($"金 {St.Gold}"));
             Check("outposts-kept", _outpostMarks.Count == St.Graph.Cells.Count(c => c.Kind == MapGraph.Kind.Outpost));
             await Shot("02-operation");

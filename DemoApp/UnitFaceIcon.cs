@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 
-/// <summary>地図・手札・接敵・結果で共用する顔。既存の立ち絵の切り出しだけで、原本には書き込まない。</summary>
+/// <summary>地図・手札・接敵・結果で共用する顔。味方は既存の立ち絵を切り出し、敵は専用の顔を使う。原本には書き込まない。</summary>
 public partial class UnitFaceIcon : Control
 {
     // 画像幅・高さに対する顔の中心、画像幅に対する切り出し幅。絵の構図だけを持つ。
@@ -51,7 +51,7 @@ public partial class UnitFaceIcon : Control
     {
         UnitId = unit?.Id;
         Tint = enemy ? UiKit.Enemy : UiKit.Player;
-        FaceTexture = unit is null || wave is not null ? null : TextureFor(unit.Id);
+        FaceTexture = unit is null ? null : TextureFor(unit.Id);
         Mark = wave ?? (unit is null ? "—" : StringInfo.GetNextTextElement(unit.Name));
         TooltipText = unit?.Name ?? "空席";
         QueueRedraw();
@@ -60,13 +60,20 @@ public partial class UnitFaceIcon : Control
     public static Texture2D? TextureFor(string id)
     {
         if (Faces.TryGetValue(id, out var cached)) return cached;
-        string source = $"res://assets/portraits/{id}.png";
+        string portraitId = id switch
+        {
+            "recruit_g" => "recruit", "archer_g" => "archer", "priest_g" => "priest",
+            "knight_g" or "knight_v" or "knight_slander" => "knight", "axeman_v" => "axeman", _ => id,
+        };
+        string source = $"res://assets/map/enemies/{portraitId}.png";
+        bool faceAsset = Godot.FileAccess.FileExists(source);
+        if (!faceAsset) source = $"res://assets/portraits/{id}.png";
         if (!Godot.FileAccess.FileExists(source))
             source = $"res://assets/portraits/battle/{id}_idle_right.png";
         if (!Godot.FileAccess.FileExists(source)) return Faces[id] = null;
         using Image original = Image.LoadFromFile(ProjectSettings.GlobalizePath(source));
         if (original.IsEmpty()) return Faces[id] = null;
-        Vector3 frame = Framing.GetValueOrDefault(id, new Vector3(.5f, .14f, .36f));
+        Vector3 frame = faceAsset ? new(.5f, .5f, 1) : Framing.GetValueOrDefault(id, new Vector3(.5f, .14f, .36f));
         int side = Math.Max(1, (int)(original.GetWidth() * frame.Z));
         side = Math.Min(side, Math.Min(original.GetWidth(), original.GetHeight()));
         int x = Math.Clamp((int)(original.GetWidth() * frame.X) - side / 2, 0, original.GetWidth() - side);

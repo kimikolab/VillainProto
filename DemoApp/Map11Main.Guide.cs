@@ -31,6 +31,12 @@ public partial class Map11Main
         if (_guide is null) return;
         _guide.ShowReach(ReachButtons());
         if (GuideCovered) { PointGuide(null, "", ""); return; }
+        if (_reform && St.FreePicks > 0)
+        {
+            Button? offer = _freeOfferButtons.FirstOrDefault(b => !b.Disabled);
+            PointGuide(offer, "無料の1枚を選ぶ", "free-offer");
+            return;
+        }
         if (_guideEventCell is { } cell && _toastClock > 0)
         {
             // 出来事の文は既存のトーストだけ。場所の枠に同じ文を重ねない。

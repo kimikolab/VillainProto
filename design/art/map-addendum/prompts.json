@@ -1,0 +1,165 @@
+{
+  "tool": "image_gen (built-in)",
+  "date": "2026-11-03",
+  "enemies": [
+    {
+      "id": "recruit",
+      "prompt": "Use case: stylized-concept. Create ONE game UI enemy face portrait, square head-and-shoulders closeup of a medieval levy recruit soldier. Simple worn iron kettle helmet, padded brown collar, shadowed eyes, anonymous mass-produced infantry. Hand-painted Japanese dark fantasy game illustration, crisp ink contours, muted ivory iron and earth colors, readable large helmet silhouette at 48px. Head centered and occupies 75 percent of square; shoulders only at lower edge. Neutral dark desaturated backdrop, no border, no letters, no watermark, no multiple panels. Save the generated image locally for project use."
+    },
+    {
+      "id": "levy",
+      "prompt": "Use case: stylized-concept. ONE square game UI enemy face portrait of conscript farm militia in rough straw hood and frayed ochre cloth, low simple wool cap, shadowed eyes. Hand-painted Japanese dark fantasy illustration, crisp ink contours, muted earth and ivory iron colors, anonymous mass-produced soldier rather than heroic unique character. Head centered occupying 75 percent of square, shoulders only at lower edge, silhouette legible at 48px. Neutral dark desaturated backdrop. No border, no text, no watermark, no multiple panels."
+    },
+    {
+      "id": "laborer",
+      "prompt": "Use case: stylized-concept. ONE square game UI enemy face portrait of burly conscript laborer wearing a dark work hood with thick rope around shoulders, weary shadowed face. Hand-painted Japanese dark fantasy illustration, crisp ink contours, muted earth and ivory iron colors, anonymous mass-produced soldier rather than heroic unique character. Head centered occupying 75 percent of square, shoulders only at lower edge, silhouette legible at 48px. Neutral dark desaturated backdrop. No border, no text, no watermark, no multiple panels."
+    },
+    {
+      "id": "drifter",
+      "prompt": "Use case: stylized-concept. ONE square game UI enemy face portrait of ragged mercenary with asymmetrical dented nasal helmet, leather coif and patched dark red scarf. Hand-painted Japanese dark fantasy illustration, crisp ink contours, muted earth and ivory iron colors, anonymous mass-produced soldier rather than heroic unique character. Head centered occupying 75 percent of square, shoulders only at lower edge, silhouette legible at 48px. Neutral dark desaturated backdrop. No border, no text, no watermark, no multiple panels."
+    },
+    {
+      "id": "axeman",
+      "prompt": "Use case: stylized-concept. ONE square game UI enemy face portrait of battle axe infantry wearing squared iron helmet with reinforced brow and fur collar, small axe head at shoulder. Hand-painted Japanese dark fantasy illustration, crisp ink contours, muted earth and ivory iron colors, anonymous mass-produced soldier rather than heroic unique character. Head centered occupying 75 percent of square, shoulders only at lower edge, silhouette legible at 48px. Neutral dark desaturated backdrop. No border, no text, no watermark, no multiple panels."
+    },
+    {
+      "id": "archer",
+      "prompt": "Use case: stylized-concept. ONE square game UI enemy face portrait of sniper archer wearing deep olive pointed hood and cloth mask, one narrow visible eye, arrow fletching at shoulder. Hand-painted Japanese dark fantasy illustration, crisp ink contours, muted earth and ivory iron colors, anonymous mass-produced soldier rather than heroic unique character. Head centered occupying 75 percent of square, shoulders only at lower edge, silhouette legible at 48px. Neutral dark desaturated backdrop. No border, no text, no watermark, no multiple panels."
+    },
+    {
+      "id": "priest",
+      "prompt": "Use case: stylized-concept. ONE square game UI enemy face portrait of military priest wearing plain ivory cowl with muted red trim, eyes in shadow, simple clerical collar. Hand-painted Japanese dark fantasy illustration, crisp ink contours, muted earth and ivory iron colors, anonymous mass-produced soldier rather than heroic unique character. Head centered occupying 75 percent of square, shoulders only at lower edge, silhouette legible at 48px. Neutral dark desaturated backdrop. No border, no text, no watermark, no multiple panels."
+    },
+    {
+      "id": "warden",
+      "prompt": "Use case: stylized-concept. ONE square game UI enemy face portrait of fortress heavy infantry wearing broad closed dark iron bucket helmet, horizontal visor slit, huge riveted shoulder plates. Hand-painted Japanese dark fantasy illustration, crisp ink contours, muted earth and ivory iron colors, anonymous mass-produced soldier rather than heroic unique character. Head centered occupying 75 percent of square, shoulders only at lower edge, silhouette legible at 48px. Neutral dark desaturated backdrop. No border, no text, no watermark, no multiple panels."
+    },
+    {
+      "id": "knight",
+      "prompt": "Use case: stylized-concept. ONE square game UI enemy face portrait of pilgrim knight wearing tall silver closed visor helm and small crimson crest, ivory tabard collar. Hand-painted Japanese dark fantasy illustration, crisp ink contours, muted earth and ivory iron colors, anonymous mass-produced soldier rather than heroic unique character. Head centered occupying 75 percent of square, shoulders only at lower edge, silhouette legible at 48px. Neutral dark desaturated backdrop. No border, no text, no watermark, no multiple panels."
+    },
+    {
+      "id": "zealot_squire",
+      "prompt": "Use case: stylized-concept. ONE square game UI enemy face portrait of heavy armored squire wearing rounded steel sallet helmet and high gorget, blue-gray padded collar, modest riveted armor. Hand-painted Japanese dark fantasy illustration, crisp ink contours, muted earth and ivory iron colors, anonymous mass-produced soldier rather than heroic unique character. Head centered occupying 75 percent of square, shoulders only at lower edge, silhouette legible at 48px. Neutral dark desaturated backdrop. No border, no text, no watermark, no multiple panels."
+    },
+    {
+      "id": "husher",
+      "prompt": "Use case: stylized-concept. ONE square game UI enemy face portrait of silence herald in violet hood and silver mouth-covering mask, prominent glowing PURPLE crossed seal on mask, threatening anonymous eyes. Hand-painted Japanese dark fantasy illustration, crisp ink contours, muted earth and ivory iron colors, anonymous mass-produced soldier rather than heroic unique character. Head centered occupying 75 percent of square, shoulders only at lower edge, silhouette legible at 48px. Neutral dark desaturated backdrop. No border, no text, no watermark, no multiple panels."
+    },
+    {
+      "id": "droughter",
+      "prompt": "Use case: stylized-concept. ONE square game UI enemy face portrait of drought priest in desiccated moss green hood, prominent glowing GREEN cracked droplet seal across forehead, gaunt shadowed face. Hand-painted Japanese dark fantasy illustration, crisp ink contours, muted earth and ivory iron colors, anonymous mass-produced soldier rather than heroic unique character. Head centered occupying 75 percent of square, shoulders only at lower edge, silhouette legible at 48px. Neutral dark desaturated backdrop. No border, no text, no watermark, no multiple panels."
+    },
+    {
+      "id": "yoker",
+      "prompt": "Use case: stylized-concept. ONE square game UI enemy face portrait of yoke heavy infantry in broad black steel helmet, prominent glowing GOLDEN YELLOW horizontal clamp seal across faceplate. Hand-painted Japanese dark fantasy illustration, crisp ink contours, muted earth and ivory iron colors, anonymous mass-produced soldier rather than heroic unique character. Head centered occupying 75 percent of square, shoulders only at lower edge, silhouette legible at 48px. Neutral dark desaturated backdrop. No border, no text, no watermark, no multiple panels."
+    },
+    {
+      "id": "accuser",
+      "prompt": "Use case: stylized-concept. ONE square game UI enemy face portrait of accuser inquisitor wearing dark red cowl and iron half-mask, prominent RED eye seal across forehead, anonymous shadowed eyes. Hand-painted Japanese dark fantasy illustration, crisp ink contours, muted earth and ivory iron colors, anonymous mass-produced soldier rather than heroic unique character. Head centered occupying 75 percent of square, shoulders only at lower edge, silhouette legible at 48px. Neutral dark desaturated backdrop. No border, no text, no watermark, no multiple panels."
+    }
+  ],
+  "terrain": [
+    {
+      "id": "fort",
+      "prompt": "Use case: stylized-concept. ONE isolated small isometric strategy map terrain sprite: small north frontier stone fort with two squat crenellated towers and a low wall. Hand painted Japanese medieval fantasy illustration, readable simple silhouette at 100px, muted earth tones, crisp contours, camera 40 degrees down, whole structure centered with generous transparent margin. Deep muted red banners and red canvas mark enemy ownership. No people, no text, no icon border, no grid, no square background tile, no scene background. Transparent background.",
+      "allyEdit": "Edit this strategy map sprite. Change ONLY the red banners, flags, cloth and tent canvas to muted teal blue-green to mark allied ownership. Preserve architecture, object placement, silhouette, camera, framing, size, fine details and lighting. Remove any background or ambient halo outside the terrain object; output genuinely transparent RGBA outside the terrain, with crisp alpha edges. No text."
+    },
+    {
+      "id": "camp",
+      "prompt": "Use case: stylized-concept. ONE isolated small isometric strategy map terrain sprite: small shallow river camp with two triangular canvas tents, a low stone ford and a tiny stream segment. Hand painted Japanese medieval fantasy illustration, readable simple silhouette at 100px, muted earth tones, crisp contours, camera 40 degrees down, whole structure centered with generous transparent margin. Deep muted red banners and red canvas mark enemy ownership. No people, no text, no icon border, no grid, no square background tile, no scene background. Transparent background.",
+      "allyEdit": "Edit this strategy map sprite. Change ONLY the red banners, flags, cloth and tent canvas to muted teal blue-green to mark allied ownership. Preserve architecture, object placement, silhouette, camera, framing, size, fine details and lighting. Remove any background or ambient halo outside the terrain object; output genuinely transparent RGBA outside the terrain, with crisp alpha edges. No text."
+    },
+    {
+      "id": "gate",
+      "prompt": "Use case: stylized-concept. ONE isolated small isometric strategy map terrain sprite: small southern toll gate with two timber watch posts, a crossbar gateway and a short wooden palisade. Hand painted Japanese medieval fantasy illustration, readable simple silhouette at 100px, muted earth tones, crisp contours, camera 40 degrees down, whole structure centered with generous transparent margin. Deep muted red banners and red canvas mark enemy ownership. No people, no text, no icon border, no grid, no square background tile, no scene background. Transparent background.",
+      "allyEdit": "Edit this strategy map sprite. Change ONLY the red banners, flags, cloth and tent canvas to muted teal blue-green to mark allied ownership. Preserve architecture, object placement, silhouette, camera, framing, size, fine details and lighting. Remove any background or ambient halo outside the terrain object; output genuinely transparent RGBA outside the terrain, with crisp alpha edges. No text."
+    }
+  ],
+  "files": [
+    {
+      "path": "DemoApp/assets/map/enemies/recruit.png",
+      "source": "C:\\Users\\Pon\\.codex\\generated_images\\01a19cb6-dc2a-7d02-9770-8c96d062041c\\exec-c9564bee-d37f-4ab4-8944-dd1333cc6540.png"
+    },
+    {
+      "path": "DemoApp/assets/map/enemies/levy.png",
+      "source": "C:\\Users\\Pon\\.codex\\generated_images\\01a19cb6-dc2a-7d02-9770-8c96d062041c\\exec-104ee0ba-8466-4dad-a97c-0523a772662a.png"
+    },
+    {
+      "path": "DemoApp/assets/map/enemies/laborer.png",
+      "source": "C:\\Users\\Pon\\.codex\\generated_images\\01a19cb6-dc2a-7d02-9770-8c96d062041c\\exec-d278ee49-6030-4ca6-ba41-044a4de5a3d6.png"
+    },
+    {
+      "path": "DemoApp/assets/map/enemies/drifter.png",
+      "source": "C:\\Users\\Pon\\.codex\\generated_images\\01a19cb6-dc2a-7d02-9770-8c96d062041c\\exec-11a6f0c3-b9ca-44d9-86aa-fb1614066666.png"
+    },
+    {
+      "path": "DemoApp/assets/map/enemies/axeman.png",
+      "source": "C:\\Users\\Pon\\.codex\\generated_images\\01a19cb6-dc2a-7d02-9770-8c96d062041c\\exec-09998ffe-b772-48ba-b042-ed43c10bdd00.png"
+    },
+    {
+      "path": "DemoApp/assets/map/enemies/archer.png",
+      "source": "C:\\Users\\Pon\\.codex\\generated_images\\01a19cb6-dc2a-7d02-9770-8c96d062041c\\exec-995b40fb-ab6e-4e1d-af17-2abb125490c0.png"
+    },
+    {
+      "path": "DemoApp/assets/map/enemies/priest.png",
+      "source": "C:\\Users\\Pon\\.codex\\generated_images\\01a19cb6-dc2a-7d02-9770-8c96d062041c\\exec-2dd83b70-c683-4e52-88ed-91b24bf9ae09.png"
+    },
+    {
+      "path": "DemoApp/assets/map/enemies/warden.png",
+      "source": "C:\\Users\\Pon\\.codex\\generated_images\\01a19cb6-dc2a-7d02-9770-8c96d062041c\\exec-88924c9f-4928-46b9-a4de-b0dcc64a3520.png"
+    },
+    {
+      "path": "DemoApp/assets/map/enemies/knight.png",
+      "source": "C:\\Users\\Pon\\.codex\\generated_images\\01a19cb6-dc2a-7d02-9770-8c96d062041c\\exec-27713add-b8ab-4d41-8a40-5bfe613bbe82.png"
+    },
+    {
+      "path": "DemoApp/assets/map/enemies/zealot_squire.png",
+      "source": "C:\\Users\\Pon\\.codex\\generated_images\\01a19cb6-dc2a-7d02-9770-8c96d062041c\\exec-98616ec5-dc5a-4049-98fb-38b79fe66f2a.png"
+    },
+    {
+      "path": "DemoApp/assets/map/enemies/husher.png",
+      "source": "C:\\Users\\Pon\\.codex\\generated_images\\01a19cb6-dc2a-7d02-9770-8c96d062041c\\exec-18533f97-7fd5-47ef-822a-aed727c6dc84.png"
+    },
+    {
+      "path": "DemoApp/assets/map/enemies/droughter.png",
+      "source": "C:\\Users\\Pon\\.codex\\generated_images\\01a19cb6-dc2a-7d02-9770-8c96d062041c\\exec-d3b29a32-e431-4b9f-8efb-34eb7d68dff7.png"
+    },
+    {
+      "path": "DemoApp/assets/map/enemies/yoker.png",
+      "source": "C:\\Users\\Pon\\.codex\\generated_images\\01a19cb6-dc2a-7d02-9770-8c96d062041c\\exec-2d2a1e58-f705-4254-82db-a656537e5c57.png"
+    },
+    {
+      "path": "DemoApp/assets/map/enemies/accuser.png",
+      "source": "C:\\Users\\Pon\\.codex\\generated_images\\01a19cb6-dc2a-7d02-9770-8c96d062041c\\exec-97ba0f1f-5a23-461c-b4d4-0a3f0464cc99.png"
+    },
+    {
+      "path": "DemoApp/assets/map/terrain/fort_enemy.png",
+      "source": "C:\\Users\\Pon\\.codex\\generated_images\\01a19cb6-dc2a-7d02-9770-8c96d062041c\\exec-2838ee06-ba10-40be-ba3d-e27bccf80461.png"
+    },
+    {
+      "path": "DemoApp/assets/map/terrain/camp_enemy.png",
+      "source": "C:\\Users\\Pon\\.codex\\generated_images\\01a19cb6-dc2a-7d02-9770-8c96d062041c\\exec-b60437a4-c114-492a-a4b5-1776b4e05e3f.png"
+    },
+    {
+      "path": "DemoApp/assets/map/terrain/gate_enemy.png",
+      "source": "C:\\Users\\Pon\\.codex\\generated_images\\01a19cb6-dc2a-7d02-9770-8c96d062041c\\exec-c6e70ca5-792b-4936-9736-07b6f07382bf.png"
+    },
+    {
+      "path": "DemoApp/assets/map/terrain/fort_ally.png",
+      "source": "C:\\Users\\Pon\\.codex\\generated_images\\01a19cb6-dc2a-7d02-9770-8c96d062041c\\exec-101363f1-45ef-4a9c-a897-7b8ad01c8a46.png"
+    },
+    {
+      "path": "DemoApp/assets/map/terrain/camp_ally.png",
+      "source": "C:\\Users\\Pon\\.codex\\generated_images\\01a19cb6-dc2a-7d02-9770-8c96d062041c\\exec-aae6a553-fc63-49dd-9221-9ef2dde7c609.png"
+    },
+    {
+      "path": "DemoApp/assets/map/terrain/gate_ally.png",
+      "source": "C:\\Users\\Pon\\.codex\\generated_images\\01a19cb6-dc2a-7d02-9770-8c96d062041c\\exec-5a6c8996-cf43-4607-95db-cf2f8fe62c29.png"
+    }
+  ],
+  "nativeAssets": {
+    "burn.svg": "燃焼: 火の輪郭を64px SVGとして作成",
+    "poison.svg": "毒: 霧の輪郭を64px SVGとして作成"
+  }
+}
