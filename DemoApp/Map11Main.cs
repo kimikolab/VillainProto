@@ -335,6 +335,17 @@ public partial class Map11Main : Node3D
             Refresh();
             if (StopReason(before) is { } why) ShowToast(why, GoldColor, 30f);
         }
+        // 第446期 §3: **枠を買った直後の「無料で 1 枚」**（`--map-stage=1-2` と使う）。開始の金 8 で、出撃前に 3 隊目の枠を買う。
+        else if (parts.Length > 1 && parts[1] == "freepick")
+        {
+            St.UseDefaultSquads();
+            _selected = 0;
+            _reform = true;
+            ClearHold();
+            bool bought = St.BuySlot();
+            Refresh();
+            GD.Print($"MAP11_CAPTURE_FREEPICK seed={Map11Session.Seed} bought={bought} gold={St.Gold} free={St.FreePicks}");
+        }
         // 第445期 §3: **組み直しの窓に呼ぶ候補 3 枚が出ている所**（`--map-stage=1-2` と使う）。既定の組み方で 2 隊を組み、第1隊を北へ出して
         // 戦闘は**頭なしで**決着させ（戦闘シーンへは行かない）、金が呼ぶ ＋ 枠のぶん貯まったら、拠点の隊の組み直しを開く。
         else if (parts.Length > 1 && parts[1] == "shop")
@@ -1927,6 +1938,12 @@ public partial class Map11Main : Node3D
 
     private void ToggleReform()
     {
+        // 第446期: 枠の特典の無料の 1 枚を選ぶまで、組み直しの窓は閉じない。
+        if (_reform && St.FreePicks > 0)
+        {
+            ShowToast("枠の特典の 1 枚を、候補から無料で選んでから戻ってください", GoldColor, 3.0f);
+            return;
+        }
         if (!_reform && !St.CanReform(_selected))
         {
             ShowToast(St.IsLocked(_selected)
@@ -2113,37 +2130,68 @@ public partial class Map11Main : Node3D
     {
         if (!St.Stage.Gold.On) return;
         GoldRule g = St.Stage.Gold;
+        bool free = St.FreePicks > 0;
+        // 第446期: 押せない理由を 1 語（金が足りない）。押せる・押せないの判定は `Map11State` のまま。
+        string Short(int cost) => St.Gold < cost ? "・金が足りない" : "";
+        // 手札の列は細いので、札の文字は切り（全文は触れたときの説明）、案内の文は折り返す。
+        void Fit(Button b) { b.ClipText = true; b.TooltipText = b.Text; b.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill; b.CustomMinimumSize = new Vector2(0, b.CustomMinimumSize.Y); }
         _benchList.AddChild(UiKit.Text($"金 {St.Gold}", 18, GoldColor));
+        if (free)
+        {
+            Label note = UiKit.Text("枠の特典: 候補から 1 枚を無料で選ぶ（選ぶまで作戦に戻れない）", 13, GoldColor);
+            note.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+            _benchList.AddChild(note);
+        }
         for (int k = 0; k < St.Offers.Count; k++)
         {
             UnitDef d = St.Offers[k];
             int index = k;
-            Button b = UiKit.ActionButton($"呼ぶ（{g.Recruit}）  {d.Name}   HP {d.MaxHp} ・ 攻{d.Attack} ・ 速{d.Speed}", GoldColor);
+            string head = free ? "無料" : $"呼ぶ {g.Recruit}";
+            Button b = UiKit.ActionButton($"{head}  {d.Name}  HP{d.MaxHp} 攻{d.Attack} 速{d.Speed}{(free ? "" : Short(g.Recruit))}", GoldColor);
             b.Alignment = HorizontalAlignment.Left;
+            Fit(b);
             b.Disabled = !_reform || !St.CanRecruit(index);
             b.Pressed += () =>
             {
+                bool wasFree = St.FreePicks > 0;
                 if (!St.Recruit(index)) { ShowToast("いまは呼べません", EnemyColor, 3.0f); return; }
-                ShowToast($"{d.Name} を呼んだ（金 −{g.Recruit}・残り {St.Gold}）", GoldColor, 3.0f);
+                ShowToast(wasFree ? $"{d.Name} を無料で呼んだ（枠の特典）" : $"{d.Name} を呼んだ（金 −{g.Recruit}・残り {St.Gold}）", GoldColor, 3.0f);
                 ClearHold();
                 Refresh();
             };
             _benchList.AddChild(b);
         }
+        if (g.Reroll > 0)
+        {
+            Button re = UiKit.ActionButton($"リロール {g.Reroll}（候補を引き直す）{Short(g.Reroll)}", UiKit.Muted);
+            Fit(re);
+            re.Disabled = !_reform || !St.CanReroll;
+            re.Pressed += () =>
+            {
+                if (!St.Reroll()) return;
+                ShowToast($"候補を引き直した（金 −{g.Reroll}・残り {St.Gold}）", GoldColor, 2.5f);
+                Refresh();
+            };
+            _benchList.AddChild(re);
+        }
         if (St.SquadCap < St.Squads.Length)
         {
-            Button slot = UiKit.ActionButton($"{St.SquadCap + 1}隊目の枠を開ける（{g.Slot}）", UiKit.Muted);
+            Button slot = UiKit.ActionButton($"{St.SquadCap + 1}隊目の枠 {g.Slot}"
+                + (g.SlotFreePick ? "（1 枚無料つき）" : "") + Short(g.Slot), UiKit.Muted);
+            Fit(slot);
             slot.Disabled = !_reform || !St.CanBuySlot;
             slot.Pressed += () =>
             {
                 if (!St.BuySlot()) return;
-                ShowToast($"{St.Squads[St.SquadCap - 1].Label} が使えるようになった（金 −{g.Slot}・残り {St.Gold}）", GoldColor, 3.0f);
+                ShowToast($"{St.Squads[St.SquadCap - 1].Label} が使えるようになった（金 −{g.Slot}・残り {St.Gold}）"
+                          + (St.FreePicks > 0 ? "——候補から 1 枚を無料で選んでください" : ""), GoldColor, 4.0f);
                 Refresh();
             };
             _benchList.AddChild(slot);
         }
         string held = _holdBench >= 0 && _holdBench < St.Bench.Count ? St.Bench[_holdBench].Def.Name : "控えの駒を選んで";
-        Button sell = UiKit.ActionButton($"売る（＋{g.Sell}）  {held}", UiKit.Muted);
+        Button sell = UiKit.ActionButton($"売る ＋{g.Sell}  {held}", UiKit.Muted);
+        Fit(sell);
         sell.Disabled = !_reform || !St.CanSell(_holdBench);
         sell.Pressed += () =>
         {
@@ -2533,7 +2581,8 @@ public partial class Map11Main : Node3D
             if (St.Stage.WinOnCapture && St.Won) lines.Add($"退いた敵部隊 {St.FoesRemaining}（制圧で勝ち・残りは退いた）");
             if (St.Stage.Gold.On)
                 lines.Add($"金: 稼いだ {St.GoldLog.Where(e => e.Amount > 0).Sum(e => e.Amount)} ・ 使った {-St.GoldLog.Where(e => e.Amount < 0).Sum(e => e.Amount)}"
-                          + $" ・ 余り {St.Gold} ・ 呼んだ {St.Recruits} 枚 ・ 売った {St.Sold} 枚 ・ 使えた隊 {St.SquadCap}");
+                          + $" ・ 余り {St.Gold} ・ 呼んだ {St.Recruits} 枚 ・ 売った {St.Sold} 枚 ・ 使えた隊 {St.SquadCap}"
+                          + (St.Stage.Gold.Reroll > 0 ? $" ・ リロール {St.Rerolls} 回" : ""));
         }
         // 第177期 §3 —— **開始時に自分で組んだ編成**（次の期の材料）。
         lines.Add("");

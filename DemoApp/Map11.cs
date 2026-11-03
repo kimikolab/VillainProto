@@ -559,6 +559,10 @@ public sealed class Map11State
     /// <summary>呼んだ枚数 ／ 売った枚数（測るためだけの計数）。</summary>
     public int Recruits { get; private set; }
     public int Sold { get; private set; }
+    /// <summary>リロールした回数（第446期）。</summary>
+    public int Rerolls { get; private set; }
+    /// <summary>無料で呼べる残り（第446期: 枠を買うと 1）。<b>残っているあいだは呼ぶ値段が 0</b>。</summary>
+    public int FreePicks { get; private set; }
     /// <summary>開始の手札の引きで保証 3 条件を満たせたか（満たせなければ結果画面に印）。到着を切った通しでは真。</summary>
     public bool OpeningOk { get; } = true;
     /// <summary>開始の手札の引き直しの回数。</summary>
@@ -675,14 +679,16 @@ public sealed class Map11State
     public bool CanTrade => Stage.Gold.On && !Finished && Squads.Any(q => CanReform(q.Index));
 
     /// <summary>呼べるか（候補 <paramref name="offer"/> 番目）。</summary>
-    public bool CanRecruit(int offer) => CanTrade && offer >= 0 && offer < Offers.Count && Gold >= Stage.Gold.Recruit;
+    public bool CanRecruit(int offer) => CanTrade && offer >= 0 && offer < Offers.Count && (FreePicks > 0 || Gold >= Stage.Gold.Recruit);
 
     /// <summary>呼ぶ（第445期 §0-1）。候補の駒を手札に入れ、その位置に列の次の 1 枚を補充する。</summary>
     public bool Recruit(int offer)
     {
         if (!CanRecruit(offer)) return false;
         UnitDef d = Offers[offer];
-        Spend(Stage.Gold.Recruit, $"{d.Name}を呼んだ");
+        // 第446期: 枠の特典の 1 枚は無料（金の出入りには載せない）。
+        if (FreePicks > 0) FreePicks--;
+        else Spend(Stage.Gold.Recruit, $"{d.Name}を呼んだ");
         Bench.Add(One(d));
         Recruits++;
         Offers.RemoveAt(offer);
@@ -699,6 +705,29 @@ public sealed class Map11State
         if (!CanBuySlot) return false;
         Spend(Stage.Gold.Slot, $"{SquadCap + 1}隊目の枠を開けた");
         SquadCap++;
+        // 第446期: 買うとその場で候補から 1 枚を無料で選べる（「枠を先に買うと空のまま」を規則で潰す）。
+        if (Stage.Gold.SlotFreePick) FreePicks++;
+        return true;
+    }
+
+    /// <summary>リロールできるか（第446期・値段 0 の盤では無い）。</summary>
+    public bool CanReroll => CanTrade && Stage.Gold.Reroll > 0 && Gold >= Stage.Gold.Reroll && Offers.Count > 0;
+
+    /// <summary>
+    /// 候補を引き直す（第446期）。列の次から、盤上・手札にいない駒を候補の枚数だけ引き、<b>捨てた候補は列の最後へ戻す</b>
+    /// （回数の上限が無いので、戻さないと列が尽きる）。乱数は引かない（列は最初に並べたまま）。
+    /// </summary>
+    public bool Reroll()
+    {
+        if (!CanReroll) return false;
+        Spend(Stage.Gold.Reroll, "候補を引き直した");
+        var old = Offers.ToList();
+        Offers.Clear();
+        for (int k = 0; k < Stage.Gold.Offers; k++) if (NextOffer() is { } d) Offers.Add(d);
+        foreach (UnitDef d in old) _offerQueue.Enqueue(d);
+        // 列の残りが候補の枚数に満たなかったときは、戻した駒から足りないぶんを補う。
+        while (Offers.Count < Stage.Gold.Offers && NextOffer() is { } more) Offers.Add(more);
+        Rerolls++;
         return true;
     }
 
