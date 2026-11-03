@@ -834,6 +834,7 @@ if (focusId == "reseat") { ReseatDiag.Run(args, stageIndex); return; }
 if (focusId == "layout") { LayoutDiag.Run(args, stageIndex); return; }
 
 if (focusId == "dump") { DumpDiag.Run(args, stageIndex); return; }
+if (focusId == "tags") { TagsDiag.Run(args, stageIndex); return; }   // 第450期
 
 EnemyCatalog.Stage stage = EnemyCatalog.Stages[stageIndex];
 Console.WriteLine($"対象ステージ: {stage.Name}\n");

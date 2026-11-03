@@ -17,6 +17,7 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 compare > docs/balance.md  # 代表編成 × 全ステージの勝率比較
     dotnet run --project BattleSim -c Release 0 compare quality > docs/quality.md  # 勝ち方の質（残存/圧勝率/**完全勝利**/全滅勝ち・第2〜5波）
     dotnet run --project BattleSim -c Release 0 dump > docs/units.md      # ユニット・特性・ステージ一覧
+    dotnet run --project BattleSim -c Release 0 tags > docs/tags.md       # **第450期**: 駒のタグ（軸・役割・表示だけ）の確定版。表は `UnitTags`（`BattleCore/UnitCatalog.cs`）。戦闘0回
     dotnet run --project BattleSim -c Release 0 layout      # 代表編成の全配置総当たり（並列・決定的。**第140期に波別最良の測り直しも並列にした**）
     dotnet run --project BattleSim -c Release 0 reseat [絞り込み] [skip] [take]  # 配置候補を seed 200 で測り直す
     dotnet run --project BattleSim -c Release 0 confirm     # 差し替え候補を別 seed で追試する
@@ -1847,6 +1848,8 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
         # (ae) 火の魔術師の全体攻撃で味方 5 体に燃焼・火矢の貫きで付く数 ／ (af) 毒霧の司祭で毎ターン前列 2 体だけに毒 ／
         # (ag) 本陣の守りは動かず・先頭にならず・生きている間は制圧できない（直に歩かせた隊で確かめる・抜くと ＋10）／
         # (ah) 候補の 1 枚目が手持ちと同じ `Presets.Compare` の行の駒（開始とリロール）＋ 3 方針 × 100 seed と守備隊との戦い（報告のみ）。約 40 秒
+        # **第450期**: (ae)〜(ah) と第449期の表は第449期の 1-2（`Stage12H449`・火は燃え移る版）で回す。遊ぶ 1-2（`Stage12`）に
+        # (ai) 火の魔術師・火矢の射手の火が自分の部隊へ燃え移らない ／ (aj) 52 枚すべてに軸 1〜2 個と役割 1 個 ＋ 3 方針 × 100 seed と火の魔術師の部隊の重さ（報告のみ）。約 50 秒
     Godot_console.exe --path DemoApp --headless -- --map11-phase176
         # **第176期 Phase 0**: Q0-1〜Q0-5（`PortalOn = false` が第175期の 18 量と一致するか ／
         # 重なりと同点の割り方 ／ 湧いた部隊を満タンで作る口 ／ 方針の手順 ／ 走行時間）。約 1 秒

@@ -8952,8 +8952,36 @@ public static readonly UnitDef Inverter = MakeStill("inverter", "逆位の祭司
     // ---- 第449期 帯 B（燃焼・毒の餌になる敵）。体は既存の兵の数値のまま、札は味方の書き手の流用 ----
     // **`Stages` / `Columns` / 会戦には載せない**（作戦マップの部隊 `MapSquads` だけが使う）。燃焼の脆さ（+25%）は敵の火では乗らない（`BrittleApplies`）——そのまま。
 
-    /// <summary>火の魔術師（第449期）。詠唱兵（70/8/5・溜めて全体）の体に、ボルグの書き手（火の粉 ＋ 火の粉・広）。当てた相手全員に火を点け、隣の味方にも燃え移る。</summary>
+    /// <summary>火の魔術師（第450期）。詠唱兵（70/8/5・溜めて全体）の体に、敵の火の粉（<see cref="TraitId.CinderFoe"/>）。当てた相手全員に火を点ける（隣の味方へは燃え移らない）。</summary>
     public static readonly UnitDef Pyromancer = new()
+    {
+        Id = "pyromancer", Name = "火の魔術師", MaxHp = 70, Attack = 8, Speed = 5,
+        Advances = false,
+        PlusText = "全員を焼く——1ターン魔力を集め、次のターンに2倍の全体攻撃（溜め）。当てた全員に火を点ける",
+        Traits = new[] { TraitId.CinderFoe }, Pattern = AttackPattern.All,
+        Actions = new UnitAction[]
+        {
+            new(ActionKind.Charge, Label: "火を集めている"),
+            new(ActionKind.Attack, 200),
+        }
+    };
+
+    /// <summary>火矢の射手（第450期）。狙撃手（38/14/11・溜めて貫き）の体に、敵の火の粉（<see cref="TraitId.CinderFoe"/>）。貫いた全員に火が点く（隣の味方へは燃え移らない）。</summary>
+    public static readonly UnitDef FireArcher = new()
+    {
+        Id = "fire_archer", Name = "火矢の射手", MaxHp = 38, Attack = 14, Speed = 11,
+        Advances = false,
+        PlusText = "貫いた者に火を点ける——1ターン狙いを定め、次のターンに2倍の貫き（溜め）",
+        Traits = new[] { TraitId.CinderFoe }, Pattern = AttackPattern.Pierce,
+        Actions = new UnitAction[]
+        {
+            new(ActionKind.Charge, Label: "火矢をつがえている"),
+            new(ActionKind.Attack, 200),
+        }
+    };
+
+    /// <summary>第449期の火の魔術師（ボルグの書き手 火の粉 ＋ 火の粉・広・<b>隣の味方にも燃え移る</b>）。第449期の 1-2（`Stage12H449`）と門が使う。</summary>
+    public static readonly UnitDef PyromancerH449 = new()
     {
         Id = "pyromancer", Name = "火の魔術師", MaxHp = 70, Attack = 8, Speed = 5,
         Advances = false,
@@ -8966,8 +8994,8 @@ public static readonly UnitDef Inverter = MakeStill("inverter", "逆位の祭司
         }
     };
 
-    /// <summary>火矢の射手（第449期）。狙撃手（38/14/11・溜めて貫き）の体に、ボルグの書き手（火の粉 ＋ 火の粉・広）。広があるので貫いた全員に火が点く。</summary>
-    public static readonly UnitDef FireArcher = new()
+    /// <summary>第449期の火矢の射手（火の粉 ＋ 火の粉・広・<b>隣の味方にも燃え移る</b>）。第449期の 1-2（`Stage12H449`）と門が使う。</summary>
+    public static readonly UnitDef FireArcherH449 = new()
     {
         Id = "fire_archer", Name = "火矢の射手", MaxHp = 38, Attack = 14, Speed = 11,
         Advances = false,
@@ -9015,6 +9043,12 @@ public static readonly UnitDef Inverter = MakeStill("inverter", "逆位の祭司
 
     /// <summary>作戦マップの敵部隊を Id で引く（第448期）。</summary>
     public static MapSquad MapSquadOf(string id) => MapSquads.First(m => m.Id == id);
+
+    /// <summary>第449期の火の魔術師の部隊（火の粉で自分の部隊の隣にも燃え移る版）。第449期の 1-2（`Stage12H449`）が使う。</summary>
+    public static MapSquad BandFireH449 { get; } = MapSquadOf("band_fire") with
+    {
+        Enemy = Formation.Build(front1: Warden, front3: Recruit, center: PyromancerH449, back1: FireArcherH449, back3: Recruit),
+    };
 
     /// <summary>検証の波（第221期）。敵専用の9枠（<see cref="EnemyWave"/>）で組む。</summary>
     public sealed record TestStage(string Name, EnemyWave Enemy);
@@ -9142,5 +9176,123 @@ public static readonly UnitDef Inverter = MakeStill("inverter", "逆位の祭司
         foreach (var o in src.Occupied())
             if (o.Slot != 3) f[o.Slot] = o.Def;
         return f;
+    }
+}
+
+/// <summary>
+/// 駒のタグ（第450期・指示書 design/PHASE450_TAGS_SPEC.md §0-2・§2）。<b>表示だけ——どの規則も読まない</b>（`compare` は動かない）。
+/// <b>軸</b>（何で働くか・1〜2 個）と<b>役割</b>（隊の中で何をするか・1 個）。<b>手で書く表</b>で、<b><c>Id</c> で引く</b>（転生で名前が変わっても引ける）。
+/// 敵は素の兵が役割だけ・帯 B は軸 ＋「付与」。盤面ルールの保持者は札から語（粛・渇き・軛・逆位・断罪）を足す。
+/// 「合う」とは言わない——同じタグの駒を光らせる口は作らない。読むのはプレイヤー。確定版の表は `docs/tags.md`（`tags`）。
+/// </summary>
+public static class UnitTags
+{
+    /// <summary>軸の語（10）。</summary>
+    public static readonly string[] Axes = { "燃焼", "毒", "感電", "呪い", "移動", "標", "生贄", "破片", "自傷", "手番" };
+    /// <summary>役割の語（6）。「付与」＝ 状態を相手に付ける ／「反応」＝ 状態がある場面で強くなる。</summary>
+    public static readonly string[] Roles = { "タンク", "アタッカー", "サポート", "ヒーラー", "付与", "反応" };
+
+    /// <summary>表の 1 行（軸 1〜2・役割 1）。</summary>
+    public sealed record Entry(IReadOnlyList<string> Axes, string Role);
+
+    private static readonly Dictionary<string, Entry> Table = Build();
+
+    private static Dictionary<string, Entry> Build()
+    {
+        var t = new Dictionary<string, Entry>();
+        void A(UnitDef d, string role, params string[] axes) => t.Add(d.Id, new Entry(axes, role));
+        // ---- 編成に選べる 52 枚（`UnitCatalog.All` の並び） ----
+        A(UnitCatalog.Borg, "タンク", "燃焼");
+        A(UnitCatalog.Mudo, "タンク", "呪い", "自傷");
+        A(UnitCatalog.Sero, "タンク", "移動");
+        A(UnitCatalog.Nel, "サポート", "呪い");
+        A(UnitCatalog.Gald, "タンク", "自傷");
+        A(UnitCatalog.Rica, "アタッカー", "生贄");
+        A(UnitCatalog.Golm, "タンク", "標");
+        A(UnitCatalog.Dolga, "アタッカー", "手番");
+        A(UnitCatalog.Mug, "付与", "生贄");
+        A(UnitCatalog.Zoto, "アタッカー", "生贄", "燃焼");
+        A(UnitCatalog.Vel, "ヒーラー", "生贄");
+        A(UnitCatalog.Sid, "アタッカー", "毒");
+        A(UnitCatalog.Kado, "タンク", "自傷");
+        A(UnitCatalog.Hisa, "ヒーラー", "標");
+        A(UnitCatalog.Lili, "ヒーラー", "呪い");
+        A(UnitCatalog.Mio, "付与", "毒");
+        A(UnitCatalog.Rau, "付与", "毒");
+        A(UnitCatalog.Guza, "付与", "毒");
+        A(UnitCatalog.Tou, "付与", "感電");
+        A(UnitCatalog.Beni, "反応", "毒");
+        A(UnitCatalog.Gan, "サポート", "手番");
+        A(UnitCatalog.Vio, "反応", "毒");
+        A(UnitCatalog.Yomi, "アタッカー", "移動");
+        A(UnitCatalog.Basa, "付与", "移動");
+        A(UnitCatalog.Kugu, "サポート", "感電");
+        A(UnitCatalog.Ban, "サポート", "手番");
+        A(UnitCatalog.Shio, "サポート", "移動");
+        A(UnitCatalog.Utsu, "反応", "呪い");
+        A(UnitCatalog.Doha, "サポート", "標");
+        A(UnitCatalog.Sasa, "サポート", "破片", "移動");
+        A(UnitCatalog.Kubi, "付与", "呪い");
+        A(UnitCatalog.Hagi, "アタッカー", "生贄");
+        A(UnitCatalog.Sekki, "タンク", "手番");
+        A(UnitCatalog.Hota, "反応", "燃焼");
+        A(UnitCatalog.Hibi, "サポート", "破片");
+        A(UnitCatalog.Tsugi, "タンク", "破片");
+        A(UnitCatalog.Shiga, "アタッカー", "感電");
+        A(UnitCatalog.Zan, "アタッカー", "標");
+        A(UnitCatalog.Susu, "アタッカー", "自傷");
+        A(UnitCatalog.Gare, "アタッカー", "破片");
+        A(UnitCatalog.Nomi, "アタッカー", "自傷");
+        A(UnitCatalog.Kata, "アタッカー", "感電");
+        A(UnitCatalog.Tomo, "サポート", "手番");
+        A(UnitCatalog.Hane, "タンク", "移動");
+        A(UnitCatalog.Ere, "サポート", "生贄");
+        A(UnitCatalog.Wata, "サポート", "呪い");
+        A(UnitCatalog.Chiri, "アタッカー", "燃焼");
+        A(UnitCatalog.Sora, "タンク", "自傷");
+        A(UnitCatalog.Kari, "アタッカー", "呪い");
+        A(UnitCatalog.Tome, "アタッカー", "標");
+        A(UnitCatalog.Hiyo, "サポート", "燃焼");
+        A(UnitCatalog.Som, "付与", "感電");
+        // ---- 作戦マップの敵（帯 A・B・本陣の守り・1-2 の波の写し） ----
+        A(EnemyCatalog.Levy, "アタッカー");
+        A(EnemyCatalog.Laborer, "アタッカー");
+        A(EnemyCatalog.Recruit, "アタッカー");
+        A(EnemyCatalog.Priest, "アタッカー");
+        A(EnemyCatalog.Archer, "アタッカー");
+        A(EnemyCatalog.ArcherG, "アタッカー");
+        A(EnemyCatalog.Warden, "タンク");
+        A(EnemyCatalog.Knight, "アタッカー");
+        A(EnemyCatalog.KnightGR, "アタッカー");
+        A(EnemyCatalog.HusherHD15, "アタッカー");
+        A(EnemyCatalog.ZealotSquire, "タンク");
+        A(EnemyCatalog.Drifter, "アタッカー");
+        A(EnemyCatalog.Axeman, "アタッカー");
+        A(EnemyCatalog.Champion, "アタッカー");
+        A(EnemyCatalog.Pyromancer, "付与", "燃焼");
+        A(EnemyCatalog.FireArcher, "付与", "燃焼");
+        A(EnemyCatalog.MiasmaPriest, "付与", "毒");
+        return t;
+    }
+
+    /// <summary>盤面ルールの札と語（敵の保持者の札に出す）。</summary>
+    private static readonly (TraitId Id, string Word)[] RuleWords =
+    {
+        (TraitId.Hush, "粛"), (TraitId.Drought, "渇き"), (TraitId.Yoke, "軛"), (TraitId.Inversion, "逆位"), (TraitId.Condemn, "断罪"),
+    };
+
+    /// <summary>表の行（無ければ null）。</summary>
+    public static Entry? EntryOf(string id) => Table.GetValueOrDefault(id);
+
+    /// <summary>その駒が持つ盤面ルールの語。</summary>
+    public static IReadOnlyList<string> RulesOf(UnitDef d) => RuleWords.Where(r => d.Traits.Contains(r.Id)).Select(r => r.Word).ToArray();
+
+    /// <summary>軸 → 役割 → 盤面ルールの語の順（表に無い駒は盤面ルールの語だけ）。</summary>
+    public static IReadOnlyList<string> Of(UnitDef d)
+    {
+        var list = new List<string>();
+        if (EntryOf(d.Id) is { } e) { list.AddRange(e.Axes); list.Add(e.Role); }
+        list.AddRange(RulesOf(d));
+        return list;
     }
 }

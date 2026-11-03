@@ -347,8 +347,9 @@ public sealed class MapStage
     /// 1-2（第449期・遊ぶ版）。帯 B（燃焼・毒の餌になる敵）と本陣の守備隊（ポン案）:
     /// 中の中間拠点を<b>火の魔術師の部隊</b>、南の中間拠点を<b>毒霧の部隊</b>に替え、敵の拠点に<b>本陣の守り（動かない・抜かないと制圧できない・抜くと ＋10）</b>を置いた。
     /// 候補の 1 枚目は手持ちと噛む駒（<see cref="MatchOffer"/>）。北・湧き・予備隊・盤・金（守備隊の ＋10 のほか）・期限・隊の枠は第448期（<see cref="Stage12H448"/>）のまま。
+    /// 第450期からは回帰の基準だけが使う——火の魔術師の部隊は第449期の版（<see cref="EnemyCatalog.BandFireH449"/>・自分の部隊の隣にも燃え移る）。遊ぶ 1-2 は <see cref="Stage12"/>。
     /// </summary>
-    public static MapStage Stage12 { get; } = new()
+    public static MapStage Stage12H449 { get; } = new()
     {
         Id = Stage12H448.Id,
         Title = Stage12H448.Title,
@@ -356,7 +357,8 @@ public sealed class MapStage
         Lanes = new IReadOnlyList<Map11.RoadNode>[]
         {
             new[] { Band(0, 0, "band_archers", 2), Node(0, 1, EnemyCatalog.Vanguards[0], 1) },
-            new[] { Node(1, 0, EnemyCatalog.Stages[0], 0), Band(1, 1, "band_fire", 3), Garrison(1, 2, "band_garrison", 4) },
+            new[] { Node(1, 0, EnemyCatalog.Stages[0], 0),
+                    new Map11.RoadNode(1, 1, EnemyCatalog.BandFireH449.Name, EnemyCatalog.BandFireH449.Enemy, 3), Garrison(1, 2, "band_garrison", 4) },
             new[] { Band(2, 0, "band_shields", 3), Band(2, 1, "band_miasma", 2) },
         },
         LaneNames = Stage12H448.LaneNames,
@@ -371,6 +373,35 @@ public sealed class MapStage
         WinOnCapture = Stage12H448.WinOnCapture,
         Gold = GoldRule.V449(),
         MatchOffer = true,
+    };
+
+    /// <summary>
+    /// 1-2（第450期・遊ぶ版）。第449期（<see cref="Stage12H449"/>）から<b>火の魔術師の部隊だけ</b>を替えた——火の魔術師・火矢の射手の火は
+    /// 敵の火の粉（`CinderFoe`・当てた相手全員に点く・<b>自分の部隊の隣へは燃え移らない</b>）。盤・部隊の並び・金・候補の規則は第449期のまま。
+    /// </summary>
+    public static MapStage Stage12 { get; } = new()
+    {
+        Id = Stage12H449.Id,
+        Title = Stage12H449.Title,
+        Board = Stage12H449.Board,
+        Lanes = new IReadOnlyList<Map11.RoadNode>[]
+        {
+            Stage12H449.Lanes[0],
+            new[] { Stage12H449.Lanes[1][0], Band(1, 1, "band_fire", 3), Stage12H449.Lanes[1][2] },
+            Stage12H449.Lanes[2],
+        },
+        LaneNames = Stage12H449.LaneNames,
+        Spawn = Stage12H449.Spawn,
+        Portal = Stage12H449.Portal,
+        Time = Stage12H449.Time,
+        Arrival = Stage12H449.Arrival,
+        Reserve = Stage12H449.Reserve,
+        SquadCap = Stage12H449.SquadCap,
+        TurnCap = Stage12H449.TurnCap,
+        TimeLimit = Stage12H449.TimeLimit,
+        WinOnCapture = Stage12H449.WinOnCapture,
+        Gold = Stage12H449.Gold,
+        MatchOffer = Stage12H449.MatchOffer,
     };
 
     /// <summary>選べるステージ（編成画面の選択の並び）。</summary>

@@ -76,6 +76,12 @@ using System.Linq;
 //   (ag) 本陣の守りは刻を進めても敵の拠点から動かず、抜かないと制圧できない（抜くと ＋10）
 //   (ah) 候補の 1 枚目が手持ちと同じ `Presets.Compare` の行の駒（行がある seed で・リロールでも）
 //   3 方針 × 100 seed の表 ＋ 守備隊との戦いで失った枚数（報告だけ）
+// **第450期からは (ae)〜(ah) と第449期の表は第449期の盤（`MapStage.Stage12H449`・火は第449期の版）で回す**（回帰の基準）。
+//
+// 第450期（§1・遊ぶ 1-2 ＝ `MapStage.Stage12`・敵の火から燃え移りを外した・駒のタグ）:
+//   (ai) 火の魔術師の全体攻撃・火矢の射手の貫きで、敵の味方（自分の部隊）が燃えない（味方 5 体 ／ 3 体には今までどおり点く）
+//   (aj) 編成に選べる 52 枚すべてに 軸 1〜2 個と役割 1 個（表の語だけ）がある
+//   3 方針 × 100 seed の表と火の魔術師の部隊の重さ（報告だけ）
 //
 // 「貪欲」は第438・440期の門と同じ選び方（各隊は盤の上でいちばん近い敵部隊へ・敵が尽きたら敵の拠点へ）。
 // 自分で組む通し（到着あり）で回す: 開始の 10 枚を第1隊・第2隊に 5 枚ずつ、届いた駒は拠点にいる第3隊へ。
@@ -278,6 +284,7 @@ public static class Map12ChangeSmoke
         Phase447(write, Req);
         Phase448(write, Req);
         Phase449(write, Req);
+        Phase450(write, Req);
         return ok;
     }
 
@@ -1161,11 +1168,11 @@ public static class Map12ChangeSmoke
                 write($"  | {bname} | {k} | {v.Battles} | {(double)v.Lost / Math.Max(1, v.Battles):F2} |");
     }
 
-    /// <summary>第449期 —— 遊ぶ 1-2（`MapStage.Stage12`）の (ae)〜(ah) と、3 方針の表・守備隊との戦いで失った枚数（報告だけ）。</summary>
+    /// <summary>第449期 —— 第449期の 1-2（`MapStage.Stage12H449`）の (ae)〜(ah) と、3 方針の表・守備隊との戦いで失った枚数（報告だけ）。</summary>
     private static void Phase449(Action<string> write, Action<bool, string> Req)
     {
-        MapStage stage = MapStage.Stage12;
-        write("  ---- 第449期（遊ぶ 1-2・帯 B（火の魔術師の部隊・毒霧の部隊）・本陣の守り・候補の 1 枚目を噛む駒に） ----");
+        MapStage stage = MapStage.Stage12H449;
+        write("  ---- 第449期の 1-2（`Stage12H449`・帯 B（火の魔術師の部隊・毒霧の部隊）・本陣の守り・候補の 1 枚目を噛む駒に） ----");
 
         // 1 戦を台本つきで回し、(味方, 敵, 結果) を返す。味方は 5 枚の重装兵（長持ちさせて書き手の手番を見る）。
         (List<UnitState> P, List<UnitState> E, BattleResult R) Duel(Formation enemy, int seed)
@@ -1195,12 +1202,12 @@ public static class Map12ChangeSmoke
             int archMax = 0, archN = 0;
             for (int seed = 0; seed < 10; seed++)
             {
-                var (p, e, r) = Duel(Formation.Build(front1: w, front3: w, center: EnemyCatalog.Pyromancer), seed);
+                var (p, e, r) = Duel(Formation.Build(front1: w, front3: w, center: EnemyCatalog.PyromancerH449), seed);
                 UnitState mage = e.First(u => u.Def.Id == "pyromancer");
                 var f = FirstWrite(p, r, mage, StatusKeys.Burn);
                 if (f.Turn > 0) { pyroN++; if (f.Players == 5) pyroAll++; }
                 pyro.Add($"{f.Players}+{f.Foes}");
-                var (p2, e2, r2) = Duel(Formation.Build(front1: w, front3: w, back1: EnemyCatalog.FireArcher), seed);
+                var (p2, e2, r2) = Duel(Formation.Build(front1: w, front3: w, back1: EnemyCatalog.FireArcherH449), seed);
                 UnitState fa = e2.First(u => u.Def.Id == "fire_archer");
                 var f2 = FirstWrite(p2, r2, fa, StatusKeys.Burn);
                 if (f2.Turn > 0) { archN++; archMax = Math.Max(archMax, f2.Players); }
@@ -1328,7 +1335,7 @@ public static class Map12ChangeSmoke
         }
 
         // ---- 報告のみ: 3 方針 × 100 seed ＋ 部隊ごとの失った枚数 ----
-        var boards = new[] { ("第448期の既定", MapStage.Stage12H448), ("第449期の既定", stage) };
+        var boards = new[] { ("第448期の既定", MapStage.Stage12H448), ("第449期の既定", stage) };   // 第450期: 「第449期の既定」は `Stage12H449`
         var policies = new[] { ("1 隊残す", true, false, false), ("分担＋戻り番", true, true, false), ("籠城", true, true, true) };
         write("");
         write("  | 盤 | 方針 | 踏破 | 陥落 | 時間切れ | 制圧の刻（中央値） | 戦闘（平均） | 1 戦あたりの失った枚数 | 守備隊との戦い（計） | 守備隊との戦いで失った枚数（1 戦あたり） | 呼んだ枚数（平均） | 呼び戻した枚数（平均） |");
@@ -1371,6 +1378,101 @@ public static class Map12ChangeSmoke
         foreach (var (bname, byFoe) in foes)
             foreach (var (k, v) in byFoe.OrderByDescending(kv => (double)kv.Value.Lost / Math.Max(1, kv.Value.Battles)))
                 write($"  | {bname} | {k} | {v.Battles} | {(double)v.Lost / Math.Max(1, v.Battles):F2} |");
+    }
+
+    /// <summary>第450期 —— 遊ぶ 1-2（`MapStage.Stage12`）の (ai)(aj) と、3 方針の表・火の魔術師の部隊の重さ（報告だけ）。</summary>
+    private static void Phase450(Action<string> write, Action<bool, string> Req)
+    {
+        MapStage stage = MapStage.Stage12;
+        write("  ---- 第450期（遊ぶ 1-2・敵の火から燃え移りを外した・駒のタグ） ----");
+        (List<UnitState> P, List<UnitState> E, BattleResult R) Duel(Formation enemy, int seed)
+        {
+            var w = EnemyCatalog.Warden;
+            var p = BattleEngine.Materialize(Formation.Build(front1: w, front3: w, center: w, back1: w, back3: w), BattleContext.PlayerTeam);
+            var e = BattleEngine.Materialize(enemy, BattleContext.EnemyTeam);
+            return (p, e, BattleEngine.Run(p, e, seed, verbose: true));
+        }
+        // 書き手が付けた燃焼の相手（味方 ／ 敵の味方）を全刻ぶん数える。
+        (int Players, int Foes) Burned(List<UnitState> p, BattleResult r, UnitState actor)
+        {
+            var ids = r.Events.Where(ev => ev.Kind == BattleEventKind.StatusGain && ev.ActorId == actor.InstanceId && ev.Text == StatusKeys.Burn)
+                              .Select(ev => ev.TargetId).Distinct().ToList();
+            int pl = ids.Count(id => p.Any(u => u.InstanceId == id));
+            return (pl, ids.Count - pl);
+        }
+
+        // ---- (ai) 敵の火は自分の部隊へ燃え移らない ----
+        {
+            var w = EnemyCatalog.Warden;
+            int self = 0, pyroAll = 0, archMax = 0;
+            var line = new List<string>();
+            for (int seed = 0; seed < 10; seed++)
+            {
+                var (p, e, r) = Duel(Formation.Build(front1: w, front3: w, center: EnemyCatalog.Pyromancer, back1: EnemyCatalog.FireArcher), seed);
+                var a = Burned(p, r, e.First(u => u.Def.Id == "pyromancer"));
+                var b = Burned(p, r, e.First(u => u.Def.Id == "fire_archer"));
+                self += a.Foes + b.Foes;
+                if (a.Players == 5) pyroAll++;
+                archMax = Math.Max(archMax, b.Players);
+                line.Add($"{a.Players}+{a.Foes} ／ {b.Players}+{b.Foes}");
+            }
+            write($"  (ai) 火の魔術師 ／ 火矢の射手が燃やした数（味方＋敵の味方・戦い全体）seed 0〜9: {string.Join("  ", line)}");
+            write($"       敵の味方に点いた火 {self}（第449期の版は魔術師が前の 2 体・射手が隣の 1 体） ／ 味方 5 体すべてに点いた seed {pyroAll}/10 ／ 射手の味方の最大 {archMax} 体");
+            Req(self == 0 && pyroAll == 10 && archMax >= 2,
+                "(ai) 火の魔術師・火矢の射手の火は自分の部隊へ燃え移らない（味方には全体 5 体・貫いた先にも点く）");
+        }
+
+        // ---- (aj) 52 枚のタグ ----
+        {
+            var bad = UnitCatalog.All.Where(u => UnitTags.EntryOf(u.Id) is not { } e
+                    || e.Axes.Count < 1 || e.Axes.Count > 2 || e.Axes.Any(a => !UnitTags.Axes.Contains(a)) || !UnitTags.Roles.Contains(e.Role))
+                .Select(u => u.Name).ToList();
+            var axes = UnitTags.Axes.Select(a => $"{a} {UnitCatalog.All.Count(u => UnitTags.EntryOf(u.Id)?.Axes.Contains(a) == true)}");
+            var roles = UnitTags.Roles.Select(r => $"{r} {UnitCatalog.All.Count(u => UnitTags.EntryOf(u.Id)?.Role == r)}");
+            var foes = stage.Lanes.SelectMany(l => l).SelectMany(n => n.Enemy.Occupied()).Select(o => o.Def)
+                .Concat(stage.Reserve.Enemy!.Occupied().Select(o => o.Def))
+                .Concat(Enumerable.Range(0, 3).SelectMany(l => stage.Spawn(l).Enemy.Occupied().Select(o => o.Def)))
+                .GroupBy(d => d.Id).Select(g => g.First()).ToList();
+            var foeBare = foes.Where(d => d.Tags.Count == 0).Select(d => d.Name).ToList();
+            write($"  (aj) 52 枚のうち タグが表に無い・数や語が外れている駒 {bad.Count}{(bad.Count > 0 ? "（" + string.Join("・", bad) + "）" : "")}");
+            write($"       軸: {string.Join(" ／ ", axes)}");
+            write($"       役割: {string.Join(" ／ ", roles)}");
+            write($"       1-2 の敵 {foes.Count} 種: {string.Join(" ／ ", foes.Select(d => $"{d.Name}（{string.Join("・", d.Tags)}）"))} ——タグの無い敵 {foeBare.Count}");
+            Req(UnitCatalog.All.Count == 52 && bad.Count == 0, "(aj) 編成に選べる 52 枚すべてに 軸 1〜2 個と役割 1 個がある（空の駒 0）");
+        }
+
+        // ---- 報告のみ: 3 方針 × 100 seed ＋ 火の魔術師の部隊 ----
+        var boards = new[] { ("第449期の既定", MapStage.Stage12H449), ("第450期の既定", stage) };
+        var policies = new[] { ("1 隊残す", true, false, false), ("分担＋戻り番", true, true, false), ("籠城", true, true, true) };
+        write("");
+        write("  | 盤 | 方針 | 踏破 | 陥落 | 時間切れ | 制圧の刻（中央値） | 戦闘（平均） | 1 戦あたりの失った枚数 |");
+        write("  |---|---|--:|--:|--:|--:|--:|--:|");
+        int crashed = 0;
+        var fire = new Dictionary<string, (int Battles, int Lost)>();
+        foreach (var (bname, board) in boards)
+            foreach (var (pname, guard, split, turtle) in policies)
+            {
+                var runs = new List<Once>();
+                var local = new Dictionary<string, (int Battles, int Lost)>();
+                for (int seed = 0; seed < Seeds; seed++)
+                {
+                    try { runs.Add(Greedy(seed, board, guard, split, turtle, local)); }
+                    catch (Exception ex) { crashed++; if (crashed <= 3) write($"  × 第450期 {bname} {pname} seed {seed}: {ex.GetType().Name}: {ex.Message}"); }
+                }
+                if (runs.Count == 0) continue;
+                double P(Func<Once, bool> f) => 100.0 * runs.Count(f) / runs.Count;
+                var cap = runs.Where(r => r.Captured).Select(r => r.CapturedTurn).OrderBy(x => x).ToArray();
+                int b = local.Values.Sum(v => v.Battles), lost = local.Values.Sum(v => v.Lost);
+                local.TryGetValue(EnemyCatalog.MapSquadOf("band_fire").Name, out var fv);
+                fire.TryGetValue(bname, out var acc);
+                fire[bname] = (acc.Battles + fv.Battles, acc.Lost + fv.Lost);
+                write($"  | {bname} | {pname} | {P(r => r.Won):F0} | {P(r => r.Fallen):F0} | {P(r => r.TimedOut):F0} | {(cap.Length == 0 ? "—" : cap[cap.Length / 2].ToString())} | "
+                    + $"{runs.Average(r => r.Battles):F1} | {(b == 0 ? 0 : (double)lost / b):F2} |");
+            }
+        Req(crashed == 0, $"第450期の 2 つの盤 × 3 方針を {Seeds} seed ずつ回して落ちない（数字は報告のみ・線は置かない）");
+        write("");
+        foreach (var (bname, v) in fire)
+            write($"  火の魔術師の部隊（{bname}・3 方針の計）: 戦闘 {v.Battles} ／ 1 戦あたりの失った枚数 {(double)v.Lost / Math.Max(1, v.Battles):F2}");
     }
 
     /// <summary>手札の先頭から <paramref name="count"/> 枚を、その隊の空いた席（前1 から）へ配る。</summary>

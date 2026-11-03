@@ -1111,7 +1111,8 @@ public enum TraitId
     Hush,        // 粛: 保持者が生きている間、ターン外の行動が一切通らない。**両陣営に等しくかかる**
 
     // --- 第449期 作戦マップの敵（帯 B）だけが持つ札。`Stages` の敵も `UnitCatalog.All` も持たない ---
-    MiasmaFront  // 前の瘴気: 毎ターン、相手の前列に毒 +1（毒霧の司祭）。味方への漏れはない
+    MiasmaFront, // 前の瘴気: 毎ターン、相手の前列に毒 +1（毒霧の司祭）。味方への漏れはない
+    CinderFoe    // 敵の火の粉（第450期）: 当てた相手全員に火を点ける。隣の味方へは燃え移らない（火の魔術師・火矢の射手）
 }
 
 /// <summary>
@@ -10896,6 +10897,25 @@ public sealed class CinderTrait : Trait
 }
 
 /// <summary>
+/// 敵の火の粉（第450期・作戦マップの敵「火の魔術師」「火矢の射手」・指示書 design/PHASE450_TAGS_SPEC.md §0-1）。
+/// <b>この攻撃で当てた相手全員に火を点ける</b>（火の粉 ＋ 火の粉・広 と同じ相手・貫いた先にも点く）。<b>隣の味方へは燃え移らない</b>
+/// ——火の粉の燃え移りはボルグのマイナス（火を力にする仲間の燃料）で、火を力にする駒のいない敵には「ただのマイナス」だった（第449期の試遊）。
+/// 当てた相手は火勢の帳簿の「この攻撃で当たった敵」（<see cref="BattleContext.FoesHitThisAttack"/>）から引くので、保持者は火勢の土台に数える（<see cref="FireLevelRule.Holds"/>）。
+/// <b>保持者は作戦マップの敵だけ</b>なので `compare` は動かない。乱数を引かない。
+/// </summary>
+public sealed class CinderFoeTrait : Trait
+{
+    public override TraitId Id => TraitId.CinderFoe;
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+    {
+        if (dealt <= 0) return;
+        ctx.Ignite(target, source: self);
+        foreach (UnitState foe in ctx.FoesHitThisAttack(self))
+            if (foe != target) ctx.Ignite(foe, source: self);
+    }
+}
+
+/// <summary>
 /// 火の鎧（第234期・焼け残りのボルグの版 G1〜G4・<b>保持者 0 枚</b>——版は診断 <c>borgguard</c> のローカルの駒）。
 /// <para>① <b>敵の攻撃を受けると、その攻撃が終わってから、殴った敵と自分に火が点く</b>（攻撃1回ごと・薙ぎ／貫き／全体で当たっても殴った敵1体に1回）。
 /// 「攻撃」は敵の <c>PerformAttack</c> の枠の中で、その枠の主（攻撃者）が出どころの一撃——手番の攻撃・割り込み・反撃・追い打ち。
@@ -17278,7 +17298,7 @@ public static class FireLevelRule
     /// <summary>燃えていなければ 0、燃えていれば max(1, 値)。燃焼がどの口で消えても 0 に読め、燃焼だけが移っても 1 に読める。</summary>
     public static int Of(UnitState u) => u.RawCounter(StatusKeys.Burn) <= 0 ? 0 : Math.Max(1, u.RawCounter(LvKey));
     /// <summary>この期の札のどれかを持つ（その陣営に火勢を持たせる）。</summary>
-    public static bool Holds(UnitState u) => u.HasTrait(TraitId.FireLevel) || u.HasTrait(TraitId.CinderWide) || u.HasTrait(TraitId.FireKeep)
+    public static bool Holds(UnitState u) => u.HasTrait(TraitId.FireLevel) || u.HasTrait(TraitId.CinderWide) || u.HasTrait(TraitId.CinderFoe) || u.HasTrait(TraitId.FireKeep)
         || u.HasTrait(TraitId.PyreStage) || u.HasTrait(TraitId.FireStoke) || u.HasTrait(TraitId.TurnGift) || u.HasTrait(TraitId.TurnGiftWait)
         || u.HasTrait(TraitId.FireSpreadCap) || u.HasTrait(TraitId.StokeBaseAtk) || u.HasTrait(TraitId.FireUnleash) || u.HasTrait(TraitId.PyreBurnout)
         || u.HasTrait(TraitId.PyreEmbers) || u.HasTrait(TraitId.CallFire) || u.HasTrait(TraitId.FireRainOrdered)   // 第244期
@@ -20270,6 +20290,7 @@ public static class TraitCatalog
         new ContagionTrait(),
         new MiasmaTrait(),
         new MiasmaFrontTrait(),                               // 第449期（作戦マップの敵・毒霧の司祭）
+        new CinderFoeTrait(),                                 // 第450期（作戦マップの敵・火の魔術師 ／ 火矢の射手）
         new ImmobileTrait(),
         new HavocTrait(),
         new ParalyzeTrait(),

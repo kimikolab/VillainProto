@@ -760,6 +760,7 @@
 | `Yoke` | - |
 | `Hush` | - |
 | `MiasmaFront` | - |
+| `CinderFoe` | - |
 
 ## 燃焼の規則
 

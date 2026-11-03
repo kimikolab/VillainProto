@@ -86,6 +86,12 @@ public sealed class UnitDef
     public AttackPattern Pattern { get; init; } = AttackPattern.Single;
 
     /// <summary>
+    /// 駒のタグ（第450期・<b>表示だけ・どの規則も読まない</b>）。軸（1〜2）→ 役割（1）→ 盤面ルールの語の順。
+    /// 表は <see cref="UnitTags"/>（<c>Id</c> で引く・手で書く）。
+    /// </summary>
+    public IReadOnlyList<string> Tags => UnitTags.Of(this);
+
+    /// <summary>
     /// 一撃を入れるとき、相手の前まで<b>踏み込む</b>か（既定 <c>true</c>）、その場から出すか。
     ///
     /// <para><b>表示専用。どの規則もこれを読まない</b>（第131期）。engine に射程という軸は

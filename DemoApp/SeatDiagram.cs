@@ -189,9 +189,14 @@ public partial class SeatDiagram : Control
             // **3 行目に独立して置く**——2 行目の末尾に足すと `ClipText` で真っ先に切れる。
             string tag = BoardRuleTags.LabelFor(cell.Def.Traits);
             string head = (slot == Selected ? "▶ " : "") + seat;
+            // 第450期: 駒のタグ（軸・役割）。<b>行を増やさない</b>——大きい図では席の行の後ろ、小さい図では盤面ルールの行の頭に置く。
+            // 盤面ルールの語は ★ の札がもう出しているので重ねない。
+            string tags = UnitTagChips.Text(cell.Def, tag);
+            bool big = DisplayScale > 1.1f;
+            string last = string.Join("  ", new[] { big ? "" : tags, tag }.Where(x => x.Length > 0));
             card.Text = cell.Alive
-                ? $"{head}{(DisplayScale > 1.1f ? "\n" : "  ")}{cell.Def.Name}\nHP {cell.Hp}/{cell.MaxHp}  攻{cell.Def.Attack} 速{cell.Def.Speed}"
-                  + (tag.Length > 0 ? "\n" + tag : "")
+                ? $"{head}{(big ? (tags.Length > 0 ? "  " + tags : "") + "\n" : "  ")}{cell.Def.Name}\nHP {cell.Hp}/{cell.MaxHp}  攻{cell.Def.Attack} 速{cell.Def.Speed}"
+                  + (last.Length > 0 ? "\n" + last : "")
                 : $"{head}  {cell.Def.Name}\n{DeadLabel}";
             card.AddThemeColorOverride("font_color",
                 !cell.Alive ? UiKit.Faint

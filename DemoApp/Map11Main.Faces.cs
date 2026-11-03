@@ -74,8 +74,13 @@ public partial class Map11Main
         var face = new UnitFaceIcon { Position = new Vector2(5, 5), Size = new Vector2(42, 42) };
         face.SetUnit(def);
         button.AddChild(face);
-        button.CustomMinimumSize = new Vector2(0, 54);
+        button.CustomMinimumSize = new Vector2(0, 62);
         button.ClipText = true;
+        // 第450期: 駒のタグ（軸・役割）を札の下の段に小札で。説明（触れたとき）にも同じ語を足す。
+        HBoxContainer chips = UnitTagChips.Make(def, 10);
+        chips.Position = new Vector2(54, 44);
+        button.AddChild(chips);
+        if (def.Tags.Count > 0) button.TooltipText = (button.TooltipText ?? "") + $"\nタグ: {UnitTagChips.Text(def)}";
         foreach (string state in new[] { "normal", "hover", "pressed", "disabled" })
         {
             var style = (StyleBox)button.GetThemeStylebox(state).Duplicate();
@@ -111,8 +116,16 @@ public partial class Map11Main
             if (squad.Units is { } units)
                 foreach (var unit in units.Where(u => u.IsAlive).OrderBy(u => u.Slot))
                 {
-                    var face = new UnitFaceIcon { CustomMinimumSize = new Vector2(38, 38) };
-                    face.SetUnit(unit.Def); members.AddChild(face);
+                    // 第450期: 顔の下にタグの小札。
+                    var cell = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+                    cell.AddThemeConstantOverride("separation", 2);
+                    var face = new UnitFaceIcon { CustomMinimumSize = new Vector2(38, 38), SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter };
+                    face.SetUnit(unit.Def); cell.AddChild(face);
+                    HBoxContainer chips = UnitTagChips.Make(unit.Def, 9);
+                    chips.Alignment = BoxContainer.AlignmentMode.Center;
+                    cell.AddChild(chips);
+                    cell.TooltipText = $"{unit.Def.Name}　{UnitTagChips.Text(unit.Def)}";
+                    members.AddChild(cell);
                 }
             row.AddChild(members);
             if (squad.Lost || badge.Count == 0) row.AddChild(UiKit.Text(squad.Lost ? "失われた" : "空席", 14, UiKit.Muted));
