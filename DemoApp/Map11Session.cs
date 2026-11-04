@@ -167,6 +167,13 @@ public static class Map11Session
         State.Resolve(squad, node, playerWon, wasIntercept);
         Battles = State.Battles;
         if (wasIntercept && TurnRunning) _interceptFought = true;
+        // 第457期: 本陣で勝って、まだそこに敵がいれば連戦の合間（次の `StepTurn` が `Siege` で止まる）。
+        if (!wasIntercept && TurnRunning && playerWon && State.SiegeNext(squad) is { } next)
+        {
+            SiegeSquad = squad;
+            SiegeNode = next;
+            _siegeShown = false;
+        }
 
         var notes = result is null ? new List<string>() : Map11Info.RuleNotes(result);
         // 第454期 §1: レリックが働いた回数（台本の `BattleEventKind.Relic`・表示だけ）。駒は戦闘の前の隊の駒（InstanceId はこの戦闘で振られた番号）。
@@ -252,7 +259,8 @@ public static class Map11Session
     // =================================================================================
 
     /// <summary>作戦ターンを進めた結果。</summary>
-    public enum StepKind { Done, Battle, Intercept, Fallen }
+    /// <remarks>第457期: <c>Siege</c> ＝ 本陣の連戦の合間（<see cref="SiegeNode"/>・続けて戦うか引くかを選ぶ）。</remarks>
+    public enum StepKind { Done, Battle, Intercept, Fallen, Siege }
 
     /// <summary>
     /// 隊ごとの<b>行き先</b>（第175期 §1-1）。<b>第174期の「毎ターン置く命令」を置き換えた。</b>
@@ -279,6 +287,32 @@ public static class Map11Session
     /// <summary>この作戦ターンに迎撃を 1 戦以上済ませたか（<see cref="InterceptBreak"/> の材料）。</summary>
     private static bool _interceptFought;
 
+    /// <summary>本陣の連戦の合間で、次に当たる相手（第457期・null ＝ 合間ではない）。</summary>
+    public static Map11State.Node? SiegeNode { get; private set; }
+    /// <summary>本陣の連戦の合間にいる隊（-1 ＝ 合間ではない）。</summary>
+    public static int SiegeSquad { get; private set; } = -1;
+    private static bool _siegeShown;
+
+    /// <summary>連戦の合間で「続けて戦う」（第457期）。戦闘を用意できたら true（呼ぶ側は接敵の窓へ）。</summary>
+    public static bool ContinueSiege()
+    {
+        if (SiegeNode is not { } node || SiegeSquad < 0) return false;
+        int squad = SiegeSquad;
+        ClearSiege();
+        return BeginBattle(squad, node);
+    }
+
+    /// <summary>連戦の合間で「引く」（第457期）。隊を入ってきた経路の中間拠点へ戻す（呼ぶ側は作戦ターンの続きを流す）。</summary>
+    public static bool RetreatSiege()
+    {
+        if (State is null || SiegeSquad < 0) return false;
+        int squad = SiegeSquad;
+        ClearSiege();
+        return State.SiegeRetreat(squad);
+    }
+
+    private static void ClearSiege() { SiegeNode = null; SiegeSquad = -1; _siegeShown = false; }
+
     private static int _cursor;
     private static List<Map11State.Encounter>? _foes;
     private static int _foeIndex;
@@ -293,6 +327,7 @@ public static class Map11Session
         _foes = null;
         _foeIndex = 0;
         _interceptFought = false;
+        ClearSiege();
     }
 
     /// <summary>行き先を決める（プレイヤーの判断）。<b>盤面は1ビットも動かない。</b></summary>
@@ -325,6 +360,13 @@ public static class Map11Session
     public static StepKind StepTurn()
     {
         if (State is not { } st || !TurnRunning) return StepKind.Done;
+
+        // ---- 0) 第457期: 本陣の連戦の合間。1 度目は止まって窓を出す。答えずにもう一度呼ばれたら「続けて戦う」（器具と頭なしの通しのため） ----
+        if (SiegeNode is not null)
+        {
+            if (!_siegeShown) { _siegeShown = true; return StepKind.Siege; }
+            if (ContinueSiege()) return StepKind.Battle;
+        }
 
         // ---- 1) 隊の行動（番号順に1つずつ） ----
         while (_cursor < st.Squads.Length)
@@ -364,6 +406,7 @@ public static class Map11Session
         TurnRunning = false;
         InterceptNode = null;
         _interceptFought = false;
+        ClearSiege();
         _foes = null;
         _cursor = 0;
         // **行き先は引きずる**（第175期 §1-1「一度でも出した隊は、行き先を変えるまで前へ進み続ける」）

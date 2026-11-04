@@ -23,7 +23,7 @@ public partial class Map11Main
     }
 
     private bool GuideCovered => St.Finished || Map11Session.TurnRunning
-        || _encounterOverlay.Visible || _interceptOverlay.Visible || _resultOverlay.Visible
+        || _encounterOverlay.Visible || _interceptOverlay.Visible || _resultOverlay.Visible || _siegeOverlay.Visible
         || _confirmOverlay.Visible || Map11Clock.Running || _running;
 
     private void RefreshGuide()

@@ -555,6 +555,12 @@ public partial class Map11Main : Node3D
             GD.Print($"MAP11_CAPTURE_GREEDY seed={Map11Session.Seed} won={St.Won} fallen={St.Fallen} heroTurn={St.HeroTurn} hero={St.HeroOutcome} trail={string.Join(">", St.HeroHpTrail)} "
                      + "relics=" + string.Join("/", Map11Session.RelicWorked.Select(kv => $"{RelicCatalog.Info(kv.Key.Relic).Name}({kv.Key.Unit}):{kv.Value}")));
         }
+        // 第457期 §3: **本陣の連戦の合間の窓**の絵（`Map11Main.Siege.cs`）。
+        else if (parts.Length > 1 && parts[1] == "siege")
+        {
+            CaptureSiegeSetup();
+            await ToSignal(GetTree().CreateTimer(2.0), SceneTreeTimer.SignalName.Timeout);   // 浮く金の数字が消えるのを待つ
+        }
         // 第443期 §0-1: **迎撃の合間**の絵（`--map-stage=1-2` と使う）。既定の組み方で 2 隊を組み、北と南の先頭だけを残して
         // 拠点で待つ。2 刻目に 2 部隊が同時に着くので、1 戦目を**頭なしで**決着させ（戦闘シーンへは行かない）、2 戦目の迎撃の窓を出す。
         else if (parts.Length > 1 && parts[1] == "break")
@@ -596,6 +602,8 @@ public partial class Map11Main : Node3D
         await ToSignal(GetTree().CreateTimer(0.4), SceneTreeTimer.SignalName.Timeout);
         Error error = GetViewport().GetTexture().GetImage().SavePng(path);
         GD.Print($"MAP11_CAPTURE error={error} path={path}");
+        // 第457期 (bl): 敵の拠点の札が盤（画面）の内側に収まっているか。
+        if (parts.Length > 1 && parts[1] is "hero" or "siege") GD.Print($"MAP11_CAPTURE_PORTAL {PortalCardsInside()}");
         GetTree().Quit(error == Error.Ok ? 0 : 1);
     }
 
@@ -847,6 +855,7 @@ public partial class Map11Main : Node3D
             return;
         }
         if (_encounterOverlay.Visible) { Fight(); return; }
+        if (_siegeOverlay.Visible) { SiegeContinue(); Callable.From(RunSmokeStep).CallDeferred(); return; }   // 第457期: 通しの門は続けて戦う
         if (_interceptOverlay.Visible)
         {
             if (Map11Session.InterceptNode is { } node && St.NextInterceptor(node) is var pick && pick >= 0)
@@ -1812,6 +1821,7 @@ public partial class Map11Main : Node3D
         {
             case Map11Session.StepKind.Battle: _running = false; ShowEncounter(); return true;
             case Map11Session.StepKind.Intercept: _running = false; ShowIntercept(); return true;
+            case Map11Session.StepKind.Siege: _running = false; ShowSiege(); return true;   // 第457期
             case Map11Session.StepKind.Fallen: _running = false; ShowResult(); return true;
         }
         // **終わったかを、止まる理由より先に見る**（第177期・ポンの2巡目で踏んだ）。
@@ -1857,7 +1867,7 @@ public partial class Map11Main : Node3D
     private bool ClockMayTick()
         => !St.Finished && !Map11Session.TurnRunning && !_reform
            && !_encounterOverlay.Visible && !_interceptOverlay.Visible && !_resultOverlay.Visible
-           && !_confirmOverlay.Visible;
+           && !_confirmOverlay.Visible && !_siegeOverlay.Visible;
 
     /// <summary>時計を 1 フレームぶん進める（<c>_Process</c> と時計の門が呼ぶ）。</summary>
     private void ClockStep(double delta)
@@ -1893,7 +1903,7 @@ public partial class Map11Main : Node3D
         // 第439期 §1: **Space でも ▶／⏸**（ボタンと同じ1本）。
         if (e is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Space } && !_run.Disabled
             && !_reform && !_confirmOverlay.Visible && !_encounterOverlay.Visible
-            && !_interceptOverlay.Visible && !_resultOverlay.Visible)
+            && !_interceptOverlay.Visible && !_resultOverlay.Visible && !_siegeOverlay.Visible)
         {
             ToggleClock();
             GetViewport().SetInputAsHandled();
@@ -1909,6 +1919,7 @@ public partial class Map11Main : Node3D
         {
             case Map11Session.StepKind.Battle: ShowEncounter(); return;
             case Map11Session.StepKind.Intercept: ShowIntercept(); return;
+            case Map11Session.StepKind.Siege: ShowSiege(); return;   // 第457期: 本陣の連戦の合間
             case Map11Session.StepKind.Fallen: ShowResult(); return;
             default: if (St.Finished) ShowResult(); return;
         }
@@ -2908,8 +2919,11 @@ public partial class Map11Main : Node3D
                 // **敵の拠点も1点に集まる**ので同じ扱い（第177期）。
                 // 敵の拠点は札が重なる（ポータル自身の札・湧いた部隊・複数の隊が同じ1点）ので、
                 // **隊は手前（拠点寄り）へずらしてから縦に並べる**（第177期・ポンの2巡目で読めなかった）。
+                // 第457期 §0-2: 敵の拠点にいる隊は**そこにいる隊の並び順**で敵の拠点の札の左に縦に並べる（隊の番号で並べると、1 隊だけでも北の砦の脇へずれた）。
+                int portalRank = St.Squads.Take(i).Count(q => !q.Lost && q.Pos == St.Graph.Portal);
+                int portalCount = St.Squads.Count(q => !q.Lost && q.Pos == St.Graph.Portal);
                 Vector3 at = s.Pos == St.Graph.Home ? Stack(BasePos, i)
-                    : s.Pos == St.Graph.Portal ? Stack(PortalPos + new Vector3(-5.2f, 0, 0), i)
+                    : s.Pos == St.Graph.Portal ? PortalPos + new Vector3(-4.6f, 0, (portalRank - (portalCount - 1) / 2f) * 3.6f * _labelScale)
                     : PosOf(s.Pos) + new Vector3(-3.4f, 0, 0);
                 if (_firstRefresh) m.MoveTo(at); else m.SlideTo(at);
                 m.Set($"{s.Label}" + Nl
@@ -2959,10 +2973,13 @@ public partial class Map11Main : Node3D
 
         // 盤の上の湧きの板（道をまたいで、湧いた順に並べる）。
         int spawn = 0;
+        // 第457期 §0-2: 敵の拠点で重なる札のずらしは**今そこにいる敵の数**で（抜いた湧きを番号に数えない——勇者が盤の外へ押し出された）。
+        int atPortal = St.Nodes.Sum(r => r.Count(x => !x.Cleared && x.Pos == St.Graph.Portal));
         foreach (Map11State.Node n in St.Spawns)
         {
             Marker m = SpawnMarker(spawn++);
-            Place(m, n, n.Def.Road, stackAtPortal: spawn);
+            int stack = !n.Cleared && n.Pos == St.Graph.Portal ? ++atPortal : 0;
+            Place(m, n, n.Def.Road, stackAtPortal: stack);
             // 第441期 §3: **予備隊は行き先の経路と「あと n 刻」**（先頭の「◀ あと」より優先）。
             if (n.IsReserve && !n.Cleared)
                 m.SetNote($"予備隊 → {St.LaneName(n.Def.Road)} あと {St.ReserveEta ?? 0} 刻", UiKit.Hurt, true);

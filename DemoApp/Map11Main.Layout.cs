@@ -71,6 +71,7 @@ public partial class Map11Main
         BuildGuide(_uiRoot);
         BuildEncounterOverlay(_uiRoot);
         BuildInterceptOverlay(_uiRoot);
+        BuildSiegeOverlay(_uiRoot);   // 第457期: 本陣の連戦の合間
         BuildResultOverlay(_uiRoot);
         BuildConfirmOverlay(_uiRoot);
     }

@@ -87,6 +87,9 @@ public sealed class MapStage
     /// <summary>作戦マップの勇者（第454期 §2・<b>既定は Off</b>）。</summary>
     public HeroRule Hero { get; init; } = HeroRule.Off;
 
+    /// <summary>本陣の連戦（第457期・<see cref="SiegeRule"/>）。既定は無し（第456期まで）。</summary>
+    public SiegeRule Siege { get; init; } = SiegeRule.Off;
+
     public int LaneCount => Lanes.Length;
     public int TotalNodes => Lanes.Sum(l => l.Count);
 
@@ -550,11 +553,12 @@ public sealed class MapStage
     };
 
     /// <summary>
-    /// 1-2（第456期・遊ぶ版）。第455期（<see cref="Stage12H455"/>）の勇者を<b>門番</b>にした（<see cref="HeroRule.V456"/>）——
+    /// 1-2 の第456期の姿。第455期（<see cref="Stage12H455"/>）の勇者を<b>門番</b>にした（<see cref="HeroRule.V456"/>）——
     /// 門が開いた刻に敵の拠点のマス（本陣の守りと同じマス）に予告なしで立ち、動かない。本陣に入ると守り → 勇者の順に当たり、勇者が立っている間は制圧できない。
     /// <b>勝ちは制圧のまま</b>（第445期と同じ・制圧で勝ち・残りは退いた）・期限 12 のまま・倒せば ＋20。
+    /// 第457期からは回帰の基準だけが使う——遊ぶ 1-2 は <see cref="Stage12"/>。
     /// </summary>
-    public static MapStage Stage12 { get; } = new()
+    public static MapStage Stage12H456 { get; } = new()
     {
         Id = Stage12H455.Id,
         Title = Stage12H455.Title,
@@ -575,6 +579,34 @@ public sealed class MapStage
         PortalGate = Stage12H455.PortalGate,
         Relic = Stage12H455.Relic,
         Hero = HeroRule.V456,
+    };
+
+    /// <summary>
+    /// 1-2（第457期・遊ぶ版）。第456期（<see cref="Stage12H456"/>）に<b>本陣の連戦</b>（<see cref="SiegeRule.V457"/>）を足した——
+    /// 敵の拠点のマスで勝つと、同じ刻のうちに次の相手（守り → 勇者 → 湧き・予備隊）と続けて戦うか、入ってきた経路の中間拠点へ引くかを選ぶ。本陣の戦闘では道中の回復を乗せない。
+    /// </summary>
+    public static MapStage Stage12 { get; } = new()
+    {
+        Id = Stage12H456.Id,
+        Title = Stage12H456.Title,
+        Board = Stage12H456.Board,
+        Lanes = Stage12H456.Lanes,
+        LaneNames = Stage12H456.LaneNames,
+        Spawn = Stage12H456.Spawn,
+        Portal = Stage12H456.Portal,
+        Time = Stage12H456.Time,
+        Arrival = Stage12H456.Arrival,
+        Reserve = Stage12H456.Reserve,
+        SquadCap = Stage12H456.SquadCap,
+        TurnCap = Stage12H456.TurnCap,
+        TimeLimit = Stage12H456.TimeLimit,
+        WinOnCapture = Stage12H456.WinOnCapture,
+        Gold = Stage12H456.Gold,
+        MatchOffer = Stage12H456.MatchOffer,
+        PortalGate = Stage12H456.PortalGate,
+        Relic = Stage12H456.Relic,
+        Hero = Stage12H456.Hero,
+        Siege = SiegeRule.V457,
     };
 
     /// <summary>選べるステージ（編成画面の選択の並び）。</summary>
@@ -714,4 +746,17 @@ public readonly record struct HeroRule(bool On, int AfterGate, int StepEvery, Un
 public readonly record struct ReserveRule(bool On, Formation? Enemy, string Name, int StageIndex)
 {
     public static readonly ReserveRule Off = new(false, null, "", 0);
+}
+
+/// <summary>
+/// 本陣の連戦（第457期 §0-1）。<b><c>On</c> が偽なら第456期まで</b>（敵の拠点のマスでも 1 刻 1 戦・残った相手とは次の刻に当たる）。
+/// 真なら、敵の拠点のマスで勝った隊は<b>同じ刻のうちに</b>次の相手（`Map11State.PortalFoe` の順）と続けて戦うか、
+/// 入ってきた経路の中間拠点（経路の奥のマス）へ引くかを選ぶ（引くのは無料・1 刻かからない）。本陣の戦闘では道中の回復を乗せない。
+/// 中間拠点・道の上・味方の拠点の迎撃は今までどおり。
+/// </summary>
+public readonly record struct SiegeRule(bool On)
+{
+    public static readonly SiegeRule Off = new(false);
+    /// <summary>第457期の値: 本陣で連戦・合間に引ける・本陣では回復なし。</summary>
+    public static readonly SiegeRule V457 = new(true);
 }

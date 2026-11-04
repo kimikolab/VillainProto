@@ -1164,6 +1164,41 @@ public sealed class Map11State
             }
     }
 
+    // ---------------- 本陣の連戦（第457期 §0-1・`SiegeRule`） ----------------
+
+    /// <summary>
+    /// 本陣で続けて戦える次の相手（第457期）。連戦の盤で、その隊が敵の拠点のマスにいて生きた駒があり、
+    /// まだそこに敵がいれば <see cref="PortalFoe"/>（守り → 勇者 → 湧き・予備隊の順）を返す。それ以外は null。<b>盤面は1ビットも動かさない。</b>
+    /// </summary>
+    public Node? SiegeNext(int squadIndex)
+    {
+        if (!Stage.Siege.On || !Portal.On || Finished) return null;
+        Squad s = Squads[squadIndex];
+        if (s.Lost || s.Units is not { } u || !u.Any(x => x.IsAlive) || s.Pos != Graph.Portal) return null;
+        return PortalFoe() is { Cleared: false } f ? f : null;
+    }
+
+    /// <summary>勇者を倒した刻（第457期・-1 ＝ まだ・測るためだけ）。</summary>
+    public int HeroDownTurn { get; private set; } = -1;
+
+    /// <summary>本陣の連戦の合間に引いた回数（第457期・測るためだけ）。</summary>
+    public int SiegeRetreats { get; private set; }
+
+    /// <summary>
+    /// 本陣から引く（第457期）。隊を<b>入ってきた経路の中間拠点</b>（経路の奥のマス）へ戻す——1 刻かからない・無料。
+    /// 中間拠点が味方のものなら組み直し・呼ぶ・休むができる（<see cref="AtOutpost"/> の規則のまま）。本陣の敵はそのまま（HP は持ち越し）。
+    /// </summary>
+    public bool SiegeRetreat(int squadIndex)
+    {
+        if (!Stage.Siege.On) return false;
+        Squad s = Squads[squadIndex];
+        if (s.Lost || s.Units is null || s.Pos != Graph.Portal) return false;
+        int road = s.Road >= 0 && s.Road < Stage.LaneCount ? s.Road : 0;
+        Place(s, Graph.Lanes[road][^1], road);
+        SiegeRetreats++;
+        return true;
+    }
+
     /// <summary>その隊は制圧した第2拠点にいるか（<b>休む・組み直しができる</b>）。</summary>
     public bool AtSecondBase(int squadIndex)
         => Captured && Squads[squadIndex].Units is not null && Squads[squadIndex].Pos == Graph.Portal;
@@ -1583,6 +1618,7 @@ public sealed class Map11State
         }
         else node.Units = EngagementEngine.CrossBoundary(aliveE);
         if (node.IsHero) HeroHpTrail.Add(node.HpNow);   // 第455期: 勇者の HP の推移（結果画面・測るためだけ）
+        if (node.IsHero && node.Cleared && HeroDownTurn < 0) HeroDownTurn = Turn;   // 第457期: 勇者を倒した刻（測るためだけ）
 
         if (aliveP.Count == 0)
         {
@@ -1594,7 +1630,8 @@ public sealed class Map11State
         {
             // 第175期 §2: **迎撃で勝っても、道中の回復は乗らない**（待ちの抜け道を塞ぐ）。
             bool recover = playerWon && Map11.RecoverPercent > 0
-                           && (!intercept || Time.InterceptRecover);
+                           && (!intercept || Time.InterceptRecover)
+                           && !(Stage.Siege.On && node.Pos == Graph.Portal);   // 第457期: 本陣の戦闘では道中の回復を乗せない
             s.Units = EngagementEngine.CrossBoundary(aliveP, pu,
                 recover ? new RecoverRule(Map11.RecoverPercent, false) : null);
             RepairSeats(s.Units);
