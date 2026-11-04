@@ -180,6 +180,7 @@ public partial class BattlefieldView : Control
             _slots[i].Visible = true;
             _slots[i].SetUnit(formation[i]);
         }
+        ApplySeatRelics();   // 第455期: 席の札の「◆名前」（駒を置き替えても席の札は残る・空の席では出さない）
         // **置くたび・動かすたびに引き直す**（写しを持たない・自己検査 (e)）。
         _setupSelected = selected;
         var seats = new Dictionary<int, UnitDef>();

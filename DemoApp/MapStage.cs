@@ -494,8 +494,36 @@ public sealed class MapStage
     };
 
     /// <summary>
-    /// 1-2（第454期・遊ぶ版）。第453期（<see cref="Stage12H453"/>）に<b>勇者</b>（<see cref="HeroRule.V454"/>・門が開いた刻の 2 刻後に予告なしで敵の拠点に現れ、2 刻に 1 マス味方の拠点へ進む）と、
+    /// 1-2 の第454期の姿。第453期（<see cref="Stage12H453"/>）に<b>勇者</b>（<see cref="HeroRule.V454"/>・門が開いた刻の 2 刻後に予告なしで敵の拠点に現れ、2 刻に 1 マス味方の拠点へ進む）と、
     /// レリックの両端を軸の語だけで見る規則（<see cref="RelicRule.V454"/>）を足した。勝ちは制圧のまま（勇者が着く前に制圧すれば逃げ切り）。
+    /// 第455期からは回帰の基準だけが使う——遊ぶ 1-2 は <see cref="Stage12"/>。
+    /// </summary>
+    public static MapStage Stage12H454 { get; } = new()
+    {
+        Id = Stage12H453.Id,
+        Title = Stage12H453.Title,
+        Board = Stage12H453.Board,
+        Lanes = Stage12H453.Lanes,
+        LaneNames = Stage12H453.LaneNames,
+        Spawn = Stage12H453.Spawn,
+        Portal = Stage12H453.Portal,
+        Time = Stage12H453.Time,
+        Arrival = Stage12H453.Arrival,
+        Reserve = Stage12H453.Reserve,
+        SquadCap = Stage12H453.SquadCap,
+        TurnCap = Stage12H453.TurnCap,
+        TimeLimit = Stage12H453.TimeLimit,
+        WinOnCapture = Stage12H453.WinOnCapture,
+        Gold = Stage12H453.Gold,
+        MatchOffer = Stage12H453.MatchOffer,
+        PortalGate = Stage12H453.PortalGate,
+        Relic = RelicRule.V454,
+        Hero = HeroRule.V454,
+    };
+
+    /// <summary>
+    /// 1-2（第455期・遊ぶ版）。第454期（<see cref="Stage12H454"/>）の勇者を<b>本陣を制圧した刻</b>に出す（<see cref="HeroRule.V455"/>・1-3 の形）——
+    /// 制圧した本陣の 1 つ手前（経路の奥のマス）に予告なしで現れ、2 刻に 1 マス味方の拠点へ進む。<b>勝ちは制圧 ＋ 勇者を倒す</b>・期限は制圧まで。
     /// </summary>
     public static MapStage Stage12 { get; } = new()
     {
@@ -517,7 +545,7 @@ public sealed class MapStage
         MatchOffer = Stage12H453.MatchOffer,
         PortalGate = Stage12H453.PortalGate,
         Relic = RelicRule.V454,
-        Hero = HeroRule.V454,
+        Hero = HeroRule.V455,
     };
 
     /// <summary>選べるステージ（編成画面の選択の並び）。</summary>
@@ -622,13 +650,22 @@ public readonly record struct RelicRule(bool On, int Offers, bool Bridge = false
 /// （経路は予備隊と同じ選び方・前が詰まれば待つ・味方のいるマスへ入れば戦闘・拠点に着けば迎撃）。HP は戦闘をまたいで持ち越す（敵部隊と同じ）。
 /// 勝ちは制圧のまま——倒しても勝ちではないが、倒せば <c>Gold</c>。
 /// </summary>
-public readonly record struct HeroRule(bool On, int AfterGate, int StepEvery, UnitDef? Unit, int Gold)
+/// <param name="AfterCapture">
+/// 第455期 §0（1-3 の形）: <b>本陣を制圧した刻</b>に、制圧した本陣の 1 つ手前（経路の奥のマス・味方の隊がいない経路を先に）へ現れる（<c>AfterGate</c> は読まない）。
+/// <b>勝ちは制圧 ＋ 勇者を倒す</b>・刻の期限は制圧までで、現れた後は外す（勇者が時計）。制圧した刻に残っていたほかの敵部隊は退く。
+/// 勇者は中間拠点を取り返さず、味方の隊と同じマスに立てば素通りしない（その刻の終わりに戦闘）。拠点に居座れば 2 刻ごとに迎撃をやり直す。偽なら第454期まで。
+/// </param>
+public readonly record struct HeroRule(bool On, int AfterGate, int StepEvery, UnitDef? Unit, int Gold, bool AfterCapture = false)
 {
     public static readonly HeroRule Off = new(false, 0, 0, null, 0);
     /// <summary>第454期の値: 門の 2 刻後・2 刻に 1 マス・版 B（`EnemyCatalog.HeroMap`・固定 300 回復）・倒して ＋20。</summary>
     public static readonly HeroRule V454 = new(true, 2, 2, EnemyCatalog.HeroMap, 20);
     /// <summary>版 A（回復は最大HPの 40%）。遊ぶのは <see cref="V454"/>。</summary>
     public static readonly HeroRule V454A = new(true, 2, 2, EnemyCatalog.HeroMapA, 20);
+    /// <summary>第455期の値: 制圧した刻に現れる・2 刻に 1 マス・版 B・倒せば勝ち（金は無し）。</summary>
+    public static readonly HeroRule V455 = new(true, 0, 2, EnemyCatalog.HeroMap, 0, AfterCapture: true);
+    /// <summary>版 A（回復は最大HPの 40%・「難しい」の切替）。遊ぶのは <see cref="V455"/>。</summary>
+    public static readonly HeroRule V455A = new(true, 0, 2, EnemyCatalog.HeroMapA, 0, AfterCapture: true);
 }
 
 /// <summary>

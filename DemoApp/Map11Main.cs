@@ -498,6 +498,8 @@ public partial class Map11Main : Node3D
             if (St.RelicOffer.Count > 0) St.ChooseRelic(0);
             Go(1, Dest.Home);   // 拠点を空にすると湧いた部隊が着いて陥落するので、第2隊は拠点へ戻して迎え撃たせる
             Watch before = Take();
+            // 第455期: 勇者は本陣を制圧した刻に現れる——第1隊で本陣へ入って制圧する（`hero,win` はそのまま勇者を倒すまで回して結果画面）。
+            if (St.Stage.Hero.AfterCapture) Go(0, Dest.Portal(St.Graph, 0));
             for (int guard = 0; guard < 8 && St.Hero is null && !St.Finished; guard++)
             {
                 before = Take();
@@ -505,9 +507,52 @@ public partial class Map11Main : Node3D
                     if (e.Intercept) { if (St.NextInterceptor(e.Node) is var j && j >= 0) Fight(j, e.Node, true); St.CloseIntercept(e.Node); }
                     else Fight(e.Squad, e.Node, false);
             }
+            // 第455期 §4: `hero,win`——勇者を倒すまで（HP の多い隊から 1 隊ずつ勇者のマスへ・敵の前進の戦闘も回す）、倒したら結果画面。
+            bool win = parts.Length > 2 && parts[2] == "win";
+            for (int guard = 0; win && guard < 40 && !St.Finished; guard++)
+            {
+                if (St.Hero is not { Cleared: false } foe) break;
+                int striker = Enumerable.Range(0, St.Squads.Length).Where(k => !St.Squads[k].Lost && St.CanSend(k))
+                    .OrderByDescending(k => St.Squads[k].Units?.Where(x => x.IsAlive).Sum(x => x.Hp) ?? 0).DefaultIfEmpty(-1).First();
+                if (striker < 0) break;
+                Dest to = foe.Pos == St.Graph.Home ? Dest.Home : Dest.Of(St.Graph, foe.Pos);
+                if (St.FoeFacing(striker) is { } here) Fight(striker, here, false);
+                else if (Map11Orders.Apply(St, striker, to, Map11Orders.Plan(St, striker, to)) is { } met) Fight(striker, met, false);
+                for (int k = 0; k < St.Squads.Length; k++)
+                    if (k != striker && St.AtForwardBase(k)) St.Rest(k);
+                if (St.Finished) break;
+                foreach (Map11State.Encounter e in St.AdvanceFoes())
+                    if (e.Intercept) { if (St.NextInterceptor(e.Node) is var j && j >= 0) Fight(j, e.Node, true); St.CloseIntercept(e.Node); }
+                    else Fight(e.Squad, e.Node, false);
+            }
             Refresh();
-            if (StopReason(before) is { } why) ShowToast(why, GoldColor, 30f);
-            GD.Print($"MAP11_CAPTURE_HERO seed={Map11Session.Seed} turn={St.Turn} fallen={St.Fallen} finished={St.Finished} held={St.HeldOutposts.Count} gate={St.GateOpen} gateTurn={St.GateOpenedTurn} heroTurn={St.HeroTurn} hero={(St.Hero is { } h ? St.Graph[h.Pos].Name : "-")} "
+            if (win && St.Finished) ShowResult();
+            else if (StopReason(before) is { } why) ShowToast(why, GoldColor, 30f);
+            GD.Print($"MAP11_CAPTURE_HERO win={win} won={St.Won} trail={string.Join(">", St.HeroHpTrail)} seed={Map11Session.Seed} turn={St.Turn} fallen={St.Fallen} finished={St.Finished} held={St.HeldOutposts.Count} gate={St.GateOpen} gateTurn={St.GateOpenedTurn} heroTurn={St.HeroTurn} hero={(St.Hero is { } h ? St.Graph[h.Pos].Name : "-")} "
+                     + "relics=" + string.Join("/", Map11Session.RelicWorked.Select(kv => $"{RelicCatalog.Info(kv.Key.Relic).Name}({kv.Key.Unit}):{kv.Value}")));
+        }
+        // 第455期 §4: **勇者を倒した結果画面**の絵（`--map-stage=1-2` と使う）。器具の「分担＋戻り番」で通しを最後まで回す
+        // （戦闘は画面の通しと同じ口 `Map11Session.CompleteBattle` に台本つきで渡す——戦闘の記録とレリックの回数が結果画面に載る）。
+        else if (parts.Length > 1 && parts[1] == "greedy")
+        {
+            _reform = false;
+            ClearHold();
+            Map12ChangeSmoke.FightHook = (st, squad, node, intercept) =>
+            {
+                bool begun = intercept ? Map11Session.BeginIntercept(squad, node) : Map11Session.BeginBattle(squad, node);
+                if (!begun) return;
+                BattleResult r = BattleEngine.Run(CampaignSession.CarriedPlayers!, CampaignSession.CarriedEnemies!, CampaignSession.CarriedSeed, verbose: true);
+                CampaignSession.ClearCarriedBattle();
+                Map11Session.CompleteBattle(r.PlayerWon, r);
+            };
+            try { Map12ChangeSmoke.Greedy(Map11Session.Seed, St.Stage, guard: true, split: true, state: St); }
+            finally { Map12ChangeSmoke.FightHook = null; }
+            Refresh();
+            if (St.Finished) ShowResult();
+            // 金の浮く数字（1.65 秒）が消えるのを待ち、結果の欄を `greedy,<px>` ぶん下へ送る（勇者の行・レリックの行・戦闘の記録を見せる）。
+            await ToSignal(GetTree().CreateTimer(2.0), SceneTreeTimer.SignalName.Timeout);
+            if (parts.Length > 2 && int.TryParse(parts[2], out int down)) _resultScroll.ScrollVertical = down;
+            GD.Print($"MAP11_CAPTURE_GREEDY seed={Map11Session.Seed} won={St.Won} fallen={St.Fallen} heroTurn={St.HeroTurn} hero={St.HeroOutcome} trail={string.Join(">", St.HeroHpTrail)} "
                      + "relics=" + string.Join("/", Map11Session.RelicWorked.Select(kv => $"{RelicCatalog.Info(kv.Key.Relic).Name}({kv.Key.Unit}):{kv.Value}")));
         }
         // 第443期 §0-1: **迎撃の合間**の絵（`--map-stage=1-2` と使う）。既定の組み方で 2 隊を組み、北と南の先頭だけを残して
@@ -1689,7 +1734,10 @@ public partial class Map11Main : Node3D
         if (before.GateOpen && !St.GateOpen) now.Add($"本陣の門が閉じた（中間拠点 あと {St.GateNeed}）");
         // 第454期 §2-1: 勇者が現れた刻（予告は無い・ここで初めて知らせる）。
         if (before.HeroTurn < 0 && St.HeroTurn >= 0 && St.Hero is { } hero)
-            now.Add($"勇者が現れた（{Map11.PortalName}から{St.LaneName(hero.Def.Road)}へ向かう・2 刻に 1 マス）");
+            now.Add(St.Stage.Hero.AfterCapture
+                // 第455期: 制圧した刻に、本陣の 1 つ手前へ（倒せば勝ち）。
+                ? $"勇者が現れた（{St.Graph[hero.Pos].Name}・{St.LaneName(hero.Def.Road)}を拠点へ向かう・2 刻に 1 マス）——倒せば勝ち（HP {hero.HpNow}・毎ターン 300 回復）"
+                : $"勇者が現れた（{Map11.PortalName}から{St.LaneName(hero.Def.Road)}へ向かう・2 刻に 1 マス）");
         if (Map11Session.DeliveryText(St.Deliveries.Skip(before.Rewards)) is { } got) now.Add(got);
         if (St.HeroTurnsLeft is 3 or 1 && St.Turn > 0 && !St.Finished) now.Add($"勇者パーティーが あと {St.HeroTurnsLeft} 刻で現れる");
         if (St.TimeLimitLeft is 3 or 1 && St.Turn > 0 && !St.Finished) now.Add($"制圧の期限まで あと {St.TimeLimitLeft} 作戦ターン");
@@ -2719,10 +2767,10 @@ public partial class Map11Main : Node3D
                 ? $"{Map11.PortalName} を制圧したのは 作戦ターン {St.CapturedTurn + 1}"
                 : $"{Map11.PortalName} は制圧できなかった");
             lines.Add($"{Map11.PortalName} から湧いた敵部隊 {St.SpawnCount} 部隊"
-                + $"（うち抜いた {St.Spawns.Count(n => n.Cleared && !n.IsReserve)} 部隊）");
+                + $"（うち抜いた {St.Spawns.Count(n => n.Cleared && !n.IsReserve && !n.IsHero && !n.Retreated)} 部隊）");
             // 第441期 §3: 敵の予備隊。
             if (St.Reserve is { } rv)
-                lines.Add(rv.Cleared ? $"敵の予備隊（{rv.Def.Name}）を抜いた（{St.LaneName(rv.Def.Road)}）"
+                lines.Add(rv.Retreated ? $"敵の予備隊（{rv.Def.Name}）は退いた" : rv.Cleared ? $"敵の予備隊（{rv.Def.Name}）を抜いた（{St.LaneName(rv.Def.Road)}）"
                     : St.ReserveWaiting ? $"敵の予備隊（{rv.Def.Name}）は {Map11.PortalName} で待機のまま"
                     : $"敵の予備隊（{rv.Def.Name}）は {St.LaneName(rv.Def.Road)} に残った");
             if (St.SecondBaseFalls > 0) lines.Add($"第2拠点を取り返された {St.SecondBaseFalls} 回");
@@ -2733,14 +2781,19 @@ public partial class Map11Main : Node3D
                 lines.Add("見返りの増援: " + string.Join(" ／ ", St.Deliveries.Select(d => $"{d.Unit.Def.Name}（{d.Reason}・{d.Place}）")));
             if (St.HeroArrived) lines.Add($"作戦ターン {St.Stage.TurnCap} で勇者パーティーが着いた");
             // 第454期: 勇者（現れた刻・その後）とレリックが働いた回数。
-            if (St.Stage.Hero.On)
+            if (St.Stage.Hero.On && St.Stage.Hero.AfterCapture)
+                // 第455期: 勇者を倒した（戦った回数・当てた隊・持ち越した HP の推移）。
+                lines.Add(St.HeroTurn < 0 ? $"勇者: {St.HeroOutcome}"
+                    : $"勇者を{St.HeroOutcome}（作戦ターン {St.HeroTurn} に現れた・戦った {St.HeroBattles} 回・当てた隊 {St.HeroSquads.Count}・HP {string.Join(" → ", St.HeroHpTrail)}）");
+            else if (St.Stage.Hero.On)
                 lines.Add(St.HeroTurn < 0 ? "勇者: 現れなかった"
                     : $"勇者: 作戦ターン {St.HeroTurn} に現れた・{St.HeroOutcome}（戦った {St.HeroBattles} 回・当てた隊 {St.HeroSquads.Count}）");
+            if (St.RetreatedCount > 0) lines.Add($"退いた敵部隊 {St.RetreatedCount}（制圧した刻に退いた）");
             if (Map11Session.RelicWorked.Count > 0)
                 lines.Add("レリックが働いた: " + string.Join(" ／ ", Map11Session.RelicWorked.Select(kv => $"◆{RelicCatalog.Info(kv.Key.Relic).Name}（{kv.Key.Unit}）{kv.Value} 回")));
             if (St.TimeUp) lines.Add($"{St.Stage.TurnCap} 作戦ターン以内に {Map11.PortalName} を制圧できなかった（時間切れ）");
             // 第445期: 制圧で勝った盤は、掃除をしなかった敵部隊を「退いた」と出す。金の出入り。
-            if (St.Stage.WinOnCapture && St.Won) lines.Add($"退いた敵部隊 {St.FoesRemaining}（制圧で勝ち・残りは退いた）");
+            if (St.Stage.WinOnCapture && St.Won && !St.Stage.Hero.AfterCapture) lines.Add($"退いた敵部隊 {St.FoesRemaining}（制圧で勝ち・残りは退いた）");
             if (St.Stage.Gold.On)
                 lines.Add($"金: 稼いだ {St.GoldLog.Where(e => e.Amount > 0).Sum(e => e.Amount)} ・ 使った {-St.GoldLog.Where(e => e.Amount < 0).Sum(e => e.Amount)}"
                           + $" ・ 余り {St.Gold} ・ 呼んだ {St.Recruits} 枚 ・ 売った {St.Sold} 枚 ・ 使えた隊 {St.SquadCap}"
@@ -2808,6 +2861,8 @@ public partial class Map11Main : Node3D
         _mapHeadlineText = $"{St.Stage.Title} ・ "
             // 第447期 §0-3: 勝ち条件の文（勇者の予告の言い換え）と金は題の直後（長い行の右端は切れるので、seed を最後に回す）。
             + (St.TimeLimitLeft is { } limit ? $"{St.Stage.TurnCap} 作戦ターン以内に{Map11.PortalName}を制圧（あと {limit}） ・ " : "")
+            // 第455期: 制圧の後は勇者が時計（期限を外す）。
+            + (St.HeroClock && St.Hero is { Cleared: false } hh ? $"勇者を倒せば勝ち（HP {hh.HpNow}） ・ " : "")
             // 第445期 §0-1: 金（金のある盤だけ）。
             + (St.Stage.Gold.On ? $"金 {St.Gold} ・ " : "")
             + (St.Time.On ? $"作戦ターン {St.Turn + 1} ・ " : "")

@@ -122,8 +122,8 @@ public static class Map11Session
         return Launch(squad, prep, intercept: false);
     }
 
-    /// <summary>拠点の迎撃（第174期）。<b>道の上に出るわけではない</b>ので、専用の口を通す。</summary>
-    private static bool BeginIntercept(int squad, Map11State.Node node)
+    /// <summary>拠点の迎撃（第174期）。<b>道の上に出るわけではない</b>ので、専用の口を通す（第455期: 絵の口 `hero,win` も通す）。</summary>
+    internal static bool BeginIntercept(int squad, Map11State.Node node)
     {
         if (State is null || HasPendingBattle) return false;
         if (State.PrepareIntercept(squad, node) is not { } prep) return false;
@@ -212,6 +212,14 @@ public static class Map11Session
             string name = RelicCatalog.Info(relic).Name;
             lines.Add($"◆{name}（{u.Def.Name}）: {g.Count()} 回");
             RelicWorked[(u.Def.Name, relic)] = RelicWorked.GetValueOrDefault((u.Def.Name, relic)) + g.Count();
+        }
+        // 第455期 §1-1: 持たせた札は 0 回でも出す（働かない札が読める）。
+        foreach (UnitState u in squad.Where(x => x.Relic is TraitId r && RelicCatalog.IsRelic(r)))
+        {
+            TraitId relic = u.Relic!.Value;
+            if (result.Events.Any(e => e.Kind == BattleEventKind.Relic && e.ActorId == u.InstanceId && e.Text == relic.ToString())) continue;
+            lines.Add($"◆{RelicCatalog.Info(relic).Name}（{u.Def.Name}）: 0 回");
+            RelicWorked.TryAdd((u.Def.Name, relic), 0);
         }
         return lines;
     }

@@ -80,7 +80,8 @@ public partial class ScorePanel : PanelContainer
     }
 
     /// <summary>台本の最終集計を描き直す。<b>盤面にも台本にも一切触らない。</b></summary>
-    public void Render(BattleResult result, IReadOnlyList<DemoOpening> opening, string subtitle)
+    /// <param name="relicLines">第455期 §1-3: 表の下に出す「◆札（駒）: n 回」の行（戦闘側の編成画面で持たせた札・無ければ出さない）。表の幅は触らない。</param>
+    public void Render(BattleResult result, IReadOnlyList<DemoOpening> opening, string subtitle, IReadOnlyList<string>? relicLines = null)
     {
         foreach (Node child in _body.GetChildren()) child.QueueFree();
 
@@ -121,6 +122,12 @@ public partial class ScorePanel : PanelContainer
         }
         Section(result, team, label, discharge, BattleContext.PlayerTeam, "味方", UiKit.Player);
         Section(result, team, label, discharge, BattleContext.EnemyTeam, "敵", UiKit.Enemy);
+        // 第455期 §1-3: レリック（試遊だけ）が働いた回数——表の下に 1 行ずつ（`BattleEventKind.Relic` を数える・作戦マップの `RelicNotes` と同じ数え方）。
+        if (relicLines is { Count: > 0 })
+        {
+            _body.AddChild(new HSeparator());
+            _body.AddChild(UiKit.Text("レリック: " + string.Join(" ／ ", relicLines), 12, UiKit.Gold));
+        }
 
         _body.AddChild(new HSeparator());
 

@@ -2820,7 +2820,8 @@ public partial class Main : Control
                 + (_battleEnemyScale is { } scale ? $"敵 HP{scale.HpPercent}% / 攻{scale.AtkPercent}% ・ " : "")
                 + $"{_result.Turns}ターン ・ {(_result.PlayerWon ? "勝利" : "敗北")}"
                 + $"（生存 {_result.PlayerSurvivors}体）。"
-                + "台本は開戦前に計算済み。この表は戦闘全体の最終集計で、再生位置によらない。");
+                + "台本は開戦前に計算済み。この表は戦闘全体の最終集計で、再生位置によらない。",
+                RelicScoreLines());   // 第455期 §1-3: 表の下にレリックの行
         }
         _scorePanel.Visible = visible && _result is not null;
         if (_partyBar is not null && _battleMode) _partyBar.Visible = !_scorePanel.Visible;

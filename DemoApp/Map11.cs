@@ -25,6 +25,9 @@ public static class Map11
     /// <summary>1 マップの戦闘回数の上限（第168期 <c>BandCap</c> と同じ）。</summary>
     public const int BattleCap = 24;
 
+    /// <summary>制圧の後の勇者（第455期）が現れてから決着しないまま打ち切る刻（器具の止め・ふつうは起きない）。</summary>
+    public const int HeroStallTurns = 40;
+
     /// <summary>
     /// 敵の数値の倍率（第187期）。<b>作戦マップには掛けない</b>（ポンの判断）——
     /// 単発戦（`compare` の波）は <see cref="EnemyScaleRule.Default"/>（115 / 115）のままだが、
@@ -432,6 +435,11 @@ public sealed class Map11State
         public bool FromPortal { get; init; }
         public List<UnitState>? Units { get; set; }
         public bool Cleared { get; set; }
+        /// <summary>
+        /// 制圧した刻に退いた（第455期・<see cref="HeroRule.AfterCapture"/> の盤だけ）。<b>盤からは <see cref="Cleared"/> と同じに消える</b>が、
+        /// 「抜いた」には数えない（<see cref="ClearedCount"/>・湧きを抜いた数）。
+        /// </summary>
+        public bool Retreated { get; set; }
         public int DefMaxHp { get; init; }
         /// <summary>いまの残 HP（まだ当たっていない部隊は満タン）。</summary>
         public int HpNow { get; set; }
@@ -1020,7 +1028,7 @@ public sealed class Map11State
     /// <summary>1 枚を盤に立てられる形にする（開始の手札・呼んだ駒）。</summary>
     private static UnitState One(UnitDef d) => BattleEngine.Materialize(Formation.Build(front1: d), BattleContext.PlayerTeam)[0];
 
-    public int ClearedCount => Nodes.Sum(r => r.Count(n => n.Cleared));
+    public int ClearedCount => Nodes.Sum(r => r.Count(n => n.Cleared && !n.Retreated));
     public bool AllCleared => ClearedCount >= Stage.TotalNodes;
 
     /// <summary>出せる隊が1つも残っていない（盤上に居らず、かつ出していないわけでもない）。</summary>
@@ -1033,7 +1041,19 @@ public sealed class Map11State
     public string LaneName(int road) => road < 0 ? Map11.PortalName : Stage.LaneNames[road];
 
     public bool Finished => (Portal.On ? Won : AllCleared) || NoSquadsLeft || Battles >= BattleCapNow
-                            || Fallen || (Time.On && Turn >= Stage.TurnCap);
+                            || Fallen || (Time.On && Turn >= Stage.TurnCap && !HeroClock) || HeroStalled;
+
+    /// <summary>
+    /// 制圧の後の勇者が時計になっているか（第455期 §0・<see cref="HeroRule.AfterCapture"/> の盤で制圧した後）。
+    /// 真の間は刻の期限（<see cref="MapStage.TurnCap"/>）で終わらない——終わるのは勇者を倒すか、拠点が陥落するか、隊が尽きるか。
+    /// </summary>
+    public bool HeroClock => Stage.Hero.On && Stage.Hero.AfterCapture && Captured;
+
+    /// <summary>勇者が現れてから <see cref="Map11.HeroStallTurns"/> 刻たっても決着しない（器具の打ち切り・ふつうは起きない）。</summary>
+    public bool HeroStalled => HeroClock && HeroTurn >= 0 && Turn >= HeroTurn + Map11.HeroStallTurns && !Won && !Fallen;
+
+    /// <summary>勝つのに勇者を倒す必要があり、まだ倒していない（第455期）。それ以外の盤では常に偽。</summary>
+    public bool HeroStanding => Stage.Hero.On && Stage.Hero.AfterCapture && Hero is not { Cleared: true };
 
     /// <summary>
     /// 勇者パーティーが着いて負けた（第444期 §0-3）。<b>上限を勇者の予告にした盤（<see cref="MapStage.HeroAtCap"/>）で、
@@ -1045,16 +1065,17 @@ public sealed class Map11State
     public int? HeroTurnsLeft => Stage.HeroAtCap && Time.On ? Math.Max(0, Stage.TurnCap - Turn) : null;
 
     /// <summary>「n 作戦ターン以内に制圧」の残り（第447期・勝ち条件の文を出す盤だけ）。</summary>
-    public int? TimeLimitLeft => Stage.TimeLimit && Time.On ? Math.Max(0, Stage.TurnCap - Turn) : null;
+    public int? TimeLimitLeft => Stage.TimeLimit && Time.On && !HeroClock ? Math.Max(0, Stage.TurnCap - Turn) : null;
 
-    /// <summary>時間切れで負けた（第447期・勝ち条件の文を出す盤で、上限の刻に勝っていない）。</summary>
-    public bool TimeUp => Stage.TimeLimit && Time.On && Turn >= Stage.TurnCap && !Won && !Fallen;
+    /// <summary>時間切れで負けた（第447期・勝ち条件の文を出す盤で、上限の刻に勝っていない）。第455期: 制圧の後の勇者の盤では期限を外す。</summary>
+    public bool TimeUp => Stage.TimeLimit && Time.On && Turn >= Stage.TurnCap && !Won && !Fallen && !HeroClock;
 
     /// <summary>
     /// 勝ち。<b>拠点ありでは「制圧した ＋ 盤上の敵部隊が 0」</b>（第176期 §1-4）
     /// ——道を抜くだけでは終わらない。拠点なしでは第175期のまま。
     /// </summary>
-    public bool Won => Portal.On ? (Captured && (Stage.WinOnCapture || !FoesLeft) && !Fallen) : (AllCleared && !Fallen);
+    /// 第455期: 制圧の後に勇者が現れる盤（<see cref="HeroRule.AfterCapture"/>）では、<b>勇者を倒すまで勝ちにならない</b>。
+    public bool Won => Portal.On ? (Captured && (Stage.WinOnCapture || !FoesLeft) && !Fallen && !HeroStanding) : (AllCleared && !Fallen);
 
     /// <summary>盤に残っている敵部隊の数（第445期: 制圧で勝ったとき「退いた敵部隊」として結果に出す）。</summary>
     public int FoesRemaining => Nodes.Sum(r => r.Count(n => !n.Cleared)) + Spawns.Count(n => !n.Cleared) + (ReserveWaiting ? 1 : 0);
@@ -1130,6 +1151,7 @@ public sealed class Map11State
             {
                 Captured = true;
                 CapturedTurn = Turn;
+                if (Stage.Hero.On && Stage.Hero.AfterCapture) RetreatAll();   // 第455期: 残りの敵部隊は退く（勇者だけが残る）
                 // 第177期 §1: **制圧した時点でポータルは味方のものになる**ので、
                 // リキャストは味方の <see cref="PortalRule.WarpEvery"/> から数え直す
                 // ——敵の湧きの残り（最大 S ターン）を引き継がない。
@@ -1173,7 +1195,8 @@ public sealed class Map11State
         foreach (int cell in _outposts)
         {
             int lane = Graph[cell].Lane;
-            bool foe = FoesOn(lane).Any(n => n.Pos == cell);
+            // 第455期: 制圧の後の勇者は中間拠点を取り返さない（味方の拠点だけを目指す）。
+            bool foe = FoesOn(lane).Any(n => n.Pos == cell && !(n.IsHero && Stage.Hero.AfterCapture));
             int mine = -1;
             for (int i = 0; i < Squads.Length; i++)
                 if (!Squads[i].Lost && Squads[i].Units is { } u && Squads[i].Pos == cell && u.Any(x => x.IsAlive)) { mine = i; break; }
@@ -1530,7 +1553,7 @@ public sealed class Map11State
         List<UnitState> pu = s.Units!;
         List<UnitState> eu = node.Units!;
         Battles++;
-        if (node.IsHero) { HeroBattles++; HeroSquads.Add(squadIndex); }   // 第454期（測るためだけ）
+        if (node.IsHero) { HeroBattles++; HeroSquads.Add(squadIndex); _heroFoughtTurn = Turn; }   // 第454期（測るためだけ）・第455期: 当たった刻
 
         var aliveP = pu.Where(u => u.IsAlive).ToList();
         var aliveE = eu.Where(u => u.IsAlive).ToList();
@@ -1556,6 +1579,7 @@ public sealed class Map11State
             if (node.Def.Road == s.Home && !node.FromPortal) s.Cleared++;
         }
         else node.Units = EngagementEngine.CrossBoundary(aliveE);
+        if (node.IsHero) HeroHpTrail.Add(node.HpNow);   // 第455期: 勇者の HP の推移（結果画面・測るためだけ）
 
         if (aliveP.Count == 0)
         {
@@ -1801,6 +1825,17 @@ public sealed class Map11State
             // 前が詰まっていればそのマスの手前で待つ。固定の4部隊も「詰まり」として数える。
             foreach (Node sp in FoesOn(road).Where(x => x.FromPortal).ToList())
             {
+                // 第455期: 制圧の後の勇者は、味方の隊と同じマスにいれば素通りせずその場で戦闘・拠点に居座れば 2 刻ごとに迎撃をやり直す。
+                if (sp.IsHero && Stage.Hero.AfterCapture)
+                {
+                    if (sp.Pos == Graph.Home)
+                    {
+                        if ((Turn - HeroTurn) % Math.Max(1, Stage.Hero.StepEvery) == 0 && !Step(sp)) return list;
+                        continue;
+                    }
+                    int with = SquadAt(sp.Pos);
+                    if (with >= 0) { if (_heroFoughtTurn != Turn - 1) list.Add(new Encounter(with, sp, false)); continue; }   // 同じ刻にもう当たっていれば二度は当てない
+                }
                 if (sp.Pos == Graph.Home) continue;
                 // 第454期: 勇者は StepEvery 刻に 1 マス（現れた刻からかぞえて）。
                 if (sp.IsHero && Stage.Hero.StepEvery > 1 && (Turn - HeroTurn) % Stage.Hero.StepEvery != 0) continue;
@@ -1839,6 +1874,25 @@ public sealed class Map11State
     {
         if (!Stage.Hero.On || Stage.Hero.Unit is not UnitDef hero || !Portal.On || !Graph.HasPortal) return;
         if (GateOpenedTurn < 0 && Stage.PortalGate > 0 && GateOpen) GateOpenedTurn = Turn;
+        // 第455期 §0: 本陣を制圧した刻（その刻の敵の前進の終わり）に、制圧した本陣の 1 つ手前（経路の奥のマス）へ。
+        // 経路は予備隊と同じ選び方（味方の隊のいない経路 → 生存の少ない経路）。そのマスに隊がいれば、奥のマスが空いている経路へ替える。
+        if (Stage.Hero.AfterCapture)
+        {
+            if (Hero is not null || !Captured || Fallen) return;
+            int road = ReserveTarget();
+            if (SquadAt(Graph.Lanes[road][^1]) >= 0)
+                road = Enumerable.Range(0, Stage.LaneCount).Where(l => SquadAt(Graph.Lanes[l][^1]) < 0).DefaultIfEmpty(road).First();
+            var fa = Formation.Build(center: hero);
+            Hero = new Node
+            {
+                Def = new Map11.RoadNode(road, Map11.RoadCells, hero.Name, fa, EnemyCatalog.Stages.Count - 1),
+                Graph = Graph, FromPortal = true, IsHero = true, DefMaxHp = hero.MaxHp, HpNow = hero.MaxHp, Pos = Graph.Lanes[road][^1],
+            };
+            Spawns.Add(Hero);
+            HeroTurn = Turn;
+            HeroHpTrail.Add(hero.MaxHp);
+            return;
+        }
         if (Hero is not null || GateOpenedTurn < 0 || Turn < GateOpenedTurn + Stage.Hero.AfterGate || Captured || Fallen) return;
         var f = Formation.Build(center: hero);
         var def = new Map11.RoadNode(ReserveTarget(), Map11.RoadCells, hero.Name, f, EnemyCatalog.Stages.Count - 1);
@@ -1850,9 +1904,35 @@ public sealed class Map11State
         HeroTurn = Turn;
     }
 
+    /// <summary>勇者の HP の推移（第455期・現れた時の最大 HP、以後は戦闘のたびの残り・結果画面と器具が読む）。</summary>
+    public List<int> HeroHpTrail { get; } = new();
+    /// <summary>勇者に最後に当たった刻（第455期・同じ刻に二度当てないため）。</summary>
+    private int _heroFoughtTurn = -1;
+    /// <summary>制圧した刻に退いた敵部隊の数（第455期・<see cref="HeroRule.AfterCapture"/> の盤だけ）。</summary>
+    public int RetreatedCount { get; private set; }
+
+    /// <summary>制圧した刻に、勇者のほかの敵部隊を退かせる（第455期・盤から消える・「抜いた」には数えない）。</summary>
+    private void RetreatAll()
+    {
+        foreach (Node n in Nodes.SelectMany(r => r).Concat(Spawns).Concat(Reserve is { } rv && !Spawns.Contains(rv) ? new[] { rv } : Array.Empty<Node>()))
+        {
+            if (n.Cleared || n.IsHero) continue;
+            n.Cleared = true;
+            n.Retreated = true;
+            RetreatedCount++;
+        }
+    }
+
     /// <summary>勇者のその後（結果画面の 1 行・表示だけ）。</summary>
     public string HeroOutcome
-        => Hero is null ? "現れなかった"
+        => Stage.Hero.AfterCapture
+           ? (Hero is null ? "現れなかった（制圧していない）"
+              : Hero.Cleared ? "倒した"
+              : Fallen ? "着かれた（拠点が陥落）"
+              : NoSquadsLeft ? "倒せなかった（隊が尽きた）"
+              : HeroStalled ? "倒せなかった（決着しないまま打ち切り）"
+              : "まだ盤上にいる")
+           : Hero is null ? "現れなかった"
            : Hero.Cleared ? "倒した"
            : Fallen ? "着かれた（拠点が陥落）"
            : Captured ? "逃げ切った（着く前に制圧）"
@@ -1934,6 +2014,7 @@ public sealed class Map11State
             foreach (Node sp in FoesOn(road).Where(x => x.FromPortal).ToList())
             {
                 if (sp.Pos == Graph.Home) continue;
+                if (sp.IsHero && Stage.Hero.AfterCapture && SquadAt(sp.Pos) >= 0) continue;   // 第455期: 隊と同じマスの勇者は動かずに戦う
                 if (sp.IsHero && Stage.Hero.StepEvery > 1 && (Turn + 1 - HeroTurn) % Stage.Hero.StepEvery != 0) continue;   // 第454期（同じ式・次の刻）
                 int target = Graph.TowardHome(road, sp.Pos);
                 if (FoesOn(road).Any(x => !ReferenceEquals(x, sp) && PosOf(x) == target)) continue;
@@ -2045,7 +2126,7 @@ public sealed class Map11State
         double p = ClearedCount;
         foreach (Node[] road in Nodes)
             foreach (Node n in road)
-                if (!n.Cleared && n.DefMaxHp > 0)
+                if ((!n.Cleared || n.Retreated) && n.DefMaxHp > 0)
                     p += (double)(n.DefMaxHp - n.HpNow) / n.DefMaxHp;
         return p;
     }
