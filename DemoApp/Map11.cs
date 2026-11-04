@@ -1113,6 +1113,9 @@ public sealed class Map11State
     public Node? PortalFoe()
     {
         if (!Portal.On) return null;
+        // 第456期: 門番の勇者が立っていれば、本陣の守り → 勇者 → 湧き・予備隊の順（門番の盤だけ・ほかの盤は下の順のまま）。
+        if (Stage.Hero.Gatekeeper && Hero is { Cleared: false } keeper && keeper.Pos == Graph.Portal)
+            return Nodes.SelectMany(r => r).FirstOrDefault(n => !n.Cleared && n.Def.Stationary && n.Pos == Graph.Portal) ?? keeper;
         for (int road = 0; road < Stage.LaneCount; road++)
             foreach (Node n in FoesOn(road))
                 if (n.Pos == Graph.Portal) return n;
@@ -1825,6 +1828,7 @@ public sealed class Map11State
             // 前が詰まっていればそのマスの手前で待つ。固定の4部隊も「詰まり」として数える。
             foreach (Node sp in FoesOn(road).Where(x => x.FromPortal).ToList())
             {
+                if (sp.IsHero && Stage.Hero.Gatekeeper) continue;   // 第456期: 門番の勇者は動かない
                 // 第455期: 制圧の後の勇者は、味方の隊と同じマスにいれば素通りせずその場で戦闘・拠点に居座れば 2 刻ごとに迎撃をやり直す。
                 if (sp.IsHero && Stage.Hero.AfterCapture)
                 {
@@ -1874,6 +1878,23 @@ public sealed class Map11State
     {
         if (!Stage.Hero.On || Stage.Hero.Unit is not UnitDef hero || !Portal.On || !Graph.HasPortal) return;
         if (GateOpenedTurn < 0 && Stage.PortalGate > 0 && GateOpen) GateOpenedTurn = Turn;
+        // 第456期 §0: 門が開いた刻（その刻の敵の前進の終わり）に、敵の拠点のマス（本陣の守りと同じマス）へ。動かない（門番）。
+        // 経路の番号は本陣の守りの経路（戦闘の記録の「中の道 n.」）——敵の拠点のマスの相手は経路によらず `PortalFoe` が選ぶ。
+        if (Stage.Hero.Gatekeeper)
+        {
+            if (Hero is not null || GateOpenedTurn < 0 || Captured || Fallen) return;
+            int road = Nodes.SelectMany(r => r).FirstOrDefault(n => n.Def.Stationary)?.Def.Road ?? 0;
+            var fg = Formation.Build(center: hero);
+            Hero = new Node
+            {
+                Def = new Map11.RoadNode(road, Map11.RoadCells, hero.Name, fg, EnemyCatalog.Stages.Count - 1),
+                Graph = Graph, FromPortal = true, IsHero = true, DefMaxHp = hero.MaxHp, HpNow = hero.MaxHp, Pos = Graph.Portal,
+            };
+            Spawns.Add(Hero);
+            HeroTurn = Turn;
+            HeroHpTrail.Add(hero.MaxHp);
+            return;
+        }
         // 第455期 §0: 本陣を制圧した刻（その刻の敵の前進の終わり）に、制圧した本陣の 1 つ手前（経路の奥のマス）へ。
         // 経路は予備隊と同じ選び方（味方の隊のいない経路 → 生存の少ない経路）。そのマスに隊がいれば、奥のマスが空いている経路へ替える。
         if (Stage.Hero.AfterCapture)
@@ -1925,7 +1946,11 @@ public sealed class Map11State
 
     /// <summary>勇者のその後（結果画面の 1 行・表示だけ）。</summary>
     public string HeroOutcome
-        => Stage.Hero.AfterCapture
+        => Stage.Hero.Gatekeeper
+           ? (Hero is null ? "現れなかった（門が開かなかった）"
+              : Hero.Cleared ? "倒した"
+              : "本陣の前に立ったまま")
+           : Stage.Hero.AfterCapture
            ? (Hero is null ? "現れなかった（制圧していない）"
               : Hero.Cleared ? "倒した"
               : Fallen ? "着かれた（拠点が陥落）"
@@ -2015,6 +2040,7 @@ public sealed class Map11State
             {
                 if (sp.Pos == Graph.Home) continue;
                 if (sp.IsHero && Stage.Hero.AfterCapture && SquadAt(sp.Pos) >= 0) continue;   // 第455期: 隊と同じマスの勇者は動かずに戦う
+                if (sp.IsHero && Stage.Hero.Gatekeeper) continue;   // 第456期: 門番の勇者は動かない
                 if (sp.IsHero && Stage.Hero.StepEvery > 1 && (Turn + 1 - HeroTurn) % Stage.Hero.StepEvery != 0) continue;   // 第454期（同じ式・次の刻）
                 int target = Graph.TowardHome(road, sp.Pos);
                 if (FoesOn(road).Any(x => !ReferenceEquals(x, sp) && PosOf(x) == target)) continue;

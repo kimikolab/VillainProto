@@ -522,10 +522,11 @@ public sealed class MapStage
     };
 
     /// <summary>
-    /// 1-2（第455期・遊ぶ版）。第454期（<see cref="Stage12H454"/>）の勇者を<b>本陣を制圧した刻</b>に出す（<see cref="HeroRule.V455"/>・1-3 の形）——
+    /// 1-2 の第455期の姿。第454期（<see cref="Stage12H454"/>）の勇者を<b>本陣を制圧した刻</b>に出す（<see cref="HeroRule.V455"/>・1-3 の形）——
     /// 制圧した本陣の 1 つ手前（経路の奥のマス）に予告なしで現れ、2 刻に 1 マス味方の拠点へ進む。<b>勝ちは制圧 ＋ 勇者を倒す</b>・期限は制圧まで。
+    /// 第456期からは回帰の基準だけが使う——遊ぶ 1-2 は <see cref="Stage12"/>。
     /// </summary>
-    public static MapStage Stage12 { get; } = new()
+    public static MapStage Stage12H455 { get; } = new()
     {
         Id = Stage12H453.Id,
         Title = Stage12H453.Title,
@@ -546,6 +547,34 @@ public sealed class MapStage
         PortalGate = Stage12H453.PortalGate,
         Relic = RelicRule.V454,
         Hero = HeroRule.V455,
+    };
+
+    /// <summary>
+    /// 1-2（第456期・遊ぶ版）。第455期（<see cref="Stage12H455"/>）の勇者を<b>門番</b>にした（<see cref="HeroRule.V456"/>）——
+    /// 門が開いた刻に敵の拠点のマス（本陣の守りと同じマス）に予告なしで立ち、動かない。本陣に入ると守り → 勇者の順に当たり、勇者が立っている間は制圧できない。
+    /// <b>勝ちは制圧のまま</b>（第445期と同じ・制圧で勝ち・残りは退いた）・期限 12 のまま・倒せば ＋20。
+    /// </summary>
+    public static MapStage Stage12 { get; } = new()
+    {
+        Id = Stage12H455.Id,
+        Title = Stage12H455.Title,
+        Board = Stage12H455.Board,
+        Lanes = Stage12H455.Lanes,
+        LaneNames = Stage12H455.LaneNames,
+        Spawn = Stage12H455.Spawn,
+        Portal = Stage12H455.Portal,
+        Time = Stage12H455.Time,
+        Arrival = Stage12H455.Arrival,
+        Reserve = Stage12H455.Reserve,
+        SquadCap = Stage12H455.SquadCap,
+        TurnCap = Stage12H455.TurnCap,
+        TimeLimit = Stage12H455.TimeLimit,
+        WinOnCapture = Stage12H455.WinOnCapture,
+        Gold = Stage12H455.Gold,
+        MatchOffer = Stage12H455.MatchOffer,
+        PortalGate = Stage12H455.PortalGate,
+        Relic = Stage12H455.Relic,
+        Hero = HeroRule.V456,
     };
 
     /// <summary>選べるステージ（編成画面の選択の並び）。</summary>
@@ -655,7 +684,11 @@ public readonly record struct RelicRule(bool On, int Offers, bool Bridge = false
 /// <b>勝ちは制圧 ＋ 勇者を倒す</b>・刻の期限は制圧までで、現れた後は外す（勇者が時計）。制圧した刻に残っていたほかの敵部隊は退く。
 /// 勇者は中間拠点を取り返さず、味方の隊と同じマスに立てば素通りしない（その刻の終わりに戦闘）。拠点に居座れば 2 刻ごとに迎撃をやり直す。偽なら第454期まで。
 /// </param>
-public readonly record struct HeroRule(bool On, int AfterGate, int StepEvery, UnitDef? Unit, int Gold, bool AfterCapture = false)
+/// <param name="Gatekeeper">
+/// 第456期 §0（門番）: <b>門が開いた刻</b>（その刻の敵の前進の終わり）に<b>敵の拠点のマス</b>に立ち、<b>動かない</b>（<c>AfterGate</c> ／ <c>StepEvery</c> は読まない）。
+/// 本陣に入ると本陣の守り → 勇者 → 湧き・予備隊の順に当たり、勇者が立っている間は制圧できない。勝ちは制圧のまま。門が閉じ直しても立ったまま。
+/// </param>
+public readonly record struct HeroRule(bool On, int AfterGate, int StepEvery, UnitDef? Unit, int Gold, bool AfterCapture = false, bool Gatekeeper = false)
 {
     public static readonly HeroRule Off = new(false, 0, 0, null, 0);
     /// <summary>第454期の値: 門の 2 刻後・2 刻に 1 マス・版 B（`EnemyCatalog.HeroMap`・固定 300 回復）・倒して ＋20。</summary>
@@ -666,6 +699,10 @@ public readonly record struct HeroRule(bool On, int AfterGate, int StepEvery, Un
     public static readonly HeroRule V455 = new(true, 0, 2, EnemyCatalog.HeroMap, 0, AfterCapture: true);
     /// <summary>版 A（回復は最大HPの 40%・「難しい」の切替）。遊ぶのは <see cref="V455"/>。</summary>
     public static readonly HeroRule V455A = new(true, 0, 2, EnemyCatalog.HeroMapA, 0, AfterCapture: true);
+    /// <summary>第456期の値: 門が開いた刻に本陣の前に立つ門番・動かない・版 B・倒して ＋20。</summary>
+    public static readonly HeroRule V456 = new(true, 0, 0, EnemyCatalog.HeroMap, 20, Gatekeeper: true);
+    /// <summary>版 A（回復は最大HPの 40%）。遊ぶのは <see cref="V456"/>。</summary>
+    public static readonly HeroRule V456A = new(true, 0, 0, EnemyCatalog.HeroMapA, 20, Gatekeeper: true);
 }
 
 /// <summary>

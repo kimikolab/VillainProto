@@ -1734,7 +1734,10 @@ public partial class Map11Main : Node3D
         if (before.GateOpen && !St.GateOpen) now.Add($"本陣の門が閉じた（中間拠点 あと {St.GateNeed}）");
         // 第454期 §2-1: 勇者が現れた刻（予告は無い・ここで初めて知らせる）。
         if (before.HeroTurn < 0 && St.HeroTurn >= 0 && St.Hero is { } hero)
-            now.Add(St.Stage.Hero.AfterCapture
+            now.Add(St.Stage.Hero.Gatekeeper
+                // 第456期: 門が開いた刻に本陣の前に立つ（門番）。
+                ? $"勇者が本陣の前に立った——倒さなければ本陣へ入れない（HP {hero.HpNow}・毎ターン 300 回復・本陣に入ると守り → 勇者の順）"
+                : St.Stage.Hero.AfterCapture
                 // 第455期: 制圧した刻に、本陣の 1 つ手前へ（倒せば勝ち）。
                 ? $"勇者が現れた（{St.Graph[hero.Pos].Name}・{St.LaneName(hero.Def.Road)}を拠点へ向かう・2 刻に 1 マス）——倒せば勝ち（HP {hero.HpNow}・毎ターン 300 回復）"
                 : $"勇者が現れた（{Map11.PortalName}から{St.LaneName(hero.Def.Road)}へ向かう・2 刻に 1 マス）");
@@ -2785,6 +2788,10 @@ public partial class Map11Main : Node3D
                 // 第455期: 勇者を倒した（戦った回数・当てた隊・持ち越した HP の推移）。
                 lines.Add(St.HeroTurn < 0 ? $"勇者: {St.HeroOutcome}"
                     : $"勇者を{St.HeroOutcome}（作戦ターン {St.HeroTurn} に現れた・戦った {St.HeroBattles} 回・当てた隊 {St.HeroSquads.Count}・HP {string.Join(" → ", St.HeroHpTrail)}）");
+            else if (St.Stage.Hero.On && St.Stage.Hero.Gatekeeper)
+                // 第456期: 門番の勇者（倒した ／ 立ったまま・戦った回数・当てた隊・HP の推移）。
+                lines.Add(St.HeroTurn < 0 ? $"勇者: {St.HeroOutcome}"
+                    : $"勇者{(St.Hero is { Cleared: true } ? "を倒した" : ": " + St.HeroOutcome)}（作戦ターン {St.HeroTurn} に本陣の前に立った・戦った {St.HeroBattles} 回・当てた隊 {St.HeroSquads.Count}・HP {string.Join(" → ", St.HeroHpTrail)}）");
             else if (St.Stage.Hero.On)
                 lines.Add(St.HeroTurn < 0 ? "勇者: 現れなかった"
                     : $"勇者: 作戦ターン {St.HeroTurn} に現れた・{St.HeroOutcome}（戦った {St.HeroBattles} 回・当てた隊 {St.HeroSquads.Count}）");

@@ -60,11 +60,13 @@ public partial class Map11Main
         int count = foe.Cleared ? 0 : foe.Units?.Count(u => u.IsAlive) ?? foe.Def.Enemy.Occupied().Count();
         // 第447期 §0-2: 抜くと入る金を札に出す（湧いた部隊は安い・予備隊は最初からいる部隊と同じ）。
         GoldRule g = St.Stage.Gold;
-        string reward = g.On && !foe.Cleared ? $" ＋{St.KillGold(foe)}" : "";
+        // 第456期 §1: 金の無い敵（＋0）には出さない。
+        string reward = g.On && !foe.Cleared && St.KillGold(foe) > 0 ? $" ＋{St.KillGold(foe)}" : "";
         string head = foe.IsHero ? "勇者" : foe.IsReserve ? "予備隊"
             : Regex.IsMatch(foe.Def.Name, "第[^波]+波") ? "第" + WaveMark(foe.Def.Name) + "波" : foe.Def.Name;   // 第448期: 帯 A は部隊の名前
         badge.ShowUnit(Representative(foe), count, NodeHpPercent(foe), head + reward,
             enemy: true, wave: WaveMark(foe.Def.Name));
+        if (foe.IsHero) badge.Face.SetAccent(UiKit.Gold);   // 第456期 §1: 勇者の札は金色の縁（仮・Codex が差し替えてよい）
         badge.TooltipText = $"{foe.Def.Name}　{Representative(foe)?.Name}　{count}体　HP {NodeHpPercent(foe):F0}%"
             + (Map11.SquadLineOf(foe.Def.Name) is { Length: > 0 } line ? $"\n{line}" : "");
     }

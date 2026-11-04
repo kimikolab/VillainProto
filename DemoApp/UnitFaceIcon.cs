@@ -45,6 +45,9 @@ public partial class UnitFaceIcon : Control
     public string Mark { get; private set; } = "—";
     public Color Tint { get; private set; } = UiKit.Player;
 
+    /// <summary>縁の色だけを替える（第456期・勇者の札の金色の縁・<see cref="SetUnit"/> の後に呼ぶ）。</summary>
+    public void SetAccent(Color color) { Tint = color; QueueRedraw(); }
+
     public UnitFaceIcon() { MouseFilter = MouseFilterEnum.Ignore; CustomMinimumSize = new(40, 40); }
 
     public void SetUnit(UnitDef? unit, bool enemy = false, string? wave = null)
