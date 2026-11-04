@@ -762,6 +762,8 @@
 | `MiasmaFront` | - |
 | `CinderFoe` | - |
 | `BossMend300` | - |
+| `ShockFoe` | - |
+| `ShoveFoe` | - |
 
 ## 燃焼の規則
 

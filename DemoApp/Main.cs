@@ -331,6 +331,14 @@ public partial class Main : Control
             GetTree().Quit(mok ? 0 : 1);
             return;
         }
+        // 第458期 §1-2: 1-3 の門（盤・横の辺・帯 B の残り 2 体・大群の連戦・本陣の守り（重）・期限 18）。画面なし。
+        if (bootArgs.Contains("--map13-smoke", StringComparer.Ordinal))
+        {
+            bool ok13 = Map13Smoke.Run(GD.Print);
+            GD.Print($"MAP13_SMOKE_COMPLETE ok={ok13}");
+            GetTree().Quit(ok13 ? 0 : 1);
+            return;
+        }
         // 第441期 §5-3: 1-2 に「盤の上で変わるもの」（途中到着・予備隊・湧き S=2）を足した門。画面なし。
         if (bootArgs.Contains("--map12-change-smoke", StringComparer.Ordinal))
         {

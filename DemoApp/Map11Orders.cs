@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 
 // =====================================================================================
 // 行き先から1ターンの命令を作る層（第175期 §1-1）
@@ -29,7 +30,11 @@ public readonly record struct Dest(int Id, int Lane, MapGraph.Kind Kind)
     public int Road => Lane;
 
     /// <summary>そのマスへ（敵の拠点なら経路は決まらない——<see cref="Portal"/> を使う）。</summary>
-    public static Dest Of(MapGraph g, int id) => new(id, g[id].Lane, g[id].Kind);
+    /// 第458期: 経路に属さない通り道（1-3 の分かれ道）は、そこを通る最初の経路を行き先の経路にする（拠点から出る向きが要るため）。
+    public static Dest Of(MapGraph g, int id)
+        => g[id].Lane < 0 && g[id].Kind == MapGraph.Kind.Open
+            ? new(id, Enumerable.Range(0, g.Lanes.Count).FirstOrDefault(l => Array.IndexOf(g.Lanes[l], id) >= 0), g[id].Kind)
+            : new(id, g[id].Lane, g[id].Kind);
 
     /// <summary>その経路のいちばん奥（＝抜き切るまで進み続ける）。<b>敵の拠点は含まない。</b></summary>
     public static Dest Deep(MapGraph g, int lane) => Of(g, g.Lanes[lane][^1]);
@@ -162,8 +167,8 @@ public static class Map11Orders
         int road = s.Pos == st.Graph.Home ? dest.Road : s.Road;
         if (road < 0) return null;
         Map11State.Node? front = st.FrontFoe(road);
-        int limit = front?.Cell ?? st.MaxCell;
-        int next = Math.Min(s.Cell < 0 ? 0 : s.Cell + 1, Math.Min(limit, st.MaxCell));
+        int limit = front?.Cell ?? st.MaxCellOf(road);
+        int next = Math.Min(s.Cell < 0 ? 0 : s.Cell + 1, Math.Min(limit, st.MaxCellOf(road)));   // 第458期: 経路ごとの奥
         // 第451期: 本陣の門が閉じていれば敵の拠点のマスの相手には当たらない。
         if (front is not null && front.Pos == st.Graph.Portal && !st.CanEnter(squad, front.Pos)) return null;
         return front is not null && front.Cell == next ? front : null;
@@ -175,6 +180,7 @@ public static class Map11Orders
         // 第177期: **接敵するターンはそう書く**（「〜へ進む」だと何が起きるか読めない）。
         Order.Advance => Meeting(st, squad, dest) is { } foe
             ? (foe.Def.Road < 0 ? $"{Map11.PortalName} で {foe.Def.Name} と接敵"   // 第441期: 待機中の予備隊
+               : st.LongLanes ? $"{st.Graph[foe.Pos].Name} で {foe.Def.Name} と接敵"   // 第458期: 1-3 はマスの名前で呼ぶ
                : $"{st.Stage.LaneNames[foe.Def.Road]} {CellName(foe.Cell)} で {foe.Def.Name} と接敵")
             : $"{Where(st.Graph, dest)} へ進む",
         Order.Move => $"{Where(st.Graph, dest)} へ進む",

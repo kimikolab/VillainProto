@@ -379,10 +379,13 @@ public partial class Map11Main
         // 横長の盤に合わせ、空いた横幅を使う。選んだ隊の詳細は地図に重ねず左に確保する。
         bool wide = St.Stage.LaneCount > 2;
         Vector3 look = new(wide ? 7 : 9, 0, -2);
+        // 第458期: 横に長い盤（1-3）は盤の左右の真ん中を見て、倍率ぶん引く（1-1 ／ 1-2 は第457期のまま）。
+        float view = St.Stage.ViewScale;
+        if (view != 1f) look.X = (St.Graph.Cells.Min(c => c.Pos.X) + St.Graph.Cells.Max(c => c.Pos.X)) / 2;
         if (!_reform && _showSquadDetail) look.X -= 7;
         if (!_reform && (_showFoes || _showHistory)) look.X += 7;
         _camera.Projection = Camera3D.ProjectionType.Orthogonal;
-        _camera.Size = wide ? 44 : 40;
+        _camera.Size = (wide ? 44 : 40) * view;
         _camera.Position = look + new Vector3(0, 46, 34);
         _camera.LookAt(look, Vector3.Up);
     }

@@ -90,6 +90,12 @@ public sealed class MapStage
     /// <summary>本陣の連戦（第457期・<see cref="SiegeRule"/>）。既定は無し（第456期まで）。</summary>
     public SiegeRule Siege { get; init; } = SiegeRule.Off;
 
+    /// <summary>
+    /// 盤の見え方の倍率（第458期・<b>画面だけが読む</b>——カメラの引きと盤の文字の大きさ）。既定 1（1-1 ／ 1-2 は第457期のまま）。
+    /// 1-3 は盤が横に 1.5 倍長い（縦も 1.25 倍）ので 1.35 倍引く（文字の縮尺は第177期の作法＝引いた距離の比で大きくする）。
+    /// </summary>
+    public float ViewScale { get; init; } = 1f;
+
     public int LaneCount => Lanes.Length;
     public int TotalNodes => Lanes.Sum(l => l.Count);
 
@@ -609,8 +615,61 @@ public sealed class MapStage
         Siege = SiegeRule.V457,
     };
 
+    /// <summary>大群の 1 部隊（第458期・1-3 の C3・動かない・<see cref="Map11.RoadNode.Hold"/>）。</summary>
+    private static Map11.RoadNode Horde(int lane, int index, string id, int backdrop)
+        => Band(lane, index, id, backdrop) with { Hold = true };
+
+    /// <summary>
+    /// 1-3（第458期・遊ぶ版・指示書 design/PHASE458_STAGE13_SPEC.md・構想 claude/STAGE13_PLAN.md）。<b>この期は盤と敵だけ</b>——勇者は 1-2 と同じ門番（<see cref="HeroRule.V456"/>）。
+    /// 盤は <see cref="MapGraph.Build13"/>（拠点 → 分かれ道 → 3 経路・中間拠点どうしの横の辺）。
+    /// 北: 弓隊 → 北の砦に<b>雷杖の部隊</b>（帯 B・新） ／ 中: 物見 → 野営地に火の魔術師の部隊 → C3 に<b>大群（徴募兵 × 3・重なって動かない）</b> ／
+    /// 南: 盾の列 → 南の関所に<b>槍兵の部隊</b>（帯 B・新） ／ 本陣: <b>本陣の守り（重）</b>（抜くと ＋12）。
+    /// 湧きは S = 3 で 毒霧の部隊（北）→ 徴募兵（中）→ 傭兵崩れ（南）の順・予備隊は騎士の小隊。期限 <b>18</b>。
+    /// 連戦の窓は本陣と<b>敵が重なったマス</b>（<see cref="SiegeRule.V458"/>）。金は 1-2 と同じ（大群は 1 部隊 ＋3・本陣の守り（重）は ＋12）。
+    /// 経路・隊の枠・候補・レリック・門（中間拠点 2 つ）は 1-2（<see cref="Stage12"/>）のまま。
+    /// </summary>
+    public static MapStage Stage13 { get; } = new()
+    {
+        Id = "1-3",
+        Title = "検証用マップ 1-3",
+        Board = MapGraph.Build13,
+        Lanes = new IReadOnlyList<Map11.RoadNode>[]
+        {
+            new[] { Band(0, 0, "band_archers", 2), Band(0, 1, "band_shock", 3) },
+            new[]
+            {
+                Node(1, 0, EnemyCatalog.Stages[0], 0), Band(1, 1, "band_fire", 3),
+                Horde(1, 2, "band_levy", 0), Horde(1, 3, "band_levy", 0), Horde(1, 4, "band_levy", 0),
+                Garrison(1, 5, "band_garrison_heavy", 4),
+            },
+            new[] { Band(2, 0, "band_shields", 3), Band(2, 1, "band_lance", 2) },
+        },
+        LaneNames = MapGraph.Lanes13,
+        Spawn = lane => lane switch
+        {
+            0 => (EnemyCatalog.MapSquadOf("band_miasma").Enemy, EnemyCatalog.MapSquadOf("band_miasma").Name, 2),
+            1 => (EnemyCatalog.MapSquadOf("band_levy").Enemy, EnemyCatalog.MapSquadOf("band_levy").Name, 0),
+            _ => (EnemyCatalog.MapSquadOf("band_sellswords").Enemy, EnemyCatalog.MapSquadOf("band_sellswords").Name, 2),
+        },
+        Portal = Stage12.Portal,
+        Time = Stage12.Time,
+        Arrival = Stage12.Arrival,
+        Reserve = Stage12.Reserve,
+        SquadCap = Stage12.SquadCap,
+        TurnCap = 18,
+        TimeLimit = Stage12.TimeLimit,
+        WinOnCapture = Stage12.WinOnCapture,
+        Gold = GoldRule.V458(),
+        MatchOffer = Stage12.MatchOffer,
+        PortalGate = Stage12.PortalGate,
+        Relic = Stage12.Relic,
+        Hero = Stage12.Hero,
+        Siege = SiegeRule.V458,
+        ViewScale = 1.35f,
+    };
+
     /// <summary>選べるステージ（編成画面の選択の並び）。</summary>
-    public static IReadOnlyList<MapStage> All { get; } = new[] { Stage11, Stage12 };
+    public static IReadOnlyList<MapStage> All { get; } = new[] { Stage11, Stage12, Stage13 };
 }
 
 /// <summary>
@@ -659,7 +718,7 @@ public readonly record struct ArrivalRule(bool On, int Start, int Every, int Min
 /// <param name="Garrison">動かない守備隊（<see cref="Map11.RoadNode.Stationary"/>）を抜く（第449期）。0 の盤には守備隊がいない。</param>
 public readonly record struct GoldRule(bool On, int Start, int Kill, int SpawnKill, int Outpost, int Recruit, int Slot, int Sell,
                                        int Offers, int StartSquads, int Reroll = 0, bool SlotFreePick = false,
-                                       int SlotStep = 0, int Revive = 0, int RevivePercent = 50, int Garrison = 0)
+                                       int SlotStep = 0, int Revive = 0, int RevivePercent = 50, int Garrison = 0, int Horde = 0)
 {
     public static readonly GoldRule Off = new(false, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     /// <summary>
@@ -674,6 +733,8 @@ public readonly record struct GoldRule(bool On, int Start, int Kill, int SpawnKi
         => new(true, 8, 6, 3, 8, 4, 8, 2, 3, 2, Reroll: 2, SlotFreePick: true, SlotStep: 4, Revive: 6, RevivePercent: 50);
     /// <summary>第449期の値: 第447期に「本陣の守り（動かない守備隊）を抜く ＋10」を足した。</summary>
     public static GoldRule V449() => V447() with { Garrison = 10 };
+    /// <summary>第458期の値（1-3）: 第449期に「大群の 1 部隊を抜く ＋3」を足し、本陣の守り（重）を ＋12 にした。</summary>
+    public static GoldRule V458() => V449() with { Garrison = 12, Horde = 3 };
     /// <summary>第445期の仮の値（ポンが遊んで決める）: 開始 0・抜く +6・湧き +3・中間拠点 +8・呼ぶ 10・枠 12・売る +3・候補 3・隊 2 で始まる。</summary>
     public static GoldRule Of(int start = 0, int kill = 6, int spawnKill = 3, int outpost = 8, int recruit = 10, int slot = 12,
                               int sell = 3, int offers = 3, int startSquads = 2)
@@ -754,9 +815,15 @@ public readonly record struct ReserveRule(bool On, Formation? Enemy, string Name
 /// 入ってきた経路の中間拠点（経路の奥のマス）へ引くかを選ぶ（引くのは無料・1 刻かからない）。本陣の戦闘では道中の回復を乗せない。
 /// 中間拠点・道の上・味方の拠点の迎撃は今までどおり。
 /// </summary>
-public readonly record struct SiegeRule(bool On)
+/// <param name="Stacks">
+/// 第458期: 本陣のほか、<b>敵が 2 部隊以上重なっているマス</b>（1-3 の大群）でも連戦の窓を出す。引くと入ってきた側の隣のマスへ。
+/// 大群（<see cref="Map11.RoadNode.Hold"/>）との戦闘では道中の回復を乗せない（本陣と同じ）。中間拠点は 1 刻 1 戦のまま。
+/// </param>
+public readonly record struct SiegeRule(bool On, bool Stacks = false)
 {
     public static readonly SiegeRule Off = new(false);
     /// <summary>第457期の値: 本陣で連戦・合間に引ける・本陣では回復なし。</summary>
     public static readonly SiegeRule V457 = new(true);
+    /// <summary>第458期の値（1-3）: 第457期に、敵が重なったマス（大群）の連戦を足した。</summary>
+    public static readonly SiegeRule V458 = new(true, Stacks: true);
 }

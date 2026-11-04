@@ -92,6 +92,8 @@ public partial class Map11Main
             Press(_run);
             Map11Clock.IntervalOverride = 0;
             ClockStep(0);
+            // 第458期: 1-3 は先頭の敵が拠点の隣（分かれ道）に着くまで 2 刻かかる——出来事で時計が止まるまで刻を進める（1-1 ／ 1-2 は 1 刻目で止まる）。
+            for (int k = 0; k < 4 && _guideEventCell is null && Map11Clock.Running; k++) ClockStep(0);
             await Shot("09-event");
             Check("event", !Map11Clock.Running && _guideEventCell is not null
                 && _destButtons.Any(d => d.Dest.Id == _guideEventCell && d.Node == _guide.Target)

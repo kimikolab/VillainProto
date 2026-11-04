@@ -282,4 +282,69 @@ public sealed class MapGraph
         b.Link(lanes[1][1], lanes[2][1]);
         return b.Build();
     }
+
+    /// <summary>1-3 の経路の名前（<see cref="MapStage.Stage13"/> と同じ並び・1-2 と同じ）。</summary>
+    internal static readonly string[] Lanes13 = Lanes12;
+
+    /// <summary>1-3 の中間拠点の名前（第458期・仮・1-2 と同じ）。各経路の 3 マス目（分岐の先から数えて N0 → N1 → 砦）。</summary>
+    internal static readonly string[] Outposts13 = Outposts12;
+
+    /// <summary>分岐のマスの名前（第458期）。</summary>
+    internal const string Fork13 = "分かれ道";
+
+    /// <summary>
+    /// 1-3 の盤（第458期 §0-1・指示書 design/PHASE458_STAGE13_SPEC.md）。
+    /// <code>
+    ///                N0 ── N1 ──[北の砦]── N3 ──────┐
+    ///               /               |               │
+    ///   Home ── F ── C0 ── C1 ──[野営地]── C3 ── C4 ─┼── Portal
+    ///               \               |               │
+    ///                S0 ── S1 ──[南の関所]── S3 ─────┘
+    /// </code>
+    /// 拠点 → <b>分岐 F（Open・通り抜け・どの経路にも属さない）</b> → 3 経路。中間拠点は各経路の 3 マス目（拠点から 4 歩）で、
+    /// そこから本陣まで北・南は 2 歩、中は 3 歩（C3・C4）。<b>横の辺は中間拠点どうし</b>（北の砦 ⇔ 野営地 ⇔ 南の関所・隊だけが使う）。
+    /// 経路（<see cref="Lanes"/>）は<b>分岐 F を先頭に含む</b>——敵は F を通って拠点へ着く（F の <c>Lane</c> は -1・3 本の経路が共有する）。
+    /// 盤のマスは拠点を除いて 14（F ＋ 北 4 ＋ 中 5 ＋ 南 4）＋ 本陣。指示書の図の「N2」は砦の位置の書き違いと読んだ（「拠点から 4 歩」「マス 14」と合う形）。
+    /// 敵の初期位置は <paramref name="starts"/>（経路ごと・区画の番号の順・経路の上の位置＝ F が 0）。<c>Pos</c> は 1-2 を横に伸ばした座標。
+    /// </summary>
+    public static MapGraph Build13(bool portalOn) => Build13(portalOn, Starts13);
+
+    /// <summary>1-3 の敵の初期位置（経路の上の位置・F が 0）。北: 弓隊 N1(2)・雷杖 砦(3) ／ 中: 物見 C1(2)・火 野営地(3)・大群 ×3 C3(4) ・本陣の守り ／ 南: 盾 S1(2)・槍兵 関所(3)。</summary>
+    internal static readonly int[][] Starts13 = { new[] { 2, 3 }, new[] { 2, 3, 4, 4, 4 }, new[] { 2, 3 } };
+
+    private static MapGraph Build13(bool portalOn, int[][] starts)
+    {
+        var b = new Builder();
+        int home = b.Add("拠点", Kind.Home, (-15.0f, 0f));
+        int fork = b.Add(Fork13, Kind.Open, (-9.0f, 0f));
+        float[] zs = { -15.0f, 0f, 15.0f };
+        // 経路の上のマス（F を除く）: 北・南は 4、中は 5。中間拠点は 3 マス目（添字 2）。
+        int[] counts = { 4, 5, 4 };
+        float[][] xs = { new[] { -3.0f, 5.0f, 13.0f, 22.0f }, new[] { -3.0f, 5.0f, 13.0f, 21.0f, 29.0f }, new[] { -3.0f, 5.0f, 13.0f, 22.0f } };
+        var lanes = new int[Lanes13.Length][];
+        for (int lane = 0; lane < Lanes13.Length; lane++)
+        {
+            lanes[lane] = new int[counts[lane] + 1];
+            lanes[lane][0] = fork;
+            for (int k = 0; k < counts[lane]; k++)
+            {
+                bool outpost = k == 2;
+                string name = outpost ? Outposts13[lane] : $"{Lanes13[lane]} {k + 1} マス目";
+                lanes[lane][k + 1] = b.Add(name, outpost ? Kind.Outpost : Kind.Open, (xs[lane][k], zs[lane]), lane);
+            }
+        }
+        int portal = portalOn ? b.Add(Map11.PortalName, Kind.Portal, (37.0f, 0f)) : -1;
+        b.Link(home, fork);
+        for (int lane = 0; lane < Lanes13.Length; lane++)
+        {
+            int from = fork;
+            foreach (int c in lanes[lane].Skip(1)) { b.Link(from, c); from = c; }
+            if (portal >= 0) b.Link(from, portal);
+            b.Lane(Lanes13[lane], lanes[lane], starts[lane].Select(i => lanes[lane][i]).ToArray());
+        }
+        // 横の辺（中間拠点どうし・隊だけが使う）。
+        b.Link(lanes[0][3], lanes[1][3]);
+        b.Link(lanes[1][3], lanes[2][3]);
+        return b.Build();
+    }
 }

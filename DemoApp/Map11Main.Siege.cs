@@ -15,10 +15,12 @@ public partial class Map11Main
     private Label _siegeBody = null!;
     private Button _siegeGo = null!;
     private Button _siegeBack = null!;
+    private Label _siegeTag = null!;
 
     private void BuildSiegeOverlay(Control root)
     {
         _siegeOverlay = Modal(root, 360, 130, out VBoxContainer col, "SIEGE ・ 本陣の連戦", EnemyColor);
+        _siegeTag = (Label)col.GetChild(0);   // 第458期: 大群のマスでは「〈マス〉の連戦」に替える
         _siegeTitle = UiKit.Text("", 22, Colors.White);
         _siegeTitle.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         col.AddChild(_siegeTitle);
@@ -48,19 +50,24 @@ public partial class Map11Main
         _selected = squad;
         ShowFoe(next);
         int road = s.Road >= 0 && s.Road < St.Stage.LaneCount ? s.Road : 0;
-        int cell = St.Graph.Lanes[road][^1];
+        // 第458期: 本陣のほか、敵が重なったマス（1-3 の大群）でも出る。引く先は本陣なら経路の奥、大群なら入ってきた側の隣（`SiegeRetreat` と同じ式）。
+        bool portal = s.Pos == St.Graph.Portal;
+        string where = portal ? "本陣" : St.Graph[s.Pos].Name;
+        int cell = portal ? St.Graph.Lanes[road][^1] : St.Graph.TowardHome(road, s.Pos);
         bool held = St.HeldOutposts.Contains(cell);
         int alive = s.Units?.Count(u => u.IsAlive) ?? 0;
         int foeAlive = next.Units?.Count(u => u.IsAlive) ?? next.Def.Enemy.Occupied().Count();
-        int after = St.Portal.On ? CountPortalFoes() : 0;
-        _siegeTitle.Text = $"{s.Label} が本陣で勝った——次は {(next.IsHero ? "勇者" : next.Def.Name)}";
+        int after = portal ? (St.Portal.On ? CountPortalFoes() : 0)
+            : Enumerable.Range(0, St.Stage.LaneCount).Sum(r => St.FoesOn(r).Count(n => n.Pos == s.Pos));
+        _siegeTag.Text = portal ? "SIEGE ・ 本陣の連戦" : $"SIEGE ・ {where}の連戦";
+        _siegeTitle.Text = $"{s.Label} が{where}で勝った——次は {(next.IsHero ? "勇者" : next.Def.Name)}";
         _siegeBody.Text =
-            $"{s.Label}: {alive} 枚 ・ HP {SquadHpPercent(s):F0}%（本陣では戦闘の後の回復は乗らない）\n"
+            $"{s.Label}: {alive} 枚 ・ HP {SquadHpPercent(s):F0}%（{where}では戦闘の後の回復は乗らない）\n"
             + $"{(next.IsHero ? "勇者" : next.Def.Name)}: {foeAlive} 体 ・ HP {NodeHpPercent(next):F0}%"
-            + (after > 1 ? $"（本陣に残る敵 {after}）" : "") + "\n\n"
+            + (after > 1 ? $"（{where}に残る敵 {after}）" : "") + "\n\n"
             + $"引く: {St.Graph[cell].Name}へ戻る（無料・時間はかからない）。"
-            + (held ? "味方の中間拠点なので、組み直し・呼ぶ・休むができる。" : "敵のものなので組み直しはできない。")
-            + " 本陣の敵はそのまま（HP は戻らない）。";
+            + (held ? "味方の中間拠点なので、組み直し・呼ぶ・休むができる。" : St.Graph.IsOutpost(cell) ? "敵のものなので組み直しはできない。" : "")
+            + $" {where}の敵はそのまま（HP は戻らない）。";
         _siegeGo.Text = $"続けて戦う（{(next.IsHero ? "勇者" : next.Def.Name)}）";
         _siegeBack.Text = $"引く（{St.Graph[cell].Name}へ）";
         _siegeOverlay.Visible = true;
@@ -85,7 +92,7 @@ public partial class Map11Main
         int squad = Map11Session.SiegeSquad;
         string label = squad >= 0 ? St.Squads[squad].Label : "";
         if (Map11Session.RetreatSiege())
-            ShowToast($"{label} は本陣から{St.Graph[St.Squads[squad].Pos].Name}へ引いた", GoldColor, 4.0f);
+            ShowToast($"{label} は{(_siegeTag.Text.Contains("本陣") ? "本陣" : "連戦")}から{St.Graph[St.Squads[squad].Pos].Name}へ引いた", GoldColor, 4.0f);
         Refresh();
         Pump();
     }
@@ -111,7 +118,8 @@ public partial class Map11Main
     /// 第457期 §3: **本陣の連戦の合間の窓**の絵（`--map-stage=1-2` と使う）。北の砦・野営地を取って門を開け（勇者が本陣の前に立つ）、
     /// 第1隊の行き先を本陣にして作戦ターンを流し、守りとの戦闘を頭なしで決着させて（台本つき）、連戦の窓で止める。
     /// </summary>
-    private void CaptureSiegeSetup()
+    /// <param name="horde">第458期: 1-3 の大群の連戦の窓（`--map-stage=1-3` と `,horde`）。第1隊を中の道の野営地まで戦わせて進め、行き先を大群のマス（C3）にする。</param>
+    private void CaptureSiegeSetup(bool horde = false)
     {
         St.UseDefaultSquads();
         _reform = false;
@@ -133,15 +141,19 @@ public partial class Map11Main
             }
             while (St.FoeFacing(squad) is { } here && !St.Finished) Fight(squad, here, false);
         }
-        Go(0, Dest.Of(St.Graph, St.Graph.Lanes[0][^1]));
-        Go(1, Dest.Of(St.Graph, St.Graph.Lanes[1][^1]));
-        for (int guard = 0; guard < 6 && St.Hero is null && !St.Finished; guard++)
+        if (horde) Go(0, Dest.Of(St.Graph, St.Graph.Lanes[1][3]));
+        else
+        {
+            Go(0, Dest.Of(St.Graph, St.Graph.Lanes[0][^1]));
+            Go(1, Dest.Of(St.Graph, St.Graph.Lanes[1][^1]));
+        }
+        for (int guard = 0; guard < 6 && !horde && St.Hero is null && !St.Finished; guard++)
             foreach (Map11State.Encounter e in St.AdvanceFoes())
                 if (e.Intercept) { if (St.NextInterceptor(e.Node) is var j && j >= 0) Fight(j, e.Node, true); St.CloseIntercept(e.Node); }
                 else Fight(e.Squad, e.Node, false);
         while (St.RelicOffer.Count > 0) St.ChooseRelic(0);   // 中間拠点の候補の窓は先に閉じる（絵が窓どうしで重ならないように）
-        Map11Session.SetDestination(0, Dest.Portal(St.Graph, 0));
-        Map11Session.SetDestination(1, Dest.Of(St.Graph, St.Graph.Lanes[1][^1]));
+        Map11Session.SetDestination(0, horde ? Dest.Of(St.Graph, St.Graph.Lanes[1][4]) : Dest.Portal(St.Graph, 0));
+        Map11Session.SetDestination(1, horde ? Dest.Home : Dest.Of(St.Graph, St.Graph.Lanes[1][^1]));
         bool siege = false;
         for (int guard = 0; guard < 6 && !siege && !St.Finished; guard++)
         {

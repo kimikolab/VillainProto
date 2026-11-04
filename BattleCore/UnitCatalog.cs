@@ -9012,6 +9012,16 @@ public static readonly UnitDef Inverter = MakeStill("inverter", "逆位の祭司
     public static readonly UnitDef MiasmaPriest = MakeStill("miasma_priest", "毒霧の司祭", 40, 9, 8,
         "毎ターン前列に毒を撒く（毒 +1・ターンの頭）。その場から殴る", TraitId.MiasmaFront);
 
+    // ---- 第458期 帯 B の残り 2 体（1-3 の北の砦・南の関所）。体は既存の兵の数値のまま、札は味方の書き手の向きを敵側にした形 ----
+
+    /// <summary>雷杖の魔導兵（第458期）。従軍司祭（40/9/8・踏み込まない）の体に、敵の帯電（<see cref="TraitId.ShockFoe"/>・毎ターン向かいの敵 1 体に感電）。</summary>
+    public static readonly UnitDef ShockMage = MakeStill("shock_mage", "雷杖の魔導兵", 40, 9, 8,
+        "毎ターン、向かいの敵 1 体を帯電させる（ターンの頭）。帯電した者は一撃で弾け、隣へ雷が伝う。その場から殴る", TraitId.ShockFoe);
+
+    /// <summary>突き飛ばしの槍兵（第458期）。巡礼騎士（75/15/7）の体に、敵の突き飛ばし（<see cref="TraitId.ShoveFoe"/>・当てた相手を同じレーンの 1 つ後ろへ押す）。</summary>
+    public static readonly UnitDef ShoveLancer = Make("shove_lancer", "突き飛ばしの槍兵", 75, 15, 7,
+        "毎ターン、目の前の1体を突く。当てた相手を 1 つ後ろの席へ突き飛ばす（後ろにいた味方と入れ替わる）", TraitId.ShoveFoe);
+
     /// <summary>作戦マップの敵部隊（第448期）。<paramref name="Line"/> は画面の敵部隊の札と接敵の窓に出す 1 行。</summary>
     public sealed record MapSquad(string Id, string Name, string Line, Formation Enemy);
 
@@ -9039,6 +9049,13 @@ public static readonly UnitDef Inverter = MakeStill("inverter", "逆位の祭司
             Formation.Build(front1: Warden, front3: Warden, center: MiasmaPriest, back1: Priest, back3: Recruit)),
         new MapSquad("band_garrison", "本陣の守り", "敵の拠点から動かない守備隊。抜かなければ制圧できない",
             Formation.Build(front1: Champion, front3: Knight, center: Priest, back1: Archer, back3: Knight)),
+        // 第458期 帯 B の残り（1-3 の北の砦・南の関所）＋ 本陣の守り（重）。
+        new MapSquad("band_shock", "雷杖の部隊", "中央の魔導兵が毎ターン 1 体を帯電させる。感電を力にする隊なら化ける",
+            Formation.Build(front1: Warden, front3: Recruit, center: ShockMage, back1: Archer, back3: Recruit)),
+        new MapSquad("band_lance", "槍兵の部隊", "前の槍兵が当てた相手を後ろへ突き飛ばす。動かされて働く隊なら化ける",
+            Formation.Build(front1: ShoveLancer, front3: ShoveLancer, center: Priest, back1: Recruit, back3: Recruit)),
+        new MapSquad("band_garrison_heavy", "本陣の守り（重）", "聖騎士長 2 枚と回復する司祭長。敵の拠点から動かない。抜かなければ制圧できない",
+            Formation.Build(front1: Champion, front3: Champion, center: Chaplain, back1: Archer, back3: KnightG)),
     };
 
     /// <summary>作戦マップの敵部隊を Id で引く（第448期）。</summary>
@@ -9323,6 +9340,9 @@ public static class UnitTags
         A(EnemyCatalog.Pyromancer, "付与", "燃焼");
         A(EnemyCatalog.FireArcher, "付与", "燃焼");
         A(EnemyCatalog.MiasmaPriest, "付与", "毒");
+        A(EnemyCatalog.ShockMage, "付与", "感電");     // 第458期
+        A(EnemyCatalog.ShoveLancer, "アタッカー", "移動");
+        A(EnemyCatalog.Chaplain, "ヒーラー");            // 第458期（本陣の守り（重）の中央）
         return t;
     }
 

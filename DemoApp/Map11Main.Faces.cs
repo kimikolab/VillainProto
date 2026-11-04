@@ -63,6 +63,8 @@ public partial class Map11Main
         // 第456期 §1: 金の無い敵（＋0）には出さない。
         string reward = g.On && !foe.Cleared && St.KillGold(foe) > 0 ? $" ＋{St.KillGold(foe)}" : "";
         string head = foe.IsHero ? "勇者" : foe.IsReserve ? "予備隊"
+            : foe.Def.Hold && !foe.Cleared ? $"{foe.Def.Name} ×{HordeCount(foe)}"   // 第458期 §0-4: 大群は「徴募兵 ×3」
+            : foe.Def.Stationary ? "本陣の守り"                                     // 第458期 §0-4: 守り（重）も札は「本陣の守り ＋12」
             : Regex.IsMatch(foe.Def.Name, "第[^波]+波") ? "第" + WaveMark(foe.Def.Name) + "波" : foe.Def.Name;   // 第448期: 帯 A は部隊の名前
         badge.ShowUnit(Representative(foe), count, NodeHpPercent(foe), head + reward,
             enemy: true, wave: WaveMark(foe.Def.Name));

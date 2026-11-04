@@ -113,7 +113,9 @@ public static class Map11
     /// </summary>
     /// <para><c>Stationary</c>（第449期 §0-3）は<b>動かない区画</b>——敵の拠点のマスに立ち、前進しない（「先頭だけが前進する」は飛ばして次を先頭と見る）。
     /// 制圧するには抜く必要がある（<see cref="Map11State.PortalFoe"/> に数える）。湧きの列は塞がない。</para>
-    public sealed record RoadNode(int Road, int Index, string Name, Formation Enemy, int StageIndex, bool Stationary = false);
+    /// <para><c>Hold</c>（第458期 §0-2）は<b>自分の初期位置から動かない区画</b>（1-3 の大群・徴募兵 ×3 が C3 に重なって待つ）。
+    /// 先頭の前進（<see cref="Map11State.NextNode"/>）からは飛ばし、湧いた部隊はその手前で詰まる。敵の拠点の守備隊（<c>Stationary</c>）とは別の札。</para>
+    public sealed record RoadNode(int Road, int Index, string Name, Formation Enemy, int StageIndex, bool Stationary = false, bool Hold = false);
 
     /// <summary>道ごとの敵部隊。<b>手前を抜かないと奥に当たれない。</b></summary>
     public static IReadOnlyList<RoadNode>[] Roads { get; } =
@@ -531,6 +533,16 @@ public sealed class Map11State
     /// <summary>隊が立てるいちばん奥のマス。<b>拠点なしなら道の行き止まり</b>（第175期のまま）。</summary>
     public int MaxCell => Portal.On ? Map11.PortalCell : Map11.RoadCells - 1;
 
+    /// <summary>
+    /// 経路 <paramref name="road"/> で隊が立てるいちばん奥（第458期・経路の長さが盤で違う 1-3 のため）。
+    /// 1-1 ／ 1-2 は経路の長さが <see cref="Map11.RoadCells"/> なので <see cref="MaxCell"/> と同じ値。
+    /// </summary>
+    public int MaxCellOf(int road) => road < 0 || road >= Graph.Lanes.Count ? MaxCell
+        : Portal.On ? Graph.Lanes[road].Length : Graph.Lanes[road].Length - 1;
+
+    /// <summary>経路の長さが 1-1 ／ 1-2 と違う盤か（第458期・1-3）。<b>画面の文（マスの呼び名）だけが読む。</b></summary>
+    public bool LongLanes => Graph.Lanes.Any(l => l.Length != Map11.RoadCells);
+
     /// <summary>1 マップの戦闘回数の上限（拠点ありでは <see cref="PortalRule.BattleCap"/>）。</summary>
     public int BattleCapNow => Portal.On ? Portal.BattleCap : Map11.BattleCap;
 
@@ -632,6 +644,7 @@ public sealed class Map11State
         Stage = stage ?? MapStage.Stage11;
         Graph = graph ?? Stage.Board(Portal.On);
         _outposts = Graph.Cells.Where(c => c.Kind == MapGraph.Kind.Outpost).Select(c => c.Id).ToArray();
+        _holds = Stage.Lanes.Any(l => l.Any(n => n.Hold));
         // 最初の1回まで S ターン（第176期の `Turn % S == 0` と同じ立ち上がり）。
         _portalReady = Portal.On ? Math.Max(0, Portal.SpawnEvery) : 0;
         // 第177期 §3: 自分で組む通しでは、**3 隊の 15 枚をばらして手札にする**。
@@ -1082,11 +1095,15 @@ public sealed class Map11State
 
     /// <summary>道 <paramref name="road"/> で次に当たる区画。道が抜け切っていれば null。</summary>
     /// 第449期: <b>動かない区画（<see cref="Map11.RoadNode.Stationary"/>）は飛ばす</b>——前進するのは次の動く区画。
+    /// 第458期: <b>動かない大群（<see cref="Map11.RoadNode.Hold"/>）も飛ばす</b>。
     public Node? NextNode(int road)
     {
-        foreach (Node n in Nodes[road]) if (!n.Cleared && !n.Def.Stationary) return n;
+        foreach (Node n in Nodes[road]) if (!n.Cleared && !n.Def.Stationary && !n.Def.Hold) return n;
         return null;
     }
+
+    /// <summary>動かない大群（<see cref="Map11.RoadNode.Hold"/>）のいる盤か（第458期・1-3）。偽の盤では <see cref="FoesOn"/> の並びは第457期のまま。</summary>
+    private readonly bool _holds;
 
     // ---------------- 道の上の敵（第176期。**拠点なしでは湧きが 0 なので第175期と同義**） ----------------
 
@@ -1096,7 +1113,12 @@ public sealed class Map11State
     /// 前が詰まっていれば進めない（<see cref="AdvanceFoes"/>）ので、この並びが位置の順になる。
     /// </summary>
     /// 第449期: 動かない区画（敵の拠点の守備隊）は<b>いちばん奥</b>なので最後に返す。
+    /// 第458期: 大群のいる盤では<b>経路の上の位置の順</b>に並べ直す（湧いた部隊は大群の奥で詰まるので、元の並びでは「手前」が崩れる）。
+    /// 同じ位置は元の並び（区画 → 湧き → 守備隊）のまま。大群のいない盤は 1 行も変えていない。
     public IEnumerable<Node> FoesOn(int road)
+        => _holds ? FoesOnRaw(road).OrderBy(n => Graph.IndexOn(road, n.Pos)) : FoesOnRaw(road);
+
+    private IEnumerable<Node> FoesOnRaw(int road)
     {
         foreach (Node n in Nodes[road]) if (!n.Cleared && !n.Def.Stationary) yield return n;
         foreach (Node n in Spawns) if (!n.Cleared && n.Def.Road == road) yield return n;
@@ -1132,6 +1154,10 @@ public sealed class Map11State
         Squad s = Squads[squadIndex];
         if (s.Units is null || s.Road < 0) return null;
         if (Portal.On && s.Pos == Graph.Portal) return PortalFoe();
+        // 第458期: 経路に属さない通り道（1-3 の分かれ道）では、どの経路の敵でも同じマスにいれば当たる（素通りしない）。
+        if (s.Pos != Graph.Home && Graph[s.Pos].Lane < 0)
+            for (int road = 0; road < Stage.LaneCount; road++)
+                if (FrontFoe(road) is { } here && here.Pos == s.Pos) return here;
         Node? f = FrontFoe(s.Road);
         return f is not null && f.Pos == s.Pos ? f : null;
     }
@@ -1170,19 +1196,28 @@ public sealed class Map11State
     /// 本陣で続けて戦える次の相手（第457期）。連戦の盤で、その隊が敵の拠点のマスにいて生きた駒があり、
     /// まだそこに敵がいれば <see cref="PortalFoe"/>（守り → 勇者 → 湧き・予備隊の順）を返す。それ以外は null。<b>盤面は1ビットも動かさない。</b>
     /// </summary>
+    /// 第458期: <see cref="SiegeRule.Stacks"/> の盤では、<b>敵が重なっているマス</b>（1-3 の大群）で勝ってまだそこに敵がいるときも連戦の合間になる（相手は <see cref="FoeFacing"/>）。
     public Node? SiegeNext(int squadIndex)
     {
         if (!Stage.Siege.On || !Portal.On || Finished) return null;
         Squad s = Squads[squadIndex];
-        if (s.Lost || s.Units is not { } u || !u.Any(x => x.IsAlive) || s.Pos != Graph.Portal) return null;
+        if (s.Lost || s.Units is not { } u || !u.Any(x => x.IsAlive)) return null;
+        if (s.Pos != Graph.Portal)
+            return Stage.Siege.Stacks && s.Pos != Graph.Home && FoeFacing(squadIndex) is { Cleared: false } h ? h : null;
         return PortalFoe() is { Cleared: false } f ? f : null;
     }
 
     /// <summary>勇者を倒した刻（第457期・-1 ＝ まだ・測るためだけ）。</summary>
     public int HeroDownTurn { get; private set; } = -1;
 
-    /// <summary>本陣の連戦の合間に引いた回数（第457期・測るためだけ）。</summary>
+    /// <summary>本陣の連戦の合間に引いた回数（第457期・測るためだけ）。第458期から重なったマス（大群）で引いた回数も含む。</summary>
     public int SiegeRetreats { get; private set; }
+
+    /// <summary>そのうち重なったマス（大群）で引いた回数（第458期・測るためだけ）。</summary>
+    public int StackRetreats { get; private set; }
+
+    /// <summary>横の辺（経路をまたぐ辺・<see cref="MapGraph.IsCross"/>）を通った回数（第458期・測るためだけ）。</summary>
+    public int CrossMoves { get; private set; }
 
     /// <summary>
     /// 本陣から引く（第457期）。隊を<b>入ってきた経路の中間拠点</b>（経路の奥のマス）へ戻す——1 刻かからない・無料。
@@ -1192,8 +1227,17 @@ public sealed class Map11State
     {
         if (!Stage.Siege.On) return false;
         Squad s = Squads[squadIndex];
-        if (s.Lost || s.Units is null || s.Pos != Graph.Portal) return false;
+        if (s.Lost || s.Units is null || s.Pos == Graph.Home) return false;
         int road = s.Road >= 0 && s.Road < Stage.LaneCount ? s.Road : 0;
+        // 第458期: 重なったマス（大群）からは、入ってきた側の隣（経路の上で 1 つ拠点寄り・1-3 の C3 なら野営地）へ。
+        if (s.Pos != Graph.Portal)
+        {
+            if (!Stage.Siege.Stacks) return false;
+            Place(s, Graph.TowardHome(road, s.Pos), road);
+            SiegeRetreats++;
+            StackRetreats++;
+            return true;
+        }
         Place(s, Graph.Lanes[road][^1], road);
         SiegeRetreats++;
         return true;
@@ -1631,7 +1675,8 @@ public sealed class Map11State
             // 第175期 §2: **迎撃で勝っても、道中の回復は乗らない**（待ちの抜け道を塞ぐ）。
             bool recover = playerWon && Map11.RecoverPercent > 0
                            && (!intercept || Time.InterceptRecover)
-                           && !(Stage.Siege.On && node.Pos == Graph.Portal);   // 第457期: 本陣の戦闘では道中の回復を乗せない
+                           && !(Stage.Siege.On && node.Pos == Graph.Portal)    // 第457期: 本陣の戦闘では道中の回復を乗せない
+                           && !(Stage.Siege.Stacks && node.Def.Hold);         // 第458期: 大群の戦闘でも乗せない（連戦の窓は本陣と同じ規則）
             s.Units = EngagementEngine.CrossBoundary(aliveP, pu,
                 recover ? new RecoverRule(Map11.RecoverPercent, false) : null);
             RepairSeats(s.Units);
@@ -1674,6 +1719,7 @@ public sealed class Map11State
     /// <summary>その敵部隊を抜いたときの金（第449期: 本陣の守りは <see cref="GoldRule.Garrison"/>・湧いた部隊は安い）。画面の札も同じ値を読む。</summary>
     public int KillGold(Node node)
         => node.IsHero ? Stage.Hero.Gold   // 第454期: 勇者
+           : node.Def.Hold ? Stage.Gold.Horde   // 第458期: 大群は 1 部隊ずつ
            : node.Def.Stationary ? Stage.Gold.Garrison : node.FromPortal && !node.IsReserve ? Stage.Gold.SpawnKill : Stage.Gold.Kill;
 
     // =============================================================================
@@ -1719,7 +1765,7 @@ public sealed class Map11State
             // **道の先頭の敵より先へは行かない**——次のマスがその敵のマスなら入って戦闘、
             // その敵が自分より拠点寄りにいる（決着しなかった戦闘の後に脇を抜けられた）ならそのマスへ引き返して当たる
             // （第437期の `Math.Min(Cell + 1, 先頭の敵のマス)` をそのまま写した）。
-            int next = Graph.NextStep(s.Pos, road, Graph.At(road, MaxCell), road);
+            int next = Graph.NextStep(s.Pos, road, Graph.At(road, MaxCellOf(road)), road);   // 第458期: 経路ごとの奥（1-1 ／ 1-2 は MaxCell と同じ）
             if (FrontFoe(road) is { } front && front.Cell < Graph.IndexOn(road, next)) next = front.Pos;
             // 第451期: 本陣の門が閉じていれば、敵の拠点のマスの手前で止まる。
             if (!CanEnter(squadIndex, next)) return null;
@@ -1742,6 +1788,7 @@ public sealed class Map11State
         if (s.Lost || s.Units is null || !CanSend(squadIndex) || s.Pos == Graph.Home) return null;
         if (FoeFacing(squadIndex) is { } contact) return contact;
         if (!Graph[s.Pos].Neighbors.Contains(cell) || Graph.IsBase(cell)) return null;
+        if (Graph.IsCross(s.Pos, cell)) CrossMoves++;   // 第458期（測るためだけ）
         Place(s, cell, s.Road);
         return FoeFacing(squadIndex);
     }

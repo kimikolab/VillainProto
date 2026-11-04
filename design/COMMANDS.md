@@ -1876,6 +1876,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
         # **第457期**: (be)〜(bh) と第456期の表は第456期の 1-2（`Stage12H456`・1 刻 1 戦）で回す。遊ぶ 1-2（`Stage12`・本陣の連戦）に
         # (bi) 守りに勝つと同じ刻に `Siege` の窓・「続けて」で勇者 ／ (bj) 「引く」で中間拠点へ・勇者の HP は持ち越し ／ (bk) 本陣では回復が乗らない ＋ 器具 2 方針 × 100 seed（報告のみ）。約 60 秒
         # (bl) は絵の口 `,hero` の `MAP11_CAPTURE_PORTAL cards=n inside=True`（敵の拠点の札が画面の内側）。絵: `,siege`（連戦の合間の窓）
+    Godot_console.exe --path DemoApp --headless -- --map13-smoke
+        # **第458期**: 1-3（`MapStage.Stage13`・`Map13Smoke.cs`・画面なし）。(a) 盤 14 マス ＋ 拠点 ＋ 本陣・経路 3 本・横の辺 2 本（中間拠点どうし）・分かれ道を通り抜ける
+        # ／ (b) 北の砦 → 野営地を横の辺で 1 歩 ／ (c) 雷杖の部隊で感電・槍兵の部隊で押される ／ (d) C3 の大群（徴募兵 × 3）で連戦の窓・引けば野営地・大群では回復なし
+        # ／ (e) 本陣の守り（重）で ＋12 ／ (f) 期限 18 で時間切れ ＋ 1-2 と 1-3 × 3 方針 × 100 seed（報告のみ）。約 2 分
+        # 絵: `--map-stage=1-3 --map-seed=1 --map11-capture=<png>,default`（開始時）・`,horde`（大群の連戦の窓）
     Godot_console.exe --path DemoApp --headless -- --map11-phase176
         # **第176期 Phase 0**: Q0-1〜Q0-5（`PortalOn = false` が第175期の 18 量と一致するか ／
         # 重なりと同点の割り方 ／ 湧いた部隊を満タンで作る口 ／ 方針の手順 ／ 走行時間）。約 1 秒

@@ -1113,7 +1113,9 @@ public enum TraitId
     // --- 第449期 作戦マップの敵（帯 B）だけが持つ札。`Stages` の敵も `UnitCatalog.All` も持たない ---
     MiasmaFront, // 前の瘴気: 毎ターン、相手の前列に毒 +1（毒霧の司祭）。味方への漏れはない
     CinderFoe,   // 敵の火の粉（第450期）: 当てた相手全員に火を点ける。隣の味方へは燃え移らない（火の魔術師・火矢の射手）
-    BossMend300  // 自前の回復・固定 300（第454期・作戦マップの勇者 `EnemyCatalog.HeroMap`）: ターン頭に自分を 300 回復（割合ではなく固定量）
+    BossMend300, // 自前の回復・固定 300（第454期・作戦マップの勇者 `EnemyCatalog.HeroMap`）: ターン頭に自分を 300 回復（割合ではなく固定量）
+    ShockFoe,    // 敵の帯電（第458期・雷杖の魔導兵）: 毎ターン、向かいの敵 1 体に感電を付ける（トウの書き手の向きを敵側に・味方への漏れはない）
+    ShoveFoe     // 敵の突き飛ばし（第458期・突き飛ばしの槍兵）: 当てた相手を同じレーンの 1 つ後ろの席へ押す（いれば入れ替わる）
 }
 
 /// <summary>
@@ -10917,6 +10919,75 @@ public sealed class CinderFoeTrait : Trait
 }
 
 /// <summary>
+/// 敵の帯電（第458期・作戦マップの敵「雷杖の魔導兵」・指示書 design/PHASE458_STAGE13_SPEC.md §0-2）。
+/// <b>毎ターン、向かいの敵 1 体に感電を付ける</b>（<see cref="BattleContext.MarkShock"/>・トウの粉 <see cref="ChargedPowderTrait"/> の書き手の向きを敵側にした形）。
+/// 向かい ＝ 自分と<b>同じ席番号</b>の相手（生きていれば）→ いなければ相手の前列の席の若い順 → いなければ生きている相手の席の若い順。<b>乱数を引かない。</b>
+/// 弾ける・連鎖する・痺れるは engine の感電の規則のまま（痺れの札 <see cref="TraitId.ShockStunHalf"/> は持たない）。味方への漏れは無い。
+/// 行動パターンを持たない保持者なのでターン頭に付ける（<see cref="MiasmaFrontTrait"/> と同じ枝）。<b>保持者は作戦マップの敵だけ</b>なので `compare` は動かない。
+/// </summary>
+public sealed class ShockFoeTrait : Trait
+{
+    public override TraitId Id => TraitId.ShockFoe;
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action) => Mark(ctx, self);
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!ActsOnPattern(self)) Mark(ctx, self);
+    }
+
+    /// <summary>向かいの相手（同じ席 → 前列の席の若い順 → 席の若い順・いなければ null）。</summary>
+    public static UnitState? Facing(BattleContext ctx, UnitState self)
+    {
+        var foes = ctx.LivingMembers(ctx.Opponent(self.TeamId));
+        return foes.FirstOrDefault(u => u.Slot == self.Slot)
+            ?? foes.Where(u => u.Row == Row.Front).OrderBy(u => u.Slot).FirstOrDefault()
+            ?? foes.OrderBy(u => u.Slot).FirstOrDefault();
+    }
+
+    private static void Mark(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive || Facing(ctx, self) is not { } foe) return;
+        if (ctx.MarkShock(foe, self))
+            ctx.Log($"    {self.Name} の雷杖が {foe.Name} を帯電させた", LogKind.Status);
+    }
+}
+
+/// <summary>
+/// 敵の突き飛ばし（第458期・作戦マップの敵「突き飛ばしの槍兵」・指示書 §0-2）。<b>攻撃を当てた主目標を、同じレーンの 1 つ後ろの席へ押す</b>
+/// （<see cref="BattleContext.SwapSlots"/>・そこに駒がいれば入れ替わる・押された駒も入れ替わった駒も「動かされた」として反応する）。
+/// 1 つ後ろ ＝ その陣形のレーン（召喚枠を除く）で主目標の次にある<b>編成の席</b>のうち席番号の若い方（X 字なら 前1 → 中央 → 後1）。後列の駒は押せない（何もしない）。
+/// ハネの吹っ飛ばし（<see cref="ReboundTrait"/>）は相手の席を X 字の前列（0 ／ 1）で決め打ちしていたので流用せず、陣形の表（<see cref="FormationShape.IsLanePredecessor"/>）から引く形にした。
+/// 移動の連鎖は <see cref="BattleContext.Shoving"/> の再入ガードの中で起こす。<b>乱数を引かない</b>（入れ替えの窓口は占有者の候補が 0/1 個なら引かない）。
+/// <b>保持者は作戦マップの敵だけ</b>なので `compare` は動かない。
+/// </summary>
+public sealed class ShoveFoeTrait : Trait
+{
+    public override TraitId Id => TraitId.ShoveFoe;
+
+    /// <summary>押す先の席（無ければ -1）。</summary>
+    public static int BehindOf(UnitState target)
+    {
+        FormationShape shape = target.Shape;
+        for (int s = 0; s < FormationRules.TotalSlots; s++)
+            if (shape.IsPlayable(s) && shape.IsLanePredecessor(target.Slot, s)
+                && FormationRules.DepthOf(FormationRules.RowOf(s)) > FormationRules.DepthOf(FormationRules.RowOf(target.Slot)))
+                return s;
+        return -1;
+    }
+
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+    {
+        if (!self.IsAlive || !target.IsAlive || dealt <= 0 || ctx.InShove) return;
+        int to = BehindOf(target);
+        if (to < 0) return;
+        ctx.Shoving(() =>
+        {
+            ctx.Log($"    {self.Name} の槍が {target.Name} を後ろへ突き飛ばした", LogKind.Trigger);
+            ctx.SwapSlots(target, to, self);
+        });
+    }
+}
+
+/// <summary>
 /// 火の鎧（第234期・焼け残りのボルグの版 G1〜G4・<b>保持者 0 枚</b>——版は診断 <c>borgguard</c> のローカルの駒）。
 /// <para>① <b>敵の攻撃を受けると、その攻撃が終わってから、殴った敵と自分に火が点く</b>（攻撃1回ごと・薙ぎ／貫き／全体で当たっても殴った敵1体に1回）。
 /// 「攻撃」は敵の <c>PerformAttack</c> の枠の中で、その枠の主（攻撃者）が出どころの一撃——手番の攻撃・割り込み・反撃・追い打ち。
@@ -20297,6 +20368,8 @@ public static class TraitCatalog
         new MiasmaTrait(),
         new MiasmaFrontTrait(),                               // 第449期（作戦マップの敵・毒霧の司祭）
         new CinderFoeTrait(),                                 // 第450期（作戦マップの敵・火の魔術師 ／ 火矢の射手）
+        new ShockFoeTrait(),                                  // 第458期（作戦マップの敵・雷杖の魔導兵）
+        new ShoveFoeTrait(),                                  // 第458期（作戦マップの敵・突き飛ばしの槍兵）
         new ImmobileTrait(),
         new HavocTrait(),
         new ParalyzeTrait(),

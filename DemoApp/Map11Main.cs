@@ -556,9 +556,9 @@ public partial class Map11Main : Node3D
                      + "relics=" + string.Join("/", Map11Session.RelicWorked.Select(kv => $"{RelicCatalog.Info(kv.Key.Relic).Name}({kv.Key.Unit}):{kv.Value}")));
         }
         // 第457期 §3: **本陣の連戦の合間の窓**の絵（`Map11Main.Siege.cs`）。
-        else if (parts.Length > 1 && parts[1] == "siege")
+        else if (parts.Length > 1 && parts[1] is "siege" or "horde")
         {
-            CaptureSiegeSetup();
+            CaptureSiegeSetup(horde: parts[1] == "horde");   // 第458期: `horde` は 1-3 の大群の連戦の窓
             await ToSignal(GetTree().CreateTimer(2.0), SceneTreeTimer.SignalName.Timeout);   // 浮く金の数字が消えるのを待つ
         }
         // 第443期 §0-1: **迎撃の合間**の絵（`--map-stage=1-2` と使う）。既定の組み方で 2 隊を組み、北と南の先頭だけを残して
@@ -880,7 +880,7 @@ public partial class Map11Main : Node3D
     private void BuildWorld()
     {
         // 敵の拠点があるとカメラを引くので、盤の文字はそのぶん大きくする（距離の比）。
-        _labelScale = St.Stage.LaneCount > 2 ? WideLabelScale : St.Portal.On ? 1.40f : 1.0f;
+        _labelScale = (St.Stage.LaneCount > 2 ? WideLabelScale : St.Portal.On ? 1.40f : 1.0f) * St.Stage.ViewScale;   // 第458期: 引いた倍率ぶん大きく
 
         var sky = new ProceduralSkyMaterial
         {
@@ -909,7 +909,7 @@ public partial class Map11Main : Node3D
 
         AddChild(new MeshInstance3D
         {
-            Mesh = new PlaneMesh { Size = new Vector2(90, 60) },
+            Mesh = new PlaneMesh { Size = new Vector2(90, 60) * (St.Stage.ViewScale == 1f ? 1f : 1.8f) },   // 第458期: 引いた盤（1-3）は地面も広げる
             MaterialOverride = CampaignMain.MakeMaterial(Color.FromHtml("#557343"), roughness: 0.96f),
         });
 
@@ -1068,11 +1068,13 @@ public partial class Map11Main : Node3D
         // 札は<b>いつも板の真下</b>（道で揃える）。名前は板の上、前進の予告はさらにその上。
         // 第438期: 札は**盤のマス**から引く（経路ごと・拠点の隣から奥へ）。
         Add(Dest.Home, BasePos, new Vector2(-70, 78));
+        var added = new HashSet<int>();   // 第458期: 1-3 の分かれ道は 3 本の経路の先頭に重なる——札は 1 枚
         for (int road = 0; road < St.Graph.Lanes.Count; road++)
             for (int cell = 0; cell < St.Graph.Lanes[road].Length; cell++)
                 // **空きマス（0）だけ1段下げる**——拠点のすぐ隣なので、同じ段だと札が重なる。
-                Add(Dest.Of(St.Graph, St.Graph.Lanes[road][cell]), PosOf(St.Graph.Lanes[road][cell]),
-                    new Vector2(-70, cell == 0 ? 62 : 32));
+                if (added.Add(St.Graph.Lanes[road][cell]))
+                    Add(Dest.Of(St.Graph, St.Graph.Lanes[road][cell]), PosOf(St.Graph.Lanes[road][cell]),
+                        new Vector2(-70, cell == 0 ? 62 : 32));
 
         // 第177期 §2 —— 敵の拠点。**北と南は同じ1点**なので、札は道ごとに縦に並べる
         // （どちらの道を通って向かうかは、行き先ではなく<b>道</b>が決める）。
@@ -3031,7 +3033,7 @@ public partial class Map11Main : Node3D
               + (Map11.SquadLineOf(n.Def.Name) is { Length: > 0 } line ? line + Nl : "")
               + Map11.RuleLineOf(n.Def.Enemy) + Nl
               + $"{alive} 体 ・ 残り HP {NodeHpPercent(n):F0}%"
-              + (n.Cell >= Map11.PortalCell ? $"（{Map11.PortalName}）" : "");
+              + (n.Def.Road >= 0 && n.Pos == St.Graph.Portal ? $"（{Map11.PortalName}）" : "");   // 第458期: 位置で見る（1-1 ／ 1-2 は同じ結果）
         var button = new Button
         {
             Text = text,
@@ -3052,6 +3054,13 @@ public partial class Map11Main : Node3D
     private void Place(Marker m, Map11State.Node n, int road, int stackAtPortal = 0)
     {
         int alive = n.Cleared ? 0 : n.Units?.Count(u => u.IsAlive) ?? n.Def.Enemy.Occupied().Count();
+        // 第458期 §0-4: 大群（重なって動かない部隊）は札を 1 枚にまとめる（先頭の 1 部隊だけ出し、名前は「徴募兵 ×3」）。
+        if (!n.Cleared && n.Def.Hold && HordeHead(n) is { } head && !ReferenceEquals(head, n))
+        {
+            m.Set("", EnemyColor, false);
+            m.SetNote("", GoldColor, false);
+            return;
+        }
         if (!n.Cleared)
         {
             Vector3 at = n.Pos == St.Graph.Home ? BasePos + new Vector3(0, 0, LaneSide(road) * 3.4f)
@@ -3079,6 +3088,12 @@ public partial class Map11Main : Node3D
     /// 同じマスにいる敵部隊のうち、自分より手前に何部隊いるか（0 ＝ ずらさない）。第442期の 1-2 は中の道の 2 戦目の地点に
     /// 物見と先遣が重なって始まるので、後ろの板を斜めにずらして名前も読めるようにする。<b>位置を読むだけ</b>（判定は持たない）。
     /// </summary>
+    /// <summary>大群のまとまりの先頭（同じマスの動かない部隊のうち手前の 1 つ）と、そのマスの部隊数（第458期・表示だけ）。</summary>
+    internal static Map11State.Node? HordeHead(Map11State.Node n)
+        => St.FoesOn(n.Def.Road).FirstOrDefault(x => x.Def.Hold && x.Pos == n.Pos);
+    internal static int HordeCount(Map11State.Node n)
+        => St.FoesOn(n.Def.Road).Count(x => x.Def.Hold && x.Pos == n.Pos);
+
     private int SharedCellIndex(Map11State.Node n, int road)
         => St.FoesOn(road).TakeWhile(x => !ReferenceEquals(x, n)).Count(x => x.Pos == n.Pos);
 
