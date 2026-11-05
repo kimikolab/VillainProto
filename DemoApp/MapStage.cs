@@ -96,6 +96,13 @@ public sealed class MapStage
     /// </summary>
     public float ViewScale { get; init; } = 1f;
 
+    /// <summary>
+    /// 横の辺の穴の直し（第460期 §B・第459期 報告 §5-1）。真なら<b>隊のいるマスに敵がいれば当たる</b>（先頭の敵かどうかを問わない・`Map11State.FoeFacing`）。
+    /// 偽なら第459期まで（経路の「先頭の敵」が同じマスにいるときだけ当たる——横の辺で先頭でない敵のいるマスへ入ると素通りする）。
+    /// 遊ぶ 1-2 ／ 1-3 だけ真（1-1 に横の辺は無い）。
+    /// </summary>
+    public bool CrossFacing { get; init; }
+
     public int LaneCount => Lanes.Length;
     public int TotalNodes => Lanes.Sum(l => l.Count);
 
@@ -616,12 +623,13 @@ public sealed class MapStage
         Siege = SiegeRule.V457,
     };
 
-    /// <summary>1-2（第460期・遊ぶ版）。第459期（<see cref="Stage12H459"/>）の写し。</summary>
-    public static MapStage Stage12 { get; } = Copy(Stage12H459);
+    /// <summary>1-2（第460期・遊ぶ版）。第459期（<see cref="Stage12H459"/>）に横の辺の穴の直し（<see cref="CrossFacing"/>）を載せた。</summary>
+    public static MapStage Stage12 { get; } = Copy(Stage12H459, crossFacing: true);
 
-    /// <summary>ステージの写し（第460期・版を足すための道具・中身は 1 つも変えない）。</summary>
-    private static MapStage Copy(MapStage s) => new()
+    /// <summary>ステージの写し（第460期・版を足すための道具）。<paramref name="crossFacing"/> を渡したときだけ横の辺の直しを替える。</summary>
+    private static MapStage Copy(MapStage s, bool? crossFacing = null) => new()
     {
+        CrossFacing = crossFacing ?? s.CrossFacing,
         Id = s.Id,
         Title = s.Title,
         Board = s.Board,
@@ -731,8 +739,8 @@ public sealed class MapStage
         ViewScale = Stage13H458.ViewScale,
     };
 
-    /// <summary>1-3（第460期・遊ぶ版）。第459期（<see cref="Stage13H459"/>）の写し。</summary>
-    public static MapStage Stage13 { get; } = Copy(Stage13H459);
+    /// <summary>1-3（第460期・遊ぶ版）。第459期（<see cref="Stage13H459"/>）に横の辺の穴の直し（<see cref="CrossFacing"/>）を載せた。</summary>
+    public static MapStage Stage13 { get; } = Copy(Stage13H459, crossFacing: true);
 
     /// <summary>選べるステージ（編成画面の選択の並び）。</summary>
     public static IReadOnlyList<MapStage> All { get; } = new[] { Stage11, Stage12, Stage13 };

@@ -1232,9 +1232,14 @@ public sealed class Map11State
         // 第458期: 経路に属さない通り道（1-3 の分かれ道）では、どの経路の敵でも同じマスにいれば当たる（素通りしない）。
         if (s.Pos != Graph.Home && Graph[s.Pos].Lane < 0)
             for (int road = 0; road < Stage.LaneCount; road++)
+            {
                 if (FrontFoe(road) is { } here && here.Pos == s.Pos) return here;
+                if (Stage.CrossFacing && FoeAt(road, s.Pos) is { } any) return any;   // 第460期 §B
+            }
         Node? f = FrontFoe(s.Road);
-        return f is not null && f.Pos == s.Pos ? f : null;
+        if (f is not null && f.Pos == s.Pos) return f;
+        // 第460期 §B（横の辺の穴の直し・`MapStage.CrossFacing`）: 先頭でなくても、隊のいるマスに敵がいれば当たる（並びは `FoesOn` のまま）。
+        return Stage.CrossFacing ? FoeAt(s.Road, s.Pos) : null;
     }
 
     /// <summary>
@@ -1293,6 +1298,14 @@ public sealed class Map11State
 
     /// <summary>横の辺（経路をまたぐ辺・<see cref="MapGraph.IsCross"/>）を通った回数（第458期・測るためだけ）。</summary>
     public int CrossMoves { get; private set; }
+    /// <summary>横の辺で入ったマスで、経路の先頭でない敵に当たった回数（第460期・直した後だけ起きる・測るためだけ）。</summary>
+    public int CrossContacts { get; private set; }
+    /// <summary>横の辺で入ったマスに敵がいたのに当たらなかった回数（第460期・直す前の穴・測るためだけ）。</summary>
+    public int CrossSkips { get; private set; }
+    /// <summary>追ってくる勇者が、味方の取っている中間拠点のマスを通った回数（第460期 §4・規則は変えない・測るためだけ）。</summary>
+    public int HeroOverHeld { get; private set; }
+    /// <summary>そのとき取り返されていたら門が閉じていた（取っている中間拠点が門の数を割った）か（第460期 §4・測るためだけ）。</summary>
+    public bool HeroWouldCloseGate { get; private set; }
 
     /// <summary>
     /// 本陣から引く（第457期）。隊を<b>入ってきた経路の中間拠点</b>（経路の奥のマス）へ戻す——1 刻かからない・無料。
@@ -1865,9 +1878,17 @@ public sealed class Map11State
         if (s.Lost || s.Units is null || !CanSend(squadIndex) || s.Pos == Graph.Home) return null;
         if (FoeFacing(squadIndex) is { } contact) return contact;
         if (!Graph[s.Pos].Neighbors.Contains(cell) || Graph.IsBase(cell)) return null;
-        if (Graph.IsCross(s.Pos, cell)) CrossMoves++;   // 第458期（測るためだけ）
+        bool cross = Graph.IsCross(s.Pos, cell);
+        if (cross) CrossMoves++;   // 第458期（測るためだけ）
         Place(s, cell, s.Road);
-        return FoeFacing(squadIndex);
+        Node? met = FoeFacing(squadIndex);
+        // 第460期（測るためだけ）: 横の辺で入ったマスで、先頭でない敵に当たった ／ 敵がいるのに当たらなかった（直す前の穴）。
+        if (cross)
+        {
+            if (met is not null && !ReferenceEquals(met, FrontFoe(s.Road))) CrossContacts++;
+            else if (met is null && Enumerable.Range(0, Stage.LaneCount).Any(r => FoesOn(r).Any(n => n.Pos == cell))) CrossSkips++;
+        }
+        return met;
     }
 
     /// <summary>
@@ -2040,6 +2061,11 @@ public sealed class Map11State
             if (next == h.Pos) return true;
             h.Pos = next;
             if (Graph[next].Lane >= 0) h.Def = h.Def with { Road = Graph[next].Lane };
+            if (HeldOutposts.Contains(next))
+            {
+                HeroOverHeld++;   // 第460期 §4（測るためだけ・取り返しはしない）
+                if (Stage.PortalGate > 0 && GateOpen && HeldOutposts.Count - 1 < Stage.PortalGate) HeroWouldCloseGate = true;
+            }
             if (next == Graph.Portal && Squads.Any(q => !q.Lost && q.Pos == Graph.Portal && q.Units is { } qu && qu.Any(x => x.IsAlive)))
                 HeroJoinedSiege++;   // 測るためだけ
             if (next != Graph.Portal && SquadAt(next) is var sq and >= 0) list.Add(new Encounter(sq, h, false));
