@@ -339,6 +339,17 @@ public partial class Main : Control
             GetTree().Quit(ok13 ? 0 : 1);
             return;
         }
+        // 第459期 §4: 1-3 の追ってくる勇者の門（現れる・拠点へ・迎撃・拠点が落ちる・追う・勝ち・表示の作戦ターン）。画面なし。
+        if (bootArgs.Contains("--map13-hero-smoke", StringComparer.Ordinal) || bootArgs.Contains("--map13-hero-quick", StringComparer.Ordinal))
+        {
+            bool okH;
+            // 例外で止まると Godot が終わらずに残る——門の中の例外は落ちたとして書いて抜ける。
+            try { okH = Map13HeroSmoke.Run(GD.Print, bots: !bootArgs.Contains("--map13-hero-quick", StringComparer.Ordinal)); }
+            catch (System.Exception ex) { GD.PrintErr(ex.ToString()); okH = false; }
+            GD.Print($"MAP13_HERO_SMOKE_COMPLETE ok={okH}");
+            GetTree().Quit(okH ? 0 : 1);
+            return;
+        }
         // 第441期 §5-3: 1-2 に「盤の上で変わるもの」（途中到着・予備隊・湧き S=2）を足した門。画面なし。
         if (bootArgs.Contains("--map12-change-smoke", StringComparer.Ordinal))
         {

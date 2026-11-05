@@ -2720,9 +2720,12 @@ public static class Map12ChangeSmoke
     /// <paramref name="split"/> が真なら（第442期・報告だけ）<b>分担＋戻り番</b>: 同じ刻に 2 隊が同じ敵を狙わない（若い隊から順に取る）。
     /// 番の規則は最初の接敵の後からで、そのとき拠点に出せる隊が 1 つもいなければ、拠点にいちばん近い隊が戻る。
     /// </summary>
+    /// <summary>追ってくる勇者が現れた後の方針（第459期・報告だけ）。<c>None</c> ＝ 第458期までの方針のまま。</summary>
+    internal enum HeroPlan { None, Guard, Flee }
+
     internal static Once Greedy(int seed, MapStage stage, bool guard, bool split = false, bool turtle = false,
                                Dictionary<string, (int Battles, int Lost)>? byFoe = null, Action<Map11State>? watch = null, bool rally = false,
-                               Map11State? state = null, bool siegeRest = false)
+                               Map11State? state = null, bool siegeRest = false, HeroPlan heroPlan = HeroPlan.None)
     {
         int recruits = 0, relicsEquipped = 0;
         bool slotBought = false, thirdFull = false;
@@ -2758,7 +2761,9 @@ public static class Map12ChangeSmoke
         }
 
         var taken = new HashSet<Map11State.Node>(ReferenceEqualityComparer.Instance);
-        int homeGuard = -1, striker = -1;
+        int homeGuard = -1, striker = -1, heroGuard = -1;
+        // 第459期（報告だけ）: 追ってくる勇者が現れていて、まだ倒しても拠点を落とされてもいないか。
+        bool Chasing() => stage.Hero.Chaser && st.HeroTurn >= 0 && st.Hero is { Cleared: false } && !st.Captured;
         // 第457期: 本陣の連戦の盤では、勝ったら同じ刻のうちに次の相手と続けて戦う（既定）。
         // `siegeRest` なら、合間に隊の HP が 50% 未満のとき入ってきた経路の中間拠点へ引き、90% まで休んでから戻る（報告だけ）。
         var resting = new HashSet<int>();
@@ -2780,6 +2785,16 @@ public static class Map12ChangeSmoke
         {
             Map11State.Squad s = st.Squads[i];
             if (s.Lost) return Dest.Home;
+            // 第459期（報告だけ）: 守る ＝ 勇者が現れたら 1 隊を拠点に置く（拠点に出せる隊がいなければいちばん近い隊を戻す）。
+            if (heroPlan == HeroPlan.Guard && i == heroGuard) return Dest.Home;
+            // 第459期（報告だけ）: 逃げる ＝ 勇者が現れたら全部の隊が本陣へ（いちばん近い経路から・拠点は捨てる）。
+            if (heroPlan == HeroPlan.Flee && Chasing() && Ready(i))
+            {
+                int lane = Enumerable.Range(0, g.Lanes.Count)
+                    .Select(l => (l, len: g.Path(s.Pos, s.Road, g.Portal, l).Count))
+                    .Where(x => x.len > 0).OrderBy(x => x.len).ThenBy(x => x.l).Select(x => x.l).DefaultIfEmpty(s.Road >= 0 ? s.Road : 0).First();
+                return Dest.Portal(g, lane);
+            }
             // 第457期（報告だけ）: 本陣から引いた隊は、味方の中間拠点にいるあいだ 90% まで休む。
             if (resting.Contains(i))
             {
@@ -2878,6 +2893,11 @@ public static class Map12ChangeSmoke
                 // 第445期: 金のある盤では、まだ買っていない枠も「そろっていない隊」に数える（枠を買って 3 隊とも 5 枚になるまで待つ）。
                 released = st.Squads.Where(q => !q.Lost && (stage.Gold.On || !st.IsLocked(q.Index)))
                                     .All(q => !st.IsLocked(q.Index) && q.Units is { } u && u.Count(x => x.IsAlive) == 5);
+            heroGuard = -1;
+            if (heroPlan == HeroPlan.Guard && Chasing() && !st.HomeLost)
+                heroGuard = Enumerable.Range(0, st.Squads.Length).Where(Ready)
+                    .OrderBy(k => st.Squads[k].Pos == g.Home ? 0 : g.Path(st.Squads[k].Pos, st.Squads[k].Road, g.Home, -1).Count)
+                    .ThenBy(k => k).DefaultIfEmpty(-1).First();
             if (split && st.Battles > 0 && !st.Captured
                 && !Enumerable.Range(0, st.Squads.Length).Any(k => Ready(k) && st.Squads[k].Pos == g.Home))
                 homeGuard = Enumerable.Range(0, st.Squads.Length).Where(Ready)
