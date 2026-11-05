@@ -95,7 +95,35 @@ public static class Map11Session
 
     public static void EnsureStarted()
     {
+        // 第460期 §A-1: 「1 章」を選んでいれば 1 章の通し（同じステージを遊んでいる間は続ける・違えば 1-1 から始める）。
+        if (ChapterPicked)
+        {
+            if (Chapter1.Active && State is not null && ReferenceEquals(State.Stage, Chapter1.CurrentStage)) return;
+            Chapter1.Begin();
+            return;
+        }
+        if (Chapter1.Active) Chapter1.End();
         if (State is null || !ReferenceEquals(State.Stage, Chosen)) Reset(stage: Chosen);
+    }
+
+    /// <summary>
+    /// 編成画面のステージの札で「1 章」を選んでいるか（第460期 §A-1）。札の回り方は 1-1 → 1-2 → 1-3 → 1 章 → 1-1（<see cref="CyclePick"/>）。
+    /// 単発の 1-1 ／ 1-2 ／ 1-3 は <see cref="Chosen"/> のまま。
+    /// </summary>
+    public static bool ChapterPicked { get; private set; }
+
+    /// <summary>ステージの札の文（第460期・「マップ 1-2」／「1 章」）。</summary>
+    public static string PickText => ChapterPicked ? "1 章" : $"マップ {Chosen.Id}";
+
+    /// <summary>ステージの札を 1 つ進める（第460期 §A-1・1-1 → 1-2 → 1-3 → 1 章 → 1-1）。</summary>
+    public static void CyclePick()
+    {
+        var all = MapStage.All;
+        if (ChapterPicked) { ChapterPicked = false; Chosen = all[0]; return; }
+        int at = 0;
+        for (int i = 0; i < all.Count; i++) if (ReferenceEquals(all[i], Chosen)) at = i;
+        if (at == all.Count - 1) { ChapterPicked = true; return; }
+        Chosen = all[at + 1];
     }
 
     /// <summary>隊を道へ送る（プレイヤーの判断）。<b>記録は戦闘のたびに付ける</b>ので、ここでは残さない。</summary>

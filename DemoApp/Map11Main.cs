@@ -233,6 +233,7 @@ public partial class Map11Main : Node3D
         }
 
         if (St.Finished) ShowResult();
+        ShowChapterIntro();   // 第460期 §A-5: 1 章のステージの頭の札（1 章でなければ何もしない）
 
         // 第169期 自己検査 (d')。**画面を通した通し確認**（頭なしで走る）。
         // 判断だけを器具と同じ固定の割り当てで代行し、戦闘は本物の再生を通す。
@@ -1633,12 +1634,14 @@ public partial class Map11Main : Node3D
         Button again = UiKit.ActionButton("もう一度", GoldColor);
         _replayButton = again;
         again.CustomMinimumSize = new Vector2(0, 44);
-        again.Pressed += () =>
-        {
-            Map11Session.Reset(stage: St.Stage);
-            GetTree().ReloadCurrentScene();
-        };
+        again.Pressed += OnResultAgain;   // 第460期: 1 章では「次へ」「やり直す」にもなる（`Map11Main.Chapter.cs`）
         col.AddChild(again);
+        // 第460期 §A-3: 1 章で負けたときだけ「やめる（1 章の結果へ）」。
+        _resultQuit = UiKit.ActionButton("やめる（1 章の結果へ）", UiKit.Muted);
+        _resultQuit.CustomMinimumSize = new Vector2(0, 36);
+        _resultQuit.Visible = false;
+        _resultQuit.Pressed += OnResultQuit;
+        col.AddChild(_resultQuit);
     }
 
     // =================================================================================
@@ -2893,6 +2896,7 @@ public partial class Map11Main : Node3D
         RefreshResultFaces();
         _resultScroll.ScrollVertical = 0;
         _resultOverlay.Visible = true;
+        ChapterResultView();   // 第460期 §A-3: 1 章ならボタンを替える（単発は「もう一度」のまま）
     }
 
     // =================================================================================

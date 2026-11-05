@@ -798,10 +798,8 @@ public partial class Main : Control
         _stagePick.TooltipText = "作戦マップのステージ（替えると次に入ったとき新しい通しになる）";
         _stagePick.Pressed += () =>
         {
-            var all = MapStage.All;
-            int at = 0;
-            for (int i = 0; i < all.Count; i++) if (ReferenceEquals(all[i], Map11Session.Chosen)) at = i;
-            Map11Session.Chosen = all[(at + 1) % all.Count];
+            // 第460期 §A-1: 1-1 → 1-2 → 1-3 → 1 章 → 1-1（回り方は `Map11Session.CyclePick` の 1 箇所）。
+            Map11Session.CyclePick();
             _stagePick.Text = StagePickText();
         };
         _setupActions.AddChild(_stagePick);
@@ -2853,7 +2851,7 @@ public partial class Main : Control
     /// そちらへ戻す——戻り先は入場時（<c>_Ready</c>）に決めてあり、
     /// 戦闘の勝敗で <c>HasPendingEncounter</c> が落ちても揺れない。
     /// </summary>
-    private static string StagePickText() => $"マップ {Map11Session.Chosen.Id}";
+    private static string StagePickText() => Map11Session.PickText;
 
     private void GoToCampaign()
     {
