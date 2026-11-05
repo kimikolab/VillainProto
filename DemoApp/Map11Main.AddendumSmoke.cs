@@ -25,7 +25,7 @@ public partial class Map11Main
             Require(_hoverDestination == dest && _routePreview.Points.Length > 1, "実際のマウス位置で経路が出る");
             Require(_routePreview.Enemies.Length > 0, "経路上の敵が表示される");
             Require(Map11Session.Destinations[0] == original && St.Turn == 0, "ホバーは命令や時刻を書き換えない");
-            Require(_orderHint.Text.Contains("移動") && _orderHint.Text.Contains("刻"), "経路から刻を出す");
+            Require(_orderHint.Text.Contains("移動") && _orderHint.Text.Contains("作戦ターン"), "経路から作戦ターンを出す");   // 第459期: 「刻」→「作戦ターン」
             await Shot("01-route");
             Input.ParseInputEvent(new InputEventMouseMotion { Position = new Vector2(8, 188), GlobalPosition = new Vector2(8, 188) });
             await Frames(); Require(_routePreview.Points.Length == 0, "ホバー解除で仮の経路を消す");
@@ -44,7 +44,7 @@ public partial class Map11Main
                 St.Squads[0].Via = St.Graph[a].Lane;
                 _hoverDestination = _destButtons.Single(d => d.Dest.Id == b);
                 UpdateRoutePreview();
-                Require(_routePreview.Points.Length == 2 && _orderHint.Text.Contains("移動 1刻"), "横の道も1刻の経路になる");
+                Require(_routePreview.Points.Length == 2 && _orderHint.Text.Contains("移動 1 作戦ターン"), "横の道も1作戦ターンの経路になる");
             }
             St.Squads[0].Pos = St.Graph.Home; St.Squads[0].Via = -1; _hoverDestination = null;
             foreach (int cell in _outpostArt.Keys)

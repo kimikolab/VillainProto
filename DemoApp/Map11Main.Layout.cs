@@ -126,7 +126,7 @@ public partial class Map11Main
         {
             Button b = UiKit.ActionButton(text, UiKit.Muted);
             b.CustomMinimumSize = new Vector2(48, 42);
-            b.TooltipText = fast ? "速さ 2×（1 刻 0.6 秒）" : "速さ 1×（1 刻 1.2 秒）";
+            b.TooltipText = fast ? "速さ 2×（1 作戦ターン 0.6 秒）" : "速さ 1×（1 作戦ターン 1.2 秒）";
             b.Pressed += () => { Map11Clock.Fast = fast; RefreshClock(); };
             toolbar.AddChild(b);
             return b;

@@ -184,10 +184,11 @@ public static class Map11Session
         int alive = sq.Units?.Count(u => u.IsAlive) ?? 0;
         double hpPct = sq.Units is null || maxHp == 0
             ? 0 : 100.0 * sq.Units.Where(u => u.IsAlive).Sum(u => u.Hp) / maxHp;
+        // 第459期 §2: 記録の作戦ターンは画面と同じ数（`ShownTurn`・1 から）。時間なしの通しは 0（出さない）のまま。
         BattleLog.Add(new Line(Battles, squadName, State.LaneName(road),
                                $"{node.Def.Index + 1}. {node.Def.Name}",
                                playerWon, alive, hpPct, notes,
-                               State.Turn, wasIntercept));
+                               State.Time.On ? ShownTurn : 0, wasIntercept));
 
         // **「抜けなかった」には2種類ある。** 全滅と、30 ターンで決着しない膠着。
         // 膠着は engine の上限ターン（`MaxTurns`）で、**同じ相手にもう一度当てても同じことが起きる**
@@ -313,6 +314,18 @@ public static class Map11Session
 
     private static void ClearSiege() { SiegeNode = null; SiegeSquad = -1; _siegeShown = false; }
 
+    /// <summary>いま流している作戦ターンの番号（第459期 §2・<see cref="BeginTurn"/> が写す・0 ＝ まだ 1 度も流していない）。</summary>
+    private static int _playing;
+
+    /// <summary>
+    /// <b>画面に出す作戦ターン</b>（第459期 §2・1 から・<b>表示だけ</b>）。上の帯・時計・戦闘の記録はこの 1 つの数を読む。
+    /// 流しているあいだと終わった後は<b>流している（流した）作戦ターン</b>、止まっているあいだは<b>次に流す作戦ターン</b>（<c>Turn + 1</c>）。
+    /// <para><c>Map11State.Turn</c> は「敵が動いた回数」で、作戦ターンの途中（敵の前進）で 1 増える——第458期までは帯が <c>Turn + 1</c>、時計と記録が
+    /// <c>Turn</c> を出していたので、同じ時に 1 ずれた数が並んでいた（観察ログ 458 (6)）。規則はこの数を読まない。</para>
+    /// </summary>
+    public static int ShownTurn
+        => State is null ? 1 : (TurnRunning || State.Finished) && _playing > 0 ? _playing : State.Turn + 1;
+
     private static int _cursor;
     private static List<Map11State.Encounter>? _foes;
     private static int _foeIndex;
@@ -327,6 +340,7 @@ public static class Map11Session
         _foes = null;
         _foeIndex = 0;
         _interceptFought = false;
+        _playing = 0;
         ClearSiege();
     }
 
@@ -347,6 +361,7 @@ public static class Map11Session
         if (State is null || TurnRunning || State.Finished) return;
         TakeOpening();
         TurnRunning = true;
+        _playing = State.Turn + 1;   // 第459期 §2: この作戦ターンの番号（表示だけ）
         _cursor = 0;
         _foes = null;
         _foeIndex = 0;

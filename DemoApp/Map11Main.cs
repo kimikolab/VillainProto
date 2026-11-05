@@ -1129,9 +1129,11 @@ public partial class Map11Main : Node3D
                 : d.Dest.IsPortal ? (St.Captured ? "第2拠点" : "敵の拠点")
                 : St.Graph.IndexOn(d.Dest.Road, d.Dest.Id) is var at && at <= 0 ? "手前" : $"{at} 戦目";
             if (d.Dest.IsPortal) place = $"{place}（{St.Stage.LaneMark(d.Dest.Road)}）";
-            d.Node.Text = here ? $"◆ {place}"
+            // 第459期 §2: 選んだ隊がそこまで歩く作戦ターン（横の辺を通る道も同じ数で）。
+            string eta = !cleared && TurnsToDest(_selected, d.Dest) is { } steps ? $" ・ あと {steps}" : "";
+            d.Node.Text = here ? $"◆ {place}{eta}"
                         : cleared ? place
-                        : $"{place} ← {who}";
+                        : $"{place} ← {who}{eta}";
             d.Node.TooltipText = $"{sel.Label} をここへ";
             d.Node.Modulate = here ? new Color(1.0f, 0.90f, 0.62f)
                             : cleared ? new Color(1, 1, 1, 0.35f) : Colors.White;
@@ -1650,7 +1652,23 @@ public partial class Map11Main : Node3D
     }
 
     /// <summary>その隊がこの作戦ターンに何をするか（隊の札と案内に同じものを出す）。</summary>
-    private static string OrderText(int squad) => Map11Session.OrderText(squad);
+    /// 第459期 §2: 行き先に着いていなければ「（あと n）」を添える（盤の最短路の歩数 ＝ 作戦ターン数・横の辺も同じ数で・表示だけ）。
+    private static string OrderText(int squad)
+        => Map11Session.OrderText(squad) + (TurnsToDest(squad, Map11Session.Destinations[squad]) is int n && n > 0 ? $"（あと {n}）" : "");
+
+    /// <summary>
+    /// その隊が行き先まで歩く作戦ターン（第459期 §2・<b>表示だけ</b>）。盤の最短路（<see cref="MapGraph.Path"/>・横の辺を含む）の歩数で、
+    /// 途中の戦闘は数えない。着いている・道が無い・失った隊は null。
+    /// </summary>
+    private static int? TurnsToDest(int squad, Dest dest)
+    {
+        if (!St.Time.On || squad < 0 || squad >= St.Squads.Length) return null;
+        Map11State.Squad s = St.Squads[squad];
+        if (s.Lost || St.AtDest(squad, dest)) return null;
+        if (St.CanWarp(squad, dest)) return 1;
+        int n = St.Graph.Path(s.Pos, s.Via, dest.Id, dest.Lane).Count - 1;
+        return n > 0 ? n : null;
+    }
 
     // =================================================================================
     // 第174期 部B —— 作戦ターン
@@ -1750,13 +1768,13 @@ public partial class Map11Main : Node3D
                 ? $"勇者が本陣の前に立った——倒さなければ本陣へ入れない（HP {hero.HpNow}・毎ターン 300 回復・本陣に入ると守り → 勇者の順）"
                 : St.Stage.Hero.AfterCapture
                 // 第455期: 制圧した刻に、本陣の 1 つ手前へ（倒せば勝ち）。
-                ? $"勇者が現れた（{St.Graph[hero.Pos].Name}・{St.LaneName(hero.Def.Road)}を拠点へ向かう・2 刻に 1 マス）——倒せば勝ち（HP {hero.HpNow}・毎ターン 300 回復）"
-                : $"勇者が現れた（{Map11.PortalName}から{St.LaneName(hero.Def.Road)}へ向かう・2 刻に 1 マス）");
+                ? $"勇者が現れた（{St.Graph[hero.Pos].Name}・{St.LaneName(hero.Def.Road)}を拠点へ向かう・2 作戦ターンに 1 マス）——倒せば勝ち（HP {hero.HpNow}・毎ターン 300 回復）"
+                : $"勇者が現れた（{Map11.PortalName}から{St.LaneName(hero.Def.Road)}へ向かう・2 作戦ターンに 1 マス）");
         if (Map11Session.DeliveryText(St.Deliveries.Skip(before.Rewards)) is { } got) now.Add(got);
-        if (St.HeroTurnsLeft is 3 or 1 && St.Turn > 0 && !St.Finished) now.Add($"勇者パーティーが あと {St.HeroTurnsLeft} 刻で現れる");
+        if (St.HeroTurnsLeft is 3 or 1 && St.Turn > 0 && !St.Finished) now.Add($"勇者パーティーが あと {St.HeroTurnsLeft} 作戦ターンで現れる");
         if (St.TimeLimitLeft is 3 or 1 && St.Turn > 0 && !St.Finished) now.Add($"制圧の期限まで あと {St.TimeLimitLeft} 作戦ターン");
         if (before.ReserveDepart < 0 && St.ReserveDepartTurn >= 0 && St.Reserve is { } rv)
-            now.Add($"予備隊（{rv.Def.Name}）が {St.LaneName(rv.Def.Road)} へ向かう（拠点まで {St.ReserveEta ?? 0} 刻）");
+            now.Add($"予備隊（{rv.Def.Name}）が {St.LaneName(rv.Def.Road)} へ向かう（拠点まで あと {St.ReserveEta ?? 0} 作戦ターン）");
         string? old = StopReason440(before);
         if (now.Count == 0) return old;
         if (old is not null) now.Add(old);
@@ -1894,7 +1912,8 @@ public partial class Map11Main : Node3D
         }
         _clockLabel.Visible = _clockGauge.Visible = on && St.Time.On;
         // 第440期 §4-1: **止まっているあいだも速さを出す**。
-        _clockLabel.Text = $"刻 {St.Turn} ・ 速さ {(Map11Clock.Fast ? "2×" : "1×")}"
+        // 第459期 §2: 上の帯と同じ数（`Map11Session.ShownTurn`・1 から）。第458期までは「刻 {Turn}」で帯より 1 小さかった。
+        _clockLabel.Text = $"作戦ターン {Map11Session.ShownTurn} ・ 速さ {(Map11Clock.Fast ? "2×" : "1×")}"
             + (Map11Session.TurnRunning ? " ・ 戦闘中"
                : Map11Clock.Running ? " ・ ▶ 動いています" : " ・ ⏸ 止まっています");
         _clockGauge.Value = Map11Clock.Fraction;
@@ -2757,7 +2776,7 @@ public partial class Map11Main : Node3D
         }
     }
 
-    /// <summary>戦闘の記録の1行。<b>第174期に「作戦ターン」と「迎撃」の印を足した</b>（§2-2）。</summary>
+    /// <summary>戦闘の記録の1行。<b>第174期に「作戦ターン」と「迎撃」の印を足した</b>（§2-2）。第459期: T の数は上の帯と同じ作戦ターン（1 から）。</summary>
     private static string HistoryLine(Map11Session.Line l) =>
         (l.Turn > 0 ? $"T{l.Turn} " : "") + $"{l.No}戦目  "
         + (l.Intercept ? "【迎撃】" : "") + $"{l.Squad} → {l.Road} {l.Foe}"
@@ -2808,10 +2827,11 @@ public partial class Map11Main : Node3D
             else if (St.Stage.Hero.On)
                 lines.Add(St.HeroTurn < 0 ? "勇者: 現れなかった"
                     : $"勇者: 作戦ターン {St.HeroTurn} に現れた・{St.HeroOutcome}（戦った {St.HeroBattles} 回・当てた隊 {St.HeroSquads.Count}）");
-            if (St.RetreatedCount > 0) lines.Add($"退いた敵部隊 {St.RetreatedCount}（制圧した刻に退いた）");
+            if (St.RetreatedCount > 0) lines.Add($"退いた敵部隊 {St.RetreatedCount}（制圧した作戦ターンに退いた）");
             if (Map11Session.RelicWorked.Count > 0)
                 lines.Add("レリックが働いた: " + string.Join(" ／ ", Map11Session.RelicWorked.Select(kv => $"◆{RelicCatalog.Info(kv.Key.Relic).Name}（{kv.Key.Unit}）{kv.Value} 回")));
-            if (St.TimeUp) lines.Add($"{St.Stage.TurnCap} 作戦ターン以内に {Map11.PortalName} を制圧できなかった（時間切れ）");
+            // 第459期 §2: 期限は「作戦ターン {TurnCap} が最後」。
+            if (St.TimeUp) lines.Add($"作戦ターン {St.Stage.TurnCap} で期限——{Map11.PortalName} を制圧できなかった（時間切れ）");
             // 第445期: 制圧で勝った盤は、掃除をしなかった敵部隊を「退いた」と出す。金の出入り。
             if (St.Stage.WinOnCapture && St.Won && !St.Stage.Hero.AfterCapture) lines.Add($"退いた敵部隊 {St.FoesRemaining}（制圧で勝ち・残りは退いた）");
             if (St.Stage.Gold.On)
@@ -2885,7 +2905,7 @@ public partial class Map11Main : Node3D
             + (St.HeroClock && St.Hero is { Cleared: false } hh ? $"勇者を倒せば勝ち（HP {hh.HpNow}） ・ " : "")
             // 第445期 §0-1: 金（金のある盤だけ）。
             + (St.Stage.Gold.On ? $"金 {St.Gold} ・ " : "")
-            + (St.Time.On ? $"作戦ターン {St.Turn + 1} ・ " : "")
+            + (St.Time.On ? $"作戦ターン {Map11Session.ShownTurn} ・ " : "")
             + (St.Portal.On
                 ? $"{(St.Captured ? "制圧済み" : Map11.PortalName + "は敵のもの")} ・ 残る敵部隊 {left}"
                 : $"抜いた敵部隊 {St.ClearedCount} / {St.Stage.TotalNodes}")
@@ -2984,7 +3004,7 @@ public partial class Map11Main : Node3D
             Place(m, n, n.Def.Road, stackAtPortal: stack);
             // 第441期 §3: **予備隊は行き先の経路と「あと n 刻」**（先頭の「◀ あと」より優先）。
             if (n.IsReserve && !n.Cleared)
-                m.SetNote($"予備隊 → {St.LaneName(n.Def.Road)} あと {St.ReserveEta ?? 0} 刻", UiKit.Hurt, true);
+                m.SetNote($"予備隊 → {St.LaneName(n.Def.Road)} ・ 拠点まで あと {St.ReserveEta ?? 0}", UiKit.Hurt, true);
         }
         for (int i = spawn; i < _spawnMarkers.Count; i++) _spawnMarkers[i].Set("", EnemyColor, false);
         RefreshFoeArrows();
@@ -3073,14 +3093,13 @@ public partial class Map11Main : Node3D
         }
         m.Set(n.Cleared ? "" : $"{n.Def.Name}" + Nl + $"{alive} 体 ・ {NodeHpPercent(n):F0}%",
               EnemyColor, !n.Cleared);
-        // 第175期 §1-3: **盤の上に「← あと n」**（拠点の向きの矢印つき）。先頭の敵だけ。
-        if (!n.Cleared && St.Time.On && ReferenceEquals(St.FrontFoe(road), n))
-        {
-            int? left = Map11Session.TurnsToAdvance(road);
-            bool soon = n.Cell <= 0 || left is 1;
-            m.SetNote(n.Cell < 0 ? "◀ 拠点に到達" : $"◀ あと {left}",
-                      soon ? UiKit.Hurt : GoldColor, soon);
-        }
+        // 第175期 §1-3: **盤の上に「← あと n」**（拠点の向きの矢印つき）。
+        // 第459期 §2: **動く敵すべてに「拠点まで あと n」**（いまの速さで拠点に着くまでの作戦ターン・`TurnsToHome`）。
+        // 第458期までは先頭の敵だけに「次に動くまで」を出していた——K = 1 の盤では常に 1 で、着くまでを数えられなかった。
+        if (!n.Cleared && St.Time.On && n.Pos == St.Graph.Home)
+            m.SetNote("◀ 拠点に到達", UiKit.Hurt, true);
+        else if (!n.Cleared && St.TurnsToHome(n) is { } left)
+            m.SetNote($"◀ 拠点まで あと {left}", left <= 1 ? UiKit.Hurt : GoldColor, left <= 1);
         else m.SetNote("", GoldColor, false);
     }
 
@@ -3169,7 +3188,7 @@ public partial class Map11Main : Node3D
         // 第451期 §0-1: 本陣の門が閉じている間は「門 ・ 中間拠点 あと n」。
         if (!mine && !St.GateOpen) body += Nl + $"門 ・ 中間拠点 あと {St.GateNeed}";
         // 第444期 §0-3: **勇者の予告**（刻の上限を盤ごとに持つ盤だけ）。上限で負け。
-        if (St.HeroTurnsLeft is { } hero) body += Nl + $"勇者パーティー あと {hero} 刻";
+        if (St.HeroTurnsLeft is { } hero) body += Nl + $"勇者パーティー あと {hero} 作戦ターン";
         _portalMarker.Set(head + Nl + body, tint);
         // **湧く瞬間（＝残り 0）に脈打つ**／制圧したら止める。
         _portalMarker.SetNote(mine ? "" : wait <= 1 ? "◀ 湧く" : "", UiKit.Hurt, true);

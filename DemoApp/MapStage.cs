@@ -1,4 +1,4 @@
-﻿using BattleCore;
+using BattleCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;

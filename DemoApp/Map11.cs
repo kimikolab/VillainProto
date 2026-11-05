@@ -2096,6 +2096,21 @@ public sealed class Map11State
         return best;
     }
 
+    /// <summary>
+    /// その敵部隊が<b>いまの速さで</b>拠点に着くまでの作戦ターン（第459期 §2・<b>表示だけ</b>——敵の札の「拠点まで あと n」）。
+    /// 動かない敵（本陣の守り・大群・門番の勇者・先頭でない最初からの部隊・待機中の予備隊）・抜いた敵・拠点に着いた敵は null。
+    /// 前が詰まって待つ刻は数えない（位置からの歩数 × 歩く間隔）。
+    /// </summary>
+    public int? TurnsToHome(Node n)
+    {
+        if (!Time.On || Time.AdvanceEvery <= 0 || n.Cleared || n.Def.Stationary || n.Def.Hold || n.Pos == Graph.Home || n.Def.Road < 0) return null;
+        if (n.IsHero && Stage.Hero.Gatekeeper) return null;
+        if (!n.FromPortal && !ReferenceEquals(NextNode(n.Def.Road), n)) return null;
+        int at = Graph.IndexOn(n.Def.Road, n.Pos);
+        int steps = at != int.MinValue ? at + 1 : Math.Max(0, Graph.Path(n.Pos, n.Def.Road, Graph.Home, -1).Count - 1);
+        return steps * Time.AdvanceEvery * (n.IsHero ? Math.Max(1, Stage.Hero.StepEvery) : 1);
+    }
+
     /// <summary>予備隊が拠点に着くまでの見込みの刻（出発していなければ null・前が詰まれば延びる）。</summary>
     public int? ReserveEta => Reserve is { Cleared: false } r && r.Def.Road >= 0 && r.Pos != Graph.Home
         ? Graph.IndexOn(r.Def.Road, r.Pos) + 1 : null;
