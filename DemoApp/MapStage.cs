@@ -588,10 +588,11 @@ public sealed class MapStage
     };
 
     /// <summary>
-    /// 1-2（第457期・遊ぶ版）。第456期（<see cref="Stage12H456"/>）に<b>本陣の連戦</b>（<see cref="SiegeRule.V457"/>）を足した——
+    /// 1-2（第457期）。第456期（<see cref="Stage12H456"/>）に<b>本陣の連戦</b>（<see cref="SiegeRule.V457"/>）を足した——
     /// 敵の拠点のマスで勝つと、同じ刻のうちに次の相手（守り → 勇者 → 湧き・予備隊）と続けて戦うか、入ってきた経路の中間拠点へ引くかを選ぶ。本陣の戦闘では道中の回復を乗せない。
+    /// 第460期からは回帰の基準だけが使う——遊ぶ 1-2 は <see cref="Stage12"/>。
     /// </summary>
-    public static MapStage Stage12 { get; } = new()
+    public static MapStage Stage12H459 { get; } = new()
     {
         Id = Stage12H456.Id,
         Title = Stage12H456.Title,
@@ -613,6 +614,36 @@ public sealed class MapStage
         Relic = Stage12H456.Relic,
         Hero = Stage12H456.Hero,
         Siege = SiegeRule.V457,
+    };
+
+    /// <summary>1-2（第460期・遊ぶ版）。第459期（<see cref="Stage12H459"/>）の写し。</summary>
+    public static MapStage Stage12 { get; } = Copy(Stage12H459);
+
+    /// <summary>ステージの写し（第460期・版を足すための道具・中身は 1 つも変えない）。</summary>
+    private static MapStage Copy(MapStage s) => new()
+    {
+        Id = s.Id,
+        Title = s.Title,
+        Board = s.Board,
+        Lanes = s.Lanes,
+        LaneNames = s.LaneNames,
+        Spawn = s.Spawn,
+        Portal = s.Portal,
+        Time = s.Time,
+        Arrival = s.Arrival,
+        Reserve = s.Reserve,
+        SquadCap = s.SquadCap,
+        TurnCap = s.TurnCap,
+        HeroAtCap = s.HeroAtCap,
+        TimeLimit = s.TimeLimit,
+        WinOnCapture = s.WinOnCapture,
+        Gold = s.Gold,
+        MatchOffer = s.MatchOffer,
+        PortalGate = s.PortalGate,
+        Relic = s.Relic,
+        Hero = s.Hero,
+        Siege = s.Siege,
+        ViewScale = s.ViewScale,
     };
 
     /// <summary>大群の 1 部隊（第458期・1-3 の C3・動かない・<see cref="Map11.RoadNode.Hold"/>）。</summary>
@@ -673,8 +704,9 @@ public sealed class MapStage
     /// 1-3（第459期・遊ぶ版・指示書 design/PHASE459_HERO_CHASE_SPEC.md）。第458期（<see cref="Stage13H458"/>）の勇者を<b>追ってくる勇者</b>（<see cref="HeroRule.V459"/>）に替えた——
     /// 門が開いた刻に拠点から 3 歩のマスに現れ、毎刻 1 歩で拠点へ。拠点が空なら拠点が落ちる（負けではない）・勝ちは本陣の制圧（勇者は倒さなくてよい）。
     /// 盤・敵・湧き・金・連戦は第458期のまま。
+    /// 第460期からは回帰の基準だけが使う——遊ぶ 1-3 は <see cref="Stage13"/>。
     /// </summary>
-    public static MapStage Stage13 { get; } = new()
+    public static MapStage Stage13H459 { get; } = new()
     {
         Id = Stage13H458.Id,
         Title = Stage13H458.Title,
@@ -698,6 +730,9 @@ public sealed class MapStage
         Siege = Stage13H458.Siege,
         ViewScale = Stage13H458.ViewScale,
     };
+
+    /// <summary>1-3（第460期・遊ぶ版）。第459期（<see cref="Stage13H459"/>）の写し。</summary>
+    public static MapStage Stage13 { get; } = Copy(Stage13H459);
 
     /// <summary>選べるステージ（編成画面の選択の並び）。</summary>
     public static IReadOnlyList<MapStage> All { get; } = new[] { Stage11, Stage12, Stage13 };

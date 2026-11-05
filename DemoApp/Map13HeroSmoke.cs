@@ -6,7 +6,7 @@ using System.Linq;
 // =====================================================================================
 // 1-3 の追ってくる勇者の門（第459期 §4・`--map13-hero-smoke`・指示書 design/PHASE459_HERO_CHASE_SPEC.md）
 //
-// **画面を1つも作らない。** `MapStage.Stage13`（追ってくる勇者 `HeroRule.V459`）と `Map11State` ／ `Map11Orders` ／ `Map11Session` だけを回す。
+// **画面を1つも作らない。** `MapStage.Stage13H459`（第460期から固定した第459期の 1-3・追ってくる勇者 `HeroRule.V459`）と `Map11State` ／ `Map11Orders` ／ `Map11Session` だけを回す。
 // **ここには Godot の型を1つも使わない**（`Map13Smoke` と同じ扱い）。戦闘は勝ち負けを決めて精算だけする（駒の HP を 0 にする）。
 //
 //   (a) 門が開いた刻に、勇者が Lanes[road][2] に現れる・経路の選び方（隊のいない経路 → 敵の生存の少ない経路 → 中）
@@ -30,7 +30,7 @@ public static class Map13HeroSmoke
     {
         bool ok = true;
         void Req(bool c, string what) { write($"{(c ? "○" : "×")} {what}"); ok &= c; }
-        MapStage stage = MapStage.Stage13;
+        MapStage stage = MapStage.Stage13H459;   // 第460期: 第459期の 1-3 に固定（遊ぶ 1-3 は横の辺の直しが入った）
 
         void Win(Map11State st, int squad, Map11State.Node node, bool intercept = false)
         {
