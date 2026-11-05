@@ -112,6 +112,13 @@ public static class Map11Session
     /// </summary>
     public static bool ChapterPicked { get; private set; }
 
+    /// <summary>「1 章」を選んで 1 章を始める（第460期・絵の口 `--map-chapter=N` だけが使う・遊ぶ起動は札の <see cref="CyclePick"/>）。</summary>
+    public static void PickChapter(int? seed = null)
+    {
+        ChapterPicked = true;
+        Chapter1.Begin(seed);
+    }
+
     /// <summary>ステージの札の文（第460期・「マップ 1-2」／「1 章」）。</summary>
     public static string PickText => ChapterPicked ? "1 章" : $"マップ {Chosen.Id}";
 

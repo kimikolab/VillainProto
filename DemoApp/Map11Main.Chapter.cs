@@ -1,3 +1,4 @@
+using BattleCore;
 using Godot;
 using System.Linq;
 
@@ -74,6 +75,40 @@ public partial class Map11Main
         _resultScroll.ScrollVertical = 0;
         _resultOverlay.Visible = true;
         GD.Print($"CHAPTER1_RESULT seed={Chapter1.Seed} " + string.Join(" | ", Chapter1.ResultLines()));
+    }
+
+    /// <summary>
+    /// 絵の口 `--map-chapter-play=N`（第460期）: 1 章を seed N で始め、器具の方針（1-1 ／ 1-2 は分担＋戻り番・1-3 は逃げる）で
+    /// 1-3 に勝つまで頭なしで回す（負ければやり直す）。戦闘は画面と同じ口（`Map11Session.BeginBattle` ／ `CompleteBattle`）——戦闘の記録と働いた札が結果に載る。
+    /// 終わると 1-3 の勝った通しが `Map11Session.State` に残る（場面はそれを描き、結果画面は「1 章の結果へ」）。
+    /// </summary>
+    private static void PlayChapterForCapture(int seed)
+    {
+        Map11Session.PickChapter(seed);
+        Map12ChangeSmoke.FightHook = (st, squad, node, intercept) =>
+        {
+            bool begun = intercept ? Map11Session.BeginIntercept(squad, node) : Map11Session.BeginBattle(squad, node);
+            if (!begun) return;
+            BattleResult r = BattleEngine.Run(CampaignSession.CarriedPlayers!, CampaignSession.CarriedEnemies!, CampaignSession.CarriedSeed, verbose: true);
+            CampaignSession.ClearCarriedBattle();
+            Map11Session.CompleteBattle(r.PlayerWon, r);
+        };
+        try
+        {
+            for (int guard = 0; guard < 60 && Chapter1.Active && !Chapter1.Over; guard++)
+            {
+                Map11State st = Map11Session.State!;
+                bool last = Chapter1.Index == Chapter1.Stages.Count - 1;
+                Map12ChangeSmoke.Greedy(st.Seed, st.Stage, guard: true, split: true, state: st, siegeRest: true,
+                    heroPlan: last ? Map12ChangeSmoke.HeroPlan.Flee : Map12ChangeSmoke.HeroPlan.None);
+                Chapter1.Settle(st, Map11Session.RelicWorked, Map11Session.BattleLog);
+                if (!st.Won) Chapter1.Retry();
+                else if (last) break;
+                else Chapter1.Next();
+            }
+        }
+        finally { Map12ChangeSmoke.FightHook = null; }
+        Chapter1.IntroPending = false;
     }
 
     /// <summary>

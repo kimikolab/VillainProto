@@ -350,6 +350,16 @@ public partial class Main : Control
             GetTree().Quit(okH ? 0 : 1);
             return;
         }
+        // 第460期 §2: 1 章の門（札の回り方・連なり・やり直し・1 章の結果・横の辺の穴）。画面なし。`--chapter1-quick` は器具の表を省く。
+        if (bootArgs.Contains("--chapter1-smoke", StringComparer.Ordinal) || bootArgs.Contains("--chapter1-quick", StringComparer.Ordinal))
+        {
+            bool okC;
+            try { okC = Chapter1Smoke.Run(GD.Print, bots: !bootArgs.Contains("--chapter1-quick", StringComparer.Ordinal)); }
+            catch (System.Exception ex) { GD.PrintErr(ex.ToString()); okC = false; }
+            GD.Print($"CHAPTER1_SMOKE_COMPLETE ok={okC}");
+            GetTree().Quit(okC ? 0 : 1);
+            return;
+        }
         // 第441期 §5-3: 1-2 に「盤の上で変わるもの」（途中到着・予備隊・湧き S=2）を足した門。画面なし。
         if (bootArgs.Contains("--map12-change-smoke", StringComparer.Ordinal))
         {

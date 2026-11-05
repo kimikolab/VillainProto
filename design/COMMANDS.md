@@ -1891,6 +1891,16 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
         # ＋ 1-3（門番）× 3 方針と 1-3（追う勇者）× 5 方針（守る・逃げるを足す）× 100 seed（報告のみ）。`--map13-hero-quick` は表を省く（約 20 秒）
         # 絵: `res://Map11Main.tscn -- --map-stage=1-3 --map-seed=0 --map11-capture=<png>,chase`（勇者が現れた刻）・`,chase-lost`（拠点が落ちた刻）
         #     ——どちらも画面の時計と同じ `StopReason` で止める（`MAP11_CAPTURE_CHASE stopped=True` が出来事で止まった印）
+        # **第460期**: 第459期の 1-3（`MapStage.Stage13H459`）で回す（遊ぶ 1-3 は横の辺の直しが入った）。
+    Godot_console.exe --path DemoApp --headless -- --chapter1-smoke
+        # **第460期**: 1 章の連なり ＋ 横の辺の穴（`Chapter1Smoke.cs`・画面なし）。(a) 札の回り方 1-1 → 1-2 → 1-3 → 1 章 → 1-1
+        # ／ (b) 1 章で勝つと次のステージが単発と同じ始め方 ／ (c) 1 章の各ステージの通しが同じ seed の単発の通しと 1 刻ずつ一致（やり直しを含む）
+        # ／ (d) 負けて「やり直す」（新しい seed・回数 ＋1）・「やめる」で 1 章の結果 ／ (e) 1-3 の後に 1 章の結果（3 行 ＋ 合計・勇者の列）
+        # ／ (f) 先頭でない敵のいるマスへ横の辺で入ると戦闘（1-3 ／ 1-2・第459期の版は素通り）／ (g) 同じマスに 2 部隊で連戦の窓（1-3）
+        # ／ (h) 直しは遊ぶ 1-2 ／ 1-3 だけ ＋ B の前後の方針の表・戦闘の並びが分かれた通し・1 章の通し（2 方針）・勇者が取っている中間拠点を通った回数（報告のみ）。
+        # 約 4 分。`--chapter1-quick` は表を省く（約 20 秒）
+        # 絵: `res://Map11Main.tscn -- --map-chapter=<seed> --map11-capture=<png>,intro`（1-1 の頭の札）
+        #     ・`--map-chapter-play=<seed> --map11-capture=<png>,chapter-result`（1 章を器具で回して 1 章の結果）
     Godot_console.exe --path DemoApp --headless -- --map11-phase176
         # **第176期 Phase 0**: Q0-1〜Q0-5（`PortalOn = false` が第175期の 18 量と一致するか ／
         # 重なりと同点の割り方 ／ 湧いた部隊を満タンで作る口 ／ 方針の手順 ／ 走行時間）。約 1 秒

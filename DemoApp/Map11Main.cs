@@ -209,6 +209,15 @@ public partial class Map11Main : Node3D
             && int.TryParse(seedArg["--map-seed=".Length..], out int capSeed)
             && !(Map11Session.State is { } cur && cur.Seed == capSeed && ReferenceEquals(cur.Stage, Map11Session.Chosen)))
             Map11Session.Reset(capSeed, stage: Map11Session.Chosen);
+        // 第460期: 絵の口（`--map11-capture=`）と使う 1 章の口。`--map-chapter=N` は 1 章の seed N で 1-1 から（ステージの頭の札が出る）、
+        // `--map-chapter-play=N` はさらに 1 章を器具の方針で 1-3 に勝つまで頭なしで回す（1 章の結果の絵・`Map11Main.Chapter.cs`）。遊ぶ起動では読まない。
+        if (user.Any(a => a.StartsWith("--map11-capture=", StringComparison.Ordinal)))
+        {
+            if (user.FirstOrDefault(a => a.StartsWith("--map-chapter=", StringComparison.Ordinal)) is { } ch && int.TryParse(ch["--map-chapter=".Length..], out int chSeed))
+                Map11Session.PickChapter(chSeed);
+            if (user.FirstOrDefault(a => a.StartsWith("--map-chapter-play=", StringComparison.Ordinal)) is { } cp && int.TryParse(cp["--map-chapter-play=".Length..], out int cpSeed))
+                PlayChapterForCapture(cpSeed);
+        }
         Map11Session.EnsureStarted();
         // 第439期: 時計は通しに結び付ける（別の通しなら止めて目盛りを 0 に）。
         Map11Clock.Bind(St);
@@ -598,6 +607,15 @@ public partial class Map11Main : Node3D
         // 第177期: **既定の3隊を配った後**の絵（手札から組む前の画面ではなく、遊んでいる姿）。
         else if (parts.Length > 1 && parts[1] == "default")
         { UseDefaultSquads(); _reform = false; ClearHold(); Refresh(); }
+        // 第460期: 1 章の絵。`intro` はステージの頭の札（`--map-chapter=N` と使う・出ているまま撮る）、
+        // `chapter-result` は 1-3 の結果画面で「1 章の結果へ」を押した後（`--map-chapter-play=N` と使う）。
+        else if (parts.Length > 1 && parts[1] == "intro") { }
+        else if (parts.Length > 1 && parts[1] == "chapter-result")
+        {
+            if (St.Finished && St.Won) OnResultAgain();
+            await ToSignal(GetTree().CreateTimer(2.5), SceneTreeTimer.SignalName.Timeout);   // 浮く金の数字が消えるのを待つ
+            GD.Print($"MAP11_CAPTURE_CHAPTER over={Chapter1.Over} " + string.Join(" | ", Chapter1.ResultLines()));
+        }
         // 第172期: 組み直しの絵（つまんでいる札と控えの駒が出ている状態）。
         else if (parts.Length > 1 && parts[1] == "reform")
         {
