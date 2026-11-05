@@ -670,7 +670,8 @@ public sealed class MapStage
     };
 
     /// <summary>
-    /// 1-3（第459期・遊ぶ版・指示書 design/PHASE459_HERO_CHASE_SPEC.md）。第458期（<see cref="Stage13H458"/>）の勇者を<b>追ってくる勇者</b>に替える。
+    /// 1-3（第459期・遊ぶ版・指示書 design/PHASE459_HERO_CHASE_SPEC.md）。第458期（<see cref="Stage13H458"/>）の勇者を<b>追ってくる勇者</b>（<see cref="HeroRule.V459"/>）に替えた——
+    /// 門が開いた刻に拠点から 3 歩のマスに現れ、毎刻 1 歩で拠点へ。拠点が空なら拠点が落ちる（負けではない）・勝ちは本陣の制圧（勇者は倒さなくてよい）。
     /// 盤・敵・湧き・金・連戦は第458期のまま。
     /// </summary>
     public static MapStage Stage13 { get; } = new()
@@ -693,7 +694,7 @@ public sealed class MapStage
         MatchOffer = Stage13H458.MatchOffer,
         PortalGate = Stage13H458.PortalGate,
         Relic = Stage13H458.Relic,
-        Hero = Stage13H458.Hero,
+        Hero = HeroRule.V459,
         Siege = Stage13H458.Siege,
         ViewScale = Stage13H458.ViewScale,
     };
@@ -811,7 +812,15 @@ public readonly record struct RelicRule(bool On, int Offers, bool Bridge = false
 /// 第456期 §0（門番）: <b>門が開いた刻</b>（その刻の敵の前進の終わり）に<b>敵の拠点のマス</b>に立ち、<b>動かない</b>（<c>AfterGate</c> ／ <c>StepEvery</c> は読まない）。
 /// 本陣に入ると本陣の守り → 勇者 → 湧き・予備隊の順に当たり、勇者が立っている間は制圧できない。勝ちは制圧のまま。門が閉じ直しても立ったまま。
 /// </param>
-public readonly record struct HeroRule(bool On, int AfterGate, int StepEvery, UnitDef? Unit, int Gold, bool AfterCapture = false, bool Gatekeeper = false)
+/// <param name="Chaser">
+/// 第459期 §1（追ってくる勇者・1-3）: <b>門が開いた刻</b>に<b>味方の拠点から <c>FromHome</c> 歩のマス</b>（経路の上・`Lanes[road][FromHome - 1]`）に現れ、
+/// <b><c>StepEvery</c> 刻に 1 歩</b>拠点へ進む（ほかの敵に詰まらない）。隊のいるマスに入ればその刻に戦闘・拠点に隊がいれば迎撃。
+/// 拠点に隊がいなければ<b>拠点が落ちる（`Map11State.HomeLost`）が負けではない</b>——現れた刻から、拠点に何が着いても負けにしない。
+/// 落ちた後は呼ぶ・休む・組み直しは取っている中間拠点でだけ、勇者はいちばん近い隊を追う。勝ちは制圧のまま（勇者は倒さなくてよい・本陣では守りの後ろに並ぶ）。
+/// </param>
+/// <param name="FromHome">追う勇者が現れるマスの、味方の拠点からの歩数（第459期・<c>Chaser</c> の盤だけが読む）。</param>
+public readonly record struct HeroRule(bool On, int AfterGate, int StepEvery, UnitDef? Unit, int Gold, bool AfterCapture = false, bool Gatekeeper = false,
+                                       bool Chaser = false, int FromHome = 0)
 {
     public static readonly HeroRule Off = new(false, 0, 0, null, 0);
     /// <summary>第454期の値: 門の 2 刻後・2 刻に 1 マス・版 B（`EnemyCatalog.HeroMap`・固定 300 回復）・倒して ＋20。</summary>
@@ -826,6 +835,8 @@ public readonly record struct HeroRule(bool On, int AfterGate, int StepEvery, Un
     public static readonly HeroRule V456 = new(true, 0, 0, EnemyCatalog.HeroMap, 20, Gatekeeper: true);
     /// <summary>版 A（回復は最大HPの 40%）。遊ぶのは <see cref="V456"/>。</summary>
     public static readonly HeroRule V456A = new(true, 0, 0, EnemyCatalog.HeroMapA, 20, Gatekeeper: true);
+    /// <summary>第459期の値（1-3）: 門が開いた刻に拠点から 3 歩のマスに現れて追ってくる・毎刻 1 歩（K = 1）・版 B・倒して ＋20。</summary>
+    public static readonly HeroRule V459 = new(true, 0, 1, EnemyCatalog.HeroMap, 20, Chaser: true, FromHome: 3);
 }
 
 /// <summary>

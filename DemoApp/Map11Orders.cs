@@ -85,6 +85,8 @@ public static class Map11Orders
 
         if (dest.AtHome)
         {
+            // 第459期 §1-4: 拠点が落ちた後は拠点へ戻らない（その場で待つ・取っている中間拠点なら傷が残っていれば休む）。
+            if (st.HomeLost) return st.AtForwardBase(squad) && st.Hurt(squad) ? Order.Rest : Order.Wait;
             if (!home) return Order.Back;
             return st.Hurt(squad) ? Order.Rest : Order.Wait;
         }
@@ -171,6 +173,8 @@ public static class Map11Orders
         int next = Math.Min(s.Cell < 0 ? 0 : s.Cell + 1, Math.Min(limit, st.MaxCellOf(road)));   // 第458期: 経路ごとの奥
         // 第451期: 本陣の門が閉じていれば敵の拠点のマスの相手には当たらない。
         if (front is not null && front.Pos == st.Graph.Portal && !st.CanEnter(squad, front.Pos)) return null;
+        // 第459期: 次のマスに追ってくる勇者が立っていれば、その勇者と接敵（勇者は「先頭の敵」に数えない）。
+        if (st.ChaserAt(st.Graph.At(road, next)) is { } chaser && (front is null || front.Cell >= next)) return chaser;
         return front is not null && front.Cell == next ? front : null;
     }
 
@@ -188,6 +192,6 @@ public static class Map11Orders
         Order.Rest => st.AtSecondBase(squad) ? $"休む（{Map11.PortalName}）"
                       : st.AtOutpost(squad) ? $"休む（{st.Graph[st.Squads[squad].Pos].Name}）" : "休む（拠点）",
         Order.Warp => dest.AtHome ? "拠点へワープ" : $"{Map11.PortalName} へワープ",
-        _ => dest.AtHome ? "拠点で待つ" : $"{Where(st.Graph, dest)} に到着（待機）",
+        _ => dest.AtHome ? (st.HomeLost ? "その場で待つ（拠点は落ちた）" : "拠点で待つ") : $"{Where(st.Graph, dest)} に到着（待機）",
     };
 }

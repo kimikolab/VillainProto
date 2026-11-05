@@ -561,6 +561,12 @@ public partial class Map11Main : Node3D
             CaptureSiegeSetup(horde: parts[1] == "horde");   // 第458期: `horde` は 1-3 の大群の連戦の窓
             await ToSignal(GetTree().CreateTimer(2.0), SceneTreeTimer.SignalName.Timeout);   // 浮く金の数字が消えるのを待つ
         }
+        // 第459期 §7: **追ってくる勇者が現れた刻 ／ 拠点が落ちた刻**の絵（`--map-stage=1-3` と使う・`Map11Main.Chase.cs`）。
+        else if (parts.Length > 1 && parts[1] is "chase" or "chase-lost")
+        {
+            CaptureChaseSetup(lost: parts[1] == "chase-lost");
+            await ToSignal(GetTree().CreateTimer(2.0), SceneTreeTimer.SignalName.Timeout);   // 浮く金の数字が消えるのを待つ
+        }
         // 第443期 §0-1: **迎撃の合間**の絵（`--map-stage=1-2` と使う）。既定の組み方で 2 隊を組み、北と南の先頭だけを残して
         // 拠点で待つ。2 刻目に 2 部隊が同時に着くので、1 戦目を**頭なしで**決着させ（戦闘シーンへは行かない）、2 戦目の迎撃の窓を出す。
         else if (parts.Length > 1 && parts[1] == "break")
@@ -1123,7 +1129,8 @@ public partial class Map11Main : Node3D
             // **行けない行き先は押せない**——抜け切った道（拠点なしのとき）と、
             // 敵の拠点がない設定での敵の拠点。
             bool cleared = !d.Dest.AtHome && !St.CanHead(d.Dest.Road);
-            d.Node.Disabled = busy || sel.Lost || cleared || (!d.Dest.AtHome && !St.CanSend(_selected));
+            d.Node.Disabled = busy || sel.Lost || cleared || (!d.Dest.AtHome && !St.CanSend(_selected))
+                              || (d.Dest.AtHome && St.HomeLost);   // 第459期 §1-4: 落ちた拠点へは戻れない
             bool here = Map11Session.Destinations[_selected] == d.Dest;
             string place = d.Dest.AtHome ? "拠点"
                 : d.Dest.IsPortal ? (St.Captured ? "第2拠点" : "敵の拠点")
@@ -1708,14 +1715,15 @@ public partial class Map11Main : Node3D
     /// <summary>止まる理由を調べるために、作戦ターンの前に写しておく盤面。</summary>
     private readonly record struct Watch(bool[] Arrived, bool[] Imminent, int Spawns, bool Captured,
                                          int Delivered = 0, int ReserveDepart = -1,
-                                         int Rewards = 0, int OutpostCaptures = 0, int OutpostLosses = 0, bool GateOpen = true, int HeroTurn = -1);
+                                         int Rewards = 0, int OutpostCaptures = 0, int OutpostLosses = 0, bool GateOpen = true, int HeroTurn = -1,
+                                         bool HomeLost = false);
 
     private static Watch Take() => new(
         Enumerable.Range(0, St.Squads.Length).Select(AtDest).ToArray(),
         Enumerable.Range(0, St.Stage.LaneCount)
                   .Select(r => St.NextNode(r) is { } n && n.Cell <= 0).ToArray(),
         St.SpawnCount, St.Captured, St.ArrivedCount, St.ReserveDepartTurn,
-        St.Deliveries.Count, St.OutpostCaptures, St.OutpostLosses, St.GateOpen, St.HeroTurn);
+        St.Deliveries.Count, St.OutpostCaptures, St.OutpostLosses, St.GateOpen, St.HeroTurn, St.HomeLost);
 
     /// <summary>
     /// 第177期 §2（第176期 §3-1 #2）—— <b>行き先までのあいだに立っている最初の敵のマス。</b>
@@ -1763,13 +1771,21 @@ public partial class Map11Main : Node3D
         if (before.GateOpen && !St.GateOpen) now.Add($"本陣の門が閉じた（中間拠点 あと {St.GateNeed}）");
         // 第454期 §2-1: 勇者が現れた刻（予告は無い・ここで初めて知らせる）。
         if (before.HeroTurn < 0 && St.HeroTurn >= 0 && St.Hero is { } hero)
-            now.Add(St.Stage.Hero.Gatekeeper
+            now.Add(St.Stage.Hero.Chaser
+                // 第459期 §1-1: 門が開いた刻に、拠点から 3 歩のマスに現れて拠点へ向かってくる（仮の文・台詞は後で Web 側）。
+                ? $"勇者が拠点へ向かってくる——あと {St.TurnsToHome(hero) ?? 0} 作戦ターン（{St.Graph[hero.Pos].Name}・HP {hero.HpNow}・毎ターン 300 回復）"
+                  + "。拠点に隊がいれば迎撃、空なら拠点が落ちる（負けではない・本陣を取れば勝ち）"
+                : St.Stage.Hero.Gatekeeper
                 // 第456期: 門が開いた刻に本陣の前に立つ（門番）。
                 ? $"勇者が本陣の前に立った——倒さなければ本陣へ入れない（HP {hero.HpNow}・毎ターン 300 回復・本陣に入ると守り → 勇者の順）"
                 : St.Stage.Hero.AfterCapture
                 // 第455期: 制圧した刻に、本陣の 1 つ手前へ（倒せば勝ち）。
                 ? $"勇者が現れた（{St.Graph[hero.Pos].Name}・{St.LaneName(hero.Def.Road)}を拠点へ向かう・2 作戦ターンに 1 マス）——倒せば勝ち（HP {hero.HpNow}・毎ターン 300 回復）"
                 : $"勇者が現れた（{Map11.PortalName}から{St.LaneName(hero.Def.Road)}へ向かう・2 作戦ターンに 1 マス）");
+        // 第459期 §1-4: 拠点が落ちた刻（負けではない）。
+        if (!before.HomeLost && St.HomeLost)
+            now.Add($"拠点が落ちた（{St.HomeLostBy}）——負けではない。呼ぶ・休む・組み直しは取っている中間拠点でだけ・拠点へは戻れない"
+                    + (St.HeroChase() is { } chase ? $"・勇者は {St.Squads[chase.Squad].Label} を追う（あと {chase.Steps}）" : ""));
         if (Map11Session.DeliveryText(St.Deliveries.Skip(before.Rewards)) is { } got) now.Add(got);
         if (St.HeroTurnsLeft is 3 or 1 && St.Turn > 0 && !St.Finished) now.Add($"勇者パーティーが あと {St.HeroTurnsLeft} 作戦ターンで現れる");
         if (St.TimeLimitLeft is 3 or 1 && St.Turn > 0 && !St.Finished) now.Add($"制圧の期限まで あと {St.TimeLimitLeft} 作戦ターン");
@@ -2345,6 +2361,13 @@ public partial class Map11Main : Node3D
         // 手札の列は細いので、札の文字は切り（全文は触れたときの説明）、案内の文は折り返す。
         void Fit(Button b) { b.ClipText = true; b.TooltipText = b.Text; b.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill; b.CustomMinimumSize = new Vector2(0, b.CustomMinimumSize.Y); }
         _benchList.AddChild(UiKit.Text($"金 {St.Gold}", 18, GoldColor));
+        // 第459期 §7: 拠点が落ちた後、呼ぶ・組み直しが拠点では押せない理由を 1 行。
+        if (St.HomeLost && !St.CanReform(_selected))
+        {
+            Label lost = UiKit.Text("拠点が落ちた——呼ぶ・休む・組み直しは、取っている中間拠点にいる隊でだけできる", 13, UiKit.Hurt);
+            lost.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+            _benchList.AddChild(lost);
+        }
         if (free)
         {
             Label note = UiKit.Text("枠の特典: 候補から 1 枚を無料で選ぶ（選ぶまで作戦に戻れない）", 13, GoldColor);
@@ -2816,7 +2839,14 @@ public partial class Map11Main : Node3D
                 lines.Add("見返りの増援: " + string.Join(" ／ ", St.Deliveries.Select(d => $"{d.Unit.Def.Name}（{d.Reason}・{d.Place}）")));
             if (St.HeroArrived) lines.Add($"作戦ターン {St.Stage.TurnCap} で勇者パーティーが着いた");
             // 第454期: 勇者（現れた刻・その後）とレリックが働いた回数。
-            if (St.Stage.Hero.On && St.Stage.Hero.AfterCapture)
+            if (St.Stage.Hero.On && St.Stage.Hero.Chaser)
+                // 第459期: 追ってくる勇者（現れた作戦ターン・マス・その後・戦った回数・HP の推移）と、拠点が落ちたか。
+                lines.Add(St.HeroTurn < 0 ? $"勇者: {St.HeroOutcome}"
+                    : $"勇者: 作戦ターン {St.HeroTurn} に現れた・{St.HeroOutcome}（戦った {St.HeroBattles} 回・当てた隊 {St.HeroSquads.Count}・HP {string.Join(" → ", St.HeroHpTrail)}）");
+            if (St.HomeLost)
+                lines.Add($"拠点が落ちた（作戦ターン {St.HomeLostTurn}・{St.HomeLostBy}）——その後は中間拠点だけで続けた");
+            if (St.Stage.Hero.On && St.Stage.Hero.Chaser) { /* 第459期: 上に出した */ }
+            else if (St.Stage.Hero.On && St.Stage.Hero.AfterCapture)
                 // 第455期: 勇者を倒した（戦った回数・当てた隊・持ち越した HP の推移）。
                 lines.Add(St.HeroTurn < 0 ? $"勇者: {St.HeroOutcome}"
                     : $"勇者を{St.HeroOutcome}（作戦ターン {St.HeroTurn} に現れた・戦った {St.HeroBattles} 回・当てた隊 {St.HeroSquads.Count}・HP {string.Join(" → ", St.HeroHpTrail)}）");
@@ -2956,7 +2986,8 @@ public partial class Map11Main : Node3D
                 // 第177期: **途中に敵がいればそこで止め、その先は点線**（第176期 §3-1 #2）。
                 Dest d = Map11Session.Destinations[i];
                 bool arrived = AtDest(i);
-                if (arrived || St.Finished) _arrows[i].Hide();
+                // 第459期: 拠点が落ちた後の行き先「拠点」は「その場で待つ」なので矢印を出さない。
+                if (arrived || St.Finished || (d.AtHome && St.HomeLost)) _arrows[i].Hide();
                 else
                 {
                     Vector3 goal = PosOf(d.Id);
@@ -3014,7 +3045,9 @@ public partial class Map11Main : Node3D
         RefreshOutposts();
 
         int waiting = St.Squads.Count(x => !x.Lost && x.Road < 0);
-        _homeLabel.Text = waiting == 0 ? "拠点" : $"拠点（待機 {waiting} 隊）";
+        _homeLabel.Text = St.HomeLost ? "拠点（陥落）"   // 第459期 §7
+            : waiting == 0 ? "拠点" : $"拠点（待機 {waiting} 隊）";
+        _homeLabel.Modulate = St.HomeLost ? new Color(1.0f, 0.45f, 0.40f) : Colors.White;
 
         RefreshSquadDetail();
         RefreshFoeDetail();
@@ -3096,8 +3129,11 @@ public partial class Map11Main : Node3D
         // 第175期 §1-3: **盤の上に「← あと n」**（拠点の向きの矢印つき）。
         // 第459期 §2: **動く敵すべてに「拠点まで あと n」**（いまの速さで拠点に着くまでの作戦ターン・`TurnsToHome`）。
         // 第458期までは先頭の敵だけに「次に動くまで」を出していた——K = 1 の盤では常に 1 で、着くまでを数えられなかった。
-        if (!n.Cleared && St.Time.On && n.Pos == St.Graph.Home)
-            m.SetNote("◀ 拠点に到達", UiKit.Hurt, true);
+        if (!n.Cleared && n.IsHero && St.Stage.Hero.Chaser && St.HomeLost)
+            m.SetNote(St.HeroChase() is { } chase ? $"◀ {St.Squads[chase.Squad].Label}を追う ・ あと {chase.Steps}" : "◀ 追う隊がいない",
+                      UiKit.Hurt, St.HeroChase() is { Steps: <= 1 });   // 第459期 §1-4
+        else if (!n.Cleared && St.Time.On && n.Pos == St.Graph.Home)
+            m.SetNote(St.HomeLost ? "◀ 落ちた拠点に居座る" : "◀ 拠点に到達", UiKit.Hurt, true);
         else if (!n.Cleared && St.TurnsToHome(n) is { } left)
             m.SetNote($"◀ 拠点まで あと {left}", left <= 1 ? UiKit.Hurt : GoldColor, left <= 1);
         else m.SetNote("", GoldColor, false);
@@ -3153,11 +3189,46 @@ public partial class Map11Main : Node3D
             }
         }
         while (_reserveArrows.Count < hops.Count) _reserveArrows.Add(new Arrow(this, EnemyColor, 1.3f, y: 1.2f));
+        RefreshChaserRoute();
         for (int i = 0; i < _reserveArrows.Count; i++)
         {
             if (i >= hops.Count) { _reserveArrows[i].Hide(); continue; }
             var (a, b) = hops[i];
             _reserveArrows[i].Set(a.Lerp(b, 0.12f), a.Lerp(b, 0.88f), a.Lerp(b, 0.88f));
+        }
+    }
+
+    private readonly List<Arrow> _chaserArrows = new();
+
+    /// <summary>
+    /// 第459期 §7 —— <b>追ってくる勇者の進む道</b>を太い矢印でつなぐ（拠点が落ちる前は拠点まで、落ちた後は追う隊まで・仮の見た目）。
+    /// 道は `Map11State` の式（経路を拠点へ ／ `HeroChase` の最短路）をなぞるだけ。
+    /// </summary>
+    private void RefreshChaserRoute()
+    {
+        var hops = new List<(Vector3 A, Vector3 B)>();
+        if (!St.Finished && St.Stage.Hero.Chaser && St.Hero is { Cleared: false } h)
+        {
+            List<int> path = new();
+            if (!St.HomeLost && h.Pos != St.Graph.Home)
+            {
+                path.Add(h.Pos);
+                for (int at = h.Pos, guard = 0; at != St.Graph.Home && guard < 12; guard++) { at = St.Graph.TowardHome(h.Def.Road, at); path.Add(at); }
+            }
+            else if (St.HeroChase() is { } chase)
+            {
+                Map11State.Squad s = St.Squads[chase.Squad];
+                path = St.Graph.Path(h.Pos, h.Def.Road, s.Pos, s.Pos == St.Graph.Portal ? s.Via : -1);
+            }
+            for (int i = 0; i + 1 < path.Count; i++)
+                hops.Add((path[i] == St.Graph.Portal ? PortalPos : PosOf(path[i]), path[i + 1] == St.Graph.Portal ? PortalPos : PosOf(path[i + 1])));
+        }
+        while (_chaserArrows.Count < hops.Count) _chaserArrows.Add(new Arrow(this, new Color(1.0f, 0.78f, 0.25f), 4.2f, y: 1.9f));
+        for (int i = 0; i < _chaserArrows.Count; i++)
+        {
+            if (i >= hops.Count) { _chaserArrows[i].Hide(); continue; }
+            var (a, b) = hops[i];
+            _chaserArrows[i].Set(a.Lerp(b, 0.12f), a.Lerp(b, 0.88f), a.Lerp(b, 0.88f));
         }
     }
 

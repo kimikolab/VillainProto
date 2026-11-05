@@ -151,7 +151,11 @@ public partial class Map11Main
     private void GuideEvent(Watch before)
     {
         // StopReason と同じ出来事のデータを読む。表示文から場所を逆算しない。
-        if (St.ArrivedCount > before.Delivered) _guideEventCell = St.Graph.Home;
+        // 第459期: 追ってくる勇者が現れたマス ／ 拠点が落ちたら取っている中間拠点（無ければ案内しない）。届いた駒も落ちた後は中間拠点へ。
+        int? held = St.HeldOutposts.Count > 0 ? St.HeldOutposts.First() : null;
+        if (St.Stage.Hero.Chaser && before.HeroTurn < 0 && St.HeroTurn >= 0 && St.Hero is { } chaser) _guideEventCell = chaser.Pos;
+        else if (!before.HomeLost && St.HomeLost) _guideEventCell = held;
+        else if (St.ArrivedCount > before.Delivered) _guideEventCell = St.HomeLost ? held : St.Graph.Home;
         else if (before.ReserveDepart < 0 && St.ReserveDepartTurn >= 0 && St.Reserve is { } reserve)
             _guideEventCell = reserve.Pos;
         else if (!before.Captured && St.Captured || St.SpawnCount > before.Spawns)
