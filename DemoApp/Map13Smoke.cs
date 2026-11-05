@@ -6,7 +6,7 @@ using System.Linq;
 // =====================================================================================
 // 1-3 の門（第458期 §1-2・`--map13-smoke`・指示書 design/PHASE458_STAGE13_SPEC.md）
 //
-// **画面を1つも作らない。** `MapStage.Stage13` の盤と `Map11State` ／ `Map11Orders` ／ `Map11Session` だけを回す。
+// **画面を1つも作らない。** `MapStage.Stage13H458`（第459期から固定した第458期の 1-3）の盤と `Map11State` ／ `Map11Orders` ／ `Map11Session` だけを回す。
 // **ここには Godot の型を1つも使わない**（`Map12Smoke` と同じ扱い）。
 //
 //   (a) 盤 14 マス ＋ 拠点 ＋ 本陣・経路 3 本・横の辺 2 本（中間拠点どうし）・分かれ道 F を通り抜けられる
@@ -27,7 +27,7 @@ public static class Map13Smoke
     {
         bool ok = true;
         void Req(bool c, string what) { write($"{(c ? "○" : "×")} {what}"); ok &= c; }
-        MapStage stage = MapStage.Stage13;
+        MapStage stage = MapStage.Stage13H458;   // 第459期: 第458期の 1-3 に固定（遊ぶ 1-3 は勇者が替わった）
 
         void Win(Map11State st, int squad, Map11State.Node node)
         {

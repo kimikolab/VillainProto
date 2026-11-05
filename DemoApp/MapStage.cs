@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -627,8 +627,9 @@ public sealed class MapStage
     /// 湧きは S = 3 で 毒霧の部隊（北）→ 徴募兵（中）→ 傭兵崩れ（南）の順・予備隊は騎士の小隊。期限 <b>18</b>。
     /// 連戦の窓は本陣と<b>敵が重なったマス</b>（<see cref="SiegeRule.V458"/>）。金は 1-2 と同じ（大群は 1 部隊 ＋3・本陣の守り（重）は ＋12）。
     /// 経路・隊の枠・候補・レリック・門（中間拠点 2 つ）は 1-2（<see cref="Stage12"/>）のまま。
+    /// 第459期からは回帰の基準だけが使う——遊ぶ 1-3 は <see cref="Stage13"/>（追ってくる勇者）。
     /// </summary>
-    public static MapStage Stage13 { get; } = new()
+    public static MapStage Stage13H458 { get; } = new()
     {
         Id = "1-3",
         Title = "検証用マップ 1-3",
@@ -666,6 +667,35 @@ public sealed class MapStage
         Hero = Stage12.Hero,
         Siege = SiegeRule.V458,
         ViewScale = 1.35f,
+    };
+
+    /// <summary>
+    /// 1-3（第459期・遊ぶ版・指示書 design/PHASE459_HERO_CHASE_SPEC.md）。第458期（<see cref="Stage13H458"/>）の勇者を<b>追ってくる勇者</b>に替える。
+    /// 盤・敵・湧き・金・連戦は第458期のまま。
+    /// </summary>
+    public static MapStage Stage13 { get; } = new()
+    {
+        Id = Stage13H458.Id,
+        Title = Stage13H458.Title,
+        Board = Stage13H458.Board,
+        Lanes = Stage13H458.Lanes,
+        LaneNames = Stage13H458.LaneNames,
+        Spawn = Stage13H458.Spawn,
+        Portal = Stage13H458.Portal,
+        Time = Stage13H458.Time,
+        Arrival = Stage13H458.Arrival,
+        Reserve = Stage13H458.Reserve,
+        SquadCap = Stage13H458.SquadCap,
+        TurnCap = Stage13H458.TurnCap,
+        TimeLimit = Stage13H458.TimeLimit,
+        WinOnCapture = Stage13H458.WinOnCapture,
+        Gold = Stage13H458.Gold,
+        MatchOffer = Stage13H458.MatchOffer,
+        PortalGate = Stage13H458.PortalGate,
+        Relic = Stage13H458.Relic,
+        Hero = Stage13H458.Hero,
+        Siege = Stage13H458.Siege,
+        ViewScale = Stage13H458.ViewScale,
     };
 
     /// <summary>選べるステージ（編成画面の選択の並び）。</summary>
