@@ -2957,6 +2957,7 @@ public partial class Map11Main : Node3D
         int left = St.Nodes.Sum(r => r.Count(x => !x.Cleared)) + St.Spawns.Count(x => !x.Cleared)
                    + (St.ReserveWaiting ? 1 : 0);
         _mapHeadlineText = $"{St.Stage.Title} ・ "
+            + (St.Stage.FoeScale.Active ? $"{St.Stage.FoeScale.BarText} ・ " : "")   // 第462期 §1-3: 1 章の敵の倍率（×1.0 は出さない）
             // 第447期 §0-3: 勝ち条件の文（勇者の予告の言い換え）と金は題の直後（長い行の右端は切れるので、seed を最後に回す）。
             + (St.TimeLimitLeft is { } limit ? $"{St.Stage.TurnCap} 作戦ターン以内に{Map11.PortalName}を制圧（あと {limit}） ・ " : "")
             // 第455期: 制圧の後は勇者が時計（期限を外す）。
