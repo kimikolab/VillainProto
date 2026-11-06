@@ -7,7 +7,8 @@ public partial class Map11Main
     /// ステージ K（0 ＝ 1-1）に<b>入ったところ</b>まで頭なしで回す（負ければやり直す）。持ち越して入ったステージの始め（組み直しの窓）を撮るため。
     /// 戦闘は画面と同じ口（`Map11Session.BeginBattle` ／ `CompleteBattle`）。
     /// </summary>
-    private static void PlayChapterUntil(int seed, int stopAt)
+    /// 第462期: <paramref name="keepIntro"/> ならステージの頭の札を残す（`,card` の絵）。
+    private static void PlayChapterUntil(int seed, int stopAt, bool keepIntro = false)
     {
         Map11Session.PickChapter(seed);
         Map12ChangeSmoke.FightHook = (st, squad, node, intercept) =>
@@ -33,6 +34,6 @@ public partial class Map11Main
             }
         }
         finally { Map12ChangeSmoke.FightHook = null; }
-        Chapter1.IntroPending = false;
+        Chapter1.IntroPending = keepIntro;
     }
 }

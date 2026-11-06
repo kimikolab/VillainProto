@@ -219,7 +219,7 @@ public partial class Map11Main : Node3D
             {
                 // 第461期: `--map-chapter-stop=K` ならステージ K に入ったところで止める（持ち越して入った組み直しの窓の絵・`Map11Main.Carry.cs`）。
                 if (user.FirstOrDefault(a => a.StartsWith("--map-chapter-stop=", StringComparison.Ordinal)) is { } cs && int.TryParse(cs["--map-chapter-stop=".Length..], out int stopAt))
-                    PlayChapterUntil(cpSeed, stopAt);
+                    PlayChapterUntil(cpSeed, stopAt, keepIntro: user.Any(a => a.StartsWith("--map11-capture=", StringComparison.Ordinal) && a.EndsWith(",card", StringComparison.Ordinal)));   // 第462期: `,card` はステージの頭の札を残す
                 else PlayChapterForCapture(cpSeed);
             }
         }
@@ -616,6 +616,9 @@ public partial class Map11Main : Node3D
         // 第460期: 1 章の絵。`intro` はステージの頭の札（`--map-chapter=N` と使う・出ているまま撮る）、
         // `chapter-result` は 1-3 の結果画面で「1 章の結果へ」を押した後（`--map-chapter-play=N` と使う）。
         else if (parts.Length > 1 && parts[1] == "intro") { }
+        // 第462期: `card` はステージの頭の札（`--map-chapter-stop=K` と使う・出ているまま撮る）、`map` は組み直しの窓を閉じた作戦の画面（上の帯）。
+        else if (parts.Length > 1 && parts[1] == "card") { }
+        else if (parts.Length > 1 && parts[1] == "map") { _reform = false; ClearHold(); Refresh(); }
         else if (parts.Length > 1 && parts[1] == "chapter-result")
         {
             if (St.Finished && St.Won) OnResultAgain();
