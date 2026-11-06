@@ -6,7 +6,7 @@ using System.Linq;
 // =====================================================================================
 // 1 章の門（第460期 §2・`--chapter1-smoke`・指示書 design/PHASE460_CHAPTER1_SPEC.md）
 //
-// **画面を1つも作らない。** `Chapter1` ／ `Map11Session` ／ `Map11State` ／ `Map11Orders` と器具の方針（`Map12ChangeSmoke.Greedy`）だけを回す。
+// **第461期から第460期の 1 章（`ChapterRule.V460`・持ち越し無し）に固定。** **画面を1つも作らない。** `Chapter1` ／ `Map11Session` ／ `Map11State` ／ `Map11Orders` と器具の方針（`Map12ChangeSmoke.Greedy`）だけを回す。
 // **ここには Godot の型を1つも使わない**。
 //
 //   A (a) 札の回り方 1-1 → 1-2 → 1-3 → 1 章 → 1-1 ／ (b) 1 章で勝つと次のステージが単発と同じ始め方で始まる
@@ -66,7 +66,7 @@ public static class Chapter1Smoke
         // ---- (b)(c)(e) 1 章を最後まで（器具の方針で・負ければやり直す）----
         {
             const int chapterSeed = 4600;
-            Chapter1.Begin(chapterSeed);
+            Chapter1.Begin(chapterSeed, ChapterRule.V460);   // 第461期: 第460期の 1 章（持ち越し無し）に固定
             var plan = new[] { Split, Split, Flee };
             bool startsOk = true, tracesOk = true;
             var startLines = new List<string>();
@@ -111,7 +111,7 @@ public static class Chapter1Smoke
 
         // ---- (d) 負けると「やり直す」「やめる」 ----
         {
-            Chapter1.Begin(4601);
+            Chapter1.Begin(4601, ChapterRule.V460);
             Map11State first = Map11Session.State!;
             int seed0 = Chapter1.Records[0].Seed;
             string bench0 = string.Join("・", first.Bench.Select(u => u.Def.Id));
@@ -318,7 +318,7 @@ public static class Chapter1Smoke
                     bool all = true;
                     for (int i = 0; i < 3 && all; i++)
                     {
-                        MapStage stage = Chapter1.Stages[i];
+                        MapStage stage = Chapter1.StagesFor(ChapterRule.V460)[i];
                         bool won = false;
                         for (int a = 0; a <= RetryCap && !won; a++)
                         {

@@ -12,10 +12,28 @@ using System.Linq;
 // **ここには Godot の型を1つも使わない**（画面は `Map11Main.Chapter.cs`・頭なしの門は `Chapter1Smoke`）。
 // =====================================================================================
 
+/// <summary>
+/// 1 章の規則の版（第461期）。<b><c>Carry</c> が偽なら第460期</b>（持ち越し無し・各ステージは単発と同じに始まる・1-1 は単発の 1-1）。
+/// 真なら第461期の持ち越し（`design/PHASE461_CARRYOVER_SPEC.md`）。
+/// </summary>
+public readonly record struct ChapterRule(bool Carry, string Name)
+{
+    /// <summary>第460期の 1 章（持ち越し無し）。`--chapter1-smoke` はこれで回す。</summary>
+    public static readonly ChapterRule V460 = new(false, "第460期（持ち越し無し）");
+}
+
 public static class Chapter1
 {
-    /// <summary>1 章のステージ（遊ぶ版）。</summary>
-    public static IReadOnlyList<MapStage> Stages => new[] { MapStage.Stage11, MapStage.Stage12, MapStage.Stage13 };
+    /// <summary>遊ぶ 1 章の規則（編成画面の札「1 章」・絵の口が始める版）。</summary>
+    public static ChapterRule Default => ChapterRule.V460;
+    /// <summary>いまの 1 章の規則（<see cref="Begin"/> が決める）。</summary>
+    public static ChapterRule Rule { get; private set; } = Default;
+
+    /// <summary>その規則の 1 章のステージ（遊ぶ版）。</summary>
+    public static IReadOnlyList<MapStage> StagesFor(ChapterRule rule) => new[] { MapStage.Stage11, MapStage.Stage12, MapStage.Stage13 };
+
+    /// <summary>いまの 1 章のステージ。</summary>
+    public static IReadOnlyList<MapStage> Stages => StagesFor(Rule);
 
     /// <summary>1 ステージぶんの記録（1 章の結果画面の 1 行）。</summary>
     public sealed class Record
@@ -54,9 +72,10 @@ public static class Chapter1
     public static int StageSeed(int chapterSeed, int stage, int attempt)
         => (int)((uint)(chapterSeed * 7919 + (stage + 1) * 104729 + attempt * 1299709) % 1_000_000u);
 
-    /// <summary>1 章を始める（1-1 から）。seed を渡さなければ振る。</summary>
-    public static void Begin(int? seed = null)
+    /// <summary>1 章を始める（1-1 から）。seed を渡さなければ振る。規則を渡さなければ <see cref="Default"/>。</summary>
+    public static void Begin(int? seed = null, ChapterRule? rule = null)
     {
+        Rule = rule ?? Default;
         Seed = seed ?? new Random().Next(0, 1_000_000);
         Active = true;
         Over = false;
