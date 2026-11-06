@@ -742,6 +742,26 @@ public sealed class MapStage
     /// <summary>1-3（第460期・遊ぶ版）。第459期（<see cref="Stage13H459"/>）に横の辺の穴の直し（<see cref="CrossFacing"/>）を載せた。</summary>
     public static MapStage Stage13 { get; } = Copy(Stage13H459, crossFacing: true);
 
+    /// <summary>
+    /// 1 章の 1-1（第461期 §1-2・持ち越しのある 1 章 `ChapterRule.V461` だけが使う）。盤・敵・湧きは単発の 1-1（<see cref="Stage11"/>）と同じもの。
+    /// <b>小さく始める</b>: 手札は開始の保証つきの引きを <b>6 枚</b>（`ArrivalRule.OpeningOnly(6)`・後から届かない）・隊の枠は 1-2 と同じ数（4）で<b>使えるのは 2</b>・
+    /// <b>金の規則は 1-2 と同じ値</b>（<see cref="GoldRule.V449"/>・始め 8・中間拠点と勇者の分は 1-1 に無いので起きない）。単発の 1-1 は変えない（手札 15・隊 3・金なし）。
+    /// </summary>
+    public static MapStage Stage11Ch { get; } = new()
+    {
+        Id = Stage11.Id,
+        Title = Stage11.Title,
+        Board = Stage11.Board,
+        Lanes = Stage11.Lanes,
+        LaneNames = Stage11.LaneNames,
+        Spawn = Stage11.Spawn,
+        Portal = Stage11.Portal,
+        Time = Stage11.Time,
+        Arrival = ArrivalRule.OpeningOnly(start: 6),
+        SquadCap = Stage12.SquadCap,
+        Gold = GoldRule.V449(),
+    };
+
     /// <summary>選べるステージ（編成画面の選択の並び）。</summary>
     public static IReadOnlyList<MapStage> All { get; } = new[] { Stage11, Stage12, Stage13 };
 }

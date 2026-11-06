@@ -20,6 +20,8 @@ public readonly record struct ChapterRule(bool Carry, string Name)
 {
     /// <summary>第460期の 1 章（持ち越し無し）。`--chapter1-smoke` はこれで回す。</summary>
     public static readonly ChapterRule V460 = new(false, "第460期（持ち越し無し）");
+    /// <summary>第461期の 1 章（1-1 は小さく始め、隊と駒・金の余り・レリック・隊の枠を次のステージへ持ち越す）。</summary>
+    public static readonly ChapterRule V461 = new(true, "第461期（持ち越し）");
 }
 
 public static class Chapter1
@@ -30,7 +32,9 @@ public static class Chapter1
     public static ChapterRule Rule { get; private set; } = Default;
 
     /// <summary>その規則の 1 章のステージ（遊ぶ版）。</summary>
-    public static IReadOnlyList<MapStage> StagesFor(ChapterRule rule) => new[] { MapStage.Stage11, MapStage.Stage12, MapStage.Stage13 };
+    /// 第461期: 持ち越しのある 1 章の 1-1 は <see cref="MapStage.Stage11Ch"/>（手札 6・隊の枠 2・金 8）。
+    public static IReadOnlyList<MapStage> StagesFor(ChapterRule rule)
+        => new[] { rule.Carry ? MapStage.Stage11Ch : MapStage.Stage11, MapStage.Stage12, MapStage.Stage13 };
 
     /// <summary>いまの 1 章のステージ。</summary>
     public static IReadOnlyList<MapStage> Stages => StagesFor(Rule);
