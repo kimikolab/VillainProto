@@ -1908,6 +1908,13 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
         # ／ (e) 1-2 で負けて「やり直す」と入った時点の写しへ ／ (f) 持ち越した駒は呼ぶ候補に出ない ／ (g) 1 章の結果に終わりの手札・隊の枠・金・レリック
         # ＋ 1 章の通し（持ち越しあり ／ 第460期）× 2 方針 × 100 seed・ステージの始めの手札 ／ 駒 ／ 枠 ／ 金 ／ レリック・1-3 の終わりの手札と駒（報告のみ）。`--chapter1-carry-quick` は表を省く
         # 絵: `res://Map11Main.tscn -- --map-chapter-play=<seed> --map-chapter-stop=1 --map11-capture=<png>,intro`（1-2 に持ち越して入った組み直しの窓）
+        # **第462期**: 第461期の 1 章（`ChapterRule.V461`・倍率なし）に固定して回す（遊ぶ 1 章は敵の倍率のある V462）。
+    Godot_console.exe --path DemoApp --headless -- --chapter1-scale-smoke
+        # **第462期**: 1 章の敵の倍率（`ChapterRule.V462`・`Chapter1ScaleSmoke.cs`・画面なし）。(a) 1 章の 1-1 は ×1.0 ／ (b) 1-2 は道の部隊・中間拠点・湧き・予備隊・本陣の守り・勇者の
+        # 最大HP と攻撃が ×1.3（四捨五入）・勇者の固定回復 300 → 390 ／ (c) 1-3 は ×1.6（大群も・回復 480）／ (d) 単発は今のまま ／ (e) 頭の札と上の帯に「敵の強さ ×n」／ (f) 速さ・札・金は掛けない
+        # ＋ §3 ポンの 1-3 の第2隊（ハギあり ／ 抜き）× 作戦マップの勇者 ×1.0 ／ ×1.3 ／ ×1.6 × 20 seed（刈り取りの回数）＋ §6 1 章の通し（第462期 ／ 第461期）× 2 方針 × 100 seed・負けた配りの切り分け・
+        # 1-2 ／ 1-3 の戦闘の終わりの HP（報告のみ）。`--chapter1-scale-quick` は §6 の表を省く（§3 は出す）
+        # 絵: `res://Map11Main.tscn -- --map-chapter-play=<seed> --map-chapter-stop=K --map11-capture=<png>,card`（ステージ K の頭の札）／ `,map`（組み直しの窓を閉じた作戦の画面・上の帯）
     Godot_console.exe --path DemoApp --headless -- --map11-phase176
         # **第176期 Phase 0**: Q0-1〜Q0-5（`PortalOn = false` が第175期の 18 量と一致するか ／
         # 重なりと同点の割り方 ／ 湧いた部隊を満タンで作る口 ／ 方針の手順 ／ 走行時間）。約 1 秒
