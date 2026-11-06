@@ -1901,6 +1901,13 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
         # 約 4 分。`--chapter1-quick` は表を省く（約 20 秒）
         # 絵: `res://Map11Main.tscn -- --map-chapter=<seed> --map11-capture=<png>,intro`（1-1 の頭の札）
         #     ・`--map-chapter-play=<seed> --map11-capture=<png>,chapter-result`（1 章を器具で回して 1 章の結果）
+        # **第461期**: 第460期の 1 章（`ChapterRule.V460`・持ち越し無し）に固定して回す（遊ぶ 1 章は持ち越しのある V461）。
+    Godot_console.exe --path DemoApp --headless -- --chapter1-carry-smoke
+        # **第461期**: 1 章の持ち越し（`ChapterRule.V461`・`Chapter1CarrySmoke.cs`・画面なし）。(a) 1 章の 1-1 は手札 6・隊の枠 2・金 8（`MapStage.Stage11Ch`）・単発の 1-1 はそのまま
+        # ／ (b) 1 章の 1-1 で金が入る ／ (c) 1-1 → 1-2 の持ち越し（手札・隊と席・枠・金の余り ＋8・レリック・全快・死者も戻る・すべて拠点）／ (d) 1-2 → 1-3（レリックは駒に付いたまま）
+        # ／ (e) 1-2 で負けて「やり直す」と入った時点の写しへ ／ (f) 持ち越した駒は呼ぶ候補に出ない ／ (g) 1 章の結果に終わりの手札・隊の枠・金・レリック
+        # ＋ 1 章の通し（持ち越しあり ／ 第460期）× 2 方針 × 100 seed・ステージの始めの手札 ／ 駒 ／ 枠 ／ 金 ／ レリック・1-3 の終わりの手札と駒（報告のみ）。`--chapter1-carry-quick` は表を省く
+        # 絵: `res://Map11Main.tscn -- --map-chapter-play=<seed> --map-chapter-stop=1 --map11-capture=<png>,intro`（1-2 に持ち越して入った組み直しの窓）
     Godot_console.exe --path DemoApp --headless -- --map11-phase176
         # **第176期 Phase 0**: Q0-1〜Q0-5（`PortalOn = false` が第175期の 18 量と一致するか ／
         # 重なりと同点の割り方 ／ 湧いた部隊を満タンで作る口 ／ 方針の手順 ／ 走行時間）。約 1 秒

@@ -360,6 +360,16 @@ public partial class Main : Control
             GetTree().Quit(okC ? 0 : 1);
             return;
         }
+        // 第461期 §3: 1 章の持ち越しの門（1-1 は小さく始める・持ち越し・やり直しの写し・結果の「育った」列）。画面なし。`--chapter1-carry-quick` は器具の表を省く。
+        if (bootArgs.Contains("--chapter1-carry-smoke", StringComparer.Ordinal) || bootArgs.Contains("--chapter1-carry-quick", StringComparer.Ordinal))
+        {
+            bool okK;
+            try { okK = Chapter1CarrySmoke.Run(GD.Print, bots: !bootArgs.Contains("--chapter1-carry-quick", StringComparer.Ordinal)); }
+            catch (System.Exception ex) { GD.PrintErr(ex.ToString()); okK = false; }
+            GD.Print($"CHAPTER1_CARRY_SMOKE_COMPLETE ok={okK}");
+            GetTree().Quit(okK ? 0 : 1);
+            return;
+        }
         // 第441期 §5-3: 1-2 に「盤の上で変わるもの」（途中到着・予備隊・湧き S=2）を足した門。画面なし。
         if (bootArgs.Contains("--map12-change-smoke", StringComparer.Ordinal))
         {

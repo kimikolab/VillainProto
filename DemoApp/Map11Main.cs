@@ -216,7 +216,12 @@ public partial class Map11Main : Node3D
             if (user.FirstOrDefault(a => a.StartsWith("--map-chapter=", StringComparison.Ordinal)) is { } ch && int.TryParse(ch["--map-chapter=".Length..], out int chSeed))
                 Map11Session.PickChapter(chSeed);
             if (user.FirstOrDefault(a => a.StartsWith("--map-chapter-play=", StringComparison.Ordinal)) is { } cp && int.TryParse(cp["--map-chapter-play=".Length..], out int cpSeed))
-                PlayChapterForCapture(cpSeed);
+            {
+                // 第461期: `--map-chapter-stop=K` ならステージ K に入ったところで止める（持ち越して入った組み直しの窓の絵・`Map11Main.Carry.cs`）。
+                if (user.FirstOrDefault(a => a.StartsWith("--map-chapter-stop=", StringComparison.Ordinal)) is { } cs && int.TryParse(cs["--map-chapter-stop=".Length..], out int stopAt))
+                    PlayChapterUntil(cpSeed, stopAt);
+                else PlayChapterForCapture(cpSeed);
+            }
         }
         Map11Session.EnsureStarted();
         // 第439期: 時計は通しに結び付ける（別の通しなら止めて目盛りを 0 に）。
