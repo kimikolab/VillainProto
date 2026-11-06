@@ -360,6 +360,16 @@ public partial class Main : Control
             GetTree().Quit(okC ? 0 : 1);
             return;
         }
+        // 第462期 §4: 1 章の敵の倍率の門（1-2 ×1.3 ／ 1-3 ×1.6・勇者の固定回復も・単発は今のまま）。画面なし。`--chapter1-scale-quick` は §6 の器具の表を省く。
+        if (bootArgs.Contains("--chapter1-scale-smoke", StringComparer.Ordinal) || bootArgs.Contains("--chapter1-scale-quick", StringComparer.Ordinal))
+        {
+            bool okS;
+            try { okS = Chapter1ScaleSmoke.Run(GD.Print, bots: !bootArgs.Contains("--chapter1-scale-quick", StringComparer.Ordinal)); }
+            catch (System.Exception ex) { GD.PrintErr(ex.ToString()); okS = false; }
+            GD.Print($"CHAPTER1_SCALE_SMOKE_COMPLETE ok={okS}");
+            GetTree().Quit(okS ? 0 : 1);
+            return;
+        }
         // 第461期 §3: 1 章の持ち越しの門（1-1 は小さく始める・持ち越し・やり直しの写し・結果の「育った」列）。画面なし。`--chapter1-carry-quick` は器具の表を省く。
         if (bootArgs.Contains("--chapter1-carry-smoke", StringComparer.Ordinal) || bootArgs.Contains("--chapter1-carry-quick", StringComparer.Ordinal))
         {
