@@ -658,6 +658,96 @@ public sealed class Map11State
     public List<UnitState> FallenUnits { get; } = new();
     /// <summary>呼び戻した枚数（測るためだけの計数）。</summary>
     public int Revives { get; private set; }
+    /// <summary>倒れた駒がどの隊で倒れたか（第461期・1 章の持ち越しだけが読む）。</summary>
+    private readonly Dictionary<UnitState, int> _fallenSquad = new(ReferenceEqualityComparer.Instance);
+
+    // ---------------- 1 章の持ち越し（第461期 §1-1・`Chapter1` だけが使う） ----------------
+
+    /// <summary>持ち越す駒 1 枚（定義・席（手札なら -1）・持たせたレリック）。HP と状態は持ち越さない（次のステージの始めに全快）。</summary>
+    public sealed record CarryUnit(UnitDef Def, int Slot, TraitId? Relic);
+
+    /// <summary>
+    /// 次のステージへ持ち越すもの（第461期）: 手札・隊ごとの駒と席・隊の枠・金の余り・手持ちのレリック。
+    /// 倒れた駒は<b>倒れた隊の同じ席</b>へ戻す（席が埋まっていれば手札へ）——「全快・死者も戻る」。
+    /// </summary>
+    public sealed record CarryPack(IReadOnlyList<CarryUnit> Bench, IReadOnlyList<IReadOnlyList<CarryUnit>> Squads,
+                                   int SquadCap, int Gold, IReadOnlyList<TraitId> RelicHand)
+    {
+        /// <summary>駒の枚数（手札 ＋ 隊）。</summary>
+        public int Units => Bench.Count + Squads.Sum(s => s.Count);
+        /// <summary>レリックの数（手持ち ＋ 駒に持たせた札）。</summary>
+        public int Relics => RelicHand.Count + Bench.Concat(Squads.SelectMany(s => s)).Count(u => u.Relic is not null);
+    }
+
+    /// <summary>このステージの終わりの持ち越し（第461期・<b>盤面は1ビットも動かさない</b>）。</summary>
+    public CarryPack TakeCarry()
+    {
+        var squads = new List<List<CarryUnit>>();
+        foreach (Squad q in Squads)
+        {
+            IEnumerable<CarryUnit> alive = q.Units is { } us
+                ? us.Where(u => u.IsAlive).Select(u => new CarryUnit(u.Def, u.Slot, u.Relic))
+                : q.Lost ? Enumerable.Empty<CarryUnit>() : q.Def.F.Occupied().Select(o => new CarryUnit(o.Def, o.Slot, null));
+            squads.Add(alive.ToList());
+        }
+        var bench = Bench.Select(u => new CarryUnit(u.Def, -1, u.Relic)).ToList();
+        var seen = squads.SelectMany(s => s).Concat(bench).Select(c => c.Def.Id).ToHashSet();
+        foreach (UnitState u in FallenUnits)
+        {
+            if (!seen.Add(u.Def.Id)) continue;
+            int sq = _fallenSquad.TryGetValue(u, out int k) ? k : -1;
+            if (sq >= 0 && sq < squads.Count && squads[sq].All(c => c.Slot != u.Slot)) squads[sq].Add(new CarryUnit(u.Def, u.Slot, u.Relic));
+            else bench.Add(new CarryUnit(u.Def, -1, u.Relic));
+        }
+        foreach (var s in squads) s.Sort((a, b) => a.Slot.CompareTo(b.Slot));
+        return new CarryPack(bench, squads, SquadCap, Gold, RelicHand.ToList());
+    }
+
+    /// <summary>前のステージから持ち越した（第461期・画面が組み直しの窓を開けるために読む）。</summary>
+    public bool CarriedIn { get; private set; }
+
+    /// <summary>
+    /// 持ち越しを、始めたばかりのこのステージに載せる（第461期 §1-1・作戦ターンを 1 度も進めていない状態で呼ぶ）。
+    /// 手札・隊の駒と席・隊の枠・レリックを写し、金は<b>余り ＋ このステージの始めの金</b>。駒は作り直す（全快・状態は 0・札は付けたまま）。
+    /// 呼ぶ候補とレリックの列は、持ち越した駒・札を除いて引き直す（列の並びは同じ seed のまま）。
+    /// </summary>
+    public void ApplyCarry(CarryPack p)
+    {
+        UnitState Make(CarryUnit c)
+        {
+            UnitState u = One(c.Def);
+            if (c.Slot >= 0) u.Slot = c.Slot;
+            return c.Relic is TraitId r ? WithRelic(u, r) : u;
+        }
+        Bench.Clear();
+        Bench.AddRange(p.Bench.Select(Make));
+        for (int i = 0; i < Squads.Length; i++)
+        {
+            Squads[i].Units = i < p.Squads.Count ? p.Squads[i].Select(Make).ToList() : new List<UnitState>();
+            SortBySlot(Squads[i].Units!);
+        }
+        SquadCap = Math.Clamp(p.SquadCap, 1, Squads.Length);
+        Gold = p.Gold + (Stage.Gold.On ? Stage.Gold.Start : 0);
+        RelicHand.Clear();
+        RelicHand.AddRange(p.RelicHand);
+        // レリックの列: 持ち越した札（手持ち ＋ 駒に付いた札）は出さない。
+        var owned = p.RelicHand.Concat(p.Bench.Concat(p.Squads.SelectMany(s => s)).Where(c => c.Relic is not null).Select(c => c.Relic!.Value)).ToHashSet();
+        var relics = _relicQueue.Where(r => !owned.Contains(r)).ToList();
+        _relicQueue.Clear();
+        foreach (TraitId r in relics) _relicQueue.Enqueue(r);
+        // 呼ぶ候補: 列を同じ seed で並べ直し、持ち越した駒を飛ばして引き直す（コンストラクタと同じ式）。
+        if (Stage.Gold.On)
+        {
+            Offers.Clear();
+            _offerQueue.Clear();
+            var rng = new Random(unchecked(Seed * 7919 + 445));
+            UnitDef[] pool = UnitCatalog.All.ToArray();
+            for (int i = pool.Length - 1; i > 0; i--) { int j = rng.Next(i + 1); (pool[i], pool[j]) = (pool[j], pool[i]); }
+            foreach (UnitDef d in pool) _offerQueue.Enqueue(d);
+            for (int k = 0; k < Stage.Gold.Offers; k++) if ((k == 0 ? FirstOffer() : NextOffer()) is { } d) Offers.Add(d);
+        }
+        CarriedIn = true;
+    }
     private static readonly HashSet<string> RosterIds = UnitCatalog.All.Select(d => d.Id).ToHashSet();
     /// <summary>開始の手札の引きで保証 3 条件を満たせたか（満たせなければ結果画面に印）。到着を切った通しでは真。</summary>
     public bool OpeningOk { get; } = true;
@@ -1740,7 +1830,11 @@ public sealed class Map11State
         // 第447期: 呼び戻しのある盤では、この戦闘で倒れた駒を記録する（境界で隊から外れるので、ここで拾わないと消える）。
         if (Stage.Gold.Revive > 0)
             foreach (UnitState u in pu)
-                if (!u.IsAlive && RosterIds.Contains(u.Def.Id) && !FallenUnits.Contains(u)) FallenUnits.Add(u);
+                if (!u.IsAlive && RosterIds.Contains(u.Def.Id) && !FallenUnits.Contains(u))
+                {
+                    FallenUnits.Add(u);
+                    _fallenSquad[u] = squadIndex;   // 第461期: 1 章の持ち越しで、倒れた駒を倒れた隊の席へ戻すため（規則は読まない）
+                }
         node.HpNow = aliveE.Sum(u => u.Hp);
 
         if (aliveE.Count == 0)

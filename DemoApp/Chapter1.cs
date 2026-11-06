@@ -27,7 +27,7 @@ public readonly record struct ChapterRule(bool Carry, string Name)
 public static class Chapter1
 {
     /// <summary>遊ぶ 1 章の規則（編成画面の札「1 章」・絵の口が始める版）。</summary>
-    public static ChapterRule Default => ChapterRule.V460;
+    public static ChapterRule Default => ChapterRule.V461;   // 第461期から持ち越しのある 1 章
     /// <summary>いまの 1 章の規則（<see cref="Begin"/> が決める）。</summary>
     public static ChapterRule Rule { get; private set; } = Default;
 
@@ -57,6 +57,10 @@ public static class Chapter1
         /// <summary>働いた札（「◆名（駒）」→ 回数・勝った ／ 最後の配り）。</summary>
         public Dictionary<string, int> Relics { get; } = new();
         public string Result => Won ? $"制圧（作戦ターン {Turn}）" : Quit ? "やめた" : Played ? "途中" : "—";
+        /// <summary>このステージに入った時点の持ち越し（第461期・1-1 と持ち越しの無い 1 章は null）。やり直しはここへ戻る。</summary>
+        public Map11State.CarryPack? Entry { get; set; }
+        /// <summary>このステージの終わり（最後に終わった配り）の持ち越し（第461期・結果画面の「育った」列と、勝てば次のステージの <see cref="Entry"/>）。</summary>
+        public Map11State.CarryPack? EndPack { get; set; }
     }
 
     public static bool Active { get; private set; }
@@ -107,6 +111,8 @@ public static class Chapter1
         r.Won = r.Quit = false;
         _settled = null;
         Map11Session.Reset(r.Seed, draft: true, stage: Stages[Index]);
+        // 第461期 §1-1 ／ §1-3: 持ち越しのある 1 章では、入った時点の持ち越しを載せる（やり直しも同じ写しへ戻る・戦闘と湧きの seed だけが新しい）。
+        if (Rule.Carry && r.Entry is { } entry) Map11Session.State!.ApplyCarry(entry);
         IntroPending = true;
     }
 
@@ -129,6 +135,7 @@ public static class Chapter1
         r.Relics.Clear();
         foreach (var kv in relics.Where(kv => kv.Value > 0))
             r.Relics[$"◆{RelicCatalog.Info(kv.Key.Relic).Name}（{kv.Key.Unit}）"] = kv.Value;
+        if (Rule.Carry) r.EndPack = st.TakeCarry();   // 第461期
     }
 
     /// <summary>勝ったステージの次へ（1-3 の後は 1 章の結果）。次のステージを始めたら true。</summary>
@@ -136,8 +143,10 @@ public static class Chapter1
     {
         if (!Active || !Records[Index].Won) return false;
         if (Index >= Stages.Count - 1) { Over = true; return false; }
+        Map11State.CarryPack? carry = Rule.Carry ? Records[Index].EndPack : null;   // 第461期: 勝った配りの終わりを持ち越す
         Index++;
         Attempt = 0;
+        Records[Index].Entry = carry;
         StartStage();
         return true;
     }

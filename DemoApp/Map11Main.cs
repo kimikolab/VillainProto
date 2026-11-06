@@ -229,7 +229,8 @@ public partial class Map11Main : Node3D
         Refresh();
 
         // 第177期 §3: **手札から組むところから始まる**ので、組み直しを最初から開いておく。
-        if (Map11Session.Drafting && St.Bench.Count > 0)
+        // 第461期 §1-1: 1 章で前のステージから持ち越したときも（手札が空でも）作戦の画面に入る前に 1 度開く。
+        if (Map11Session.Drafting && (St.Bench.Count > 0 || St.CarriedIn))
         {
             _reform = true;
             Refresh();
