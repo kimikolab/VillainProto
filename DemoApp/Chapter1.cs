@@ -61,6 +61,10 @@ public static class Chapter1
         public Map11State.CarryPack? Entry { get; set; }
         /// <summary>このステージの終わり（最後に終わった配り）の持ち越し（第461期・結果画面の「育った」列と、勝てば次のステージの <see cref="Entry"/>）。</summary>
         public Map11State.CarryPack? EndPack { get; set; }
+        /// <summary>終わりの手札・駒・隊の枠・金・レリック（第461期 §1-4・遊んでいなければ「—」）。</summary>
+        public string Grown => EndPack is { } p
+            ? $"手札 {p.Bench.Count} 枚（駒 {p.Units} 枚）・隊の枠 {p.SquadCap}・金 {p.Gold}・レリック {p.Relics}"
+            : "—";
     }
 
     public static bool Active { get; private set; }
@@ -192,7 +196,8 @@ public static class Chapter1
         }
         var lines = new List<string>();
         foreach (Record r in Records)
-            lines.Add($"{r.Stage.Id} ・ {r.Result} ・ やり直し {r.Retries} 回 ・ 勇者 {(r.Played ? r.Hero : "—")} ・ 金 稼いだ {r.Earned} ／ 使った {r.Spent} ・ 働いた札 {Top(r.Relics)}");
+            lines.Add($"{r.Stage.Id} ・ {r.Result} ・ やり直し {r.Retries} 回 ・ 勇者 {(r.Played ? r.Hero : "—")} ・ 金 稼いだ {r.Earned} ／ 使った {r.Spent} ・ 働いた札 {Top(r.Relics)}"
+                      + (Rule.Carry ? $" ・ 終わり {r.Grown}" : ""));   // 第461期 §1-4: 育ったことが見える列（持ち越しの無い 1 章は第460期のまま）
         lines.Add($"合計 ・ 制圧 {Records.Count(r => r.Won)} ／ {Records.Count} ・ やり直し {Records.Sum(r => r.Retries)} 回"
                   + $" ・ 金 稼いだ {Records.Sum(r => r.Earned)} ／ 使った {Records.Sum(r => r.Spent)} ・ 働いた札 {Top(Records.SelectMany(r => r.Relics))}");
         return lines;
