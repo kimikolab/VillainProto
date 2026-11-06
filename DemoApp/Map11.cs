@@ -1794,7 +1794,7 @@ public sealed class Map11State
         // ——敵の拠点のマスでは、そこに立っている湧いた部隊が相手になる（§1-2）。
         Node? node = against ?? (Portal.On ? FoeFacing(squadIndex) : NextNode(s.Road));
         if (node is null || node.Cleared) return null;
-        node.Units ??= BattleEngine.Materialize(node.Def.Enemy, BattleContext.EnemyTeam, Map11.EnemyScale);
+        node.Units ??= FoeUnits(node);
         return (pu, node.Units, Map11.DeriveSeed(Seed, Battles), node);
     }
 
@@ -2512,6 +2512,16 @@ public sealed class Map11State
     }
 
     /// <summary>迎撃に出す（<b>拠点から動かない</b>——道の上に出るわけではない）。</summary>
+    /// <summary>
+    /// 敵の部隊の駒を作る（初めて当たるときに 1 度だけ）。第462期: 1 章の倍率のかかった盤（<see cref="MapStage.FoeScale"/>）では、
+    /// 勇者の毎手番の固定回復も同じ倍率にする（最大HP と攻撃は盤の定義がすでに掛けた後の値）。倍率の無い盤では第461期と同じ 1 行。
+    /// </summary>
+    private List<UnitState> FoeUnits(Node node)
+    {
+        List<UnitState> us = BattleEngine.Materialize(node.Def.Enemy, BattleContext.EnemyTeam, Map11.EnemyScale);
+        return node.IsHero ? Stage.FoeScale.MendHero(us) : us;
+    }
+
     public (List<UnitState> Players, List<UnitState> Enemies, int Seed, Node Node)? PrepareIntercept(
         int squadIndex, Node node)
     {
@@ -2522,7 +2532,7 @@ public sealed class Map11State
         if (!pu.Any(u => u.IsAlive)) return null;
         s.Deployed = true;
         if (s.Home < 0) s.Home = node.Def.Road;
-        node.Units ??= BattleEngine.Materialize(node.Def.Enemy, BattleContext.EnemyTeam, Map11.EnemyScale);
+        node.Units ??= FoeUnits(node);
         return (pu, node.Units, Map11.DeriveSeed(Seed, Battles), node);
     }
 

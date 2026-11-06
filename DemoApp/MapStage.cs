@@ -103,6 +103,22 @@ public sealed class MapStage
     /// </summary>
     public bool CrossFacing { get; init; }
 
+    /// <summary>
+    /// 敵の数値の倍率（第462期・1 章だけ・<see cref="ChapterRule.V462"/>）。<b>盤の敵はすでに掛けた後の値</b>（<see cref="Scaled"/> が経路・湧き・予備隊・勇者の定義を写して掛ける）
+    /// ——ここは表示（ステージの頭の札・上の帯）と、勇者の固定回復を掛ける口（`Map11State` が勇者の駒を作るとき・<see cref="MapFoeScale.MendHero"/>）だけが読む。
+    /// 単発のステージは <see cref="MapFoeScale.None"/>。
+    /// </summary>
+    public MapFoeScale FoeScale { get; init; } = MapFoeScale.None;
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(MapStage, MapFoeScale), MapStage> _scaled = new();
+
+    /// <summary>
+    /// 敵の数値に倍率を掛けた写し（第462期）。<b>同じステージ・同じ倍率には同じインスタンスを返す</b>（1 章の通しが `ReferenceEquals(State.Stage, Chapter1.CurrentStage)` で続きを見分けるため）。
+    /// 掛けるのは<b>敵の駒の最大HP と攻撃</b>（四捨五入）——経路の区画（道の部隊・中間拠点・大群・本陣の守り）・湧き・予備隊・勇者。速さ・札・金は掛けない。
+    /// 倍率が 1.0 ならこのステージそのもの。
+    /// </summary>
+    public MapStage Scaled(MapFoeScale sc) => !sc.Active ? this : _scaled.GetOrAdd((this, sc), static k => Copy(k.Item1, scale: k.Item2));
+
     public int LaneCount => Lanes.Length;
     public int TotalNodes => Lanes.Sum(l => l.Count);
 
@@ -627,19 +643,21 @@ public sealed class MapStage
     public static MapStage Stage12 { get; } = Copy(Stage12H459, crossFacing: true);
 
     /// <summary>ステージの写し（第460期・版を足すための道具）。<paramref name="crossFacing"/> を渡したときだけ横の辺の直しを替える。</summary>
-    private static MapStage Copy(MapStage s, bool? crossFacing = null) => new()
+    /// 第462期: <paramref name="scale"/> を渡したときは敵の数値に倍率を掛ける（<see cref="Scaled"/> だけが渡す）。
+    private static MapStage Copy(MapStage s, bool? crossFacing = null, MapFoeScale? scale = null) => new()
     {
         CrossFacing = crossFacing ?? s.CrossFacing,
+        FoeScale = scale ?? s.FoeScale,
         Id = s.Id,
         Title = s.Title,
         Board = s.Board,
-        Lanes = s.Lanes,
+        Lanes = scale is { } sl ? sl.Lanes(s.Lanes) : s.Lanes,
         LaneNames = s.LaneNames,
-        Spawn = s.Spawn,
+        Spawn = scale is { } ss ? ss.Spawn(s.Spawn) : s.Spawn,
         Portal = s.Portal,
         Time = s.Time,
         Arrival = s.Arrival,
-        Reserve = s.Reserve,
+        Reserve = scale is { } sr && s.Reserve.Enemy is { } re ? s.Reserve with { Enemy = sr.Foe(re) } : s.Reserve,
         SquadCap = s.SquadCap,
         TurnCap = s.TurnCap,
         HeroAtCap = s.HeroAtCap,
@@ -649,7 +667,7 @@ public sealed class MapStage
         MatchOffer = s.MatchOffer,
         PortalGate = s.PortalGate,
         Relic = s.Relic,
-        Hero = s.Hero,
+        Hero = scale is { } sh && s.Hero.Unit is { } hu ? s.Hero with { Unit = sh.HeroDef(hu) } : s.Hero,
         Siege = s.Siege,
         ViewScale = s.ViewScale,
     };
@@ -882,6 +900,107 @@ public readonly record struct RelicRule(bool On, int Offers, bool Bridge = false
 /// 落ちた後は呼ぶ・休む・組み直しは取っている中間拠点でだけ、勇者はいちばん近い隊を追う。勝ちは制圧のまま（勇者は倒さなくてよい・本陣では守りの後ろに並ぶ）。
 /// </param>
 /// <param name="FromHome">追う勇者が現れるマスの、味方の拠点からの歩数（第459期・<c>Chaser</c> の盤だけが読む）。</param>
+/// <summary>
+/// 敵の数値の倍率（第462期・指示書 design/PHASE462_CHAPTER_SCALE_SPEC.md §1-1・1 章だけ）。百分率で「勇者」と「それ以外」の 2 列（この期は同じ値）。
+/// <b>掛けるのは敵の駒の最大HP と攻撃（四捨五入）と、勇者の毎手番の固定回復（<see cref="BossMendTrait.Fixed"/>）</b>。速さ・札の係数・状態異常・金は掛けない。
+/// <para>engine の倍率（<see cref="EnemyScaleRule"/>・切り捨て）は使わない——指示書が四捨五入を指定していて、小さい攻撃（6 × 1.3 ＝ 7.8）で 1 点ずれるため。
+/// engine の倍率が持つ「敵が呼んだ召喚に同じ倍率」の枝は、いまの敵に敵陣へ駒を呼ぶ敵が 0 体なので（`BattleContext.Summon` の注）、この写しでは要らない。</para>
+/// </summary>
+public readonly record struct MapFoeScale(int FoePercent, int HeroPercent)
+{
+    public static readonly MapFoeScale None = new(100, 100);
+    public bool Active => FoePercent != 100 || HeroPercent != 100;
+
+    /// <summary>四捨五入で倍率を掛ける（下限 1）。</summary>
+    public static int Mul(int x, int percent) => Math.Max(1, (int)Math.Round(x * (double)percent / 100, MidpointRounding.AwayFromZero));
+
+    private static string Times(int percent) => $"×{percent / 100.0:0.0#}";
+    /// <summary>表示の倍率（「×1.3」・勇者だけ違えば「×1.3（勇者 ×1.0）」）。</summary>
+    public string Text => FoePercent == HeroPercent ? Times(FoePercent) : $"{Times(FoePercent)}（勇者 {Times(HeroPercent)}）";
+    /// <summary>ステージの頭の札の 1 行（第462期 §1-3・1.0 なら空）。</summary>
+    public string IntroLine => Active ? $"敵の強さ {Text}" : "";
+    /// <summary>作戦の画面の上の帯（第462期 §1-3・1.0 なら空）。</summary>
+    public string BarText => Active ? $"敵 {Text}" : "";
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(UnitDef, int, bool), UnitDef> _defs = new();
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(Formation, int), Formation> _forms = new();
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(TraitId, int), BossMendTrait> _mends = new();
+
+    private static UnitDef Apply(UnitDef d, int percent, bool hero) => percent == 100 ? d : _defs.GetOrAdd((d, percent, hero), static k =>
+    {
+        (UnitDef src, int p, bool isHero) = k;
+        // 項目は `UnitDef.WithStats` と同じ並び（足したらここにも足す）。勇者だけ説明文の固定回復の数を掛けた後の値に替える。
+        int mend = Mul(BossMendTrait.Fixed300, p);
+        return new UnitDef
+        {
+            Id = src.Id, Name = src.Name, MaxHp = Mul(src.MaxHp, p), Attack = Mul(src.Attack, p), Speed = src.Speed, Traits = src.Traits,
+            Pattern = src.Pattern, Advances = src.Advances, Actions = src.Actions,
+            PlusText = isHero && src.Traits.Contains(TraitId.BossMend300) ? src.PlusText.Replace($"{BossMendTrait.Fixed300} 癒える", $"{mend} 癒える") : src.PlusText,
+            MinusText = src.MinusText, Flavor = src.Flavor,
+        };
+    });
+
+    /// <summary>勇者以外の敵の駒の定義に掛けた写し（同じ定義・同じ倍率には同じインスタンス）。</summary>
+    public UnitDef Foe(UnitDef d) => Apply(d, FoePercent, false);
+    /// <summary>勇者の定義に掛けた写し（説明文の「300 癒える」も掛けた後の値）。</summary>
+    public UnitDef HeroDef(UnitDef d) => Apply(d, HeroPercent, true);
+
+    /// <summary>敵の部隊（編成）の写し（陣形・枠はそのまま・駒だけ掛ける・同じ編成には同じインスタンス）。</summary>
+    public Formation Foe(Formation f)
+    {
+        int p = FoePercent;
+        if (p == 100) return f;
+        MapFoeScale self = this;
+        return _forms.GetOrAdd((f, p), _ =>
+        {
+            Formation c = f.Clone();
+            foreach ((int slot, UnitDef d) in f.Occupied()) c[slot] = self.Foe(d);
+            return c;
+        });
+    }
+
+    /// <summary>経路の区画（道の部隊・中間拠点・大群・本陣の守り）に掛けた写し。</summary>
+    public IReadOnlyList<Map11.RoadNode>[] Lanes(IReadOnlyList<Map11.RoadNode>[] lanes)
+    {
+        MapFoeScale self = this;
+        return lanes.Select(l => (IReadOnlyList<Map11.RoadNode>)l.Select(n => n with { Enemy = self.Foe(n.Enemy) }).ToArray()).ToArray();
+    }
+
+    /// <summary>湧きに掛けた写し（湧くたびに同じ編成なら同じ写し）。</summary>
+    public Func<int, (Formation Enemy, string Name, int StageIndex)> Spawn(Func<int, (Formation Enemy, string Name, int StageIndex)> spawn)
+    {
+        MapFoeScale self = this;
+        return road => { var (e, name, idx) = spawn(road); return (self.Foe(e), name, idx); };
+    }
+
+    /// <summary>勇者の毎手番の固定回復に掛けた量（300 × 倍率・四捨五入）。</summary>
+    public int HeroMend(int fixedAmount) => Mul(fixedAmount, HeroPercent);
+
+    /// <summary>
+    /// 勇者の駒の固定回復を掛けた後の量に替える（`Map11State` が勇者の駒を作った直後に 1 度だけ・§3 の器具も同じ口）。
+    /// 札（<see cref="BossMendTrait"/>）は量だけが違う同じ種類の写しに差し替える——札の持つ状態は無い（定数だけ）ので、量ごとに 1 つを共有する。
+    /// 倍率 1.0 ・固定回復を持たない駒はそのまま。
+    /// </summary>
+    public List<UnitState> MendHero(List<UnitState> us)
+    {
+        if (HeroPercent == 100) return us;
+        MapFoeScale self = this;
+        for (int i = 0; i < us.Count; i++)
+        {
+            UnitState u = us[i];
+            if (!u.Traits.Any(t => t is BossMendTrait { Fixed: > 0 })) continue;
+            us[i] = new UnitState
+            {
+                Def = u.Def, TeamId = u.TeamId, Shape = u.Shape, Slot = u.Slot, Hp = u.Hp, MaxHp = u.MaxHp, Relic = u.Relic,
+                Traits = u.Traits.Select(t => t is BossMendTrait { Fixed: > 0 } m
+                    ? _mends.GetOrAdd((m.Id, self.HeroMend(m.Fixed)), static k => new BossMendTrait(k.Item1, 0, k.Item2))
+                    : t).ToArray(),
+            };
+        }
+        return us;
+    }
+}
+
 public readonly record struct HeroRule(bool On, int AfterGate, int StepEvery, UnitDef? Unit, int Gold, bool AfterCapture = false, bool Gatekeeper = false,
                                        bool Chaser = false, int FromHome = 0)
 {

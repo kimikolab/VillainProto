@@ -15,26 +15,38 @@ using System.Linq;
 /// <summary>
 /// 1 章の規則の版（第461期）。<b><c>Carry</c> が偽なら第460期</b>（持ち越し無し・各ステージは単発と同じに始まる・1-1 は単発の 1-1）。
 /// 真なら第461期の持ち越し（`design/PHASE461_CARRYOVER_SPEC.md`）。
+/// 第462期: <c>Scales</c> はステージごとの敵の数値の倍率（1-1 ／ 1-2 ／ 1-3・null ならすべて ×1.0）。
 /// </summary>
-public readonly record struct ChapterRule(bool Carry, string Name)
+public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList<MapFoeScale>? Scales = null)
 {
     /// <summary>第460期の 1 章（持ち越し無し）。`--chapter1-smoke` はこれで回す。</summary>
     public static readonly ChapterRule V460 = new(false, "第460期（持ち越し無し）");
     /// <summary>第461期の 1 章（1-1 は小さく始め、隊と駒・金の余り・レリック・隊の枠を次のステージへ持ち越す）。</summary>
     public static readonly ChapterRule V461 = new(true, "第461期（持ち越し）");
+    /// <summary>
+    /// 第462期の 1 章（第461期の持ち越し ＋ 敵の数値の倍率 1-1 ×1.0 ／ 1-2 ×1.3 ／ 1-3 ×1.6・指示書 design/PHASE462_CHAPTER_SCALE_SPEC.md §1-1）。
+    /// 表は「それ以外」と「勇者」の 2 列（この期は同じ値）。値だけを替えるときはこの表を替える。
+    /// </summary>
+    public static readonly ChapterRule V462 = new(true, "第462期（持ち越し・敵の倍率）",
+        new MapFoeScale[] { MapFoeScale.None, new(FoePercent: 130, HeroPercent: 130), new(FoePercent: 160, HeroPercent: 160) });
+
+    /// <summary>ステージ <paramref name="index"/>（0 ＝ 1-1）の敵の倍率。</summary>
+    public MapFoeScale ScaleOf(int index) => Scales is { } s && index < s.Count ? s[index] : MapFoeScale.None;
 }
 
 public static class Chapter1
 {
     /// <summary>遊ぶ 1 章の規則（編成画面の札「1 章」・絵の口が始める版）。</summary>
-    public static ChapterRule Default => ChapterRule.V461;   // 第461期から持ち越しのある 1 章
+    public static ChapterRule Default => ChapterRule.V462;   // 第461期から持ち越しのある 1 章・第462期から敵の倍率
     /// <summary>いまの 1 章の規則（<see cref="Begin"/> が決める）。</summary>
     public static ChapterRule Rule { get; private set; } = Default;
 
     /// <summary>その規則の 1 章のステージ（遊ぶ版）。</summary>
     /// 第461期: 持ち越しのある 1 章の 1-1 は <see cref="MapStage.Stage11Ch"/>（手札 6・隊の枠 2・金 8）。
+    /// 第462期: 倍率のある 1 章は、各ステージの敵に倍率を掛けた写し（<see cref="MapStage.Scaled"/>・同じ倍率なら同じインスタンス）。
     public static IReadOnlyList<MapStage> StagesFor(ChapterRule rule)
-        => new[] { rule.Carry ? MapStage.Stage11Ch : MapStage.Stage11, MapStage.Stage12, MapStage.Stage13 };
+        => new[] { rule.Carry ? MapStage.Stage11Ch : MapStage.Stage11, MapStage.Stage12, MapStage.Stage13 }
+            .Select((s, i) => s.Scaled(rule.ScaleOf(i))).ToArray();
 
     /// <summary>いまの 1 章のステージ。</summary>
     public static IReadOnlyList<MapStage> Stages => StagesFor(Rule);
