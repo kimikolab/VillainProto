@@ -106,7 +106,8 @@ public static class TuningToolsSmoke
         if (Directory.Exists(tmp)) Directory.Delete(tmp, recursive: true);
         string plays = Path.Combine(tmp, "plays");
         string realPlays = PlayLog.DefaultRoot(demoDir);
-        ChapterRule rule = Chapter1.Default;
+        ChapterRule rule = ChapterRule.V465;   // 第467期: 第465期の 1 章に固定（遊ぶ 1 章は投資のある第467期・(c) の「今の版」だけが `Chapter1.Default` を読む）
+        ChapterRule nowRule = Chapter1.Default;
         write($"  遊ぶ 1 章 {rule.Name}・写しの置き場（門） {plays}・手で写した写し {PlayLog.ManualDir(realPlays)}");
 
         Map12ChangeSmoke.FightHook = FightThroughSession;
@@ -156,7 +157,7 @@ public static class TuningToolsSmoke
             // ---- (f) 写しを書いても書かなくても通しは同じ ----
             bool same = bare.Turns.Count == run.Turns.Count && bare.Turns.All(kv => run.Turns.TryGetValue(kv.Key, out var t) && t.SequenceEqual(kv.Value));
             write($"  (f) 写しを書かない通しと書く通し: 配り {bare.Turns.Count} ／ {run.Turns.Count}・刻 {bare.Turns.Sum(kv => kv.Value.Count)} ／ {run.Turns.Sum(kv => kv.Value.Count)}・すべて一致 {same}");
-            Req(same && Chapter1.Default.Name == ChapterRule.V465.Name,
+            Req(same && rule.Name == ChapterRule.V465.Name,
                 "(f) 規則は 1 行も変わっていない——写しを書いても書かなくても 1 章の通しは 1 刻ずつ同じ・遊ぶ 1 章は第465期のまま（単発・画面・`--chapter1-*` の門・`compare` ／ `docs/` は回帰で見る）");
 
             // ---- (b) 写しから始めると 1 刻ずつ一致する ----
@@ -218,10 +219,10 @@ public static class TuningToolsSmoke
                         string starA = Map11Session.State.Stage.Stars.On ? $"☆{Map11Session.State.Stars.Values.Count(v => v.Star == 3)}枚が☆3" : "☆なし";
                         Map11Session.PickChapterFrom(s, snapRule: false);
                         MapStage b = Map11Session.State!.Stage;
-                        bool nowOk = Chapter1.Rule.Name == rule.Name && b.FoeScale == rule.ScaleOf(2);
+                        bool nowOk = Chapter1.Rule.Name == nowRule.Name && b.FoeScale == nowRule.ScaleOf(2);
                         int heroB = b.Hero.Unit!.MaxHp;
                         okC &= snapOk && nowOk && a.FoeScale != b.FoeScale && heroA != heroB;
-                        parts.Add($"{s.ChapterSeed} の 1-3: 写しの版 {wantRule.Key} {a.FoeScale.Text}（勇者 HP {heroA}・{starA}）／ 今の版 {rule.Key} {b.FoeScale.Text}{(b.FoeScale.HeroMends ? "" : "・勇者の回復なし")}（勇者 HP {heroB}・☆{Map11Session.State.Stars.Values.Count(v => v.Star == 3)}枚が☆3）");
+                        parts.Add($"{s.ChapterSeed} の 1-3: 写しの版 {wantRule.Key} {a.FoeScale.Text}（勇者 HP {heroA}・{starA}）／ 今の版 {nowRule.Key} {b.FoeScale.Text}{(b.FoeScale.HeroMends ? "" : "・勇者の回復なし")}（勇者 HP {heroB}・☆{Map11Session.State.Stars.Values.Count(v => v.Star == 3)}枚が☆3）");
                     }
                     foreach (string p in parts) write($"  (c) {p}");
                 }
@@ -256,7 +257,7 @@ public static class TuningToolsSmoke
                 }
                 // 表そのもの（手で写した写し ＋ この門の器具の写し・出力は .tmp）
                 string outDir = Path.Combine(tmp, "weights");
-                var args = new List<string> { "--foe-weight", $"--plays={realPlays}", $"--out={outDir}", quick ? "--stage=1-2" : "--stage=1-2,1-3" };
+                var args = new List<string> { "--foe-weight", $"--plays={realPlays}", $"--out={outDir}", quick ? "--stage=1-2" : "--stage=1-2,1-3", $"--rule={rule.Key}" };   // 第467期: 第465期の版に固定
                 if (quick) args.Add("--stars=as");
                 bool ran = FoeWeight.Main(write, args, demoDir);
                 var outs = Directory.Exists(outDir) ? Directory.GetFiles(outDir, "*.md") : Array.Empty<string>();
