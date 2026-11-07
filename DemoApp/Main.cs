@@ -212,6 +212,16 @@ public partial class Main : Control
             GetTree().Quit(okT ? 0 : 1);
             return;
         }
+        // 第467期 §5: 軸への投資の門（札 3 枚・持ち越して重なる・候補の寄せ 25% ／ 50% ／ 上限 60%・味方の雷で倒れた記録・単発と第460〜465期は今のまま）。画面なし。`--chapter1-invest-quick` は §7 の器具の通しを省く。
+        if (bootArgs.Contains("--chapter1-invest-smoke", StringComparer.Ordinal) || bootArgs.Contains("--chapter1-invest-quick", StringComparer.Ordinal))
+        {
+            bool okI;
+            try { okI = Chapter1InvestSmoke.Run(GD.Print, ProjectSettings.GlobalizePath("res://"), bots: !bootArgs.Contains("--chapter1-invest-quick", StringComparer.Ordinal)); }
+            catch (System.Exception ex) { GD.PrintErr(ex.ToString()); okI = false; }
+            GD.Print($"CHAPTER1_INVEST_SMOKE_COMPLETE ok={okI}");
+            GetTree().Quit(okI ? 0 : 1);
+            return;
+        }
         if (bootArgs.Contains("--map11-phase0", StringComparer.Ordinal))
         {
             bool p0 = Map11Verify.Phase0(GD.Print);

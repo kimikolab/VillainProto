@@ -1948,6 +1948,14 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
         # **第466期**: 写しのステージから 1 章を始める（既定は今の版・`--map-chapter-rule=snap` で写しに記録された版）。遊ぶ起動は編成画面の札「1 章（写しから）」で一覧から選ぶ。
         # 遊ぶ起動（引数なし）だけが 1 章の写しを `design/plays/<1 章の seed>/<ステージ>_start|first|end.json` に書く（写しから始めた 1 章は `<seed>_from<ステージ>_<時刻>`）。
         # 絵: `res://Map11Main.tscn -- --map-snap-picker --map11-capture=<png>`（写しの一覧の窓・読むだけで書かない）
+    Godot_console.exe --path DemoApp --headless -- --chapter1-invest-smoke
+        # **第467期**: 軸への投資の門（`Chapter1InvestSmoke.cs`・画面なし）。(a) 各ステージの始めに 10 軸から重複なしの 3 枚・同じ seed ／ やり直しでも同じ ／ (b) 選んだ軸が持ち越されて重なる（写しにも残る）
+        # ／ (c) 呼ぶ候補 1000 枚で投資の枠が 25% ／ 50% ／ 上限 60%・2 軸は回数で按分 ／ (d) 軸の駒を全部持っていれば今の引き方 ／ (e) ☆ ・強化は第465期のまま（押し方は下の絵の口）
+        # ／ (f) 写し 70307 の感電の隊 × 雷杖の部隊で「味方の雷で n 枚」（`Map11Info.DownsOf`）／ (g) 単発と第460〜465期の 1 章は投資なし
+        # ＋ §7 1 章の通し（第467期 ／ 第465期）× 2 方針 × 100 seed・4 枚以上そろった軸の数・札に燃焼が出た割合（報告のみ）。`--chapter1-invest-quick` は通しを省く
+    Godot.exe --path DemoApp --quit-after 3000 res://Map11Main.tscn -- "--map11-capture=<png>,enhance-press" --map-chapter-play=4670 --map-chapter-stop=1
+        # **第467期 §2**: 強化の後の押し方を画面の口（`OnBenchPressed` ／ `OnSquadSlot` ／ `PressEnhance`）で押して確かめる。合否は `MAP11_CAPTURE_ENHANCE_PRESS ok=`（金は絵の口だけで足す）。
+        # 投資の札の窓は `,invest`（`--map-chapter=N` なら 1-1・`--map-chapter-play=N --map-chapter-stop=K` ならステージ K）・投資の後の組み直しの窓は `,invested`
     Godot_console.exe --path DemoApp --headless -- --map11-phase176
         # **第176期 Phase 0**: Q0-1〜Q0-5（`PortalOn = false` が第175期の 18 量と一致するか ／
         # 重なりと同点の割り方 ／ 湧いた部隊を満タンで作る口 ／ 方針の手順 ／ 走行時間）。約 1 秒
