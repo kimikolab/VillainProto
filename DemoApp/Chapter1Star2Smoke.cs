@@ -63,7 +63,7 @@ public static class Chapter1Star2Smoke
         StarRule sr = StarRule.V464;
         ChapterRule rule = ChapterRule.V464;
         var ch = Chapter1.StagesFor(rule);
-        write($"  1 章の規則 {rule.Name}・☆ {sr.Name}・配り {DealRule.V464.Name}・遊ぶ 1 章 {Chapter1.Default.Name}");
+        write($"  1 章の規則 {rule.Name}・☆ {sr.Name}・配り {DealRule.V464.Name}・遊ぶ 1 章 {ChapterRule.V464.Name}");   // 第465期: 第464期の門は第464期の 1 章に固定（遊ぶ 1 章は第465期から V465）
         write($"  倍率 {string.Join(" ／ ", ch.Select(s => $"{s.Id} {(s.FoeScale.Active ? s.FoeScale.Text : "×1.0")}"))}・呼ぶ {ch[0].Gold.Recruit} 金・強化 {sr.EnhancePrice} 金・呼び戻し {ch[0].Gold.Revive} 金（1-1）");
 
         // ---- (a) 呼ぶ候補 ----
