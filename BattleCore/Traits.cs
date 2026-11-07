@@ -10708,7 +10708,9 @@ public sealed class HagiDepthTrait : Trait
     /// <summary>第402期（A・<see cref="TraitId.HagiBigSoul"/>）: その敵（倒れた ／ 線を割った）の最大 HP が <see cref="BigHp"/> 以上なら、魂の増え <paramref name="n"/> に足す分（3 倍 − 1 倍）。札が無ければ 0。ボスの名前 ／ 種類では分岐しない。</summary>
     public static int BigExtra(UnitState h, UnitState e, int n) => h.HasTrait(TraitId.HagiBigSoul) && e.MaxHp >= BigHp ? n * (BigMul - 1) : 0;
     /// <summary>第404期（L45 ／ R50 ／ R45）: 刈り取りの線（魂の段 ＋ 印）の合計の上限（‰）。札が無ければ上限なし。</summary>
-    public static int LineCapOf(UnitState h) => h.HasTrait(TraitId.HagiLineCap45) ? 450 : h.HasTrait(TraitId.HagiLineCap50) ? 500 : int.MaxValue;
+    /// 第463期: 駒の定義が上限を渡していれば（`UnitDef.ReapLineCapPermil`・1 章の☆だけ）、札の上限と小さい方。渡さなければ今のまま。
+    public static int LineCapOf(UnitState h) => Math.Min(h.Def.ReapLineCapPermil ?? int.MaxValue,
+        h.HasTrait(TraitId.HagiLineCap45) ? 450 : h.HasTrait(TraitId.HagiLineCap50) ? 500 : int.MaxValue);
     /// <summary>第401期: その敵に対する刈りの印込みの線の上限（‰）。</summary>
     public static int MarkLineMax(UnitState h) => h.HasTrait(TraitId.HagiLineLow) ? MarkLineMaxLowPermil : MarkLineMaxPermil;
     /// <summary>魂 ／ 最後に魂が動いた（敵の死 ／ 線を割った）ターン（ハギの私有キー）。</summary>

@@ -131,6 +131,12 @@ public sealed class UnitDef
     public string Flavor { get; init; } = "";
 
     /// <summary>
+    /// 刈り取りの線の上限（‰・第463期・<b>外から渡す口</b>）。<b>null なら札のとおり</b>（`HagiDepthTrait.LineCapOf`）。
+    /// 渡すのは作戦マップの 1 章の☆（DemoApp の `StarRule`・ハギの看板の数字）だけで、`BattleSim` の駒は1体も渡さない。札の上限より大きい値は効かない（小さい方）。
+    /// </summary>
+    public int? ReapLineCapPermil { get; init; }
+
+    /// <summary>
     /// 最大HPと攻撃力だけを差し替えた写し（第187期・敵の難易度のつまみ）。
     /// <b>他の全部（特性・速さ・攻撃型・行動・説明文）はそのまま写す</b>——項目を足したらここにも足すこと。
     /// </summary>
@@ -138,7 +144,7 @@ public sealed class UnitDef
     {
         Id = Id, Name = Name, MaxHp = maxHp, Attack = attack, Speed = Speed, Traits = Traits,
         Pattern = Pattern, Advances = Advances, Actions = Actions,
-        PlusText = PlusText, MinusText = MinusText, Flavor = Flavor,
+        PlusText = PlusText, MinusText = MinusText, Flavor = Flavor, ReapLineCapPermil = ReapLineCapPermil,
     };
 
     public override string ToString() => Name;
