@@ -1,0 +1,99 @@
+{
+  "format": 1,
+  "kind": "start",
+  "chapterSeed": 177004,
+  "stage": "1-1",
+  "stageIndex": 0,
+  "attempt": 0,
+  "stageSeed": 799405,
+  "rule": "V465",
+  "ruleName": "第465期（持ち越し・敵の倍率・☆の強化・勇者の回復なし）",
+  "scale": "×0.6（勇者の回復なし）",
+  "written": "2026-11-07T22:48:21",
+  "entry": false,
+  "pack": {
+    "gold": 0,
+    "squadCap": 2,
+    "relicHand": [],
+    "bench": [
+      {
+        "id": "mudo",
+        "name": "泥人形ムド",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "sid",
+        "name": "毒吐きのスィド",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "gan",
+        "name": "鬨の号令ガン",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "utsu",
+        "name": "逆しまのウツ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "doha",
+        "name": "分かちのドハ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "kubi",
+        "name": "萎縮のクビ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      }
+    ],
+    "squads": [
+      [],
+      [],
+      [],
+      []
+    ],
+    "stars": {
+      "doha": [
+        1,
+        0
+      ],
+      "gan": [
+        1,
+        0
+      ],
+      "kubi": [
+        1,
+        0
+      ],
+      "mudo": [
+        1,
+        0
+      ],
+      "sid": [
+        1,
+        0
+      ],
+      "utsu": [
+        1,
+        0
+      ]
+    }
+  },
+  "goldNow": 8,
+  "retries": 0,
+  "notes": [],
+  "estimated": []
+}
