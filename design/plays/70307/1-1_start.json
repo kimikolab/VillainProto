@@ -1,0 +1,99 @@
+{
+  "format": 1,
+  "kind": "start",
+  "chapterSeed": 70307,
+  "stage": "1-1",
+  "stageIndex": 0,
+  "attempt": 0,
+  "stageSeed": 865862,
+  "rule": "V465",
+  "ruleName": "第465期（持ち越し・敵の倍率・☆の強化・勇者の回復なし）",
+  "scale": "×0.6（勇者の回復なし）",
+  "written": "2026-11-07T22:15:40",
+  "entry": false,
+  "pack": {
+    "gold": 0,
+    "squadCap": 2,
+    "relicHand": [],
+    "bench": [
+      {
+        "id": "borg",
+        "name": "焼け残りのボルグ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "rica",
+        "name": "墓守リィカ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "mug",
+        "name": "胞子体ムグ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "tou",
+        "name": "痺れ粉のトウ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "hagi",
+        "name": "彼岸花のハギ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "som",
+        "name": "背かれのソム",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      }
+    ],
+    "squads": [
+      [],
+      [],
+      [],
+      []
+    ],
+    "stars": {
+      "borg": [
+        1,
+        0
+      ],
+      "hagi": [
+        1,
+        0
+      ],
+      "mug": [
+        1,
+        0
+      ],
+      "rica": [
+        1,
+        0
+      ],
+      "som": [
+        1,
+        0
+      ],
+      "tou": [
+        1,
+        0
+      ]
+    }
+  },
+  "goldNow": 8,
+  "retries": 0,
+  "notes": [],
+  "estimated": []
+}

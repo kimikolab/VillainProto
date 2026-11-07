@@ -1,0 +1,213 @@
+{
+  "format": 1,
+  "kind": "end",
+  "chapterSeed": 70307,
+  "stage": "1-1",
+  "stageIndex": 0,
+  "attempt": 0,
+  "stageSeed": 865862,
+  "rule": "V465",
+  "ruleName": "第465期（持ち越し・敵の倍率・☆の強化・勇者の回復なし）",
+  "scale": "×0.6（勇者の回復なし）",
+  "written": "2026-11-07T22:21:01",
+  "entry": true,
+  "pack": {
+    "gold": 12,
+    "squadCap": 2,
+    "relicHand": [],
+    "bench": [
+      {
+        "id": "borg",
+        "name": "焼け残りのボルグ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      }
+    ],
+    "squads": [
+      [
+        {
+          "id": "mug",
+          "name": "胞子体ムグ",
+          "star": 1,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "doha",
+          "name": "分かちのドハ",
+          "star": 1,
+          "pips": 0,
+          "slot": 1
+        },
+        {
+          "id": "som",
+          "name": "背かれのソム",
+          "star": 1,
+          "pips": 0,
+          "slot": 2
+        },
+        {
+          "id": "rica",
+          "name": "墓守リィカ",
+          "star": 1,
+          "pips": 0,
+          "slot": 3
+        },
+        {
+          "id": "hagi",
+          "name": "彼岸花のハギ",
+          "star": 1,
+          "pips": 0,
+          "slot": 4
+        }
+      ],
+      [
+        {
+          "id": "dolga",
+          "name": "のろまの巨兵ドルガ",
+          "star": 1,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "tou",
+          "name": "痺れ粉のトウ",
+          "star": 1,
+          "pips": 0,
+          "slot": 1
+        },
+        {
+          "id": "basa",
+          "name": "喧噪のバサ",
+          "star": 1,
+          "pips": 0,
+          "slot": 2
+        },
+        {
+          "id": "kugu",
+          "name": "縛めのクグ",
+          "star": 1,
+          "pips": 0,
+          "slot": 3
+        },
+        {
+          "id": "nomi",
+          "name": "刻みのノミ",
+          "star": 1,
+          "pips": 0,
+          "slot": 4
+        }
+      ],
+      [],
+      []
+    ],
+    "stars": {
+      "basa": [
+        1,
+        0
+      ],
+      "borg": [
+        1,
+        0
+      ],
+      "doha": [
+        1,
+        0
+      ],
+      "dolga": [
+        1,
+        0
+      ],
+      "hagi": [
+        1,
+        0
+      ],
+      "kugu": [
+        1,
+        0
+      ],
+      "mug": [
+        1,
+        0
+      ],
+      "nomi": [
+        1,
+        0
+      ],
+      "rica": [
+        1,
+        0
+      ],
+      "som": [
+        1,
+        0
+      ],
+      "tou": [
+        1,
+        0
+      ]
+    }
+  },
+  "goldNow": 12,
+  "result": "制圧（作戦ターン 6）",
+  "retries": 0,
+  "battles": [
+    {
+      "no": 1,
+      "turn": 2,
+      "squad": "第1隊",
+      "road": "北の道",
+      "foe": "1. 第二波・先遣",
+      "won": true,
+      "intercept": true,
+      "alive": 5,
+      "hp": 66.8,
+      "notes": [
+        "ターン外の行動が 2 回止められた（粛）",
+        "\u3000粛の保持者は 2 ターン目に倒れた"
+      ]
+    },
+    {
+      "no": 2,
+      "turn": 2,
+      "squad": "第1隊",
+      "road": "南の道",
+      "foe": "1. 第四波・先遣",
+      "won": true,
+      "intercept": true,
+      "alive": 5,
+      "hp": 78.6,
+      "notes": [
+        "味方の一撃が 25 で切られた: 3 回（計 88 点ぶん）（軛）",
+        "\u3000軛の保持者は 3 ターン目に倒れた"
+      ]
+    },
+    {
+      "no": 3,
+      "turn": 4,
+      "squad": "第1隊",
+      "road": "南の道",
+      "foe": "2. 第五波 / 異端審問団",
+      "won": true,
+      "intercept": false,
+      "alive": 5,
+      "hp": 96.3,
+      "notes": []
+    },
+    {
+      "no": 4,
+      "turn": 4,
+      "squad": "第2隊",
+      "road": "北の道",
+      "foe": "2. 第三波 / 討伐隊本隊",
+      "won": true,
+      "intercept": false,
+      "alive": 5,
+      "hp": 100,
+      "notes": []
+    }
+  ],
+  "notes": [],
+  "estimated": []
+}

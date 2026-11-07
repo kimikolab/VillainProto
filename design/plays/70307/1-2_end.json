@@ -1,0 +1,432 @@
+{
+  "format": 1,
+  "kind": "end",
+  "chapterSeed": 70307,
+  "stage": "1-2",
+  "stageIndex": 1,
+  "attempt": 0,
+  "stageSeed": 970591,
+  "rule": "V465",
+  "ruleName": "第465期（持ち越し・敵の倍率・☆の強化・勇者の回復なし）",
+  "scale": "×0.9（勇者の回復なし）",
+  "written": "2026-11-07T22:31:51",
+  "entry": true,
+  "pack": {
+    "gold": 56,
+    "squadCap": 4,
+    "relicHand": [
+      "Spring"
+    ],
+    "bench": [
+      {
+        "id": "yomi",
+        "name": "軋みのヨミ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "zan",
+        "name": "仇討ちのザン",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "mug",
+        "name": "胞子体ムグ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      }
+    ],
+    "squads": [
+      [
+        {
+          "id": "sero",
+          "name": "逃亡兵セロ",
+          "star": 1,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "doha",
+          "name": "分かちのドハ",
+          "star": 1,
+          "pips": 0,
+          "slot": 1
+        },
+        {
+          "id": "som",
+          "name": "背かれのソム",
+          "star": 1,
+          "pips": 0,
+          "slot": 2
+        },
+        {
+          "id": "rica",
+          "name": "墓守リィカ",
+          "star": 1,
+          "pips": 0,
+          "slot": 3
+        },
+        {
+          "id": "hagi",
+          "name": "彼岸花のハギ",
+          "star": 1,
+          "pips": 0,
+          "slot": 4
+        }
+      ],
+      [
+        {
+          "id": "basa",
+          "name": "喧噪のバサ",
+          "star": 1,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "dolga",
+          "name": "のろまの巨兵ドルガ",
+          "star": 1,
+          "pips": 0,
+          "slot": 1,
+          "relic": "RelicCreak"
+        },
+        {
+          "id": "nomi",
+          "name": "刻みのノミ",
+          "star": 1,
+          "pips": 0,
+          "slot": 2,
+          "relic": "RelicShockStep"
+        },
+        {
+          "id": "tou",
+          "name": "痺れ粉のトウ",
+          "star": 1,
+          "pips": 0,
+          "slot": 3
+        },
+        {
+          "id": "kugu",
+          "name": "縛めのクグ",
+          "star": 1,
+          "pips": 0,
+          "slot": 4
+        }
+      ],
+      [
+        {
+          "id": "hibi",
+          "name": "砕け盾のヒビ",
+          "star": 1,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "sasa",
+          "name": "錯乱のササ",
+          "star": 1,
+          "pips": 0,
+          "slot": 1
+        },
+        {
+          "id": "hisa",
+          "name": "囃し立てのヒサ",
+          "star": 1,
+          "pips": 0,
+          "slot": 2
+        },
+        {
+          "id": "tsugi",
+          "name": "継ぎ当てのツギ",
+          "star": 1,
+          "pips": 0,
+          "slot": 3
+        },
+        {
+          "id": "lili",
+          "name": "施しのリリ",
+          "star": 1,
+          "pips": 0,
+          "slot": 4
+        }
+      ],
+      [
+        {
+          "id": "borg",
+          "name": "焼け残りのボルグ",
+          "star": 1,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "sid",
+          "name": "毒吐きのスィド",
+          "star": 1,
+          "pips": 0,
+          "slot": 1
+        },
+        {
+          "id": "beni",
+          "name": "毒喰らいのベニ",
+          "star": 1,
+          "pips": 0,
+          "slot": 2
+        },
+        {
+          "id": "hiyo",
+          "name": "火選りのヒヨ",
+          "star": 1,
+          "pips": 0,
+          "slot": 3
+        },
+        {
+          "id": "chiri",
+          "name": "導火線のチリ",
+          "star": 1,
+          "pips": 0,
+          "slot": 4
+        }
+      ]
+    ],
+    "stars": {
+      "basa": [
+        1,
+        0
+      ],
+      "beni": [
+        1,
+        0
+      ],
+      "borg": [
+        1,
+        0
+      ],
+      "chiri": [
+        1,
+        0
+      ],
+      "doha": [
+        1,
+        0
+      ],
+      "dolga": [
+        1,
+        0
+      ],
+      "hagi": [
+        1,
+        0
+      ],
+      "hibi": [
+        1,
+        0
+      ],
+      "hisa": [
+        1,
+        0
+      ],
+      "hiyo": [
+        1,
+        0
+      ],
+      "kugu": [
+        1,
+        0
+      ],
+      "lili": [
+        1,
+        0
+      ],
+      "mug": [
+        1,
+        0
+      ],
+      "nomi": [
+        1,
+        0
+      ],
+      "rica": [
+        1,
+        0
+      ],
+      "sasa": [
+        1,
+        0
+      ],
+      "sero": [
+        1,
+        0
+      ],
+      "sid": [
+        1,
+        0
+      ],
+      "som": [
+        1,
+        0
+      ],
+      "tou": [
+        1,
+        0
+      ],
+      "tsugi": [
+        1,
+        0
+      ],
+      "yomi": [
+        1,
+        0
+      ],
+      "zan": [
+        1,
+        0
+      ]
+    }
+  },
+  "goldNow": 56,
+  "result": "制圧（作戦ターン 7）",
+  "retries": 0,
+  "battles": [
+    {
+      "no": 1,
+      "turn": 1,
+      "squad": "第1隊",
+      "road": "北の道",
+      "foe": "1. 弓隊",
+      "won": true,
+      "intercept": false,
+      "alive": 5,
+      "hp": 100,
+      "notes": []
+    },
+    {
+      "no": 2,
+      "turn": 1,
+      "squad": "第2隊",
+      "road": "南の道",
+      "foe": "1. 盾の列",
+      "won": true,
+      "intercept": false,
+      "alive": 5,
+      "hp": 100,
+      "notes": []
+    },
+    {
+      "no": 3,
+      "turn": 2,
+      "squad": "第1隊",
+      "road": "北の道",
+      "foe": "2. 第二波・先遣",
+      "won": true,
+      "intercept": false,
+      "alive": 3,
+      "hp": 89.4,
+      "notes": [
+        "ターン外の行動が 9 回止められた（粛）",
+        "\u3000粛の保持者は 3 ターン目に倒れた"
+      ]
+    },
+    {
+      "no": 4,
+      "turn": 2,
+      "squad": "第2隊",
+      "road": "南の道",
+      "foe": "2. 毒霧の部隊",
+      "won": true,
+      "intercept": false,
+      "alive": 5,
+      "hp": 100,
+      "notes": []
+    },
+    {
+      "no": 5,
+      "turn": 3,
+      "squad": "第3隊",
+      "road": "中の道",
+      "foe": "1. 第一波 / 物見の兵",
+      "won": true,
+      "intercept": true,
+      "alive": 4,
+      "hp": 71.1,
+      "notes": []
+    },
+    {
+      "no": 6,
+      "turn": 4,
+      "squad": "第1隊",
+      "road": "北の道",
+      "foe": "4. 徴募兵",
+      "won": true,
+      "intercept": false,
+      "alive": 5,
+      "hp": 100,
+      "notes": []
+    },
+    {
+      "no": 7,
+      "turn": 5,
+      "squad": "第4隊",
+      "road": "中の道",
+      "foe": "2. 火の魔術師の部隊",
+      "won": true,
+      "intercept": false,
+      "alive": 5,
+      "hp": 100,
+      "notes": []
+    },
+    {
+      "no": 8,
+      "turn": 5,
+      "squad": "第4隊",
+      "road": "中の道",
+      "foe": "4. 騎士の小隊",
+      "won": true,
+      "intercept": false,
+      "alive": 5,
+      "hp": 100,
+      "notes": []
+    },
+    {
+      "no": 9,
+      "turn": 7,
+      "squad": "第4隊",
+      "road": "中の道",
+      "foe": "3. 本陣の守り",
+      "won": true,
+      "intercept": false,
+      "alive": 5,
+      "hp": 100,
+      "notes": []
+    },
+    {
+      "no": 10,
+      "turn": 7,
+      "squad": "第4隊",
+      "road": "中の道",
+      "foe": "4. 勇者",
+      "won": true,
+      "intercept": false,
+      "alive": 5,
+      "hp": 100,
+      "notes": []
+    },
+    {
+      "no": 11,
+      "turn": 7,
+      "squad": "第4隊",
+      "road": "中の道",
+      "foe": "4. 第一波 / 物見の兵",
+      "won": true,
+      "intercept": false,
+      "alive": 5,
+      "hp": 97.3,
+      "notes": []
+    }
+  ],
+  "notes": [],
+  "estimated": []
+}

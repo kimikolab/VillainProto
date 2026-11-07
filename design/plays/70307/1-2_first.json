@@ -1,0 +1,203 @@
+{
+  "format": 1,
+  "kind": "first",
+  "chapterSeed": 70307,
+  "stage": "1-2",
+  "stageIndex": 1,
+  "attempt": 0,
+  "stageSeed": 970591,
+  "rule": "V465",
+  "ruleName": "第465期（持ち越し・敵の倍率・☆の強化・勇者の回復なし）",
+  "scale": "×0.9（勇者の回復なし）",
+  "written": "2026-11-07T22:22:58",
+  "entry": true,
+  "pack": {
+    "gold": -8,
+    "squadCap": 3,
+    "relicHand": [],
+    "bench": [
+      {
+        "id": "borg",
+        "name": "焼け残りのボルグ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      }
+    ],
+    "squads": [
+      [
+        {
+          "id": "mug",
+          "name": "胞子体ムグ",
+          "star": 1,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "doha",
+          "name": "分かちのドハ",
+          "star": 1,
+          "pips": 0,
+          "slot": 1
+        },
+        {
+          "id": "som",
+          "name": "背かれのソム",
+          "star": 1,
+          "pips": 0,
+          "slot": 2
+        },
+        {
+          "id": "rica",
+          "name": "墓守リィカ",
+          "star": 1,
+          "pips": 0,
+          "slot": 3
+        },
+        {
+          "id": "hagi",
+          "name": "彼岸花のハギ",
+          "star": 1,
+          "pips": 0,
+          "slot": 4
+        }
+      ],
+      [
+        {
+          "id": "dolga",
+          "name": "のろまの巨兵ドルガ",
+          "star": 1,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "tou",
+          "name": "痺れ粉のトウ",
+          "star": 1,
+          "pips": 0,
+          "slot": 1
+        },
+        {
+          "id": "basa",
+          "name": "喧噪のバサ",
+          "star": 1,
+          "pips": 0,
+          "slot": 2
+        },
+        {
+          "id": "kugu",
+          "name": "縛めのクグ",
+          "star": 1,
+          "pips": 0,
+          "slot": 3
+        },
+        {
+          "id": "nomi",
+          "name": "刻みのノミ",
+          "star": 1,
+          "pips": 0,
+          "slot": 4
+        }
+      ],
+      [
+        {
+          "id": "hibi",
+          "name": "砕け盾のヒビ",
+          "star": 1,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "sasa",
+          "name": "錯乱のササ",
+          "star": 1,
+          "pips": 0,
+          "slot": 1
+        },
+        {
+          "id": "tsugi",
+          "name": "継ぎ当てのツギ",
+          "star": 1,
+          "pips": 0,
+          "slot": 2
+        },
+        {
+          "id": "yomi",
+          "name": "軋みのヨミ",
+          "star": 1,
+          "pips": 0,
+          "slot": 3
+        }
+      ],
+      []
+    ],
+    "stars": {
+      "basa": [
+        1,
+        0
+      ],
+      "borg": [
+        1,
+        0
+      ],
+      "doha": [
+        1,
+        0
+      ],
+      "dolga": [
+        1,
+        0
+      ],
+      "hagi": [
+        1,
+        0
+      ],
+      "hibi": [
+        1,
+        0
+      ],
+      "kugu": [
+        1,
+        0
+      ],
+      "mug": [
+        1,
+        0
+      ],
+      "nomi": [
+        1,
+        0
+      ],
+      "rica": [
+        1,
+        0
+      ],
+      "sasa": [
+        1,
+        0
+      ],
+      "som": [
+        1,
+        0
+      ],
+      "tou": [
+        1,
+        0
+      ],
+      "tsugi": [
+        1,
+        0
+      ],
+      "yomi": [
+        1,
+        0
+      ]
+    }
+  },
+  "goldNow": 0,
+  "retries": 0,
+  "notes": [
+    "最初の作戦ターンの直前の写し（組み直しの窓で呼んだ駒・並べ替えを含む）。金は「このステージの始めの金を足す前」に直してある"
+  ],
+  "estimated": []
+}
