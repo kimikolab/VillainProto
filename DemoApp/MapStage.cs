@@ -929,10 +929,11 @@ public readonly record struct RelicRule(bool On, int Offers, bool Bridge = false
 /// <para>engine の倍率（<see cref="EnemyScaleRule"/>・切り捨て）は使わない——指示書が四捨五入を指定していて、小さい攻撃（6 × 1.3 ＝ 7.8）で 1 点ずれるため。
 /// engine の倍率が持つ「敵が呼んだ召喚に同じ倍率」の枝は、いまの敵に敵陣へ駒を呼ぶ敵が 0 体なので（`BattleContext.Summon` の注）、この写しでは要らない。</para>
 /// </summary>
-public readonly record struct MapFoeScale(int FoePercent, int HeroPercent)
+/// 第465期: <c>HeroMends</c> が偽なら勇者は毎手番の固定回復の札（<see cref="TraitId.BossMend300"/>）を持たない（1 章の `ChapterRule.V465`）。真が第464期まで。
+public readonly record struct MapFoeScale(int FoePercent, int HeroPercent, bool HeroMends = true)
 {
     public static readonly MapFoeScale None = new(100, 100);
-    public bool Active => FoePercent != 100 || HeroPercent != 100;
+    public bool Active => FoePercent != 100 || HeroPercent != 100 || !HeroMends;
 
     /// <summary>四捨五入で倍率を掛ける（下限 1）。</summary>
     public static int Mul(int x, int percent) => Math.Max(1, (int)Math.Round(x * (double)percent / 100, MidpointRounding.AwayFromZero));
@@ -945,20 +946,25 @@ public readonly record struct MapFoeScale(int FoePercent, int HeroPercent)
     /// <summary>作戦の画面の上の帯（第462期 §1-3・1.0 なら空）。</summary>
     public string BarText => Active ? $"敵 {Text}" : "";
 
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(UnitDef, int, bool), UnitDef> _defs = new();
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(UnitDef, int, bool, bool), UnitDef> _defs = new();
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<(Formation, int), Formation> _forms = new();
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<(TraitId, int), BossMendTrait> _mends = new();
 
-    private static UnitDef Apply(UnitDef d, int percent, bool hero) => percent == 100 ? d : _defs.GetOrAdd((d, percent, hero), static k =>
+    private static UnitDef Apply(UnitDef d, int percent, bool hero, bool mends = true)
+        => percent == 100 && (mends || !hero || !d.Traits.Contains(TraitId.BossMend300)) ? d : _defs.GetOrAdd((d, percent, hero, mends), static k =>
     {
-        (UnitDef src, int p, bool isHero) = k;
+        (UnitDef src, int p, bool isHero, bool keepMend) = k;
         // 項目は `UnitDef.WithStats` と同じ並び（足したらここにも足す）。勇者だけ説明文の固定回復の数を掛けた後の値に替える。
         int mend = Mul(BossMendTrait.Fixed300, p);
+        // 第465期: 回復の無い勇者は札（BossMend300）を外し、説明文の「ターン頭に 300 癒える。」の文を消す（ほかの札・文はそのまま）。
+        bool drop = isHero && !keepMend && src.Traits.Contains(TraitId.BossMend300);
         return new UnitDef
         {
-            Id = src.Id, Name = src.Name, MaxHp = Mul(src.MaxHp, p), Attack = Mul(src.Attack, p), Speed = src.Speed, Traits = src.Traits,
+            Id = src.Id, Name = src.Name, MaxHp = Mul(src.MaxHp, p), Attack = Mul(src.Attack, p), Speed = src.Speed,
+            Traits = drop ? src.Traits.Where(t => t != TraitId.BossMend300).ToArray() : src.Traits,
             Pattern = src.Pattern, Advances = src.Advances, Actions = src.Actions,
-            PlusText = isHero && src.Traits.Contains(TraitId.BossMend300) ? src.PlusText.Replace($"{BossMendTrait.Fixed300} 癒える", $"{mend} 癒える") : src.PlusText,
+            PlusText = drop ? src.PlusText.Replace($"ターン頭に {BossMendTrait.Fixed300} 癒える。", "")
+                     : isHero && src.Traits.Contains(TraitId.BossMend300) ? src.PlusText.Replace($"{BossMendTrait.Fixed300} 癒える", $"{mend} 癒える") : src.PlusText,
             MinusText = src.MinusText, Flavor = src.Flavor,
         };
     });
@@ -966,7 +972,7 @@ public readonly record struct MapFoeScale(int FoePercent, int HeroPercent)
     /// <summary>勇者以外の敵の駒の定義に掛けた写し（同じ定義・同じ倍率には同じインスタンス）。</summary>
     public UnitDef Foe(UnitDef d) => Apply(d, FoePercent, false);
     /// <summary>勇者の定義に掛けた写し（説明文の「300 癒える」も掛けた後の値）。</summary>
-    public UnitDef HeroDef(UnitDef d) => Apply(d, HeroPercent, true);
+    public UnitDef HeroDef(UnitDef d) => Apply(d, HeroPercent, true, HeroMends);
 
     /// <summary>敵の部隊（編成）の写し（陣形・枠はそのまま・駒だけ掛ける・同じ編成には同じインスタンス）。</summary>
     public Formation Foe(Formation f)

@@ -45,6 +45,14 @@ public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList
     public static readonly ChapterRule V464 = new(true, "第464期（持ち越し・敵の倍率・☆の強化）",
         new MapFoeScale[] { new(FoePercent: 60, HeroPercent: 60), new(FoePercent: 90, HeroPercent: 90), new(FoePercent: 130, HeroPercent: 130) }, StarRule.V464, DealRule.V464);
 
+    /// <summary>
+    /// 第465期の 1 章（指示書 design/PHASE465_HERO_NOMEND_SPEC.md §1）。第464期に、<b>勇者（1-2 の門番・1-3 の追う勇者）から毎手番の固定回復を外す</b>
+    /// （`MapFoeScale.HeroMends = false`・札 `BossMend300` を持たない・HP は持ち越すので隊を順に当てて削れる）。
+    /// ☆・強化・1-1 の配り・持ち越しは第464期のまま。
+    /// </summary>
+    public static readonly ChapterRule V465 = new(true, "第465期（持ち越し・敵の倍率・☆の強化・勇者の回復なし）",
+        new MapFoeScale[] { new(60, 60, HeroMends: false), new(90, 90, HeroMends: false), new(130, 130, HeroMends: false) }, StarRule.V464, DealRule.V464);
+
     /// <summary>ステージ <paramref name="index"/>（0 ＝ 1-1）の敵の倍率。</summary>
     public MapFoeScale ScaleOf(int index) => Scales is { } s && index < s.Count ? s[index] : MapFoeScale.None;
 }
@@ -52,7 +60,7 @@ public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList
 public static class Chapter1
 {
     /// <summary>遊ぶ 1 章の規則（編成画面の札「1 章」・絵の口が始める版）。</summary>
-    public static ChapterRule Default => ChapterRule.V464;   // 第461期から持ち越しのある 1 章・第462期から敵の倍率・第463期から☆の重ね・第464期から☆は強化で
+    public static ChapterRule Default => ChapterRule.V465;   // 第461期から持ち越しのある 1 章・第462期から敵の倍率・第463期から☆の重ね・第464期から☆は強化で・第465期から勇者の回復なし
     /// <summary>いまの 1 章の規則（<see cref="Begin"/> が決める）。</summary>
     public static ChapterRule Rule { get; private set; } = Default;
 
