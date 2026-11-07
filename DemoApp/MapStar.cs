@@ -33,6 +33,13 @@ public sealed class StarRule
     public required IReadOnlyList<int> Need { get; init; }
     /// <summary>看板の数字（キャラの <c>Id</c> → 札）。</summary>
     public IReadOnlyDictionary<string, StarSign> Signs { get; init; } = new Dictionary<string, StarSign>();
+    /// <summary>
+    /// 第464期: 「強化」の値段（持っている駒に金で 1 枚重ねる）。<b>0 なら第463期の重ね</b>——呼ぶ候補に持っている駒が出て、呼ぶと重なる。
+    /// 正なら呼ぶ候補は持っていないキャラだけ（第462期の作り）で、重ねは「強化」だけ（指示書 design/PHASE464_STAR_DIRECT_SPEC.md §1-1）。
+    /// </summary>
+    public int EnhancePrice { get; init; }
+    /// <summary>重ねを呼ぶ候補で配るか（第463期の作り・<see cref="EnhancePrice"/> が 0）。</summary>
+    public bool StackOffers => On && EnhancePrice <= 0;
 
     /// <summary>☆の上限（☆3）。</summary>
     public int Max => Percent.Count - 1;
@@ -50,6 +57,20 @@ public sealed class StarRule
         {
             [UnitCatalog.Hagi.Id] = new("刈り取りの線の上限", new int?[] { null, 250, 350, null }),
         },
+    };
+
+    /// <summary>
+    /// 第464期の値: ☆の表・看板の数字は第463期のまま（☆1 ×0.6 ・☆2 ×0.8 ・☆3 ×1.0 ／ 2 枚・3 枚 ／ ハギ 25% ・35%）。
+    /// 重ねは<b>「強化」で 1 枚 4 金</b>（呼ぶと同じ値・☆3 まで 5 枚 ＝ 20 金）。呼ぶ候補に持っている駒は出ない。
+    /// </summary>
+    public static readonly StarRule V464 = new()
+    {
+        On = true,
+        Name = "第464期（☆1 ×0.6 ・☆2 ×0.8 ・☆3 ×1.0 ／ 2 枚・3 枚 ／ 強化 1 枚 4 金）",
+        Percent = V463.Percent,
+        Need = V463.Need,
+        Signs = V463.Signs,
+        EnhancePrice = 4,
     };
 
     /// <summary>☆<paramref name="star"/> の、次の☆へ要る枚数（☆の上限なら 0）。</summary>

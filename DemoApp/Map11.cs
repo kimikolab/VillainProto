@@ -1098,7 +1098,7 @@ public sealed class Map11State
         while (_offerQueue.Count > 0)
         {
             UnitDef d = _offerQueue.Dequeue();
-            if ((!OnBoardOrHand(d) || Stackable(d)) && Offers.All(o => o.Id != d.Id)) return d;   // 第463期: ☆のあるステージでは持っている駒も（☆3 は出さない）
+            if ((!OnBoardOrHand(d) || (Stage.Stars.StackOffers && Stackable(d))) && Offers.All(o => o.Id != d.Id)) return d;   // 第463期: ☆のあるステージでは持っている駒も（☆3 は出さない）・第464期の強化の盤では持っていない駒だけ
         }
         return null;
     }
@@ -1118,13 +1118,14 @@ public sealed class Map11State
         if (FreePicks > 0) FreePicks--;
         else Spend(Stage.Gold.Recruit, $"{d.Name}を呼んだ");
         // 第463期 §1-3: ☆のあるステージでは、持っている駒と同じキャラは<b>すぐに持っている駒へ重なる</b>（手札に 2 体目は来ない・倒れた駒にも重なる）。
-        if (Stackable(d) && OwnedUnit(d.Id) is { } owned) StackOnto(owned);
+        if (Stage.Stars.StackOffers && Stackable(d) && OwnedUnit(d.Id) is { } owned) StackOnto(owned);
         else Bench.Add(Stage.Stars.On ? Star1(d) : One(d));
         Recruits++;
         Offers.RemoveAt(offer);
         if ((offer == 0 ? FirstOffer() : NextOffer()) is { } next) { Offers.Insert(offer, next); NoteOffer(next); }
         // 第463期: 呼んだキャラは☆3 になるまで列の最後へ戻す（列は全キャラを同じ重みで 1 周する）。
-        if (Stage.Stars.On && StarOf(d.Id).Star < Stage.Stars.Max) _offerQueue.Enqueue(Stage.Stars.BaseOf(d));
+        // 第464期の強化の盤では戻さない——呼んだキャラは列から外れる（第462期まで・重ねは「強化」で）。
+        if (Stage.Stars.StackOffers && StarOf(d.Id).Star < Stage.Stars.Max) _offerQueue.Enqueue(Stage.Stars.BaseOf(d));
         return true;
     }
 
@@ -1220,9 +1221,9 @@ public sealed class Map11State
     /// <summary>札の上の☆（「☆1（1／2）」・☆の無いステージは空）。</summary>
     public string StarText(UnitDef d) => Stage.Stars.On ? Stage.Stars.Text(StarOf(d.Id)) : "";
     /// <summary>呼ぶ候補の☆（重ねの札は「重ねる ☆1→（1／2）」・新しいキャラは「☆1」・☆の無いステージは空）。</summary>
-    public string OfferStarText(UnitDef d) => !Stage.Stars.On ? "" : Stackable(d) ? Stage.Stars.StackText(StarOf(d.Id)) : "☆1";
+    public string OfferStarText(UnitDef d) => !Stage.Stars.On ? "" : Stage.Stars.StackOffers && Stackable(d) ? Stage.Stars.StackText(StarOf(d.Id)) : "☆1";
     /// <summary>呼んだ後のその駒の定義（☆の写し・画面の候補の札の数値）。☆の無いステージは候補の定義そのもの。</summary>
-    public UnitDef OfferDef(UnitDef d) => !Stage.Stars.On ? d : Stage.Stars.Def(d, Stackable(d) ? Stage.Stars.Add(StarOf(d.Id)).Star : 1);
+    public UnitDef OfferDef(UnitDef d) => !Stage.Stars.On ? d : Stage.Stars.Def(d, Stage.Stars.StackOffers && Stackable(d) ? Stage.Stars.Add(StarOf(d.Id)).Star : 1);
     /// <summary>手放したときの金（☆のあるステージは ＋2 × 重ねた枚数）。</summary>
     public int SellPrice(UnitState u) => Stage.Gold.Sell * (Stage.Stars.On ? Stage.Stars.Copies(StarOf(u.Def.Id)) : 1);
 
@@ -1244,6 +1245,50 @@ public sealed class Map11State
     /// <summary>候補に 1 枚足す（重ねの札だったかを数える）。</summary>
     private void AddOffer(UnitDef d) { Offers.Add(d); NoteOffer(d); }
     private void NoteOffer(UnitDef d) { OffersShown++; if (Stackable(d)) StackOffersShown++; }
+
+    // ---------------- 強化（第464期 §1-1・金で直に 1 枚重ねる） ----------------
+
+    /// <summary>強化した回数（測るためだけ）。</summary>
+    public int Enhances { get; private set; }
+
+    /// <summary>
+    /// その駒を強化できない理由（1 行・強化できれば null）。<b>強化できる場所は呼べる場所と同じ</b>——隊の駒はその隊を組み直せるとき（拠点・取っている中間拠点）、
+    /// 手札と倒れた駒は金を動かせるとき（<see cref="CanTrade"/>）。倒れた駒も強化できる（倒れたまま☆が上がる）。☆3 と、強化の無い盤では出さない。
+    /// </summary>
+    public string? EnhanceBlock(UnitState? u)
+    {
+        if (u is null || !Stage.Stars.On || Stage.Stars.EnhancePrice <= 0) return "強化の無い盤";
+        if (!Stars.TryGetValue(u.Def.Id, out StarState s) || !ReferenceEquals(OwnedUnit(u.Def.Id), u)) return "持っている駒ではない";
+        if (s.Star >= Stage.Stars.Max) return $"☆{Stage.Stars.Max} は強化できない";
+        if (Squads.FirstOrDefault(q => q.Units is { } us && us.Contains(u)) is { } sq && !CanReform(sq.Index))
+            return $"{sq.Label} は道の上（強化は拠点・取っている中間拠点で）";
+        if (!CanTrade) return "いまは金を使えない（拠点・取っている中間拠点に隊がいない）";
+        if (Gold < Stage.Stars.EnhancePrice) return "金が足りない";
+        return null;
+    }
+
+    public bool CanEnhance(UnitState? u) => EnhanceBlock(u) is null;
+
+    /// <summary>強化の値段と、強化した後の☆の文（「強化 4 金（☆1 → 1／2）」・☆が上がる 1 枚は「強化 4 金（☆1（1／2）→ ☆2）」）。</summary>
+    public string EnhanceText(UnitDef d)
+    {
+        StarState s = StarOf(d.Id), a = Stage.Stars.Add(s);
+        string to = a.Star > s.Star ? $"☆{s.Star}{(s.Pips > 0 ? $"（{s.Pips}／{Stage.Stars.NeedAt(s.Star)}）" : "")} → ☆{a.Star}" : $"☆{s.Star} → {a.Pips}／{Stage.Stars.NeedAt(s.Star)}";
+        return $"強化 {Stage.Stars.EnhancePrice} 金（{to}）";
+    }
+
+    /// <summary>
+    /// 強化する（第464期 §1-1）。金を <see cref="StarRule.EnhancePrice"/> 払い、持っている駒に同じキャラを 1 枚重ねる（第463期の重ね方のまま・☆が上がれば HP は割合を保つ）。
+    /// 返すのは強化した後の駒（☆が上がれば写しに置き換わる・強化できなければ null）。
+    /// </summary>
+    public UnitState? Enhance(UnitState u)
+    {
+        if (!CanEnhance(u)) return null;
+        Spend(Stage.Stars.EnhancePrice, $"{u.Def.Name}を強化した");
+        Enhances++;
+        StackOnto(u);
+        return OwnedUnit(u.Def.Id);
+    }
 
     /// <summary>
     /// 持っている駒に 1 枚重ねる（第463期 §1-3）。☆が上がれば定義を☆の写しに替えた駒に置き換える——<b>今の HP は割合を保つ</b>（満タンなら満タン・倒れた駒は倒れたまま）。
