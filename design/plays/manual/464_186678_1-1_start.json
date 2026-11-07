@@ -1,0 +1,130 @@
+{
+  "format": 1,
+  "kind": "start",
+  "chapterSeed": 186678,
+  "stage": "1-1",
+  "stageIndex": 0,
+  "attempt": 0,
+  "stageSeed": 407811,
+  "rule": "V464",
+  "ruleName": "第464期（持ち越し・敵の倍率・☆の強化）",
+  "scale": "×0.6",
+  "written": "2026-11-07T00:00:00",
+  "entry": true,
+  "pack": {
+    "gold": 0,
+    "squadCap": 2,
+    "relicHand": [],
+    "bench": [],
+    "squads": [
+      [
+        {
+          "id": "shiga",
+          "name": "電気鞭のシガ",
+          "star": 1,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "kugu",
+          "name": "縛めのクグ",
+          "star": 1,
+          "pips": 0,
+          "slot": 1
+        },
+        {
+          "id": "tsugi",
+          "name": "継ぎ当てのツギ",
+          "star": 1,
+          "pips": 0,
+          "slot": 2
+        },
+        {
+          "id": "tou",
+          "name": "痺れ粉のトウ",
+          "star": 1,
+          "pips": 0,
+          "slot": 3
+        },
+        {
+          "id": "beni",
+          "name": "毒喰らいのベニ",
+          "star": 1,
+          "pips": 0,
+          "slot": 4
+        }
+      ],
+      [
+        {
+          "id": "dolga",
+          "name": "のろまの巨兵ドルガ",
+          "star": 1,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "ban",
+          "name": "据えのバン",
+          "star": 1,
+          "pips": 0,
+          "slot": 1
+        },
+        {
+          "id": "gan",
+          "name": "鬨の号令ガン",
+          "star": 1,
+          "pips": 0,
+          "slot": 3
+        }
+      ],
+      [],
+      []
+    ],
+    "stars": {
+      "ban": [
+        1,
+        0
+      ],
+      "beni": [
+        1,
+        0
+      ],
+      "dolga": [
+        1,
+        0
+      ],
+      "gan": [
+        1,
+        0
+      ],
+      "kugu": [
+        1,
+        0
+      ],
+      "shiga": [
+        1,
+        0
+      ],
+      "tou": [
+        1,
+        0
+      ],
+      "tsugi": [
+        1,
+        0
+      ]
+    }
+  },
+  "goldNow": 8,
+  "retries": 0,
+  "notes": [
+    "第464期の観察ログ（design/PHASE464_WATCH_LOG.md）の「開始時の編成」（最初の作戦ターンの直前）から手で写した（第466期）",
+    "配られた 6 枚に感電のシガ・クグ・トウ（軸の保証の 3 枚）・呼んだ 5 枚"
+  ],
+  "estimated": [
+    "☆は観察ログに書かれていない——全員☆1 とした",
+    "金は 1-1 の始めの 8 のまま（組み直しの窓で使った分は記録が無い）",
+    "レリックの手持ちは記録が無い（空とした）",
+    "手札は記録が無い（空）"
+  ]
+}

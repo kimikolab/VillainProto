@@ -1,0 +1,146 @@
+{
+  "format": 1,
+  "kind": "start",
+  "chapterSeed": 21323,
+  "stage": "1-2",
+  "stageIndex": 1,
+  "attempt": 0,
+  "stageSeed": 66295,
+  "rule": "V461",
+  "ruleName": "第461期（持ち越し）",
+  "scale": "×1.0",
+  "written": "2026-11-07T00:00:00",
+  "entry": true,
+  "pack": {
+    "gold": 8,
+    "squadCap": 2,
+    "relicHand": [],
+    "bench": [
+      {
+        "id": "zoto",
+        "name": "爆ぜるゾト",
+        "star": 3,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "mug",
+        "name": "胞子体ムグ",
+        "star": 3,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "kata",
+        "name": "禍導のカタ",
+        "star": 3,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "utsu",
+        "name": "逆しまのウツ",
+        "star": 3,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "som",
+        "name": "背かれのソム",
+        "star": 3,
+        "pips": 0,
+        "slot": -1
+      }
+    ],
+    "squads": [
+      [
+        {
+          "id": "hagi",
+          "name": "彼岸花のハギ",
+          "star": 3,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "hane",
+          "name": "突き返しのハネ",
+          "star": 3,
+          "pips": 0,
+          "slot": 1
+        },
+        {
+          "id": "golm",
+          "name": "大喰らいゴルム",
+          "star": 3,
+          "pips": 0,
+          "slot": 2
+        },
+        {
+          "id": "dolga",
+          "name": "のろまの巨兵ドルガ",
+          "star": 3,
+          "pips": 0,
+          "slot": 3
+        },
+        {
+          "id": "lili",
+          "name": "施しのリリ",
+          "star": 3,
+          "pips": 0,
+          "slot": 4
+        }
+      ],
+      [
+        {
+          "id": "hibi",
+          "name": "砕け盾のヒビ",
+          "star": 3,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "sekki",
+          "name": "人呑みのセッキ",
+          "star": 3,
+          "pips": 0,
+          "slot": 1
+        },
+        {
+          "id": "tsugi",
+          "name": "継ぎ当てのツギ",
+          "star": 3,
+          "pips": 0,
+          "slot": 2
+        },
+        {
+          "id": "nomi",
+          "name": "刻みのノミ",
+          "star": 3,
+          "pips": 0,
+          "slot": 3
+        },
+        {
+          "id": "gan",
+          "name": "鬨の号令ガン",
+          "star": 3,
+          "pips": 0,
+          "slot": 4
+        }
+      ],
+      [],
+      []
+    ]
+  },
+  "goldNow": 16,
+  "retries": 0,
+  "notes": [
+    "第461期の観察ログ（design/PHASE461_WATCH_LOG.md）の「開始時の編成」（最初の作戦ターンの直前）から手で写した（第466期）",
+    "レリック（◆火付けの矢のノミ・◆軋む足のハギ）は 1-2 の途中で持たせたので、この写しには付けていない"
+  ],
+  "estimated": [
+    "第461・462期は☆が無かった——全員☆3（今の強さ）として写した",
+    "金は前のステージの終わりの余り（結果画面の数から組み立てた）。編成は組み直しの窓の後なので、窓で使った金のぶん実際より多い（1-1: 8 ＋ 24 − 24 ＝ 8）",
+    "レリックの手持ちは記録が無い（空とした）",
+    "隊の枠は使っていた 2 とした"
+  ]
+}

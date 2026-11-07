@@ -1,0 +1,130 @@
+{
+  "format": 1,
+  "kind": "start",
+  "chapterSeed": 653552,
+  "stage": "1-1",
+  "stageIndex": 0,
+  "attempt": 1,
+  "stageSeed": 915430,
+  "rule": "V463",
+  "ruleName": "第463期（持ち越し・敵の倍率・☆の重ね）",
+  "scale": "×0.6",
+  "written": "2026-11-07T00:00:00",
+  "entry": true,
+  "pack": {
+    "gold": 0,
+    "squadCap": 2,
+    "relicHand": [],
+    "bench": [
+      {
+        "id": "nel",
+        "name": "呪詛官ネル",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "rica",
+        "name": "墓守リィカ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "hisa",
+        "name": "囃し立てのヒサ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      }
+    ],
+    "squads": [
+      [
+        {
+          "id": "hane",
+          "name": "突き返しのハネ",
+          "star": 1,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "gald",
+          "name": "廃棄聖騎士ガルド",
+          "star": 1,
+          "pips": 0,
+          "slot": 1
+        },
+        {
+          "id": "lili",
+          "name": "施しのリリ",
+          "star": 1,
+          "pips": 0,
+          "slot": 2
+        },
+        {
+          "id": "yomi",
+          "name": "軋みのヨミ",
+          "star": 1,
+          "pips": 0,
+          "slot": 3
+        },
+        {
+          "id": "utsu",
+          "name": "逆しまのウツ",
+          "star": 1,
+          "pips": 0,
+          "slot": 4
+        }
+      ],
+      [],
+      [],
+      []
+    ],
+    "stars": {
+      "gald": [
+        1,
+        0
+      ],
+      "hane": [
+        1,
+        0
+      ],
+      "hisa": [
+        1,
+        0
+      ],
+      "lili": [
+        1,
+        0
+      ],
+      "nel": [
+        1,
+        0
+      ],
+      "rica": [
+        1,
+        0
+      ],
+      "utsu": [
+        1,
+        0
+      ],
+      "yomi": [
+        1,
+        0
+      ]
+    }
+  },
+  "goldNow": 8,
+  "retries": 1,
+  "notes": [
+    "第463期の観察ログ（design/PHASE463_WATCH_LOG.md）の「開始時の編成」（最初の作戦ターンの直前）から手で写した（第466期）",
+    "1-1 のやり直し後の 2 回目の配り（配り 2 回目）"
+  ],
+  "estimated": [
+    "☆は観察ログのとおり全員☆1（☆2 の駒は 1 枚も無かった）",
+    "金は 1-1 の始めの 8 のまま（組み直しの窓で使った分は記録が無い）",
+    "レリックの手持ちは記録が無い（空とした）",
+    "隊の枠は 2（1-1 の始め）"
+  ]
+}
