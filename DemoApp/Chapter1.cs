@@ -18,7 +18,7 @@ using System.Linq;
 /// 第462期: <c>Scales</c> はステージごとの敵の数値の倍率（1-1 ／ 1-2 ／ 1-3・null ならすべて ×1.0）。
 /// 第463期: <c>Stars</c> は☆の規則（null なら☆なし・<see cref="StarRule"/>）。
 /// </summary>
-public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList<MapFoeScale>? Scales = null, StarRule? Stars = null)
+public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList<MapFoeScale>? Scales = null, StarRule? Stars = null, DealRule? Deal = null)
 {
     /// <summary>第460期の 1 章（持ち越し無し）。`--chapter1-smoke` はこれで回す。</summary>
     public static readonly ChapterRule V460 = new(false, "第460期（持ち越し無し）");
@@ -43,7 +43,7 @@ public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList
     /// 敵の倍率は §1-2: <b>1-2 ×0.9 ・1-3 ×1.3</b>（第462期の比 1.3 ／ 1.6 を、☆の育ちの見込み（1-2 の始めは☆1 中心・1-3 の始めは☆2 中心）で割り戻した値）・1-1 ×0.6 は第463期のまま・勇者の列も同じ値。
     /// </summary>
     public static readonly ChapterRule V464 = new(true, "第464期（持ち越し・敵の倍率・☆の強化）",
-        new MapFoeScale[] { new(FoePercent: 60, HeroPercent: 60), new(FoePercent: 90, HeroPercent: 90), new(FoePercent: 130, HeroPercent: 130) }, StarRule.V464);
+        new MapFoeScale[] { new(FoePercent: 60, HeroPercent: 60), new(FoePercent: 90, HeroPercent: 90), new(FoePercent: 130, HeroPercent: 130) }, StarRule.V464, DealRule.V464);
 
     /// <summary>ステージ <paramref name="index"/>（0 ＝ 1-1）の敵の倍率。</summary>
     public MapFoeScale ScaleOf(int index) => Scales is { } s && index < s.Count ? s[index] : MapFoeScale.None;
@@ -61,7 +61,8 @@ public static class Chapter1
     /// 第462期: 倍率のある 1 章は、各ステージの敵に倍率を掛けた写し（<see cref="MapStage.Scaled"/>・同じ倍率なら同じインスタンス）。
     public static IReadOnlyList<MapStage> StagesFor(ChapterRule rule)
         => new[] { rule.Carry ? MapStage.Stage11Ch : MapStage.Stage11, MapStage.Stage12, MapStage.Stage13 }
-            .Select((s, i) => s.Scaled(rule.ScaleOf(i)).Starred(rule.Stars ?? StarRule.Off)).ToArray();   // 第463期: ☆の規則を載せる（☆なしならそのまま）
+            .Select((s, i) => s.Scaled(rule.ScaleOf(i)).Starred(rule.Stars ?? StarRule.Off)   // 第463期: ☆の規則を載せる（☆なしならそのまま）
+                .Dealt(i == 0 ? rule.Deal ?? DealRule.Off : DealRule.Off)).ToArray();          // 第464期: 1-1 の配りの規則（52 枚から・軸の保証）
 
     /// <summary>いまの 1 章のステージ。</summary>
     public static IReadOnlyList<MapStage> Stages => StagesFor(Rule);

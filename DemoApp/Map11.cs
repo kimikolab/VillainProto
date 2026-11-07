@@ -759,6 +759,8 @@ public sealed class Map11State
     public bool OpeningOk { get; } = true;
     /// <summary>開始の手札の引き直しの回数。</summary>
     public int OpeningRerolls { get; }
+    /// <summary>開始の配りの軸の保証で選んだ軸（第464期・1 章の 1-1 だけ・保証の無い引きは null）。</summary>
+    public string? OpeningAxis { get; }
 
     // ---------------- 敵の予備隊（第441期 §3） ----------------
 
@@ -798,7 +800,11 @@ public sealed class Map11State
         if (draft && Stage.Arrival.On)
         {
             // 第441期 §2: **開始は 10 枚**。残りは到着の列に並ぶ（どれも seed で引く・戦闘の seed とは別の乱数）。
-            MapDraw.Opening o = MapDraw.Draw(seed, Stage.Arrival.Start, Stage.Arrival.MinPer, Stage.Arrival.MaxPer);
+            // 第464期 §1-3: 配りの規則のある盤（1 章の 1-1）は 52 枚から・同じ軸 3 枚以上の保証つき。
+            MapDraw.Opening o = Stage.Deal.On
+                ? MapDraw.DrawAxis(seed, Stage.Arrival.Start, Stage.Deal)
+                : MapDraw.Draw(seed, Stage.Arrival.Start, Stage.Arrival.MinPer, Stage.Arrival.MaxPer);
+            OpeningAxis = o.Axis;
             Bench = o.Start.Select(One).ToList();
             Arrivals.AddRange(o.Queue.Select(One));
             foreach (int k in o.Batches) _arrivalBatches.Enqueue(k);
