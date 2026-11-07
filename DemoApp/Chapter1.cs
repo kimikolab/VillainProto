@@ -16,8 +16,9 @@ using System.Linq;
 /// 1 章の規則の版（第461期）。<b><c>Carry</c> が偽なら第460期</b>（持ち越し無し・各ステージは単発と同じに始まる・1-1 は単発の 1-1）。
 /// 真なら第461期の持ち越し（`design/PHASE461_CARRYOVER_SPEC.md`）。
 /// 第462期: <c>Scales</c> はステージごとの敵の数値の倍率（1-1 ／ 1-2 ／ 1-3・null ならすべて ×1.0）。
+/// 第463期: <c>Stars</c> は☆の規則（null なら☆なし・<see cref="StarRule"/>）。
 /// </summary>
-public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList<MapFoeScale>? Scales = null)
+public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList<MapFoeScale>? Scales = null, StarRule? Stars = null)
 {
     /// <summary>第460期の 1 章（持ち越し無し）。`--chapter1-smoke` はこれで回す。</summary>
     public static readonly ChapterRule V460 = new(false, "第460期（持ち越し無し）");
@@ -30,6 +31,13 @@ public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList
     public static readonly ChapterRule V462 = new(true, "第462期（持ち越し・敵の倍率）",
         new MapFoeScale[] { MapFoeScale.None, new(FoePercent: 130, HeroPercent: 130), new(FoePercent: 160, HeroPercent: 160) });
 
+    /// <summary>
+    /// 第463期の 1 章（第462期 ＋ ☆の重ね・指示書 design/PHASE463_STAR_SPEC.md §1）。駒は☆1 で手に入り、同じキャラを重ねて☆3（今の強さ）まで上がる（<see cref="StarRule.V463"/>）。
+    /// 敵の倍率は第462期と同じ表（1-1 は §1-4 で別に替える）。
+    /// </summary>
+    public static readonly ChapterRule V463 = new(true, "第463期（持ち越し・敵の倍率・☆の重ね）",
+        new MapFoeScale[] { MapFoeScale.None, new(FoePercent: 130, HeroPercent: 130), new(FoePercent: 160, HeroPercent: 160) }, StarRule.V463);
+
     /// <summary>ステージ <paramref name="index"/>（0 ＝ 1-1）の敵の倍率。</summary>
     public MapFoeScale ScaleOf(int index) => Scales is { } s && index < s.Count ? s[index] : MapFoeScale.None;
 }
@@ -37,7 +45,7 @@ public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList
 public static class Chapter1
 {
     /// <summary>遊ぶ 1 章の規則（編成画面の札「1 章」・絵の口が始める版）。</summary>
-    public static ChapterRule Default => ChapterRule.V462;   // 第461期から持ち越しのある 1 章・第462期から敵の倍率
+    public static ChapterRule Default => ChapterRule.V463;   // 第461期から持ち越しのある 1 章・第462期から敵の倍率・第463期から☆の重ね
     /// <summary>いまの 1 章の規則（<see cref="Begin"/> が決める）。</summary>
     public static ChapterRule Rule { get; private set; } = Default;
 
@@ -46,7 +54,7 @@ public static class Chapter1
     /// 第462期: 倍率のある 1 章は、各ステージの敵に倍率を掛けた写し（<see cref="MapStage.Scaled"/>・同じ倍率なら同じインスタンス）。
     public static IReadOnlyList<MapStage> StagesFor(ChapterRule rule)
         => new[] { rule.Carry ? MapStage.Stage11Ch : MapStage.Stage11, MapStage.Stage12, MapStage.Stage13 }
-            .Select((s, i) => s.Scaled(rule.ScaleOf(i))).ToArray();
+            .Select((s, i) => s.Scaled(rule.ScaleOf(i)).Starred(rule.Stars ?? StarRule.Off)).ToArray();   // 第463期: ☆の規則を載せる（☆なしならそのまま）
 
     /// <summary>いまの 1 章のステージ。</summary>
     public static IReadOnlyList<MapStage> Stages => StagesFor(Rule);

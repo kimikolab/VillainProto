@@ -670,8 +670,10 @@ public sealed class Map11State
     /// 次のステージへ持ち越すもの（第461期）: 手札・隊ごとの駒と席・隊の枠・金の余り・手持ちのレリック。
     /// 倒れた駒は<b>倒れた隊の同じ席</b>へ戻す（席が埋まっていれば手札へ）——「全快・死者も戻る」。
     /// </summary>
+    /// <param name="Stars">第463期: キャラごとの☆と途中まで重ねた枚数（☆の無いステージは null）。駒の定義はすでに☆の写し。</param>
     public sealed record CarryPack(IReadOnlyList<CarryUnit> Bench, IReadOnlyList<IReadOnlyList<CarryUnit>> Squads,
-                                   int SquadCap, int Gold, IReadOnlyList<TraitId> RelicHand)
+                                   int SquadCap, int Gold, IReadOnlyList<TraitId> RelicHand,
+                                   IReadOnlyDictionary<string, StarState>? Stars = null)
     {
         /// <summary>駒の枚数（手札 ＋ 隊）。</summary>
         public int Units => Bench.Count + Squads.Sum(s => s.Count);
@@ -700,7 +702,8 @@ public sealed class Map11State
             else bench.Add(new CarryUnit(u.Def, -1, u.Relic));
         }
         foreach (var s in squads) s.Sort((a, b) => a.Slot.CompareTo(b.Slot));
-        return new CarryPack(bench, squads, SquadCap, Gold, RelicHand.ToList());
+        return new CarryPack(bench, squads, SquadCap, Gold, RelicHand.ToList(),
+                             Stage.Stars.On ? new Dictionary<string, StarState>(Stars) : null);   // 第463期: ☆と途中まで重ねた枚数も
     }
 
     /// <summary>前のステージから持ち越した（第461期・画面が組み直しの窓を開けるために読む）。</summary>
@@ -719,6 +722,9 @@ public sealed class Map11State
             if (c.Slot >= 0) u.Slot = c.Slot;
             return c.Relic is TraitId r ? WithRelic(u, r) : u;
         }
+        // 第463期: ☆と途中まで重ねた枚数を写す（駒の定義はすでに☆の写し）。このステージの始めの引きの☆は捨てる。
+        Stars.Clear();
+        if (p.Stars is { } ps) foreach (var (id, st) in ps) Stars[id] = st;
         Bench.Clear();
         Bench.AddRange(p.Bench.Select(Make));
         for (int i = 0; i < Squads.Length; i++)
@@ -744,7 +750,7 @@ public sealed class Map11State
             UnitDef[] pool = UnitCatalog.All.ToArray();
             for (int i = pool.Length - 1; i > 0; i--) { int j = rng.Next(i + 1); (pool[i], pool[j]) = (pool[j], pool[i]); }
             foreach (UnitDef d in pool) _offerQueue.Enqueue(d);
-            for (int k = 0; k < Stage.Gold.Offers; k++) if ((k == 0 ? FirstOffer() : NextOffer()) is { } d) Offers.Add(d);
+            for (int k = 0; k < Stage.Gold.Offers; k++) if ((k == 0 ? FirstOffer() : NextOffer()) is { } d) AddOffer(d);
         }
         CarriedIn = true;
     }
@@ -807,6 +813,12 @@ public sealed class Map11State
                     : Map11.Reserves.AsEnumerable())
                 .Select(One)
                 .ToList();
+        // 第463期 §1-1: ☆のあるステージでは、始めの手札（と届く駒）はすべて☆1。
+        if (Stage.Stars.On)
+        {
+            for (int i = 0; i < Bench.Count; i++) Bench[i] = Star1(Bench[i].Def);
+            for (int i = 0; i < Arrivals.Count; i++) Arrivals[i] = Star1(Arrivals[i].Def);
+        }
         // 第442期 §0-3: 隊の数はステージが持つ（`SquadCap`・1-1 は 3 のまま）。後ろの隊は作らない。
         // 第447期: 隊の枠が 4 つの盤は 4 隊目の定義（空）を足す。
         Squads = Map11.Squads.Append(Map11.ExtraSquad).Take(Stage.SquadCap).Select((d, i) => new Squad
@@ -853,7 +865,7 @@ public sealed class Map11State
                 for (int i = relics.Length - 1; i > 0; i--) { int j = relicRng.Next(i + 1); (relics[i], relics[j]) = (relics[j], relics[i]); }
                 foreach (TraitId r in relics) _relicQueue.Enqueue(r);
             }
-            for (int k = 0; k < Stage.Gold.Offers; k++) if ((k == 0 ? FirstOffer() : NextOffer()) is { } d) Offers.Add(d);
+            for (int k = 0; k < Stage.Gold.Offers; k++) if ((k == 0 ? FirstOffer() : NextOffer()) is { } d) AddOffer(d);
         }
     }
 
@@ -1036,6 +1048,7 @@ public sealed class Map11State
             if (q.Units is { } us && us.IndexOf(from) is int i && i >= 0) us[i] = to;
         if (Bench.IndexOf(from) is int b && b >= 0) Bench[b] = to;
         if (FallenUnits.IndexOf(from) is int f && f >= 0) FallenUnits[f] = to;
+        if (_fallenSquad.Remove(from, out int sq)) _fallenSquad[to] = sq;   // 第463期: 倒れた駒の☆が上がったとき
     }
 
     /// <summary><c>Presets.Compare</c> の行ごとの駒の Id（第449期 §0-5・噛む駒の判定）。</summary>
@@ -1085,7 +1098,7 @@ public sealed class Map11State
         while (_offerQueue.Count > 0)
         {
             UnitDef d = _offerQueue.Dequeue();
-            if (!OnBoardOrHand(d) && Offers.All(o => o.Id != d.Id)) return d;
+            if ((!OnBoardOrHand(d) || Stackable(d)) && Offers.All(o => o.Id != d.Id)) return d;   // 第463期: ☆のあるステージでは持っている駒も（☆3 は出さない）
         }
         return null;
     }
@@ -1104,10 +1117,14 @@ public sealed class Map11State
         // 第446期: 枠の特典の 1 枚は無料（金の出入りには載せない）。
         if (FreePicks > 0) FreePicks--;
         else Spend(Stage.Gold.Recruit, $"{d.Name}を呼んだ");
-        Bench.Add(One(d));
+        // 第463期 §1-3: ☆のあるステージでは、持っている駒と同じキャラは<b>すぐに持っている駒へ重なる</b>（手札に 2 体目は来ない・倒れた駒にも重なる）。
+        if (Stackable(d) && OwnedUnit(d.Id) is { } owned) StackOnto(owned);
+        else Bench.Add(Stage.Stars.On ? Star1(d) : One(d));
         Recruits++;
         Offers.RemoveAt(offer);
-        if ((offer == 0 ? FirstOffer() : NextOffer()) is { } next) Offers.Insert(offer, next);
+        if ((offer == 0 ? FirstOffer() : NextOffer()) is { } next) { Offers.Insert(offer, next); NoteOffer(next); }
+        // 第463期: 呼んだキャラは☆3 になるまで列の最後へ戻す（列は全キャラを同じ重みで 1 周する）。
+        if (Stage.Stars.On && StarOf(d.Id).Star < Stage.Stars.Max) _offerQueue.Enqueue(Stage.Stars.BaseOf(d));
         return true;
     }
 
@@ -1144,10 +1161,10 @@ public sealed class Map11State
         Spend(Stage.Gold.Reroll, "候補を引き直した");
         var old = Offers.ToList();
         Offers.Clear();
-        for (int k = 0; k < Stage.Gold.Offers; k++) if ((k == 0 ? FirstOffer() : NextOffer()) is { } d) Offers.Add(d);
+        for (int k = 0; k < Stage.Gold.Offers; k++) if ((k == 0 ? FirstOffer() : NextOffer()) is { } d) AddOffer(d);
         foreach (UnitDef d in old) _offerQueue.Enqueue(d);
         // 列の残りが候補の枚数に満たなかったときは、戻した駒から足りないぶんを補う。
-        while (Offers.Count < Stage.Gold.Offers && NextOffer() is { } more) Offers.Add(more);
+        while (Offers.Count < Stage.Gold.Offers && NextOffer() is { } more) AddOffer(more);
         Rerolls++;
         return true;
     }
@@ -1161,8 +1178,11 @@ public sealed class Map11State
         if (!CanSell(benchIndex)) return false;
         UnitState u = Bench[benchIndex];
         Bench.RemoveAt(benchIndex);
-        Earn(Stage.Gold.Sell, $"{u.Def.Name}を手放した");
+        Earn(SellPrice(u), $"{u.Def.Name}を手放した");
         Sold++;
+        // 第463期 §1-3: ☆を捨てる。☆3 で列から外れていたキャラは列の最後へ戻す。
+        if (Stage.Stars.On && Stars.Remove(u.Def.Id) && _offerQueue.All(q => q.Id != u.Def.Id) && Offers.All(o => o.Id != u.Def.Id))
+            _offerQueue.Enqueue(Stage.Stars.BaseOf(u.Def));
         return true;
     }
 
@@ -1181,6 +1201,74 @@ public sealed class Map11State
 
     /// <summary>1 枚を盤に立てられる形にする（開始の手札・呼んだ駒）。</summary>
     private static UnitState One(UnitDef d) => BattleEngine.Materialize(Formation.Build(front1: d), BattleContext.PlayerTeam)[0];
+
+    // ---------------- ☆の重ね（第463期 §1・☆のあるステージ（1 章）だけ） ----------------
+
+    /// <summary>キャラ（<c>Id</c>）ごとの☆と、次の☆へ重ねた枚数。<b>☆の無いステージでは空</b>。</summary>
+    public Dictionary<string, StarState> Stars { get; } = new();
+    /// <summary>候補に出た札の数 ／ そのうち重ねの札（持っている駒と同じキャラ）だった数（測るためだけ・候補に入った時点で数える）。</summary>
+    public int OffersShown { get; private set; }
+    public int StackOffersShown { get; private set; }
+    /// <summary>重ねた枚数 ／ ☆が上がった回数（測るためだけ）。</summary>
+    public int Stacks { get; private set; }
+    public int StarUps { get; private set; }
+    /// <summary>☆が上がった駒（上がった順・画面の短い印が読む）。</summary>
+    public List<(string Name, int Star)> StarUpLog { get; } = new();
+
+    /// <summary>そのキャラの☆（☆の無いステージ・持っていないキャラは☆の上限＝今の強さ）。</summary>
+    public StarState StarOf(string id) => Stars.TryGetValue(id, out StarState s) ? s : new StarState(Stage.Stars.Max, 0);
+    /// <summary>札の上の☆（「☆1（1／2）」・☆の無いステージは空）。</summary>
+    public string StarText(UnitDef d) => Stage.Stars.On ? Stage.Stars.Text(StarOf(d.Id)) : "";
+    /// <summary>呼ぶ候補の☆（重ねの札は「重ねる ☆1→（1／2）」・新しいキャラは「☆1」・☆の無いステージは空）。</summary>
+    public string OfferStarText(UnitDef d) => !Stage.Stars.On ? "" : Stackable(d) ? Stage.Stars.StackText(StarOf(d.Id)) : "☆1";
+    /// <summary>呼んだ後のその駒の定義（☆の写し・画面の候補の札の数値）。☆の無いステージは候補の定義そのもの。</summary>
+    public UnitDef OfferDef(UnitDef d) => !Stage.Stars.On ? d : Stage.Stars.Def(d, Stackable(d) ? Stage.Stars.Add(StarOf(d.Id)).Star : 1);
+    /// <summary>手放したときの金（☆のあるステージは ＋2 × 重ねた枚数）。</summary>
+    public int SellPrice(UnitState u) => Stage.Gold.Sell * (Stage.Stars.On ? Stage.Stars.Copies(StarOf(u.Def.Id)) : 1);
+
+    /// <summary>重ねられるキャラか（☆のあるステージで、持っていて（倒れていても）☆3 でない）。</summary>
+    public bool Stackable(UnitDef d) => Stage.Stars.On && OnBoardOrHand(d) && Stars.ContainsKey(d.Id) && StarOf(d.Id).Star < Stage.Stars.Max;
+
+    /// <summary>そのキャラの駒（隊・手札・倒れた駒のどこか・生きている駒を先に）。</summary>
+    private UnitState? OwnedUnit(string id)
+        => Squads.Where(q => q.Units is not null).SelectMany(q => q.Units!).Concat(Bench).Concat(FallenUnits)
+            .Where(u => u.Def.Id == id).OrderByDescending(u => u.IsAlive).FirstOrDefault();
+
+    /// <summary>☆1 の駒を作る（☆を 1 から数え直す）。</summary>
+    private UnitState Star1(UnitDef d)
+    {
+        Stars[d.Id] = new StarState(1, 0);
+        return One(Stage.Stars.Def(d, 1));
+    }
+
+    /// <summary>候補に 1 枚足す（重ねの札だったかを数える）。</summary>
+    private void AddOffer(UnitDef d) { Offers.Add(d); NoteOffer(d); }
+    private void NoteOffer(UnitDef d) { OffersShown++; if (Stackable(d)) StackOffersShown++; }
+
+    /// <summary>
+    /// 持っている駒に 1 枚重ねる（第463期 §1-3）。☆が上がれば定義を☆の写しに替えた駒に置き換える——<b>今の HP は割合を保つ</b>（満タンなら満タン・倒れた駒は倒れたまま）。
+    /// 席・レリック・私有のカウンタは写す（`WithRelic` と同じ）。
+    /// </summary>
+    private void StackOnto(UnitState u)
+    {
+        StarState before = StarOf(u.Def.Id), after = Stage.Stars.Add(before);
+        Stars[u.Def.Id] = after;
+        Stacks++;
+        if (after.Star <= before.Star) return;
+        StarUps++;
+        StarUpLog.Add((u.Def.Name, after.Star));
+        UnitDef def = Stage.Stars.Def(u.Def, after.Star);
+        int hp = u.Hp <= 0 ? 0 : Math.Max(1, (int)Math.Round((double)u.Hp * def.MaxHp / u.MaxHp, MidpointRounding.AwayFromZero));
+        var n = new UnitState
+        {
+            Def = def, TeamId = u.TeamId, Shape = u.Shape, Slot = u.Slot, Hp = Math.Min(hp, def.MaxHp), MaxHp = def.MaxHp,
+            Traits = u.Relic is TraitId r ? RelicCatalog.Attach(def.Traits, r) : TraitCatalog.Resolve(def.Traits),
+            Relic = u.Relic,
+            HasFallenBack = u.HasFallenBack, ActionIndex = u.ActionIndex, LastDeathTurn = u.LastDeathTurn, TakenTurn = u.TakenTurn,
+        };
+        foreach (var (k, v) in u.Counters) n.Counters[k] = v;
+        ReplaceUnit(u, n);
+    }
 
     public int ClearedCount => Nodes.Sum(r => r.Count(n => n.Cleared && !n.Retreated));
     public bool AllCleared => ClearedCount >= Stage.TotalNodes;

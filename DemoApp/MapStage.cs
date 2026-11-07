@@ -119,6 +119,17 @@ public sealed class MapStage
     /// </summary>
     public MapStage Scaled(MapFoeScale sc) => !sc.Active ? this : _scaled.GetOrAdd((this, sc), static k => Copy(k.Item1, scale: k.Item2));
 
+    /// <summary>
+    /// ☆の規則（第463期・1 章だけ・<see cref="ChapterRule.V463"/>）。<b>偽（<see cref="StarRule.Off"/>）なら☆は無い</b>——単発のステージと第462期までの 1 章。
+    /// 読むのは `Map11State`（手札の駒を☆1 で作る・呼ぶ・重ねる・売る・持ち越す）と画面の札だけ。
+    /// </summary>
+    public StarRule Stars { get; init; } = StarRule.Off;
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(MapStage, StarRule), MapStage> _starred = new();
+
+    /// <summary>☆の規則を載せた写し（第463期・<see cref="Scaled"/> と同じく、同じステージ・同じ規則には同じインスタンス）。☆の無い規則ならこのステージそのもの。</summary>
+    public MapStage Starred(StarRule rule) => !rule.On ? this : _starred.GetOrAdd((this, rule), static k => Copy(k.Item1, stars: k.Item2));
+
     public int LaneCount => Lanes.Length;
     public int TotalNodes => Lanes.Sum(l => l.Count);
 
@@ -644,8 +655,9 @@ public sealed class MapStage
 
     /// <summary>ステージの写し（第460期・版を足すための道具）。<paramref name="crossFacing"/> を渡したときだけ横の辺の直しを替える。</summary>
     /// 第462期: <paramref name="scale"/> を渡したときは敵の数値に倍率を掛ける（<see cref="Scaled"/> だけが渡す）。
-    private static MapStage Copy(MapStage s, bool? crossFacing = null, MapFoeScale? scale = null) => new()
+    private static MapStage Copy(MapStage s, bool? crossFacing = null, MapFoeScale? scale = null, StarRule? stars = null) => new()
     {
+        Stars = stars ?? s.Stars,
         CrossFacing = crossFacing ?? s.CrossFacing,
         FoeScale = scale ?? s.FoeScale,
         Id = s.Id,
