@@ -47,11 +47,11 @@ public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList
 
     /// <summary>
     /// 第465期の 1 章（指示書 design/PHASE465_HERO_NOMEND_SPEC.md §1）。第464期に、<b>勇者（1-2 の門番・1-3 の追う勇者）から毎手番の固定回復を外す</b>
-    /// （`MapFoeScale.HeroMends = false`・札 `BossMend300` を持たない・HP は持ち越すので隊を順に当てて削れる）。
+    /// （`MapFoeScale.HeroMends = false`・札 `BossMend300` を持たない・HP は持ち越すので隊を順に当てて削れる）と、<b>1-3 を ×1.6 に戻す</b>（第462〜463期の値・勇者の列も）。
     /// ☆・強化・1-1 の配り・持ち越しは第464期のまま。
     /// </summary>
     public static readonly ChapterRule V465 = new(true, "第465期（持ち越し・敵の倍率・☆の強化・勇者の回復なし）",
-        new MapFoeScale[] { new(60, 60, HeroMends: false), new(90, 90, HeroMends: false), new(130, 130, HeroMends: false) }, StarRule.V464, DealRule.V464);
+        new MapFoeScale[] { new(60, 60, HeroMends: false), new(90, 90, HeroMends: false), new(160, 160, HeroMends: false) }, StarRule.V464, DealRule.V464);
 
     /// <summary>ステージ <paramref name="index"/>（0 ＝ 1-1）の敵の倍率。</summary>
     public MapFoeScale ScaleOf(int index) => Scales is { } s && index < s.Count ? s[index] : MapFoeScale.None;
