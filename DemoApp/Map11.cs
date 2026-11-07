@@ -1296,6 +1296,9 @@ public sealed class Map11State
         return true;
     }
 
+    /// <summary>絵の口 `enhance-press`（第467期 §2・画面の押し方の確かめ）だけ: 金を足す。<b>遊ぶ通し・器具・門の通しは呼ばない。</b></summary>
+    internal void GrantGoldForCheck(int amount) => Earn(amount, "押し方の確かめ（絵の口）");
+
     private void Earn(int amount, string reason, int cell = -1)
     {
         if (!Stage.Gold.On || amount <= 0) return;

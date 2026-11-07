@@ -142,6 +142,11 @@ public partial class Map11Main : Node3D
     private int _holdBench = -1;
 
     private bool Holding => _holdSlot >= 0 || _holdBench >= 0;
+    /// <summary>
+    /// 第467期 §2: つまんだ駒を強化した直後か。<b>真なら次の 1 押しは入れ替えではなく「押した駒を選び直す」</b>（第465期の観察ログ (6)・
+    /// 強化してもつまみが残り、次に押した駒と入れ替わっていた）。つまみが変われば偽に戻る（<see cref="ClearHold"/>）。
+    /// </summary>
+    private bool _enhancedHold;
 
     private ScrollContainer _leftScroll = null!;
     private Button _reformButton = null!;
@@ -641,6 +646,8 @@ public partial class Map11Main : Node3D
         else if (parts.Length > 1 && parts[1] == "card") { }
         else if (parts.Length > 1 && parts[1] == "map") { _reform = false; ClearHold(); Refresh(); }
         // 第464期: `enhance` は組み直しの窓で手札の 1 枚目（手札が空なら選んでいる隊の前1）を選んだところ（強化のボタン・`--map-chapter-stop=K` と使う）。
+        // 第467期 §2: `enhance-press` は強化の後の押し方を画面の口で押して確かめる（門 `--chapter1-invest-smoke` (e)・`--map-chapter-stop=1` と使う）。
+        else if (parts.Length > 1 && parts[1] == "enhance-press") CaptureEnhancePress();
         // 第467期 §1-3: `invest` はステージの始めの投資の札の窓（`--map-chapter-stop=K` と使う・出ているまま撮る）。
         else if (parts.Length > 1 && parts[1] == "invest") { if (_introOverlay is not null) _introOverlay.Visible = false; ShowInvestPicker(); }
         // 第467期 §1-3: `invested` は投資を器具の選び方で選んだ後の組み直しの窓（金の段の「投資:」の 1 行・候補の「◇投資」の印）。
@@ -2159,7 +2166,7 @@ public partial class Map11Main : Node3D
     // 「どの札を押したか」を渡して、結果を引き直すことだけ。
     // =================================================================================
 
-    private void ClearHold() { _holdSquad = -1; _holdSlot = -1; _holdBench = -1; _holdRelic = null; }
+    private void ClearHold() { _holdSquad = -1; _holdSlot = -1; _holdBench = -1; _holdRelic = null; _enhancedHold = false; }
 
     // ---- 第174期 部A #2: 組み直しで関係が変わったら1行出す ----
 
@@ -2311,6 +2318,8 @@ public partial class Map11Main : Node3D
             ShowToast($"{St.Squads[_selected].Label} は拠点にいません", EnemyColor, 3.0f);
             return;
         }
+        // 第467期 §2: 強化した直後の 1 押しは選び直し（つまみを外して、押した駒を新しくつまむ）。
+        if (_enhancedHold && Holding) ClearHold();
 
         if (_holdBench >= 0)
         {
@@ -2351,6 +2360,8 @@ public partial class Map11Main : Node3D
         // 第453期 §0-4: レリックをつまんでいれば、押した手札の駒に持たせる。
         if (_holdRelic is TraitId hr) { EquipHeldRelic(index >= 0 && index < St.Bench.Count ? St.Bench[index] : null, hr); Refresh(); return; }
         if (!_reform) { ShowToast("「組み直す」を押してから選んでください", UiKit.Muted, 3.0f); return; }
+        // 第467期 §2: 強化した直後の 1 押しは選び直し（つまみを外して、押した駒を新しくつまむ）。
+        if (_enhancedHold && Holding) ClearHold();
         if (_holdSlot >= 0)
         {
             var before = RelationKeys();
@@ -2563,16 +2574,21 @@ public partial class Map11Main : Node3D
         en.Alignment = HorizontalAlignment.Left;
         fit(en);
         en.Disabled = why is not null;
-        en.Pressed += () =>
-        {
-            int ups = St.StarUpLog.Count;
-            if (St.Enhance(target) is null) { ShowToast("いまは強化できません", EnemyColor, 3.0f); return; }
-            ShowToast($"{name} を強化した（金 −{St.Stage.Stars.EnhancePrice}・残り {St.Gold}）", GoldColor, 3.0f);
-            // 第463期 §1-5 と同じ短い印（仮・見た目は Codex）。
-            if (St.StarUpLog.Count > ups) ShowToast($"★ {St.StarUpLog[^1].Name} が ☆{St.StarUpLog[^1].Star} に上がった", GoldColor, 3.5f);
-            Refresh();
-        };
+        en.Pressed += () => PressEnhance(target);
         return en;
+    }
+
+    /// <summary>強化のボタンを押した（第467期にボタンの中身を外へ出しただけ・絵の口 `enhance-press` も呼ぶ）。つまんでいた駒なら、次の 1 押しは選び直し。</summary>
+    private void PressEnhance(UnitState target)
+    {
+        string name = target.Def.Name;
+        int ups = St.StarUpLog.Count;
+        if (St.Enhance(target) is null) { ShowToast("いまは強化できません", EnemyColor, 3.0f); return; }
+        if (Holding) _enhancedHold = true;   // 第467期 §2
+        ShowToast($"{name} を強化した（金 −{St.Stage.Stars.EnhancePrice}・残り {St.Gold}）", GoldColor, 3.0f);
+        // 第463期 §1-5 と同じ短い印（仮・見た目は Codex）。
+        if (St.StarUpLog.Count > ups) ShowToast($"★ {St.StarUpLog[^1].Name} が ☆{St.StarUpLog[^1].Star} に上がった", GoldColor, 3.5f);
+        Refresh();
     }
 
     /// <summary>札の名前の後ろの☆（第463期・☆の無いステージは空）。</summary>
