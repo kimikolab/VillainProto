@@ -17,8 +17,10 @@ using System.Linq;
 /// 真なら第461期の持ち越し（`design/PHASE461_CARRYOVER_SPEC.md`）。
 /// 第462期: <c>Scales</c> はステージごとの敵の数値の倍率（1-1 ／ 1-2 ／ 1-3・null ならすべて ×1.0）。
 /// 第463期: <c>Stars</c> は☆の規則（null なら☆なし・<see cref="StarRule"/>）。
+/// 第467期: <c>Invest</c> は軸への投資の規則（null なら投資なし・<see cref="InvestRule"/>）。
 /// </summary>
-public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList<MapFoeScale>? Scales = null, StarRule? Stars = null, DealRule? Deal = null)
+public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList<MapFoeScale>? Scales = null, StarRule? Stars = null, DealRule? Deal = null,
+                                          InvestRule? Invest = null)
 {
     /// <summary>第460期の 1 章（持ち越し無し）。`--chapter1-smoke` はこれで回す。</summary>
     public static readonly ChapterRule V460 = new(false, "第460期（持ち越し無し）");
@@ -54,10 +56,17 @@ public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList
         new MapFoeScale[] { new(60, 60, HeroMends: false), new(90, 90, HeroMends: false), new(160, 160, HeroMends: false) }, StarRule.V464, DealRule.V464);
 
     /// <summary>
+    /// 第467期の 1 章（指示書 design/PHASE467_INVEST_SPEC.md §1）。第465期に、<b>各ステージの始めの軸への投資</b>（10 軸からランダムな 3 枚の札から 1 枚・持ち越して重なる・
+    /// 呼ぶ候補 1 枚ごとに投資 1 回 +25%（上限 60%）の割合で投資した軸の駒から引く・<see cref="InvestRule.V467"/>）を足しただけ。敵の倍率 ・☆ ・強化 ・1-1 の配りは第465期のまま。
+    /// </summary>
+    public static readonly ChapterRule V467 = new(true, "第467期（持ち越し・敵の倍率・☆の強化・勇者の回復なし・軸への投資）",
+        V465.Scales, StarRule.V464, DealRule.V464, InvestRule.V467);
+
+    /// <summary>
     /// 版の一覧（第466期・遊びの写しが版をキーで持つ——写しの版で 1 章を始め直すため）。<b>版を足したらここにも足す。</b>
     /// </summary>
     public static IReadOnlyList<(string Key, ChapterRule Rule)> Versions
-        => new[] { ("V460", V460), ("V461", V461), ("V462", V462), ("V463", V463), ("V464", V464), ("V465", V465) };
+        => new[] { ("V460", V460), ("V461", V461), ("V462", V462), ("V463", V463), ("V464", V464), ("V465", V465), ("V467", V467) };
 
     /// <summary>版のキー（「V465」・一覧に無ければ名前）。</summary>
     public string Key { get { string n = Name; return Versions.FirstOrDefault(v => v.Rule.Name == n).Key ?? n; } }
@@ -72,7 +81,7 @@ public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList
 public static class Chapter1
 {
     /// <summary>遊ぶ 1 章の規則（編成画面の札「1 章」・絵の口が始める版）。</summary>
-    public static ChapterRule Default => ChapterRule.V465;   // 第461期から持ち越しのある 1 章・第462期から敵の倍率・第463期から☆の重ね・第464期から☆は強化で・第465期から勇者の回復なし
+    public static ChapterRule Default => ChapterRule.V467;   // 第461期から持ち越しのある 1 章・第462期から敵の倍率・第463期から☆の重ね・第464期から☆は強化で・第465期から勇者の回復なし・第467期から軸への投資
     /// <summary>いまの 1 章の規則（<see cref="Begin"/> が決める）。</summary>
     public static ChapterRule Rule { get; private set; } = Default;
 
@@ -82,7 +91,8 @@ public static class Chapter1
     public static IReadOnlyList<MapStage> StagesFor(ChapterRule rule)
         => new[] { rule.Carry ? MapStage.Stage11Ch : MapStage.Stage11, MapStage.Stage12, MapStage.Stage13 }
             .Select((s, i) => s.Scaled(rule.ScaleOf(i)).Starred(rule.Stars ?? StarRule.Off)   // 第463期: ☆の規則を載せる（☆なしならそのまま）
-                .Dealt(i == 0 ? rule.Deal ?? DealRule.Off : DealRule.Off)).ToArray();          // 第464期: 1-1 の配りの規則（52 枚から・軸の保証）
+                .Dealt(i == 0 ? rule.Deal ?? DealRule.Off : DealRule.Off)                      // 第464期: 1-1 の配りの規則（52 枚から・軸の保証）
+                .Invested(rule.Invest ?? InvestRule.Off)).ToArray();                            // 第467期: 軸への投資（3 ステージとも）
 
     /// <summary>いまの 1 章のステージ。</summary>
     public static IReadOnlyList<MapStage> Stages => StagesFor(Rule);
@@ -105,6 +115,8 @@ public static class Chapter1
         /// <summary>働いた札（「◆名（駒）」→ 回数・勝った ／ 最後の配り）。</summary>
         public Dictionary<string, int> Relics { get; } = new();
         public string Result => Won ? $"制圧（作戦ターン {Turn}）" : Quit ? "やめた" : Played ? "途中" : Skipped ? "—（写しから始めた）" : "—";
+        /// <summary>このステージの始めに選んだ投資の軸（第467期・投資の無い 1 章 ／ まだ選んでいなければ null）。</summary>
+        public string? Invested { get; set; }
         /// <summary>写しから始めた 1 章で、写しより前のステージ（第466期・遊んでいない）。</summary>
         public bool Skipped { get; set; }
         /// <summary>このステージに入った時点の持ち越し（第461期・1-1 と持ち越しの無い 1 章は null）。やり直しはここへ戻る。</summary>
@@ -195,6 +207,8 @@ public static class Chapter1
         Map11Session.Reset(r.Seed, draft: true, stage: Stages[Index]);
         // 第461期 §1-1 ／ §1-3: 持ち越しのある 1 章では、入った時点の持ち越しを載せる（やり直しも同じ写しへ戻る・戦闘と湧きの seed だけが新しい）。
         if (Rule.Carry && r.Entry is { } entry) Map11Session.State!.ApplyCarry(entry);
+        // 第467期: このステージの投資（持ち越しにこのステージの投資が入っていれば——写しの `_first` ／ `_end` から始めたとき——選んだことにする）。
+        r.Invested = Map11Session.State!.InvestLog.Where(x => x.Stage == Stages[Index].Id).Select(x => x.Axis).LastOrDefault();
         PlayLog.OnStart(Map11Session.State!, Rule.Carry ? r.Entry : null);   // 第466期: 入った時点の写し（書くだけ）
         IntroPending = true;
     }
@@ -252,6 +266,33 @@ public static class Chapter1
         Over = true;
     }
 
+    // ---------------- 軸への投資（第467期 §1・判定は `Map11State` ／ `InvestRule`） ----------------
+
+    /// <summary>
+    /// いまのステージの投資の札（10 軸から重複なしの 3 枚）。<b>1 章の seed とステージだけで決まる</b>（配りの回数を入れない——やり直しでも同じ 3 枚）。投資の無い 1 章は空。
+    /// </summary>
+    public static IReadOnlyList<string> InvestCards
+        => Active && CurrentStage.Invest.On ? CurrentStage.Invest.CardsFor(StageSeed(Seed, Index, 0)) : Array.Empty<string>();
+
+    /// <summary>このステージの投資をまだ選んでいない（画面が札の窓を出す・選ぶまで閉じない）。</summary>
+    public static bool InvestPending => Active && !Over && Map11Session.State is { } st && ReferenceEquals(st.Stage, CurrentStage) && st.InvestPending;
+
+    /// <summary>札 <paramref name="card"/> 番目（0 から）の軸に投資する。選べたら true。</summary>
+    public static bool PickInvest(int card)
+    {
+        var cards = InvestCards;
+        if (!InvestPending || card < 0 || card >= cards.Count) return false;
+        if (!Map11Session.State!.Invest(cards[card])) return false;
+        Records[Index].Invested = cards[card];
+        return true;
+    }
+
+    /// <summary>器具の選び方で投資する（手持ちにいちばん多い軸・同じなら札の左から・絵の口と器具の通しが使う）。選ぶものが無ければ何もしない。</summary>
+    public static void AutoInvest()
+    {
+        if (InvestPending) PickInvest(InvestRule.BotPick(Map11Session.State!, InvestCards));
+    }
+
     /// <summary>勇者の列（指示書 §A-4）。1-1 は勇者がいない（—）。</summary>
     public static string HeroText(Map11State st, IReadOnlyList<Map11Session.Line> log)
     {
@@ -277,7 +318,8 @@ public static class Chapter1
         var lines = new List<string>();
         foreach (Record r in Records)
             lines.Add($"{r.Stage.Id} ・ {r.Result} ・ やり直し {r.Retries} 回 ・ 勇者 {(r.Played ? r.Hero : "—")} ・ 金 稼いだ {r.Earned} ／ 使った {r.Spent} ・ 働いた札 {Top(r.Relics)}"
-                      + (Rule.Carry ? $" ・ 終わり {r.Grown}" : ""));   // 第461期 §1-4: 育ったことが見える列（持ち越しの無い 1 章は第460期のまま）
+                      + (Rule.Carry ? $" ・ 終わり {r.Grown}" : "")    // 第461期 §1-4: 育ったことが見える列（持ち越しの無い 1 章は第460期のまま）
+                      + (Rule.Invest is { On: true } ? $" ・ 投資 {r.Invested ?? "—"}" : ""));   // 第467期（投資の無い 1 章は第466期のまま）
         lines.Add($"合計 ・ 制圧 {Records.Count(r => r.Won)} ／ {Records.Count} ・ やり直し {Records.Sum(r => r.Retries)} 回"
                   + $" ・ 金 稼いだ {Records.Sum(r => r.Earned)} ／ 使った {Records.Sum(r => r.Spent)} ・ 働いた札 {Top(Records.SelectMany(r => r.Relics))}");
         return lines;

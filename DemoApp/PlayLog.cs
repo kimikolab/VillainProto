@@ -65,6 +65,8 @@ public static class PlayLog
         public List<Unit> Bench { get; set; } = new();
         public List<List<Unit>> Squads { get; set; } = new();
         public Dictionary<string, int[]>? Stars { get; set; }
+        /// <summary>第467期: 投資の記録（[ステージ, 軸] を選んだ順・投資の無い 1 章は null）。</summary>
+        public List<string[]>? Invest { get; set; }
     }
 
     /// <summary>戦闘 1 回（結果画面の行と同じもの・`Map11Session.Line`）。</summary>
@@ -158,6 +160,7 @@ public static class PlayLog
             Bench = p.Bench.Select(U).ToList(),
             Squads = p.Squads.Select(s => s.Select(U).ToList()).ToList(),
             Stars = p.Stars?.OrderBy(kv => kv.Key, StringComparer.Ordinal).ToDictionary(kv => kv.Key, kv => new[] { kv.Value.Star, kv.Value.Pips }),
+            Invest = p.Invest?.Select(x => new[] { x.Stage, x.Axis }).ToList(),   // 第467期
         };
     }
 
@@ -195,7 +198,9 @@ public static class PlayLog
         var bench = p.Bench.Select(C).ToList();
         var squads = p.Squads.Select(s => (IReadOnlyList<Map11State.CarryUnit>)s.Select(C).ToList()).ToList();
         var hand = relics ? p.RelicHand.Select(r => RelicOf(r)!.Value).ToList() : new List<TraitId>();
-        return new Map11State.CarryPack(bench, squads, p.SquadCap, p.Gold, hand, stars.On ? map : null);
+        // 第467期: 投資の記録（投資の無いステージに載せると `ApplyCarry` が捨てる）。
+        var invest = p.Invest?.Where(x => x.Length >= 2).Select(x => (x[0], x[1])).ToList();
+        return new Map11State.CarryPack(bench, squads, p.SquadCap, p.Gold, hand, stars.On ? map : null, invest);
     }
 
     /// <summary>持ち越しの並べ方（第461期の門 (c)(d) と同じ並べ方 ＋ ☆）。2 つの持ち越しが同じ中身かを比べる。</summary>
@@ -206,7 +211,8 @@ public static class PlayLog
         return $"手札[{string.Join(",", p.Bench.Select(U).OrderBy(x => x, StringComparer.Ordinal))}]"
                + $" 隊[{string.Join(" | ", p.Squads.Select(s => string.Join(",", s.OrderBy(u => u.Slot).Select(u => $"{u.Slot}:{U(u)}"))))}]"
                + $" 枠{p.SquadCap} 金{p.Gold} 手持ち[{string.Join(",", p.RelicHand)}] ☆[{stars}]"
-               + $" 定義[{string.Join(",", p.Bench.Concat(p.Squads.SelectMany(s => s)).Select(u => $"{u.Def.Id}:{u.Def.MaxHp}/{u.Def.Attack}").OrderBy(x => x, StringComparer.Ordinal))}]";
+               + $" 定義[{string.Join(",", p.Bench.Concat(p.Squads.SelectMany(s => s)).Select(u => $"{u.Def.Id}:{u.Def.MaxHp}/{u.Def.Attack}").OrderBy(x => x, StringComparer.Ordinal))}]"
+               + (p.Invest is { } inv ? $" 投資[{string.Join(",", inv.Select(x => $"{x.Stage}:{x.Axis}"))}]" : "");   // 第467期（投資の無い 1 章は第466期のまま）
     }
 
     // ---------------- 読む・書く ----------------

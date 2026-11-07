@@ -671,9 +671,11 @@ public sealed class Map11State
     /// 倒れた駒は<b>倒れた隊の同じ席</b>へ戻す（席が埋まっていれば手札へ）——「全快・死者も戻る」。
     /// </summary>
     /// <param name="Stars">第463期: キャラごとの☆と途中まで重ねた枚数（☆の無いステージは null）。駒の定義はすでに☆の写し。</param>
+    /// <param name="Invest">第467期: 投資の記録（どのステージで何の軸を選んだか・選んだ順・投資の無いステージは null）。</param>
     public sealed record CarryPack(IReadOnlyList<CarryUnit> Bench, IReadOnlyList<IReadOnlyList<CarryUnit>> Squads,
                                    int SquadCap, int Gold, IReadOnlyList<TraitId> RelicHand,
-                                   IReadOnlyDictionary<string, StarState>? Stars = null)
+                                   IReadOnlyDictionary<string, StarState>? Stars = null,
+                                   IReadOnlyList<(string Stage, string Axis)>? Invest = null)
     {
         /// <summary>駒の枚数（手札 ＋ 隊）。</summary>
         public int Units => Bench.Count + Squads.Sum(s => s.Count);
@@ -703,7 +705,8 @@ public sealed class Map11State
         }
         foreach (var s in squads) s.Sort((a, b) => a.Slot.CompareTo(b.Slot));
         return new CarryPack(bench, squads, SquadCap, Gold, RelicHand.ToList(),
-                             Stage.Stars.On ? new Dictionary<string, StarState>(Stars) : null);   // 第463期: ☆と途中まで重ねた枚数も
+                             Stage.Stars.On ? new Dictionary<string, StarState>(Stars) : null,   // 第463期: ☆と途中まで重ねた枚数も
+                             Stage.Invest.On ? InvestLog.ToList() : null);                       // 第467期: 投資の記録も
     }
 
     /// <summary>前のステージから持ち越した（第461期・画面が組み直しの窓を開けるために読む）。</summary>
@@ -736,18 +739,105 @@ public sealed class Map11State
         var relics = _relicQueue.Where(r => !owned.Contains(r)).ToList();
         _relicQueue.Clear();
         foreach (TraitId r in relics) _relicQueue.Enqueue(r);
+        // 第467期: 投資の記録（投資の無いステージでは捨てる）。
+        InvestLog.Clear();
+        if (Stage.Invest.On && p.Invest is { } inv) InvestLog.AddRange(inv);
         // 呼ぶ候補: 列を同じ seed で並べ直し、持ち越した駒を飛ばして引き直す（コンストラクタと同じ式）。
-        if (Stage.Gold.On)
-        {
-            Offers.Clear();
-            _offerQueue.Clear();
-            var rng = new Random(unchecked(Seed * 7919 + 445));
-            UnitDef[] pool = UnitCatalog.All.ToArray();
-            for (int i = pool.Length - 1; i > 0; i--) { int j = rng.Next(i + 1); (pool[i], pool[j]) = (pool[j], pool[i]); }
-            foreach (UnitDef d in pool) _offerQueue.Enqueue(d);
-            for (int k = 0; k < Stage.Gold.Offers; k++) if ((k == 0 ? FirstOffer() : NextOffer()) is { } d) AddOffer(d);
-        }
+        RebuildOffers();
         CarriedIn = true;
+    }
+
+    /// <summary>
+    /// 呼ぶ候補を始めから引き直す（第461期の <see cref="ApplyCarry"/> の中の式を外へ出しただけ・第467期）。列を同じ seed で並べ直し、盤上・手札の駒を飛ばして候補の枚数を引く。
+    /// 投資の乱数も始めに戻す（同じ投資・同じ盤なら同じ候補）。金の無い盤では何もしない。<b>ステージの始め（作戦ターンを 1 度も進めていない）でだけ呼ぶ。</b>
+    /// </summary>
+    private void RebuildOffers()
+    {
+        if (!Stage.Gold.On) return;
+        Offers.Clear();
+        _offerQueue.Clear();
+        _investIds.Clear();
+        _investRng = new Random(unchecked(Seed * 7919 + 467));
+        var rng = new Random(unchecked(Seed * 7919 + 445));
+        UnitDef[] pool = UnitCatalog.All.ToArray();
+        for (int i = pool.Length - 1; i > 0; i--) { int j = rng.Next(i + 1); (pool[i], pool[j]) = (pool[j], pool[i]); }
+        foreach (UnitDef d in pool) _offerQueue.Enqueue(d);
+        for (int k = 0; k < Stage.Gold.Offers; k++) if ((k == 0 ? FirstOffer() : NextOffer()) is { } d) AddOffer(d);
+    }
+
+    // ---------------- 軸への投資（第467期 §1・投資のあるステージ（1 章）だけ） ----------------
+
+    /// <summary>投資の記録（どのステージで何の軸を選んだか・選んだ順・持ち越す）。<b>投資の無いステージでは空</b>。</summary>
+    public List<(string Stage, string Axis)> InvestLog { get; } = new();
+    /// <summary>このステージの投資をまだ選んでいない（投資のあるステージだけ）。</summary>
+    public bool InvestPending => Stage.Invest.On && !Finished && InvestLog.All(x => x.Stage != Stage.Id);
+    /// <summary>その軸に投資した回数。</summary>
+    public int InvestCount(string axis) => InvestLog.Count(x => x.Axis == axis);
+    /// <summary>投資の 1 行（「投資: 燃焼 ×1・感電 ×1」）。</summary>
+    public string InvestText => InvestRule.Text(InvestLog);
+
+    /// <summary>
+    /// このステージの投資を選ぶ（第467期 §1-1・ステージの始めに 1 度だけ）。呼ぶ候補はこの投資で引き直す（ステージの始めに投資していたのと同じ）。
+    /// 選べたら true（投資の無いステージ・選び終えたステージ・軸でない語は false）。
+    /// </summary>
+    public bool Invest(string axis)
+    {
+        if (!InvestPending || !UnitTags.Axes.Contains(axis)) return false;
+        InvestLog.Add((Stage.Id, axis));
+        RebuildOffers();
+        return true;
+    }
+
+    /// <summary>手持ち（隊・手札・倒れた駒）のうち、その軸のキャラの数（器具の選び方 <see cref="InvestRule.BotPick"/> が読む）。</summary>
+    public int OwnedAxisCount(string axis)
+        => Squads.SelectMany(q => q.Units is { } us ? us.Select(u => u.Def) : q.Lost ? Enumerable.Empty<UnitDef>() : q.Def.F.Occupied().Select(o => o.Def))
+            .Concat(Bench.Select(u => u.Def)).Concat(FallenUnits.Select(u => u.Def))
+            .Where(d => MapDraw.AxesOf(d).Contains(axis)).Select(d => d.Id).Distinct().Count();
+
+    /// <summary>いまの候補のうち、投資の枠から来た札か（画面の小さな印）。</summary>
+    public bool IsInvestOffer(UnitDef d) => _investIds.Contains(d.Id);
+    /// <summary>投資の枠から候補に出た枚数（測るためだけ）。</summary>
+    public int InvestOffersShown { get; private set; }
+
+    /// <summary>投資の乱数（戦闘の seed とも候補の列とも別・<b>投資が 1 回も無ければ引かない</b>）。</summary>
+    private Random _investRng = new(0);
+    /// <summary>いまの候補のうち投資の枠から来た札の Id。</summary>
+    private readonly HashSet<string> _investIds = new();
+    private bool _lastInvest;
+
+    /// <summary>
+    /// 候補 1 枚を投資の枠から引く（第467期 §1-2）。投資 n 回なら <see cref="InvestRule.Percent"/>(n)% で投資の枠に入り、軸は<b>投資の回数で按分</b>して選ぶ
+    /// （投資の記録から 1 つを等しく引く——1 回ずつなら等分）。その軸の駒のうち列で最初の「呼べる駒」を抜き出す（ほかの駒の列の並びは変えない）。
+    /// 外れたとき・その軸の駒を全部持っているときは null（今の引き方へ）。
+    /// </summary>
+    private UnitDef? InvestOffer()
+    {
+        int picks = InvestLog.Count;
+        if (picks == 0 || !Stage.Invest.On) return null;
+        if (_investRng.Next(100) >= Stage.Invest.Percent(picks)) return null;
+        string axis = InvestLog[_investRng.Next(picks)].Axis;
+        int n = _offerQueue.Count;
+        UnitDef? hit = null;
+        for (int i = 0; i < n; i++)
+        {
+            UnitDef d = _offerQueue.Dequeue();
+            if (hit is null && MapDraw.AxesOf(d).Contains(axis) && OfferEligible(d)) { hit = d; continue; }
+            _offerQueue.Enqueue(d);
+        }
+        if (hit is not null) { _investIds.Add(hit.Id); InvestOffersShown++; _lastInvest = true; }
+        return hit;
+    }
+
+    /// <summary>
+    /// 門（`--chapter1-invest-smoke` (c)(d)）だけ: 候補 1 枚を引いて列の最後へ戻す（いまの候補は変えない）。投資の枠から来たかを返す。
+    /// </summary>
+    internal (UnitDef? Def, bool Invest) ProbeOffer()
+    {
+        _lastInvest = false;
+        UnitDef? d = NextOffer();
+        bool inv = _lastInvest;
+        if (d is not null) { _offerQueue.Enqueue(d); _investIds.Remove(d.Id); if (inv) InvestOffersShown--; }
+        return (d, inv);
     }
     /// <summary>
     /// 持ち越した駒 1 枚を作る（第461期の <see cref="ApplyCarry"/> の中の式を外へ出しただけ・第466期）。全快・状態は 0・札は付けたまま・席は持ち越しの席。
@@ -1104,15 +1194,21 @@ public sealed class Map11State
     }
 
     /// <summary>候補の列から、盤上・手札・候補にいない次の 1 枚（尽きたら null）。飛ばした駒は列に戻さない。</summary>
+    /// 第467期: 投資のあるステージでは、先に投資の枠を引く（<see cref="InvestOffer"/>・外れたら今の引き方）。
     private UnitDef? NextOffer()
     {
+        if (InvestLog.Count > 0 && InvestOffer() is { } inv) return inv;
         while (_offerQueue.Count > 0)
         {
             UnitDef d = _offerQueue.Dequeue();
-            if ((!OnBoardOrHand(d) || (Stage.Stars.StackOffers && Stackable(d))) && Offers.All(o => o.Id != d.Id)) return d;   // 第463期: ☆のあるステージでは持っている駒も（☆3 は出さない）・第464期の強化の盤では持っていない駒だけ
+            if (OfferEligible(d)) return d;
         }
         return null;
     }
+
+    /// <summary>候補に出せる駒か（第467期に <see cref="NextOffer"/> の条件を外へ出しただけ）。</summary>
+    private bool OfferEligible(UnitDef d)
+        => (!OnBoardOrHand(d) || (Stage.Stars.StackOffers && Stackable(d))) && Offers.All(o => o.Id != d.Id);   // 第463期: ☆のあるステージでは持っている駒も（☆3 は出さない）・第464期の強化の盤では持っていない駒だけ
 
     /// <summary>金を動かせるか（呼ぶ・枠・売る）。<b>拠点・取った中間拠点・第2拠点にいる隊がいて、組み直しの窓が開けるとき</b>（迎撃の合間も含む）。</summary>
     public bool CanTrade => Stage.Gold.On && !Finished && Squads.Any(q => CanReform(q.Index));
@@ -1133,6 +1229,7 @@ public sealed class Map11State
         else Bench.Add(Stage.Stars.On ? Star1(d) : One(d));
         Recruits++;
         Offers.RemoveAt(offer);
+        _investIds.Remove(d.Id);   // 第467期
         if ((offer == 0 ? FirstOffer() : NextOffer()) is { } next) { Offers.Insert(offer, next); NoteOffer(next); }
         // 第463期: 呼んだキャラは☆3 になるまで列の最後へ戻す（列は全キャラを同じ重みで 1 周する）。
         // 第464期の強化の盤では戻さない——呼んだキャラは列から外れる（第462期まで・重ねは「強化」で）。
@@ -1173,6 +1270,7 @@ public sealed class Map11State
         Spend(Stage.Gold.Reroll, "候補を引き直した");
         var old = Offers.ToList();
         Offers.Clear();
+        _investIds.Clear();   // 第467期
         for (int k = 0; k < Stage.Gold.Offers; k++) if ((k == 0 ? FirstOffer() : NextOffer()) is { } d) AddOffer(d);
         foreach (UnitDef d in old) _offerQueue.Enqueue(d);
         // 列の残りが候補の枚数に満たなかったときは、戻した駒から足りないぶんを補う。
