@@ -53,6 +53,18 @@ public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList
     public static readonly ChapterRule V465 = new(true, "第465期（持ち越し・敵の倍率・☆の強化・勇者の回復なし）",
         new MapFoeScale[] { new(60, 60, HeroMends: false), new(90, 90, HeroMends: false), new(160, 160, HeroMends: false) }, StarRule.V464, DealRule.V464);
 
+    /// <summary>
+    /// 版の一覧（第466期・遊びの写しが版をキーで持つ——写しの版で 1 章を始め直すため）。<b>版を足したらここにも足す。</b>
+    /// </summary>
+    public static IReadOnlyList<(string Key, ChapterRule Rule)> Versions
+        => new[] { ("V460", V460), ("V461", V461), ("V462", V462), ("V463", V463), ("V464", V464), ("V465", V465) };
+
+    /// <summary>版のキー（「V465」・一覧に無ければ名前）。</summary>
+    public string Key { get { string n = Name; return Versions.FirstOrDefault(v => v.Rule.Name == n).Key ?? n; } }
+
+    /// <summary>キーから版を引く（無ければ null）。</summary>
+    public static ChapterRule? ByKey(string key) => Versions.Where(v => v.Key == key).Select(v => (ChapterRule?)v.Rule).FirstOrDefault();
+
     /// <summary>ステージ <paramref name="index"/>（0 ＝ 1-1）の敵の倍率。</summary>
     public MapFoeScale ScaleOf(int index) => Scales is { } s && index < s.Count ? s[index] : MapFoeScale.None;
 }
@@ -131,6 +143,7 @@ public static class Chapter1
         Attempt = 0;
         Records.Clear();
         foreach (MapStage s in Stages) Records.Add(new Record { Stage = s });
+        PlayLog.BeginChapter(Seed);   // 第466期: 遊びの写しの置き場（書かない起動では何もしない）
         StartStage();
     }
 
@@ -153,6 +166,7 @@ public static class Chapter1
         Map11Session.Reset(r.Seed, draft: true, stage: Stages[Index]);
         // 第461期 §1-1 ／ §1-3: 持ち越しのある 1 章では、入った時点の持ち越しを載せる（やり直しも同じ写しへ戻る・戦闘と湧きの seed だけが新しい）。
         if (Rule.Carry && r.Entry is { } entry) Map11Session.State!.ApplyCarry(entry);
+        PlayLog.OnStart(Map11Session.State!, Rule.Carry ? r.Entry : null);   // 第466期: 入った時点の写し（書くだけ）
         IntroPending = true;
     }
 
@@ -176,6 +190,7 @@ public static class Chapter1
         foreach (var kv in relics.Where(kv => kv.Value > 0))
             r.Relics[$"◆{RelicCatalog.Info(kv.Key.Relic).Name}（{kv.Key.Unit}）"] = kv.Value;
         if (Rule.Carry) r.EndPack = st.TakeCarry();   // 第461期
+        PlayLog.OnEnd(st, log, r);   // 第466期: 終わりの写し ＋ 戦闘の記録（書くだけ）
     }
 
     /// <summary>勝ったステージの次へ（1-3 の後は 1 章の結果）。次のステージを始めたら true。</summary>

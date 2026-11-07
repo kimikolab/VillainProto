@@ -194,6 +194,8 @@ public partial class Main : Control
         // 第169期 自己検査 (c)。**画面を1つも作らずに `Map11State` だけを回す。**
         // 通常起動では 1 ビットも走らない。
         string[] bootArgs = OS.GetCmdlineUserArgs();
+        // 第466期 §1: 遊ぶ起動（引数なし）だけ、1 章の遊びの写しを design/plays に書く（門・器具・絵の口では書かない）。
+        if (bootArgs.Length == 0 && !PlayLog.Enabled) PlayLog.Enable(PlayLog.DefaultRoot(ProjectSettings.GlobalizePath("res://")));
         if (bootArgs.Contains("--map11-phase0", StringComparer.Ordinal))
         {
             bool p0 = Map11Verify.Phase0(GD.Print);

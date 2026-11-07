@@ -480,6 +480,7 @@ public static class Map11Session
     {
         if (State is not { } st || OpeningLines.Count > 0) return;
         Drafting = false;
+        PlayLog.OnFirst(st);   // 第466期: 1 章の最初の作戦ターンの直前の写し（書くだけ）
         foreach (Map11State.Squad s in st.Squads)
         {
             string body = s.Units is { Count: > 0 } u
