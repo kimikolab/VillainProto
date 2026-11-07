@@ -716,12 +716,7 @@ public sealed class Map11State
     /// </summary>
     public void ApplyCarry(CarryPack p)
     {
-        UnitState Make(CarryUnit c)
-        {
-            UnitState u = One(c.Def);
-            if (c.Slot >= 0) u.Slot = c.Slot;
-            return c.Relic is TraitId r ? WithRelic(u, r) : u;
-        }
+        UnitState Make(CarryUnit c) => MakeCarried(c);
         // 第463期: ☆と途中まで重ねた枚数を写す（駒の定義はすでに☆の写し）。このステージの始めの引きの☆は捨てる。
         Stars.Clear();
         if (p.Stars is { } ps) foreach (var (id, st) in ps) Stars[id] = st;
@@ -753,6 +748,16 @@ public sealed class Map11State
             for (int k = 0; k < Stage.Gold.Offers; k++) if ((k == 0 ? FirstOffer() : NextOffer()) is { } d) AddOffer(d);
         }
         CarriedIn = true;
+    }
+    /// <summary>
+    /// 持ち越した駒 1 枚を作る（第461期の <see cref="ApplyCarry"/> の中の式を外へ出しただけ・第466期）。全快・状態は 0・札は付けたまま・席は持ち越しの席。
+    /// 敵の重さの表（`FoeWeight`）も同じ式で駒を立てる（作戦マップの戦闘と同じ駒で回すため）。
+    /// </summary>
+    internal static UnitState MakeCarried(CarryUnit c)
+    {
+        UnitState u = One(c.Def);
+        if (c.Slot >= 0) u.Slot = c.Slot;
+        return c.Relic is TraitId r ? WithRelic(u, r) : u;
     }
     private static readonly HashSet<string> RosterIds = UnitCatalog.All.Select(d => d.Id).ToHashSet();
     /// <summary>開始の手札の引きで保証 3 条件を満たせたか（満たせなければ結果画面に印）。到着を切った通しでは真。</summary>
