@@ -1930,6 +1930,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
         # ／ (e) 敵の倍率 1-1 ×0.6 ・1-2 ×0.9 ・1-3 ×1.3（勇者も）／ (f) 1-1 の 6 枚に同じ軸 3 枚以上（52 枚から・3 つの保証も）／ (g) 単発と第460〜463期の 1 章は今のまま
         # ＋ §5 1-1 の始めの軸の内訳（100 配り）・ハギ☆1 ／ ☆2 ／ ☆3 × 勇者 ×0.9 ／ ×1.3 × 20 seed・1 章の通し（第464期 ／ 第463期）× 2 方針 × 100 seed（報告のみ）。`--chapter1-star2-quick` は 1 章の通しを省く
         # 絵: `res://Map11Main.tscn -- --map-chapter-play=<seed> --map-chapter-stop=1 --map11-capture=<png>,enhance`（組み直しの窓で手札の 1 枚目（空なら第1隊 前1）を選んだところ・強化のボタン）
+        # **第465期**: 第464期の 1 章（`ChapterRule.V464`）を名指しで回す（遊ぶ 1 章は勇者の回復なしの V465）。
+    Godot_console.exe --path DemoApp --headless -- --chapter1-nomend-smoke
+        # **第465期**: 1 章の勇者の回復を外す（`ChapterRule.V465`・`MapFoeScale.HeroMends`・`Chapter1NomendSmoke.cs`・画面なし）。(a) 1-2 ・ 1-3 の勇者は回復の札なし・HP ／ 攻撃は倍率どおり
+        # ／ (b) 勇者の HP は戦闘をまたいで持ち越し、戦闘の中で増えない（第465期と第464期の 1-2 × 40 配りで比べる）／ (c) 1-3 ×1.6 ／ (d) 単発と第460〜464期の勇者は回復を持つ ／ (e) 説明文に回復の行なし
+        # ＋ §5 1 章の通し（第465期 ／ 第464期）× 2 方針 × 100 seed・勇者との戦闘（数・負け・倒すまでに当てた隊・1 戦目の後の HP）（報告のみ）。`--chapter1-nomend-quick` は通しを省く
     Godot_console.exe --path DemoApp --headless -- --map11-phase176
         # **第176期 Phase 0**: Q0-1〜Q0-5（`PortalOn = false` が第175期の 18 量と一致するか ／
         # 重なりと同点の割り方 ／ 湧いた部隊を満タンで作る口 ／ 方針の手順 ／ 走行時間）。約 1 秒

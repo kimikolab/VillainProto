@@ -360,6 +360,16 @@ public partial class Main : Control
             GetTree().Quit(okC ? 0 : 1);
             return;
         }
+        // 第465期 §3: 1 章の勇者の回復を外す門（1-2 ・ 1-3 の勇者は回復の札なし・HP は持ち越して戦闘の中で増えない・1-3 ×1.6・単発は今のまま）。画面なし。`--chapter1-nomend-quick` は §5 の器具の通しを省く。
+        if (bootArgs.Contains("--chapter1-nomend-smoke", StringComparer.Ordinal) || bootArgs.Contains("--chapter1-nomend-quick", StringComparer.Ordinal))
+        {
+            bool okN;
+            try { okN = Chapter1NomendSmoke.Run(GD.Print, bots: !bootArgs.Contains("--chapter1-nomend-quick", StringComparer.Ordinal)); }
+            catch (System.Exception ex) { GD.PrintErr(ex.ToString()); okN = false; }
+            GD.Print($"CHAPTER1_NOMEND_SMOKE_COMPLETE ok={okN}");
+            GetTree().Quit(okN ? 0 : 1);
+            return;
+        }
         // 第464期 §3: ☆を金で直に重ねる門（強化 4 金・候補に持っている駒は出ない・1-2 ×0.9 ／ 1-3 ×1.3・1-1 の配りの軸の保証・単発は今のまま）。画面なし。`--chapter1-star2-quick` は §5 の器具の通しを省く。
         if (bootArgs.Contains("--chapter1-star2-smoke", StringComparer.Ordinal) || bootArgs.Contains("--chapter1-star2-quick", StringComparer.Ordinal))
         {
