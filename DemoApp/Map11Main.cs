@@ -626,6 +626,8 @@ public partial class Map11Main : Node3D
         // 第462期: `card` はステージの頭の札（`--map-chapter-stop=K` と使う・出ているまま撮る）、`map` は組み直しの窓を閉じた作戦の画面（上の帯）。
         else if (parts.Length > 1 && parts[1] == "card") { }
         else if (parts.Length > 1 && parts[1] == "map") { _reform = false; ClearHold(); Refresh(); }
+        // 第464期: `enhance` は組み直しの窓で手札の 1 枚目（手札が空なら選んでいる隊の前1）を選んだところ（強化のボタン・`--map-chapter-stop=K` と使う）。
+        else if (parts.Length > 1 && parts[1] == "enhance") { ClearHold(); if (St.Bench.Count > 0) { _holdBench = 0; Refresh(); } else OnSquadSlot(0); }
         else if (parts.Length > 1 && parts[1] == "chapter-result")
         {
             if (St.Finished && St.Won) OnResultAgain();
@@ -2489,9 +2491,13 @@ public partial class Map11Main : Node3D
                     Refresh();
                 };
                 _benchList.AddChild(rv);
+                // 第464期 §1-4: 倒れた駒も強化できる（倒れたまま☆が上がる）。☆3 では出さない。
+                if (St.Stage.Stars.EnhancePrice > 0 && St.StarOf(f.Def.Id).Star < St.Stage.Stars.Max)
+                    _benchList.AddChild(EnhanceButton(f, Fit));
             }
         }
         AddRelicRows();   // 第452期: 手札の隣の「レリック」の段
+        AddEnhanceRow(Fit);   // 第464期 §1-4: 強化（選んだ手札・隊の駒）
         string held = _holdBench >= 0 && _holdBench < St.Bench.Count ? St.Bench[_holdBench].Def.Name : "控えの駒を選んで";
         int sellPrice = _holdBench >= 0 && _holdBench < St.Bench.Count ? St.SellPrice(St.Bench[_holdBench]) : g.Sell;   // 第463期: ＋2 × 重ねた枚数
         Button sell = UiKit.ActionButton($"売る ＋{sellPrice}  {held}", UiKit.Muted);
@@ -2506,6 +2512,45 @@ public partial class Map11Main : Node3D
             Refresh();
         };
         _benchList.AddChild(sell);
+    }
+
+    /// <summary>
+    /// 第464期 §1-4 —— 「強化 4 金（☆1 → 1／2）」のボタン（選んだ手札・隊の駒）。☆3 の駒・強化の無い盤では出さない。
+    /// 押せるかどうかと理由の 1 行は `Map11State.EnhanceBlock` だけを読む（画面は判定を持たない）。
+    /// </summary>
+    private void AddEnhanceRow(Action<Button> fit)
+    {
+        if (St.Stage.Stars.EnhancePrice <= 0) return;
+        UnitState? target = _holdBench >= 0 && _holdBench < St.Bench.Count ? St.Bench[_holdBench]
+                          : _holdSquad >= 0 && _holdSlot >= 0 ? St.UnitAt(_holdSquad, _holdSlot) : null;
+        if (target is null)
+        {
+            _benchList.AddChild(UiKit.Text($"強化 {St.Stage.Stars.EnhancePrice} 金: 手札か隊の駒を選ぶと出る", 13, UiKit.Muted));
+            return;
+        }
+        if (St.StarOf(target.Def.Id).Star >= St.Stage.Stars.Max) return;
+        _benchList.AddChild(EnhanceButton(target, fit));
+    }
+
+    /// <summary>強化のボタン 1 つと、押せないときの理由の 1 行（ボタンの説明にも）。</summary>
+    private Control EnhanceButton(UnitState target, Action<Button> fit)
+    {
+        string? why = !_reform ? "「組み直す」を押してから" : St.EnhanceBlock(target);
+        string name = target.Def.Name;
+        Button en = UiKit.ActionButton($"{St.EnhanceText(target.Def)}  {name}{(why is null ? "" : $"・{why}")}", GoldColor);
+        en.Alignment = HorizontalAlignment.Left;
+        fit(en);
+        en.Disabled = why is not null;
+        en.Pressed += () =>
+        {
+            int ups = St.StarUpLog.Count;
+            if (St.Enhance(target) is null) { ShowToast("いまは強化できません", EnemyColor, 3.0f); return; }
+            ShowToast($"{name} を強化した（金 −{St.Stage.Stars.EnhancePrice}・残り {St.Gold}）", GoldColor, 3.0f);
+            // 第463期 §1-5 と同じ短い印（仮・見た目は Codex）。
+            if (St.StarUpLog.Count > ups) ShowToast($"★ {St.StarUpLog[^1].Name} が ☆{St.StarUpLog[^1].Star} に上がった", GoldColor, 3.5f);
+            Refresh();
+        };
+        return en;
     }
 
     /// <summary>札の名前の後ろの☆（第463期・☆の無いステージは空）。</summary>
