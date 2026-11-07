@@ -33,10 +33,10 @@ public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList
 
     /// <summary>
     /// 第463期の 1 章（第462期 ＋ ☆の重ね・指示書 design/PHASE463_STAR_SPEC.md §1）。駒は☆1 で手に入り、同じキャラを重ねて☆3（今の強さ）まで上がる（<see cref="StarRule.V463"/>）。
-    /// 敵の倍率は第462期と同じ表（1-1 は §1-4 で別に替える）。
+    /// 敵の倍率は §1-4: <b>1-1 を ×0.6</b>（☆1 の 6 枚で始めるので・勇者の列も同じ値）・1-2 ×1.3 ・1-3 ×1.6 は第462期のまま。
     /// </summary>
     public static readonly ChapterRule V463 = new(true, "第463期（持ち越し・敵の倍率・☆の重ね）",
-        new MapFoeScale[] { MapFoeScale.None, new(FoePercent: 130, HeroPercent: 130), new(FoePercent: 160, HeroPercent: 160) }, StarRule.V463);
+        new MapFoeScale[] { new(FoePercent: 60, HeroPercent: 60), new(FoePercent: 130, HeroPercent: 130), new(FoePercent: 160, HeroPercent: 160) }, StarRule.V463);
 
     /// <summary>ステージ <paramref name="index"/>（0 ＝ 1-1）の敵の倍率。</summary>
     public MapFoeScale ScaleOf(int index) => Scales is { } s && index < s.Count ? s[index] : MapFoeScale.None;
