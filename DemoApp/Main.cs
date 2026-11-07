@@ -360,6 +360,16 @@ public partial class Main : Control
             GetTree().Quit(okC ? 0 : 1);
             return;
         }
+        // 第464期 §3: ☆を金で直に重ねる門（強化 4 金・候補に持っている駒は出ない・1-2 ×0.9 ／ 1-3 ×1.3・1-1 の配りの軸の保証・単発は今のまま）。画面なし。`--chapter1-star2-quick` は §5 の器具の通しを省く。
+        if (bootArgs.Contains("--chapter1-star2-smoke", StringComparer.Ordinal) || bootArgs.Contains("--chapter1-star2-quick", StringComparer.Ordinal))
+        {
+            bool okS;
+            try { okS = Chapter1Star2Smoke.Run(GD.Print, bots: !bootArgs.Contains("--chapter1-star2-quick", StringComparer.Ordinal)); }
+            catch (System.Exception ex) { GD.PrintErr(ex.ToString()); okS = false; }
+            GD.Print($"CHAPTER1_STAR2_SMOKE_COMPLETE ok={okS}");
+            GetTree().Quit(okS ? 0 : 1);
+            return;
+        }
         // 第463期 §3: ☆の重ねの門（☆1 から重ねて☆3・持ち越し・売値・ハギの線の上限・1-1 ×0.6・単発は今のまま）。画面なし。`--chapter1-star-quick` は §5 の器具の通しを省く。
         if (bootArgs.Contains("--chapter1-star-smoke", StringComparer.Ordinal) || bootArgs.Contains("--chapter1-star-quick", StringComparer.Ordinal))
         {

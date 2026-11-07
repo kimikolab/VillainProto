@@ -2866,6 +2866,13 @@ public static class Map12ChangeSmoke
                 while (Holes() > Spare() && st.Recruit(0)) recruits++;
             }
             if (turtle || stage.Gold.On) for (int k = 0; k < st.Squads.Length; k++) { if (st.CanReform(k)) refilled += Refill(st, k); }
+            // 第464期 §5: 強化のある盤（1 章の `StarRule.V464`）だけ——隊の穴を埋めた後、金が残っていれば隊の前の席から順に☆を上げる
+            // （第1隊 前1 → … → 第4隊 後3・1 体を☆3 まで上げてから次）。強化の無い盤では 1 行も通らない。
+            if (stage.Gold.On && stage.Stars.EnhancePrice > 0)
+                foreach (Map11State.Squad q in st.Squads)
+                    if (q.Units is { } us)
+                        foreach (UnitState u in us.Where(x => x.IsAlive).OrderBy(x => x.Slot).ToList())
+                            for (UnitState? cur = u; cur is not null && st.CanEnhance(cur);) cur = st.Enhance(cur);
             // 第452期: レリック（レリックのある盤だけ）——候補の先頭を取り、タグが噛む駒（同じ語）に持たせる・いなければ前1。
             if (stage.Relic.On)
             {
