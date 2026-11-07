@@ -1935,6 +1935,19 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
         # **第465期**: 1 章の勇者の回復を外す（`ChapterRule.V465`・`MapFoeScale.HeroMends`・`Chapter1NomendSmoke.cs`・画面なし）。(a) 1-2 ・ 1-3 の勇者は回復の札なし・HP ／ 攻撃は倍率どおり
         # ／ (b) 勇者の HP は戦闘をまたいで持ち越し、戦闘の中で増えない（第465期と第464期の 1-2 × 40 配りで比べる）／ (c) 1-3 ×1.6 ／ (d) 単発と第460〜464期の勇者は回復を持つ ／ (e) 説明文に回復の行なし
         # ＋ §5 1 章の通し（第465期 ／ 第464期）× 2 方針 × 100 seed・勇者との戦闘（数・負け・倒すまでに当てた隊・1 戦目の後の HP）（報告のみ）。`--chapter1-nomend-quick` は通しを省く
+    Godot_console.exe --path DemoApp --headless -- --tuning-tools-smoke
+        # **第466期**: 試遊を減らす道具の門（`TuningToolsSmoke.cs`・画面なし・約 1 分）。(a) 1 章を器具で 1 回通すと 3 ステージ × 始め ／ 1 刻目の前 ／ 終わりの写しが出て、読み直すと持ち越しと同じ中身
+        # ／ (b) 1-2 ・ 1-3 の始めの写しから始めると、1-1 から通したときと 1 刻ずつ一致 ／ (c) 写しの版 ／ 今の版の切替 ／ (d) `--foe-weight` の表と第462期 §3 の「ハギ × 勇者」6 行の再現
+        # ／ (e) 手で写した第461〜464期の写し（`design/plays/manual`）が読める ／ (f) 写しを書いても書かなくても通しは同じ。写しは `.tmp/p466/smoke/plays` に書く（`design/plays` は汚さない）。
+        # `--tuning-tools-quick` は (d) の表を 1-2 ・☆「写しのまま」だけにする
+    Godot_console.exe --path DemoApp --headless -- --foe-weight [--plays=<dir>] [--stage=1-2,1-3] [--scale=1.0,1.3,1.6] [--rule=V465] [--seeds=20] [--stars=as,1,2,3] [--no-relics] [--from=<文字>] [--out=<dir>] [--bands=<path>]
+        # **第466期**: 敵の重さの表（`FoeWeight.cs`・約 10 秒）。遊びの写しの隊 × そのステージの敵部隊 1 つずつ（道・中間拠点・大群の 1 部隊・湧き・予備隊・本陣の守り・勇者）× 倍率 × ☆（写しのまま ／ 全員☆1 ／ ☆2 ／ ☆3）を単発の戦闘で回し、
+        # `design/weights/<日付>_<ステージ>.md` に出す（`docs/` には載せない・同じ日は上書き）。先頭に「帯から外れた組」・勇者は強い順に 1 隊ずつ当てる通し（HP は持ち越す）。帯は `design/weights/BANDS.md`（ポンが直す）。
+        # 既定は design/plays の写し全部（同じ 1 章・同じステージは「1 刻目の前」、無ければ「入った時点」）・今の 1 章の版と倍率。相対パスはリポジトリの根から。Git Bash では `/` で始まる値（`--from=/4661/`）がパスに書き換えられる——`--plays=` でフォルダを絞る
+    Godot.exe --path DemoApp res://Map11Main.tscn -- --map-chapter-from=<写しの .json> [--map-chapter-rule=snap]
+        # **第466期**: 写しのステージから 1 章を始める（既定は今の版・`--map-chapter-rule=snap` で写しに記録された版）。遊ぶ起動は編成画面の札「1 章（写しから）」で一覧から選ぶ。
+        # 遊ぶ起動（引数なし）だけが 1 章の写しを `design/plays/<1 章の seed>/<ステージ>_start|first|end.json` に書く（写しから始めた 1 章は `<seed>_from<ステージ>_<時刻>`）。
+        # 絵: `res://Map11Main.tscn -- --map-snap-picker --map11-capture=<png>`（写しの一覧の窓・読むだけで書かない）
     Godot_console.exe --path DemoApp --headless -- --map11-phase176
         # **第176期 Phase 0**: Q0-1〜Q0-5（`PortalOn = false` が第175期の 18 量と一致するか ／
         # 重なりと同点の割り方 ／ 湧いた部隊を満タンで作る口 ／ 方針の手順 ／ 走行時間）。約 1 秒

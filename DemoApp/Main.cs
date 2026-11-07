@@ -197,16 +197,18 @@ public partial class Main : Control
         // 第466期 §1: 遊ぶ起動（引数なし）だけ、1 章の遊びの写しを design/plays に書く（門・器具・絵の口では書かない）。
         if (bootArgs.Length == 0 && !PlayLog.Enabled) PlayLog.Enable(PlayLog.DefaultRoot(ProjectSettings.GlobalizePath("res://")));
         // 第466期 §3 ／ §5: 敵の重さの表（`--foe-weight`）と、試遊を減らす道具の門（`--tuning-tools-smoke`・`-quick` は §(d) の表を 1-2 だけ）。画面なし。
-        if (bootArgs.Contains("--foe-weight", StringComparer.Ordinal))
+        if (bootArgs.Contains("--foe-weight", StringComparer.Ordinal) || bootArgs.Contains("--tuning-tools-smoke", StringComparer.Ordinal) || bootArgs.Contains("--tuning-tools-quick", StringComparer.Ordinal))
         {
             bool okT;
             string demoDir = ProjectSettings.GlobalizePath("res://");
             try
             {
-                okT = FoeWeight.Main(GD.Print, bootArgs, demoDir);
+                okT = bootArgs.Contains("--foe-weight", StringComparer.Ordinal)
+                    ? FoeWeight.Main(GD.Print, bootArgs, demoDir)
+                    : TuningToolsSmoke.Run(GD.Print, demoDir, quick: bootArgs.Contains("--tuning-tools-quick", StringComparer.Ordinal));
             }
             catch (System.Exception ex) { GD.PrintErr(ex.ToString()); okT = false; }
-            GD.Print($"FOE_WEIGHT_COMPLETE ok={okT}");
+            GD.Print($"{(bootArgs.Contains("--foe-weight", StringComparer.Ordinal) ? "FOE_WEIGHT" : "TUNING_TOOLS_SMOKE")}_COMPLETE ok={okT}");
             GetTree().Quit(okT ? 0 : 1);
             return;
         }
