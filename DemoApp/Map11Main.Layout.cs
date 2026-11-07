@@ -74,6 +74,7 @@ public partial class Map11Main
         BuildSiegeOverlay(_uiRoot);   // 第457期: 本陣の連戦の合間
         BuildResultOverlay(_uiRoot);
         BuildConfirmOverlay(_uiRoot);
+        BuildStaging();
     }
 
     private static VBoxContainer Column(Control parent, int gap = 10)
@@ -440,11 +441,20 @@ public partial class Map11Main
 
     private void PositionMapPicks()
     {
+        var portalCards = _mapPicks.Where(p => p.Marker.Shown && p.Foe is { Cleared: false } f && f.Pos == St.Graph.Portal).ToList();
         foreach (var pick in _mapPicks)
         {
             pick.Button.Visible = !_reform && pick.Marker.Shown && (pick.Foe is { } foe ? !foe.Cleared
                 : !St.Squads[pick.Squad].Lost && !St.IsLocked(pick.Squad) && ((MapUnitBadge)pick.Button).Count > 0);
             pick.Button.Position = _camera.UnprojectPosition(pick.Marker.Root.Position) + new Vector2(-41, -64);
+            int rank = portalCards.FindIndex(p => p.Button == pick.Button);
+            if (rank >= 0 && portalCards.Count > 1)
+            {
+                Vector2 portal = _camera.UnprojectPosition(PortalPos);
+                int rows = Math.Min(3, portalCards.Count);
+                pick.Button.Position = new Vector2(Math.Min(portal.X + 35 + (rank / 3) * 150, _layoutSize.X - 120),
+                    Math.Clamp(portal.Y - 64 + (rank % 3 - (rows - 1) / 2f) * 130, 245, _layoutSize.Y - 210));
+            }
             ((MapUnitBadge)pick.Button).SetNotice(pick.Marker.Note, pick.Marker.NoteColor);
         }
         if (_waitingReserveBadge is not null)

@@ -49,14 +49,22 @@ public partial class Map11Main
         if (_relicOfferPanel is null)
         {
             _relicOfferPanel = Panel();
+            _relicOfferPanel.ZIndex = 100;
+            _relicOfferPanel.AddThemeStyleboxOverride("panel", UiKit.Box(Color.FromHtml("#101c17"), GoldColor));
             _relicOfferPanel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.Center);
-            _relicOfferPanel.CustomMinimumSize = new Vector2(680, 0);
+            _relicOfferPanel.CustomMinimumSize = new Vector2(0, 0);
+            _relicOfferPanel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+            _relicOfferPanel.OffsetLeft = 80; _relicOfferPanel.OffsetRight = -80;
+            _relicOfferPanel.OffsetTop = 195; _relicOfferPanel.OffsetBottom = -100;
             _uiRoot.AddChild(_relicOfferPanel);
         }
         foreach (Node child in _relicOfferPanel.GetChildren()) { _relicOfferPanel.RemoveChild(child); child.QueueFree(); }
         var box = new VBoxContainer();
         box.AddThemeConstantOverride("separation", 8);
-        _relicOfferPanel.AddChild(box);
+        var scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+        _relicOfferPanel.AddChild(scroll);
+        box.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        scroll.AddChild(box);
         box.AddChild(UiKit.Text("レリックを 1 枚（中間拠点を取った見返り・このマップの間だけ）", 18, GoldColor));
         box.AddChild(UiKit.Text("得た札は手札の「レリック」の段へ。札を押してつまみ、駒の札を押すと持たせる（1 駒 1 枚）", 13, UiKit.Muted));
         for (int k = 0; k < St.RelicOffer.Count; k++)
@@ -66,11 +74,13 @@ public partial class Map11Main
             var row = new HBoxContainer();
             row.AddThemeConstantOverride("separation", 8);
             HBoxContainer ends = RelicEndsChips(r, 11);
+            ends.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
             ends.CustomMinimumSize = new Vector2(150, 0);
             row.AddChild(ends);
             Button b = UiKit.ActionButton(RelicLine(r), GoldColor);
             b.Alignment = HorizontalAlignment.Left;
-            b.ClipText = true;
+            b.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+            b.CustomMinimumSize = new Vector2(0, 64);
             b.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
             b.TooltipText = RelicHelp(r);
             b.Pressed += () =>
@@ -102,14 +112,22 @@ public partial class Map11Main
         if (_relicCatalogPanel is null)
         {
             _relicCatalogPanel = Panel();
+            _relicCatalogPanel.ZIndex = 101;
+            _relicCatalogPanel.AddThemeStyleboxOverride("panel", UiKit.Box(Color.FromHtml("#101c17"), GoldColor));
             _relicCatalogPanel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.Center);
-            _relicCatalogPanel.CustomMinimumSize = new Vector2(820, 0);
+            _relicCatalogPanel.CustomMinimumSize = new Vector2(0, 0);
+            _relicCatalogPanel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+            _relicCatalogPanel.OffsetLeft = 60; _relicCatalogPanel.OffsetRight = -60;
+            _relicCatalogPanel.OffsetTop = 100; _relicCatalogPanel.OffsetBottom = -40;
             _uiRoot.AddChild(_relicCatalogPanel);
         }
         foreach (Node child in _relicCatalogPanel.GetChildren()) { _relicCatalogPanel.RemoveChild(child); child.QueueFree(); }
         var box = new VBoxContainer();
         box.AddThemeConstantOverride("separation", 6);
-        _relicCatalogPanel.AddChild(box);
+        var scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+        _relicCatalogPanel.AddChild(scroll);
+        box.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        scroll.AddChild(box);
         box.AddChild(UiKit.Text("レリックの一覧（12 枚）—— 引き金 → 効果", 18, GoldColor));
         box.AddChild(UiKit.Text("「誰でも」の端はどの駒でも満たす。印: ★このマップで出た ／ ◆手持ち・持たせた", 12, UiKit.Muted));
         foreach (RelicInfo info in RelicCatalog.All)
@@ -156,7 +174,8 @@ public partial class Map11Main
             bool holding = _holdRelic == r;
             Button b = UiKit.ActionButton((holding ? "▶ " : "◆ ") + RelicLine(r), GoldColor);
             b.Alignment = HorizontalAlignment.Left;
-            b.ClipText = true;
+            b.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+            b.CustomMinimumSize = new Vector2(0, 64);
             b.TooltipText = RelicHelp(r);
             if (holding) b.Modulate = new Color(1.0f, 0.90f, 0.62f);
             b.Pressed += () =>
@@ -173,7 +192,8 @@ public partial class Map11Main
             if (St.RelicHolder(info.Id) is not UnitState holder) continue;
             Button b = UiKit.ActionButton($"◆{info.Name} → {holder.Def.Name}（押すと外す）", UiKit.Muted);
             b.Alignment = HorizontalAlignment.Left;
-            b.ClipText = true;
+            b.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+            b.CustomMinimumSize = new Vector2(0, 64);
             b.TooltipText = RelicHelp(info.Id);
             b.Disabled = !St.CanEquip(holder);
             b.Pressed += () => { if (St.UnequipRelic(holder)) ShowToast($"{holder.Def.Name} から「{info.Name}」を外した", UiKit.Muted, 2.5f); Refresh(); };

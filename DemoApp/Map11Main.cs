@@ -467,19 +467,21 @@ public partial class Map11Main : Node3D
                     if (e.Intercept) { if (St.NextInterceptor(e.Node) is var j && j >= 0) CaptureFight(j, e.Node, true); St.CloseIntercept(e.Node); }
                     else CaptureFight(e.Squad, e.Node, false);
             }
-            bool got = St.ChooseRelic(0);
+            bool offer = parts.Length > 2 && parts[2] == "offer";
+            bool got = !offer && St.ChooseRelic(0);
             UnitState? holder = St.Squads[0].Units?.Where(u => u.IsAlive).OrderBy(u => u.Slot).FirstOrDefault();
             _selected = 0;
             _reform = St.CanReform(0);
             // 第453期: 画面の「つまむ → 駒の札を押す」の作法そのもので持たせる（`OnSquadSlot` を通す）。
             TraitId? picked = got ? St.RelicHand[0] : null;
             _holdRelic = picked;
-            if (holder is not null) OnSquadSlot(holder.Slot);
+            if (holder is not null && !offer) OnSquadSlot(holder.Slot);
             bool equipped = picked is TraitId pr && St.RelicHolder(pr) is { } h && h.Def.Id == holder?.Def.Id;
             _squadPick = holder?.Slot ?? -1;
             if (parts.Length > 2 && parts[2] == "book") ShowRelicCatalog();   // 第453期: 一覧の絵（`relic,book`）
             Refresh();
             GD.Print($"MAP11_CAPTURE_RELIC seed={Map11Session.Seed} got={got} equipped={equipped} holder={holder?.Def.Name} reform={_reform} pickPath=True");
+            _stageCue?.Dismiss();
         }
         // 第454期 §5: **勇者が現れた直後**の絵（`--map-stage=1-2` と使う）。北の砦を取って候補の先頭を第1隊の前1 に持たせ、野営地も取って門を開け、
         // 勇者が現れるまで刻を進める。戦闘は頭なし（台本つきで回し、レリックが働いた回数を結果画面と同じ帳簿に足す）。
@@ -544,7 +546,7 @@ public partial class Map11Main : Node3D
             Refresh();
             if (win && St.Finished) ShowResult();
             else if (StopReason(before) is { } why) ShowToast(why, GoldColor, 30f);
-            GD.Print($"MAP11_CAPTURE_HERO win={win} won={St.Won} trail={string.Join(">", St.HeroHpTrail)} seed={Map11Session.Seed} turn={St.Turn} fallen={St.Fallen} finished={St.Finished} held={St.HeldOutposts.Count} gate={St.GateOpen} gateTurn={St.GateOpenedTurn} heroTurn={St.HeroTurn} hero={(St.Hero is { } h ? St.Graph[h.Pos].Name : "-")} "
+            GD.Print($"MAP11_CAPTURE_HERO win={win} won={St.Won} trail={string.Join(">", St.HeroHpTrail)} seed={Map11Session.Seed} turn={St.Turn} fallen={St.Fallen} finished={St.Finished} held={St.HeldOutposts.Count} gate={St.GateOpen} gateTurn={St.GateOpenedTurn} heroTurn={St.HeroTurn} hero={(St.Hero is { } h ? PlaceName(h.Pos) : "-")} "
                      + "relics=" + string.Join("/", Map11Session.RelicWorked.Select(kv => $"{RelicCatalog.Info(kv.Key.Relic).Name}({kv.Key.Unit}):{kv.Value}")));
         }
         // 第455期 §4: **勇者を倒した結果画面**の絵（`--map-stage=1-2` と使う）。器具の「分担＋戻り番」で通しを最後まで回す
@@ -572,16 +574,21 @@ public partial class Map11Main : Node3D
                      + "relics=" + string.Join("/", Map11Session.RelicWorked.Select(kv => $"{RelicCatalog.Info(kv.Key.Relic).Name}({kv.Key.Unit}):{kv.Value}")));
         }
         // 第457期 §3: **本陣の連戦の合間の窓**の絵（`Map11Main.Siege.cs`）。
+        else if (parts.Length > 1 && parts[1] == "guard-cue")
+        {
+            CaptureSiegeSetup();
+            _siegeOverlay.Visible = false;
+        }
         else if (parts.Length > 1 && parts[1] is "siege" or "horde")
         {
             CaptureSiegeSetup(horde: parts[1] == "horde");   // 第458期: `horde` は 1-3 の大群の連戦の窓
             await ToSignal(GetTree().CreateTimer(2.0), SceneTreeTimer.SignalName.Timeout);   // 浮く金の数字が消えるのを待つ
         }
         // 第459期 §7: **追ってくる勇者が現れた刻 ／ 拠点が落ちた刻**の絵（`--map-stage=1-3` と使う・`Map11Main.Chase.cs`）。
-        else if (parts.Length > 1 && parts[1] is "chase" or "chase-lost")
+        else if (parts.Length > 1 && parts[1] is "chase" or "chase-lost" or "chase-cue" or "chase-lost-cue")
         {
-            CaptureChaseSetup(lost: parts[1] == "chase-lost");
-            await ToSignal(GetTree().CreateTimer(2.0), SceneTreeTimer.SignalName.Timeout);   // 浮く金の数字が消えるのを待つ
+            CaptureChaseSetup(lost: parts[1].StartsWith("chase-lost", StringComparison.Ordinal));
+            if (!parts[1].EndsWith("-cue", StringComparison.Ordinal)) await ToSignal(GetTree().CreateTimer(2.0), SceneTreeTimer.SignalName.Timeout);   // 浮く金の数字が消えるのを待つ
         }
         // 第443期 §0-1: **迎撃の合間**の絵（`--map-stage=1-2` と使う）。既定の組み方で 2 隊を組み、北と南の先頭だけを残して
         // 拠点で待つ。2 刻目に 2 部隊が同時に着くので、1 戦目を**頭なしで**決着させ（戦闘シーンへは行かない）、2 戦目の迎撃の窓を出す。
@@ -1162,16 +1169,17 @@ public partial class Map11Main : Node3D
             bool here = Map11Session.Destinations[_selected] == d.Dest;
             string place = d.Dest.AtHome ? "拠点"
                 : d.Dest.IsPortal ? (St.Captured ? "第2拠点" : "敵の拠点")
-                : St.Graph.IndexOn(d.Dest.Road, d.Dest.Id) is var at && at <= 0 ? "手前" : $"{at} 戦目";
+                : PlaceName(d.Dest.Id);
             if (d.Dest.IsPortal) place = $"{place}（{St.Stage.LaneMark(d.Dest.Road)}）";
             // 第459期 §2: 選んだ隊がそこまで歩く作戦ターン（横の辺を通る道も同じ数で）。
             string eta = !cleared && TurnsToDest(_selected, d.Dest) is { } steps ? $" ・ あと {steps}" : "";
             d.Node.Text = here ? $"◆ {place}{eta}"
                         : cleared ? place
                         : $"{place} ← {who}{eta}";
+            if (d.Dest.AtHome && St.HomeLost) d.Node.Text = "⛓ 拠点 ⛓";
             d.Node.TooltipText = $"{sel.Label} をここへ";
             d.Node.Modulate = here ? new Color(1.0f, 0.90f, 0.62f)
-                            : cleared ? new Color(1, 1, 1, 0.35f) : Colors.White;
+                            : cleared || (d.Dest.AtHome && St.HomeLost) ? new Color(.55f, .55f, .55f, .65f) : Colors.White;
         }
     }
 
@@ -1803,14 +1811,14 @@ public partial class Map11Main : Node3D
         if (before.HeroTurn < 0 && St.HeroTurn >= 0 && St.Hero is { } hero)
             now.Add(St.Stage.Hero.Chaser
                 // 第459期 §1-1: 門が開いた刻に、拠点から 3 歩のマスに現れて拠点へ向かってくる（仮の文・台詞は後で Web 側）。
-                ? $"勇者が拠点へ向かってくる——あと {St.TurnsToHome(hero) ?? 0} 作戦ターン（{St.Graph[hero.Pos].Name}・HP {hero.HpNow}・毎ターン 300 回復）"
+                ? $"勇者が拠点へ向かってくる——あと {St.TurnsToHome(hero) ?? 0} 作戦ターン（{PlaceName(hero.Pos)}・HP {hero.HpNow}・毎ターン 300 回復）"
                   + "。拠点に隊がいれば迎撃、空なら拠点が落ちる（負けではない・本陣を取れば勝ち）"
                 : St.Stage.Hero.Gatekeeper
                 // 第456期: 門が開いた刻に本陣の前に立つ（門番）。
                 ? $"勇者が本陣の前に立った——倒さなければ本陣へ入れない（HP {hero.HpNow}・毎ターン 300 回復・本陣に入ると守り → 勇者の順）"
                 : St.Stage.Hero.AfterCapture
                 // 第455期: 制圧した刻に、本陣の 1 つ手前へ（倒せば勝ち）。
-                ? $"勇者が現れた（{St.Graph[hero.Pos].Name}・{St.LaneName(hero.Def.Road)}を拠点へ向かう・2 作戦ターンに 1 マス）——倒せば勝ち（HP {hero.HpNow}・毎ターン 300 回復）"
+                ? $"勇者が現れた（{PlaceName(hero.Pos)}・{St.LaneName(hero.Def.Road)}を拠点へ向かう・2 作戦ターンに 1 マス）——倒せば勝ち（HP {hero.HpNow}・毎ターン 300 回復）"
                 : $"勇者が現れた（{Map11.PortalName}から{St.LaneName(hero.Def.Road)}へ向かう・2 作戦ターンに 1 マス）");
         // 第459期 §1-4: 拠点が落ちた刻（負けではない）。
         if (!before.HomeLost && St.HomeLost)
@@ -3112,6 +3120,7 @@ public partial class Map11Main : Node3D
         RefreshScreen();
         FloatNewGold();
         RefreshGuide();
+        RefreshStaging();
         _firstRefresh = false;
     }
 
@@ -3159,10 +3168,12 @@ public partial class Map11Main : Node3D
         }
         if (!n.Cleared)
         {
-            Vector3 at = n.Pos == St.Graph.Home ? BasePos + new Vector3(0, 0, LaneSide(road) * 3.4f)
+            var portalFoes = St.Nodes.SelectMany(r => r).Concat(St.Spawns).Where(x => !x.Cleared && x.Pos == St.Graph.Portal).ToList();
+            int portalRank = portalFoes.IndexOf(n);
+            Vector3 at = n.Pos == St.Graph.Home ? BasePos + new Vector3(4.8f, 0, LaneSide(road) * 3.4f + 3.8f)
                        : n.Pos == St.Graph.Portal
-                           ? PortalPos + new Vector3(3.2f + stackAtPortal * 0.9f, 0,
-                                                     LaneSide(road) * 2.2f)
+                           ? PortalPos + new Vector3(3.2f, 0,
+                                                     (portalRank - (portalFoes.Count - 1) / 2f) * 7.6f)
                        : PosOf(n.Pos) + SharedCellIndex(n, road) * new Vector3(3.6f, 0, 4.8f);
             // 第175期 §1-3: **前進した瞬間は1マス滑らせる**（瞬間移動させない）。
             if (_firstRefresh) m.MoveTo(at); else m.SlideTo(at);
@@ -3241,7 +3252,6 @@ public partial class Map11Main : Node3D
         }
     }
 
-    private readonly List<Arrow> _chaserArrows = new();
 
     /// <summary>
     /// 第459期 §7 —— <b>追ってくる勇者の進む道</b>を太い矢印でつなぐ（拠点が落ちる前は拠点まで、落ちた後は追う隊まで・仮の見た目）。
@@ -3266,13 +3276,8 @@ public partial class Map11Main : Node3D
             for (int i = 0; i + 1 < path.Count; i++)
                 hops.Add((path[i] == St.Graph.Portal ? PortalPos : PosOf(path[i]), path[i + 1] == St.Graph.Portal ? PortalPos : PosOf(path[i + 1])));
         }
-        while (_chaserArrows.Count < hops.Count) _chaserArrows.Add(new Arrow(this, new Color(1.0f, 0.78f, 0.25f), 4.2f, y: 1.9f));
-        for (int i = 0; i < _chaserArrows.Count; i++)
-        {
-            if (i >= hops.Count) { _chaserArrows[i].Hide(); continue; }
-            var (a, b) = hops[i];
-            _chaserArrows[i].Set(a.Lerp(b, 0.12f), a.Lerp(b, 0.88f), a.Lerp(b, 0.88f));
-        }
+        _chaseHops.Clear();
+        _chaseHops.AddRange(hops);
     }
 
     /// <summary>
@@ -3359,7 +3364,7 @@ public partial class Map11Main : Node3D
             Color c = mine ? PlayerColor : EnemyColor;
             if (_outpostArt.TryGetValue(cell, out var art)) art.Texture = OutpostTexture(cell, mine);
             name.Modulate = c;
-            name.Text = St.Graph[cell].Name + (mine ? "（味方）" : St.Stage.Gold.On && St.Stage.Gold.Outpost > 0 ? $"  ＋{St.Stage.Gold.Outpost}" : "");
+            name.Text = PlaceName(cell) + (mine ? "（味方）" : St.Stage.Gold.On && St.Stage.Gold.Outpost > 0 ? $"  ＋{St.Stage.Gold.Outpost}" : "");
         }
     }
 
@@ -3386,6 +3391,7 @@ public partial class Map11Main : Node3D
         // 第439期: 時計。**時計の門の最中は門が自分で回す**（フレームの分まで刻ませない）。
         if (!_clockSmoke) ClockStep(delta);
         ProcessGuide(delta);
+        ProcessStaging(delta);
         UpdateRoutePreview();
 
         if (_toastClock <= 0) return;

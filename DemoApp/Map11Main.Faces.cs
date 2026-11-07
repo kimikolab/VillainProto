@@ -69,6 +69,8 @@ public partial class Map11Main
         badge.ShowUnit(Representative(foe), count, NodeHpPercent(foe), head + reward,
             enemy: true, wave: WaveMark(foe.Def.Name));
         if (foe.IsHero) badge.Face.SetAccent(UiKit.Gold);   // 第456期 §1: 勇者の札は金色の縁（仮・Codex が差し替えてよい）
+        badge.SetStaging(foe.IsHero, foe.Def.Hold ? HordeCount(foe) : 1,
+            foe.IsHero ? (St.HomeLost ? St.HeroChase()?.Steps : St.TurnsToHome(foe)) : null);
         badge.TooltipText = $"{foe.Def.Name}　{Representative(foe)?.Name}　{count}体　HP {NodeHpPercent(foe):F0}%"
             + (Map11.SquadLineOf(foe.Def.Name) is { Length: > 0 } line ? $"\n{line}" : "");
     }

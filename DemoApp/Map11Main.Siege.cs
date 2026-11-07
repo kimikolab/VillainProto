@@ -16,14 +16,23 @@ public partial class Map11Main
     private Button _siegeGo = null!;
     private Button _siegeBack = null!;
     private Label _siegeTag = null!;
+    private HBoxContainer _siegeFaces = null!;
+    private ProgressBar _siegeHp = null!;
 
     private void BuildSiegeOverlay(Control root)
     {
-        _siegeOverlay = Modal(root, 360, 130, out VBoxContainer col, "SIEGE ・ 本陣の連戦", EnemyColor);
+        _siegeOverlay = Modal(root, 380, 285, out VBoxContainer col, "SIEGE ・ 本陣の連戦", EnemyColor);
         _siegeTag = (Label)col.GetChild(0);   // 第458期: 大群のマスでは「〈マス〉の連戦」に替える
         _siegeTitle = UiKit.Text("", 22, Colors.White);
         _siegeTitle.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         col.AddChild(_siegeTitle);
+        _siegeFaces = new HBoxContainer();
+        _siegeFaces.AddThemeConstantOverride("separation", 45);
+        _siegeFaces.CustomMinimumSize = new Vector2(0, 130);
+        col.AddChild(_siegeFaces);
+        _siegeHp = new ProgressBar { CustomMinimumSize = new Vector2(0, 30), ShowPercentage = true };
+        _siegeHp.AddThemeStyleboxOverride("fill", UiKit.Box(PlayerColor, PlayerColor));
+        col.AddChild(_siegeHp);
         _siegeBody = UiKit.Text("", 14, Color.FromHtml("#ccd5cb"));
         _siegeBody.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         _siegeBody.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
@@ -33,10 +42,12 @@ public partial class Map11Main
         col.AddChild(row);
         _siegeGo = UiKit.ActionButton("続けて戦う", GoldColor);
         _siegeGo.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        _siegeGo.CustomMinimumSize = new Vector2(0, 58);
         _siegeGo.Pressed += SiegeContinue;
         row.AddChild(_siegeGo);
         _siegeBack = UiKit.ActionButton("引く", UiKit.Muted);
         _siegeBack.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        _siegeBack.CustomMinimumSize = new Vector2(0, 58);
         _siegeBack.Pressed += SiegeRetreat;
         row.AddChild(_siegeBack);
     }
@@ -52,24 +63,34 @@ public partial class Map11Main
         int road = s.Road >= 0 && s.Road < St.Stage.LaneCount ? s.Road : 0;
         // 第458期: 本陣のほか、敵が重なったマス（1-3 の大群）でも出る。引く先は本陣なら経路の奥、大群なら入ってきた側の隣（`SiegeRetreat` と同じ式）。
         bool portal = s.Pos == St.Graph.Portal;
-        string where = portal ? "本陣" : St.Graph[s.Pos].Name;
+        string where = portal ? "本陣" : PlaceName(s.Pos);
         int cell = portal ? St.Graph.Lanes[road][^1] : St.Graph.TowardHome(road, s.Pos);
         bool held = St.HeldOutposts.Contains(cell);
         int alive = s.Units?.Count(u => u.IsAlive) ?? 0;
         int foeAlive = next.Units?.Count(u => u.IsAlive) ?? next.Def.Enemy.Occupied().Count();
         int after = portal ? (St.Portal.On ? CountPortalFoes() : 0)
             : Enumerable.Range(0, St.Stage.LaneCount).Sum(r => St.FoesOn(r).Count(n => n.Pos == s.Pos));
+        foreach (Node child in _siegeFaces.GetChildren()) { _siegeFaces.RemoveChild(child); child.QueueFree(); }
+        var own = new MapUnitBadge { MouseFilter = Control.MouseFilterEnum.Ignore };
+        SetBadge(own, s); _siegeFaces.AddChild(own);
+        _siegeFaces.AddChild(new MapNoRecovery { CustomMinimumSize = new Vector2(62, 94), TooltipText = "戦闘後の回復なし" });
+        var enemy = new MapUnitBadge { MouseFilter = Control.MouseFilterEnum.Ignore };
+        SetBadge(enemy, next); enemy.SetStaging(next.IsHero, after); _siegeFaces.AddChild(enemy);
+        Label remaining = UiKit.Text($"× {after}", 36, GoldColor);
+        remaining.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+        _siegeFaces.AddChild(remaining);
+        _siegeHp.Value = SquadHpPercent(s);
         _siegeTag.Text = portal ? "SIEGE ・ 本陣の連戦" : $"SIEGE ・ {where}の連戦";
         _siegeTitle.Text = $"{s.Label} が{where}で勝った——次は {(next.IsHero ? "勇者" : next.Def.Name)}";
         _siegeBody.Text =
-            $"{s.Label}: {alive} 枚 ・ HP {SquadHpPercent(s):F0}%（{where}では戦闘の後の回復は乗らない）\n"
+            $"{s.Label}: {alive} 枚 ・ HP {SquadHpPercent(s):F0}%\n"
             + $"{(next.IsHero ? "勇者" : next.Def.Name)}: {foeAlive} 体 ・ HP {NodeHpPercent(next):F0}%"
             + (after > 1 ? $"（{where}に残る敵 {after}）" : "") + "\n\n"
-            + $"引く: {St.Graph[cell].Name}へ戻る（無料・時間はかからない）。"
+            + $"引く: {PlaceName(cell)}へ戻る（無料・時間はかからない）。"
             + (held ? "味方の中間拠点なので、組み直し・呼ぶ・休むができる。" : St.Graph.IsOutpost(cell) ? "敵のものなので組み直しはできない。" : "")
             + $" {where}の敵はそのまま（HP は戻らない）。";
         _siegeGo.Text = $"続けて戦う（{(next.IsHero ? "勇者" : next.Def.Name)}）";
-        _siegeBack.Text = $"引く（{St.Graph[cell].Name}へ）";
+        _siegeBack.Text = $"引く（{PlaceName(cell)}へ）";
         _siegeOverlay.Visible = true;
     }
 

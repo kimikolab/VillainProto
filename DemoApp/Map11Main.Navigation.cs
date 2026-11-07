@@ -41,7 +41,7 @@ public partial class Map11Main
         Vector2 Project(int cell) => _camera.UnprojectPosition(PosOf(cell) + Vector3.Up * .5f);
         _routePreview.SetRoute(path.Select(Project).ToArray(), enemies.Select(n => Project(n.Pos)).ToArray());
         string home = pick.Dest.AtHome ? "　帰還後に回復・補充" : "";
-        _orderHint.Text = $"{squad.Label} → {St.Graph[pick.Dest.Id].Name}　{(warp ? "ワープ" : "移動")} {Math.Max(0, path.Count - 1)} 作戦ターン"
+        _orderHint.Text = $"{squad.Label} → {PlaceName(pick.Dest.Id)}　{(warp ? "ワープ" : "移動")} {Math.Max(0, path.Count - 1)} 作戦ターン"
             + (enemies.Length > 0 ? $"　経路上の敵 {enemies.Length}隊" : "") + home;
     }
 

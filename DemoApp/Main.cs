@@ -1557,6 +1557,7 @@ public partial class Main : Control
         _dohaFastEvent = _dohaShares.FastEvents.Contains(eventIndex);
         BattlePawn3D? actor = _battleField.FindPawn(e.ActorId);
         BattlePawn3D? target = _battleField.FindPawn(e.TargetId);
+        ObserveRelicCue(e, actor);
         if (actor is not null) actor.AnimationSpeed = Math.Max(0.1, _speed);
         if (target is not null) target.AnimationSpeed = Math.Max(0.1, _speed);
         _chiriFastEvent = _chiri.DamageOwners.ContainsKey(eventIndex) || _chiri.FuseHits.Contains(eventIndex);

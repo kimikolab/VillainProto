@@ -119,6 +119,27 @@ public partial class UnitFaceIcon : Control
 /// <summary>部隊を表す1枚の札。人数とHPは呼び出し側から受け取り、計算しない。</summary>
 public partial class MapUnitBadge : Button
 {
+    private bool _hero;
+    private int _layers = 1;
+    private int? _eta;
+    private float _pulseClock;
+    private readonly Label _etaLabel = UiKit.Text("", 28, UiKit.Gold);
+    public void SetStaging(bool hero, int layers = 1, int? eta = null)
+    {
+        _hero = hero; _layers = Math.Clamp(layers, 1, 6); _eta = eta;
+        _etaLabel.Text = eta?.ToString() ?? "";
+        _etaLabel.Visible = hero && eta is not null;
+        _name.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+        _name.TooltipText = _name.Text;
+        QueueRedraw();
+    }
+    public override void _Process(double delta)
+    {
+        if (!_hero || !IsVisibleInTree()) return;
+        _pulseClock += (float)delta;
+        _etaLabel.Modulate = _eta == 1 ? new Color(1, .45f + .25f * Mathf.Sin(_pulseClock * 7), .25f) : Colors.White;
+        QueueRedraw();
+    }
     public UnitFaceIcon Face { get; } = new();
     public int Count { get; private set; }
     public double HpPercent { get; private set; }
@@ -146,6 +167,10 @@ public partial class MapUnitBadge : Button
         _notice.AddThemeColorOverride("font_outline_color", UiKit.Shadow);
         _notice.AddThemeConstantOverride("outline_size", 4);
         AddChild(_notice);
+        _etaLabel.Position = new Vector2(81, 30);
+        _etaLabel.Size = new Vector2(52, 42);
+        _etaLabel.MouseFilter = MouseFilterEnum.Ignore;
+        AddChild(_etaLabel);
     }
 
     public void SetNotice(string text, Color color)
@@ -166,6 +191,19 @@ public partial class MapUnitBadge : Button
 
     public override void _Draw()
     {
+        for (int i = _layers - 1; i > 0; i--)
+        {
+            var rect = new Rect2(6 + i * 6, 15 - i * 4, 60, 60);
+            DrawRect(rect, UiKit.Panel);
+            DrawRect(rect, UiKit.Enemy, false, 2);
+        }
+        if (_hero)
+        {
+            Vector2[] shield = { new(36, 3), new(80, 20), new(77, 75), new(36, 99), new(-7, 75), new(-10, 20) };
+            DrawColoredPolygon(shield, UiKit.Panel);
+            for (int i = 0; i < shield.Length; i++) DrawLine(shield[i], shield[(i + 1) % shield.Length], UiKit.Gold, 3, true);
+            DrawColoredPolygon(new[] { new Vector2(18, 11), new Vector2(14, -3), new Vector2(29, 3), new Vector2(36, -10), new Vector2(44, 3), new Vector2(59, -3), new Vector2(54, 11) }, UiKit.Gold);
+        }
         DrawCircle(new Vector2(67, 67), 14, UiKit.Panel);
         DrawRect(new Rect2(7, 82, 68, 6), UiKit.Line);
         DrawRect(new Rect2(7, 82, (float)(68 * HpPercent / 100), 6), _color);

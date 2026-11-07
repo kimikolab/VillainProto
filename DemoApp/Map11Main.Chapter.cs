@@ -64,8 +64,26 @@ public partial class Map11Main
     private void ShowChapterResult()
     {
         _resultTitle.Text = "1 章 の結果";
-        foreach (Node child in _resultFaces.GetChildren()) child.QueueFree();
-        var lines = Chapter1.ResultLines();
+        foreach (Node child in _resultFaces.GetChildren()) { _resultFaces.RemoveChild(child); child.QueueFree(); }
+        foreach (var record in Chapter1.Records)
+        {
+            var panel = Panel();
+            var row = new HBoxContainer();
+            row.AddThemeConstantOverride("separation", 18);
+            panel.AddChild(row);
+            var art = new MapStageIllustration { State = record.Stage, CustomMinimumSize = new Vector2(170, 80) };
+            row.AddChild(art);
+            var words = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+            row.AddChild(words);
+            words.AddChild(UiKit.Text($"{(record.Won ? "✓" : record.Quit ? "×" : "○")}  {record.Stage.Id}  {record.Result}", 20, record.Won ? PlayerColor : UiKit.Muted));
+            string symbol = record.Hero.StartsWith("倒した") ? "⚔ " : record.Hero.StartsWith("逃げ切った") ? "➜ " : "";
+            Label hero = UiKit.Text(symbol + record.Hero, 16, GoldColor);
+            hero.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+            words.AddChild(hero);
+            words.AddChild(UiKit.Text($"＋{record.Earned}　／　−{record.Spent}　　やり直し {record.Retries}", 13, UiKit.Muted));
+            _resultFaces.AddChild(panel);
+        }
+        var lines = Chapter1.ResultLines().Where(line => line.StartsWith("合計")).ToList();
         lines.Add("");
         lines.Add($"1 章の seed {Chapter1.Seed}（ステージの seed: "
                   + string.Join(" ／ ", Chapter1.Records.Where(r => r.Played).Select(r => $"{r.Stage.Id} {r.Seed}")) + "）");
@@ -119,7 +137,8 @@ public partial class Map11Main
         if (!Chapter1.Active || !Chapter1.IntroPending || St.Finished) return;
         Chapter1.IntroPending = false;
         var (title, body) = Chapter1.Intro(St.Stage);
-        _introOverlay = Modal(_uiRoot, 300, 140, out VBoxContainer col, "1 章", GoldColor);
+        _introOverlay = Modal(_uiRoot, 330, 245, out VBoxContainer col, "1 章", GoldColor);
+        col.AddChild(new MapStageIllustration { State = St.Stage, CustomMinimumSize = new Vector2(0, 160), SizeFlagsHorizontal = Control.SizeFlags.ExpandFill });
         col.AddChild(UiKit.Text(title, 24, Colors.White));
         Label text = UiKit.Text(body, 15, Color.FromHtml("#ccd5cb"));
         text.AutowrapMode = TextServer.AutowrapMode.WordSmart;
