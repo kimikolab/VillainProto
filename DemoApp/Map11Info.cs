@@ -78,6 +78,43 @@ public static class Map11Info
 
     // ---------------- 戦闘の後の1行（指示書 §1-4） ----------------
 
+    /// <summary>倒れた味方の駒 1 枚の、倒れた一撃の出どころ（第467期 §3・<see cref="DownsOf"/>）。</summary>
+    public enum DownCause { Foe, AllyShock, AllyOther, Unknown }
+
+    /// <summary>
+    /// 1 戦の台本から、<paramref name="players"/>（この戦闘の味方の <c>InstanceId</c>）のうち倒れた駒ごとに、倒れた一撃の出どころを分ける（第467期 §3・<b>読むだけ</b>）。
+    /// 倒れた直前の、その駒への最後の <c>Damage</c> の出どころ（<c>ActorId</c>）が味方（自分・この戦闘で喚ばれた味方の側の駒を含む）で、その一撃が<b>雷・粉の連鎖</b>（直前の出来事を
+    /// <c>Damage</c> ／ <c>Heal</c> ／ <c>Death</c> ／ <c>StatusGain</c> をまたいでさかのぼって、最初に当たるのが <c>Discharge</c>（放電）・<c>ShockGauge</c>（粉塵爆発・焼など感電の計器）・
+    /// <c>ShockSpent</c>（起爆））なら <see cref="DownCause.AllyShock"/>。<c>Death</c> の倒した側（<c>ActorId</c>）は連鎖を起こした敵になるので読まない。
+    /// 台本の無い戦闘（<c>verbose: false</c>）は空。
+    /// </summary>
+    public static List<(int Id, DownCause Cause)> DownsOf(BattleResult r, IReadOnlySet<int> players)
+    {
+        var list = new List<(int, DownCause)>();
+        var ev = r.Events;
+        // 出どころの味方には、この戦闘で喚ばれた味方の側の駒（召喚獣など）も入れる（倒れた枚数には入れない）。
+        var side = new HashSet<int>(players);
+        foreach (BattleEvent s in ev)
+            if (s.Kind == BattleEventKind.Summon && s.TargetId is int sid && s.Team == BattleContext.PlayerTeam) side.Add(sid);
+        for (int i = 0; i < ev.Count; i++)
+        {
+            BattleEvent e = ev[i];
+            if (e.Kind != BattleEventKind.Death || e.TargetId is not int dead || !players.Contains(dead)) continue;
+            int j = i - 1;
+            while (j >= 0 && !(ev[j].Kind == BattleEventKind.Damage && ev[j].TargetId == dead)) j--;
+            if (j < 0 || ev[j].ActorId is not int src) { list.Add((dead, DownCause.Unknown)); continue; }
+            if (!side.Contains(src)) { list.Add((dead, DownCause.Foe)); continue; }
+            int k = j - 1;
+            while (k >= 0 && ev[k].Kind is BattleEventKind.Damage or BattleEventKind.Heal or BattleEventKind.Death or BattleEventKind.StatusGain) k--;
+            bool shock = k >= 0 && ev[k].Kind is BattleEventKind.Discharge or BattleEventKind.ShockGauge or BattleEventKind.ShockSpent;
+            list.Add((dead, shock ? DownCause.AllyShock : DownCause.AllyOther));
+        }
+        return list;
+    }
+
+    /// <summary>味方の雷・粉で倒れた駒の枚数（第467期 §3・戦闘の記録の「（味方の雷で n 枚）」）。</summary>
+    public static int AllyShockDowns(BattleResult r, IReadOnlySet<int> players) => DownsOf(r, players).Count(d => d.Cause == DownCause.AllyShock);
+
     /// <summary>
     /// <b>盤面ルールが実際に何をしたか</b>を、味方側の数字だけで並べる。
     /// <b>評価の言葉は1つも書かない</b>（案B）——「相性が悪い」「送り先を間違えた」は出さない。

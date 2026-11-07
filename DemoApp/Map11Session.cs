@@ -31,9 +31,10 @@ public static class Map11Session
     /// <param name="Notes">盤面ルールが実際にしたこと（<see cref="Map11Info.RuleNotes"/>）。</param>
     /// <param name="Turn">その戦闘が起きた作戦ターン（第174期。時間なしなら 0）。</param>
     /// <param name="Intercept">拠点の迎撃戦か（第174期）。</param>
+    /// <param name="AllyShock">第467期 §3: この戦闘で味方の雷・粉で倒れた駒の枚数（1 章だけ数える・<see cref="Map11Info.AllyShockDowns"/>・単発は 0）。</param>
     public sealed record Line(int No, string Squad, string Road, string Foe,
                               bool Won, int Alive, double HpPercent, IReadOnlyList<string> Notes,
-                              int Turn, bool Intercept);
+                              int Turn, bool Intercept, int AllyShock = 0);
 
     public static Map11State? State { get; private set; }
     public static int Seed { get; private set; }
@@ -259,10 +260,13 @@ public static class Map11Session
         double hpPct = sq.Units is null || maxHp == 0
             ? 0 : 100.0 * sq.Units.Where(u => u.IsAlive).Sum(u => u.Hp) / maxHp;
         // 第459期 §2: 記録の作戦ターンは画面と同じ数（`ShownTurn`・1 から）。時間なしの通しは 0（出さない）のまま。
+        // 第467期 §3: 味方の雷・粉で倒れた枚数（1 章だけ・台本のある戦闘だけ——単発の記録は第466期のまま）。
+        int allyShock = Chapter1.Active && result is not null
+            ? Map11Info.AllyShockDowns(result, unitsBefore.Select(u => u.InstanceId).ToHashSet()) : 0;
         BattleLog.Add(new Line(Battles, squadName, State.LaneName(road),
                                $"{node.Def.Index + 1}. {node.Def.Name}",
                                playerWon, alive, hpPct, notes,
-                               State.Time.On ? ShownTurn : 0, wasIntercept));
+                               State.Time.On ? ShownTurn : 0, wasIntercept, allyShock));
 
         // **「抜けなかった」には2種類ある。** 全滅と、30 ターンで決着しない膠着。
         // 膠着は engine の上限ターン（`MaxTurns`）で、**同じ相手にもう一度当てても同じことが起きる**

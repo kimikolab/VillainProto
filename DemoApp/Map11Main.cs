@@ -2935,7 +2935,7 @@ public partial class Map11Main : Node3D
     private static string HistoryLine(Map11Session.Line l) =>
         (l.Turn > 0 ? $"T{l.Turn} " : "") + $"{l.No}戦目  "
         + (l.Intercept ? "【迎撃】" : "") + $"{l.Squad} → {l.Road} {l.Foe}"
-        + $"  {(l.Won ? "抜いた" : "抜けず")}  （残り {l.Alive}枚 ・ HP {l.HpPercent:F0}%）";
+        + $"  {(l.Won ? "抜いた" : "抜けず")}  （残り {l.Alive}枚 ・ HP {l.HpPercent:F0}%{(l.AllyShock > 0 ? $"（味方の雷で {l.AllyShock} 枚）" : "")}）";   // 第467期 §3
 
     private void ShowResult()
     {

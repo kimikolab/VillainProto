@@ -81,6 +81,8 @@ public static class PlayLog
         public bool Intercept { get; set; }
         public int Alive { get; set; }
         public double Hp { get; set; }
+        /// <summary>第467期 §3: 味方の雷・粉で倒れた枚数（0 なら書かない）。</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public int AllyShock { get; set; }
         public List<string> Notes { get; set; } = new();
     }
 
@@ -332,7 +334,7 @@ public static class PlayLog
         s.Battles = log.Select(l => new Battle
         {
             No = l.No, Turn = l.Turn, Squad = l.Squad, Road = l.Road, Foe = l.Foe, Won = l.Won, Intercept = l.Intercept,
-            Alive = l.Alive, Hp = Math.Round(l.HpPercent, 1), Notes = l.Notes.ToList(),
+            Alive = l.Alive, Hp = Math.Round(l.HpPercent, 1), AllyShock = l.AllyShock, Notes = l.Notes.ToList(),
         }).ToList();
         Put(s);
     }
