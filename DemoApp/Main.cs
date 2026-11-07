@@ -360,6 +360,16 @@ public partial class Main : Control
             GetTree().Quit(okC ? 0 : 1);
             return;
         }
+        // 第463期 §3: ☆の重ねの門（☆1 から重ねて☆3・持ち越し・売値・ハギの線の上限・1-1 ×0.6・単発は今のまま）。画面なし。`--chapter1-star-quick` は §5 の器具の通しを省く。
+        if (bootArgs.Contains("--chapter1-star-smoke", StringComparer.Ordinal) || bootArgs.Contains("--chapter1-star-quick", StringComparer.Ordinal))
+        {
+            bool okR;
+            try { okR = Chapter1StarSmoke.Run(GD.Print, bots: !bootArgs.Contains("--chapter1-star-quick", StringComparer.Ordinal)); }
+            catch (System.Exception ex) { GD.PrintErr(ex.ToString()); okR = false; }
+            GD.Print($"CHAPTER1_STAR_SMOKE_COMPLETE ok={okR}");
+            GetTree().Quit(okR ? 0 : 1);
+            return;
+        }
         // 第462期 §4: 1 章の敵の倍率の門（1-2 ×1.3 ／ 1-3 ×1.6・勇者の固定回復も・単発は今のまま）。画面なし。`--chapter1-scale-quick` は §6 の器具の表を省く。
         if (bootArgs.Contains("--chapter1-scale-smoke", StringComparer.Ordinal) || bootArgs.Contains("--chapter1-scale-quick", StringComparer.Ordinal))
         {
