@@ -115,6 +115,7 @@ public partial class Map11Main
         {
             for (int guard = 0; guard < 60 && Chapter1.Active && !Chapter1.Over; guard++)
             {
+                Chapter1.AutoInvest();   // 第467期: 器具の選び方で投資（手持ちにいちばん多い軸）
                 Map11State st = Map11Session.State!;
                 bool last = Chapter1.Index == Chapter1.Stages.Count - 1;
                 Map12ChangeSmoke.Greedy(st.Seed, st.Stage, guard: true, split: true, state: st, siegeRest: true,
@@ -145,7 +146,7 @@ public partial class Map11Main
         col.AddChild(text);
         Button go = UiKit.ActionButton("始める", GoldColor);
         go.CustomMinimumSize = new Vector2(0, 40);
-        go.Pressed += () => { if (_introOverlay is not null) _introOverlay.Visible = false; };
+        go.Pressed += () => { if (_introOverlay is not null) _introOverlay.Visible = false; ShowInvestPicker(); };   // 第467期: 続けて投資の札
         col.AddChild(go);
         _introOverlay.Visible = true;
     }

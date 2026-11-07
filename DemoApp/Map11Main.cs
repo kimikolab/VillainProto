@@ -261,6 +261,7 @@ public partial class Map11Main : Node3D
 
         if (St.Finished) ShowResult();
         ShowChapterIntro();   // 第460期 §A-5: 1 章のステージの頭の札（1 章でなければ何もしない）
+        if (_introOverlay is not { Visible: true }) ShowInvestPicker();   // 第467期 §1-3: 頭の札が出ていなければ投資の札（出ていれば「始める」の後）
         ShowSnapPicker();     // 第466期 §2: 「1 章（写しから）」の写しの一覧（選ぶところでなければ何もしない）
 
         // 第169期 自己検査 (d')。**画面を通した通し確認**（頭なしで走る）。
@@ -640,6 +641,10 @@ public partial class Map11Main : Node3D
         else if (parts.Length > 1 && parts[1] == "card") { }
         else if (parts.Length > 1 && parts[1] == "map") { _reform = false; ClearHold(); Refresh(); }
         // 第464期: `enhance` は組み直しの窓で手札の 1 枚目（手札が空なら選んでいる隊の前1）を選んだところ（強化のボタン・`--map-chapter-stop=K` と使う）。
+        // 第467期 §1-3: `invest` はステージの始めの投資の札の窓（`--map-chapter-stop=K` と使う・出ているまま撮る）。
+        else if (parts.Length > 1 && parts[1] == "invest") { if (_introOverlay is not null) _introOverlay.Visible = false; ShowInvestPicker(); }
+        // 第467期 §1-3: `invested` は投資を器具の選び方で選んだ後の組み直しの窓（金の段の「投資:」の 1 行・候補の「◇投資」の印）。
+        else if (parts.Length > 1 && parts[1] == "invested") { Chapter1.AutoInvest(); if (_investOverlay is not null) _investOverlay.Visible = false; if (_introOverlay is not null) _introOverlay.Visible = false; _reform = true; ClearHold(); Refresh(); }
         else if (parts.Length > 1 && parts[1] == "enhance") { ClearHold(); if (St.Bench.Count > 0) { _holdBench = 0; Refresh(); } else OnSquadSlot(0); }
         else if (parts.Length > 1 && parts[1] == "chapter-result")
         {
@@ -2414,6 +2419,8 @@ public partial class Map11Main : Node3D
         // 手札の列は細いので、札の文字は切り（全文は触れたときの説明）、案内の文は折り返す。
         void Fit(Button b) { b.ClipText = true; b.TooltipText = b.Text; b.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill; b.CustomMinimumSize = new Vector2(0, b.CustomMinimumSize.Y); }
         _benchList.AddChild(UiKit.Text($"金 {St.Gold}", 18, GoldColor));
+        // 第467期 §1-3: 投資の 1 行（投資のあるステージ＝1 章だけ）。
+        if (St.Stage.Invest.On) _benchList.AddChild(UiKit.Text(St.InvestText, 13, GoldColor));
         // 第459期 §7: 拠点が落ちた後、呼ぶ・組み直しが拠点では押せない理由を 1 行。
         if (St.HomeLost && !St.CanReform(_selected))
         {
@@ -2435,7 +2442,9 @@ public partial class Map11Main : Node3D
             // 第463期 §1-5: ☆のあるステージは「☆1」か「重ねる ☆1→（1／2）」と、呼んだ後の☆の数値（`Map11State.OfferDef`）。
             UnitDef shown = St.OfferDef(d);
             string star = St.OfferStarText(d) is { Length: > 0 } st ? $"  {st}" : "";
-            Button b = UiKit.ActionButton($"{head}  {d.Name}{star}  HP{shown.MaxHp} 攻{shown.Attack} 速{shown.Speed}{(free ? "" : Short(g.Recruit))}", GoldColor);
+            // 第467期 §1-3: 投資の枠から来た札に小さな印（仮・見た目は Codex）。
+            string inv = St.IsInvestOffer(d) ? "  ◇投資" : "";
+            Button b = UiKit.ActionButton($"{head}  {d.Name}{star}{inv}  HP{shown.MaxHp} 攻{shown.Attack} 速{shown.Speed}{(free ? "" : Short(g.Recruit))}", GoldColor);
             b.Alignment = HorizontalAlignment.Left;
             Fit(b);
             b.Disabled = !_reform || !St.CanRecruit(index);

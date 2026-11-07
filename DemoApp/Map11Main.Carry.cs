@@ -23,6 +23,7 @@ public partial class Map11Main
         {
             for (int guard = 0; guard < 60 && Chapter1.Active && !Chapter1.Over && Chapter1.Index < stopAt; guard++)
             {
+                Chapter1.AutoInvest();   // 第467期: 器具の選び方で投資（手持ちにいちばん多い軸）
                 Map11State st = Map11Session.State!;
                 bool last = Chapter1.Index == Chapter1.Stages.Count - 1;
                 Map12ChangeSmoke.Greedy(st.Seed, st.Stage, guard: true, split: true, state: st, siegeRest: true,
