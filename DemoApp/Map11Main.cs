@@ -2349,7 +2349,7 @@ public partial class Map11Main : Node3D
             int index = i;
             var b = new Button
             {
-                Text = $"{u.Def.Name}{(u.Relic is TraitId rl ? $"  ◆{RelicCatalog.Info(rl).Name}" : "")}\nHP {u.Hp}/{u.MaxHp} ・ 攻{u.Def.Attack} ・ 速{u.Def.Speed}",   // 第452期: レリックの印
+                Text = $"{u.Def.Name}{StarTag(u.Def)}{(u.Relic is TraitId rl ? $"  ◆{RelicCatalog.Info(rl).Name}" : "")}\nHP {u.Hp}/{u.MaxHp} ・ 攻{u.Def.Attack} ・ 速{u.Def.Speed}",   // 第452期: レリックの印・第463期: ☆
                 Alignment = HorizontalAlignment.Left,
                 FocusMode = Control.FocusModeEnum.None,
                 CustomMinimumSize = new Vector2(0, 42),
@@ -2409,7 +2409,10 @@ public partial class Map11Main : Node3D
             UnitDef d = St.Offers[k];
             int index = k;
             string head = free ? "無料" : $"呼ぶ {g.Recruit}";
-            Button b = UiKit.ActionButton($"{head}  {d.Name}  HP{d.MaxHp} 攻{d.Attack} 速{d.Speed}{(free ? "" : Short(g.Recruit))}", GoldColor);
+            // 第463期 §1-5: ☆のあるステージは「☆1」か「重ねる ☆1→（1／2）」と、呼んだ後の☆の数値（`Map11State.OfferDef`）。
+            UnitDef shown = St.OfferDef(d);
+            string star = St.OfferStarText(d) is { Length: > 0 } st ? $"  {st}" : "";
+            Button b = UiKit.ActionButton($"{head}  {d.Name}{star}  HP{shown.MaxHp} 攻{shown.Attack} 速{shown.Speed}{(free ? "" : Short(g.Recruit))}", GoldColor);
             b.Alignment = HorizontalAlignment.Left;
             Fit(b);
             b.Disabled = !_reform || !St.CanRecruit(index);
@@ -2418,8 +2421,11 @@ public partial class Map11Main : Node3D
             b.Pressed += () =>
             {
                 bool wasFree = St.FreePicks > 0;
+                int ups = St.StarUpLog.Count;
                 if (!St.Recruit(index)) { ShowToast("いまは呼べません", EnemyColor, 3.0f); return; }
                 ShowToast(wasFree ? $"{d.Name} を無料で呼んだ（枠の特典）" : $"{d.Name} を呼んだ（金 −{g.Recruit}・残り {St.Gold}）", GoldColor, 3.0f);
+                // 第463期 §1-5: ☆が上がった瞬間の短い印（仮・見た目は Codex）。
+                if (St.StarUpLog.Count > ups) ShowToast($"★ {St.StarUpLog[^1].Name} が ☆{St.StarUpLog[^1].Star} に上がった", GoldColor, 3.5f);
                 ClearHold();
                 Refresh();
             };
@@ -2479,19 +2485,23 @@ public partial class Map11Main : Node3D
         }
         AddRelicRows();   // 第452期: 手札の隣の「レリック」の段
         string held = _holdBench >= 0 && _holdBench < St.Bench.Count ? St.Bench[_holdBench].Def.Name : "控えの駒を選んで";
-        Button sell = UiKit.ActionButton($"売る ＋{g.Sell}  {held}", UiKit.Muted);
+        int sellPrice = _holdBench >= 0 && _holdBench < St.Bench.Count ? St.SellPrice(St.Bench[_holdBench]) : g.Sell;   // 第463期: ＋2 × 重ねた枚数
+        Button sell = UiKit.ActionButton($"売る ＋{sellPrice}  {held}", UiKit.Muted);
         Fit(sell);
         sell.Disabled = !_reform || !St.CanSell(_holdBench);
         sell.Pressed += () =>
         {
             string name = St.Bench[_holdBench].Def.Name;
             if (!St.Sell(_holdBench)) return;
-            ShowToast($"{name} を手放した（金 ＋{g.Sell}・残り {St.Gold}）", GoldColor, 3.0f);
+            ShowToast($"{name} を手放した（金 ＋{sellPrice}・残り {St.Gold}）", GoldColor, 3.0f);
             ClearHold();
             Refresh();
         };
         _benchList.AddChild(sell);
     }
+
+    /// <summary>札の名前の後ろの☆（第463期・☆の無いステージは空）。</summary>
+    private string StarTag(UnitDef d) => St.StarText(d) is { Length: > 0 } t ? $"  {t}" : "";
 
     /// <summary>組み直しの案内（いま何ができるか・何をつまんでいるか）。</summary>
     private void RefreshReform()
@@ -2552,6 +2562,7 @@ public partial class Map11Main : Node3D
         RenderSquadSummary(cells, s);
         _squadDiagram.AllowEmptyPress = _reform && St.CanReform(_selected);
         _squadDiagram.DeadLabel = s.Lost ? "（失われた）" : "（戦死）";
+        _squadDiagram.StarText = St.Stage.Stars.On ? St.StarText : null;   // 第463期: 隊の札にも☆
         _squadDiagram.Render(cells, _squadPick);
 
         foreach (Node child in _squadFocus.GetChildren()) child.QueueFree();
@@ -2734,8 +2745,8 @@ public partial class Map11Main : Node3D
             string seat = FormationRules.SeatNames[Math.Clamp(r.Slot, 0, FormationRules.TotalSlots - 1)];
             _squadDetail.AddChild(UiKit.Text(
                 r.Alive
-                    ? $"{seat}  {r.Def.Name}   HP {r.Hp}/{r.MaxHp} ・ 攻{r.Def.Attack} ・ 速{r.Def.Speed}"
-                    : $"{seat}  {r.Def.Name}   （戦死）",
+                    ? $"{seat}  {r.Def.Name}{StarTag(r.Def)}   HP {r.Hp}/{r.MaxHp} ・ 攻{r.Def.Attack} ・ 速{r.Def.Speed}"
+                    : $"{seat}  {r.Def.Name}{StarTag(r.Def)}   （戦死）",
                 14, tint));
             Wrapped($"　何をする: {r.Def.PlusText}", 12, r.Alive ? UiKit.Muted : DeadColor);
             if (r.Def.MinusText.Length > 0)

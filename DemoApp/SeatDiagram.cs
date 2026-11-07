@@ -74,6 +74,9 @@ public partial class SeatDiagram : Control
     /// </summary>
     public string DeadLabel { get; set; } = "（戦死）";
 
+    /// <summary>駒の名前の後ろに出す☆（第463期・作戦マップの 1 章だけが渡す・null なら出さない）。図は判定を持たないので、文は呼び出し側が作る。</summary>
+    public Func<UnitDef, string>? StarText { get; set; }
+
     /// <summary>いま選んでいる席（-1 ＝ なし）。</summary>
     public int Selected { get; private set; } = -1;
 
@@ -197,10 +200,11 @@ public partial class SeatDiagram : Control
             bool big = DisplayScale > 1.1f;
             string relic = cell.Relic is TraitId rl ? "◆" + RelicCatalog.Info(rl).Name : "";   // 第452期
             string last = string.Join("  ", new[] { big ? "" : tags, tag, relic }.Where(x => x.Length > 0));
+            string star = StarText?.Invoke(cell.Def) is { Length: > 0 } st ? " " + st : "";   // 第463期
             card.Text = cell.Alive
-                ? $"{head}{(big ? (tags.Length > 0 ? "  " + tags : "") + "\n" : "  ")}{cell.Def.Name}\nHP {cell.Hp}/{cell.MaxHp}  攻{cell.Def.Attack} 速{cell.Def.Speed}"
+                ? $"{head}{(big ? (tags.Length > 0 ? "  " + tags : "") + "\n" : "  ")}{cell.Def.Name}{star}\nHP {cell.Hp}/{cell.MaxHp}  攻{cell.Def.Attack} 速{cell.Def.Speed}"
                   + (last.Length > 0 ? "\n" + last : "")
-                : $"{head}  {cell.Def.Name}\n{DeadLabel}";
+                : $"{head}  {cell.Def.Name}{star}\n{DeadLabel}";
             // 第451期: 触れるとタグの 1 行。
             card.TooltipText = cell.Def.Tags.Count > 0 ? cell.Def.Name + "\n" + UnitTagChips.Help(cell.Def) : "";
             card.AddThemeColorOverride("font_color",
