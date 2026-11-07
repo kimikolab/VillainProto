@@ -104,7 +104,9 @@ public static class Chapter1
         public int Spent { get; set; }
         /// <summary>働いた札（「◆名（駒）」→ 回数・勝った ／ 最後の配り）。</summary>
         public Dictionary<string, int> Relics { get; } = new();
-        public string Result => Won ? $"制圧（作戦ターン {Turn}）" : Quit ? "やめた" : Played ? "途中" : "—";
+        public string Result => Won ? $"制圧（作戦ターン {Turn}）" : Quit ? "やめた" : Played ? "途中" : Skipped ? "—（写しから始めた）" : "—";
+        /// <summary>写しから始めた 1 章で、写しより前のステージ（第466期・遊んでいない）。</summary>
+        public bool Skipped { get; set; }
         /// <summary>このステージに入った時点の持ち越し（第461期・1-1 と持ち越しの無い 1 章は null）。やり直しはここへ戻る。</summary>
         public Map11State.CarryPack? Entry { get; set; }
         /// <summary>このステージの終わり（最後に終わった配り）の持ち越し（第461期・結果画面の「育った」列と、勝てば次のステージの <see cref="Entry"/>）。</summary>
@@ -141,9 +143,36 @@ public static class Chapter1
         Over = false;
         Index = 0;
         Attempt = 0;
+        From = null;
         Records.Clear();
         foreach (MapStage s in Stages) Records.Add(new Record { Stage = s });
         PlayLog.BeginChapter(Seed);   // 第466期: 遊びの写しの置き場（書かない起動では何もしない）
+        StartStage();
+    }
+
+    /// <summary>写しから始めた 1 章なら、その写し（第466期）。</summary>
+    public static PlayLog.Snap? From { get; private set; }
+
+    /// <summary>
+    /// 写しから 1 章を始める（第466期 §2）。写しのステージ・1 章の seed・配りの回数から始め、写しの持ち越しを載せる
+    /// （1 章の 1-1 の自動の写しは配りから——`Snap.Entry` が偽）。以降は今の 1 章と同じ（次のステージへ持ち越す・やり直しはそのステージの始め）。
+    /// <paramref name="snapRule"/> が真なら写しに記録された版で、偽なら<b>今の版</b>（<see cref="Default"/>・既定——調整した後の盤を前の持ち越しで遊ぶため）。
+    /// 写しの☆は、その版に☆が無ければ捨て、写しに☆が無ければ☆3 とする（`PlayLog.ToCarry`）。
+    /// </summary>
+    public static void BeginFrom(PlayLog.Snap snap, bool snapRule = false)
+    {
+        Rule = snapRule && ChapterRule.ByKey(snap.Rule) is { } r ? r : Default;
+        Seed = snap.ChapterSeed;
+        Active = true;
+        Over = false;
+        Index = Math.Clamp(snap.StageIndex, 0, Stages.Count - 1);
+        Attempt = Math.Max(0, snap.Attempt);
+        From = snap;
+        Records.Clear();
+        foreach (MapStage s in Stages) Records.Add(new Record { Stage = s });
+        for (int i = 0; i < Index; i++) Records[i].Skipped = true;
+        if (snap.Entry && snap.Pack is { } p) Records[Index].Entry = PlayLog.ToCarry(p, Stages[Index].Stars);
+        PlayLog.BeginChapter(Seed, snap.Stage);
         StartStage();
     }
 

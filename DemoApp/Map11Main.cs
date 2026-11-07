@@ -215,6 +215,9 @@ public partial class Map11Main : Node3D
         {
             if (user.FirstOrDefault(a => a.StartsWith("--map-chapter=", StringComparison.Ordinal)) is { } ch && int.TryParse(ch["--map-chapter=".Length..], out int chSeed))
                 Map11Session.PickChapter(chSeed);
+            // 第466期: `--map-snap-picker` は「1 章（写しから）」を選んで入ったところ（写しの一覧の窓・design/plays の写しを読む・書かない）。
+            if (user.Contains("--map-snap-picker", StringComparer.Ordinal))
+                Map11Session.PickSnapList(PlayLog.DefaultRoot(ProjectSettings.GlobalizePath("res://")));
             if (user.FirstOrDefault(a => a.StartsWith("--map-chapter-play=", StringComparison.Ordinal)) is { } cp && int.TryParse(cp["--map-chapter-play=".Length..], out int cpSeed))
             {
                 // 第461期: `--map-chapter-stop=K` ならステージ K に入ったところで止める（持ち越して入った組み直しの窓の絵・`Map11Main.Carry.cs`）。
@@ -222,6 +225,15 @@ public partial class Map11Main : Node3D
                     PlayChapterUntil(cpSeed, stopAt, keepIntro: user.Any(a => a.StartsWith("--map11-capture=", StringComparison.Ordinal) && a.EndsWith(",card", StringComparison.Ordinal)));   // 第462期: `,card` はステージの頭の札を残す
                 else PlayChapterForCapture(cpSeed);
             }
+        }
+        // 第466期 §2: `--map-chapter-from=<写しのパス>` は写しのステージから 1 章を始める（`--map-chapter-rule=snap` なら写しの版・既定は今の版）。
+        // 起動 1 回につき 1 度だけ読む（次のステージ・やり直しでシーンを読み直しても始め直さない）。
+        if (!_fromArgRead && user.FirstOrDefault(a => a.StartsWith("--map-chapter-from=", StringComparison.Ordinal)) is { } fromArg)
+        {
+            _fromArgRead = true;
+            PlayLog.Snap snap = PlayLog.Read(fromArg["--map-chapter-from=".Length..].Trim('"'));
+            Map11Session.PickChapterFrom(snap, snapRule: user.Contains("--map-chapter-rule=snap", StringComparer.Ordinal));
+            GD.Print($"CHAPTER1_FROM {snap.Path} 版 {Chapter1.Rule.Key} ステージ {Chapter1.CurrentStage.Id} seed {Map11Session.State!.Seed}");
         }
         Map11Session.EnsureStarted();
         // 第439期: 時計は通しに結び付ける（別の通しなら止めて目盛りを 0 に）。
@@ -249,6 +261,7 @@ public partial class Map11Main : Node3D
 
         if (St.Finished) ShowResult();
         ShowChapterIntro();   // 第460期 §A-5: 1 章のステージの頭の札（1 章でなければ何もしない）
+        ShowSnapPicker();     // 第466期 §2: 「1 章（写しから）」の写しの一覧（選ぶところでなければ何もしない）
 
         // 第169期 自己検査 (d')。**画面を通した通し確認**（頭なしで走る）。
         // 判断だけを器具と同じ固定の割り当てで代行し、戦闘は本物の再生を通す。

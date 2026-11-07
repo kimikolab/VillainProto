@@ -98,7 +98,14 @@ public static class Map11Session
         // 第460期 §A-1: 「1 章」を選んでいれば 1 章の通し（同じステージを遊んでいる間は続ける・違えば 1-1 から始める）。
         if (ChapterPicked)
         {
-            if (Chapter1.Active && State is not null && ReferenceEquals(State.Stage, Chapter1.CurrentStage)) return;
+            // 第466期 §2: 「1 章（写しから）」は写しから始めた 1 章を続ける（無ければいちばん新しい写しから始め、画面が一覧を出す）。
+            if (Chapter1.Active && State is not null && ReferenceEquals(State.Stage, Chapter1.CurrentStage) && (Chapter1.From is not null) == SnapPicked) return;
+            if (SnapPicked && PlayLog.Starts().FirstOrDefault() is { } newest)
+            {
+                Chapter1.BeginFrom(newest, snapRule: false);
+                SnapChoicePending = true;
+                return;
+            }
             Chapter1.Begin();
             return;
         }
@@ -112,6 +119,15 @@ public static class Map11Session
     /// </summary>
     public static bool ChapterPicked { get; private set; }
 
+    /// <summary>
+    /// 「1 章（写しから）」を選んでいるか（第466期 §2）。札の回り方は 1-1 → 1-2 → 1-3 → 1 章 → <b>1 章（写しから）</b> → 1-1。
+    /// <b>写しを書く起動（<see cref="PlayLog.Enabled"/>）で、写しが 1 つ以上あるときだけ</b>回る（頭なしの門の回り方は第460期のまま）。
+    /// </summary>
+    public static bool SnapPicked { get; private set; }
+
+    /// <summary>写しの一覧を出す（第466期・作戦の画面が読んで一覧の窓を開け、選ぶか閉じるかで偽に戻す）。</summary>
+    public static bool SnapChoicePending { get; set; }
+
     /// <summary>「1 章」を選んで 1 章を始める（第460期・絵の口 `--map-chapter=N` だけが使う・遊ぶ起動は札の <see cref="CyclePick"/>）。</summary>
     public static void PickChapter(int? seed = null)
     {
@@ -119,14 +135,37 @@ public static class Map11Session
         Chapter1.Begin(seed);
     }
 
+    /// <summary>
+    /// 札を「1 章（写しから）」にする（第466期・絵の口 `--map-snap-picker` だけが使う・遊ぶ起動は札の <see cref="CyclePick"/>）。
+    /// <paramref name="root"/> の写しを一覧に出す（写しは書かない——読む置き場だけを決める）。
+    /// </summary>
+    public static void PickSnapList(string root)
+    {
+        PlayLog.UseForReading(root);
+        ChapterPicked = true;
+        SnapPicked = true;
+        if (Chapter1.Active) Chapter1.End();
+    }
+
+    /// <summary>写しを選んで 1 章を始める（第466期 §2・一覧の窓と口 `--map-chapter-from=` が使う）。<paramref name="snapRule"/> が偽なら今の版。</summary>
+    public static void PickChapterFrom(PlayLog.Snap snap, bool snapRule)
+    {
+        ChapterPicked = true;
+        SnapPicked = true;
+        SnapChoicePending = false;
+        Chapter1.BeginFrom(snap, snapRule);
+    }
+
     /// <summary>ステージの札の文（第460期・「マップ 1-2」／「1 章」）。</summary>
-    public static string PickText => ChapterPicked ? "1 章" : $"マップ {Chosen.Id}";
+    public static string PickText => SnapPicked ? "1 章（写しから）" : ChapterPicked ? "1 章" : $"マップ {Chosen.Id}";
 
     /// <summary>ステージの札を 1 つ進める（第460期 §A-1・1-1 → 1-2 → 1-3 → 1 章 → 1-1）。</summary>
     public static void CyclePick()
     {
         var all = MapStage.All;
-        if (ChapterPicked) { ChapterPicked = false; Chosen = all[0]; return; }
+        // 第466期: 1 章 → 1 章（写しから）（写しを書く起動で写しがあるときだけ）→ 1-1
+        if (ChapterPicked && !SnapPicked && PlayLog.Enabled && PlayLog.Starts().Count > 0) { SnapPicked = true; return; }
+        if (ChapterPicked) { ChapterPicked = false; SnapPicked = false; Chosen = all[0]; return; }
         int at = 0;
         for (int i = 0; i < all.Count; i++) if (ReferenceEquals(all[i], Chosen)) at = i;
         if (at == all.Count - 1) { ChapterPicked = true; return; }
