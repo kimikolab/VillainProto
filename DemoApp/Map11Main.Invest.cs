@@ -21,9 +21,11 @@ public partial class Map11Main
         if (cards.Count == 0) return;
         InvestRule rule = St.Stage.Invest;
         _investOverlay = Modal(_uiRoot, 470, 250, out VBoxContainer col, "投資", GoldColor);
-        col.AddChild(UiKit.Text($"{St.Stage.Id} ・ どの軸に投資する？", 22, Colors.White));
+        col.AddChild(UiKit.Text(rule.Doctrines ? $"{St.Stage.Id} ・ どの札を選ぶ？" : $"{St.Stage.Id} ・ どの軸に投資する？", 22, Colors.White));
         Label help = UiKit.Text($"選んだ軸の駒が、呼ぶ候補に出やすくなる（投資 1 回につき候補 1 枚ごとに {rule.PerPick}%・上限 {rule.Cap}%）。"
-                                + "選んだ軸は次のステージへ持ち越し、同じ軸を選べば重なる。金はかからない。", 13, Color.FromHtml("#ccd5cb"));
+                                + "選んだ軸は次のステージへ持ち越し、同じ軸を選べば重なる。金はかからない。"
+                                + (rule.Doctrines ? "\n盤の札・金の札は、良いことと悪いことを両方持つ（1 章の終わりまで効く・同じ札は 1 章で 1 度だけ）。盤の札は開戦時の席で数値が変わる（戦闘中に動かされても変わらない）。" : ""),
+                                13, Color.FromHtml("#ccd5cb"));
         help.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         col.AddChild(help);
         col.AddChild(UiKit.Text(St.InvestText, 13, GoldColor));
@@ -36,6 +38,13 @@ public partial class Map11Main
             int index = i;
             var card = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
             card.AddThemeConstantOverride("separation", 6);
+            // 第468期 §1-3: 盤・金の札は「プラス ／ マイナス」の 2 行（色は仮・見た目は Codex）。
+            if (Doctrine.Find(axis) is { } doc)
+            {
+                AddDoctrineCard(card, doc, index);
+                row.AddChild(card);
+                continue;
+            }
             card.AddChild(UiKit.Text(axis, 22, GoldColor));
             Label line = UiKit.Text(UnitTags.LineOf(axis), 12, Color.FromHtml("#ccd5cb"));
             line.AutowrapMode = TextServer.AutowrapMode.WordSmart;
@@ -63,6 +72,25 @@ public partial class Map11Main
         _investOverlay.Visible = true;
     }
 
+    /// <summary>盤・金の札 1 枚（第468期 §1-3・名前 ・種類 ・プラス ／ マイナスの 2 行 ・選ぶボタン・見た目は仮）。</summary>
+    private void AddDoctrineCard(VBoxContainer card, Doctrine doc, int index)
+    {
+        Color accent = doc.Kind == DoctrineKind.Board ? Color.FromHtml("#9fc4e8") : GoldColor;
+        card.AddChild(UiKit.Text(doc.Name, 22, accent));
+        card.AddChild(UiKit.Text(doc.KindName, 12, UiKit.Muted));
+        Label plus = UiKit.Text($"＋ {doc.Plus}", 13, Color.FromHtml("#9fdc9a"));
+        plus.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        card.AddChild(plus);
+        Label minus = UiKit.Text($"－ {doc.Minus}", 13, Color.FromHtml("#e89a8a"));
+        minus.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        card.AddChild(minus);
+        card.AddChild(UiKit.Text("1 章の終わりまで効く（同じ札は 1 章で 1 度だけ）", 12, UiKit.Muted));
+        Button pick = UiKit.ActionButton($"{doc.Name}を選ぶ", accent);
+        pick.CustomMinimumSize = new Vector2(0, 38);
+        pick.Pressed += () => OnInvestPicked(index);
+        card.AddChild(pick);
+    }
+
     /// <summary>
     /// 絵の口 `enhance-press`（第467期 §2・門 `--chapter1-invest-smoke` (e) の画面の側）: 組み直しの窓で、画面の押し方の口（<see cref="OnBenchPressed"/> ／
     /// <see cref="OnSquadSlot"/> ／ <see cref="PressEnhance"/>）をそのまま押して確かめる。`--map-chapter-play=N --map-chapter-stop=1` と使う（持ち越して入った 1-2 の組み直しの窓）。
@@ -82,7 +110,7 @@ public partial class Map11Main
         Refresh();
         var parts = new System.Collections.Generic.List<string>();
         // 支度（押し方の確かめのためだけ）: 金を足し、手札が 2 枚に満たなければ隊の後ろの席の駒を「ここへ下げる」で手札へ（画面の口のまま）。
-        St.GrantGoldForCheck(10 * St.Stage.Stars.EnhancePrice);
+        St.GrantGoldForCheck(10 * St.EnhancePrice);
         for (int guard = 0; guard < 4 && St.Bench.Count < 2; guard++)
         {
             int from = Enumerable.Range(0, St.Squads.Length).FirstOrDefault(i => St.CanReform(i) && St.Squads[i].Units is { } us && us.Count(u => u.IsAlive) >= 2, -1);
@@ -92,7 +120,7 @@ public partial class Map11Main
             OnBenchPressed(St.Bench.Count);
         }
         ClearHold();
-        bool ok = St.Stage.Stars.EnhancePrice > 0 && St.Bench.Count >= 2 && St.Gold >= 4 * St.Stage.Stars.EnhancePrice;
+        bool ok = St.Stage.Stars.EnhancePrice > 0 && St.Bench.Count >= 2 && St.Gold >= 4 * St.EnhancePrice;
         string Ids() => string.Join(",", St.Bench.Select(u => u.Def.Id)) + "|" + string.Join(",", St.Squads.Select(q => string.Join(".", (q.Units ?? new()).OrderBy(u => u.Slot).Select(u => $"{u.Slot}{u.Def.Id}"))));
         int Star(UnitState u) => St.StarOf(u.Def.Id).Star * 10 + St.StarOf(u.Def.Id).Pips;
         if (ok)
@@ -168,7 +196,7 @@ public partial class Map11Main
         var cards = Chapter1.InvestCards;
         if (!Chapter1.PickInvest(index)) { ShowToast("いまは選べません", EnemyColor, 3.0f); return; }
         if (_investOverlay is not null) _investOverlay.Visible = false;
-        ShowToast($"{cards[index]}に投資した（{St.InvestText}）", GoldColor, 3.5f);
+        ShowToast(Doctrine.Find(cards[index]) is null ? $"{cards[index]}に投資した（{St.InvestText}）" : $"{cards[index]}を選んだ（{St.InvestText}）", GoldColor, 3.5f);
         GD.Print($"CHAPTER1_INVEST stage={St.Stage.Id} pick={cards[index]} cards={string.Join("/", cards)} {St.InvestText}");
         Refresh();
     }

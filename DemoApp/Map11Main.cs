@@ -648,6 +648,17 @@ public partial class Map11Main : Node3D
         // 第464期: `enhance` は組み直しの窓で手札の 1 枚目（手札が空なら選んでいる隊の前1）を選んだところ（強化のボタン・`--map-chapter-stop=K` と使う）。
         // 第467期 §2: `enhance-press` は強化の後の押し方を画面の口で押して確かめる（門 `--chapter1-invest-smoke` (e)・`--map-chapter-stop=1` と使う）。
         else if (parts.Length > 1 && parts[1] == "enhance-press") CaptureEnhancePress();
+        // 第468期 §1-3: `doctrine` は札の盤の札（無ければ金の札）を選んだ後の組み直しの窓（金の段の「投資:」・隊の席の「開戦時 HP 60 → 75」）。
+        else if (parts.Length > 1 && parts[1] == "doctrine")
+        {
+            var cards = Chapter1.InvestCards;
+            int at = Enumerable.Range(0, cards.Count).OrderBy(i => Doctrine.Find(cards[i]) is { Kind: DoctrineKind.Board } ? 0 : Doctrine.Find(cards[i]) is not null ? 1 : 2).FirstOrDefault();
+            Chapter1.PickInvest(at);
+            if (_investOverlay is not null) _investOverlay.Visible = false;
+            if (_introOverlay is not null) _introOverlay.Visible = false;
+            _reform = true; ClearHold(); Refresh();
+            GD.Print($"MAP11_CAPTURE_DOCTRINE cards={string.Join("/", cards)} {St.InvestText} seats={string.Join(" | ", (St.Squads[_selected].Units ?? new List<UnitState>()).Select(u => St.DoctrineText(u.Def, u.Slot)).Where(t => t.Length > 0))}");
+        }
         // 第467期 §1-3: `invest` はステージの始めの投資の札の窓（`--map-chapter-stop=K` と使う・出ているまま撮る）。
         else if (parts.Length > 1 && parts[1] == "invest") { if (_introOverlay is not null) _introOverlay.Visible = false; ShowInvestPicker(); }
         // 第467期 §1-3: `invested` は投資を器具の選び方で選んだ後の組み直しの窓（金の段の「投資:」の 1 行・候補の「◇投資」の印）。
@@ -1829,7 +1840,7 @@ public partial class Map11Main : Node3D
         // 第444期: 中間拠点を取った・取り返された瞬間と、見返りの駒が届いた瞬間。
         if (St.OutpostCaptures > before.OutpostCaptures)
             now.Add("中間拠点を取った（組み直し・休む・届いた駒を受け取るができる）"
-                    + (St.Stage.Gold.On ? $"（金 ＋{St.Stage.Gold.Outpost}）" : ""));
+                    + (St.Stage.Gold.On ? $"（金 ＋{St.OutpostGold}）" : ""));   // 第468期: 金の札を掛けた値
         if (St.OutpostLosses > before.OutpostLosses) now.Add("中間拠点を取り返された");
         // 第451期: 本陣の門が開いた・閉じた瞬間（門の無い盤では常に開いているので出ない）。
         if (!before.GateOpen && St.GateOpen) now.Add("本陣の門が開いた（敵の拠点へ入れる）");
@@ -2449,13 +2460,13 @@ public partial class Map11Main : Node3D
         {
             UnitDef d = St.Offers[k];
             int index = k;
-            string head = free ? "無料" : $"呼ぶ {g.Recruit}";
+            string head = free ? "無料" : $"呼ぶ {St.RecruitPrice}";   // 第468期: 金の札を掛けた値
             // 第463期 §1-5: ☆のあるステージは「☆1」か「重ねる ☆1→（1／2）」と、呼んだ後の☆の数値（`Map11State.OfferDef`）。
             UnitDef shown = St.OfferDef(d);
             string star = St.OfferStarText(d) is { Length: > 0 } st ? $"  {st}" : "";
             // 第467期 §1-3: 投資の枠から来た札に小さな印（仮・見た目は Codex）。
             string inv = St.IsInvestOffer(d) ? "  ◇投資" : "";
-            Button b = UiKit.ActionButton($"{head}  {d.Name}{star}{inv}  HP{shown.MaxHp} 攻{shown.Attack} 速{shown.Speed}{(free ? "" : Short(g.Recruit))}", GoldColor);
+            Button b = UiKit.ActionButton($"{head}  {d.Name}{star}{inv}  HP{shown.MaxHp} 攻{shown.Attack} 速{shown.Speed}{(free ? "" : Short(St.RecruitPrice))}", GoldColor);
             b.Alignment = HorizontalAlignment.Left;
             Fit(b);
             b.Disabled = !_reform || !St.CanRecruit(index);
@@ -2466,7 +2477,7 @@ public partial class Map11Main : Node3D
                 bool wasFree = St.FreePicks > 0;
                 int ups = St.StarUpLog.Count;
                 if (!St.Recruit(index)) { ShowToast("いまは呼べません", EnemyColor, 3.0f); return; }
-                ShowToast(wasFree ? $"{d.Name} を無料で呼んだ（枠の特典）" : $"{d.Name} を呼んだ（金 −{g.Recruit}・残り {St.Gold}）", GoldColor, 3.0f);
+                ShowToast(wasFree ? $"{d.Name} を無料で呼んだ（枠の特典）" : $"{d.Name} を呼んだ（金 −{St.RecruitPrice}・残り {St.Gold}）", GoldColor, 3.0f);
                 // 第463期 §1-5: ☆が上がった瞬間の短い印（仮・見た目は Codex）。
                 if (St.StarUpLog.Count > ups) ShowToast($"★ {St.StarUpLog[^1].Name} が ☆{St.StarUpLog[^1].Star} に上がった", GoldColor, 3.5f);
                 ClearHold();
@@ -2558,7 +2569,7 @@ public partial class Map11Main : Node3D
                           : _holdSquad >= 0 && _holdSlot >= 0 ? St.UnitAt(_holdSquad, _holdSlot) : null;
         if (target is null)
         {
-            _benchList.AddChild(UiKit.Text($"強化 {St.Stage.Stars.EnhancePrice} 金: 手札か隊の駒を選ぶと出る", 13, UiKit.Muted));
+            _benchList.AddChild(UiKit.Text($"強化 {St.EnhancePrice} 金: 手札か隊の駒を選ぶと出る", 13, UiKit.Muted));   // 第468期: 金の札を掛けた値
             return;
         }
         if (St.StarOf(target.Def.Id).Star >= St.Stage.Stars.Max) return;
@@ -2585,7 +2596,7 @@ public partial class Map11Main : Node3D
         int ups = St.StarUpLog.Count;
         if (St.Enhance(target) is null) { ShowToast("いまは強化できません", EnemyColor, 3.0f); return; }
         if (Holding) _enhancedHold = true;   // 第467期 §2
-        ShowToast($"{name} を強化した（金 −{St.Stage.Stars.EnhancePrice}・残り {St.Gold}）", GoldColor, 3.0f);
+        ShowToast($"{name} を強化した（金 −{St.EnhancePrice}・残り {St.Gold}）", GoldColor, 3.0f);
         // 第463期 §1-5 と同じ短い印（仮・見た目は Codex）。
         if (St.StarUpLog.Count > ups) ShowToast($"★ {St.StarUpLog[^1].Name} が ☆{St.StarUpLog[^1].Star} に上がった", GoldColor, 3.5f);
         Refresh();
@@ -2654,6 +2665,7 @@ public partial class Map11Main : Node3D
         _squadDiagram.AllowEmptyPress = _reform && St.CanReform(_selected);
         _squadDiagram.DeadLabel = s.Lost ? "（失われた）" : "（戦死）";
         _squadDiagram.StarText = St.Stage.Stars.On ? St.StarText : null;   // 第463期: 隊の札にも☆
+        _squadDiagram.SeatNote = St.Doctrines.Count > 0 ? St.DoctrineShort : null;   // 第468期: 盤の札の開戦時の数値
         _squadDiagram.Render(cells, _squadPick);
 
         foreach (Node child in _squadFocus.GetChildren()) child.QueueFree();
@@ -2839,6 +2851,9 @@ public partial class Map11Main : Node3D
                     ? $"{seat}  {r.Def.Name}{StarTag(r.Def)}   HP {r.Hp}/{r.MaxHp} ・ 攻{r.Def.Attack} ・ 速{r.Def.Speed}"
                     : $"{seat}  {r.Def.Name}{StarTag(r.Def)}   （戦死）",
                 14, tint));
+            // 第468期 §1-3: 盤の札が効く席なら、開戦時の数値（「開戦時 HP 60 → 75・攻 9 → 10（前のめり）」・仮の見た目）。
+            if (r.Alive && St.DoctrineText(r.Def, r.Slot) is { Length: > 0 } doc)
+                Wrapped($"　{doc}", 12, GoldColor);
             Wrapped($"　何をする: {r.Def.PlusText}", 12, r.Alive ? UiKit.Muted : DeadColor);
             if (r.Def.MinusText.Length > 0)
                 Wrapped($"　代わりに: {r.Def.MinusText}", 12, r.Alive ? UiKit.Faint : DeadColor);
@@ -3447,7 +3462,7 @@ public partial class Map11Main : Node3D
             Color c = mine ? PlayerColor : EnemyColor;
             if (_outpostArt.TryGetValue(cell, out var art)) art.Texture = OutpostTexture(cell, mine);
             name.Modulate = c;
-            name.Text = PlaceName(cell) + (mine ? "（味方）" : St.Stage.Gold.On && St.Stage.Gold.Outpost > 0 ? $"  ＋{St.Stage.Gold.Outpost}" : "");
+            name.Text = PlaceName(cell) + (mine ? "（味方）" : St.Stage.Gold.On && St.OutpostGold > 0 ? $"  ＋{St.OutpostGold}" : "");   // 第468期: 金の札を掛けた値
         }
     }
 
