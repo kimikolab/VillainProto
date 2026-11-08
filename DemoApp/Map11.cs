@@ -690,7 +690,7 @@ public sealed class Map11State
         foreach (Squad q in Squads)
         {
             IEnumerable<CarryUnit> alive = q.Units is { } us
-                ? us.Where(u => u.IsAlive).Select(u => new CarryUnit(u.Def, u.Slot, u.Relic))
+                ? us.Where(u => u.IsAlive).Select(u => new CarryUnit(DoctrineDefs.BaseOf(u.Def), u.Slot, u.Relic))   // 第468期: 盤の札の写しは持ち越さない（戦闘の外では元の定義のはず・念のため）
                 : q.Lost ? Enumerable.Empty<CarryUnit>() : q.Def.F.Occupied().Select(o => new CarryUnit(o.Def, o.Slot, null));
             squads.Add(alive.ToList());
         }
@@ -796,6 +796,113 @@ public sealed class Map11State
     /// <summary>持っている盤・金の札（選んだ順）。<b>盤・金の札の無いステージでは空</b>——下の値段と数値はすべて今のまま。</summary>
     public IReadOnlyList<Doctrine> Doctrines
         => Stage.Invest.Doctrines ? InvestLog.Select(x => Doctrine.Find(x.Axis)).OfType<Doctrine>().ToList() : Array.Empty<Doctrine>();
+
+    /// <summary>その席（開戦時）の最大HP ／ 攻撃の増減（%・持っている盤の札を足し合わせる）。席の列は今の陣形の表（<see cref="FormationRules.RowOf(int)"/>）で読む。</summary>
+    public (int Hp, int Atk) SeatPercent(int slot)
+    {
+        int hp = 0, atk = 0;
+        Row row = FormationRules.RowOf(Math.Clamp(slot, 0, FormationRules.TotalSlots - 1));
+        foreach (Doctrine d in Doctrines.Where(d => d.Kind == DoctrineKind.Board)) { var (h, a) = d.Of(row); hp += h; atk += a; }
+        return (hp, atk);
+    }
+
+    /// <summary>その席で開戦したときの定義（盤の札の写し・☆の写しの後に掛ける）。盤の札が効かない席なら元の定義。</summary>
+    public UnitDef DoctrineDef(UnitDef d, int slot)
+    {
+        var (hp, atk) = SeatPercent(slot);
+        return DoctrineDefs.Of(d, hp, atk);
+    }
+
+    /// <summary>
+    /// 盤の札が効く駒の札の文（第468期 §1-3・「開戦時 HP 60 → 75・攻 9 → 10（前のめり）」・効かなければ空）。
+    /// <paramref name="slot"/> は今の席（開戦時の席として読む）。
+    /// </summary>
+    public string DoctrineText(UnitDef d, int slot)
+    {
+        UnitDef b = DoctrineDefs.BaseOf(d), x = DoctrineDef(b, slot);
+        if (ReferenceEquals(b, x)) return "";
+        Row row = FormationRules.RowOf(Math.Clamp(slot, 0, FormationRules.TotalSlots - 1));
+        var parts = new List<string>();
+        if (x.MaxHp != b.MaxHp) parts.Add($"HP {b.MaxHp} → {x.MaxHp}");
+        if (x.Attack != b.Attack) parts.Add($"攻 {b.Attack} → {x.Attack}");
+        string by = string.Join("・", Doctrines.Where(dc => dc.Kind == DoctrineKind.Board && dc.Of(row) != (0, 0)).Select(dc => dc.Name));
+        return parts.Count == 0 ? "" : $"開戦時 {string.Join("・", parts)}（{by}）";
+    }
+
+    /// <summary>席の図の札に出す短い文（第468期・「開戦 HP75 攻13」・効かなければ空）。</summary>
+    public string DoctrineShort(UnitDef d, int slot)
+    {
+        UnitDef b = DoctrineDefs.BaseOf(d), x = DoctrineDef(b, slot);
+        if (ReferenceEquals(b, x)) return "";
+        var parts = new List<string>();
+        if (x.MaxHp != b.MaxHp) parts.Add($"HP{x.MaxHp}");
+        if (x.Attack != b.Attack) parts.Add($"攻{x.Attack}");
+        return parts.Count == 0 ? "" : "開戦 " + string.Join(" ", parts);
+    }
+
+    /// <summary>盤の札で数値を差した駒（差す前の HP ／ 最大HP と、差した直後の HP ／ 最大HP・戦闘で動かなければ元へそのまま戻すため）。</summary>
+    private readonly Dictionary<UnitState, (int Hp, int Max, int ArmedHp, int ArmedMax)> _armed = new(ReferenceEqualityComparer.Instance);
+    /// <summary>盤の札で数値を差した回数（駒の枚数・測るためだけ）。</summary>
+    public int DoctrineArmed { get; private set; }
+
+    /// <summary>
+    /// 開戦の直前に、隊の駒へ盤の札の数値を差す（第468期 §1-1・<see cref="Prepare"/> ／ <see cref="PrepareIntercept"/> の最後）。<b>開戦時の席</b>で決め、戦闘中に動かされても変えない
+    /// （定義の写しなので）。リストの中で置き換える（同じリストを戦闘へ渡す）。HP は割合を保つ。<b>盤の札が無ければ何もしない</b>（駒も作り直さない）。
+    /// 戦闘の後始末（<see cref="Resolve"/>）で元の定義へ戻す（<see cref="DisarmDoctrine"/>）。
+    /// </summary>
+    private void ArmDoctrine(List<UnitState> units)
+    {
+        if (!Doctrines.Any(d => d.Kind == DoctrineKind.Board)) return;
+        for (int i = 0; i < units.Count; i++)
+        {
+            UnitState u = units[i];
+            if (!u.IsAlive || u.Def.Traits.Contains(TraitId.Ephemeral)) continue;
+            UnitDef to = DoctrineDef(u.Def, u.Slot);
+            if (ReferenceEquals(to, u.Def)) continue;
+            UnitState n = WithDef(u, to);
+            _armed[n] = (u.Hp, u.MaxHp, n.Hp, n.MaxHp);
+            units[i] = n;
+            DoctrineArmed++;
+        }
+    }
+
+    /// <summary>
+    /// 盤の札の写しを元の定義へ戻す（第468期・<see cref="Resolve"/> の最後）。隊・手札・倒れた駒のどこにいても。
+    /// 戦闘で HP ／ 最大HP が動かなかった駒は差す前の値へそのまま、動いた駒は割合を保って戻す。
+    /// </summary>
+    private void DisarmDoctrine()
+    {
+        if (_armed.Count == 0 && !Squads.Any(q => q.Units?.Any(u => DoctrineDefs.IsCopy(u.Def)) == true)) return;
+        var all = Squads.Where(q => q.Units is not null).SelectMany(q => q.Units!).Concat(Bench).Concat(FallenUnits).ToList();
+        foreach (UnitState u in all)
+        {
+            if (!DoctrineDefs.IsCopy(u.Def)) continue;
+            UnitState n = WithDef(u, DoctrineDefs.BaseOf(u.Def));
+            if (_armed.TryGetValue(u, out var a) && u.Hp == a.ArmedHp && u.MaxHp == a.ArmedMax) { n.Hp = a.Hp; n.MaxHp = a.Max; }
+            ReplaceUnit(u, n);
+        }
+        _armed.Clear();
+    }
+
+    /// <summary>
+    /// 定義を替えた写し（第468期・盤の札）。最大HP は定義の比で掛け直し（戦闘で削れた最大HP の割合は保つ）、HP は割合を保つ（倒れた駒は倒れたまま）。
+    /// 席・レリック・私有のカウンタは写す（<see cref="WithRelic"/> と同じ項目）。
+    /// </summary>
+    private static UnitState WithDef(UnitState u, UnitDef def)
+    {
+        static int R(double x) => (int)Math.Round(x, MidpointRounding.AwayFromZero);
+        int max = u.MaxHp == u.Def.MaxHp ? def.MaxHp : Math.Max(1, R((double)u.MaxHp * def.MaxHp / Math.Max(1, u.Def.MaxHp)));
+        int hp = u.Hp <= 0 ? 0 : Math.Clamp(R((double)u.Hp * max / Math.Max(1, u.MaxHp)), 1, max);
+        var n = new UnitState
+        {
+            Def = def, TeamId = u.TeamId, Shape = u.Shape, Slot = u.Slot, Hp = hp, MaxHp = max,
+            Traits = u.Relic is TraitId r ? RelicCatalog.Attach(def.Traits, r) : TraitCatalog.Resolve(def.Traits),
+            Relic = u.Relic,
+            HasFallenBack = u.HasFallenBack, ActionIndex = u.ActionIndex, LastDeathTurn = u.LastDeathTurn, TakenTurn = u.TakenTurn,
+        };
+        foreach (var (k, v) in u.Counters) n.Counters[k] = v;
+        return n;
+    }
 
     /// <summary>手持ち（隊・手札・倒れた駒）のうち、その軸のキャラの数（器具の選び方 <see cref="InvestRule.BotPick"/> が読む）。</summary>
     public int OwnedAxisCount(string axis)
@@ -2051,6 +2158,7 @@ public sealed class Map11State
         Node? node = against ?? (Portal.On ? FoeFacing(squadIndex) : NextNode(s.Road));
         if (node is null || node.Cleared) return null;
         node.Units ??= FoeUnits(node);
+        ArmDoctrine(pu);   // 第468期: 盤の札（開戦時の席で数値を差す・盤の札が無ければ何もしない）
         return (pu, node.Units, Map11.DeriveSeed(Seed, Battles), node);
     }
 
@@ -2131,6 +2239,7 @@ public sealed class Map11State
         // 第445期: 抜いた見返りの金（湧いた部隊は安い）。
         if (node.Cleared)
             Earn(KillGold(node), $"{node.Def.Name}を抜いた", node.Pos);
+        DisarmDoctrine();   // 第468期: 盤の札の写しを元の定義へ（盤の札が無ければ何もしない）
     }
 
     /// <summary>同じ席の直し（第451期 §0-4）を何回したか（測るためだけの計数）。</summary>
@@ -2789,6 +2898,7 @@ public sealed class Map11State
         s.Deployed = true;
         if (s.Home < 0) s.Home = node.Def.Road;
         node.Units ??= FoeUnits(node);
+        ArmDoctrine(pu);   // 第468期: 盤の札
         return (pu, node.Units, Map11.DeriveSeed(Seed, Battles), node);
     }
 
