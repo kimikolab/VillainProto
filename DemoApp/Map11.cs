@@ -904,6 +904,32 @@ public sealed class Map11State
         return n;
     }
 
+    // ---- 金の札（値段はここの 1 箇所で読む・画面と器具も同じ値を読む） ----
+
+    private int DocSum(Func<Doctrine, int> f) => Doctrines.Sum(f);
+
+    /// <summary>呼ぶ値段（第468期: 略奪 +1 ／ 倹約 −1・下限 1）。盤・金の札の無いステージでは <see cref="GoldRule.Recruit"/> そのもの。</summary>
+    public int RecruitPrice => Stage.Gold.Recruit <= 0 ? Stage.Gold.Recruit : Math.Max(1, Stage.Gold.Recruit + DocSum(d => d.RecruitDelta));
+
+    /// <summary>強化の値段（第468期: 倹約 −1・下限 1）。強化の無い盤では <see cref="StarRule.EnhancePrice"/> そのもの（0）。</summary>
+    public int EnhancePrice => Stage.Stars.EnhancePrice <= 0 ? Stage.Stars.EnhancePrice : Math.Max(1, Stage.Stars.EnhancePrice + DocSum(d => d.EnhanceDelta));
+
+    /// <summary>抜いた ／ 取った金に金の札を掛ける（×(100 ＋ 割合)% を四捨五入 → 固定の増減 → 下限 0・素の値が 0 なら 0）。</summary>
+    private int Loot(int amount)
+    {
+        if (amount <= 0) return amount;
+        int pct = DocSum(d => d.LootPercent), flat = DocSum(d => d.LootFlat);
+        if (pct == 0 && flat == 0) return amount;
+        int x = pct == 0 ? amount : (int)Math.Round(amount * (100 + pct) / 100.0, MidpointRounding.AwayFromZero);
+        return Math.Max(0, x + flat);
+    }
+
+    /// <summary>中間拠点を取ったときの金（第468期: 金の札を掛ける）。画面の拠点の名札も同じ値を読む。</summary>
+    public int OutpostGold => Loot(Stage.Gold.Outpost);
+
+    /// <summary>作戦ターンの終わりの利子（第468期・蓄え: 手持ち 10 につき +1）。利子の無い盤では 0。</summary>
+    public int InterestNow => Stage.Gold.On ? Gold / 10 * DocSum(d => d.InterestPer10) : 0;
+
     /// <summary>手持ち（隊・手札・倒れた駒）のうち、その軸のキャラの数（器具の選び方 <see cref="InvestRule.BotPick"/> が読む）。</summary>
     public int OwnedAxisCount(string axis)
         => Squads.SelectMany(q => q.Units is { } us ? us.Select(u => u.Def) : q.Lost ? Enumerable.Empty<UnitDef>() : q.Def.F.Occupied().Select(o => o.Def))
@@ -1332,7 +1358,7 @@ public sealed class Map11State
     public bool CanTrade => Stage.Gold.On && !Finished && Squads.Any(q => CanReform(q.Index));
 
     /// <summary>呼べるか（候補 <paramref name="offer"/> 番目）。</summary>
-    public bool CanRecruit(int offer) => CanTrade && offer >= 0 && offer < Offers.Count && (FreePicks > 0 || Gold >= Stage.Gold.Recruit);
+    public bool CanRecruit(int offer) => CanTrade && offer >= 0 && offer < Offers.Count && (FreePicks > 0 || Gold >= RecruitPrice);
 
     /// <summary>呼ぶ（第445期 §0-1）。候補の駒を手札に入れ、その位置に列の次の 1 枚を補充する。</summary>
     public bool Recruit(int offer)
@@ -1341,7 +1367,7 @@ public sealed class Map11State
         UnitDef d = Offers[offer];
         // 第446期: 枠の特典の 1 枚は無料（金の出入りには載せない）。
         if (FreePicks > 0) FreePicks--;
-        else Spend(Stage.Gold.Recruit, $"{d.Name}を呼んだ");
+        else Spend(RecruitPrice, $"{d.Name}を呼んだ");
         // 第463期 §1-3: ☆のあるステージでは、持っている駒と同じキャラは<b>すぐに持っている駒へ重なる</b>（手札に 2 体目は来ない・倒れた駒にも重なる）。
         if (Stage.Stars.StackOffers && Stackable(d) && OwnedUnit(d.Id) is { } owned) StackOnto(owned);
         else Bench.Add(Stage.Stars.On ? Star1(d) : One(d));
@@ -1455,7 +1481,8 @@ public sealed class Map11State
     /// <summary>呼んだ後のその駒の定義（☆の写し・画面の候補の札の数値）。☆の無いステージは候補の定義そのもの。</summary>
     public UnitDef OfferDef(UnitDef d) => !Stage.Stars.On ? d : Stage.Stars.Def(d, Stage.Stars.StackOffers && Stackable(d) ? Stage.Stars.Add(StarOf(d.Id)).Star : 1);
     /// <summary>手放したときの金（☆のあるステージは ＋2 × 重ねた枚数）。</summary>
-    public int SellPrice(UnitState u) => Stage.Gold.Sell * (Stage.Stars.On ? Stage.Stars.Copies(StarOf(u.Def.Id)) : 1);
+    /// 第468期: 蓄えを持っていれば 0。
+    public int SellPrice(UnitState u) => Doctrines.Any(d => d.NoSell) ? 0 : Stage.Gold.Sell * (Stage.Stars.On ? Stage.Stars.Copies(StarOf(u.Def.Id)) : 1);
 
     /// <summary>重ねられるキャラか（☆のあるステージで、持っていて（倒れていても）☆3 でない）。</summary>
     public bool Stackable(UnitDef d) => Stage.Stars.On && OnBoardOrHand(d) && Stars.ContainsKey(d.Id) && StarOf(d.Id).Star < Stage.Stars.Max;
@@ -1493,7 +1520,7 @@ public sealed class Map11State
         if (Squads.FirstOrDefault(q => q.Units is { } us && us.Contains(u)) is { } sq && !CanReform(sq.Index))
             return $"{sq.Label} は道の上（強化は拠点・取っている中間拠点で）";
         if (!CanTrade) return "いまは金を使えない（拠点・取っている中間拠点に隊がいない）";
-        if (Gold < Stage.Stars.EnhancePrice) return "金が足りない";
+        if (Gold < EnhancePrice) return "金が足りない";
         return null;
     }
 
@@ -1504,7 +1531,7 @@ public sealed class Map11State
     {
         StarState s = StarOf(d.Id), a = Stage.Stars.Add(s);
         string to = a.Star > s.Star ? $"☆{s.Star}{(s.Pips > 0 ? $"（{s.Pips}／{Stage.Stars.NeedAt(s.Star)}）" : "")} → ☆{a.Star}" : $"☆{s.Star} → {a.Pips}／{Stage.Stars.NeedAt(s.Star)}";
-        return $"強化 {Stage.Stars.EnhancePrice} 金（{to}）";
+        return $"強化 {EnhancePrice} 金（{to}）";
     }
 
     /// <summary>
@@ -1514,7 +1541,7 @@ public sealed class Map11State
     public UnitState? Enhance(UnitState u)
     {
         if (!CanEnhance(u)) return null;
-        Spend(Stage.Stars.EnhancePrice, $"{u.Def.Name}を強化した");
+        Spend(EnhancePrice, $"{u.Def.Name}を強化した");
         Enhances++;
         StackOnto(u);
         return OwnedUnit(u.Def.Id);
@@ -1830,7 +1857,7 @@ public sealed class Map11State
                 OutpostCaptures++;
                 if (Stage.Relic.On && _relicCells.Add(cell)) OfferRelics();   // 第452期: 初めて取った中間拠点だけ
                 Deliver(Stage.Arrival.OnOutpost, Graph[cell].Name, $"{Graph[cell].Name}を取った");
-                Earn(Stage.Gold.Outpost, $"{Graph[cell].Name}を取った", cell);
+                Earn(OutpostGold, $"{Graph[cell].Name}を取った", cell);
                 RelocateHomeless();   // 第459期: 拠点が落ちた後、拠点に取り残された隊（0 枚・枠を開けていない隊）をここへ
             }
             else if (foe && mine < 0)
@@ -2266,7 +2293,10 @@ public sealed class Map11State
     }
 
     /// <summary>その敵部隊を抜いたときの金（第449期: 本陣の守りは <see cref="GoldRule.Garrison"/>・湧いた部隊は安い）。画面の札も同じ値を読む。</summary>
-    public int KillGold(Node node)
+    /// 第468期: 金の札（略奪 ／ 倹約）を掛ける（<see cref="Loot"/>）。
+    public int KillGold(Node node) => Loot(BaseKillGold(node));
+
+    private int BaseKillGold(Node node)
         => node.IsHero ? Stage.Hero.Gold   // 第454期: 勇者
            : node.Def.Hold ? Stage.Gold.Horde   // 第458期: 大群は 1 部隊ずつ
            : node.Def.Stationary ? Stage.Gold.Garrison : node.FromPortal && !node.IsReserve ? Stage.Gold.SpawnKill : Stage.Gold.Kill;
@@ -2438,6 +2468,8 @@ public sealed class Map11State
         // 第445期: 制圧で勝った盤では、勝った後に敵は動かない（残った敵部隊は退く）。
         if (Stage.WinOnCapture && Won) return list;
         Turn++;
+        // 第468期: 蓄えの利子（作戦ターンの終わり・手持ち 10 につき・利子の無い盤では何もしない）。
+        if (InterestNow > 0) Earn(InterestNow, "蓄えの利子");
         LastArrived.Clear();
         if (Time.AdvanceEvery <= 0 || Turn % Time.AdvanceEvery != 0)
         { LoseSecondBaseIfEmpty(); UpdateOutposts(); ArriveIfDue(); ReserveIfDue(); HeroIfDue(); return SpawnIfDue(list); }
