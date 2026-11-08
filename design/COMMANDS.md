@@ -1945,7 +1945,7 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
         # `design/weights/<日付>_<ステージ>.md` に出す（`docs/` には載せない・同じ日は上書き）。先頭に「帯から外れた組」・勇者は強い順に 1 隊ずつ当てる通し（HP は持ち越す）。帯は `design/weights/BANDS.md`（ポンが直す）。
         # 既定は design/plays の写し全部（同じ 1 章・同じステージは「1 刻目の前」、無ければ「入った時点」）・今の 1 章の版と倍率。相対パスはリポジトリの根から。Git Bash では `/` で始まる値（`--from=/4661/`）がパスに書き換えられる——`--plays=` でフォルダを絞る
     Godot.exe --path DemoApp res://Map11Main.tscn -- --map-chapter-from=<写しの .json> [--map-chapter-rule=snap]
-        # **第466期**: 写しのステージから 1 章を始める（既定は今の版・`--map-chapter-rule=snap` で写しに記録された版）。遊ぶ起動は編成画面の札「1 章（写しから）」で一覧から選ぶ。
+        # **第466期**: 写しのステージから 1 章を始める（既定は今の版・`--map-chapter-rule=snap` で写しに記録された版）。遊ぶ起動は「1 章」の最初の窓の「写しから始める」で一覧から選ぶ（第468期まで札の 5 番目「1 章（写しから）」）。
         # 遊ぶ起動（引数なし）だけが 1 章の写しを `design/plays/<1 章の seed>/<ステージ>_start|first|end.json` に書く（写しから始めた 1 章は `<seed>_from<ステージ>_<時刻>`）。
         # 絵: `res://Map11Main.tscn -- --map-snap-picker --map11-capture=<png>`（写しの一覧の窓・読むだけで書かない）
     Godot_console.exe --path DemoApp --headless -- --chapter1-invest-smoke
@@ -1956,6 +1956,14 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     Godot.exe --path DemoApp --quit-after 3000 res://Map11Main.tscn -- "--map11-capture=<png>,enhance-press" --map-chapter-play=4670 --map-chapter-stop=1
         # **第467期 §2**: 強化の後の押し方を画面の口（`OnBenchPressed` ／ `OnSquadSlot` ／ `PressEnhance`）で押して確かめる。合否は `MAP11_CAPTURE_ENHANCE_PRESS ok=`（金は絵の口だけで足す）。
         # 投資の札の窓は `,invest`（`--map-chapter=N` なら 1-1・`--map-chapter-play=N --map-chapter-stop=K` ならステージ K）・投資の後の組み直しの窓は `,invested`
+    Godot_console.exe --path DemoApp --headless -- --chapter1-doctrine-smoke
+        # **第468期**: 盤の札・金の札の門（`Chapter1DoctrineSmoke.cs`・画面なし）。(a) 3 枚が「軸 1 ＋ 盤か金 1 ＋ どれでも 1」・同じ seed ／ やり直しでも同じ
+        # ／ (b) 盤・金の札は選んだ後の札に出ない・軸は重なる ／ (c) 前のめり ／ 後詰め ／ 要 が開戦時の席で表のとおり（☆の後・全駒 × ☆1〜3・器具の通しで戦闘の後は元の定義）
+        # ／ (d) 略奪 ／ 蓄え ／ 倹約 の金の出入り ／ (e) 単発と第460〜467期は今のまま ／ (f) `--foe-weight` の「守り → 勇者」の通しと上限なしの帯
+        # ＋ §3 1 章の通し（第468期 ／ 第467期）× 2 方針 × 100 seed・1-1 で札を固定した通し・盤の札 × 手で写した写しの隊（報告のみ）。`--chapter1-doctrine-quick` は通しを省く
+    Godot.exe --path DemoApp --quit-after 1500 res://Map11Main.tscn -- "--map11-capture=<png>,snap-button" --map-chapter=4680
+        # **第468期 §2-3**: 1 章の最初の窓の「写しから始める」を押して写しの一覧が開くか（`MAP11_CAPTURE_SNAP_BUTTON ok=`・写しは読むだけ）。
+        # 盤 ／ 金の札を選んだ後の組み直しの窓は `,doctrine`（`--map-chapter-play=N --map-chapter-stop=K`・盤の札を優先して選ぶ・席の図に「開戦 HP75 攻13」）
     Godot_console.exe --path DemoApp --headless -- --map11-phase176
         # **第176期 Phase 0**: Q0-1〜Q0-5（`PortalOn = false` が第175期の 18 量と一致するか ／
         # 重なりと同点の割り方 ／ 湧いた部隊を満タンで作る口 ／ 方針の手順 ／ 走行時間）。約 1 秒

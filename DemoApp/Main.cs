@@ -222,6 +222,16 @@ public partial class Main : Control
             GetTree().Quit(okI ? 0 : 1);
             return;
         }
+        // 第468期 §4: 盤の札・金の札の門（札 3 枚の組・2 度出ない・開戦時の席の数値・金の出入り・単発と第460〜467期は今のまま・道具の直し）。画面なし。`--chapter1-doctrine-quick` は §3 の器具の通しを省く。
+        if (bootArgs.Contains("--chapter1-doctrine-smoke", StringComparer.Ordinal) || bootArgs.Contains("--chapter1-doctrine-quick", StringComparer.Ordinal))
+        {
+            bool okD;
+            try { okD = Chapter1DoctrineSmoke.Run(GD.Print, ProjectSettings.GlobalizePath("res://"), bots: !bootArgs.Contains("--chapter1-doctrine-quick", StringComparer.Ordinal)); }
+            catch (System.Exception ex) { GD.PrintErr(ex.ToString()); okD = false; }
+            GD.Print($"CHAPTER1_DOCTRINE_SMOKE_COMPLETE ok={okD}");
+            GetTree().Quit(okD ? 0 : 1);
+            return;
+        }
         if (bootArgs.Contains("--map11-phase0", StringComparer.Ordinal))
         {
             bool p0 = Map11Verify.Phase0(GD.Print);
