@@ -302,7 +302,7 @@ public static class Chapter1InvestSmoke
             foreach (var (key, r) in ChapterRule.Versions)
             {
                 bool on = Chapter1.StagesFor(r).Any(s => s.Invest.On);
-                okG &= on == (key == "V467");
+                okG &= on == (string.CompareOrdinal(key, "V467") >= 0);   // 第468期: 第467期より後の版も投資あり
                 parts.Add($"{key} {(on ? "投資あり" : "なし")}");
             }
             Chapter1.Begin(4673, ChapterRule.V465);
@@ -311,7 +311,7 @@ public static class Chapter1InvestSmoke
             Chapter1.End();
             var single = new Map11State(4673, MapStage.Stage12.Time, MapStage.Stage12.Portal, draft: true, stage: MapStage.Stage12);
             bool singleRefused = !single.Invest("燃焼") && !single.InvestPending && single.TakeCarry().Invest is null;
-            okG &= !pending465 && refused && singleRefused && Chapter1.Default.Name == ChapterRule.V467.Name;
+            okG &= !pending465 && refused && singleRefused && Chapter1.Default.Invest is { On: true };   // 第468期: 遊ぶ 1 章は第468期（投資あり）
             write($"  (g) 単発の 1-1 ／ 1-2 ／ 1-3 は投資なし・{string.Join("・", parts)}・第465期の 1 章は札を出さず投資を受けない {!pending465 && refused}・単発の 1-2 も受けない {singleRefused}");
             write("      （単発の頭なしの門・画面の門・第460〜465期の 1 章の門・`compare` ／ `docs/` が 0 行かは回帰で見る）");
             Req(okG, "(g) 単発のステージ・第460〜465期の 1 章は今のまま（投資の札も枠も無い）");
