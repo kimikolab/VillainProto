@@ -63,10 +63,17 @@ public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList
         V465.Scales, StarRule.V464, DealRule.V464, InvestRule.V467);
 
     /// <summary>
+    /// 第468期の 1 章（指示書 design/PHASE468_DOCTRINE_SPEC.md §1）。第467期の投資の札に<b>盤の札・金の札</b>（プラスとマイナスを両方持つ・<see cref="Doctrine"/>）を足しただけ
+    /// （3 枚は「軸 1 ＋ 盤か金 1 ＋ どれでも 1」・盤 ／ 金の札は 1 章で 2 度出ない・<see cref="InvestRule.V468"/>）。敵の倍率 ・☆ ・強化 ・1-1 の配り ・軸の寄せは第467期のまま。
+    /// </summary>
+    public static readonly ChapterRule V468 = new(true, "第468期（持ち越し・敵の倍率・☆の強化・勇者の回復なし・軸への投資・盤と金の札）",
+        V465.Scales, StarRule.V464, DealRule.V464, InvestRule.V468);
+
+    /// <summary>
     /// 版の一覧（第466期・遊びの写しが版をキーで持つ——写しの版で 1 章を始め直すため）。<b>版を足したらここにも足す。</b>
     /// </summary>
     public static IReadOnlyList<(string Key, ChapterRule Rule)> Versions
-        => new[] { ("V460", V460), ("V461", V461), ("V462", V462), ("V463", V463), ("V464", V464), ("V465", V465), ("V467", V467) };
+        => new[] { ("V460", V460), ("V461", V461), ("V462", V462), ("V463", V463), ("V464", V464), ("V465", V465), ("V467", V467), ("V468", V468) };
 
     /// <summary>版のキー（「V465」・一覧に無ければ名前）。</summary>
     public string Key { get { string n = Name; return Versions.FirstOrDefault(v => v.Rule.Name == n).Key ?? n; } }
@@ -81,7 +88,7 @@ public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList
 public static class Chapter1
 {
     /// <summary>遊ぶ 1 章の規則（編成画面の札「1 章」・絵の口が始める版）。</summary>
-    public static ChapterRule Default => ChapterRule.V467;   // 第461期から持ち越しのある 1 章・第462期から敵の倍率・第463期から☆の重ね・第464期から☆は強化で・第465期から勇者の回復なし・第467期から軸への投資
+    public static ChapterRule Default => ChapterRule.V468;   // 第461期から持ち越しのある 1 章・第462期から敵の倍率・第463期から☆の重ね・第464期から☆は強化で・第465期から勇者の回復なし・第467期から軸への投資・第468期から盤と金の札
     /// <summary>いまの 1 章の規則（<see cref="Begin"/> が決める）。</summary>
     public static ChapterRule Rule { get; private set; } = Default;
 
@@ -270,9 +277,16 @@ public static class Chapter1
 
     /// <summary>
     /// いまのステージの投資の札（10 軸から重複なしの 3 枚）。<b>1 章の seed とステージだけで決まる</b>（配りの回数を入れない——やり直しでも同じ 3 枚）。投資の無い 1 章は空。
+    /// 第468期: 盤・金の札は、前のステージまでに選んだ札を出さない（このステージで選んだ札は数えない——選んだ後も同じ 3 枚）。
     /// </summary>
     public static IReadOnlyList<string> InvestCards
-        => Active && CurrentStage.Invest.On ? CurrentStage.Invest.CardsFor(StageSeed(Seed, Index, 0)) : Array.Empty<string>();
+        => Active && CurrentStage.Invest.On ? CurrentStage.Invest.CardsFor(StageSeed(Seed, Index, 0), HeldBefore()) : Array.Empty<string>();
+
+    /// <summary>前のステージまでに選んだ盤・金の札（第468期・いまのステージで選んだ札は入れない）。</summary>
+    private static IReadOnlyCollection<string> HeldBefore()
+        => Map11Session.State is { } st
+            ? st.InvestLog.Where(x => x.Stage != CurrentStage.Id && Doctrine.Find(x.Axis) is not null).Select(x => x.Axis).ToHashSet()
+            : new HashSet<string>();
 
     /// <summary>このステージの投資をまだ選んでいない（画面が札の窓を出す・選ぶまで閉じない）。</summary>
     public static bool InvestPending => Active && !Over && Map11Session.State is { } st && ReferenceEquals(st.Stage, CurrentStage) && st.InvestPending;

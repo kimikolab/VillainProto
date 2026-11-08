@@ -779,14 +779,23 @@ public sealed class Map11State
     /// <summary>
     /// このステージの投資を選ぶ（第467期 §1-1・ステージの始めに 1 度だけ）。呼ぶ候補はこの投資で引き直す（ステージの始めに投資していたのと同じ）。
     /// 選べたら true（投資の無いステージ・選び終えたステージ・軸でない語は false）。
+    /// 第468期: 盤・金の札のあるステージでは盤・金の札も選べる（もう持っている札は選べない）。
     /// </summary>
     public bool Invest(string axis)
     {
-        if (!InvestPending || !UnitTags.Axes.Contains(axis)) return false;
+        if (!InvestPending) return false;
+        bool doctrine = Stage.Invest.Doctrines && Doctrine.Find(axis) is not null && InvestLog.All(x => x.Axis != axis);
+        if (!UnitTags.Axes.Contains(axis) && !doctrine) return false;
         InvestLog.Add((Stage.Id, axis));
         RebuildOffers();
         return true;
     }
+
+    // ---------------- 盤の札・金の札（第468期 §1-1・盤 ／ 金の札のあるステージ（1 章）だけ） ----------------
+
+    /// <summary>持っている盤・金の札（選んだ順）。<b>盤・金の札の無いステージでは空</b>——下の値段と数値はすべて今のまま。</summary>
+    public IReadOnlyList<Doctrine> Doctrines
+        => Stage.Invest.Doctrines ? InvestLog.Select(x => Doctrine.Find(x.Axis)).OfType<Doctrine>().ToList() : Array.Empty<Doctrine>();
 
     /// <summary>手持ち（隊・手札・倒れた駒）のうち、その軸のキャラの数（器具の選び方 <see cref="InvestRule.BotPick"/> が読む）。</summary>
     public int OwnedAxisCount(string axis)
@@ -812,10 +821,12 @@ public sealed class Map11State
     /// </summary>
     private UnitDef? InvestOffer()
     {
-        int picks = InvestLog.Count;
+        // 第468期: 盤・金の札は数えない（軸の記録だけ・軸の記録が無ければ乱数も引かない）。第467期の記録はすべて軸なので今のまま。
+        var axes = InvestLog.Where(x => InvestRule.IsAxis(x.Axis)).ToList();
+        int picks = axes.Count;
         if (picks == 0 || !Stage.Invest.On) return null;
         if (_investRng.Next(100) >= Stage.Invest.Percent(picks)) return null;
-        string axis = InvestLog[_investRng.Next(picks)].Axis;
+        string axis = axes[_investRng.Next(picks)].Axis;
         int n = _offerQueue.Count;
         UnitDef? hit = null;
         for (int i = 0; i < n; i++)
