@@ -219,7 +219,12 @@ public partial class Map11Main : Node3D
         if (user.Any(a => a.StartsWith("--map11-capture=", StringComparison.Ordinal)))
         {
             if (user.FirstOrDefault(a => a.StartsWith("--map-chapter=", StringComparison.Ordinal)) is { } ch && int.TryParse(ch["--map-chapter=".Length..], out int chSeed))
+            {
+                // 第468期: `,snap-button` の絵では写しの置き場を読む（書かない）——最初の窓に「写しから始める」が出るように。
+                if (user.Any(a => a.StartsWith("--map11-capture=", StringComparison.Ordinal) && a.EndsWith(",snap-button", StringComparison.Ordinal)))
+                    PlayLog.UseForReading(PlayLog.DefaultRoot(ProjectSettings.GlobalizePath("res://")));
                 Map11Session.PickChapter(chSeed);
+            }
             // 第466期: `--map-snap-picker` は「1 章（写しから）」を選んで入ったところ（写しの一覧の窓・design/plays の写しを読む・書かない）。
             if (user.Contains("--map-snap-picker", StringComparer.Ordinal))
                 Map11Session.PickSnapList(PlayLog.DefaultRoot(ProjectSettings.GlobalizePath("res://")));
@@ -658,6 +663,14 @@ public partial class Map11Main : Node3D
             if (_introOverlay is not null) _introOverlay.Visible = false;
             _reform = true; ClearHold(); Refresh();
             GD.Print($"MAP11_CAPTURE_DOCTRINE cards={string.Join("/", cards)} {St.InvestText} seats={string.Join(" | ", (St.Squads[_selected].Units ?? new List<UnitState>()).Select(u => St.DoctrineText(u.Def, u.Slot)).Where(t => t.Length > 0))}");
+        }
+        // 第468期 §2-3: `snap-button` は 1 章の最初の窓の「写しから始める」を押して写しの一覧が開くかを確かめる（`--map-chapter=N` と使う・写しは読むだけ）。
+        else if (parts.Length > 1 && parts[1] == "snap-button")
+        {
+            bool had = _snapButton is not null && _introOverlay is { Visible: true };
+            _snapButton?.EmitSignal(BaseButton.SignalName.Pressed);
+            bool opened = _snapOverlay is { Visible: true } && _introOverlay is { Visible: false };
+            GD.Print($"MAP11_CAPTURE_SNAP_BUTTON ok={had && opened} button={had} opened={opened} snaps={PlayLog.Starts().Count} stage={Chapter1.CurrentStage.Id}");
         }
         // 第467期 §1-3: `invest` はステージの始めの投資の札の窓（`--map-chapter-stop=K` と使う・出ているまま撮る）。
         else if (parts.Length > 1 && parts[1] == "invest") { if (_introOverlay is not null) _introOverlay.Visible = false; ShowInvestPicker(); }

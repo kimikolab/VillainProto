@@ -121,7 +121,7 @@ public static class Map11Session
     public static bool ChapterPicked { get; private set; }
 
     /// <summary>
-    /// 「1 章（写しから）」を選んでいるか（第466期 §2）。札の回り方は 1-1 → 1-2 → 1-3 → 1 章 → <b>1 章（写しから）</b> → 1-1。
+    /// 「1 章（写しから）」を選んでいるか（第466期 §2）。第468期からは札では回らない——「1 章」の最初の窓の「写しから始める」で写しを選ぶと真（<see cref="PickChapterFrom"/>）。
     /// <b>写しを書く起動（<see cref="PlayLog.Enabled"/>）で、写しが 1 つ以上あるときだけ</b>回る（頭なしの門の回り方は第460期のまま）。
     /// </summary>
     public static bool SnapPicked { get; private set; }
@@ -164,8 +164,7 @@ public static class Map11Session
     public static void CyclePick()
     {
         var all = MapStage.All;
-        // 第466期: 1 章 → 1 章（写しから）（写しを書く起動で写しがあるときだけ）→ 1-1
-        if (ChapterPicked && !SnapPicked && PlayLog.Enabled && PlayLog.Starts().Count > 0) { SnapPicked = true; return; }
+        // 第468期 §2-3: 5 番目の「1 章（写しから）」は外した（写しからは「1 章」の最初の窓の「写しから始める」）。回り方は第460期のまま。
         if (ChapterPicked) { ChapterPicked = false; SnapPicked = false; Chosen = all[0]; return; }
         int at = 0;
         for (int i = 0; i < all.Count; i++) if (ReferenceEquals(all[i], Chosen)) at = i;

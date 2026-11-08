@@ -148,6 +148,18 @@ public partial class Map11Main
         go.CustomMinimumSize = new Vector2(0, 40);
         go.Pressed += () => { if (_introOverlay is not null) _introOverlay.Visible = false; ShowInvestPicker(); };   // 第467期: 続けて投資の札
         col.AddChild(go);
+        // 第468期 §2-3: 1 章を 1-1 から始めた最初の窓に「写しから始める」（写しがあるときだけ・押すと写しの一覧・判定は持たない）。
+        _snapButton = null;
+        if (Chapter1.Index == 0 && Chapter1.Attempt == 0 && Chapter1.From is null && PlayLog.Starts().Count > 0)
+        {
+            _snapButton = UiKit.ActionButton($"写しから始める（{PlayLog.Starts().Count} 本）");
+            _snapButton.CustomMinimumSize = new Vector2(0, 34);
+            _snapButton.Pressed += () => { if (_introOverlay is not null) _introOverlay.Visible = false; OpenSnapPicker(fromIntro: true); };
+            col.AddChild(_snapButton);
+        }
         _introOverlay.Visible = true;
     }
+
+    /// <summary>頭の札の「写しから始める」（第468期・絵の口 `snap-button` が押して確かめる）。</summary>
+    private Button? _snapButton;
 }

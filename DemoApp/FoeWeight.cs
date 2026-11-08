@@ -12,6 +12,8 @@ using System.Text;
 // **代表の隊（遊びの写しの隊）× そのステージの敵部隊 1 つずつ × 倍率 × ☆** を単発の戦闘で回して表にする。
 // 駒は作戦マップと同じ式で立てる（`Map11State.MakeCarried`・敵は `Map11.EnemyScale` ＋ 勇者の回復の写し `MapFoeScale.MendHero`）。
 // 勇者は「1 隊ずつ順に当てる」の通しも出す（勇者の HP は持ち越す）。狙いの帯は `design/weights/BANDS.md` の表を読む（ポンが直す）。
+// 第468期 §2: 本陣の守りの後ろに立つ勇者（1-2 の門番）は「守り → 勇者」を同じ隊で続けて戦う通し（`SiegeChain`）で勇者の帯を読む。
+// 帯の上限は「なし」と書ける（その帯では「軽い」を外れとしない・1 章の道の部隊・湧き・予備隊・大群）。
 // 出すのは `design/weights/<日付>_<ステージ>.md`（`docs/` には載せない）。**規則は1つも持たない・盤は1つも動かさない。**
 // **ここには Godot の型を1つも使わない。**
 // =====================================================================================
@@ -63,9 +65,9 @@ public static class FoeWeight
     {
         public Dictionary<string, Band> Foe { get; } = new()
         {
-            ["road"] = new("road", 20, 70, 95),
+            ["road"] = new("road", 20, 70, double.PositiveInfinity),     // 第468期: 上限なし（ポン 2026-11-07「1 章の雑魚は軸がそろえば軽くてよい」）
             ["outpost"] = new("outpost", 18, 55, 85),
-            ["horde"] = new("horde", 20, 80, 95),
+            ["horde"] = new("horde", 20, 80, double.PositiveInfinity),   // 第468期: 上限なし
             ["garrison"] = new("garrison", 15, 40, 75),
         };
         public Dictionary<string, HeroBand> Hero { get; } = new()
@@ -96,7 +98,9 @@ public static class FoeWeight
                 var cells = line.Trim('|').Split('|').Select(c => c.Trim()).ToArray();
                 if (cells.Length < 5 || !cells[0].StartsWith("`")) continue;
                 string key = cells[0].Trim('`');
-                static double D(string s) => double.Parse(s.Replace("%", "").Replace("／20", "").Trim(), CultureInfo.InvariantCulture);
+                // 第468期: 「なし」「—」は上限なし（その帯では「軽い」を外れとしない）。
+                static double D(string s) => s.Trim() is "なし" or "—" or "-" ? double.PositiveInfinity
+                    : double.Parse(s.Replace("%", "").Replace("／20", "").Trim(), CultureInfo.InvariantCulture);
                 if (b.Foe.ContainsKey(key)) { b.Foe[key] = new Band(key, (int)D(cells[2]), D(cells[3]), D(cells[4])); read++; }
                 else if (b.Hero.ContainsKey(key) && cells.Length >= 5) { b.Hero[key] = new HeroBand(key, (int)D(cells[2]), (int)D(cells[3]), (int)D(cells[4])); read++; }
             }
@@ -197,6 +201,34 @@ public static class FoeWeight
         return 0;
     }
 
+    /// <summary>
+    /// 本陣の守り → 勇者の通し（第468期 §2・ポン 2026-11-07「連戦で読む」）。<paramref name="line"/>（守り…・勇者の順）を隊 1 つずつ順に当てる。
+    /// <b>勝った隊は、その戦闘の終わりの HP のまま次の相手に当たる</b>（作戦マップの本陣の連戦と同じく回復なし・境界は `EngagementEngine.CrossBoundary`）。
+    /// 負けた隊はそこで終わり、残った敵の HP は次の隊へ持ち越す。返すのは勇者を倒した隊の番号（1 から・倒せなければ 0）。
+    /// </summary>
+    public static int SiegeChain(IReadOnlyList<Squad> order, IReadOnlyList<Foe> line, MapStage s, int star, StarRule stars, int seed, bool relics = true)
+    {
+        int at = 0;
+        List<UnitState> e = Enemies(line[0], s);
+        for (int k = 0; k < order.Count; k++)
+        {
+            List<UnitState> p = Players(order[k], star, stars, relics);
+            for (int b = 0; ; b++)
+            {
+                BattleEngine.Run(p, e, Map11.DeriveSeed(seed, k * 16 + b), verbose: false);
+                var aliveE = e.Where(u => u.IsAlive).ToList();
+                if (aliveE.Count > 0) { e = EngagementEngine.CrossBoundary(aliveE); break; }
+                if (line[at].Kind == Kind.Hero) return k + 1;
+                at++;
+                e = Enemies(line[at], s);
+                var aliveP = p.Where(u => u.IsAlive).ToList();
+                if (aliveP.Count == 0) break;
+                p = EngagementEngine.CrossBoundary(aliveP);
+            }
+        }
+        return 0;
+    }
+
     // ---------------- 写しから代表の隊 ----------------
 
     /// <summary>
@@ -249,8 +281,12 @@ public static class FoeWeight
         public double MedTurns => Med(Fights.Select(f => (double)f.Turns));
     }
 
-    /// <summary>勇者の通し 1 組（写し × ☆ × 倍率）。<c>KilledAt</c> は seed ごとの倒した隊の番号（0 ＝ 倒せず）。</summary>
-    public sealed record Chain(string Source, int Star, MapFoeScale Scale, IReadOnlyList<Squad> Order, IReadOnlyList<int> KilledAt, string HeroKey)
+    /// <summary>
+    /// 勇者の通し 1 組（写し × ☆ × 倍率）。<c>KilledAt</c> は seed ごとの倒した隊の番号（0 ＝ 倒せず）。
+    /// 第468期: <c>Siege</c> は「守り → 勇者」の通し（同じ隊で続けて戦う）・<c>Banded</c> が偽の通しは参考（帯を読まない——その写しは守り → 勇者の通しで読む）。
+    /// </summary>
+    public sealed record Chain(string Source, int Star, MapFoeScale Scale, IReadOnlyList<Squad> Order, IReadOnlyList<int> KilledAt, string HeroKey,
+                               bool Siege = false, bool Banded = true)
     {
         public int One => KilledAt.Count(k => k == 1);
         public int Two => KilledAt.Count(k => k is 1 or 2);
@@ -287,7 +323,16 @@ public static class FoeWeight
                                      .ThenByDescending(q => cells.First(c => c.Squad == q && c.Star == star && c.Foe == hero && c.Scale == sc).MedHp)
                                      .ThenBy(q => q.No).ToList();
                         var killed = Enumerable.Range(0, seeds).Select(seed => HeroChain(order, hero, s, star, starRule, seed, relics)).ToList();
-                        chains.Add(new Chain(g.Key, star, sc, order, killed, s.Hero.Chaser ? "hero_chase" : "hero_gate"));
+                        // 第468期 §2: 守りの後ろに立つ勇者（追う勇者でない）は「守り → 勇者」の通しで帯を読む（勇者だけの通しは参考に残す）。
+                        var guards = s.Hero.Chaser ? new List<Foe>() : foes.Where(f => f.Kind == Kind.Garrison).ToList();
+                        string key = s.Hero.Chaser ? "hero_chase" : "hero_gate";
+                        chains.Add(new Chain(g.Key, star, sc, order, killed, key, Banded: guards.Count == 0));
+                        if (guards.Count > 0)
+                        {
+                            var line = guards.Append(hero).ToList();
+                            var sieged = Enumerable.Range(0, seeds).Select(seed => SiegeChain(order, line, s, star, starRule, seed, relics)).ToList();
+                            chains.Add(new Chain(g.Key, star, sc, order, sieged, key, Siege: true));
+                        }
                     }
             }
         }
@@ -301,13 +346,13 @@ public static class FoeWeight
     {
         var o = new List<string>();
         string V(Cell c) => c.Foe.Kind == Kind.Hero ? "（下の通し）" : Verdict(bands.Foe[Bands.KeyOf(c.Foe.Kind)], c.Wins, seeds, c.MedHp);
-        string H(Chain ch) => Verdict(bands.Hero[ch.HeroKey], ch.One, ch.Two, seeds);
+        string H(Chain ch) => ch.Banded ? Verdict(bands.Hero[ch.HeroKey], ch.One, ch.Two, seeds) : "（参考）";
         string Row(Cell c) => $"| {c.Squad.Name} | {c.Squad.Axis} | {StarName(c.Star)}（{StarsOf(c.Squad, c.Star)}） | {c.Foe.Name}（{KindName(c.Foe.Kind)}） | {c.Scale.Text}{(c.Scale.HeroMends ? "" : "・勇者の回復なし")}"
                              + $" | {c.Wins}／{seeds} | {Pct(c.MedHp)}（{Pct(c.MinHp)}〜{Pct(c.MaxHp)}） | {c.Lost:F2} | {V(c)} |";
         string ChainRow(Chain ch)
         {
             var got = ch.KilledAt.Where(k => k > 0).Select(k => (double)k).ToList();
-            return $"| {ch.Source} | {StarName(ch.Star)} | {ch.Scale.Text}{(ch.Scale.HeroMends ? "" : "・勇者の回復なし")} | {string.Join(" → ", ch.Order.Select(q => $"第{q.No}隊"))}"
+            return $"| {ch.Source} | {StarName(ch.Star)} | {ch.Scale.Text}{(ch.Scale.HeroMends ? "" : "・勇者の回復なし")} | {(ch.Siege ? "守り → 勇者: " : "勇者だけ: ")}{string.Join(" → ", ch.Order.Select(q => $"第{q.No}隊"))}"
                    + $" | {ch.One}／{seeds} | {ch.Two}／{seeds} | {(got.Count == 0 ? "—" : $"{Med(got):0.#}")} | {ch.Never}／{seeds} | {H(ch)} |";
         }
         const string CellHead = "| 隊 | 軸 | ☆ | 敵部隊 | 倍率 | 勝ち | 終わりの HP（中央値・範囲） | 失った枚数 | 帯 |";
@@ -321,8 +366,8 @@ public static class FoeWeight
         o.Add("");
         // ---- 帯から外れた組（まず読むところ） ----
         var off = cells.Where(c => c.Foe.Kind != Kind.Hero && V(c) != "○").ToList();
-        var offChains = chains.Where(ch => H(ch) != "○").ToList();
-        o.Add($"## 帯から外れた組（{off.Count} ／ {cells.Count(c => c.Foe.Kind != Kind.Hero)} 組・勇者の通し {offChains.Count} ／ {chains.Count}）");
+        var offChains = chains.Where(ch => ch.Banded && H(ch) != "○").ToList();
+        o.Add($"## 帯から外れた組（{off.Count} ／ {cells.Count(c => c.Foe.Kind != Kind.Hero)} 組・勇者の通し {offChains.Count} ／ {chains.Count(ch => ch.Banded)}）");
         o.Add("");
         o.Add(CellHead);
         o.Add(CellRule);
@@ -355,6 +400,8 @@ public static class FoeWeight
             o.Add("## 勇者に 1 隊ずつ順に当てる（勇者の HP は持ち越す）");
             o.Add("");
             o.Add("主力 ＝ 勇者に 1 隊で当てたときにいちばん強い隊（勝ち → 終わりの HP）。当てる順はその強い順。「倒した隊」は倒した seed の中央値（何隊目で落ちたか）。");
+            o.Add("");
+            o.Add("「守り → 勇者」は本陣の守りに勝った隊がその終わりの HP のまま勇者に当たる通し（回復なし・負けた隊の相手の HP は次の隊へ）。守りの後ろに立つ勇者の帯はこの通しで読み、「勇者だけ」の通しは（参考）。");
             o.Add("");
             o.Add(ChainHead);
             o.Add(ChainRule);

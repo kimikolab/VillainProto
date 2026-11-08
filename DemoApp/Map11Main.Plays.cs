@@ -22,6 +22,14 @@ public partial class Map11Main
     {
         if (!Map11Session.SnapChoicePending) return;
         Map11Session.SnapChoicePending = false;
+        OpenSnapPicker(fromIntro: false);
+    }
+
+    /// <summary>
+    /// 写しの一覧の窓を開ける（第468期: 1 章の最初の窓の「写しから始める」からも開く）。<paramref name="fromIntro"/> が真なら、閉じると最初の窓へ戻る（1-1 から始める）。
+    /// </summary>
+    private void OpenSnapPicker(bool fromIntro)
+    {
         var snaps = PlayLog.Starts();
         if (snaps.Count == 0) return;
         _snapOverlay = Modal(_uiRoot, 430, 300, out VBoxContainer col, "1 章（写しから）", GoldColor);
@@ -52,8 +60,12 @@ public partial class Map11Main
             };
             list.AddChild(b);
         }
-        Button close = UiKit.ActionButton($"閉じる（いま出ている写しのまま: {Chapter1.From?.Label ?? "—"}）");
-        close.Pressed += () => { if (_snapOverlay is not null) _snapOverlay.Visible = false; };
+        Button close = UiKit.ActionButton(fromIntro ? "閉じる（1-1 から始める）" : $"閉じる（いま出ている写しのまま: {Chapter1.From?.Label ?? "—"}）");
+        close.Pressed += () =>
+        {
+            if (_snapOverlay is not null) _snapOverlay.Visible = false;
+            if (fromIntro && _introOverlay is not null) _introOverlay.Visible = true;
+        };
         col.AddChild(close);
         _snapOverlay.Visible = true;
     }
