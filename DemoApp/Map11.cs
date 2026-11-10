@@ -759,11 +759,23 @@ public sealed class Map11State
         _investIds.Clear();
         _investRng = new Random(unchecked(Seed * 7919 + 467));
         var rng = new Random(unchecked(Seed * 7919 + 445));
-        UnitDef[] pool = UnitCatalog.All.ToArray();
+        UnitDef[] pool = OfferPool();   // 第469期
         for (int i = pool.Length - 1; i > 0; i--) { int j = rng.Next(i + 1); (pool[i], pool[j]) = (pool[j], pool[i]); }
         foreach (UnitDef d in pool) _offerQueue.Enqueue(d);
         for (int k = 0; k < Stage.Gold.Offers; k++) if ((k == 0 ? FirstOffer() : NextOffer()) is { } d) AddOffer(d);
     }
+
+    // ---------------- 体験版の加入の表（第469期 §1-2・加入の表のあるステージ（1 章）だけ） ----------------
+
+    /// <summary>
+    /// 呼ぶ候補の母数（第469期）。<b>加入の表の無い盤では 52 枚そのもの</b>（`UnitCatalog.All` の並び・第445期の式のまま）。
+    /// 表のある盤は、そのステージまでの表の駒（`UnitCatalog.All` の並び）——同じ seed の同じ乱数で並べる。
+    /// </summary>
+    private UnitDef[] OfferPool() => Stage.Roster.PoolFor(Stage.Id).ToArray();
+
+    /// <summary>このステージで呼べる駒のうち、まだ持っていない駒（第469期 §1-4「呼べる駒 あと n 体」・表の無い盤では空）。</summary>
+    public IReadOnlyList<UnitDef> RosterLeft
+        => Stage.Roster.On ? Stage.Roster.PoolFor(Stage.Id).Where(d => !OnBoardOrHand(d)).ToArray() : Array.Empty<UnitDef>();
 
     // ---------------- 軸への投資（第467期 §1・投資のあるステージ（1 章）だけ） ----------------
 
@@ -1040,7 +1052,10 @@ public sealed class Map11State
         {
             // 第441期 §2: **開始は 10 枚**。残りは到着の列に並ぶ（どれも seed で引く・戦闘の seed とは別の乱数）。
             // 第464期 §1-3: 配りの規則のある盤（1 章の 1-1）は 52 枚から・同じ軸 3 枚以上の保証つき。
-            MapDraw.Opening o = Stage.Deal.On
+            // 第469期 §1-1: 加入の表のある盤（1 章の 1-1）は決まった手札（乱数を引かない・やり直しても同じ）。
+            MapDraw.Opening o = Stage.Roster.StartFor(Stage.Id) is { } fixedStart
+                ? new MapDraw.Opening(fixedStart.ToArray(), Array.Empty<UnitDef>(), Array.Empty<int>(), 0, true)
+                : Stage.Deal.On
                 ? MapDraw.DrawAxis(seed, Stage.Arrival.Start, Stage.Deal)
                 : MapDraw.Draw(seed, Stage.Arrival.Start, Stage.Arrival.MinPer, Stage.Arrival.MaxPer);
             OpeningAxis = o.Axis;
@@ -1099,7 +1114,7 @@ public sealed class Map11State
         if (Stage.Gold.On)
         {
             var rng = new Random(unchecked(seed * 7919 + 445));
-            UnitDef[] pool = UnitCatalog.All.ToArray();
+            UnitDef[] pool = OfferPool();   // 第469期: 加入の表のある盤はそのステージまでの表の駒（表が無ければ 52 枚・今のまま）
             for (int i = pool.Length - 1; i > 0; i--) { int j = rng.Next(i + 1); (pool[i], pool[j]) = (pool[j], pool[i]); }
             foreach (UnitDef d in pool) _offerQueue.Enqueue(d);
             // 第452期 §1-1: レリックの列（12 枚を別の乱数で並べる・戦闘の seed とも候補の列とも別）。
@@ -1435,7 +1450,9 @@ public sealed class Map11State
         Earn(SellPrice(u), $"{u.Def.Name}を手放した");
         Sold++;
         // 第463期 §1-3: ☆を捨てる。☆3 で列から外れていたキャラは列の最後へ戻す。
-        if (Stage.Stars.On && Stars.Remove(u.Def.Id) && _offerQueue.All(q => q.Id != u.Def.Id) && Offers.All(o => o.Id != u.Def.Id))
+        // 第469期: 加入の表のある盤では、このステージで呼べる駒だけを戻す（始めの 6 枚は表に無い——売れば 1 章のうちは戻らない）。
+        if (Stage.Stars.On && Stars.Remove(u.Def.Id) && _offerQueue.All(q => q.Id != u.Def.Id) && Offers.All(o => o.Id != u.Def.Id)
+            && Stage.Roster.Allows(Stage.Id, u.Def))
             _offerQueue.Enqueue(Stage.Stars.BaseOf(u.Def));
         return true;
     }

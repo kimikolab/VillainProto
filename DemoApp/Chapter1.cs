@@ -19,8 +19,9 @@ using System.Linq;
 /// 第463期: <c>Stars</c> は☆の規則（null なら☆なし・<see cref="StarRule"/>）。
 /// 第467期: <c>Invest</c> は軸への投資の規則（null なら投資なし・<see cref="InvestRule"/>）。
 /// </summary>
+/// 第469期: <c>Roster</c> は体験版の加入の表（null なら表なし・<see cref="RosterRule"/>）。
 public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList<MapFoeScale>? Scales = null, StarRule? Stars = null, DealRule? Deal = null,
-                                          InvestRule? Invest = null)
+                                          InvestRule? Invest = null, RosterRule? Roster = null)
 {
     /// <summary>第460期の 1 章（持ち越し無し）。`--chapter1-smoke` はこれで回す。</summary>
     public static readonly ChapterRule V460 = new(false, "第460期（持ち越し無し）");
@@ -70,10 +71,18 @@ public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList
         V465.Scales, StarRule.V464, DealRule.V464, InvestRule.V468);
 
     /// <summary>
+    /// 第469期の 1 章（指示書 design/PHASE469_DEMO_ROSTER_SPEC.md §1）。第468期に<b>体験版の加入の表</b>（<see cref="RosterRule.V469"/>）を載せただけ:
+    /// 1-1 は決まった 6 枚で始まり（第464期の配りは使わない・やり直しても同じ 6 枚）、呼ぶ候補はそのステージまでの表の駒だけ（1-1 は 6 体・1-2 は 20 体・1-3 は 27 体）、
+    /// 投資の軸の札はそのステージで呼べる駒（まだ持っていないもの）がいる軸だけ。敵の倍率 ・☆ ・強化 ・盤と金の札 ・手札 6 ・隊の枠 2 ・金 8 は第468期のまま。
+    /// </summary>
+    public static readonly ChapterRule V469 = new(true, "第469期（持ち越し・敵の倍率・☆の強化・勇者の回復なし・軸への投資・盤と金の札・加入の表）",
+        V465.Scales, StarRule.V464, DealRule.Off, InvestRule.V468, RosterRule.V469);
+
+    /// <summary>
     /// 版の一覧（第466期・遊びの写しが版をキーで持つ——写しの版で 1 章を始め直すため）。<b>版を足したらここにも足す。</b>
     /// </summary>
     public static IReadOnlyList<(string Key, ChapterRule Rule)> Versions
-        => new[] { ("V460", V460), ("V461", V461), ("V462", V462), ("V463", V463), ("V464", V464), ("V465", V465), ("V467", V467), ("V468", V468) };
+        => new[] { ("V460", V460), ("V461", V461), ("V462", V462), ("V463", V463), ("V464", V464), ("V465", V465), ("V467", V467), ("V468", V468), ("V469", V469) };
 
     /// <summary>版のキー（「V465」・一覧に無ければ名前）。</summary>
     public string Key { get { string n = Name; return Versions.FirstOrDefault(v => v.Rule.Name == n).Key ?? n; } }
@@ -88,7 +97,7 @@ public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList
 public static class Chapter1
 {
     /// <summary>遊ぶ 1 章の規則（編成画面の札「1 章」・絵の口が始める版）。</summary>
-    public static ChapterRule Default => ChapterRule.V468;   // 第461期から持ち越しのある 1 章・第462期から敵の倍率・第463期から☆の重ね・第464期から☆は強化で・第465期から勇者の回復なし・第467期から軸への投資・第468期から盤と金の札
+    public static ChapterRule Default => ChapterRule.V469;   // 第461期から持ち越しのある 1 章・第462期から敵の倍率・第463期から☆の重ね・第464期から☆は強化で・第465期から勇者の回復なし・第467期から軸への投資・第468期から盤と金の札・第469期から加入の表
     /// <summary>いまの 1 章の規則（<see cref="Begin"/> が決める）。</summary>
     public static ChapterRule Rule { get; private set; } = Default;
 
@@ -99,7 +108,8 @@ public static class Chapter1
         => new[] { rule.Carry ? MapStage.Stage11Ch : MapStage.Stage11, MapStage.Stage12, MapStage.Stage13 }
             .Select((s, i) => s.Scaled(rule.ScaleOf(i)).Starred(rule.Stars ?? StarRule.Off)   // 第463期: ☆の規則を載せる（☆なしならそのまま）
                 .Dealt(i == 0 ? rule.Deal ?? DealRule.Off : DealRule.Off)                      // 第464期: 1-1 の配りの規則（52 枚から・軸の保証）
-                .Invested(rule.Invest ?? InvestRule.Off)).ToArray();                            // 第467期: 軸への投資（3 ステージとも）
+                .Invested(rule.Invest ?? InvestRule.Off)                                        // 第467期: 軸への投資（3 ステージとも）
+                .Rostered(rule.Roster ?? RosterRule.Off)).ToArray();                            // 第469期: 加入の表（3 ステージとも）
 
     /// <summary>いまの 1 章のステージ。</summary>
     public static IReadOnlyList<MapStage> Stages => StagesFor(Rule);

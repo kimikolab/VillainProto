@@ -151,6 +151,17 @@ public sealed class MapStage
     /// <summary>投資の規則を載せた写し（第467期・<see cref="Scaled"/> と同じく、同じステージ・同じ規則には同じインスタンス）。投資の無い規則ならこのステージそのもの。</summary>
     public MapStage Invested(InvestRule rule) => !rule.On ? this : _invested.GetOrAdd((this, rule), static k => Copy(k.Item1, invest: k.Item2));
 
+    /// <summary>
+    /// 体験版の加入の表（第469期・1 章だけ・<see cref="ChapterRule.V469"/>）。<b>偽（<see cref="RosterRule.Off"/>）なら表は無い</b>——始めの手札は配りの規則のまま、呼ぶ候補は 52 枚から。
+    /// 読むのは `Map11State`（始めの手札・呼ぶ候補の母数・「呼べる駒 あと n 体」）と `Chapter1`（投資の軸の札）と画面の札だけ。
+    /// </summary>
+    public RosterRule Roster { get; init; } = RosterRule.Off;
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(MapStage, RosterRule), MapStage> _rostered = new();
+
+    /// <summary>加入の表を載せた写し（第469期・<see cref="Scaled"/> と同じく、同じステージ・同じ規則には同じインスタンス）。表の無い規則ならこのステージそのもの。</summary>
+    public MapStage Rostered(RosterRule rule) => !rule.On ? this : _rostered.GetOrAdd((this, rule), static k => Copy(k.Item1, roster: k.Item2));
+
     public int LaneCount => Lanes.Length;
     public int TotalNodes => Lanes.Sum(l => l.Count);
 
@@ -676,8 +687,10 @@ public sealed class MapStage
 
     /// <summary>ステージの写し（第460期・版を足すための道具）。<paramref name="crossFacing"/> を渡したときだけ横の辺の直しを替える。</summary>
     /// 第462期: <paramref name="scale"/> を渡したときは敵の数値に倍率を掛ける（<see cref="Scaled"/> だけが渡す）。
-    private static MapStage Copy(MapStage s, bool? crossFacing = null, MapFoeScale? scale = null, StarRule? stars = null, DealRule? deal = null, InvestRule? invest = null) => new()
+    private static MapStage Copy(MapStage s, bool? crossFacing = null, MapFoeScale? scale = null, StarRule? stars = null, DealRule? deal = null, InvestRule? invest = null,
+                                 RosterRule? roster = null) => new()
     {
+        Roster = roster ?? s.Roster,
         Invest = invest ?? s.Invest,
         Stars = stars ?? s.Stars,
         Deal = deal ?? s.Deal,
