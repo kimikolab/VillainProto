@@ -777,6 +777,13 @@ public sealed class Map11State
     public IReadOnlyList<UnitDef> RosterLeft
         => Stage.Roster.On ? Stage.Roster.PoolFor(Stage.Id).Where(d => !OnBoardOrHand(d)).ToArray() : Array.Empty<UnitDef>();
 
+    /// <summary>
+    /// 投資の札に並べるその軸の駒（第469期・画面だけが読む）。加入の表のある盤では<b>このステージで呼べる駒 ＋ 持っている駒</b>だけ（表の外の駒は札に出さない）。
+    /// 表の無い盤では 52 枚のうちその軸の駒そのもの（第467期のまま）。
+    /// </summary>
+    public IReadOnlyList<UnitDef> AxisPieces(string axis)
+        => InvestRule.PiecesOf(axis).Where(d => Stage.Roster.Allows(Stage.Id, d) || OnBoardOrHand(d)).ToArray();
+
     // ---------------- 軸への投資（第467期 §1・投資のあるステージ（1 章）だけ） ----------------
 
     /// <summary>投資の記録（どのステージで何の軸を選んだか・選んだ順・持ち越す）。<b>投資の無いステージでは空</b>。</summary>

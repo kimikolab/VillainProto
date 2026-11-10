@@ -646,9 +646,12 @@ public partial class Map11Main : Node3D
         { UseDefaultSquads(); _reform = false; ClearHold(); Refresh(); }
         // 第460期: 1 章の絵。`intro` はステージの頭の札（`--map-chapter=N` と使う・出ているまま撮る）、
         // `chapter-result` は 1-3 の結果画面で「1 章の結果へ」を押した後（`--map-chapter-play=N` と使う）。
-        else if (parts.Length > 1 && parts[1] == "intro") { }
-        // 第462期: `card` はステージの頭の札（`--map-chapter-stop=K` と使う・出ているまま撮る）、`map` は組み直しの窓を閉じた作戦の画面（上の帯）。
-        else if (parts.Length > 1 && parts[1] == "card") { }
+        // 第469期: 加入の表のある 1 章では、頭の札の顔の数と「呼べる駒 あと n 体」を 1 行出す（`intro` ／ `card`）。
+        else if (parts.Length > 1 && parts[1] is "intro" or "card")
+        {
+            if (St.Stage.Roster.On)
+                GD.Print($"MAP11_CAPTURE_ROSTER stage={St.Stage.Id} faces={_introJoinFaces} left={St.RosterLeft.Count} offers={string.Join("/", St.Offers.Select(o => o.Name))} hand={string.Join("/", St.Bench.Select(u => u.Def.Name))}");
+        }
         else if (parts.Length > 1 && parts[1] == "map") { _reform = false; ClearHold(); Refresh(); }
         // 第464期: `enhance` は組み直しの窓で手札の 1 枚目（手札が空なら選んでいる隊の前1）を選んだところ（強化のボタン・`--map-chapter-stop=K` と使う）。
         // 第467期 §2: `enhance-press` は強化の後の押し方を画面の口で押して確かめる（門 `--chapter1-invest-smoke` (e)・`--map-chapter-stop=1` と使う）。
@@ -2469,6 +2472,9 @@ public partial class Map11Main : Node3D
             note.AutowrapMode = TextServer.AutowrapMode.WordSmart;
             _benchList.AddChild(note);
         }
+        // 第469期 §1-4: 加入の表のある 1 章は「呼べる駒 あと n 体」・候補が 1 枚も無ければ「呼べる駒がいない」（判定は `Map11State`）。
+        if (St.Stage.Roster.On)
+            _benchList.AddChild(UiKit.Text(St.Offers.Count == 0 ? "呼べる駒がいない（このステージの駒は全部そろった）" : $"呼べる駒 あと {St.RosterLeft.Count} 体", 13, GoldColor));
         for (int k = 0; k < St.Offers.Count; k++)
         {
             UnitDef d = St.Offers[k];

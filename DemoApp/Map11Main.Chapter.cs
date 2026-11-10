@@ -138,12 +138,29 @@ public partial class Map11Main
         if (!Chapter1.Active || !Chapter1.IntroPending || St.Finished) return;
         Chapter1.IntroPending = false;
         var (title, body) = Chapter1.Intro(St.Stage);
-        _introOverlay = Modal(_uiRoot, 330, 245, out VBoxContainer col, "1 章", GoldColor);
+        System.Collections.Generic.IReadOnlyList<UnitDef> joins = St.Stage.Roster.JoinsAt(St.Stage.Id);   // 第469期: 顔の段があれば窓を高く
+        _introOverlay = Modal(_uiRoot, 330, joins.Count > 0 ? 245 + 30 : 245, out VBoxContainer col, "1 章", GoldColor);
         col.AddChild(new MapStageIllustration { State = St.Stage, CustomMinimumSize = new Vector2(0, 160), SizeFlagsHorizontal = Control.SizeFlags.ExpandFill });
         col.AddChild(UiKit.Text(title, 24, Colors.White));
         Label text = UiKit.Text(body, 15, Color.FromHtml("#ccd5cb"));
         text.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         col.AddChild(text);
+        // 第469期 §1-4: 加入の表のある 1 章は「このステージから呼べる駒」の顔（仮・並べ方と到着の一言の枠は Codex）。
+        if (joins.Count > 0)
+        {
+            col.AddChild(UiKit.Text($"このステージから呼べる駒 {joins.Count} 体（呼べる駒 あと {St.RosterLeft.Count} 体）", 13, GoldColor));
+            var faces = new HFlowContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+            faces.AddThemeConstantOverride("h_separation", 3);
+            faces.AddThemeConstantOverride("v_separation", 3);
+            foreach (UnitDef d in joins)
+            {
+                var face = new UnitFaceIcon { CustomMinimumSize = new Vector2(40, 40), TooltipText = d.Name };
+                face.SetUnit(d);
+                faces.AddChild(face);
+            }
+            col.AddChild(faces);
+            _introJoinFaces = joins.Count;
+        }
         Button go = UiKit.ActionButton("始める", GoldColor);
         go.CustomMinimumSize = new Vector2(0, 40);
         go.Pressed += () => { if (_introOverlay is not null) _introOverlay.Visible = false; ShowInvestPicker(); };   // 第467期: 続けて投資の札
@@ -162,4 +179,7 @@ public partial class Map11Main
 
     /// <summary>頭の札の「写しから始める」（第468期・絵の口 `snap-button` が押して確かめる）。</summary>
     private Button? _snapButton;
+
+    /// <summary>頭の札に並べた「このステージから呼べる駒」の顔の数（第469期・絵の口 `roster-intro` が読む）。</summary>
+    private int _introJoinFaces;
 }

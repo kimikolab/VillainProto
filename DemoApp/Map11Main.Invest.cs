@@ -53,14 +53,14 @@ public partial class Map11Main
             // その軸の駒の顔 3〜4 体（持っていない駒を先に）。
             var faces = new HBoxContainer();
             faces.AddThemeConstantOverride("separation", 2);
-            foreach (UnitDef d in InvestRule.PiecesOf(axis).OrderBy(d => St.OnBoardOrHand(d)).Take(4))
+            foreach (UnitDef d in St.AxisPieces(axis).OrderBy(d => St.OnBoardOrHand(d)).Take(4))   // 第469期: 加入の表のある 1 章はこのステージで呼べる駒 ＋ 持っている駒だけ
             {
                 var face = new UnitFaceIcon { CustomMinimumSize = new Vector2(52, 52), TooltipText = d.Name + (St.OnBoardOrHand(d) ? "（持っている）" : "") };
                 face.SetUnit(d);
                 faces.AddChild(face);
             }
             card.AddChild(faces);
-            int have = St.OwnedAxisCount(axis), all = InvestRule.PiecesOf(axis).Count;
+            int have = St.OwnedAxisCount(axis), all = St.AxisPieces(axis).Count;
             card.AddChild(UiKit.Text($"手持ち {have} ／ {all} 体・投資 ×{St.InvestCount(axis)}", 12, UiKit.Muted));
             card.AddChild(UiKit.Text("この軸の駒が呼ぶ候補に出やすくなる", 12, UiKit.Muted));
             Button pick = UiKit.ActionButton($"{axis}に投資する", GoldColor);
