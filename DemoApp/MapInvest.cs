@@ -58,32 +58,42 @@ public sealed class InvestRule
     /// 1 章は <c>Chapter1.StageSeed(1 章の seed, ステージ, 0)</c> を渡す——<b>やり直しでも同じ 3 枚</b>（配りの回数を入れない）。
     /// </summary>
     /// 第468期: <paramref name="held"/> は前のステージまでに持った盤・金の札（その札は出さない）。<b>第467期の規則（<see cref="Doctrines"/> が偽）では読まない。</b>
-    public IReadOnlyList<string> CardsFor(int seed, IReadOnlyCollection<string>? held = null)
+    /// 第469期: <paramref name="open"/> は出してよい軸（そのステージで呼べる駒がまだいる軸・加入の表のある 1 章だけが渡す）。<b>null なら 10 軸すべて</b>（第468期まで）。
+    /// 並べる乱数は 10 軸を混ぜてから外す——10 軸すべてを渡せば第468期と同じ札。
+    public IReadOnlyList<string> CardsFor(int seed, IReadOnlyCollection<string>? held = null, IReadOnlyCollection<string>? open = null)
     {
         if (!On) return Array.Empty<string>();
-        if (Doctrines) return DoctrineCards(seed, held ?? Array.Empty<string>());
+        if (Doctrines) return DoctrineCards(seed, held ?? Array.Empty<string>(), open);
         var rng = new Random(unchecked(seed * 7919 + 467));
         string[] axes = UnitTags.Axes.ToArray();
         for (int i = axes.Length - 1; i > 0; i--) { int j = rng.Next(i + 1); (axes[i], axes[j]) = (axes[j], axes[i]); }
-        return axes.Take(Math.Min(Cards, axes.Length)).ToArray();
+        return axes.Where(a => open is null || open.Contains(a)).Take(Cards).ToArray();
     }
 
     /// <summary>
     /// 第468期 §1-2 の 3 枚: <b>軸 1 枚 ＋ 盤か金 1 枚 ＋ どれでも 1 枚</b>（どれでも ＝ 残りの軸 ＋ 持っていない盤・金の札から 1 枚を等しく）。並びは seed で混ぜる。
     /// 持っている盤・金の札（<paramref name="held"/>）は出さない。盤・金の札が 1 枚も残っていなければ 2 枚目も軸。
+    /// 第469期 §1-3: 軸は <paramref name="open"/> の軸だけ。<b>出せる軸が 1 つも無ければ、軸の枠も盤・金の札で埋める</b>（盤・金の札も尽きれば枚数が減る）。
     /// </summary>
-    private IReadOnlyList<string> DoctrineCards(int seed, IReadOnlyCollection<string> held)
+    private IReadOnlyList<string> DoctrineCards(int seed, IReadOnlyCollection<string> held, IReadOnlyCollection<string>? open)
     {
         var rng = new Random(unchecked(seed * 7919 + 468));
         static void Shuffle(string[] xs, Random r) { for (int i = xs.Length - 1; i > 0; i--) { int j = r.Next(i + 1); (xs[i], xs[j]) = (xs[j], xs[i]); } }
-        string[] axes = UnitTags.Axes.ToArray();
-        Shuffle(axes, rng);
-        string[] docs = Doctrine.All.Select(d => d.Name).Where(n => !held.Contains(n)).ToArray();
-        Shuffle(docs, rng);
-        var picked = new List<string> { axes[0] };
-        var rest = new List<string>();
-        if (docs.Length > 0) { picked.Add(docs[0]); rest.AddRange(axes.Skip(1)); rest.AddRange(docs.Skip(1)); }
-        else { picked.Add(axes[1]); rest.AddRange(axes.Skip(2)); }
+        string[] all = UnitTags.Axes.ToArray();
+        Shuffle(all, rng);
+        var axes = all.Where(a => open is null || open.Contains(a)).ToList();
+        string[] docArr = Doctrine.All.Select(d => d.Name).Where(n => !held.Contains(n)).ToArray();
+        Shuffle(docArr, rng);
+        var docs = docArr.ToList();
+        static string Take(List<string> xs) { string x = xs[0]; xs.RemoveAt(0); return x; }
+        var picked = new List<string>();
+        bool noAxis = axes.Count == 0;
+        if (!noAxis) picked.Add(Take(axes));                               // 軸の枠
+        if (docs.Count > 0) picked.Add(Take(docs));                         // 盤か金の枠
+        else if (axes.Count > 0) picked.Add(Take(axes));                    //   盤・金の札が尽きていれば軸
+        if (noAxis && docs.Count > 0) picked.Add(Take(docs));               // 第469期: 出せる軸が無ければ軸の枠も盤・金の札
+        var rest = new List<string>(axes);
+        rest.AddRange(docs);
         while (picked.Count < Cards && rest.Count > 0) { int k = rng.Next(rest.Count); picked.Add(rest[k]); rest.RemoveAt(k); }
         string[] shown = picked.ToArray();
         Shuffle(shown, rng);

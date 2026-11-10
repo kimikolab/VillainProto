@@ -227,6 +227,7 @@ public static class Chapter1
         if (Rule.Carry && r.Entry is { } entry) Map11Session.State!.ApplyCarry(entry);
         // 第467期: このステージの投資（持ち越しにこのステージの投資が入っていれば——写しの `_first` ／ `_end` から始めたとき——選んだことにする）。
         r.Invested = Map11Session.State!.InvestLog.Where(x => x.Stage == Stages[Index].Id).Select(x => x.Axis).LastOrDefault();
+        _openAxes = OpenAxesOf(Map11Session.State!);   // 第469期 §1-3: 入った時点で呼べる駒のいる軸（やり直しは同じ入りなので同じ）
         PlayLog.OnStart(Map11Session.State!, Rule.Carry ? r.Entry : null);   // 第466期: 入った時点の写し（書くだけ）
         IntroPending = true;
     }
@@ -290,8 +291,21 @@ public static class Chapter1
     /// いまのステージの投資の札（10 軸から重複なしの 3 枚）。<b>1 章の seed とステージだけで決まる</b>（配りの回数を入れない——やり直しでも同じ 3 枚）。投資の無い 1 章は空。
     /// 第468期: 盤・金の札は、前のステージまでに選んだ札を出さない（このステージで選んだ札は数えない——選んだ後も同じ 3 枚）。
     /// </summary>
+    /// 第469期 §1-3: 加入の表のある 1 章では、軸の札は<b>このステージに入った時点で呼べる駒（まだ持っていないもの）が 1 体以上いる軸</b>だけ（<see cref="OpenAxes"/>）。
     public static IReadOnlyList<string> InvestCards
-        => Active && CurrentStage.Invest.On ? CurrentStage.Invest.CardsFor(StageSeed(Seed, Index, 0), HeldBefore()) : Array.Empty<string>();
+        => Active && CurrentStage.Invest.On ? CurrentStage.Invest.CardsFor(StageSeed(Seed, Index, 0), HeldBefore(), OpenAxes) : Array.Empty<string>();
+
+    private static IReadOnlyCollection<string>? _openAxes;
+
+    /// <summary>
+    /// 軸の札に出してよい軸（第469期・加入の表の無い 1 章は null ＝ 10 軸すべて）。ステージを始めたとき（持ち越しを載せた後・呼ぶ前）に決める——
+    /// 呼んだ後に札を読み直しても同じ 3 枚。
+    /// </summary>
+    public static IReadOnlyCollection<string>? OpenAxes => Active ? _openAxes : null;
+
+    /// <summary>その盤でいま呼べる駒（まだ持っていないもの）がいる軸（<see cref="UnitTags.Axes"/> の並び・加入の表の無い盤は null）。</summary>
+    public static IReadOnlyCollection<string>? OpenAxesOf(Map11State st)
+        => st.Stage.Roster.On ? UnitTags.Axes.Where(a => st.RosterLeft.Any(d => MapDraw.AxesOf(d).Contains(a))).ToList() : null;
 
     /// <summary>前のステージまでに選んだ盤・金の札（第468期・いまのステージで選んだ札は入れない）。</summary>
     private static IReadOnlyCollection<string> HeldBefore()
