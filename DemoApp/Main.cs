@@ -232,6 +232,16 @@ public partial class Main : Control
             GetTree().Quit(okD ? 0 : 1);
             return;
         }
+        // 第469期 §4: 体験版の加入の表の門（始めの 6 枚・呼ぶ候補は表の駒だけ・2 体 ／ 0 体・軸の札・第468期のまま・単発と第460〜468期は今のまま）。画面なし。`--chapter1-roster-quick` は §6 の器具の通しを省く。
+        if (bootArgs.Contains("--chapter1-roster-smoke", StringComparer.Ordinal) || bootArgs.Contains("--chapter1-roster-quick", StringComparer.Ordinal))
+        {
+            bool okR;
+            try { okR = Chapter1RosterSmoke.Run(GD.Print, ProjectSettings.GlobalizePath("res://"), bots: !bootArgs.Contains("--chapter1-roster-quick", StringComparer.Ordinal)); }
+            catch (System.Exception ex) { GD.PrintErr(ex.ToString()); okR = false; }
+            GD.Print($"CHAPTER1_ROSTER_SMOKE_COMPLETE ok={okR}");
+            GetTree().Quit(okR ? 0 : 1);
+            return;
+        }
         if (bootArgs.Contains("--map11-phase0", StringComparer.Ordinal))
         {
             bool p0 = Map11Verify.Phase0(GD.Print);
