@@ -149,12 +149,12 @@ public static class Map11Session
     }
 
     /// <summary>写しを選んで 1 章を始める（第466期 §2・一覧の窓と口 `--map-chapter-from=` が使う）。<paramref name="snapRule"/> が偽なら今の版。</summary>
-    public static void PickChapterFrom(PlayLog.Snap snap, bool snapRule)
+    public static void PickChapterFrom(PlayLog.Snap snap, bool snapRule, ChapterRule? now = null)
     {
         ChapterPicked = true;
         SnapPicked = true;
         SnapChoicePending = false;
-        Chapter1.BeginFrom(snap, snapRule);
+        Chapter1.BeginFrom(snap, snapRule, now);   // 第469期: 今の版を渡せる（門が版を固定する）
     }
 
     /// <summary>ステージの札の文（第460期・「マップ 1-2」／「1 章」）。</summary>

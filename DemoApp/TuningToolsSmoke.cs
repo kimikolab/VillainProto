@@ -107,7 +107,7 @@ public static class TuningToolsSmoke
         string plays = Path.Combine(tmp, "plays");
         string realPlays = PlayLog.DefaultRoot(demoDir);
         ChapterRule rule = ChapterRule.V465;   // 第467期: 第465期の 1 章に固定（遊ぶ 1 章は投資のある第467期・(c) の「今の版」だけが `Chapter1.Default` を読む）
-        ChapterRule nowRule = Chapter1.Default;
+        ChapterRule nowRule = ChapterRule.V468;   // 第469期: (c) の「今の版」も第468期に固定（遊ぶ 1 章は始めの 6 枚のある第469期）
         write($"  遊ぶ 1 章 {rule.Name}・写しの置き場（門） {plays}・手で写した写し {PlayLog.ManualDir(realPlays)}");
 
         Map12ChangeSmoke.FightHook = FightThroughSession;
@@ -217,7 +217,7 @@ public static class TuningToolsSmoke
                         bool snapOk = Chapter1.Rule.Name == wantRule.Name && a.FoeScale == wantRule.ScaleOf(2);
                         int heroA = a.Hero.Unit!.MaxHp;
                         string starA = Map11Session.State.Stage.Stars.On ? $"☆{Map11Session.State.Stars.Values.Count(v => v.Star == 3)}枚が☆3" : "☆なし";
-                        Map11Session.PickChapterFrom(s, snapRule: false);
+                        Map11Session.PickChapterFrom(s, snapRule: false, now: nowRule);
                         MapStage b = Map11Session.State!.Stage;
                         bool nowOk = Chapter1.Rule.Name == nowRule.Name && b.FoeScale == nowRule.ScaleOf(2);
                         int heroB = b.Hero.Unit!.MaxHp;

@@ -177,10 +177,11 @@ public static class Chapter1
     /// （1 章の 1-1 の自動の写しは配りから——`Snap.Entry` が偽）。以降は今の 1 章と同じ（次のステージへ持ち越す・やり直しはそのステージの始め）。
     /// <paramref name="snapRule"/> が真なら写しに記録された版で、偽なら<b>今の版</b>（<see cref="Default"/>・既定——調整した後の盤を前の持ち越しで遊ぶため）。
     /// 写しの☆は、その版に☆が無ければ捨て、写しに☆が無ければ☆3 とする（`PlayLog.ToCarry`）。
+    /// 第469期: <paramref name="now"/> は「今の版」（省けば <see cref="Default"/>・門は版を固定して渡す）。
     /// </summary>
-    public static void BeginFrom(PlayLog.Snap snap, bool snapRule = false)
+    public static void BeginFrom(PlayLog.Snap snap, bool snapRule = false, ChapterRule? now = null)
     {
-        Rule = snapRule && ChapterRule.ByKey(snap.Rule) is { } r ? r : Default;
+        Rule = snapRule && ChapterRule.ByKey(snap.Rule) is { } r ? r : now ?? Default;
         Seed = snap.ChapterSeed;
         Active = true;
         Over = false;
