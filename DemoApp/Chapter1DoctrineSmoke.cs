@@ -315,7 +315,7 @@ public static class Chapter1DoctrineSmoke
             foreach (var (key, r) in ChapterRule.Versions)
             {
                 bool docs = Chapter1.StagesFor(r).Any(s => s.Invest.Doctrines);
-                okE &= docs == (key == "V468");
+                okE &= docs == (string.CompareOrdinal(key, "V468") >= 0);   // 第469期: 第468期より後の版も盤・金の札あり
                 parts.Add($"{key} {(docs ? "盤・金の札あり" : "なし")}");
             }
             // 第467期の札の式は今のまま（10 軸から重複なし・軸だけ）

@@ -283,6 +283,8 @@ public static class Chapter1RosterSmoke
         public int[] Retries = new int[3];
         public int[] Axes4 = new int[3];          // 各ステージの始め（入った時点）に 4 枚以上そろった軸の数
         public int[] LeftEnd = { -1, -1, -1 };    // 各ステージの終わり（勝った配り）の「呼べる駒 あと n 体」
+        public int[] Units = new int[3];          // 各ステージに入った時点の駒の数（隊 ＋ 手札 ＋ 倒れた駒）
+        public int[] Star2 = new int[3];          // そのうち☆2 以上
         public int Deals11, Full11;              // 1-1 の配りの数 ・6 体全部を呼んだ配り
         public int Outside;                      // 表の外の駒が手持ちに入った回数
         public int Earned, Spent;
@@ -306,7 +308,13 @@ public static class Chapter1RosterSmoke
                 MapStage stage = stages[i];
                 var st = new Map11State(Chapter1.StageSeed(c, i, a), stage.Time, stage.Portal, draft: true, stage: stage);
                 if (pack is not null) st.ApplyCarry(pack);
-                if (a == 0) res.Axes4[i] = Axes4(st);
+                if (a == 0)
+                {
+                    res.Axes4[i] = Axes4(st);
+                    var own = Owned(st);
+                    res.Units[i] = own.Count;
+                    res.Star2[i] = own.Count(id => st.StarOf(id).Star >= 2);
+                }
                 // 札は入った時点で決まる（Chapter1 と同じ式・やり直しでも同じ 3 枚）
                 cards ??= stage.Invest.CardsFor(Chapter1.StageSeed(c, i, 0),
                     (pack?.Invest ?? Array.Empty<(string, string)>()).Where(x => x.Item1 != stage.Id && Doctrine.Find(x.Item2) is not null).Select(x => x.Item2).ToHashSet(),
@@ -334,8 +342,8 @@ public static class Chapter1RosterSmoke
         int outside = 0;
         write("");
         write($"  §6 1 章の通し（1 章の seed 0〜{Seeds - 1}・負ければ同じステージをやり直す・1 ステージ {RetryCap} 回まで・買い方は第465期と同じ・札は「手持ちの軸がいちばん多い軸、無ければ札の左から」）");
-        write("  | 1 章 | 方針 | 通せた | やり直し 1-1 ／ 1-2 ／ 1-3 | 止まったステージ | 始めに 4 枚以上の軸 1-1 ／ 1-2 ／ 1-3 | 1-1 で呼び切った配り | 終わりの「あと n 体」1-1 ／ 1-2 ／ 1-3 | 金 稼いだ ／ 使った（1 章あたり） |");
-        write("  |---|---|--:|---|---|---|--:|---|---|");
+        write("  | 1 章 | 方針 | 通せた | やり直し 1-1 ／ 1-2 ／ 1-3 | 止まったステージ | 始めに 4 枚以上の軸 1-1 ／ 1-2 ／ 1-3 | 1-1 で呼び切った配り | 終わりの「あと n 体」1-1 ／ 1-2 ／ 1-3 | 入った時点の駒（☆2 以上）1-2 ／ 1-3 | 金 稼いだ ／ 使った（1 章あたり） |");
+        write("  |---|---|--:|---|---|---|--:|---|---|---|");
         foreach (ChapterRule rule in new[] { ChapterRule.V469, ChapterRule.V468 })
             foreach (var (cname, pol) in p2)
             {
@@ -350,9 +358,10 @@ public static class Chapter1RosterSmoke
                 string Avg(Func<Run1, int> f, Func<Run1, bool> where) { var xs = runs.Where(where).Select(f).ToList(); return xs.Count == 0 ? "—" : $"{xs.Average():F2}"; }
                 string axes = string.Join(" ／ ", Enumerable.Range(0, 3).Select(i => Avg(r => r.Axes4[i], r => r.Stuck < 0 || r.Stuck >= i)));
                 string left = rule.Roster is { On: true } ? string.Join(" ／ ", Enumerable.Range(0, 3).Select(i => Avg(r => r.LeftEnd[i], r => r.LeftEnd[i] >= 0))) : "—";
+                string entry = string.Join(" ／ ", Enumerable.Range(1, 2).Select(i => $"{Avg(r => r.Units[i], r => r.Stuck < 0 || r.Stuck >= i)}（{Avg(r => r.Star2[i], r => r.Stuck < 0 || r.Stuck >= i)}）"));
                 string full = rule.Roster is { On: true } ? $"{100.0 * runs.Sum(r => r.Full11) / Math.Max(1, runs.Sum(r => r.Deals11)):F0}%（{runs.Sum(r => r.Full11)} ／ {runs.Sum(r => r.Deals11)}）" : "—";
                 write($"  | {rkey} | {cname} | {runs.Count(r => r.Through)}% | {runs.Average(r => r.Retries[0]):F2} ／ {runs.Average(r => r.Retries[1]):F2} ／ {runs.Average(r => r.Retries[2]):F2}"
-                      + $" | 1-1 {runs.Count(r => r.Stuck == 0)}・1-2 {runs.Count(r => r.Stuck == 1)}・1-3 {runs.Count(r => r.Stuck == 2)} | {axes} | {full} | {left} | {runs.Average(r => r.Earned):F1} ／ {runs.Average(r => r.Spent):F1} |");
+                      + $" | 1-1 {runs.Count(r => r.Stuck == 0)}・1-2 {runs.Count(r => r.Stuck == 1)}・1-3 {runs.Count(r => r.Stuck == 2)} | {axes} | {full} | {left} | {entry} | {runs.Average(r => r.Earned):F1} ／ {runs.Average(r => r.Spent):F1} |");
             }
         write("  （「始めに 4 枚以上の軸」はそのステージに入った時点（呼ぶ前）の手持ちで数える・そのステージに入った通しだけの平均。1-1 で呼び切った ＝ 1-1 の配りの終わりに 1-1 で呼べる 6 体を全部持っていた割合（やり直しの配りも数える））");
         return outside;

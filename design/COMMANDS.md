@@ -1964,6 +1964,13 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     Godot.exe --path DemoApp --quit-after 1500 res://Map11Main.tscn -- "--map11-capture=<png>,snap-button" --map-chapter=4680
         # **第468期 §2-3**: 1 章の最初の窓の「写しから始める」を押して写しの一覧が開くか（`MAP11_CAPTURE_SNAP_BUTTON ok=`・写しは読むだけ）。
         # 盤 ／ 金の札を選んだ後の組み直しの窓は `,doctrine`（`--map-chapter-play=N --map-chapter-stop=K`・盤の札を優先して選ぶ・席の図に「開戦 HP75 攻13」）
+    Godot_console.exe --path DemoApp --headless -- --chapter1-roster-smoke
+        # **第469期**: 体験版の加入の表の門（`Chapter1RosterSmoke.cs`・画面なし）。(a) 1-1 は決まった 6 枚（☆1・seed ／ やり直しでも同じ）／ (b) 呼ぶ候補はそのステージまでの表の駒だけ（1-1 6 ／ 1-2 20 ／ 1-3 27 体）
+        # ／ (c) 呼べる駒 2 体 ／ 0 体の候補 ／ (d) 軸の札は呼べる駒のいる軸だけ・10 軸なら第468期と同じ札 ／ (e) ステージの規則・持ち越し ／ 強化 ／ やり直しは第468期のまま ／ (f) 単発と第460〜468期は表なし
+        # ＋ §6 1 章の通し（第469期 ／ 第468期）× 2 方針 × 100 seed・始めに 4 枚以上の軸・1-1 で呼び切った配り・「あと n 体」・入った時点の駒（報告のみ・表の外の駒が手持ちに入った回数 0 は門）。`--chapter1-roster-quick` は通しを省く。約 3 分
+        # 絵: `res://Map11Main.tscn -- "--map11-capture=<png>,intro" --map-chapter=N`（1-1 の頭の札）／ `,card` ／ `,invested` と `--map-chapter-play=N --map-chapter-stop=K`——`MAP11_CAPTURE_ROSTER` の 1 行（顔の数・あと n 体・候補・手札）
+    Godot_console.exe --path DemoApp --headless -- --foe-weight --plays=design/weights/p469_start6 --stage=1-1 --rule=V469 --stars=1 --scale=0.6,1.0
+        # **第469期 §2**: 始めの 6 枚から手で組んだ 5 隊（5 枚 × 3・3 枚 × 2）× 1-1 の敵（×0.6 ／ 参考 ×1.0）の重さの表（出力は `design/weights/<日付>_1-1.md`・`--out=` で替える）
     Godot_console.exe --path DemoApp --headless -- --map11-phase176
         # **第176期 Phase 0**: Q0-1〜Q0-5（`PortalOn = false` が第175期の 18 量と一致するか ／
         # 重なりと同点の割り方 ／ 湧いた部隊を満タンで作る口 ／ 方針の手順 ／ 走行時間）。約 1 秒
