@@ -1979,6 +1979,14 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
         # 絵: `res://Map11Main.tscn -- --map-chapter-play=N --map-chapter-stop=1 "--map11-capture=<png>,card"`（1-2 の頭の札・`MAP11_CAPTURE_ROSTER` の groups=2）
     Godot_console.exe --path DemoApp --headless -- --foe-weight --plays=design/weights/p469_start6 --stage=1-1 --rule=V470 --stars=1 --scale=0.6
         # **第470期 §1-3**: 始めの 6 枚の 5 隊 × 新しい 1 章の 1-1（`--rule=` の版が 1-1 を替えていればその盤を読む・`FoeWeight.StageAt` の first）。出力 `design/weights/2026-11-11_1-1.md`
+    Godot_console.exe --path DemoApp --headless -- --chapter1-stage11-smoke
+        # **第471期**: 1-1 を教習の重さにする門（`Chapter1Stage11Smoke.cs`・画面なし）。(a) 始めの 6 枚 リィカ・ムグ・ドルガ・ガン・リリ・ムド（seed 0〜199）・ネルは 1-1 で呼べる・ガンは候補に出ない
+        # ／ (b) 1 章の 1-1 の敵 北 物見の兵 → 盾の列 ／ 南 徴募兵 → 騎士の小隊 ／ 湧き 徴募兵・傭兵崩れ・波ルールの駒 0・×0.6 ／ (c) 単発と第461〜470期の 1-1 は今のまま
+        # ／ (d) 棚卸しの表が 33 行（写しを 1 本足すとステージの終わりが 1 本増えて数が動く・`.tmp/p471/smoke_plays` に写して試す）。`--chapter1-stage11-quick` は (d) を省く。約 3 秒
+    Godot_console.exe --path DemoApp --headless -- --roster33-audit [--plays=<dir>] [--out=<path>] [--rule=V470] [--seeds=100] [--no-bots] [--no-weights]
+        # **第471期 §2**: 体験版の 33 体の棚卸しの表（`Roster33Audit.cs` → `design/ROSTER33_AUDIT.md`・軸 ／ 役割・写しと器具の 隊 ／ 余り ／ 無し・1 枚抜いた終わりの HP の差・マイナスと受け手の候補・☆1 での問題・浮いている見込みの駒）。約 30 秒
+    Godot_console.exe --path DemoApp --headless -- --foe-weight --plays=design/weights/p471_start6 --stage=1-1 --rule=V471 --stars=1 --scale=0.6
+        # **第471期 §1-2**: 新しい始めの 6 枚の 5 隊 × 新しい 1 章の 1-1（出力 `design/weights/2026-11-12_1-1.md`）。別案 ネル → ハギは `--plays=design/weights/p471_alt_hagi`
     Godot_console.exe --path DemoApp --headless -- --map11-phase176
         # **第176期 Phase 0**: Q0-1〜Q0-5（`PortalOn = false` が第175期の 18 量と一致するか ／
         # 重なりと同点の割り方 ／ 湧いた部隊を満タンで作る口 ／ 方針の手順 ／ 走行時間）。約 1 秒

@@ -263,6 +263,16 @@ public partial class Main : Control
             GetTree().Quit(okP ? 0 : 1);
             return;
         }
+        // 第471期 §4: 1-1 を教習の重さにする門（始めの 6 枚・1-1 の奥と湧き・単発と第461〜470期は今のまま・棚卸しの表）。画面なし。`--chapter1-stage11-quick` は棚卸しの表を省く。
+        if (bootArgs.Contains("--chapter1-stage11-smoke", StringComparer.Ordinal) || bootArgs.Contains("--chapter1-stage11-quick", StringComparer.Ordinal))
+        {
+            bool okS;
+            try { okS = Chapter1Stage11Smoke.Run(GD.Print, ProjectSettings.GlobalizePath("res://"), audit: !bootArgs.Contains("--chapter1-stage11-quick", StringComparer.Ordinal)); }
+            catch (System.Exception ex) { GD.PrintErr(ex.ToString()); okS = false; }
+            GD.Print($"CHAPTER1_STAGE11_SMOKE_COMPLETE ok={okS}");
+            GetTree().Quit(okS ? 0 : 1);
+            return;
+        }
         if (bootArgs.Contains("--map11-phase0", StringComparer.Ordinal))
         {
             bool p0 = Map11Verify.Phase0(GD.Print);
