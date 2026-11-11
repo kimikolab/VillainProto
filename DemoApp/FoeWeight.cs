@@ -294,17 +294,18 @@ public static class FoeWeight
     }
 
     /// <summary>倍率の盤（素のステージに倍率を掛けた写し・勇者の回復は <paramref name="scale"/> のとおり）。</summary>
-    public static MapStage StageAt(int index, MapFoeScale scale) => MapStage.All[index].Scaled(scale);
+    /// 第470期: <paramref name="first"/> は 1 章の版が替えた 1-1 の盤（`ChapterRule.First`）。省けば単発の 1-1（第469期までの 1 章の 1-1 と同じ敵）。
+    public static MapStage StageAt(int index, MapFoeScale scale, MapStage? first = null) => (index == 0 && first is not null ? first : MapStage.All[index]).Scaled(scale);
 
     /// <summary>1 ステージぶんを回す（表の材料）。</summary>
     public static (List<Cell> Cells, List<Chain> Chains) Measure(IReadOnlyList<Squad> squads, int stageIndex, IReadOnlyList<MapFoeScale> scales,
-                                                                 IReadOnlyList<int> stars, StarRule starRule, int seeds, bool relics)
+                                                                 IReadOnlyList<int> stars, StarRule starRule, int seeds, bool relics, MapStage? first = null)
     {
         var cells = new List<Cell>();
         var chains = new List<Chain>();
         foreach (MapFoeScale sc in scales)
         {
-            MapStage s = StageAt(stageIndex, sc);
+            MapStage s = StageAt(stageIndex, sc, first);
             var foes = FoesOf(s);
             foreach (int star in stars)
             {
@@ -457,7 +458,7 @@ public static class FoeWeight
             var scales = Opt("scale") is { } sc
                 ? sc.Split(',').Select(x => (int)Math.Round(double.Parse(x, CultureInfo.InvariantCulture) * 100)).Select(p => new MapFoeScale(p, p, baseScale.HeroMends)).ToList()
                 : new List<MapFoeScale> { baseScale };
-            var (cells, chains) = Measure(squads, index, scales, stars, starRule, seeds, relics);
+            var (cells, chains) = Measure(squads, index, scales, stars, starRule, seeds, relics, rule.First);   // 第470期: 1 章の版が 1-1 を替えていればその盤
             string head = $"`--foe-weight` の出力（{DateTime.Now:yyyy-MM-dd HH:mm}）。手で編集しない（次の実行で上書きされる）。"
                           + $"\n\n- 版: {rule.Name}（☆の表 {starRule.Name}）・倍率 {string.Join(" ／ ", scales.Select(s => s.Text + (s.HeroMends ? "" : "（勇者の回復なし）")))}"
                           + $"\n- 代表の隊: {squads.Count} 隊（{string.Join("・", squads.Select(q => q.Source).Distinct())}）——写しの「1 刻目の前」、無ければ「入った時点」の隊"

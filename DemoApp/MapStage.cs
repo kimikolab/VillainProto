@@ -828,6 +828,30 @@ public sealed class MapStage
         Gold = GoldRule.V449(),
     };
 
+    /// <summary>
+    /// 1 章の 1-1（第470期 §1-3・`ChapterRule.V470` から）。<see cref="Stage11Ch"/> の<b>道の先頭だけ</b>を軽い部隊に替えた:
+    /// 北の先頭 第二波・先遣 → <b>第一波 ／ 物見の兵</b>（`EnemyCatalog.Stages[0]`）・南の先頭 第四波・先遣 → <b>徴募兵</b>（`band_levy`）。
+    /// 奥（第三波 ／ 討伐隊本隊・第五波 ／ 異端審問団）・湧き・盤・手札・隊の枠・金は <see cref="Stage11Ch"/> のまま。単発の 1-1 と第461〜469期の 1 章の 1-1 は変えない。
+    /// </summary>
+    public static MapStage Stage11Ch470 { get; } = new()
+    {
+        Id = Stage11Ch.Id,
+        Title = Stage11Ch.Title,
+        Board = Stage11Ch.Board,
+        Lanes = new IReadOnlyList<Map11.RoadNode>[]
+        {
+            new[] { Node(0, 0, EnemyCatalog.Stages[0], 0), Stage11Ch.Lanes[0][1] },
+            new[] { Band(1, 0, "band_levy", 0), Stage11Ch.Lanes[1][1] },
+        },
+        LaneNames = Stage11Ch.LaneNames,
+        Spawn = Stage11Ch.Spawn,
+        Portal = Stage11Ch.Portal,
+        Time = Stage11Ch.Time,
+        Arrival = Stage11Ch.Arrival,
+        SquadCap = Stage11Ch.SquadCap,
+        Gold = Stage11Ch.Gold,
+    };
+
     /// <summary>選べるステージ（編成画面の選択の並び）。</summary>
     public static IReadOnlyList<MapStage> All { get; } = new[] { Stage11, Stage12, Stage13 };
 }

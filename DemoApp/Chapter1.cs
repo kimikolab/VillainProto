@@ -20,8 +20,9 @@ using System.Linq;
 /// 第467期: <c>Invest</c> は軸への投資の規則（null なら投資なし・<see cref="InvestRule"/>）。
 /// </summary>
 /// 第469期: <c>Roster</c> は体験版の加入の表（null なら表なし・<see cref="RosterRule"/>）。
+/// 第470期: <c>First</c> は持ち越しのある 1 章の 1-1 の盤（null なら <see cref="MapStage.Stage11Ch"/>・第461〜469期）。
 public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList<MapFoeScale>? Scales = null, StarRule? Stars = null, DealRule? Deal = null,
-                                          InvestRule? Invest = null, RosterRule? Roster = null)
+                                          InvestRule? Invest = null, RosterRule? Roster = null, MapStage? First = null)
 {
     /// <summary>第460期の 1 章（持ち越し無し）。`--chapter1-smoke` はこれで回す。</summary>
     public static readonly ChapterRule V460 = new(false, "第460期（持ち越し無し）");
@@ -80,10 +81,11 @@ public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList
 
     /// <summary>
     /// 第470期の 1 章（指示書 design/PHASE470_CH1_POLISH_SPEC.md §1）。第469期に、<b>投資の札は 1-2 から</b>（1-1 は札なし）と
-    /// <b>一度取った軸は札に出さない</b>（<see cref="InvestRule.V470"/>）を載せた。敵の倍率 ・☆ ・強化 ・盤と金の札 ・加入の表は第469期のまま。
+    /// <b>一度取った軸は札に出さない</b>（<see cref="InvestRule.V470"/>）と、<b>1-1 の道の先頭を軽い部隊に</b>（<see cref="MapStage.Stage11Ch470"/>・北 第一波 ／ 物見の兵・南 徴募兵）を載せた。
+    /// 敵の倍率（1-1 ×0.6 も）・☆ ・強化 ・盤と金の札 ・加入の表は第469期のまま。
     /// </summary>
-    public static readonly ChapterRule V470 = new(true, "第470期（持ち越し・敵の倍率・☆の強化・勇者の回復なし・投資は 1-2 から・盤と金の札・加入の表）",
-        V465.Scales, StarRule.V464, DealRule.Off, InvestRule.V470, RosterRule.V469);
+    public static readonly ChapterRule V470 = new(true, "第470期（持ち越し・敵の倍率・☆の強化・勇者の回復なし・投資は 1-2 から・盤と金の札・加入の表・1-1 の先頭は軽い部隊）",
+        V465.Scales, StarRule.V464, DealRule.Off, InvestRule.V470, RosterRule.V469, MapStage.Stage11Ch470);
 
     /// <summary>
     /// 版の一覧（第466期・遊びの写しが版をキーで持つ——写しの版で 1 章を始め直すため）。<b>版を足したらここにも足す。</b>
@@ -113,7 +115,7 @@ public static class Chapter1
     /// 第461期: 持ち越しのある 1 章の 1-1 は <see cref="MapStage.Stage11Ch"/>（手札 6・隊の枠 2・金 8）。
     /// 第462期: 倍率のある 1 章は、各ステージの敵に倍率を掛けた写し（<see cref="MapStage.Scaled"/>・同じ倍率なら同じインスタンス）。
     public static IReadOnlyList<MapStage> StagesFor(ChapterRule rule)
-        => new[] { rule.Carry ? MapStage.Stage11Ch : MapStage.Stage11, MapStage.Stage12, MapStage.Stage13 }
+        => new[] { rule.Carry ? rule.First ?? MapStage.Stage11Ch : MapStage.Stage11, MapStage.Stage12, MapStage.Stage13 }   // 第470期: 版が替えた 1-1
             .Select((s, i) => s.Scaled(rule.ScaleOf(i)).Starred(rule.Stars ?? StarRule.Off)   // 第463期: ☆の規則を載せる（☆なしならそのまま）
                 .Dealt(i == 0 ? rule.Deal ?? DealRule.Off : DealRule.Off)                      // 第464期: 1-1 の配りの規則（52 枚から・軸の保証）
                 .Invested(i >= (rule.Invest?.FromStage ?? 0) ? rule.Invest ?? InvestRule.Off : InvestRule.Off)   // 第467期: 軸への投資（第470期から 1-1 は札なし）
