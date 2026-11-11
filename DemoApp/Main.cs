@@ -212,6 +212,16 @@ public partial class Main : Control
             GetTree().Quit(okT ? 0 : 1);
             return;
         }
+        // 第471期 §2: 33 体の棚卸しの表（`--roster33-audit`・design/ROSTER33_AUDIT.md を書く・`--no-bots` ／ `--no-weights` で省く）。画面なし。
+        if (bootArgs.Contains("--roster33-audit", StringComparer.Ordinal))
+        {
+            bool okA;
+            try { okA = Roster33Audit.Main(GD.Print, bootArgs, ProjectSettings.GlobalizePath("res://")); }
+            catch (System.Exception ex) { GD.PrintErr(ex.ToString()); okA = false; }
+            GD.Print($"ROSTER33_AUDIT_COMPLETE ok={okA}");
+            GetTree().Quit(okA ? 0 : 1);
+            return;
+        }
         // 第467期 §5: 軸への投資の門（札 3 枚・持ち越して重なる・候補の寄せ 25% ／ 50% ／ 上限 60%・味方の雷で倒れた記録・単発と第460〜465期は今のまま）。画面なし。`--chapter1-invest-quick` は §7 の器具の通しを省く。
         if (bootArgs.Contains("--chapter1-invest-smoke", StringComparer.Ordinal) || bootArgs.Contains("--chapter1-invest-quick", StringComparer.Ordinal))
         {
