@@ -89,11 +89,12 @@ public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList
         V465.Scales, StarRule.V464, DealRule.Off, InvestRule.V470, RosterRule.V469, MapStage.Stage11Ch470, Story: true);
 
     /// <summary>
-    /// 第471期の 1 章（指示書 design/PHASE471_STAGE11_SPEC.md §1）。第470期に、<b>始めの 6 枚のネル → ガン</b>（<see cref="RosterRule.V471"/>・ネルは 1-1 で呼べる駒へ）を載せた。
-    /// 投資の札・頭の札の文・敵の倍率 ・☆ ・強化 ・盤と金の札は第470期のまま。
+    /// 第471期の 1 章（指示書 design/PHASE471_STAGE11_SPEC.md §1）。第470期に、<b>始めの 6 枚のネル → ガン</b>（<see cref="RosterRule.V471"/>・ネルは 1-1 で呼べる駒へ）と、
+    /// <b>1-1 の奥と湧きを雑兵に</b>（<see cref="MapStage.Stage11Ch471"/>・盾の列 ／ 騎士の小隊 ／ 湧き 徴募兵・傭兵崩れ・波ルールなし）を載せた。
+    /// 投資の札・頭の札の文・敵の倍率（1-1 ×0.6）・☆ ・強化 ・盤と金の札は第470期のまま。
     /// </summary>
     public static readonly ChapterRule V471 = new(true, "第471期（持ち越し・敵の倍率・☆の強化・勇者の回復なし・投資は 1-2 から・盤と金の札・加入の表・始めの 6 枚はガン入り・1-1 は雑兵）",
-        V465.Scales, StarRule.V464, DealRule.Off, InvestRule.V470, RosterRule.V471, MapStage.Stage11Ch470, Story: true);
+        V465.Scales, StarRule.V464, DealRule.Off, InvestRule.V470, RosterRule.V471, MapStage.Stage11Ch471, Story: true);
 
     /// <summary>
     /// 版の一覧（第466期・遊びの写しが版をキーで持つ——写しの版で 1 章を始め直すため）。<b>版を足したらここにも足す。</b>

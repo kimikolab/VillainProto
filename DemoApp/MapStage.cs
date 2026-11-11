@@ -852,6 +852,34 @@ public sealed class MapStage
         Gold = Stage11Ch.Gold,
     };
 
+    /// <summary>
+    /// 1 章の 1-1（第471期 §1-2・`ChapterRule.V471` から）。<see cref="Stage11Ch470"/> の<b>奥と湧きを雑兵の部隊</b>（`EnemyCatalog.MapSquads`・波ルールなし）に替えた:
+    /// 北の奥 第三波／討伐隊本隊 → <b>盾の列</b>・南の奥 第五波／異端審問団 → <b>騎士の小隊</b>・湧き 第二波・先遣 ／ 第四波・先遣 → <b>徴募兵 ／ 傭兵崩れ</b>。
+    /// 南の奥は指示書では<b>弓隊</b>だったが、`--foe-weight`（始めの 6 枚・☆1・×0.6）で 5 枚の隊の終わりの HP 60% ／ 3 枚の隊 12／20 と線（70% ／ 15／20）に届かず、
+    /// 騎士の小隊（5 枚 84〜91%・3 枚 20／20）に替えた（傭兵崩れも線を通るが湧きと同じ部隊になる・報告 design/PHASE471_STAGE11.md §2）。
+    /// 先頭（物見の兵・徴募兵）・盤・手札・隊の枠・金は第470期のまま。<b>波ルール（粛・渇き・軛など）を持つ部隊は 1 つも出ない。</b>
+    /// </summary>
+    public static MapStage Stage11Ch471 { get; } = new()
+    {
+        Id = Stage11Ch470.Id,
+        Title = Stage11Ch470.Title,
+        Board = Stage11Ch470.Board,
+        Lanes = new IReadOnlyList<Map11.RoadNode>[]
+        {
+            new[] { Stage11Ch470.Lanes[0][0], Band(0, 1, "band_shields", 3) },
+            new[] { Stage11Ch470.Lanes[1][0], Band(1, 1, "band_knights", 2) },
+        },
+        LaneNames = Stage11Ch470.LaneNames,
+        Spawn = lane => lane == 0
+            ? (EnemyCatalog.MapSquadOf("band_levy").Enemy, EnemyCatalog.MapSquadOf("band_levy").Name, 0)
+            : (EnemyCatalog.MapSquadOf("band_sellswords").Enemy, EnemyCatalog.MapSquadOf("band_sellswords").Name, 2),
+        Portal = Stage11Ch470.Portal,
+        Time = Stage11Ch470.Time,
+        Arrival = Stage11Ch470.Arrival,
+        SquadCap = Stage11Ch470.SquadCap,
+        Gold = Stage11Ch470.Gold,
+    };
+
     /// <summary>選べるステージ（編成画面の選択の並び）。</summary>
     public static IReadOnlyList<MapStage> All { get; } = new[] { Stage11, Stage12, Stage13 };
 }

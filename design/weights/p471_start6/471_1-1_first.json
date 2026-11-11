@@ -1,0 +1,187 @@
+{
+  "format": 1,
+  "kind": "first",
+  "chapterSeed": 471,
+  "stage": "1-1",
+  "stageIndex": 0,
+  "attempt": 0,
+  "stageSeed": 0,
+  "rule": "V471",
+  "ruleName": "第471期",
+  "scale": "×0.6",
+  "written": "2026-11-12T00:00:00",
+  "entry": true,
+  "pack": {
+    "gold": 0,
+    "squadCap": 5,
+    "relicHand": [],
+    "bench": [],
+    "squads": [
+      [
+        {
+          "id": "mudo",
+          "name": "泥人形ムド",
+          "star": 1,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "dolga",
+          "name": "のろまの巨兵ドルガ",
+          "star": 1,
+          "pips": 0,
+          "slot": 1
+        },
+        {
+          "id": "gan",
+          "name": "鬨の号令ガン",
+          "star": 1,
+          "pips": 0,
+          "slot": 2
+        },
+        {
+          "id": "rica",
+          "name": "墓守リィカ",
+          "star": 1,
+          "pips": 0,
+          "slot": 3
+        },
+        {
+          "id": "lili",
+          "name": "施しのリリ",
+          "star": 1,
+          "pips": 0,
+          "slot": 4
+        }
+      ],
+      [
+        {
+          "id": "mudo",
+          "name": "泥人形ムド",
+          "star": 1,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "mug",
+          "name": "胞子体ムグ",
+          "star": 1,
+          "pips": 0,
+          "slot": 1
+        },
+        {
+          "id": "gan",
+          "name": "鬨の号令ガン",
+          "star": 1,
+          "pips": 0,
+          "slot": 2
+        },
+        {
+          "id": "rica",
+          "name": "墓守リィカ",
+          "star": 1,
+          "pips": 0,
+          "slot": 3
+        },
+        {
+          "id": "lili",
+          "name": "施しのリリ",
+          "star": 1,
+          "pips": 0,
+          "slot": 4
+        }
+      ],
+      [
+        {
+          "id": "mudo",
+          "name": "泥人形ムド",
+          "star": 1,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "lili",
+          "name": "施しのリリ",
+          "star": 1,
+          "pips": 0,
+          "slot": 1
+        },
+        {
+          "id": "gan",
+          "name": "鬨の号令ガン",
+          "star": 1,
+          "pips": 0,
+          "slot": 2
+        },
+        {
+          "id": "rica",
+          "name": "墓守リィカ",
+          "star": 1,
+          "pips": 0,
+          "slot": 3
+        },
+        {
+          "id": "dolga",
+          "name": "のろまの巨兵ドルガ",
+          "star": 1,
+          "pips": 0,
+          "slot": 4
+        }
+      ],
+      [
+        {
+          "id": "dolga",
+          "name": "のろまの巨兵ドルガ",
+          "star": 1,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "gan",
+          "name": "鬨の号令ガン",
+          "star": 1,
+          "pips": 0,
+          "slot": 2
+        },
+        {
+          "id": "rica",
+          "name": "墓守リィカ",
+          "star": 1,
+          "pips": 0,
+          "slot": 3
+        }
+      ],
+      [
+        {
+          "id": "mudo",
+          "name": "泥人形ムド",
+          "star": 1,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "mug",
+          "name": "胞子体ムグ",
+          "star": 1,
+          "pips": 0,
+          "slot": 1
+        },
+        {
+          "id": "lili",
+          "name": "施しのリリ",
+          "star": 1,
+          "pips": 0,
+          "slot": 4
+        }
+      ]
+    ],
+    "stars": {}
+  },
+  "notes": [
+    "第469期 §2 の重さの表のための手で組んだ隊（遊んだ写しではない）。始めの 6 枚から 5 枚・全員☆1",
+    "第1隊 前1 ムド・前3 ドルガ・中央 ネル・後1 リィカ・後3 リリ ／ 第2隊 ドルガ → ムグ ／ 第3隊 第1隊のリリとドルガの席を入れ替えた（ドルガ後3） ／ 第4隊 3 枚（前1 ムド・中央 ネル・後1 リィカ）／ 第5隊 3 枚（前1 ドルガ・前3 ムグ・後3 リリ）——6 枚を 3 ＋ 3 に分けた組"
+  ],
+  "estimated": [
+    "隊の組み方と席は手で決めた（指示書 §2・ポンの 2026-11-10 の変更で始めの 6 枚はゾト → ドルガ）"
+  ]
+}
