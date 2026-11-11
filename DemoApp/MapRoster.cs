@@ -55,6 +55,24 @@ public sealed class RosterRule
         },
     };
 
+    /// <summary>
+    /// 第471期の表（指示書 design/PHASE471_STAGE11_SPEC.md §1-1・ポンの決定 2026-11-12）: 始めの 6 枚の<b>ネル → ガン</b>（ネルは 1-1 で呼べる駒へ・ガンと入れ替え）。
+    /// 2 枚ずつ 3 組が見える——生贄（リィカ・ムグ）・手番（ドルガ・ガン）・呪い（リリ・ムド）。1-2 ／ 1-3 の表は第469期のまま。
+    /// </summary>
+    public static readonly RosterRule V471 = new()
+    {
+        On = true,
+        Name = "第471期（始めの 6 枚はガン入り・1-1 で 6 体 → 1-2 で 20 体 → 1-3 で 27 体）",
+        StartStage = "1-1",
+        Start = new[] { "墓守リィカ", "胞子体ムグ", "のろまの巨兵ドルガ", "鬨の号令ガン", "施しのリリ", "泥人形ムド" },
+        Joins = new (string, IReadOnlyList<string>)[]
+        {
+            ("1-1", new[] { "彼岸花のハギ", "継ぎ接ぎのヴェル", "分かちのドハ", "見境なしのミサ", "爆ぜるゾト", "呪詛官ネル" }),
+            V469.Joins[1],
+            V469.Joins[2],
+        },
+    };
+
     /// <summary>名前から駒を引く（`UnitCatalog.All`・無ければ落ちる——表の書き損じを最初の 1 回で見つける）。</summary>
     public static UnitDef Find(string name)
         => UnitCatalog.All.FirstOrDefault(d => d.Name == name) ?? throw new InvalidOperationException($"加入の表の駒が編成に選べる 52 枚に無い: {name}");

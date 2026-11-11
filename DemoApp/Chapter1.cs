@@ -89,11 +89,18 @@ public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList
         V465.Scales, StarRule.V464, DealRule.Off, InvestRule.V470, RosterRule.V469, MapStage.Stage11Ch470, Story: true);
 
     /// <summary>
+    /// 第471期の 1 章（指示書 design/PHASE471_STAGE11_SPEC.md §1）。第470期に、<b>始めの 6 枚のネル → ガン</b>（<see cref="RosterRule.V471"/>・ネルは 1-1 で呼べる駒へ）を載せた。
+    /// 投資の札・頭の札の文・敵の倍率 ・☆ ・強化 ・盤と金の札は第470期のまま。
+    /// </summary>
+    public static readonly ChapterRule V471 = new(true, "第471期（持ち越し・敵の倍率・☆の強化・勇者の回復なし・投資は 1-2 から・盤と金の札・加入の表・始めの 6 枚はガン入り・1-1 は雑兵）",
+        V465.Scales, StarRule.V464, DealRule.Off, InvestRule.V470, RosterRule.V471, MapStage.Stage11Ch470, Story: true);
+
+    /// <summary>
     /// 版の一覧（第466期・遊びの写しが版をキーで持つ——写しの版で 1 章を始め直すため）。<b>版を足したらここにも足す。</b>
     /// </summary>
     public static IReadOnlyList<(string Key, ChapterRule Rule)> Versions
         => new[] { ("V460", V460), ("V461", V461), ("V462", V462), ("V463", V463), ("V464", V464), ("V465", V465), ("V467", V467), ("V468", V468), ("V469", V469),
-                   ("V470", V470) };
+                   ("V470", V470), ("V471", V471) };
 
     /// <summary>版のキー（「V465」・一覧に無ければ名前）。</summary>
     public string Key { get { string n = Name; return Versions.FirstOrDefault(v => v.Rule.Name == n).Key ?? n; } }
@@ -108,7 +115,7 @@ public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList
 public static class Chapter1
 {
     /// <summary>遊ぶ 1 章の規則（編成画面の札「1 章」・絵の口が始める版）。</summary>
-    public static ChapterRule Default => ChapterRule.V470;   // 第461期から持ち越しのある 1 章・第462期から敵の倍率・第463期から☆の重ね・第464期から☆は強化で・第465期から勇者の回復なし・第467期から軸への投資・第468期から盤と金の札・第469期から加入の表・第470期から 1 章の手直し
+    public static ChapterRule Default => ChapterRule.V471;   // 第461期から持ち越しのある 1 章・第462期から敵の倍率・第463期から☆の重ね・第464期から☆は強化で・第465期から勇者の回復なし・第467期から軸への投資・第468期から盤と金の札・第469期から加入の表・第470期から 1 章の手直し・第471期から始めの 6 枚はガン入り
     /// <summary>いまの 1 章の規則（<see cref="Begin"/> が決める）。</summary>
     public static ChapterRule Rule { get; private set; } = Default;
 
