@@ -36,6 +36,17 @@ public sealed class InvestRule
     /// </summary>
     public bool Doctrines { get; init; }
 
+    /// <summary>
+    /// 軸の札も 1 章で 1 度だけか（第470期 §1-2）。<b>真なら選んだ軸は以後の札に出ず、同じ軸は選べない</b>（盤・金の札と同じ扱い・軸の重ねは無い）。
+    /// 2 つの軸を取れば投資 2 回で、按分して 25% ずつ（<see cref="Percent"/> の式は今のまま）。偽なら第469期まで（同じ軸を選べば重なる）。
+    /// </summary>
+    public bool Once { get; init; }
+
+    /// <summary>
+    /// 投資の札を出す最初のステージ（1 章のステージの番号・0 ＝ 1-1・第470期 §1-1）。それより前のステージは投資なしの盤（<c>Chapter1.StagesFor</c> が <see cref="Off"/> を載せる）。
+    /// </summary>
+    public int FromStage { get; init; }
+
     public static readonly InvestRule Off = new() { On = false, Name = "投資なし", Cards = 0, PerPick = 0, Cap = 0 };
 
     /// <summary>第467期の値: 札 3 枚 ／ 投資 1 回につき +25% ／ 上限 60%。</summary>
@@ -45,6 +56,16 @@ public sealed class InvestRule
     public static readonly InvestRule V468 = new()
     {
         On = true, Name = "第468期（札 3 枚＝軸 1・盤か金 1・どれでも 1・1 回 +25%・上限 60%）", Cards = 3, PerPick = 25, Cap = 60, Doctrines = true,
+    };
+
+    /// <summary>
+    /// 第470期の値（指示書 design/PHASE470_CH1_POLISH_SPEC.md §1-1 ／ §1-2）: 第468期の札に、<b>札は 1-2 から</b>（1-1 は投資なし・1 章で 2 回）と
+    /// <b>一度取った軸は札に出さない</b>（軸も 1 章で 1 度だけ）を足した。3 枚の出し方・割合（1 回 +25%・上限 60%）は第468期のまま。
+    /// </summary>
+    public static readonly InvestRule V470 = new()
+    {
+        On = true, Name = "第470期（札は 1-2 から・取った軸は出さない・札 3 枚＝軸 1・盤か金 1・どれでも 1・1 回 +25%）", Cards = 3, PerPick = 25, Cap = 60,
+        Doctrines = true, Once = true, FromStage = 1,
     };
 
     /// <summary>札が軸か（軸でなければ盤・金の札）。</summary>
@@ -81,7 +102,8 @@ public sealed class InvestRule
         static void Shuffle(string[] xs, Random r) { for (int i = xs.Length - 1; i > 0; i--) { int j = r.Next(i + 1); (xs[i], xs[j]) = (xs[j], xs[i]); } }
         string[] all = UnitTags.Axes.ToArray();
         Shuffle(all, rng);
-        var axes = all.Where(a => open is null || open.Contains(a)).ToList();
+        // 第470期 §1-2: 持っている軸（<see cref="Once"/> の版だけが held に軸を入れる）も外す——混ぜてから外すので、持っていなければ第469期と同じ札。
+        var axes = all.Where(a => (open is null || open.Contains(a)) && !held.Contains(a)).ToList();
         string[] docArr = Doctrine.All.Select(d => d.Name).Where(n => !held.Contains(n)).ToArray();
         Shuffle(docArr, rng);
         var docs = docArr.ToList();
@@ -120,9 +142,10 @@ public sealed class InvestRule
     }
 
     /// <summary>投資の 1 行（「投資: 燃焼 ×1・前のめり・略奪」・軸は回数・盤 ／ 金の札は名前だけ・投資が無ければ「投資: なし」）。</summary>
-    public static string Text(IReadOnlyList<(string Stage, string Axis)> log)
+    /// 第470期: <paramref name="once"/>（軸も 1 度だけの版）なら軸も名前だけ（「投資: 燃焼・前のめり」）。
+    public static string Text(IReadOnlyList<(string Stage, string Axis)> log, bool once = false)
         => log.Count == 0 ? "投資: なし"
-            : "投資: " + string.Join("・", log.GroupBy(x => x.Axis).Select(g => Doctrine.Find(g.Key) is null ? $"{g.Key} ×{g.Count()}" : g.Key));
+            : "投資: " + string.Join("・", log.GroupBy(x => x.Axis).Select(g => once || Doctrine.Find(g.Key) is not null ? g.Key : $"{g.Key} ×{g.Count()}"));
 }
 
 /// <summary>盤の札か金の札か（第468期）。</summary>

@@ -23,7 +23,8 @@ public partial class Map11Main
         _investOverlay = Modal(_uiRoot, 470, 250, out VBoxContainer col, "投資", GoldColor);
         col.AddChild(UiKit.Text(rule.Doctrines ? $"{St.Stage.Id} ・ どの札を選ぶ？" : $"{St.Stage.Id} ・ どの軸に投資する？", 22, Colors.White));
         Label help = UiKit.Text($"選んだ軸の駒が、呼ぶ候補に出やすくなる（投資 1 回につき候補 1 枚ごとに {rule.PerPick}%・上限 {rule.Cap}%）。"
-                                + "選んだ軸は次のステージへ持ち越し、同じ軸を選べば重なる。金はかからない。"
+                                + (rule.Once ? "選んだ軸は次のステージへ持ち越す（同じ軸は 1 章で 1 度だけ）。金はかからない。"   // 第470期 §1-2
+                                             : "選んだ軸は次のステージへ持ち越し、同じ軸を選べば重なる。金はかからない。")
                                 + (rule.Doctrines ? "\n盤の札・金の札は、良いことと悪いことを両方持つ（1 章の終わりまで効く・同じ札は 1 章で 1 度だけ）。盤の札は開戦時の席で数値が変わる（戦闘中に動かされても変わらない）。" : ""),
                                 13, Color.FromHtml("#ccd5cb"));
         help.AutowrapMode = TextServer.AutowrapMode.WordSmart;
@@ -61,7 +62,7 @@ public partial class Map11Main
             }
             card.AddChild(faces);
             int have = St.OwnedAxisCount(axis), all = St.AxisPieces(axis).Count;
-            card.AddChild(UiKit.Text($"手持ち {have} ／ {all} 体・投資 ×{St.InvestCount(axis)}", 12, UiKit.Muted));
+            card.AddChild(UiKit.Text(rule.Once ? $"手持ち {have} ／ {all} 体" : $"手持ち {have} ／ {all} 体・投資 ×{St.InvestCount(axis)}", 12, UiKit.Muted));   // 第470期: 軸の名前だけ（重ねは無い）
             card.AddChild(UiKit.Text("この軸の駒が呼ぶ候補に出やすくなる", 12, UiKit.Muted));
             Button pick = UiKit.ActionButton($"{axis}に投資する", GoldColor);
             pick.CustomMinimumSize = new Vector2(0, 38);

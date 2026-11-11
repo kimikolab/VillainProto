@@ -793,7 +793,7 @@ public sealed class Map11State
     /// <summary>その軸に投資した回数。</summary>
     public int InvestCount(string axis) => InvestLog.Count(x => x.Axis == axis);
     /// <summary>投資の 1 行（「投資: 燃焼 ×1・感電 ×1」）。</summary>
-    public string InvestText => InvestRule.Text(InvestLog);
+    public string InvestText => InvestRule.Text(InvestLog, Stage.Invest.Once);   // 第470期: 軸も 1 度だけの版は名前だけ
 
     /// <summary>
     /// このステージの投資を選ぶ（第467期 §1-1・ステージの始めに 1 度だけ）。呼ぶ候補はこの投資で引き直す（ステージの始めに投資していたのと同じ）。
@@ -805,6 +805,7 @@ public sealed class Map11State
         if (!InvestPending) return false;
         bool doctrine = Stage.Invest.Doctrines && Doctrine.Find(axis) is not null && InvestLog.All(x => x.Axis != axis);
         if (!UnitTags.Axes.Contains(axis) && !doctrine) return false;
+        if (Stage.Invest.Once && InvestLog.Any(x => x.Axis == axis)) return false;   // 第470期 §1-2: 一度取った軸は選べない
         InvestLog.Add((Stage.Id, axis));
         RebuildOffers();
         return true;
