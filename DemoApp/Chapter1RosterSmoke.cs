@@ -57,7 +57,7 @@ public static class Chapter1RosterSmoke
         // ---- (a) 始めの 6 枚 ----
         {
             var startIds = start.Select(d => d.Id).ToList();
-            bool okA = Chapter1.Default.Name == rule.Name && start.Count == 6;
+            bool okA = start.Count == 6;   // 第470期: 遊ぶ 1 章が第469期かは読まない（門は第469期に固定）
             string Hand() => string.Join("・", Map11Session.State!.Bench.Select(u => $"{u.Def.Name}☆{Map11Session.State.StarOf(u.Def.Id).Star}"));
             bool Fixed() => Map11Session.State!.Bench.Select(u => u.Def.Id).SequenceEqual(startIds)
                             && Map11Session.State.Bench.All(u => Map11Session.State.StarOf(u.Def.Id).Star == 1)
@@ -73,7 +73,7 @@ public static class Chapter1RosterSmoke
             Chapter1.Retry();
             bool f2 = Fixed();
             okA &= same == 200 && f0 && f1 && f2;
-            write($"  (a) 1 章の seed 4691 の 1-1: {h0}・隊の枠 {Map11Session.State!.SquadCap}・金 {Map11Session.State.Gold}・やり直し 2 回とも同じ 6 枚 {f1 && f2}（配りの seed は替わる）・1 章の seed 0〜199 で同じ 6 枚 {same} ／ 200・遊ぶ 1 章は第469期 {Chapter1.Default.Name == rule.Name}");
+            write($"  (a) 1 章の seed 4691 の 1-1: {h0}・隊の枠 {Map11Session.State!.SquadCap}・金 {Map11Session.State.Gold}・やり直し 2 回とも同じ 6 枚 {f1 && f2}（配りの seed は替わる）・1 章の seed 0〜199 で同じ 6 枚 {same} ／ 200");
             Req(okA, "(a) 1 章の 1-1 の始めは決まった 6 枚（☆1・手札 6・隊の枠 2・金 8）。やり直しても・seed を替えても同じ 6 枚");
         }
 
@@ -249,7 +249,7 @@ public static class Chapter1RosterSmoke
 
         // ---- (f) 単発のステージ・第460〜468期の 1 章は今のまま ----
         {
-            bool okF = MapStage.All.All(s => !s.Roster.On) && ChapterRule.Versions.Where(v => v.Key != "V469").All(v => Chapter1.StagesFor(v.Rule).All(s => !s.Roster.On));
+            bool okF = MapStage.All.All(s => !s.Roster.On) && ChapterRule.Versions.Where(v => string.CompareOrdinal(v.Key, "V469") < 0).All(v => Chapter1.StagesFor(v.Rule).All(s => !s.Roster.On));
             // 表の無い盤の母数は 52 枚・始めの手札は配りの規則のまま
             var s468 = Chapter1.StagesFor(ChapterRule.V468)[0];
             var st468 = new Map11State(77, s468.Time, s468.Portal, draft: true, stage: s468);
