@@ -139,7 +139,9 @@ public partial class Map11Main
         Chapter1.IntroPending = false;
         var (title, body) = Chapter1.Intro(St.Stage);
         System.Collections.Generic.IReadOnlyList<UnitDef> joins = St.Stage.Roster.JoinsAt(St.Stage.Id);   // 第469期: 顔の段があれば窓を高く
-        _introOverlay = Modal(_uiRoot, 330, joins.Count > 0 ? 245 + 30 : 245, out VBoxContainer col, "1 章", GoldColor);
+        var groups = Chapter1.JoinGroups(St.Stage);   // 第470期 §1-4: 段（1-2 は「流れ着いた者」を別の段に）
+        int extra = groups.Count(g => g.Heading is not null);
+        _introOverlay = Modal(_uiRoot, 330, joins.Count > 0 ? 245 + 30 + 40 * extra : 245, out VBoxContainer col, "1 章", GoldColor);
         col.AddChild(new MapStageIllustration { State = St.Stage, CustomMinimumSize = new Vector2(0, 160), SizeFlagsHorizontal = Control.SizeFlags.ExpandFill });
         col.AddChild(UiKit.Text(title, 24, Colors.White));
         Label text = UiKit.Text(body, 15, Color.FromHtml("#ccd5cb"));
@@ -149,17 +151,22 @@ public partial class Map11Main
         if (joins.Count > 0)
         {
             col.AddChild(UiKit.Text($"このステージから呼べる駒 {joins.Count} 体（呼べる駒 あと {St.RosterLeft.Count} 体）", 13, GoldColor));
-            var faces = new HFlowContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
-            faces.AddThemeConstantOverride("h_separation", 3);
-            faces.AddThemeConstantOverride("v_separation", 3);
-            foreach (UnitDef d in joins)
+            foreach (var (heading, units) in groups)
             {
-                var face = new UnitFaceIcon { CustomMinimumSize = new Vector2(40, 40), TooltipText = d.Name };
-                face.SetUnit(d);
-                faces.AddChild(face);
+                if (heading is not null) col.AddChild(UiKit.Text($"{heading}（{units.Count} 体）", 13, GoldColor));
+                var faces = new HFlowContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+                faces.AddThemeConstantOverride("h_separation", 3);
+                faces.AddThemeConstantOverride("v_separation", 3);
+                foreach (UnitDef d in units)
+                {
+                    var face = new UnitFaceIcon { CustomMinimumSize = new Vector2(40, 40), TooltipText = d.Name };
+                    face.SetUnit(d);
+                    faces.AddChild(face);
+                }
+                col.AddChild(faces);
             }
-            col.AddChild(faces);
             _introJoinFaces = joins.Count;
+            _introJoinGroups = groups.Count;
         }
         Button go = UiKit.ActionButton("始める", GoldColor);
         go.CustomMinimumSize = new Vector2(0, 40);
@@ -182,4 +189,7 @@ public partial class Map11Main
 
     /// <summary>頭の札に並べた「このステージから呼べる駒」の顔の数（第469期・絵の口 `roster-intro` が読む）。</summary>
     private int _introJoinFaces;
+
+    /// <summary>頭の札の顔の段の数（第470期・1-2 は「流れ着いた者」で 2 段・絵の口が読む）。</summary>
+    private int _introJoinGroups;
 }

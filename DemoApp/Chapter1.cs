@@ -21,8 +21,9 @@ using System.Linq;
 /// </summary>
 /// 第469期: <c>Roster</c> は体験版の加入の表（null なら表なし・<see cref="RosterRule"/>）。
 /// 第470期: <c>First</c> は持ち越しのある 1 章の 1-1 の盤（null なら <see cref="MapStage.Stage11Ch"/>・第461〜469期）。
+/// <c>Story</c> はステージの頭の札を物語の文（<see cref="Chapter1.Tales470"/>）にするか（偽なら第460期からの仮の文）。
 public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList<MapFoeScale>? Scales = null, StarRule? Stars = null, DealRule? Deal = null,
-                                          InvestRule? Invest = null, RosterRule? Roster = null, MapStage? First = null)
+                                          InvestRule? Invest = null, RosterRule? Roster = null, MapStage? First = null, bool Story = false)
 {
     /// <summary>第460期の 1 章（持ち越し無し）。`--chapter1-smoke` はこれで回す。</summary>
     public static readonly ChapterRule V460 = new(false, "第460期（持ち越し無し）");
@@ -82,10 +83,10 @@ public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList
     /// <summary>
     /// 第470期の 1 章（指示書 design/PHASE470_CH1_POLISH_SPEC.md §1）。第469期に、<b>投資の札は 1-2 から</b>（1-1 は札なし）と
     /// <b>一度取った軸は札に出さない</b>（<see cref="InvestRule.V470"/>）と、<b>1-1 の道の先頭を軽い部隊に</b>（<see cref="MapStage.Stage11Ch470"/>・北 第一波 ／ 物見の兵・南 徴募兵）を載せた。
-    /// 敵の倍率（1-1 ×0.6 も）・☆ ・強化 ・盤と金の札 ・加入の表は第469期のまま。
+    /// ステージの頭の札は物語の文（<see cref="Chapter1.Tales470"/>・仮・1-2 は「流れ着いた者」の段）。敵の倍率（1-1 ×0.6 も）・☆ ・強化 ・盤と金の札 ・加入の表は第469期のまま。
     /// </summary>
     public static readonly ChapterRule V470 = new(true, "第470期（持ち越し・敵の倍率・☆の強化・勇者の回復なし・投資は 1-2 から・盤と金の札・加入の表・1-1 の先頭は軽い部隊）",
-        V465.Scales, StarRule.V464, DealRule.Off, InvestRule.V470, RosterRule.V469, MapStage.Stage11Ch470);
+        V465.Scales, StarRule.V464, DealRule.Off, InvestRule.V470, RosterRule.V469, MapStage.Stage11Ch470, Story: true);
 
     /// <summary>
     /// 版の一覧（第466期・遊びの写しが版をキーで持つ——写しの版で 1 章を始め直すため）。<b>版を足したらここにも足す。</b>
@@ -379,8 +380,44 @@ public static class Chapter1
     /// 第462期 §1-3: 敵に倍率のかかったステージは最後に「敵の強さ ×1.3」の 1 行（1-1 ＝ ×1.0 は出さない）。
     public static (string Title, string Body) Intro(MapStage s)
     {
-        var (title, body) = IntroText(s);
+        var (title, body) = Rule.Story && Tales470.TryGetValue(s.Id, out Tale? t) ? ($"1 章 ・ {s.Id} {t.Heading}", t.Body) : IntroText(s);   // 第470期 §1-4
         return s.FoeScale.Active ? (title, body + "\n" + s.FoeScale.IntroLine) : (title, body);
+    }
+
+    /// <summary>ステージの頭の札の文 1 枚（第470期 §1-4・主人公の内心・<b>仮</b>）。<c>Drifters</c> は「このステージから呼べる駒」の顔を別の段に分ける駒（見出しは <c>DriftHeading</c>）。</summary>
+    public sealed record Tale(string Heading, string Body, string? DriftHeading = null, IReadOnlyList<string>? Drifters = null);
+
+    /// <summary>
+    /// 第470期の頭の札の文（指示書 design/PHASE470_CH1_POLISH_SPEC.md §1-4・<b>仮——後で直す・値だけ替えればよい</b>）。物語の文を持つ版（<see cref="ChapterRule.Story"/>）だけが読む。
+    /// 1-2 は人間の追放者（ヒサ・ガルド・ザン）の顔を「流れ着いた者」の段に分ける。
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, Tale> Tales470 = new Dictionary<string, Tale>
+    {
+        ["1-1"] = new("捨て駒の初陣",
+                      "軍が寄越したのは、使えない奴らと使えない砦。上等だ。\n砦の墓地には先客がいた。墓守のエルフだ——「ここの墓は、私が守ってる。あなたたちが入るなら、それも守る」"),
+        ["1-2"] = new("砦を取れ",
+                      "砦に灯りがともると、妙な連中が流れ着くようになった。王国に居場所をなくした人間だ。魔王軍に人間？　——俺も人間だ。使える奴は使う。",
+                      "流れ着いた者", new[] { "囃し立てのヒサ", "廃棄聖騎士ガルド", "仇討ちのザン" }),
+        ["1-3"] = new("狩る者",
+                      "本隊は撤退した。俺たちは捨て駒だった——慣れたもんだ。拾った連中まで、捨てる気は無い。"),
+    };
+
+    /// <summary>
+    /// 「このステージから呼べる駒」の顔の段（第470期 §1-4・見出し ＋ 駒）。物語の文を持つ版で <see cref="Tale.Drifters"/> があれば、その駒を見出しつきの 2 段目に分ける。
+    /// それ以外は 1 段（見出しなし・第469期のまま）。加入の表の無い盤は空。
+    /// </summary>
+    public static IReadOnlyList<(string? Heading, IReadOnlyList<UnitDef> Units)> JoinGroups(MapStage s)
+    {
+        IReadOnlyList<UnitDef> joins = s.Roster.JoinsAt(s.Id);
+        if (joins.Count == 0) return Array.Empty<(string?, IReadOnlyList<UnitDef>)>();
+        if (!(Active && Rule.Story && Tales470.TryGetValue(s.Id, out Tale? t) && t.Drifters is { Count: > 0 } drift))
+            return new[] { ((string?)null, joins) };
+        var rest = joins.Where(d => !drift.Contains(d.Name)).ToArray();
+        var came = joins.Where(d => drift.Contains(d.Name)).ToArray();
+        var groups = new List<(string?, IReadOnlyList<UnitDef>)>();
+        if (rest.Length > 0) groups.Add((null, rest));
+        if (came.Length > 0) groups.Add((t.DriftHeading, came));
+        return groups;
     }
 
     private static (string Title, string Body) IntroText(MapStage s) => s.Id switch

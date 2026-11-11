@@ -650,7 +650,7 @@ public partial class Map11Main : Node3D
         else if (parts.Length > 1 && parts[1] is "intro" or "card")
         {
             if (St.Stage.Roster.On)
-                GD.Print($"MAP11_CAPTURE_ROSTER stage={St.Stage.Id} faces={_introJoinFaces} left={St.RosterLeft.Count} offers={string.Join("/", St.Offers.Select(o => o.Name))} hand={string.Join("/", St.Bench.Select(u => u.Def.Name))}");
+                GD.Print($"MAP11_CAPTURE_ROSTER stage={St.Stage.Id} faces={_introJoinFaces}{(Chapter1.Rule.Story ? $" groups={_introJoinGroups}" : "")} left={St.RosterLeft.Count} offers={string.Join("/", St.Offers.Select(o => o.Name))} hand={string.Join("/", St.Bench.Select(u => u.Def.Name))}");
         }
         else if (parts.Length > 1 && parts[1] == "map") { _reform = false; ClearHold(); Refresh(); }
         // 第464期: `enhance` は組み直しの窓で手札の 1 枚目（手札が空なら選んでいる隊の前1）を選んだところ（強化のボタン・`--map-chapter-stop=K` と使う）。
