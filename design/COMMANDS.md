@@ -1975,7 +1975,7 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
         # **第470期**: 1 章の手直しの門（`Chapter1PolishSmoke.cs`・画面なし）。(a) 1-1 は投資の札なし・1-2 ／ 1-3 に出る ／ (b) 取った軸は以後の札に出ず選べない・2 軸で 25% ずつ（1-3 の候補 4000 枚を覗く）
         # ／ (c) 1 章の 1-1 の先頭が 第一波／物見の兵（北）・徴募兵（南）・奥 ／ 湧き ／ 倍率は今のまま・単発と第461〜469期の 1-1 も今のまま ／ (d) 頭の札の文が指示書 §1-4 のとおり・1-2 の顔が 2 段（流れ着いた者）／ (e) 第460〜469期・単発は今のまま
         # ＋ §3 1 章の通し（第470期 ／ 第469期）× 2 方針 × 100 seed（1-1 を制圧した作戦ターン・投資の回数・1-2 で取った軸の手持ち）＋ §2 の調べ（`design/plays/120065` の 1-1 の 1 戦目 ／ 2 戦目を台本つきで回し直す・攻撃の写し・付いた状態・全文は `.tmp/p470/trace_battle*.txt`）。報告のみ
-        # `--chapter1-polish-quick` は通しと §2 を省く（約 2 秒）。全部で約 4 分
+        # `--chapter1-polish-quick` は通しと §2 を省く（約 2 秒）。`--chapter1-polish-iso` は通しに切り分けの 2 版（第469期 ＋ 1-1 の先頭だけ ／ ＋ 投資の札だけ）を足す。全部で約 4 分（iso は約 7 分）
         # 絵: `res://Map11Main.tscn -- --map-chapter-play=N --map-chapter-stop=1 "--map11-capture=<png>,card"`（1-2 の頭の札・`MAP11_CAPTURE_ROSTER` の groups=2）
     Godot_console.exe --path DemoApp --headless -- --foe-weight --plays=design/weights/p469_start6 --stage=1-1 --rule=V470 --stars=1 --scale=0.6
         # **第470期 §1-3**: 始めの 6 枚の 5 隊 × 新しい 1 章の 1-1（`--rule=` の版が 1-1 を替えていればその盤を読む・`FoeWeight.StageAt` の first）。出力 `design/weights/2026-11-11_1-1.md`

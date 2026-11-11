@@ -39,7 +39,8 @@ public static class Chapter1PolishSmoke
         ("1-3", "狩る者", "本隊は撤退した。俺たちは捨て駒だった——慣れたもんだ。拾った連中まで、捨てる気は無い。"),
     };
 
-    public static bool Run(Action<string> write, string demoDir, bool bots = true)
+    /// <param name="iso">真なら §3 の通しに切り分けの 2 版（第469期 ＋ 1-1 の先頭だけ ／ 第469期 ＋ 投資の札だけ）を足す（`--chapter1-polish-iso`・報告だけ）。</param>
+    public static bool Run(Action<string> write, string demoDir, bool bots = true, bool iso = false)
     {
         bool ok = true;
         void Req(bool c, string what) { write($"{(c ? "○" : "×")} {what}"); ok &= c; }
@@ -178,7 +179,7 @@ public static class Chapter1PolishSmoke
         void Crash(string what, Exception ex) { crashed++; write($"  × 器具が落ちた: {what}: {ex.GetType().Name}: {ex.Message}"); }
         if (bots)
         {
-            try { BotTables(write, Crash); } catch (Exception ex) { Crash("器具の通し", ex); }
+            try { BotTables(write, Crash, iso); } catch (Exception ex) { Crash("器具の通し", ex); }
             try { Trace(write, demoDir); } catch (Exception ex) { Crash("§2 の調べ", ex); }
         }
         Req(crashed == 0, $"器具（{(bots ? $"1 章の通し × {Seeds} seed ・§2 の調べ" : "なし")}）が落ちない（数字は報告のみ・線は置かない）");
@@ -251,17 +252,21 @@ public static class Chapter1PolishSmoke
         return res;
     }
 
-    private static void BotTables(Action<string> write, Action<string, Exception> crash)
+    /// <summary>切り分けの版（§3・報告だけ・版の一覧には載せない）: 第469期に 1-1 の先頭だけ ／ 投資の札（1-2 から・取った軸は出さない）だけを足したもの。</summary>
+    private static readonly ChapterRule IsoLead = ChapterRule.V469 with { Name = "切り分け: 第469期 ＋ 1-1 の先頭だけ", First = MapStage.Stage11Ch470 };
+    private static readonly ChapterRule IsoInvest = ChapterRule.V469 with { Name = "切り分け: 第469期 ＋ 投資の札だけ", Invest = InvestRule.V470 };
+
+    private static void BotTables(Action<string> write, Action<string, Exception> crash, bool iso = false)
     {
         var p2 = new[] { ("1 隊残す（3 ステージとも）", new[] { Keep1, Keep1, Keep1 }), ("分担＋戻り番（1-3 は逃げる）", new[] { Split, Split, Flee }) };
         write("");
         write($"  §3 1 章の通し（1 章の seed 0〜{Seeds - 1}・負ければ同じステージをやり直す・1 ステージ {RetryCap} 回まで・買い方は第465期と同じ・札は「手持ちの軸がいちばん多い軸、無ければ札の左から」）");
         write("  | 1 章 | 方針 | 通せた | やり直し 1-1 ／ 1-2 ／ 1-3 | 止まったステージ | 1-1 を制圧した作戦ターン（平均・中央値） | 投資の回数（軸 ／ 盤・金） | 1-2 で取った軸の手持ち ／ 呼べる駒＋手持ち（入った時点 → 1-2 の終わり） | 1-2 の終わりにその軸を全部持っていた | 1-2 の投資の枠から出た候補 |");
         write("  |---|---|--:|---|---|---|---|---|--:|--:|");
-        foreach (ChapterRule rule in new[] { ChapterRule.V470, ChapterRule.V469 })
+        foreach (ChapterRule rule in iso ? new[] { ChapterRule.V470, ChapterRule.V469, IsoLead, IsoInvest } : new[] { ChapterRule.V470, ChapterRule.V469 })
             foreach (var (cname, pol) in p2)
             {
-                string rkey = rule.Name == ChapterRule.V470.Name ? "**第470期**" : "第469期";
+                string rkey = rule.Name == ChapterRule.V470.Name ? "**第470期**" : rule.Name == ChapterRule.V469.Name ? "第469期" : rule.Name;
                 var runs = new List<Run1>();
                 for (int c = 0; c < Seeds; c++)
                 {

@@ -247,7 +247,7 @@ public partial class Main : Control
         if (bootArgs.Contains("--chapter1-polish-smoke", StringComparer.Ordinal) || bootArgs.Contains("--chapter1-polish-quick", StringComparer.Ordinal))
         {
             bool okP;
-            try { okP = Chapter1PolishSmoke.Run(GD.Print, ProjectSettings.GlobalizePath("res://"), bots: !bootArgs.Contains("--chapter1-polish-quick", StringComparer.Ordinal)); }
+            try { okP = Chapter1PolishSmoke.Run(GD.Print, ProjectSettings.GlobalizePath("res://"), bots: !bootArgs.Contains("--chapter1-polish-quick", StringComparer.Ordinal), iso: bootArgs.Contains("--chapter1-polish-iso", StringComparer.Ordinal)); }
             catch (System.Exception ex) { GD.PrintErr(ex.ToString()); okP = false; }
             GD.Print($"CHAPTER1_POLISH_SMOKE_COMPLETE ok={okP}");
             GetTree().Quit(okP ? 0 : 1);
