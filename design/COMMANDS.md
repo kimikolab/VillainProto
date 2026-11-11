@@ -1971,6 +1971,14 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
         # 絵: `res://Map11Main.tscn -- "--map11-capture=<png>,intro" --map-chapter=N`（1-1 の頭の札）／ `,card` ／ `,invested` と `--map-chapter-play=N --map-chapter-stop=K`——`MAP11_CAPTURE_ROSTER` の 1 行（顔の数・あと n 体・候補・手札）
     Godot_console.exe --path DemoApp --headless -- --foe-weight --plays=design/weights/p469_start6 --stage=1-1 --rule=V469 --stars=1 --scale=0.6,1.0
         # **第469期 §2**: 始めの 6 枚から手で組んだ 5 隊（5 枚 × 3・3 枚 × 2）× 1-1 の敵（×0.6 ／ 参考 ×1.0）の重さの表（出力は `design/weights/<日付>_1-1.md`・`--out=` で替える）
+    Godot_console.exe --path DemoApp --headless -- --chapter1-polish-smoke
+        # **第470期**: 1 章の手直しの門（`Chapter1PolishSmoke.cs`・画面なし）。(a) 1-1 は投資の札なし・1-2 ／ 1-3 に出る ／ (b) 取った軸は以後の札に出ず選べない・2 軸で 25% ずつ（1-3 の候補 4000 枚を覗く）
+        # ／ (c) 1 章の 1-1 の先頭が 第一波／物見の兵（北）・徴募兵（南）・奥 ／ 湧き ／ 倍率は今のまま・単発と第461〜469期の 1-1 も今のまま ／ (d) 頭の札の文が指示書 §1-4 のとおり・1-2 の顔が 2 段（流れ着いた者）／ (e) 第460〜469期・単発は今のまま
+        # ＋ §3 1 章の通し（第470期 ／ 第469期）× 2 方針 × 100 seed（1-1 を制圧した作戦ターン・投資の回数・1-2 で取った軸の手持ち）＋ §2 の調べ（`design/plays/120065` の 1-1 の 1 戦目 ／ 2 戦目を台本つきで回し直す・攻撃の写し・付いた状態・全文は `.tmp/p470/trace_battle*.txt`）。報告のみ
+        # `--chapter1-polish-quick` は通しと §2 を省く（約 2 秒）。全部で約 4 分
+        # 絵: `res://Map11Main.tscn -- --map-chapter-play=N --map-chapter-stop=1 "--map11-capture=<png>,card"`（1-2 の頭の札・`MAP11_CAPTURE_ROSTER` の groups=2）
+    Godot_console.exe --path DemoApp --headless -- --foe-weight --plays=design/weights/p469_start6 --stage=1-1 --rule=V470 --stars=1 --scale=0.6
+        # **第470期 §1-3**: 始めの 6 枚の 5 隊 × 新しい 1 章の 1-1（`--rule=` の版が 1-1 を替えていればその盤を読む・`FoeWeight.StageAt` の first）。出力 `design/weights/2026-11-11_1-1.md`
     Godot_console.exe --path DemoApp --headless -- --map11-phase176
         # **第176期 Phase 0**: Q0-1〜Q0-5（`PortalOn = false` が第175期の 18 量と一致するか ／
         # 重なりと同点の割り方 ／ 湧いた部隊を満タンで作る口 ／ 方針の手順 ／ 走行時間）。約 1 秒

@@ -242,6 +242,17 @@ public partial class Main : Control
             GetTree().Quit(okR ? 0 : 1);
             return;
         }
+        // 第470期 §4: 1 章の手直しの門（投資の札は 1-2 から・取った軸は出さない・1-1 の先頭・頭の札の文と顔の段・第460〜469期は今のまま）。画面なし。
+        // §3 の器具の通しと §2 の調べ（報告だけ）つき。`--chapter1-polish-quick` は器具の通しと §2 を省く。
+        if (bootArgs.Contains("--chapter1-polish-smoke", StringComparer.Ordinal) || bootArgs.Contains("--chapter1-polish-quick", StringComparer.Ordinal))
+        {
+            bool okP;
+            try { okP = Chapter1PolishSmoke.Run(GD.Print, ProjectSettings.GlobalizePath("res://"), bots: !bootArgs.Contains("--chapter1-polish-quick", StringComparer.Ordinal)); }
+            catch (System.Exception ex) { GD.PrintErr(ex.ToString()); okP = false; }
+            GD.Print($"CHAPTER1_POLISH_SMOKE_COMPLETE ok={okP}");
+            GetTree().Quit(okP ? 0 : 1);
+            return;
+        }
         if (bootArgs.Contains("--map11-phase0", StringComparer.Ordinal))
         {
             bool p0 = Map11Verify.Phase0(GD.Print);

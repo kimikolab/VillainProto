@@ -321,9 +321,11 @@ public static class Chapter1
     /// <summary>前のステージまでに選んだ盤・金の札（第468期・いまのステージで選んだ札は入れない）。</summary>
     /// 第470期 §1-2: 軸も 1 度だけの版（<see cref="InvestRule.Once"/>）は、前のステージまでに選んだ軸も入れる。
     private static IReadOnlyCollection<string> HeldBefore()
-        => Map11Session.State is { } st
-            ? st.InvestLog.Where(x => x.Stage != CurrentStage.Id && (CurrentStage.Invest.Once || Doctrine.Find(x.Axis) is not null)).Select(x => x.Axis).ToHashSet()
-            : new HashSet<string>();
+        => Map11Session.State is { } st ? HeldOf(CurrentStage, st.InvestLog) : new HashSet<string>();
+
+    /// <summary>ステージ <paramref name="stage"/> の札から外す札（前のステージまでの投資の記録から・門と器具の通しも同じ式で札を引く）。</summary>
+    public static IReadOnlyCollection<string> HeldOf(MapStage stage, IEnumerable<(string Stage, string Axis)> log)
+        => log.Where(x => x.Stage != stage.Id && (stage.Invest.Once || Doctrine.Find(x.Axis) is not null)).Select(x => x.Axis).ToHashSet();
 
     /// <summary>このステージの投資をまだ選んでいない（画面が札の窓を出す・選ぶまで閉じない）。</summary>
     public static bool InvestPending => Active && !Over && Map11Session.State is { } st && ReferenceEquals(st.Stage, CurrentStage) && st.InvestPending;
