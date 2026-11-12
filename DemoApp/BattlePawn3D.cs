@@ -781,6 +781,7 @@ void fragment() {
         ShowGolmDiscardedPose();
         ApplyGatherRecoilPose();
         ProcessPoisonMotion((float)delta);
+        ProcessDebuffPose(delta);
         ProcessKubiBell(delta);
         SyncPoisonVisual();
         _shadow.Scale = new Vector3(1.0f - breath * 0.10f + shadowSpread, 1, 1.0f - breath * 0.10f - shadowSpread * 0.35f);
@@ -789,6 +790,7 @@ void fragment() {
 
     private void ResetStaggerPose()
     {
+        ClearDebuffPose();
         ClearKubiBell();
         _movementPoseTime = 0;
         _hushBrace = 0;

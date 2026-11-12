@@ -134,7 +134,7 @@ public partial class PartyBar : PanelContainer
                            : ratio <= 0.6f ? UiKit.Gold
                            : UiKit.Heal;
             row.Hp.Text = $"HP {pawn.Hp}/{pawn.MaxHp}";
-            row.Atk.Text = $"攻 {pawn.AttackValue} {UiKit.PatternLabel(pawn.Pattern)}";
+            row.Atk.Text = $"攻 {pawn.AttackValue} {UiKit.PatternLabel(pawn.Pattern)}{pawn.DebuffAttackSuffix}";
             row.Seat.Text = UiKit.SeatLabel(pawn.Slot, pawn.Shape);
             row.Status.Text = pawn.StatusText;
 

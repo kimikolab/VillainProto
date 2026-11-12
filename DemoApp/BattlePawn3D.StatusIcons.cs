@@ -65,7 +65,8 @@ public partial class BattlePawn3D
     public void PulsePoisonIcon() => _statusIcons.Pulse(StatusKeys.Poison);
     private void SetCurseStain(bool active)
     {
-        if (active && _curseStain is null)
+        if (!active) NelCurseStyled = false;
+        if (active && _curseStain is null && !NelCurseStyled)
             _curseStain = HexMudFx.Stain(this, ToLocal(FxPoint));
         else if (!active && _curseStain is not null)
         {

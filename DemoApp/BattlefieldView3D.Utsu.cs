@@ -48,6 +48,7 @@ public partial class BattlefieldView3D
             UtsuContacts++;
             if (UtsuEffectsEnabled)
             {
+                ShowUtsuDebuffBlade(actor, cue.Ordinal);
                 _attackAudio.PlayUtsuStrike(cue.Ordinal, !cue.Keep);
                 for (int i = 0; i < 2; i++)
                 {

@@ -77,7 +77,7 @@ public partial class Main
             target.ShowSomExpression("som_summon", .3); // 魔法陣を作らず、既存の封印・ひびへ渡す。
         if (_som.DauntedAttacks.Contains(index) && actor is not null)
         {
-            _battleField.ShowSomWeakAttack(actor);
+            _battleField.ShowSomWeakAttack(actor, !_debuff.KubiWeakAttacks.Contains(index));
             actor.SetStatusIcon(StatusKeys.Daunted, false);
             SetDisplayedStatus(actor, DisplayStatusKey(StatusKeys.Daunted), 0);
         }

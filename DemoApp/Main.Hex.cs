@@ -7,18 +7,16 @@ public partial class Main
 {
     private int _hexMarksShown, _hexSharePlays, _hexShareHits;
 
-    private async Task PlayHexShares(int start)
+    private Task PlayHexShares(int start)
     {
-        if (_result is null) return;
+        if (_result is null) return Task.CompletedTask;
         var events = _result.Events;
         int end = HexShareBatch.End(events, start);
-        int token = _playToken;
         var targets = Enumerable.Range(start, end - start)
             .Select(i => _battleField.FindPawn(events[i].TargetId)).OfType<BattlePawn3D>().Distinct().ToArray();
         foreach (var target in targets) target.AnimationSpeed = Math.Max(0.1, _speed);
-        await _battleField.ShowCurseTransfer(_battleField.FindPawn(events[start].ShareFromId), targets, _speed);
-        if (token != _playToken || !_battleMode) return;
-        // 飛行が終わった同じ拍で全員に数字を出す。元の攻撃者から線や追加攻撃の帯を出さない。
+        _battleField.ShowCurseTransferParallel(_battleField.FindPawn(events[start].ShareFromId), targets);
+        // 共有のHPは確定した拍で反映する。筋の到着を待たず、次の連撃と並行して流す。
         for (int i = start; i < end; i++)
         {
             if (!_batchedDamageIndices.Add(i)) continue;
@@ -27,6 +25,6 @@ public partial class Main
             _hexShareHits++;
         }
         _hexSharePlays++;
-        await Delay(0.10);
+        return Task.CompletedTask;
     }
 }

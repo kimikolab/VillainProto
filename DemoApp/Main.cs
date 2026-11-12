@@ -1394,6 +1394,8 @@ public partial class Main : Control
         _seekCompletion = null;
         _seekTarget = null;
         if (_result is null) return;
+        _debuffPlayback = new DebuffPlayback(_result, _battleOpening, mayReorder: _death?.Frames.Count is not > 0);
+        _result = _debuffPlayback.Result;
         _chiri = ChiriPresentation.Build(_result.Events);
         IndexStatusDamageEvents(_result.Events);
         _ticks = TickPresentation.Build(_result.Events);
@@ -1460,6 +1462,7 @@ public partial class Main : Control
     private async Task PlayEvents()
     {
         if (_result is null) return;
+        IndexDebuffs();
         _finishSoundIndex = FinishSoundCue.Find(_result.PlayerWon, _battleOpening, _result.Events);
         _movement = new MovementPresentation(_result.Events);
         _firePresentation = new FirePresentation(_result.Events);
@@ -1660,6 +1663,12 @@ public partial class Main : Control
 
     private async Task ApplyEvent(BattleEvent e, int eventIndex)
     {
+        if (_debuffPlayback?.FinishUtsuBefore.Contains(eventIndex) == true || _mudo.Starts.ContainsKey(eventIndex))
+        {
+            int rhythmToken = _playToken;
+            await _battleField.FinishUtsuMotions();
+            if (rhythmToken != _playToken || !_battleMode) return;
+        }
         _utsuFastEvent = _utsu.FastEvents.Contains(eventIndex);
         ObserveSekkiEvent(e, eventIndex);
         StartDustBurst(eventIndex);
@@ -1667,6 +1676,7 @@ public partial class Main : Control
         BattlePawn3D? actor = _battleField.FindPawn(e.ActorId);
         BattlePawn3D? target = _battleField.FindPawn(e.TargetId);
         ObserveRelicCue(e, actor);
+        ReadDebuffReadout(e, target);
         if (actor is not null) actor.AnimationSpeed = Math.Max(0.1, _speed);
         if (target is not null) target.AnimationSpeed = Math.Max(0.1, _speed);
         _chiriFastEvent = _chiri.DamageOwners.ContainsKey(eventIndex) || _chiri.FuseHits.Contains(eventIndex);
@@ -1690,6 +1700,7 @@ public partial class Main : Control
         if (_chiri.DamageOwners.TryGetValue(eventIndex, out var bombDamage)) _battleField.ShowChiriDamage(bombDamage, target);
         if (await PlayChiri(e, eventIndex, actor, target) || hushToken != _playToken || !_battleMode) return;
         ObserveKubiBell(e, eventIndex, actor);
+        if (await PlayDebuffCast(e, eventIndex, actor, target) || hushToken != _playToken || !_battleMode) return;
         if (await PlaySom(e, eventIndex, actor, target) || hushToken != _playToken || !_battleMode) return;
         if (await PlayHush(e, eventIndex, actor, target) || hushToken != _playToken || !_battleMode) return;
         if (await PlayHisaCommand(e, eventIndex, actor, target)) return;
@@ -1891,6 +1902,7 @@ public partial class Main : Control
                 break;
 
             case BattleEventKind.Damage:
+                if (_debuff.Costs.Contains(eventIndex) && target is not null) _battleField.ShowDebuffCost(target);
                 if (_batchedDamageIndices.Contains(eventIndex) || _burstDamageIndices.Contains(eventIndex))
                 {
                     // 数字は同時着弾で先に描くが、HPは元の位置でも同期する。
@@ -2142,7 +2154,18 @@ public partial class Main : Control
                 }
                 break;
 
+            case BattleEventKind.CursePass:
+                await PlayDebuffPass(eventIndex);
+                break;
+
             case BattleEventKind.StatusGain:
+                ReadUtsuDebuff(e, target);
+                if (_debuff.DeliveredDulls.Contains(eventIndex)) break;
+                if (e.Text == "dull" && target?.UnitId == "utsu")
+                {
+                    await Delay(0.08);
+                    break;
+                }
                 if (e.Text == "dull" && e.Amount == 1 && actor?.UnitId == "mudo"
                     && target is not null && actor.Team != target.Team)
                 {
@@ -2228,6 +2251,9 @@ public partial class Main : Control
                 break;
 
             case BattleEventKind.Highlight:
+                if (actor?.UnitId == "mudo" && DeferredMudoBursts > 0
+                    && _battleField.Pawns.Values.Any(p => p.UnitId == "utsu" && p.Team == actor.Team && p.AttackClipPlaying))
+                    MudoBurstPoseConflicts++;
                 if (actor?.UnitId == "mudo" && _mudo.Starts.ContainsKey(eventIndex)) _battleField.ShowMudoBurst(actor);
                 if (_result is not null && ErePresentation.IsGiftHighlight(_result.Events, eventIndex))
                 { AppendLog(e.Text ?? ""); break; }
@@ -2276,7 +2302,7 @@ public partial class Main : Control
                     _battleField.ReleaseChargedSkill(actor);
                 if (e.Text == AshActionLabels.Release) actor?.BeginAshRelease();
                 // エレの歌は音符と身体の光で伝える。術名のテロップは重ねない。
-                if (actor?.UnitId != "ere")
+                if (actor?.UnitId != "ere" && !_debuff.CastSkills.Contains(eventIndex))
                     _battleField.Float(actor, AkaPresentation.Text(e.Text ?? "SKILL"), actor?.UnitId == "susu" ? AkaPresentation.Blood : UiKit.Heal, true);
                 AppendLog($"[color=#{UiKit.Heal.ToHtml(false)}]{NameOf(e.ActorId)} — {e.Text ?? "術"}[/color]");
                 bool singing = actor?.UnitId == "ere" && _result is not null
@@ -2299,6 +2325,7 @@ public partial class Main : Control
 
             // 支援拒否の分配と回復拒否を台本から描く。号令単体と叩き起こしはログのみ。
             case BattleEventKind.Whet:
+                ReadUtsuDebuff(e, target);
                 _whetLogs++;
                 if (e.IntendedId is { } via && via != e.TargetId) _whetRelayedLogs++;
                 AppendLog(WhetLogText(e));

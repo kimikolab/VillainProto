@@ -197,8 +197,8 @@ public partial class BattlefieldView3D
         SomDaunts++; pawn.FlinchSomDaunt();
         ShockMarkFx.Ring(SomRoot, pawn.FxPoint, new Color("c7c9a8"), .6f, .20 / speed);
     }
-    internal void ShowSomWeakAttack(BattlePawn3D pawn)
-    { SomWeakAttacks++; pawn.WeakenSomAttack(); Float(pawn, "萎縮 · 威力½", new Color("c7c9a8"), false); }
+    internal void ShowSomWeakAttack(BattlePawn3D pawn, bool showLabel = true)
+    { SomWeakAttacks++; pawn.WeakenSomAttack(); if (showLabel) Float(pawn, "萎縮 · 威力½", new Color("c7c9a8"), false); }
 
     internal void BeginSomSummon(BattlePawn3D som, double speed, bool first)
     {

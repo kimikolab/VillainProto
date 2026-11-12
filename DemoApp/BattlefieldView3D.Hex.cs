@@ -5,6 +5,16 @@ using System.Threading.Tasks;
 
 public partial class BattlefieldView3D
 {
+    internal void ShowCurseTransferParallel(BattlePawn3D? source, IReadOnlyList<BattlePawn3D> targets)
+    {
+        if (source is null) return;
+        foreach (var target in targets.Distinct())
+        {
+            var flow = new HexShareFlow3D(); _fxRoot.AddChild(flow);
+            flow.Start(source, target, UtsuClock);
+        }
+    }
+
     public async Task ShowCurseApplication(BattlePawn3D? source, BattlePawn3D target, double speed)
     {
         if (source is null)
