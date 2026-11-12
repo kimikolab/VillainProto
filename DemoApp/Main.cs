@@ -212,6 +212,16 @@ public partial class Main : Control
             GetTree().Quit(okT ? 0 : 1);
             return;
         }
+        // 第472期 §1: 弱い 4 軸の診断（`--axis-diag`・design/weights/axis_diag.md を書く・`--axis-diag-quick` は seed 2 ・軸 2 つ）。画面なし。
+        if (bootArgs.Contains("--axis-diag", StringComparer.Ordinal) || bootArgs.Contains("--axis-diag-quick", StringComparer.Ordinal))
+        {
+            bool okX;
+            try { okX = AxisDiag.Main(GD.Print, bootArgs, ProjectSettings.GlobalizePath("res://")); }
+            catch (System.Exception ex) { GD.PrintErr(ex.ToString()); okX = false; }
+            GD.Print($"AXIS_DIAG_COMPLETE ok={okX}");
+            GetTree().Quit(okX ? 0 : 1);
+            return;
+        }
         // 第471期 §2: 33 体の棚卸しの表（`--roster33-audit`・design/ROSTER33_AUDIT.md を書く・`--no-bots` ／ `--no-weights` で省く）。画面なし。
         if (bootArgs.Contains("--roster33-audit", StringComparer.Ordinal))
         {

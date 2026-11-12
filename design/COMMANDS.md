@@ -1987,6 +1987,10 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
         # **第471期 §2**: 体験版の 33 体の棚卸しの表（`Roster33Audit.cs` → `design/ROSTER33_AUDIT.md`・軸 ／ 役割・写しと器具の 隊 ／ 余り ／ 無し・1 枚抜いた終わりの HP の差・マイナスと受け手の候補・☆1 での問題・浮いている見込みの駒）。約 30 秒
     Godot_console.exe --path DemoApp --headless -- --foe-weight --plays=design/weights/p471_start6 --stage=1-1 --rule=V471 --stars=1 --scale=0.6
         # **第471期 §1-2**: 新しい始めの 6 枚の 5 隊 × 新しい 1 章の 1-1（出力 `design/weights/2026-11-12_1-1.md`）。別案 ネル → ハギは `--plays=design/weights/p471_alt_hagi`
+    Godot_console.exe --path DemoApp --headless -- --axis-diag [--seeds=20] [--axes=毒,生贄] [--stars=1,2,3] [--rule=V471] [--plays=<dir>] [--cap=2] [--out=<path>]
+        # **第472期**: 弱い 4 軸の診断（`AxisDiag.cs` → `design/weights/axis_diag.md`・報告だけ）。10 軸の代表の隊（その軸の駒 ＋ `compare` の同じ行に多く載る駒・席は `compare` の行）＋ 写しのその軸の隊（軸ごとに 2 隊まで）
+        # × 1 章の 1-2 ／ 1-3 の敵部隊の全部・勇者・本陣の守り → 勇者 × ☆1 ／ ☆2 ／ ☆3 × seed 20。決着T・看板の効果が初めて働いたターン・与えたダメージの内訳（素の殴り ／ 上乗せ ／ 呼んだ駒 ／ 殴り以外）・受けた（敵から ／ 味方から）・破片の減り・攻撃の下がり
+        # ・続けて 3 戦（倒れた駒を持ち越す・道中の回復 50%）・雑兵の最大HP だけ ×2 ／ ×3 の順位・軸の駒がいつ手に入るか。約 35 秒。`--axis-diag-quick` は seed 2 ・軸 2 つ（毒・手番）・写しなし（約 2 秒・`.tmp/p472/axis_diag_quick.md`）
     Godot_console.exe --path DemoApp --headless -- --map11-phase176
         # **第176期 Phase 0**: Q0-1〜Q0-5（`PortalOn = false` が第175期の 18 量と一致するか ／
         # 重なりと同点の割り方 ／ 湧いた部隊を満タンで作る口 ／ 方針の手順 ／ 走行時間）。約 1 秒
