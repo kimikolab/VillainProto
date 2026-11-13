@@ -45,6 +45,7 @@ public partial class Map11Main
         _uiRoot.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         var header = new ColorRect { Color = Color.FromHtml("#15241e"), MouseFilter = Control.MouseFilterEnum.Ignore };
         _uiRoot.AddChild(header);
+        _headerBand = header;
         Bounds(header, 0, 0, 0, 180, anchorRight: 1);
         _headline = UiKit.Text("", 21, UiKit.Ink);
         _headline.Position = new Vector2(24, 18);
@@ -330,7 +331,7 @@ public partial class Map11Main
         if (_formationScreen is null) return;
         _formationScreen.Visible = _reform;
         _headline.Text = _reform ? $"編成　｜　{St.Stage.Title}" : "作戦　｜　" + _mapHeadlineText;
-        _operationHud.Visible = !_reform;
+        _operationHud.Visible = !_reform && !Map3DMode.Active;   // 3D では四隅の UI（`Map3DHud`）が持つ
         _orderHint.Visible = _guideSquadChosen;
         _squadDrawer.Visible = !_reform && _showSquadDetail;
         _foeDrawer.Visible = !_reform && _showFoes;
@@ -338,7 +339,7 @@ public partial class Map11Main
         _mapPickLayer.Visible = !_reform;
         _enemyToggle.Text = _showFoes ? "敵部隊 ▴" : "敵部隊";
         _historyToggle.Text = _showHistory ? "戦闘の記録 ▴" : "戦闘の記録";
-        Vector2 viewport = GetViewport().GetVisibleRect().Size;
+        Vector2 viewport = UiViewSize;
         if (_laidOutReform != _reform || _layoutSize != viewport)
         {
             MoveUi(_squadList, _reform ? _formationSquadHost : _operationSquadHost);
@@ -377,6 +378,14 @@ public partial class Map11Main
 
     private void FrameOperationMap()
     {
+        if (Map3DMode.Active && _cam3d is not null)
+        {
+            // 3D: 固定の見下ろし（`Map3DCamera`）。引き出しを開いているあいだだけ盤を横へ寄せる。
+            _cam3d.Shift = _reform ? 0 : _showSquadDetail ? -5.5f : _showFoes ? 5.5f : _showHistory ? 8.5f : 0;
+            _cam3d.Apply();
+            if (!_reform) RefreshHud3D();
+            return;
+        }
         // 横長の盤に合わせ、空いた横幅を使う。選んだ隊の詳細は地図に重ねず左に確保する。
         bool wide = St.Stage.LaneCount > 2;
         Vector3 look = new(wide ? 7 : 9, 0, -2);
@@ -441,6 +450,7 @@ public partial class Map11Main
 
     private void PositionMapPicks()
     {
+        if (Map3DMode.Active) { PositionMapPicks3D(); return; }
         var portalCards = _mapPicks.Where(p => p.Marker.Shown && p.Foe is { Cleared: false } f && f.Pos == St.Graph.Portal).ToList();
         foreach (var pick in _mapPicks)
         {

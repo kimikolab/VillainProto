@@ -55,6 +55,17 @@ public partial class Map11Main
         badge.ShowUnit(Representative(squad), count, count == 0 ? 0 : SquadHpPercent(squad), squad.Label);
     }
 
+    /// <summary>敵部隊の札の名前（金の添え書きを除く）。2D の札と 3D の駒の名札が同じものを読む。</summary>
+    private static string FoeBadgeHead(Map11State.Node foe)
+        => foe.IsHero ? "勇者" : foe.IsReserve ? "予備隊"
+            : foe.Def.Hold && !foe.Cleared ? $"{foe.Def.Name} ×{HordeCount(foe)}"   // 第458期 §0-4: 大群は「徴募兵 ×3」
+            : foe.Def.Stationary ? "本陣の守り"                                     // 第458期 §0-4: 守り（重）も札は「本陣の守り ＋12」
+            : Regex.IsMatch(foe.Def.Name, "第[^波]+波") ? "第" + WaveMark(foe.Def.Name) + "波" : foe.Def.Name;   // 第448期: 帯 A は部隊の名前
+
+    /// <summary>3D の駒の名札（抜くと入る金を添える・2D の札と同じ文）。</summary>
+    private static string FoeBadgeName(Map11State.Node foe)
+        => FoeBadgeHead(foe) + (St.Stage.Gold.On && !foe.Cleared && St.KillGold(foe) > 0 ? $" ＋{St.KillGold(foe)}" : "");
+
     private static void SetBadge(MapUnitBadge badge, Map11State.Node foe)
     {
         int count = foe.Cleared ? 0 : foe.Units?.Count(u => u.IsAlive) ?? foe.Def.Enemy.Occupied().Count();
@@ -62,11 +73,7 @@ public partial class Map11Main
         GoldRule g = St.Stage.Gold;
         // 第456期 §1: 金の無い敵（＋0）には出さない。
         string reward = g.On && !foe.Cleared && St.KillGold(foe) > 0 ? $" ＋{St.KillGold(foe)}" : "";
-        string head = foe.IsHero ? "勇者" : foe.IsReserve ? "予備隊"
-            : foe.Def.Hold && !foe.Cleared ? $"{foe.Def.Name} ×{HordeCount(foe)}"   // 第458期 §0-4: 大群は「徴募兵 ×3」
-            : foe.Def.Stationary ? "本陣の守り"                                     // 第458期 §0-4: 守り（重）も札は「本陣の守り ＋12」
-            : Regex.IsMatch(foe.Def.Name, "第[^波]+波") ? "第" + WaveMark(foe.Def.Name) + "波" : foe.Def.Name;   // 第448期: 帯 A は部隊の名前
-        badge.ShowUnit(Representative(foe), count, NodeHpPercent(foe), head + reward,
+        badge.ShowUnit(Representative(foe), count, NodeHpPercent(foe), FoeBadgeHead(foe) + reward,
             enemy: true, wave: WaveMark(foe.Def.Name));
         if (foe.IsHero) badge.Face.SetAccent(UiKit.Gold);   // 第456期 §1: 勇者の札は金色の縁（仮・Codex が差し替えてよい）
         badge.SetStaging(foe.IsHero, foe.Def.Hold ? HordeCount(foe) : 1,

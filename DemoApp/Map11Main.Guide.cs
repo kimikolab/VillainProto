@@ -29,6 +29,8 @@ public partial class Map11Main
     private void RefreshGuide()
     {
         if (_guide is null) return;
+        // 3D の作戦の画面では、行ける先はマスの台が光り、次にすることは左下の 1 行が言う（今の窓＝編成では今の案内のまま）。
+        if (Map3DMode.Active && !_reform) { _guide.ShowReach(Array.Empty<Button>()); PointGuide(null, "", ""); return; }
         _guide.ShowReach(ReachButtons());
         if (GuideCovered) { PointGuide(null, "", ""); return; }
         if (_reform && St.FreePicks > 0)
