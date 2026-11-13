@@ -251,8 +251,10 @@ public partial class Map11Main : Node3D
         if (OS.GetCmdlineUserArgs().Contains("--map11-no-clock", StringComparer.Ordinal))
             Map11Clock.Disabled = true;
 
+        Map3DMode.ReadArgs();   // 見た目の切り替え（`--map3d` ／ F2）。既定は 2D のまま（`Map11Main.Map3D.cs`）
         BuildWorld();
         BuildUi();
+        BuildMap3D();
         Refresh();
 
         // 第177期 §3: **手札から組むところから始まる**ので、組み直しを最初から開いておく。
