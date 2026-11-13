@@ -203,6 +203,7 @@ public partial class Map11Main : Node3D
 
     public override void _Ready()
     {
+        Chapter1.ReadPlayRuleArg(OS.GetCmdlineUserArgs());   // 第474期: `--chapter1-rule=V474`（まだ既定にしていない版の 1 章を遊ぶ・無ければ何もしない）
         // 第440期: `--map-stage=1-2` で編成画面を通らずにステージを選ぶ（絵を撮る・頭なしで確かめる口）。
         if (OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--map-stage=", StringComparison.Ordinal)) is { } pick
             && MapStage.All.FirstOrDefault(x => x.Id == pick["--map-stage=".Length..]) is { } chosen)

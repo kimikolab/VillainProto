@@ -880,6 +880,58 @@ public sealed class MapStage
         Gold = Stage11Ch470.Gold,
     };
 
+    /// <summary>
+    /// 区画 1 つだけに倍率を掛ける口（第474期 §1・「北2 だけに掛ける倍率」）。<b>ステージの倍率（<see cref="FoeScale"/>）とは別に、先に掛かる</b>
+    /// ——1 章の ×0.6 はこの後に掛かるので、盤の上の値は 素の値 × ここの倍率 × 0.6（どちらも四捨五入）。100 ／ 100 ならそのまま。
+    /// <b>最大HP と攻撃を別々に掛けられる</b>（「硬い ＝ 手数が要る」は HP だけを上げる）。同じ編成・同じ倍率には同じ写しを返す（<see cref="Scaled"/> が編成の同一性で写しを引くため）。
+    /// </summary>
+    private static Map11.RoadNode Hard(Map11.RoadNode node, int hpPercent, int atkPercent)
+        => hpPercent == 100 && atkPercent == 100 ? node : node with
+        {
+            Enemy = _hard.GetOrAdd((node.Enemy, hpPercent, atkPercent), static k =>
+            {
+                Formation c = k.Item1.Clone();
+                foreach ((int slot, UnitDef d) in k.Item1.Occupied())
+                    c[slot] = d.WithStats(MapFoeScale.Mul(d.MaxHp, k.Item2), MapFoeScale.Mul(d.Attack, k.Item3));
+                return c;
+            }),
+        };
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(Formation, int, int), Formation> _hard = new();
+
+    /// <summary>第474期の 1 章の 1-1 で、北の 2 マス目（峠の関）の部隊とその区画だけの倍率（最大HP ／ 攻撃・%）。<see cref="Stage11Ch474"/> と門・重さの調べが読む。</summary>
+    internal const string Stage11Ch474GateBand = "band_shields";
+    internal const int Stage11Ch474GateHp = 300, Stage11Ch474GateAtk = 200;
+
+    /// <summary>
+    /// 1 章の 1-1（第474期・`ChapterRule.V474` から・指示書 design/PHASE474_STAGE11_ASYM_SPEC.md §1）。<b>盤を非対称にした</b>（<see cref="MapGraph.Build11F474"/>）:
+    /// 北の道は 2 マス（物見の兵 → <b>峠の関の硬い部隊</b>）、南の道は 4 マス（徴募兵 → 空 → 騎士の小隊 → 空）。湧き・倍率 ×0.6・手札 6・隊の枠 2・金 8 は第471期のまま。
+    /// 単発の 1-1 と第461〜473期の 1 章の 1-1 は変えない。
+    /// </summary>
+    public static MapStage Stage11Ch474 { get; } = Stage11Ch474With(Stage11Ch474GateBand, Stage11Ch474GateHp, Stage11Ch474GateAtk);
+
+    /// <summary>北の 2 マス目の部隊と倍率を替えた 1 章の 1-1（第474期の重さの調べが候補を並べるための口・遊ぶ盤は <see cref="Stage11Ch474"/>）。</summary>
+    /// <paramref name="gateHolds"/>（関が動かない・<see cref="Map11.RoadNode.Hold"/>）と <paramref name="winOnCapture"/>（制圧したら勝ち）は<b>報告だけの案</b>（第474期の通しが比べる・遊ぶ盤には入れていない）。
+    internal static MapStage Stage11Ch474With(string gateBand, int gateHp, int gateAtk, bool gateHolds = false, bool winOnCapture = false) => new()
+    {
+        Id = Stage11Ch471.Id,
+        Title = Stage11Ch471.Title,
+        Board = MapGraph.Build11F474,
+        Lanes = new IReadOnlyList<Map11.RoadNode>[]
+        {
+            new[] { Stage11Ch471.Lanes[0][0], Hard(Band(0, 1, gateBand, 3), gateHp, gateAtk) with { Hold = gateHolds } },
+            new[] { Stage11Ch471.Lanes[1][0], Stage11Ch471.Lanes[1][1] },
+        },
+        WinOnCapture = winOnCapture,
+        LaneNames = Stage11Ch471.LaneNames,
+        Spawn = Stage11Ch471.Spawn,
+        Portal = Stage11Ch471.Portal,
+        Time = Stage11Ch471.Time,
+        Arrival = Stage11Ch471.Arrival,
+        SquadCap = Stage11Ch471.SquadCap,
+        Gold = Stage11Ch471.Gold,
+    };
+
     /// <summary>選べるステージ（編成画面の選択の並び）。</summary>
     public static IReadOnlyList<MapStage> All { get; } = new[] { Stage11, Stage12, Stage13 };
 }
