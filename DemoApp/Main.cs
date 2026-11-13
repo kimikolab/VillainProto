@@ -194,6 +194,7 @@ public partial class Main : Control
         // 第169期 自己検査 (c)。**画面を1つも作らずに `Map11State` だけを回す。**
         // 通常起動では 1 ビットも走らない。
         string[] bootArgs = OS.GetCmdlineUserArgs();
+        Chapter1.ReadPlayRuleArg(bootArgs);   // 第474期: `--chapter1-rule=V474`（まだ既定にしていない版の 1 章を遊ぶ・無ければ何もしない）
         // 第466期 §1: 遊ぶ起動（引数なし）だけ、1 章の遊びの写しを design/plays に書く（門・器具・絵の口では書かない）。
         if (bootArgs.Length == 0 && !PlayLog.Enabled) PlayLog.Enable(PlayLog.DefaultRoot(ProjectSettings.GlobalizePath("res://")));
         // 第466期 §3 ／ §5: 敵の重さの表（`--foe-weight`）と、試遊を減らす道具の門（`--tuning-tools-smoke`・`-quick` は §(d) の表を 1-2 だけ）。画面なし。
@@ -281,6 +282,17 @@ public partial class Main : Control
             catch (System.Exception ex) { GD.PrintErr(ex.ToString()); okS = false; }
             GD.Print($"CHAPTER1_STAGE11_SMOKE_COMPLETE ok={okS}");
             GetTree().Quit(okS ? 0 : 1);
+            return;
+        }
+        // 第474期 §4: 1-1 の盤を非対称にする門（北 2 マス・南 4 マス・湧きは北が先・行き先までの作戦ターン・単発と第461〜471期は今のまま）。画面なし。
+        // §1 の重さの調べ（峠の関の候補）と通し（北だけ ／ 南だけ ／ 2 隊に分ける）つき（報告だけ）。`--chapter1-asym-quick` は報告だけの 2 つを省く。
+        if (bootArgs.Contains("--chapter1-asym-smoke", StringComparer.Ordinal) || bootArgs.Contains("--chapter1-asym-quick", StringComparer.Ordinal))
+        {
+            bool okY;
+            try { okY = Chapter1AsymSmoke.Run(GD.Print, ProjectSettings.GlobalizePath("res://"), bots: !bootArgs.Contains("--chapter1-asym-quick", StringComparer.Ordinal)); }
+            catch (System.Exception ex) { GD.PrintErr(ex.ToString()); okY = false; }
+            GD.Print($"CHAPTER1_ASYM_SMOKE_COMPLETE ok={okY}");
+            GetTree().Quit(okY ? 0 : 1);
             return;
         }
         if (bootArgs.Contains("--map11-phase0", StringComparer.Ordinal))

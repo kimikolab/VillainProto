@@ -349,15 +349,15 @@ public static class FoeWeight
         string V(Cell c) => c.Foe.Kind == Kind.Hero ? "（下の通し）" : Verdict(bands.Foe[Bands.KeyOf(c.Foe.Kind)], c.Wins, seeds, c.MedHp);
         string H(Chain ch) => ch.Banded ? Verdict(bands.Hero[ch.HeroKey], ch.One, ch.Two, seeds) : "（参考）";
         string Row(Cell c) => $"| {c.Squad.Name} | {c.Squad.Axis} | {StarName(c.Star)}（{StarsOf(c.Squad, c.Star)}） | {c.Foe.Name}（{KindName(c.Foe.Kind)}） | {c.Scale.Text}{(c.Scale.HeroMends ? "" : "・勇者の回復なし")}"
-                             + $" | {c.Wins}／{seeds} | {Pct(c.MedHp)}（{Pct(c.MinHp)}〜{Pct(c.MaxHp)}） | {c.Lost:F2} | {V(c)} |";
+                             + $" | {c.Wins}／{seeds} | {Pct(c.MedHp)}（{Pct(c.MinHp)}〜{Pct(c.MaxHp)}） | {c.Lost:F2} | {c.MedTurns:0.#} | {V(c)} |";   // 第474期: 決着のターン（中央値・負けた戦も数える）
         string ChainRow(Chain ch)
         {
             var got = ch.KilledAt.Where(k => k > 0).Select(k => (double)k).ToList();
             return $"| {ch.Source} | {StarName(ch.Star)} | {ch.Scale.Text}{(ch.Scale.HeroMends ? "" : "・勇者の回復なし")} | {(ch.Siege ? "守り → 勇者: " : "勇者だけ: ")}{string.Join(" → ", ch.Order.Select(q => $"第{q.No}隊"))}"
                    + $" | {ch.One}／{seeds} | {ch.Two}／{seeds} | {(got.Count == 0 ? "—" : $"{Med(got):0.#}")} | {ch.Never}／{seeds} | {H(ch)} |";
         }
-        const string CellHead = "| 隊 | 軸 | ☆ | 敵部隊 | 倍率 | 勝ち | 終わりの HP（中央値・範囲） | 失った枚数 | 帯 |";
-        const string CellRule = "|---|---|---|---|---|--:|--:|--:|---|";
+        const string CellHead = "| 隊 | 軸 | ☆ | 敵部隊 | 倍率 | 勝ち | 終わりの HP（中央値・範囲） | 失った枚数 | 決着のターン | 帯 |";
+        const string CellRule = "|---|---|---|---|---|--:|--:|--:|--:|---|";
         const string ChainHead = "| 写し | ☆ | 倍率 | 当てた順（主力から） | 主力の 1 隊で落ちた | 2 隊までで落ちた | 倒した隊（中央値） | 倒せなかった | 帯 |";
         const string ChainRule = "|---|---|---|---|--:|--:|--:|--:|---|";
 
