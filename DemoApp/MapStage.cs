@@ -901,18 +901,22 @@ public sealed class MapStage
 
     /// <summary>第474期の 1 章の 1-1 で、北の 2 マス目（峠の関）の部隊とその区画だけの倍率（最大HP ／ 攻撃・%）。<see cref="Stage11Ch474"/> と門・重さの調べが読む。</summary>
     internal const string Stage11Ch474GateBand = "band_shields";
-    internal const int Stage11Ch474GateHp = 300, Stage11Ch474GateAtk = 200;
+    internal const int Stage11Ch474GateHp = 250, Stage11Ch474GateAtk = 200;
+    /// <summary>峠の関を抜いたときの金（ポン 2026-11-14・道の部隊を抜くのと同じ +6）。動かない区画の金の口（<see cref="GoldRule.Horde"/>）に載せる。</summary>
+    internal const int Stage11Ch474GateGold = 6;
 
     /// <summary>
     /// 1 章の 1-1（第474期・`ChapterRule.V474` から・指示書 design/PHASE474_STAGE11_ASYM_SPEC.md §1）。<b>盤を非対称にした</b>（<see cref="MapGraph.Build11F474"/>）:
     /// 北の道は 2 マス（物見の兵 → <b>峠の関の硬い部隊</b>）、南の道は 4 マス（徴募兵 → 空 → 騎士の小隊 → 空）。湧き・倍率 ×0.6・手札 6・隊の枠 2・金 8 は第471期のまま。
+    /// ポンの決定（2026-11-14）: <b>峠の関は動かない</b>（<see cref="Map11.RoadNode.Hold"/>・拠点へ歩いてこない・抜くまで北の湧きは関の奥で詰まる）・<b>敵の拠点を制圧したら勝ち</b>（<see cref="WinOnCapture"/>・1-2 ／ 1-3 と同じ）・
+    /// 関は盾の列の 最大HP 250% ／ 攻撃 200%・抜くと金 +6。物見の兵・徴募兵・騎士の小隊は今までどおり拠点へ歩く。
     /// 単発の 1-1 と第461〜473期の 1 章の 1-1 は変えない。
     /// </summary>
     public static MapStage Stage11Ch474 { get; } = Stage11Ch474With(Stage11Ch474GateBand, Stage11Ch474GateHp, Stage11Ch474GateAtk);
 
     /// <summary>北の 2 マス目の部隊と倍率を替えた 1 章の 1-1（第474期の重さの調べが候補を並べるための口・遊ぶ盤は <see cref="Stage11Ch474"/>）。</summary>
-    /// <paramref name="gateHolds"/>（関が動かない・<see cref="Map11.RoadNode.Hold"/>）と <paramref name="winOnCapture"/>（制圧したら勝ち）は<b>報告だけの案</b>（第474期の通しが比べる・遊ぶ盤には入れていない）。
-    internal static MapStage Stage11Ch474With(string gateBand, int gateHp, int gateAtk, bool gateHolds = false, bool winOnCapture = false) => new()
+    /// <paramref name="gateHolds"/>（関が動かない）と <paramref name="winOnCapture"/>（制圧したら勝ち）を偽にすると、最初に測った「関も歩く ／ 全部抜いて勝ち」の盤（通しが比べる相手）。
+    internal static MapStage Stage11Ch474With(string gateBand, int gateHp, int gateAtk, bool gateHolds = true, bool winOnCapture = true) => new()
     {
         Id = Stage11Ch471.Id,
         Title = Stage11Ch471.Title,
@@ -929,7 +933,7 @@ public sealed class MapStage
         Time = Stage11Ch471.Time,
         Arrival = Stage11Ch471.Arrival,
         SquadCap = Stage11Ch471.SquadCap,
-        Gold = Stage11Ch471.Gold,
+        Gold = gateHolds ? Stage11Ch471.Gold with { Horde = Stage11Ch474GateGold } : Stage11Ch471.Gold,
     };
 
     /// <summary>選べるステージ（編成画面の選択の並び）。</summary>

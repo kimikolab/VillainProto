@@ -45,8 +45,14 @@ public static class Chapter1AsymSmoke
                         && s.Gold.Start == 8 && s.Arrival.Start == 6 && st.Bench.Count == 6;
             write($"  (a) 経路 {string.Join(" ／ ", g.Lanes.Select((l, i) => $"{g.LaneNames[i]} {l.Length} マス"))}・北 {got[0]}（{at[0] + 1} マス目）→ {got[1]}（{at[1] + 1} マス目）／ 南 {got[2]}（{at[2] + 1} マス目）→ {got[3]}（{at[3] + 1} マス目）"
                   + $"・横の辺 ／ 中間拠点 ／ 門 なし {plain}・倍率 ×{s.FoeScale.FoePercent / 100.0:F1}・湧き {s.Spawn(0).Name}・{s.Spawn(1).Name}・金 {s.Gold.Start}・手札 {st.Bench.Count}・峠の関 {Band(MapStage.Stage11Ch474GateBand)}（その区画だけ 最大HP {MapStage.Stage11Ch474GateHp}% ／ 攻撃 {MapStage.Stage11Ch474GateAtk}%）");
-            Req(lens && plain && want.SequenceEqual(got) && places && same,
-                "(a) 1 章（V474）の 1-1: 北 2 マス（物見の兵 → 盾の列）・南 4 マス（徴募兵 → 空 → 騎士の小隊 → 空）・倍率 ／ 湧き ／ 金 ／ 手札は第471期のまま");
+            // ポンの決定（2026-11-14）: 関は動かない・制圧したら勝ち・関は 250% ／ 200%・抜くと金 +6（ほかの道の部隊も +6 のまま）
+            Map11State.Node gate = st.Nodes[0][1];
+            bool decided = gate.Def.Hold && !st.Nodes[0][0].Def.Hold && st.Nodes[1].All(n => !n.Def.Hold) && s.WinOnCapture
+                           && MapStage.Stage11Ch474GateHp == 250 && MapStage.Stage11Ch474GateAtk == 200
+                           && st.KillGold(gate) == 6 && st.KillGold(st.Nodes[0][0]) == 6 && st.TurnsToHome(gate) is null;
+            write($"      峠の関: 動かない {gate.Def.Hold}・拠点まで あと {(st.TurnsToHome(gate) is { } eta ? eta.ToString() : "—（歩かない）")}・抜くと金 +{st.KillGold(gate)}（道の部隊 +{st.KillGold(st.Nodes[0][0])}）・制圧したら勝ち {s.WinOnCapture}");
+            Req(lens && plain && want.SequenceEqual(got) && places && same && decided,
+                "(a) 1 章（V474）の 1-1: 北 2 マス（物見の兵 → 盾の列）・南 4 マス（徴募兵 → 空 → 騎士の小隊 → 空）・倍率 ／ 湧き ／ 金 ／ 手札は第471期のまま・峠の関は動かず 250% ／ 200%・抜くと金 +6・制圧したら勝ち");
         }
 
         // ---- (b) 湧きは北が先・拠点まで 3 歩 ／ 5 歩 ----
@@ -56,11 +62,17 @@ public static class Chapter1AsymSmoke
             int north = g.Path(g.Portal, 0, g.Home, -1).Count - 1, south = g.Path(g.Portal, 1, g.Home, -1).Count - 1;
             // 通しを 1 本回して、最初に湧いた 2 部隊の経路と「拠点まで あと n」を湧いた刻に読む。
             var seen = new List<(int Road, int? Eta, int Turn)>();
-            Play(s, 0, Plan.Hold, watch: q => { foreach (Map11State.Node sp in q.Spawns.Skip(seen.Count).ToList()) seen.Add((sp.Def.Road, q.TurnsToHome(sp), q.Turn)); }, endless: 20);
+            int gateAt = -1, northSpawnAt = -1;
+            Play(s, 0, Plan.Hold, watch: q =>
+            {
+                foreach (Map11State.Node sp in q.Spawns.Skip(seen.Count).ToList()) seen.Add((sp.Def.Road, q.TurnsToHome(sp), q.Turn));
+                gateAt = q.Graph.IndexOn(0, q.Nodes[0][1].Pos);
+                if (q.Spawns.FirstOrDefault(x => x.Def.Road == 0 && !x.Cleared) is { } ns) northSpawnAt = q.Graph.IndexOn(0, ns.Pos);
+            }, endless: 20);
             string spawned = seen.Count == 0 ? "湧かなかった" : string.Join("・", seen.Take(2).Select(x => $"{g.LaneNames[x.Road]}（作戦ターン {x.Turn + 1}・拠点まで あと {x.Eta}）"));
-            write($"  (b) 敵の拠点から拠点まで: 北 {north} 歩 ／ 南 {south} 歩・最初の湧き {spawned}");
-            Req(north == 3 && south == 5 && seen.Count >= 2 && seen[0].Road == 0 && seen[0].Eta == 3 && seen[1].Road == 1 && seen[1].Eta == 5,
-                "(b) 湧いた部隊は北が先（拠点まで 3 歩）。南は 5 歩");
+            write($"  (b) 敵の拠点から拠点まで: 北 {north} 歩 ／ 南 {south} 歩・最初の湧き {spawned}・誰も出ない 20 刻の後: 峠の関は北の {gateAt + 1} マス目のまま・北の湧きは {(northSpawnAt >= g.Lanes[0].Length ? "敵の拠点で詰まっている" : $"北の {northSpawnAt + 1} マス目")}");
+            Req(north == 3 && south == 5 && seen.Count >= 2 && seen[0].Road == 0 && seen[0].Eta == 3 && seen[1].Road == 1 && seen[1].Eta == 5 && gateAt == 1 && northSpawnAt > gateAt,
+                "(b) 湧いた部隊は北が先（拠点まで 3 歩）。南は 5 歩。関は動かず、抜くまで北の湧きは関の奥で詰まる");
         }
 
         // ---- (c) 行き先までの作戦ターン数 ----
@@ -118,12 +130,10 @@ public static class Chapter1AsymSmoke
         {
             MapStage old = Chapter1.StagesFor(ChapterRule.V471)[0];
             Routes(write, s); Routes(write, s, teamB: true);
-            // 報告だけの案: 峠の関が動かない ／ さらに「制圧したら勝ち」（遊ぶ盤には入れていない）
-            MapStage Var(bool win) => MapStage.Stage11Ch474With(MapStage.Stage11Ch474GateBand, MapStage.Stage11Ch474GateHp, MapStage.Stage11Ch474GateAtk, gateHolds: true, winOnCapture: win)
+            // 比べる相手: 最初に測った「関も歩く ／ 全部抜いて勝ち」の盤（関の重さは今と同じ）と、第471期の盤
+            MapStage walk = MapStage.Stage11Ch474With(MapStage.Stage11Ch474GateBand, MapStage.Stage11Ch474GateHp, MapStage.Stage11Ch474GateAtk, gateHolds: false, winOnCapture: false)
                 .Scaled(rule.ScaleOf(0)).Starred(rule.Stars ?? StarRule.Off).Rostered(rule.Roster ?? RosterRule.Off);
-            foreach (bool win in new[] { false, true })
-                foreach (bool b in new[] { false, true })
-                    Routes(write, Var(win), $"（案）峠の関が動かない{(win ? " ＋ 制圧したら勝ち" : "")}", teamB: b);
+            Routes(write, walk, "（比べる相手）関も歩く ／ 全部抜いて勝ち"); Routes(write, walk, "（比べる相手）関も歩く ／ 全部抜いて勝ち", teamB: true);
             Routes(write, old, "（比べる相手）第471期の盤・3 マス × 2 本"); Routes(write, old, "（比べる相手）第471期の盤・3 マス × 2 本", teamB: true);
         }
         catch (Exception ex) { crashed++; write($"  × 通し: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}"); }
@@ -179,7 +189,8 @@ public static class Chapter1AsymSmoke
                 var b = big.Select(One).ToList();
                 var m = small.Select(One).ToList();
                 bool bigOk = b.All(x => x.Wins == WeighSeeds && x.Hp >= 55 && x.Hp <= 75 && x.Turns >= 6);
-                bool smallOk = m.All(x => x.Wins * 20 <= 8 * WeighSeeds);
+                // 「3 枚の隊は 8／20 以下」の線は外した（ポン 2026-11-14）——3 枚の隊の数は並べるだけ。
+                bool smallOk = true;
                 string why = bigOk && smallOk ? "○"
                     : string.Join("・", new[]
                     {
@@ -209,7 +220,9 @@ public static class Chapter1AsymSmoke
     {
         public bool Won, Fallen;
         public int CaptureTurn = -1, EndTurn, Lost, Battles, Spawns, Recruits;
-        public bool MainLost, SmallLost;
+        public bool MainLost, SmallLost, GateCleared;
+        /// <summary>終わりの金（持ち越す余り）。</summary>
+        public int Gold;
         /// <summary>相手の名前 → その戦闘の後の隊の HP（%）と失った枚数（隊ごと）。</summary>
         public List<(string Foe, int Squad, bool Won, double Hp, int Lost, int Turns, bool AtHome)> Fights = new();
     }
@@ -320,6 +333,8 @@ public static class Chapter1AsymSmoke
         res.EndTurn = st.Turn; res.Battles = st.Battles; res.Spawns = st.SpawnCount;
         res.MainLost = st.Squads[0].Lost; res.SmallLost = st.Squads[1].Lost;
         res.Lost = st.Squads.Take(st.SquadCap).Sum(q => q.Units?.Count(u => !u.IsAlive) ?? 0) + st.FallenUnits.Count;
+        res.Gold = st.Gold;
+        res.GateCleared = st.Nodes[0].Length > 1 && st.Nodes[0][1].Cleared;
         return res;
     }
 
@@ -328,8 +343,8 @@ public static class Chapter1AsymSmoke
         write("");
         write($"  §1 通し・{label}（1 章の seed 0〜{Seeds - 1}・始めの 6 枚 ＋ 金 8 で 2 枚呼ぶ・{(teamB ? "組 B: 主力 ＝ ドルガ・ガン・リィカ ＋ 呼んだ 2 枚 ／ 3 枚の隊 ＝ ムド・ムグ・リリ" : "組 A: 主力 ＝ ムド・ドルガ・ガン・リィカ・リリ ／ 3 枚の隊 ＝ ムグ ＋ 呼んだ 2 枚")}・戦闘は器具）");
         write("");
-        write("  | 方針 | 勝ち | 陥落 | 制圧した作戦ターン（中央値・範囲） | 終わった作戦ターン（中央値） | 失った枚数（平均） | 主力が全滅 | 3 枚の隊が全滅 | 戦闘（平均） | 湧き（平均） |");
-        write("  |---|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+        write("  | 方針 | 勝ち | 陥落 | 制圧した作戦ターン（中央値・範囲） | 終わった作戦ターン（中央値） | 失った枚数（平均） | 主力が全滅 | 3 枚の隊が全滅 | 戦闘（平均） | 湧き（平均） | 金の余り（勝った通しの平均） | 関を抜いた |");
+        write("  |---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
         var all = new Dictionary<Plan, List<Result>>();
         foreach (Plan plan in new[] { Plan.North, Plan.South, Plan.Split, Plan.Turtle })
         {
@@ -338,7 +353,8 @@ public static class Chapter1AsymSmoke
             var won = rs.Where(r => r.Won).ToList();
             var caps = rs.Where(r => r.CaptureTurn > 0).Select(r => (double)r.CaptureTurn).ToList();
             write($"  | {PlanName(plan)} | {won.Count} | {rs.Count(r => r.Fallen)} | {(caps.Count == 0 ? "—" : $"{Med(caps):0.#}（{caps.Min():0}〜{caps.Max():0}）")} | {(won.Count == 0 ? "—" : $"{Med(won.Select(r => (double)r.EndTurn)):0.#}")}"
-                  + $" | {rs.Average(r => r.Lost):F2} | {rs.Count(r => r.MainLost)} | {rs.Count(r => r.SmallLost)} | {rs.Average(r => r.Battles):F1} | {rs.Average(r => r.Spawns):F1} |");
+                  + $" | {rs.Average(r => r.Lost):F2} | {rs.Count(r => r.MainLost)} | {rs.Count(r => r.SmallLost)} | {rs.Average(r => r.Battles):F1} | {rs.Average(r => r.Spawns):F1}"
+                  + $" | {(won.Count == 0 ? "—" : $"{won.Average(r => r.Gold):F1}")} | {rs.Count(r => r.GateCleared)} |");
         }
         write("");
         write("  相手ごと（勝ち ／ 戦闘・その戦闘の後の隊の HP の中央値・失った枚数の平均・決着T の中央値）");
