@@ -243,6 +243,17 @@ public partial class Main : Control
             GetTree().Quit(okA ? 0 : 1);
             return;
         }
+        // 第475期 §4: 加入の表の直しの門（1-1 で呼べるのは 5 体・ハギは 1-3 から・ウツ ／ ワタは 1-2 から・体験版は 35 体・第461〜474期と単発は今のまま）。画面なし。
+        // ハギ抜きの 1-1 の通し（北だけ ／ 南だけ ／ 2 隊に分ける × 100 seed・報告だけ）つき。`--chapter1-roster35-quick` は通しと棚卸しの表を省く。
+        if (bootArgs.Contains("--chapter1-roster35-smoke", StringComparer.Ordinal) || bootArgs.Contains("--chapter1-roster35-quick", StringComparer.Ordinal))
+        {
+            bool okR;
+            try { okR = Chapter1Roster35Smoke.Run(GD.Print, ProjectSettings.GlobalizePath("res://"), full: !bootArgs.Contains("--chapter1-roster35-quick", StringComparer.Ordinal)); }
+            catch (System.Exception ex) { GD.PrintErr(ex.ToString()); okR = false; }
+            GD.Print($"CHAPTER1_ROSTER35_SMOKE_COMPLETE ok={okR}");
+            GetTree().Quit(okR ? 0 : 1);
+            return;
+        }
         // 第467期 §5: 軸への投資の門（札 3 枚・持ち越して重なる・候補の寄せ 25% ／ 50% ／ 上限 60%・味方の雷で倒れた記録・単発と第460〜465期は今のまま）。画面なし。`--chapter1-invest-quick` は §7 の器具の通しを省く。
         if (bootArgs.Contains("--chapter1-invest-smoke", StringComparer.Ordinal) || bootArgs.Contains("--chapter1-invest-quick", StringComparer.Ordinal))
         {

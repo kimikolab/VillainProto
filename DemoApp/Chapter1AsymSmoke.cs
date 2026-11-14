@@ -338,7 +338,7 @@ public static class Chapter1AsymSmoke
         return res;
     }
 
-    private static void Routes(Action<string> write, MapStage stage, string label = "第474期の盤", bool teamB = false)
+    internal static void Routes(Action<string> write, MapStage stage, string label = "第474期の盤", bool teamB = false)
     {
         write("");
         write($"  §1 通し・{label}（1 章の seed 0〜{Seeds - 1}・始めの 6 枚 ＋ 金 8 で 2 枚呼ぶ・{(teamB ? "組 B: 主力 ＝ ドルガ・ガン・リィカ ＋ 呼んだ 2 枚 ／ 3 枚の隊 ＝ ムド・ムグ・リリ" : "組 A: 主力 ＝ ムド・ドルガ・ガン・リィカ・リリ ／ 3 枚の隊 ＝ ムグ ＋ 呼んだ 2 枚")}・戦闘は器具）");

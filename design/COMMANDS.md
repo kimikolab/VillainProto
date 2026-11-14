@@ -2002,6 +2002,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     Godot_console.exe --path DemoApp --headless -- --nel-leak [--seeds=20] [--out=<path>]
         # **第473期**: ネルの漏れの測り（`AxisDiag.Nel.cs` → `design/weights/nel_leak.md`・報告だけ）。呪いの代表の隊 ＋ 写しの呪いの隊 2 つ × 第471期の 1 章の 1-2 ／ 1-3 の雑兵の全部と勇者 × ☆1 ／ ☆2 ／ ☆3 × seed 20
         # × ☆の表 7 つ（今 ／ 対照 開戦の漏れなし ／ 呪うたびの漏れなし ／ 漏れなし ／ 版 NL-f ／ NL-s ／ NL-1）。味方の攻撃の下がりを経路に分ける・漏れを軽くすると誰の殴りが減るか・選ぶ線。約 20 秒。`--nel-leak-quick` は seed 2 ・☆1 ・代表の隊だけ（約 2 秒）
+    Godot_console.exe --path DemoApp --headless -- --chapter1-roster35-smoke
+        # **第475期**: 加入の表の直しの門（`Chapter1Roster35Smoke.cs`・画面なし・`ChapterRule.V475` ／ `RosterRule.V475`）。(a) 1-1 で呼べるのは 5 体・ハギは 1-1 ／ 1-2 の候補に出ず 1-3 で出る ／ (b) ウツ・ワタは 1-2 から
+        # ／ (c) 体験版は 35 体・棚卸しの表が 35 行 ／ (d) 第461〜474期の 1 章・単発は今のまま ＋ 5 体の表でも候補が 3 枚そろう・頭の札の顔の段。報告だけ: ハギ抜きの 1-1 の通し（第474期の通し × 第475期 ／ 第474期の表）。約 3 分。`--chapter1-roster35-quick` は通しと棚卸しの表を省く（約 3 秒）
+        # **第475期の道具の口**: `--axis-diag --roster=V475`（35 体から代表の隊）・`--seats=呪い:ワタ=前1,ムド=前3,ウツ=中央,リリ=後1,ネル=後3`（代表の隊の席を名指しで）・`--by-unit`（駒ごとの与えたダメージ・倒れた駒とターン・漏れ ／ 渡しの量の節）。
+        # `--roster33-audit --roster=V475 --rule=V475` は 35 体の棚卸し（`design/ROSTER35_AUDIT.md`）。どれも付けなければ出力は今のまま
     Godot_console.exe --path DemoApp --headless -- --map11-phase176
         # **第176期 Phase 0**: Q0-1〜Q0-5（`PortalOn = false` が第175期の 18 量と一致するか ／
         # 重なりと同点の割り方 ／ 湧いた部隊を満タンで作る口 ／ 方針の手順 ／ 走行時間）。約 1 秒
