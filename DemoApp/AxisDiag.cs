@@ -112,6 +112,36 @@ public static partial class AxisDiag
         return res;
     }
 
+    /// <summary>
+    /// 代表の隊の席を名指しで置き直す（第475期・「試遊・呪い」の並びに寄せるため）。<paramref name="spec"/> は「軸:駒=席,駒=席」を「;」で並べたもの
+    /// （駒は名前の一部・席は 前1 ／ 前3 ／ 中央 ／ 後1 ／ 後3・例 `呪い:ワタ=前1,ムド=前3,ウツ=中央,リリ=後1,ネル=後3`）。隊の全員を書く・同じ席は 2 度書けない。
+    /// </summary>
+    public static List<AxisSquad> Reseat(List<AxisSquad> squads, string spec, Action<string> write)
+    {
+        var res = new List<AxisSquad>(squads);
+        foreach (string part in spec.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            string[] ax = part.Split(':', 2);
+            int i = res.FindIndex(q => q.Representative && q.Axis == ax[0]);
+            if (i < 0) throw new ArgumentException($"代表の隊が無い: {ax[0]}");
+            AxisSquad q = res[i];
+            var seat = new Dictionary<string, int>();
+            foreach (string us in ax[1].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                string[] kv = us.Split('=', 2);
+                FoeWeight.Piece pc = q.Squad.Pieces.FirstOrDefault(x => x.Base.Name.Contains(kv[0], StringComparison.Ordinal)) ?? throw new ArgumentException($"{ax[0]} の代表の隊に {kv[0]} がいない");
+                int slot = Enumerable.Range(0, 5).FirstOrDefault(sl => SeatName(sl) == kv[1], -1);
+                if (slot < 0) throw new ArgumentException($"席が無い: {kv[1]}");
+                seat[pc.Base.Id] = slot;
+            }
+            if (seat.Count != q.Squad.Pieces.Count || seat.Values.Distinct().Count() != seat.Count) throw new ArgumentException($"{ax[0]}: 隊の全員に別々の席を書く（{seat.Count} ／ {q.Squad.Pieces.Count}）");
+            var pieces = q.Squad.Pieces.Select(x => x with { Slot = seat[x.Base.Id] }).OrderBy(x => x.Slot).ToList();
+            res[i] = q with { Squad = q.Squad with { Pieces = pieces }, How = pieces.Select(x => $"{SeatName(x.Slot)} {x.Base.Name}（席は名指し）").ToList() };
+            write($"AXIS_DIAG 席 {ax[0]}: {string.Join(" ／ ", res[i].How)}");
+        }
+        return res;
+    }
+
     /// <summary>写しの隊のうち、その軸が「いちばん多い軸（2 枚以上）」の隊（同じ顔ぶれは 1 つ・軸ごとに <paramref name="cap"/> 隊まで・その軸の駒の多い順）。</summary>
     public static List<AxisSquad> FromPlays(string axis, IReadOnlyList<FoeWeight.Squad> plays, int cap)
     {
@@ -148,6 +178,10 @@ public static partial class AxisDiag
         public double FoeAtkBase, FoeAtkDrop, AllyAtkBase, AllyAtkDrop;
         /// <summary>第473期: 弱体の窓口（`BattleResult.DullByRoute`）を通った量のうち味方へ向かう経路: 開戦の呪詛の漏れ ／ 呪うたびの漏れ ／ それ以外（泥散り・突き返し・誹りほか）。</summary>
         public double LeakStart, LeakTurn, AllyDullOther;
+        /// <summary>第475期: 渡し（ワタの転嫁・`DullRoute.Relay`）を通った量——ワタが拾って、ウツ ／ ムド ／ 敵へ回した弱体。</summary>
+        public double Relay;
+        /// <summary>第475期: 倒れた味方の駒（`Def.Id`）→ 倒れたターン（最初の 1 回・呼んだ駒は入らない）。</summary>
+        public Dictionary<string, int> DownAt = new();
         /// <summary>第473期: 敵の HP を減らした量を、味方の駒（`Def.Id`・呼んだ駒は呼び手ではなく呼んだ駒の Id）ごとに。</summary>
         public Dictionary<string, double> DealBy = new();
     }
@@ -211,6 +245,9 @@ public static partial class AxisDiag
                 case BattleEventKind.Attack:
                     swing = e.ActorId;
                     break;
+                case BattleEventKind.Death when e.TargetId is { } dt && idOf.TryGetValue(dt, out string? deadId):
+                    f.DownAt.TryAdd(deadId, e.Turn);
+                    break;
                 case BattleEventKind.Skill:
                 case BattleEventKind.Charge:
                     swing = null;
@@ -269,6 +306,7 @@ public static partial class AxisDiag
             f.LeakStart = dr[(int)DullRoute.CurseLeak];
             f.LeakTurn = dr[(int)DullRoute.HexLeak];
             f.AllyDullOther = AllyOtherRoutes.Sum(x => dr[(int)x]);
+            f.Relay = dr[(int)DullRoute.Relay];
         }
         return f;
     }
@@ -367,6 +405,7 @@ public static partial class AxisDiag
 
     /// <summary>
     /// `--axis-diag [--quick] [--seeds=20] [--axes=毒,生贄] [--stars=1,2,3] [--rule=V471] [--plays=<dir>] [--cap=2] [--out=<path>]`。
+    /// 第475期: `--roster=V475`（体験版の 35 体から代表の隊を組む）・`--seats=軸:駒=席,…`（代表の隊の席を名指しで）・`--by-unit`（駒ごとの与えたダメージの節を足す）。
     /// `--quick` は seed 2・軸 2 つ（毒・手番）・写しの隊なし（1 分以内が門）。
     /// </summary>
     public static bool Main(Action<string> write, IReadOnlyList<string> args, string demoAppDir)
@@ -386,7 +425,9 @@ public static partial class AxisDiag
         var t0 = DateTime.Now;
 
         // ---- 隊 ----
-        var units = Roster33Audit.Units(RosterRule.V471);
+        // 第475期: `--roster=V475` で体験版の 35 体から代表の隊を組む（既定は第471期の 33 体のまま）。
+        RosterRule roster = Opt("roster") is { } rok ? RosterRule.ByKey(rok) ?? throw new ArgumentException($"加入の表が無い: {rok}") : RosterRule.V471;
+        var units = Roster33Audit.Units(roster);
         var snaps = PlayLog.List(root).Where(s => s.Pack is not null).ToList();
         var plays = new[] { "1-1", "1-2", "1-3" }.SelectMany(id => FoeWeight.SquadsOf(snaps, id, root)).ToList();
         var squads = new List<AxisSquad>();
@@ -396,6 +437,7 @@ public static partial class AxisDiag
             if (cap > 0) squads.AddRange(FromPlays(a, plays, cap));
         }
         if (Opt("swap") is { } sw) squads = Swap(squads, sw, units, write);   // 第473期 Phase 0: 代表の隊の組み替え
+        if (Opt("seats") is { } se) squads = Reseat(squads, se, write);       // 第475期: 代表の隊の席を名指しで
         write($"AXIS_DIAG 版 {rule.Name}・☆の表 {starRule.Name}・軸 {axes.Length}・隊 {squads.Count}（代表 {squads.Count(q => q.Representative)} ・写し {squads.Count(q => !q.Representative)}）・seed {seeds}・☆ {string.Join("/", stars)}");
 
         // ---- 相手 ----
@@ -463,7 +505,8 @@ public static partial class AxisDiag
             write($"AXIS_DIAG {summonNote}");
         }
 
-        var lines = Lines(rule, starRule, seeds, stars, squads, foes.Select(x => (x.Id, x.S, x.Foes)).ToList(), cells, siege, chains, summonNote, fights, DateTime.Now - t0);
+        var lines = Lines(rule, starRule, seeds, stars, squads, foes.Select(x => (x.Id, x.S, x.Foes)).ToList(), cells, siege, chains, summonNote, fights, DateTime.Now - t0, roster);
+        if (args.Contains("--by-unit")) lines.AddRange(ByUnitLines(stars, squads, cells));   // 第475期: 駒ごとの与えたダメージ（頼んだときだけ）
         Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
         File.WriteAllText(outPath, string.Join("\n", lines) + "\n", new UTF8Encoding(false));
         write($"AXIS_DIAG {lines.Count} 行 → {outPath}（{(DateTime.Now - t0).TotalSeconds:F0} 秒）");
@@ -475,7 +518,7 @@ public static partial class AxisDiag
     private static List<string> Lines(ChapterRule rule, StarRule starRule, int seeds, List<int> stars, List<AxisSquad> squads,
                                       List<(string Id, MapStage S, List<FoeWeight.Foe> Foes)> foes, List<Cell> cells,
                                       Dictionary<(AxisSquad, int), int> siege, Dictionary<(AxisSquad, int), List<List<(bool Won, int In, int Down)>>> chains,
-                                      string summonNote, int fights, TimeSpan took)
+                                      string summonNote, int fights, TimeSpan took, RosterRule roster)
     {
         var L = new List<string>
         {
@@ -502,7 +545,6 @@ public static partial class AxisDiag
         foreach (AxisSquad q in squads) L.Add($"| {q.Axis}{(Weak.Contains(q.Axis) ? "（弱い）" : "")} | {(q.Representative ? "代表" : $"写し {q.Squad.Name}")} | {string.Join(" ／ ", q.How)} |");
 
         // ---- いつ手に入るか（加入の表） ----
-        RosterRule roster = RosterRule.V471;
         string[] order = { "始め", "1-1", "1-2", "1-3" };
         string When(UnitDef d) => roster.Start.Contains(d.Name) ? "始め" : roster.Joins.FirstOrDefault(j => j.Units.Contains(d.Name)).Stage ?? "—";
         int Idx(string w) => Array.IndexOf(order, w) is int i && i >= 0 ? i : 99;
@@ -631,6 +673,40 @@ public static partial class AxisDiag
             })) + " |");
 
         if (summonNote.Length > 0) { L.Add(""); L.Add($"- {summonNote}"); }
+        return L;
+    }
+
+    /// <summary>
+    /// 駒ごとの与えたダメージ（第475期・`--by-unit`）。敵の HP を減らした量を味方の駒ごとに 1 戦あたりで（呼んだ駒は入らない・`Fight.DealBy`）——
+    /// 雑兵の全部 ／ 勇者ごと × ☆。あわせて弱体の窓口を通った量（開戦の漏れ ／ 呪うたびの漏れ ／ 味方へのそれ以外 ／ 渡し）。代表の隊だけ。
+    /// </summary>
+    private static List<string> ByUnitLines(List<int> stars, List<AxisSquad> squads, List<Cell> cells)
+    {
+        var L = new List<string>
+        {
+            "",
+            "## 駒ごとの与えたダメージ（代表の隊・1 戦あたり・敵の HP を減らした量）",
+            "",
+            "「渡し」＝ワタの転嫁（`DullRoute.Relay`）を通った弱体の量（ワタが拾ってウツ ／ ムド ／ 敵へ回した分）。「開戦の漏れ」「呪うたびの漏れ」はネル、「それ以外」は泥散り・突き返しほか味方へ向かう弱体。",
+            "",
+            "| 軸 | ☆ | 相手 | 勝ち | 終わりの HP | 駒ごと（席 駒 量） | 倒れた駒（戦の数・倒れたターンの平均） | 開戦の漏れ | 呪うたびの漏れ | それ以外 | 渡し |",
+            "|---|--:|---|--:|--:|---|---|--:|--:|--:|--:|",
+        };
+        foreach (AxisSquad q in squads.Where(q => q.Representative))
+            foreach (int star in stars)
+            {
+                var groups = new List<(string Label, List<Fight> Fs)> { ("雑兵の全部", cells.Where(c => c.Q == q && c.Star == star && c.Hard == 1 && Grunt(c.Foe)).SelectMany(c => c.Fights).ToList()) };
+                foreach (Cell c in cells.Where(c => c.Q == q && c.Star == star && c.Foe.Kind == FoeWeight.Kind.Hero))
+                    groups.Add(($"{c.Stage} {c.Foe.Name}", c.Fights));
+                foreach (var (label, fs) in groups.Where(g => g.Fs.Count > 0))
+                {
+                    double n = fs.Count;
+                    string by = string.Join(" ／ ", q.Squad.Pieces.OrderBy(p => p.Slot).Select(p => $"{SeatName(p.Slot)} {p.Base.Name} {fs.Sum(f => f.DealBy.GetValueOrDefault(p.Base.Id)) / n:F0}"));
+                    string down = string.Join(" ／ ", q.Squad.Pieces.OrderBy(p => p.Slot).Select(p => (p, ts: fs.Where(f => f.DownAt.ContainsKey(p.Base.Id)).Select(f => (double)f.DownAt[p.Base.Id]).ToList()))
+                        .Where(x => x.ts.Count > 0).Select(x => $"{x.p.Base.Name} {x.ts.Count}／{fs.Count}（平均 {F1(x.ts.Average())}T）"));
+                    L.Add($"| {q.Axis} | ☆{star} | {label} | {fs.Count(f => f.Won)}／{fs.Count} | {fs.Average(f => f.Hp).ToString("0.0", CultureInfo.InvariantCulture)}% | {by} | {(down.Length == 0 ? "なし" : down)} | {F1(fs.Sum(f => f.LeakStart) / n)} | {F1(fs.Sum(f => f.LeakTurn) / n)} | {F1(fs.Sum(f => f.AllyDullOther) / n)} | {F1(fs.Sum(f => f.Relay) / n)} |");
+                }
+            }
         return L;
     }
 }

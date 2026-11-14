@@ -53,9 +53,9 @@ public static class Roster33Audit
     /// 表を作る。<paramref name="bots"/> が偽なら器具の通しを省く・<paramref name="weights"/> が偽なら単体の重さを省く（門 (d) の速い版）。
     /// 返すのは md の行と 33 行ぶんの集計。
     /// </summary>
-    public static (List<string> Lines, List<Row> Rows) Build(Action<string> write, string playsRoot, ChapterRule botRule, int botSeeds = 100, bool bots = true, bool weights = true, int weightSeeds = 8)
+    public static (List<string> Lines, List<Row> Rows) Build(Action<string> write, string playsRoot, ChapterRule botRule, int botSeeds = 100, bool bots = true, bool weights = true, int weightSeeds = 8, RosterRule? rosterRule = null)
     {
-        RosterRule roster = RosterRule.V471;
+        RosterRule roster = rosterRule ?? RosterRule.V471;   // 第475期: `--roster=V475` で 35 体（既定は第471期の 33 体のまま）
         var units = Units(roster);
         var rows = units.Select(d => new Row { Def = d }).ToList();
         var byId = rows.ToDictionary(r => r.Def.Id);
@@ -148,7 +148,7 @@ public static class Roster33Audit
             r.Star1 = Star1Notes.TryGetValue(r.Def.Id, out string? note) ? note : "";
         }
 
-        return (Lines(rows, ends.Count, botEnds, bots, weights, weightSquads, botRule, weightSeeds), rows);
+        return (Lines(rows, ends.Count, botEnds, bots, weights, weightSquads, botRule, weightSeeds, roster), rows);
     }
 
     /// <summary>ステージの終わり: `_end` の写しと、同じ通し（フォルダ ・1 章の seed）に前のステージの `_end` が無いときの次のステージの `_start`（持ち越しそのもの）。</summary>
@@ -203,20 +203,25 @@ public static class Roster33Audit
 
     private static string Pct(double? x) => x is { } v ? $"{100 * v:F0}%" : "—";
 
-    private static List<string> Lines(List<Row> rows, int playEnds, int botEnds, bool bots, bool weights, int weightSquads, ChapterRule botRule, int weightSeeds)
+    private static List<string> Lines(List<Row> rows, int playEnds, int botEnds, bool bots, bool weights, int weightSquads, ChapterRule botRule, int weightSeeds, RosterRule roster)
     {
+        // 第475期: 第471期の表（33 体）なら頭の文は今のまま。ほかの表は体数と表の名前を出す。
+        bool v471 = ReferenceEquals(roster, RosterRule.V471);
+        int n = rows.Count;
+        string key = ReferenceEquals(roster, RosterRule.V475) ? "V475" : ReferenceEquals(roster, RosterRule.V469) ? "V469" : "V471";
         var L = new List<string>
         {
-            "# 33 体の棚卸し（体験版の加入の表）",
+            $"# {n} 体の棚卸し（体験版の加入の表）",
             "",
-            $"`--roster33-audit` の出力（{DateTime.Now:yyyy-MM-dd HH:mm}）。手で編集しない（次の実行で上書きされる）。指示書 `design/PHASE471_STAGE11_SPEC.md` §2。**調べるだけ——直す案は書かない。**",
+            v471 ? $"`--roster33-audit` の出力（{DateTime.Now:yyyy-MM-dd HH:mm}）。手で編集しない（次の実行で上書きされる）。指示書 `design/PHASE471_STAGE11_SPEC.md` §2。**調べるだけ——直す案は書かない。**"
+                 : $"`--roster33-audit --roster={key}` の出力（{DateTime.Now:yyyy-MM-dd HH:mm}）。手で編集しない（次の実行で上書きされる）。表は第471期の棚卸し（`design/PHASE471_STAGE11_SPEC.md` §2）と同じ作り。**調べるだけ——直す案は書かない。**",
             "",
-            $"- 駒: `RosterRule.V471` の始めの 6 枚 ＋ 1-1 ／ 1-2 ／ 1-3 で呼べる 27 体（表の並び）。軸・役割は `UnitDef.Tags`（`docs/tags.md` と同じ表）",
+            $"- 駒: `RosterRule.{key}` の始めの 6 枚 ＋ 1-1 ／ 1-2 ／ 1-3 で呼べる {n - 6} 体（表の並び）。軸・役割は `UnitDef.Tags`（`docs/tags.md` と同じ表）",
             $"- 遊び: ポンの写し（`design/plays/` の全部・手で写した分も）の**ステージの終わり {playEnds} 本**——`_end` の写しと、同じ通しに前のステージの `_end` が無いときの次のステージの `_start`（持ち越しそのもの）。隊 ／ 余り（手札）／ 持っていない の回数",
             bots ? $"- 器具: {botRule.Name} の 1 章の通し（1 隊残す ／ 分担＋戻り番・1-3 は逃げる × seed 0〜99・負ければやり直し 20 回まで）の**勝ったステージの終わり {botEnds} 回**" : "- 器具: 省いた",
             weights ? $"- 単体の重さ: ポンの写しの隊（`_first`、無ければ `_start`・{weightSquads} 隊）から**その 1 枚を抜いた隊**と元の隊を、その盤の敵部隊（勇者を除く）× seed 0〜{weightSeeds - 1} に当てた終わりの HP（隊の最大 HP に対する %）の平均の差（pt・正なら入れたほうが残る）。写しの隊に出てこない駒は「—」" : "- 単体の重さ: 省いた",
             "  - 戦闘中に味方の最大 HP を変える駒（ヴェルの魂を分ける＝隣の最大 HP が半分）は、終わりの HP の割合が下がって見える（負に出やすい）。隊の数が 1〜3 の駒は揺れが大きい",
-            "- マイナス: 関係の表（`Map11Relations`）の損 ／ 両方の札と、位置を問わない札。**受け手の候補** は `Presets.Compare`（`compare` の行）でその駒と同じ行に載る 33 体の駒——**マイナスを得に変えるかは機械では数えていない（手で確認）**",
+            $"- マイナス: 関係の表（`Map11Relations`）の損 ／ 両方の札と、位置を問わない札。**受け手の候補** は `Presets.Compare`（`compare` の行）でその駒と同じ行に載る {n} 体の駒——**マイナスを得に変えるかは機械では数えていない（手で確認）**",
             "- ☆1 での問題: 第463〜470期の報告から手で写した（`Roster33Audit.Star1Notes`）",
             "",
             "| 駒 | 軸 | 役割 | 遊び 隊 ／ 余り ／ 無し | 余りの割合 | 器具 隊 ／ 余り ／ 無し | 余りの割合 | 単体の重さ（pt・隊の数） | マイナス | 受け手の候補（compare の同じ行） | ☆1 での問題 |",
@@ -267,19 +272,24 @@ public static class Roster33Audit
     private static double Score(Row r)
         => (r.PlayBenchShare ?? 0) + (r.BotBenchShare ?? 0) + (r.Mates.Count <= 1 ? 0.5 : 0) + (r.WeightAvg is { } w ? (w < 2 ? 0.5 : 0) : 0.25);
 
-    /// <summary>口 `--roster33-audit [--plays=<dir>] [--out=<path>] [--rule=V470] [--seeds=100] [--no-bots] [--no-weights]`。</summary>
+    /// <summary>
+    /// 口 `--roster33-audit [--plays=<dir>] [--out=<path>] [--rule=V470] [--seeds=100] [--no-bots] [--no-weights] [--roster=V475]`。
+    /// 第475期: `--roster=V475` は体験版の 35 体の表（出力の既定は `design/ROSTER35_AUDIT.md`・器具の版は `--rule=V475` で合わせる）。
+    /// </summary>
     public static bool Main(Action<string> write, IReadOnlyList<string> args, string demoAppDir)
     {
         string? Opt(string name) => args.FirstOrDefault(a => a.StartsWith($"--{name}=", StringComparison.Ordinal))?[(name.Length + 3)..];
         string repo = Path.GetFullPath(Path.Combine(demoAppDir, ".."));
         string root = Path.GetFullPath(Opt("plays") ?? Path.Combine(repo, "design", "plays"), repo);
-        string outPath = Path.GetFullPath(Opt("out") ?? Path.Combine(repo, "design", "ROSTER33_AUDIT.md"), repo);
+        RosterRule roster = Opt("roster") is { } rok ? RosterRule.ByKey(rok) ?? throw new ArgumentException($"加入の表が無い: {rok}") : RosterRule.V471;
+        int want = Units(roster).Count;
+        string outPath = Path.GetFullPath(Opt("out") ?? Path.Combine(repo, "design", $"ROSTER{want}_AUDIT.md"), repo);
         ChapterRule rule = Opt("rule") is { } rk ? ChapterRule.ByKey(rk) ?? throw new ArgumentException($"版が無い: {rk}") : ChapterRule.V470;
         int seeds = Opt("seeds") is { } sd ? int.Parse(sd, CultureInfo.InvariantCulture) : 100;
-        var (lines, rows) = Build(write, root, rule, seeds, bots: !args.Contains("--no-bots"), weights: !args.Contains("--no-weights"));
+        var (lines, rows) = Build(write, root, rule, seeds, bots: !args.Contains("--no-bots"), weights: !args.Contains("--no-weights"), rosterRule: roster);
         Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
         File.WriteAllText(outPath, string.Join("\n", lines) + "\n", new UTF8Encoding(false));
         write($"ROSTER33 {rows.Count} 行 → {outPath}");
-        return rows.Count == 33;
+        return rows.Count == want;
     }
 }
