@@ -24,9 +24,11 @@ public partial class Map11Main
         window.ContentScaleSize = Map3DMode.BaseSize;
         window.ContentScaleAspect = Window.ContentScaleAspectEnum.Expand;
 
-        _map3d = new Map3DStage { Name = "Map3DStage" };
-        AddChild(_map3d);
-        AddChild(new Map3DDebugLayer(() => _camera));
+        // ジオラマ（`_map3d`）とカメラは `BuildWorld3D` が盤の組み立てのところで作ってある。ここでは遊ぶ UI と検証の層を足す。
+        BuildHud3D();
+        AddChild(new Map3DDebugLayer(() => _camera, _cam3d, _map3d));
+        if (args.Contains("--map3d-fps", StringComparer.Ordinal)) _ = Map3DFps();
+        if (args.Contains("--map3d-layout-smoke", StringComparer.Ordinal)) _ = Map3DLayoutSmoke();
     }
 
     public override void _ExitTree()
@@ -106,15 +108,21 @@ public partial class Map3DSwitch : Node
 public partial class Map3DDebugLayer : CanvasLayer
 {
     private readonly Func<Camera3D> _camera;
+    private readonly Map3DCamera? _rig;
+    private readonly Map3DStage? _stage;
     private readonly Label _text = UiKit.Text("", 20, UiKit.Ink);
 
-    public Map3DDebugLayer(Func<Camera3D> camera) { _camera = camera; }
+    public Map3DDebugLayer(Func<Camera3D> camera, Map3DCamera? rig = null, Map3DStage? stage = null)
+    {
+        _camera = camera; _rig = rig; _stage = stage;
+    }
 
     public override void _Ready()
     {
         Layer = 90;
         Visible = Map3DMode.DebugShown;
-        var back = new PanelContainer { Position = new Vector2(24, 200), MouseFilter = Control.MouseFilterEnum.Ignore };
+        var back = new PanelContainer { Position = new Vector2(24, 250), MouseFilter = Control.MouseFilterEnum.Ignore };
+        back.AddThemeStyleboxOverride("panel", UiKit.Box(new Color(0.03f, 0.04f, 0.05f, 0.90f), UiKit.Line));
         back.AddChild(_text);
         AddChild(back);
     }
@@ -132,8 +140,16 @@ public partial class Map3DDebugLayer : CanvasLayer
         Camera3D c = _camera();
         Vector3 at = c.Position, rot = c.RotationDegrees;
         string lens = c.Projection == Camera3D.ProjectionType.Orthogonal ? $"平行 大きさ {c.Size:F1}" : $"画角 {c.Fov:F1}";
-        _text.Text = $"検証（F3 で隠す ／ F2 で 2D）\n{st.Stage.Id}　seed {st.Seed}　作戦ターン {st.Turn}　戦闘 {st.Battles}\n"
+        // 第474期: 敵の倍率（「敵 ×0.6」）は題字から外してここへ（遊ぶ人には見せない値）。
+        string scale = st.Stage.FoeScale.Active ? $"　{st.Stage.FoeScale.BarText}" : "";
+        _text.Text = $"検証（F3 で隠す ／ F2 で 2D）\n{st.Stage.Id}　seed {st.Seed}　作戦ターン {st.Turn}　戦闘 {st.Battles}{scale}\n"
             + $"fps {Engine.GetFramesPerSecond():F0}　道具 {(Map3DMode.ToolsAvailable ? "あり" : "なし")}\n"
             + $"カメラ 位置 ({at.X:F1}, {at.Y:F1}, {at.Z:F1})　傾き {-rot.X:F1}°　{lens}";
+        // 見た目の段: カメラの書き出しの値（T／G 傾き・Y／H 高さ・U／J 画角で動かせる・Home で拡大と横移動を戻す）と、置いた素材の数。
+        if (_rig is not null)
+            _text.Text += $"\n書き出しの値 傾き {_rig.Tilt:F0}°　高さ {_rig.Height:F0}　画角 {_rig.Fov:F0}°　拡大 {_rig.Zoom:F2}　見る点 ({_rig.Focus.X:F1}, {_rig.Focus.Z:F1})"
+                + "\nT／G 傾き　Y／H 高さ　U／J 画角　Home 視点を戻す";
+        if (_stage is not null)
+            _text.Text += $"\n素材の部品 {_stage.PartCount} 個（{_stage.UsedParts.Count} 種）　光 夕日 {Map3DStage.SunEnergy:F2}　環境 {Map3DStage.AmbientEnergy:F2}";
     }
 }

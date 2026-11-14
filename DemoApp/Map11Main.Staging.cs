@@ -28,6 +28,7 @@ public partial class Map11Main
         _stageCue = new MapStageCue { ZIndex = 60 };
         _uiRoot.AddChild(_stageCue);
         _stageCue.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        if (Map3DMode.Active) return;   // 3D: 旗・門・マスの目印はジオラマ（`Map3DStage`）とマスの台が持つ
         _homeFlag = new Node3D { Position = BasePos + new Vector3(-1, .4f, 0) };
         AddChild(_homeFlag);
         StageBox(_homeFlag, new Vector3(0, 2, 0), new Vector3(.18f, 4, .18f), UiKit.Muted);
@@ -129,7 +130,7 @@ public partial class Map11Main
     private void PlayStageCue(int cell, MapStageCue.Kind kind)
     {
         GD.Print($"MAP_STAGING_CUE stage={St.Stage.Id} turn={St.Turn} kind={kind} cell={cell}");
-        _stageCue!.ShowCue(kind, _camera.UnprojectPosition(PosOf(cell)));
+        _stageCue!.ShowCue(kind, _camera.UnprojectPosition(PosOf(cell)) / _uiScale);
         _stageCue.MoveToFront();
         MapStagingAudio.Play(this, kind);
     }

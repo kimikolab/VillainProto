@@ -30,6 +30,7 @@ public partial class Map11Main : Node3D
     /// </summary>
     private static Vector3 PosOf(int cellId)
     {
+        if (_layout3d is { } table) return table.PosOf(cellId);   // 3D のジオラマ: ステージごとの表（`Map3DLayout`）
         var (x, z) = St.Graph[cellId].Pos;
         return new Vector3(x, 0, z);
     }
@@ -210,14 +211,17 @@ public partial class Map11Main : Node3D
             Map11Session.Chosen = chosen;
         // 第444期: 絵の口（`--map11-capture=`）だけ `--map-seed=N` で通しの seed を決められる（同じ絵を撮り直すため・遊ぶ起動では読まない）。
         string[] user = OS.GetCmdlineUserArgs();
-        if (user.Any(a => a.StartsWith("--map11-capture=", StringComparison.Ordinal))
+        // 3D の fps を測る口（`--map3d-fps`）も、絵の口と同じく seed と 1 章を引数で決める（写しと同じ場面で測るため）。
+        bool pictured = user.Any(a => a.StartsWith("--map11-capture=", StringComparison.Ordinal)) || user.Contains("--map3d-fps", StringComparer.Ordinal)
+            || user.Contains("--map3d-layout-smoke", StringComparer.Ordinal);
+        if (pictured
             && user.FirstOrDefault(a => a.StartsWith("--map-seed=", StringComparison.Ordinal)) is { } seedArg
             && int.TryParse(seedArg["--map-seed=".Length..], out int capSeed)
             && !(Map11Session.State is { } cur && cur.Seed == capSeed && ReferenceEquals(cur.Stage, Map11Session.Chosen)))
             Map11Session.Reset(capSeed, stage: Map11Session.Chosen);
         // 第460期: 絵の口（`--map11-capture=`）と使う 1 章の口。`--map-chapter=N` は 1 章の seed N で 1-1 から（ステージの頭の札が出る）、
         // `--map-chapter-play=N` はさらに 1 章を器具の方針で 1-3 に勝つまで頭なしで回す（1 章の結果の絵・`Map11Main.Chapter.cs`）。遊ぶ起動では読まない。
-        if (user.Any(a => a.StartsWith("--map11-capture=", StringComparison.Ordinal)))
+        if (pictured)
         {
             if (user.FirstOrDefault(a => a.StartsWith("--map-chapter=", StringComparison.Ordinal)) is { } ch && int.TryParse(ch["--map-chapter=".Length..], out int chSeed))
             {
@@ -689,6 +693,8 @@ public partial class Map11Main : Node3D
             await ToSignal(GetTree().CreateTimer(2.5), SceneTreeTimer.SignalName.Timeout);   // 浮く金の数字が消えるのを待つ
             GD.Print($"MAP11_CAPTURE_CHAPTER over={Chapter1.Over} " + string.Join(" | ", Chapter1.ResultLines()));
         }
+        // 3D のジオラマの写しの 3 場面（`m3d-start` ／ `m3d-moved` ／ `m3d-camp`・`Map11Main.Map3DView.cs`）。
+        else if (parts.Length > 1 && parts[1].StartsWith("m3d-", StringComparison.Ordinal)) await Map3DCaptureScene(parts[1]);
         // 第172期: 組み直しの絵（つまんでいる札と控えの駒が出ている状態）。
         else if (parts.Length > 1 && parts[1] == "reform")
         {
@@ -977,6 +983,8 @@ public partial class Map11Main : Node3D
 
     private void BuildWorld()
     {
+        _layout3d = null;
+        if (Map3DMode.Active) { BuildWorld3D(); return; }   // 3D のジオラマ（`Map11Main.Map3DView.cs`）
         // 敵の拠点があるとカメラを引くので、盤の文字はそのぶん大きくする（距離の比）。
         _labelScale = (St.Stage.LaneCount > 2 ? WideLabelScale : St.Portal.On ? 1.40f : 1.0f) * St.Stage.ViewScale;   // 第458期: 引いた倍率ぶん大きく
 
@@ -1742,7 +1750,7 @@ public partial class Map11Main : Node3D
 
     private void Select(int index)
     {
-        _showSquadDetail = !_reform;
+        _showSquadDetail = !_reform && !Map3DMode.Active;   // 3D では盤を隠さない（配置は「配置を見る」で開く）
         _showFoes = _showHistory = false;
         _guideSquadChosen = true;
         _guideDestinationChosen = false;
@@ -3241,6 +3249,7 @@ public partial class Map11Main : Node3D
         FloatNewGold();
         RefreshGuide();
         RefreshStaging();
+        if (Map3DMode.Active) RefreshMap3D();
         _firstRefresh = false;
     }
 
@@ -3452,6 +3461,7 @@ public partial class Map11Main : Node3D
         {
             Map11State.GoldEvent e = St.GoldLog[_goldShown];
             if (e.Amount <= 0 || e.Cell < 0 || _camera is null || !IsInstanceValid(_headline)) continue;
+            if (Map3DMode.Active) { FloatGold3D(e); continue; }
             Vector2 from = _camera.UnprojectPosition(PosOf(e.Cell) + new Vector3(0, 2.0f, 0));
             Rect2 head = _headline.GetGlobalRect();
             int goldStart = _headline.Text.IndexOf("金 ", StringComparison.Ordinal);
@@ -3497,7 +3507,8 @@ public partial class Map11Main : Node3D
 
     public override void _Process(double delta)
     {
-        if (_layoutSize != GetViewport().GetVisibleRect().Size) RefreshScreen();
+        if (Map3DMode.Active) ProcessMap3D(delta);
+        if (_layoutSize != UiViewSize) RefreshScreen();
         // 第175期 §1-3: 盤の札を滑らせる／脈打たせる。**判定は1つも通らない**（見た目だけ）。
         foreach (Marker m in _squadMarkers) m.Tick(delta);
         foreach (Marker m in _nodeMarkers) m.Tick(delta);
@@ -3505,8 +3516,9 @@ public partial class Map11Main : Node3D
         foreach (Marker m in _spawnMarkers) m.Tick(delta);
         _portalMarker?.Tick(delta);
         // 画面の大きさが変わると札の位置がずれるので、毎フレーム引き直す（7 枚だけ）。
-        foreach (DestButton d in _destButtons)
-            d.Node.Position = _camera.UnprojectPosition(d.World) + d.Offset;
+        if (!Map3DMode.Active)
+            foreach (DestButton d in _destButtons)
+                d.Node.Position = _camera.UnprojectPosition(d.World) + d.Offset;
         PositionMapPicks();
         // 第439期: 時計。**時計の門の最中は門が自分で回す**（フレームの分まで刻ませない）。
         if (!_clockSmoke) ClockStep(delta);
