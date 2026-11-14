@@ -159,7 +159,7 @@ public static class FoeWeight
     public static UnitDef DefOf(Piece p, int star, StarRule stars)
     {
         int s = star == 0 ? p.Star : star;
-        return s >= stars.Max || !stars.On ? p.Base : stars.Def(p.Base, s);
+        return !stars.On ? p.Base : stars.Def(p.Base, s);   // 第473期: ☆3 も☆の表に聞く（看板の数字が無ければ今の定義そのもの・☆3 に数字があれば写し）
     }
 
     /// <summary>隊を立てる（作戦マップと同じ式・席の順）。</summary>

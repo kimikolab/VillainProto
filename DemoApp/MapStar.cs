@@ -16,7 +16,21 @@ using System.Linq;
 public readonly record struct StarState(int Star, int Pips);
 
 /// <summary>看板の数字 1 つ（第463期 §1-2・この期はハギだけ）。<c>ReapCapPermil[☆]</c> が刈り取りの線の上限（‰・null なら札のとおり）。</summary>
-public sealed record StarSign(string What, IReadOnlyList<int?> ReapCapPermil);
+/// 第473期: ネルの漏れの看板（<c>LeakStart</c> ／ <c>LeakTurn</c> ／ <c>LeakFloor</c>・添字が☆・null なら札のとおり・`UnitDef.LeakStartPermil` ほかへ渡す）と、
+/// 札の文の足し（<c>MinusAdd</c>・その☆の写しの「代わりに」の末尾に足す 1 行）。<b>☆3 に値があれば☆3 も写しになる</b>（無ければ今の定義そのもの）。
+public sealed record StarSign(string What, IReadOnlyList<int?> ReapCapPermil)
+{
+    public IReadOnlyList<int?>? LeakStart { get; init; }
+    public IReadOnlyList<int?>? LeakTurn { get; init; }
+    public IReadOnlyList<int?>? LeakFloor { get; init; }
+    public IReadOnlyList<string?>? MinusAdd { get; init; }
+
+    public static T? At<T>(IReadOnlyList<T>? list, int star) => list is { } l && star >= 0 && star < l.Count ? l[star] : default;
+
+    /// <summary>☆<paramref name="star"/> で今の定義から何か替えるか（☆3 を写しにするかの判定）。</summary>
+    public bool Touches(int star) => At(ReapCapPermil, star) is not null || At(LeakStart, star) is not null || At(LeakTurn, star) is not null
+                                     || At(LeakFloor, star) is not null || At(MinusAdd, star) is not null;
+}
 
 /// <summary>
 /// ☆の規則（第463期）。<b><see cref="On"/> が偽なら☆は無い</b>（単発のステージ・第462期までの 1 章）——駒は今の定義のまま。
@@ -73,6 +87,44 @@ public sealed class StarRule
         EnhancePrice = 4,
     };
 
+    /// <summary>第473期のネルの漏れの看板の 3 版（指示書 design/PHASE473_NEL_LEAK_SPEC.md §2）。☆の表・強化・ハギの看板は第464期のまま。</summary>
+    static IReadOnlyDictionary<string, StarSign> WithNel(StarSign nel)
+        => new Dictionary<string, StarSign>(V464.Signs) { [UnitCatalog.Nel.Id] = nel };
+
+    static StarRule NelVersion(string tag, StarSign nel) => new()
+    {
+        On = true, Name = $"第473期 {tag}（☆1 ×0.6 ・☆2 ×0.8 ・☆3 ×1.0 ／ 2 枚・3 枚 ／ 強化 1 枚 4 金 ／ {nel.What}）",
+        Percent = V464.Percent, Need = V464.Need, EnhancePrice = V464.EnhancePrice, Signs = WithNel(nel),
+    };
+
+    /// <summary>NL-f: ネルの漏れでは、味方の攻撃は素の値の半分より下がらない（☆を問わない・切り上げ）。</summary>
+    public static readonly StarRule V473f = NelVersion("NL-f", new StarSign("漏れの床 攻撃の半分", new int?[] { null, null, null, null })
+    {
+        LeakFloor = new int?[] { null, 500, 500, 500 },
+        MinusAdd = new string?[] { null, "味方への漏れは、攻撃力の半分まで", "味方への漏れは、攻撃力の半分まで", "味方への漏れは、攻撃力の半分まで" },
+    });
+
+    /// <summary>NL-s: 漏れの固定値（開戦 −5 ・呪うたび −2）に☆の倍率（☆1 ×0.6 ・☆2 ×0.8 ・☆3 は今のまま・切り捨て・最低 1）。</summary>
+    public static readonly StarRule V473s = NelVersion("NL-s", new StarSign("漏れに☆の倍率", new int?[] { null, null, null, null })
+    {
+        LeakStart = new int?[] { null, 600, 800, null },
+        LeakTurn = new int?[] { null, 600, 800, null },
+        MinusAdd = new string?[] { null, "味方への漏れは ×0.6", "味方への漏れは ×0.8", null },
+    });
+
+    /// <summary>NL-1: ☆1 だけ開戦の漏れが無い（呪うたびの −2 は残す）。</summary>
+    public static readonly StarRule V4731 = NelVersion("NL-1", new StarSign("☆1 は開戦の漏れなし", new int?[] { null, null, null, null })
+    {
+        LeakStart = new int?[] { null, 0, null, null },
+        MinusAdd = new string?[] { null, "☆1 は開戦の漏れが無い", null, null },
+    });
+
+    /// <summary>名前で引く（`--axis-diag --stars-rule=`・第473期）。</summary>
+    public static StarRule? ByTag(string tag) => tag switch
+    {
+        "V464" => V464, "NL-f" or "V473f" => V473f, "NL-s" or "V473s" => V473s, "NL-1" or "V4731" => V4731, _ => null,
+    };
+
     /// <summary>☆<paramref name="star"/> の、次の☆へ要る枚数（☆の上限なら 0）。</summary>
     public int NeedAt(int star) => star >= Max ? 0 : Need[star];
 
@@ -100,17 +152,22 @@ public sealed class StarRule
     public UnitDef Def(UnitDef d, int star)
     {
         UnitDef b = BaseOf(d);
-        if (!On || star >= Max) return b;
-        UnitDef made = _defs.GetOrAdd((b, star), k =>
+        if (!On || (star >= Max && !(Signs.TryGetValue(b.Id, out StarSign? top) && top.Touches(Max)))) return b;   // 第473期: ☆3 に看板の数字があれば☆3 も写し
+        UnitDef made = _defs.GetOrAdd((b, Math.Min(star, Max)), k =>
         {
             (UnitDef src, int s) = k;
             int p = Percent[s];
+            StarSign? sign = Signs.TryGetValue(src.Id, out StarSign? sg) ? sg : null;
+            string? add = StarSign.At(sign?.MinusAdd, s);
             return new UnitDef
             {
                 Id = src.Id, Name = src.Name, MaxHp = MapFoeScale.Mul(src.MaxHp, p), Attack = MapFoeScale.Mul(src.Attack, p), Speed = src.Speed, Traits = src.Traits,
                 Pattern = src.Pattern, Advances = src.Advances, Actions = src.Actions,
-                PlusText = src.PlusText, MinusText = src.MinusText, Flavor = src.Flavor,
-                ReapLineCapPermil = Signs.TryGetValue(src.Id, out StarSign? sign) && sign.ReapCapPermil[s] is int cap ? cap : src.ReapLineCapPermil,
+                PlusText = src.PlusText, MinusText = add is null ? src.MinusText : src.MinusText.Length > 0 ? $"{src.MinusText} / {add}" : add, Flavor = src.Flavor,
+                ReapLineCapPermil = StarSign.At(sign?.ReapCapPermil, s) is int cap ? cap : src.ReapLineCapPermil,
+                LeakStartPermil = StarSign.At(sign?.LeakStart, s) ?? src.LeakStartPermil,   // 第473期: ネルの漏れの看板
+                LeakTurnPermil = StarSign.At(sign?.LeakTurn, s) ?? src.LeakTurnPermil,
+                LeakFloorPermil = StarSign.At(sign?.LeakFloor, s) ?? src.LeakFloorPermil,
             };
         });
         _base.TryAdd(made, b);
@@ -129,5 +186,6 @@ public sealed class StarRule
 
     /// <summary>看板の数字の文（ハギ☆1 なら「刈り取りの線の上限 25%」・無ければ空）。</summary>
     public string SignText(string id, int star)
-        => On && Signs.TryGetValue(id, out StarSign? sign) && star < Max && sign.ReapCapPermil[star] is int cap ? $"{sign.What} {cap / 10.0:0.#}%" : "";
+        => On && Signs.TryGetValue(id, out StarSign? sign) && star < Max && StarSign.At(sign.ReapCapPermil, star) is int cap ? $"{sign.What} {cap / 10.0:0.#}%"
+         : On && Signs.TryGetValue(id, out StarSign? s2) && StarSign.At(s2.MinusAdd, Math.Min(star, Max)) is string add ? add : "";   // 第473期: ネルの漏れの文
 }

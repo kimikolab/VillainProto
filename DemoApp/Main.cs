@@ -223,6 +223,16 @@ public partial class Main : Control
             GetTree().Quit(okX ? 0 : 1);
             return;
         }
+        // 第473期 §1-1 ／ §2: ネルの漏れの測り（`--nel-leak`・design/weights/nel_leak.md を書く・`--nel-leak-quick` は seed 2 ・☆1 ・代表の隊だけ）。画面なし。
+        if (bootArgs.Contains("--nel-leak", StringComparer.Ordinal) || bootArgs.Contains("--nel-leak-quick", StringComparer.Ordinal))
+        {
+            bool okN;
+            try { okN = AxisDiag.NelMain(GD.Print, bootArgs, ProjectSettings.GlobalizePath("res://")); }
+            catch (System.Exception ex) { GD.PrintErr(ex.ToString()); okN = false; }
+            GD.Print($"NEL_LEAK_COMPLETE ok={okN}");
+            GetTree().Quit(okN ? 0 : 1);
+            return;
+        }
         // 第471期 §2: 33 体の棚卸しの表（`--roster33-audit`・design/ROSTER33_AUDIT.md を書く・`--no-bots` ／ `--no-weights` で省く）。画面なし。
         if (bootArgs.Contains("--roster33-audit", StringComparer.Ordinal))
         {
