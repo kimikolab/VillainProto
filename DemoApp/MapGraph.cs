@@ -219,6 +219,45 @@ public sealed class MapGraph
     }
 
     /// <summary>
+    /// 1 章の 1-1 の盤・第474期（指示書 design/PHASE474_STAGE11_ASYM_SPEC.md §1・`ChapterRule.V474` だけが使う）。<b>道の長さが違う</b>:
+    /// <code>
+    ///              北1 ─── 北2
+    ///             ／          ＼
+    ///   拠点                    敵の拠点
+    ///             ＼            ／
+    ///      南1 ── 南2 ── 南3 ── 南4
+    /// </code>
+    /// 北の道は 2 マス（山越えの近道・拠点から敵の拠点まで 3 歩）、南の道は 4 マス（森と湿地の回り道・5 歩）。横の辺・中間拠点・門は無い。
+    /// 敵の初期位置は <see cref="Starts11F474"/>（北 1・2 マス目 ／ 南 1・3 マス目・南の 2・4 マス目は空）。
+    /// <c>Pos</c> は上下で対称にしない（北は短くまっすぐ・南は下へ膨らんで長い）。単発の 1-1（<see cref="Build11(bool)"/>）は変えない。
+    /// </summary>
+    public static MapGraph Build11F474(bool portalOn)
+    {
+        var b = new Builder();
+        int home = b.Add("拠点", Kind.Home, (-6.0f, -1.0f));
+        (float X, float Z)[][] pos =
+        {
+            new[] { (3.0f, -8.0f), (13.0f, -8.5f) },
+            new[] { (-2.0f, 7.0f), (5.0f, 11.0f), (13.0f, 11.5f), (20.0f, 8.0f) },
+        };
+        var lanes = new int[pos.Length][];
+        for (int lane = 0; lane < pos.Length; lane++)
+            lanes[lane] = pos[lane].Select((p, k) => b.Add($"{Map11.RoadNames[lane]} {k + 1} マス目", Kind.Open, p, lane)).ToArray();
+        int portal = portalOn ? b.Add(Map11.PortalName, Kind.Portal, (23.0f, -1.0f)) : -1;
+        for (int lane = 0; lane < pos.Length; lane++)
+        {
+            int from = home;
+            foreach (int c in lanes[lane]) { b.Link(from, c); from = c; }
+            if (portal >= 0) b.Link(from, portal);
+            b.Lane(Map11.RoadNames[lane], lanes[lane], Starts11F474[lane].Select(i => lanes[lane][i]).ToArray());
+        }
+        return b.Build();
+    }
+
+    /// <summary>第474期の 1 章の 1-1 の敵の初期位置（経路の上の位置・区画の番号の順）。北: 1 マス目・2 マス目 ／ 南: 1 マス目・3 マス目。</summary>
+    internal static readonly int[][] Starts11F474 = { new[] { 0, 1 }, new[] { 0, 2 } };
+
+    /// <summary>
     /// 辺 (a, b) が<b>経路をまたぐ横の辺</b>か（両端が別の経路の上のマス）。敵はこの辺を使わない
     /// ——敵の前進は <see cref="TowardHome"/>（経路に沿う）だけなので、規則として足すものは無い。画面が色を変えるためだけに読む。
     /// </summary>

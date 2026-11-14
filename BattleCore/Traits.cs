@@ -1655,13 +1655,19 @@ public sealed class CurseTrait : Trait
 
         // 漏れは味方全体へ。角に置いて隣を空ければ無償、という抜け道を塞ぐ。
         // これで呪詛は「支援を受け付けない駒」か「火力に頼らない構成」を要求するようになる。
+        // 第473期: 量は `HexLeakTrait.Amount` を通す（看板の数字を持たない駒は AllyLeak のまま・1 章の☆のネルだけが軽くなる）。
+        int most = 0;
         foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
         {
             if (ally == self) continue;
             foreach (UnitState t in ctx.SupportTargets(ally))
-                ctx.Dull(t, AllyLeak, DullRoute.CurseLeak, self);
+            {
+                int amt = HexLeakTrait.Amount(self, t, AllyLeak, self.Def.LeakStartPermil);
+                ctx.Dull(t, amt, DullRoute.CurseLeak, self);
+                most = Math.Max(most, amt);
+            }
         }
-        ctx.Log($"    呪詛は味方にも漏れた（攻撃 -{AllyLeak}）", LogKind.FriendlyFire);
+        ctx.Log(HexLeakTrait.Signed(self) ? $"    呪詛は味方にも漏れた（攻撃 最大 -{most}）" : $"    呪詛は味方にも漏れた（攻撃 -{AllyLeak}）", LogKind.FriendlyFire);
     }
 }
 
@@ -18921,16 +18927,39 @@ public sealed class HexLeakTrait : Trait
     internal static void Leak(BattleContext ctx, UnitState self)
     {
         var hit = new List<string>();
+        int most = 0;
         foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
         {
             if (ally == self || !FormationRules.AreAdjacent(self, ally)) continue;
             if (!ally.AcceptsSupport) continue;
-            ctx.Dull(ally, LeakAtkDown, DullRoute.HexLeak, self);
-            ctx.TallyOf(self).HexLeakTotal += LeakAtkDown;
+            int amt = Amount(self, ally, LeakAtkDown, self.Def.LeakTurnPermil);   // 第473期（看板の数字が無ければ LeakAtkDown のまま）
+            ctx.Dull(ally, amt, DullRoute.HexLeak, self);
+            ctx.TallyOf(self).HexLeakTotal += amt;
+            most = Math.Max(most, amt);
             hit.Add(ally.Name);
         }
         if (hit.Count > 0)
-            ctx.Log($"    呪いは隣の {string.Join("・", hit)} にも滲んだ（攻撃 -{LeakAtkDown}）", LogKind.FriendlyFire);
+            ctx.Log($"    呪いは隣の {string.Join("・", hit)} にも滲んだ（攻撃 -{(Signed(self) ? most : LeakAtkDown)}）", LogKind.FriendlyFire);
+    }
+
+    /// <summary>漏らす駒が看板の数字（`UnitDef.LeakStartPermil` ／ `LeakTurnPermil` ／ `LeakFloorPermil`）を 1 つでも持つか（第473期・1 章の☆のネルだけ）。</summary>
+    internal static bool Signed(UnitState leaker)
+        => leaker.Def.LeakStartPermil is not null || leaker.Def.LeakTurnPermil is not null || leaker.Def.LeakFloorPermil is not null;
+
+    /// <summary>
+    /// 漏れ 1 回の量（第473期）。<paramref name="permil"/> があれば <paramref name="baseAmount"/> に掛ける（切り捨て・正の ‰ なら最低 1・0 なら 0）。
+    /// 漏らす駒が床（`LeakFloorPermil`）を持てば、<b>漏れで</b>宛先の攻撃（素の攻撃 ＋ 今の上げ下げ）が床（宛先の素の攻撃 × ‰・切り上げ）より下がらない量に削る
+    /// ——ほかの弱体で床より下にいれば漏れは 0。<b>看板の数字を持たない駒は <paramref name="baseAmount"/> をそのまま返す</b>（単発の盤は 1 行も変わらない）。乱数を引かない。
+    /// </summary>
+    internal static int Amount(UnitState leaker, UnitState target, int baseAmount, int? permil)
+    {
+        int amt = permil is int p ? (p <= 0 ? 0 : Math.Max(1, baseAmount * p / 1000)) : baseAmount;
+        if (leaker.Def.LeakFloorPermil is int f && amt > 0)
+        {
+            int floor = (target.Def.Attack * f + 999) / 1000;
+            amt = Math.Min(amt, Math.Max(0, target.Def.Attack + target.AtkBonus - floor));
+        }
+        return amt;
     }
 }
 

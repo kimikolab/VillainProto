@@ -137,6 +137,16 @@ public sealed class UnitDef
     public int? ReapLineCapPermil { get; init; }
 
     /// <summary>
+    /// 呪詛の漏れの看板（第473期・<b>外から渡す口</b>・持ち主は漏らす側＝ネル）。<b>3 つとも null なら札のとおり</b>（`HexLeakTrait.Amount`）。
+    /// <c>LeakStartPermil</c> 開戦の呪詛の味方への漏れ（`CurseTrait.AllyLeak`）に掛ける ‰ ／ <c>LeakTurnPermil</c> 呪うたびの隣への漏れ（`HexLeakTrait.LeakAtkDown`）に掛ける ‰
+    /// （どちらも切り捨て・正の ‰ なら最低 1・0 なら漏れない）／ <c>LeakFloorPermil</c> 漏れで下がる味方の攻撃の床（その味方の素の攻撃 × ‰・切り上げ）。
+    /// 渡すのは作戦マップの 1 章の☆（DemoApp の `StarRule`・ネルの看板の数字）だけで、`BattleSim` の駒は1体も渡さない。
+    /// </summary>
+    public int? LeakStartPermil { get; init; }
+    public int? LeakTurnPermil { get; init; }
+    public int? LeakFloorPermil { get; init; }
+
+    /// <summary>
     /// 最大HPと攻撃力だけを差し替えた写し（第187期・敵の難易度のつまみ）。
     /// <b>他の全部（特性・速さ・攻撃型・行動・説明文）はそのまま写す</b>——項目を足したらここにも足すこと。
     /// </summary>
@@ -145,6 +155,7 @@ public sealed class UnitDef
         Id = Id, Name = Name, MaxHp = maxHp, Attack = attack, Speed = Speed, Traits = Traits,
         Pattern = Pattern, Advances = Advances, Actions = Actions,
         PlusText = PlusText, MinusText = MinusText, Flavor = Flavor, ReapLineCapPermil = ReapLineCapPermil,
+        LeakStartPermil = LeakStartPermil, LeakTurnPermil = LeakTurnPermil, LeakFloorPermil = LeakFloorPermil,
     };
 
     public override string ToString() => Name;

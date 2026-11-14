@@ -1987,10 +1987,21 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
         # **第471期 §2**: 体験版の 33 体の棚卸しの表（`Roster33Audit.cs` → `design/ROSTER33_AUDIT.md`・軸 ／ 役割・写しと器具の 隊 ／ 余り ／ 無し・1 枚抜いた終わりの HP の差・マイナスと受け手の候補・☆1 での問題・浮いている見込みの駒）。約 30 秒
     Godot_console.exe --path DemoApp --headless -- --foe-weight --plays=design/weights/p471_start6 --stage=1-1 --rule=V471 --stars=1 --scale=0.6
         # **第471期 §1-2**: 新しい始めの 6 枚の 5 隊 × 新しい 1 章の 1-1（出力 `design/weights/2026-11-12_1-1.md`）。別案 ネル → ハギは `--plays=design/weights/p471_alt_hagi`
+    Godot_console.exe --path DemoApp --headless -- --chapter1-asym-smoke
+        # **第474期**: 1-1 の盤を非対称にする門（`Chapter1AsymSmoke.cs`・画面なし）。(a) 1 章（V474）の 1-1 は北 2 マス（物見の兵 → 盾の列）・南 4 マス（徴募兵 → 空 → 騎士の小隊 → 空）・峠の関は動かない ／ 250% ／ 200% ／ 抜くと金 +6 ／ 制圧したら勝ち
+        # ／ (b) 湧きは北が先（拠点まで 3 歩）・南は 5 歩 ／ (c) 行き先までの作戦ターン数（盤の最短路の歩数）が長さの違う道で正しい ／ (d) 単発と第461〜471期の 1-1 は今のまま
+        # ＋ 報告だけ: 峠の関（北の 2 マス目）の候補の重さ（雑兵 7 部隊 × その区画だけの 最大HP ／ 攻撃の倍率 × 始めの 6 枚の 5 隊）と、通し 100 seed（北だけ ／ 南だけ ／ 2 隊に分ける ／ 迎え撃つ × 隊の組み方 2 通り
+        # × 決めた盤 ／ 比べる相手「関も歩く ／ 全部抜いて勝ち」／ 第471期の盤・勝ち ／ 制圧の刻 ／ 失った枚数 ／ 金の余り ／ 関を抜いた数）。約 2 分。`--chapter1-asym-quick` は門だけ（約 2 秒）
+    Godot.exe --path DemoApp -- --chapter1-rule=<版のキー>
+        # **第474期**: 既定でない版の 1 章を画面で遊ぶ（例 `--chapter1-rule=V471`）（`Chapter1.ReadPlayRuleArg`・版のキーは `ChapterRule.Versions`）。`res://Map11Main.tscn` から開く絵の口（`--map-chapter=N`）でも読む。引数が無ければ何も変わらない
     Godot_console.exe --path DemoApp --headless -- --axis-diag [--seeds=20] [--axes=毒,生贄] [--stars=1,2,3] [--rule=V471] [--plays=<dir>] [--cap=2] [--out=<path>]
         # **第472期**: 弱い 4 軸の診断（`AxisDiag.cs` → `design/weights/axis_diag.md`・報告だけ）。10 軸の代表の隊（その軸の駒 ＋ `compare` の同じ行に多く載る駒・席は `compare` の行）＋ 写しのその軸の隊（軸ごとに 2 隊まで）
         # × 1 章の 1-2 ／ 1-3 の敵部隊の全部・勇者・本陣の守り → 勇者 × ☆1 ／ ☆2 ／ ☆3 × seed 20。決着T・看板の効果が初めて働いたターン・与えたダメージの内訳（素の殴り ／ 上乗せ ／ 呼んだ駒 ／ 殴り以外）・受けた（敵から ／ 味方から）・破片の減り・攻撃の下がり
         # ・続けて 3 戦（倒れた駒を持ち越す・道中の回復 50%）・雑兵の最大HP だけ ×2 ／ ×3 の順位・軸の駒がいつ手に入るか。約 35 秒。`--axis-diag-quick` は seed 2 ・軸 2 つ（毒・手番）・写しなし（約 2 秒・`.tmp/p472/axis_diag_quick.md`）
+        # **第473期**: `--stars-rule=V464|NL-f|NL-s|NL-1`（☆の表を替える）・`--swap=移動:ガルド>ハギ;生贄:ゾト>-`（代表の隊の駒を入れ替える・「-」は抜くだけ・同じ駒が隊にいれば止まる）。版の既定は第471期の 1 章に固定
+    Godot_console.exe --path DemoApp --headless -- --nel-leak [--seeds=20] [--out=<path>]
+        # **第473期**: ネルの漏れの測り（`AxisDiag.Nel.cs` → `design/weights/nel_leak.md`・報告だけ）。呪いの代表の隊 ＋ 写しの呪いの隊 2 つ × 第471期の 1 章の 1-2 ／ 1-3 の雑兵の全部と勇者 × ☆1 ／ ☆2 ／ ☆3 × seed 20
+        # × ☆の表 7 つ（今 ／ 対照 開戦の漏れなし ／ 呪うたびの漏れなし ／ 漏れなし ／ 版 NL-f ／ NL-s ／ NL-1）。味方の攻撃の下がりを経路に分ける・漏れを軽くすると誰の殴りが減るか・選ぶ線。約 20 秒。`--nel-leak-quick` は seed 2 ・☆1 ・代表の隊だけ（約 2 秒）
     Godot_console.exe --path DemoApp --headless -- --map11-phase176
         # **第176期 Phase 0**: Q0-1〜Q0-5（`PortalOn = false` が第175期の 18 量と一致するか ／
         # 重なりと同点の割り方 ／ 湧いた部隊を満タンで作る口 ／ 方針の手順 ／ 走行時間）。約 1 秒

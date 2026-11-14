@@ -97,11 +97,19 @@ public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList
         V465.Scales, StarRule.V464, DealRule.Off, InvestRule.V470, RosterRule.V471, MapStage.Stage11Ch471, Story: true);
 
     /// <summary>
+    /// 第474期の 1 章（指示書 design/PHASE474_STAGE11_ASYM_SPEC.md §1）。第471期に、<b>1-1 の盤を非対称に</b>（<see cref="MapStage.Stage11Ch474"/>・北 2 マス 短くて硬い ／ 南 4 マス 長くて軽い）を載せただけ。
+    /// 北の 2 マス目の峠の関は動かず（抜くと金 +6）、1-1 も<b>敵の拠点を制圧したら勝ち</b>（ポン 2026-11-14）。
+    /// 始めの 6 枚・呼べる駒・倍率（1-1 ×0.6）・湧き・金・投資の札・頭の札の文は第471期のまま。1-2 ／ 1-3 も第471期のまま。
+    /// </summary>
+    public static readonly ChapterRule V474 = new(true, "第474期（持ち越し・敵の倍率・☆の強化・勇者の回復なし・投資は 1-2 から・盤と金の札・加入の表・始めの 6 枚はガン入り・1-1 は道の長さが違う）",
+        V465.Scales, StarRule.V464, DealRule.Off, InvestRule.V470, RosterRule.V471, MapStage.Stage11Ch474, Story: true);
+
+    /// <summary>
     /// 版の一覧（第466期・遊びの写しが版をキーで持つ——写しの版で 1 章を始め直すため）。<b>版を足したらここにも足す。</b>
     /// </summary>
     public static IReadOnlyList<(string Key, ChapterRule Rule)> Versions
         => new[] { ("V460", V460), ("V461", V461), ("V462", V462), ("V463", V463), ("V464", V464), ("V465", V465), ("V467", V467), ("V468", V468), ("V469", V469),
-                   ("V470", V470), ("V471", V471) };
+                   ("V470", V470), ("V471", V471), ("V474", V474) };
 
     /// <summary>版のキー（「V465」・一覧に無ければ名前）。</summary>
     public string Key { get { string n = Name; return Versions.FirstOrDefault(v => v.Rule.Name == n).Key ?? n; } }
@@ -116,7 +124,22 @@ public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList
 public static class Chapter1
 {
     /// <summary>遊ぶ 1 章の規則（編成画面の札「1 章」・絵の口が始める版）。</summary>
-    public static ChapterRule Default => ChapterRule.V471;   // 第461期から持ち越しのある 1 章・第462期から敵の倍率・第463期から☆の重ね・第464期から☆は強化で・第465期から勇者の回復なし・第467期から軸への投資・第468期から盤と金の札・第469期から加入の表・第470期から 1 章の手直し・第471期から始めの 6 枚はガン入り
+    /// 第474期: `--chapter1-rule=<版のキー>` で起動したときだけ、その版を遊ぶ 1 章にする（<see cref="ReadPlayRuleArg"/>・既定は変えない）。
+    public static ChapterRule Default => _playRule ?? ChapterRule.V474;   // 第474期から 1-1 は道の長さが違う盤・第461期から持ち越しのある 1 章・第462期から敵の倍率・第463期から☆の重ね・第464期から☆は強化で・第465期から勇者の回復なし・第467期から軸への投資・第468期から盤と金の札・第469期から加入の表・第470期から 1 章の手直し・第471期から始めの 6 枚はガン入り
+    private static ChapterRule? _playRule;
+
+    /// <summary>
+    /// 起動の引数 `--chapter1-rule=V474` を読む（第474期・まだ既定にしていない版を画面で遊ぶ口）。版が無ければ何もしない。
+    /// 引数が無ければ 1 行も変わらない。読んだ版のキーを返す（無ければ null）。
+    /// </summary>
+    public static string? ReadPlayRuleArg(IEnumerable<string> args)
+    {
+        string? key = args.FirstOrDefault(a => a.StartsWith("--chapter1-rule=", StringComparison.Ordinal))?["--chapter1-rule=".Length..];
+        if (key is null || ChapterRule.ByKey(key) is not { } rule) return null;
+        _playRule = rule;
+        return key;
+    }
+
     /// <summary>いまの 1 章の規則（<see cref="Begin"/> が決める）。</summary>
     public static ChapterRule Rule { get; private set; } = Default;
 
