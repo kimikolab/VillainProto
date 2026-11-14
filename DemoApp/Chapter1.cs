@@ -105,11 +105,18 @@ public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList
         V465.Scales, StarRule.V464, DealRule.Off, InvestRule.V470, RosterRule.V471, MapStage.Stage11Ch474, Story: true);
 
     /// <summary>
+    /// 第475期の 1 章（指示書 design/PHASE475_ROSTER35_SPEC.md §1）。第474期に、<b>加入の表の直し</b>（<see cref="RosterRule.V475"/>・体験版は 35 体）を載せただけ:
+    /// 逆しまのウツ・渡しのワタが 1-2 から呼べ、彼岸花のハギは 1-3 から（1-1 で呼べるのは 5 体）。駒・敵・盤・ほかの規則は第474期のまま。
+    /// </summary>
+    public static readonly ChapterRule V475 = new(true, "第475期（持ち越し・敵の倍率・☆の強化・勇者の回復なし・投資は 1-2 から・盤と金の札・加入の表は 35 体・始めの 6 枚はガン入り・1-1 は道の長さが違う）",
+        V465.Scales, StarRule.V464, DealRule.Off, InvestRule.V470, RosterRule.V475, MapStage.Stage11Ch474, Story: true);
+
+    /// <summary>
     /// 版の一覧（第466期・遊びの写しが版をキーで持つ——写しの版で 1 章を始め直すため）。<b>版を足したらここにも足す。</b>
     /// </summary>
     public static IReadOnlyList<(string Key, ChapterRule Rule)> Versions
         => new[] { ("V460", V460), ("V461", V461), ("V462", V462), ("V463", V463), ("V464", V464), ("V465", V465), ("V467", V467), ("V468", V468), ("V469", V469),
-                   ("V470", V470), ("V471", V471), ("V474", V474) };
+                   ("V470", V470), ("V471", V471), ("V474", V474), ("V475", V475) };
 
     /// <summary>版のキー（「V465」・一覧に無ければ名前）。</summary>
     public string Key { get { string n = Name; return Versions.FirstOrDefault(v => v.Rule.Name == n).Key ?? n; } }

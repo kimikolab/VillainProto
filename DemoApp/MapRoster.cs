@@ -73,6 +73,28 @@ public sealed class RosterRule
         },
     };
 
+    /// <summary>
+    /// 第475期の表（指示書 design/PHASE475_ROSTER35_SPEC.md §1・ポンの決定 2026-11-14）: 体験版は 35 体。
+    /// <b>逆しまのウツ・渡しのワタを 1-2 から</b>（呪いの読み手・第473期の報告）・<b>彼岸花のハギを 1-3 へ遅らせる</b>（1-1 で呼べるのは 5 体・埋めない）。
+    /// 始めの 6 枚は第471期のまま。表の並びは第471期の並びの後ろに足した。
+    /// </summary>
+    public static readonly RosterRule V475 = new()
+    {
+        On = true,
+        Name = "第475期（始めの 6 枚はガン入り・1-1 で 5 体 → 1-2 で 21 体 → 1-3 で 29 体・ウツ ／ ワタは 1-2 から・ハギは 1-3 から）",
+        StartStage = "1-1",
+        Start = V471.Start,
+        Joins = new (string, IReadOnlyList<string>)[]
+        {
+            ("1-1", new[] { "継ぎ接ぎのヴェル", "分かちのドハ", "見境なしのミサ", "爆ぜるゾト", "呪詛官ネル" }),
+            ("1-2", V469.Joins[1].Units.Concat(new[] { "逆しまのウツ", "渡しのワタ" }).ToArray()),
+            ("1-3", V469.Joins[2].Units.Concat(new[] { "彼岸花のハギ" }).ToArray()),
+        },
+    };
+
+    /// <summary>版のキーから表を引く（道具の `--roster=`・無ければ null）。</summary>
+    public static RosterRule? ByKey(string key) => key switch { "V469" => V469, "V471" => V471, "V475" => V475, _ => null };
+
     /// <summary>名前から駒を引く（`UnitCatalog.All`・無ければ落ちる——表の書き損じを最初の 1 回で見つける）。</summary>
     public static UnitDef Find(string name)
         => UnitCatalog.All.FirstOrDefault(d => d.Name == name) ?? throw new InvalidOperationException($"加入の表の駒が編成に選べる 52 枚に無い: {name}");
