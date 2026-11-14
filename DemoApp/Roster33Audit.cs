@@ -105,7 +105,7 @@ public static class Roster33Audit
                          .GroupBy(x => (Path.GetDirectoryName(x.Path), x.ChapterSeed, x.Stage))
                          .Select(g => g.OrderBy(x => x.Kind == "first" ? 0 : 1).First()))
             {
-                ChapterRule rule = ChapterRule.ByKey(s.Rule) ?? Chapter1.Default;
+                ChapterRule rule = ChapterRule.ByKey(s.Rule) ?? ChapterRule.V471;   // 第473期: 版の無い写しは第471期で（遊ぶ 1 章を替えても表が動かない）
                 int index = Math.Clamp(s.StageIndex, 0, 2);
                 MapStage stage = FoeWeight.StageAt(index, rule.ScaleOf(index), rule.Carry ? rule.First : null);
                 StarRule stars = rule.Stars is { On: true } sr ? sr : StarRule.V464;

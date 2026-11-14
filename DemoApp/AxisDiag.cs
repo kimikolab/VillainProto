@@ -327,7 +327,7 @@ public static class AxisDiag
         string repo = Path.GetFullPath(Path.Combine(demoAppDir, ".."));
         string root = Path.GetFullPath(Opt("plays") ?? Path.Combine(repo, "design", "plays"), repo);
         string outPath = Path.GetFullPath(Opt("out") ?? (quick ? Path.Combine(repo, ".tmp", "p472", "axis_diag_quick.md") : Path.Combine(repo, "design", "weights", "axis_diag.md")), repo);
-        ChapterRule rule = Opt("rule") is { } rk ? ChapterRule.ByKey(rk) ?? throw new ArgumentException($"版が無い: {rk}") : Chapter1.Default;
+        ChapterRule rule = Opt("rule") is { } rk ? ChapterRule.ByKey(rk) ?? throw new ArgumentException($"版が無い: {rk}") : ChapterRule.V471;   // 第473期: 第471期の 1 章に固定（遊ぶ 1 章は第473期のネルの漏れ・`--rule=V473` で今の版）
         int seeds = Opt("seeds") is { } sd ? int.Parse(sd, CultureInfo.InvariantCulture) : quick ? 2 : 20;
         int cap = Opt("cap") is { } cp ? int.Parse(cp, CultureInfo.InvariantCulture) : quick ? 0 : 2;
         var axes = (Opt("axes")?.Split(',').Select(x => x.Trim()).ToArray()) ?? (quick ? new[] { "毒", "手番" } : UnitTags.Axes);
