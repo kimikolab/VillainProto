@@ -8,23 +8,24 @@ using System.Linq;
 // 左上 ステージ名・作戦ターン・目標 ／ 右上 金 ／ 左下 隊の札（名前・顔ぶれ・HP）／ 右下 刻を進める。
 // <b>判定は 1 つも持たない</b>——中身は呼ぶ側（`Map11Main`）が渡し、押されたことは出来事で返すだけ（操作は今の 2D の画面と同じ口につながる）。
 // 画面の基準は 1920×1080。文字は 1280×720 に縮めても読めるよう 20px 以上にしてある。検証の表示はここに混ぜない（`Map3DDebugLayer`）。
+// 第474期: 下の UI は画面の高さの 15% 以内（`BottomShare` を 3D のレイアウトの検査が見る）。隊の札は使える隊だけで、
+// まだ開けていない隊は小さなボタン 1 つに畳む。「いま何をすればよいか」の 1 行は上の真ん中（出来事の 1 行と同じ場所）へ移した。
 
-/// <summary>隊の札 1 枚に出す中身。</summary>
+/// <summary>隊の札 1 枚に出す中身（使える隊だけ）。</summary>
 internal readonly record struct Map3DSquadCardInfo(
-    int Index, string Name, string Role, IReadOnlyList<UnitDef> Faces, int Count, double HpPercent,
-    string Where, string Order, bool Selected, bool Lost, bool Locked, string LockText);
+    int Index, string Name, IReadOnlyList<UnitDef> Faces, int Count, double HpPercent, string Order, bool Selected, bool Lost);
 
 public partial class Map3DHud : CanvasLayer
 {
-    internal const int Margin = 24;
+    internal const int Margin = 20;
     internal static readonly Color Ink = Color.FromHtml("#f4f0dd");
     internal static readonly Color Muted = Color.FromHtml("#b9bfb4");
     internal static readonly Color Gold = Color.FromHtml("#f1c96b");
-    internal static readonly Color Back = new(0.055f, 0.065f, 0.085f, 0.88f);
+    internal static readonly Color Back = new(0.055f, 0.075f, 0.095f, 0.90f);
     internal static readonly Color Edge = Color.FromHtml("#4c5a66");
 
     internal event Action<int>? SquadPressed;
-    internal event Action? ReformPressed, DetailPressed, RunPressed, StepPressed, FoesPressed, HistoryPressed;
+    internal event Action? ReformPressed, DetailPressed, SlotsPressed, RunPressed, StepPressed, FoesPressed, HistoryPressed;
     internal event Action<bool>? SpeedPressed;
 
     private readonly Control _root = new() { MouseFilter = Control.MouseFilterEnum.Ignore };
@@ -37,17 +38,19 @@ public partial class Map3DHud : CanvasLayer
     private readonly PanelContainer _goldPanel = Panel();
     private readonly Label _gold = Text("", 34, Gold, bold: true);
     private readonly Button _foes = Small("敵部隊"), _history = Small("戦闘の記録");
-    private readonly PanelContainer _toastPanel = Panel();
-    private readonly Label _toast = Text("", 24, Gold, bold: true);
-    private readonly PanelContainer _hintPanel = Panel();
-    private readonly Label _hint = Text("", 22, Ink);
+    private readonly PanelContainer _notePanel = Panel();
+    private readonly Label _note = Text("", 22, Gold, bold: true);
+    private string _toast = "", _hint = "";
+    private Color _toastColor = Gold;
+    private readonly HBoxContainer _left = new();
     private readonly HBoxContainer _cards = new();
     private readonly List<Map3DSquadCard> _squadCards = new();
-    private readonly Button _reform = Small("編成・呼ぶ・強化"), _detail = Small("配置を見る");
-    private readonly Label _clockState = Text("", 22, Ink);
+    private readonly Button _slots = Small("＋ 隊の枠"), _reform = Small("編成・呼ぶ・強化"), _detail = Small("配置を見る");
+    private readonly PanelContainer _clock = Panel();
+    private readonly Label _clockState = Text("", 20, Ink);
     private readonly ProgressBar _gauge = new() { MinValue = 0, MaxValue = 1, Step = 0, ShowPercentage = false, MouseFilter = Control.MouseFilterEnum.Ignore };
     private readonly Button _run = new() { FocusMode = Control.FocusModeEnum.None };
-    private readonly Button _speed1 = Small("1×"), _speed2 = Small("2×"), _step = Small("1 刻だけ");
+    private readonly Button _speed1 = Small("1×"), _speed2 = Small("2×"), _step = Small("1 刻");
 
     internal static Label Text(string value, int size, Color color, bool bold = false)
     {
@@ -68,10 +71,10 @@ public partial class Map3DHud : CanvasLayer
         ContentMarginLeft = pad + 4, ContentMarginRight = pad + 4, ContentMarginTop = pad, ContentMarginBottom = pad,
     };
 
-    internal static PanelContainer Panel()
+    internal static PanelContainer Panel(int pad = 14)
     {
         var panel = new PanelContainer();
-        panel.AddThemeStyleboxOverride("panel", Box(Back, Edge));
+        panel.AddThemeStyleboxOverride("panel", Box(Back, Edge, 2, 12, pad));
         return panel;
     }
 
@@ -79,10 +82,10 @@ public partial class Map3DHud : CanvasLayer
     {
         button.AddThemeFontOverride("font", bold ? Map3DFonts.Bold : Map3DFonts.Regular);
         button.AddThemeFontSizeOverride("font_size", size);
-        button.AddThemeStyleboxOverride("normal", Box(accent.Darkened(0.66f), accent, 2, 10, 8));
-        button.AddThemeStyleboxOverride("hover", Box(accent.Darkened(0.50f), accent.Lightened(0.2f), 2, 10, 8));
-        button.AddThemeStyleboxOverride("pressed", Box(accent.Darkened(0.74f), accent.Lightened(0.3f), 3, 10, 8));
-        button.AddThemeStyleboxOverride("disabled", Box(new Color(0.12f, 0.13f, 0.15f, 0.8f), Edge.Darkened(0.3f), 2, 10, 8));
+        button.AddThemeStyleboxOverride("normal", Box(accent.Darkened(0.66f), accent, 2, 10, 6));
+        button.AddThemeStyleboxOverride("hover", Box(accent.Darkened(0.50f), accent.Lightened(0.2f), 2, 10, 6));
+        button.AddThemeStyleboxOverride("pressed", Box(accent.Darkened(0.74f), accent.Lightened(0.3f), 3, 10, 6));
+        button.AddThemeStyleboxOverride("disabled", Box(new Color(0.12f, 0.13f, 0.15f, 0.8f), Edge.Darkened(0.3f), 2, 10, 6));
         button.AddThemeColorOverride("font_color", Ink);
         button.AddThemeColorOverride("font_hover_color", Colors.White);
         button.AddThemeColorOverride("font_disabled_color", new Color(0.6f, 0.62f, 0.6f));
@@ -91,7 +94,7 @@ public partial class Map3DHud : CanvasLayer
 
     private static Button Small(string text)
     {
-        var button = new Button { Text = text, FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(0, 46) };
+        var button = new Button { Text = text, FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(0, 44) };
         Dress(button, Edge.Lightened(0.15f), 20);
         return button;
     }
@@ -120,8 +123,8 @@ public partial class Map3DHud : CanvasLayer
                     Code = @"shader_type canvas_item;
 void fragment() {
     vec2 d = (UV - vec2(0.5)) * vec2(1.0, 1.12);
-    float v = smoothstep(0.42, 0.92, length(d));
-    COLOR = vec4(0.05, 0.03, 0.09, v * 0.50);
+    float v = smoothstep(0.56, 1.0, length(d));
+    COLOR = vec4(0.04, 0.06, 0.09, v * 0.30);
 }",
                 },
             },
@@ -144,7 +147,7 @@ void fragment() {
 
         // ---- 右上: 金 ＋ 今の窓を開くボタン ----
         var right = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Begin };
-        right.AddThemeConstantOverride("separation", 10);
+        right.AddThemeConstantOverride("separation", 8);
         var goldRow = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.End };
         goldRow.AddThemeConstantOverride("separation", 10);
         goldRow.AddChild(new Map3DCoin { CustomMinimumSize = new Vector2(40, 40), SizeFlagsVertical = Control.SizeFlags.ShrinkCenter });
@@ -161,67 +164,64 @@ void fragment() {
         _foes.Pressed += () => FoesPressed?.Invoke();
         _history.Pressed += () => HistoryPressed?.Invoke();
 
-        // ---- 上の真ん中: 出来事の 1 行（今の画面のトーストと同じ文） ----
-        _toast.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        _toast.HorizontalAlignment = HorizontalAlignment.Center;
-        _toast.CustomMinimumSize = new Vector2(760, 0);
-        _toastPanel.AddChild(_toast);
-        _toastPanel.MouseFilter = Control.MouseFilterEnum.Ignore;
-        _toastPanel.Visible = false;
-        _root.AddChild(_toastPanel);
-        Pin(_toastPanel, Control.LayoutPreset.CenterTop);
+        // ---- 上の真ん中: 出来事の 1 行（今の画面のトーストと同じ文）。出来事が無いあいだは「いま何をすればよいか」の 1 行 ----
+        _note.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        _note.HorizontalAlignment = HorizontalAlignment.Center;
+        _note.CustomMinimumSize = new Vector2(720, 0);
+        _notePanel.AddThemeStyleboxOverride("panel", Box(Back, Edge, 2, 12, 8));
+        _notePanel.AddChild(_note);
+        _notePanel.MouseFilter = Control.MouseFilterEnum.Ignore;
+        _notePanel.Visible = false;
+        _root.AddChild(_notePanel);
+        Pin(_notePanel, Control.LayoutPreset.CenterTop);
 
-        // ---- 左下: 隊の札 ----
-        var left = new VBoxContainer();
-        left.AddThemeConstantOverride("separation", 10);
-        _hint.AutowrapMode = TextServer.AutowrapMode.Off;
-        _hintPanel.AddChild(_hint);
-        _hintPanel.AddThemeStyleboxOverride("panel", Box(Back, Gold.Darkened(0.35f), 2, 10, 8));
-        _hintPanel.SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin;
-        _hintPanel.MouseFilter = Control.MouseFilterEnum.Ignore;
-        left.AddChild(_hintPanel);
-        var row = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Begin };
-        row.AddThemeConstantOverride("separation", 12);
-        _cards.AddThemeConstantOverride("separation", 12);
-        row.AddChild(_cards);
-        // 今の窓を開くボタン（組み直し・呼ぶ・強化 ／ 隊の配置の図）。
+        // ---- 左下: 隊の札（使える隊だけ）＋ 隊の枠 ＋ 今の窓を開くボタン ----
+        _left.AddThemeConstantOverride("separation", 10);
+        _cards.AddThemeConstantOverride("separation", 10);
+        _left.AddChild(_cards);
         var side = new VBoxContainer { SizeFlagsVertical = Control.SizeFlags.ShrinkEnd };
-        side.AddThemeConstantOverride("separation", 8);
-        _reform.CustomMinimumSize = _detail.CustomMinimumSize = new Vector2(0, 56);
-        side.AddChild(_detail);
+        side.AddThemeConstantOverride("separation", 6);
+        var sideTop = new HBoxContainer();
+        sideTop.AddThemeConstantOverride("separation", 6);
+        sideTop.AddChild(_detail);
+        sideTop.AddChild(_slots);
+        side.AddChild(sideTop);
         side.AddChild(_reform);
-        row.AddChild(side);
-        _detail.Pressed += () => DetailPressed?.Invoke();
-        left.AddChild(row);
-        _root.AddChild(left);
-        Pin(left, Control.LayoutPreset.BottomLeft);
+        _left.AddChild(side);
+        _root.AddChild(_left);
+        Pin(_left, Control.LayoutPreset.BottomLeft);
         _reform.Pressed += () => ReformPressed?.Invoke();
+        _detail.Pressed += () => DetailPressed?.Invoke();
+        _slots.Pressed += () => SlotsPressed?.Invoke();
 
         // ---- 右下: 刻を進める ----
-        PanelContainer clock = Panel();
-        var clockCol = new VBoxContainer();
-        clockCol.AddThemeConstantOverride("separation", 8);
+        var clockRow = new HBoxContainer();
+        clockRow.AddThemeConstantOverride("separation", 10);
+        _run.CustomMinimumSize = new Vector2(250, 96);
+        Dress(_run, Gold, 28);
+        _run.Pressed += () => RunPressed?.Invoke();
+        clockRow.AddChild(_run);
+        var clockCol = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
+        clockCol.AddThemeConstantOverride("separation", 6);
         clockCol.AddChild(_clockState);
-        _gauge.CustomMinimumSize = new Vector2(340, 10);
-        var fill = new StyleBoxFlat { BgColor = Gold, CornerRadiusTopLeft = 5, CornerRadiusTopRight = 5, CornerRadiusBottomLeft = 5, CornerRadiusBottomRight = 5 };
-        var groove = new StyleBoxFlat { BgColor = new Color(1, 1, 1, 0.14f), CornerRadiusTopLeft = 5, CornerRadiusTopRight = 5, CornerRadiusBottomLeft = 5, CornerRadiusBottomRight = 5 };
+        _gauge.CustomMinimumSize = new Vector2(196, 8);
+        var fill = new StyleBoxFlat { BgColor = Gold, CornerRadiusTopLeft = 4, CornerRadiusTopRight = 4, CornerRadiusBottomLeft = 4, CornerRadiusBottomRight = 4 };
+        var groove = new StyleBoxFlat { BgColor = new Color(1, 1, 1, 0.14f), CornerRadiusTopLeft = 4, CornerRadiusTopRight = 4, CornerRadiusBottomLeft = 4, CornerRadiusBottomRight = 4 };
         _gauge.AddThemeStyleboxOverride("fill", fill);
         _gauge.AddThemeStyleboxOverride("background", groove);
         clockCol.AddChild(_gauge);
-        _run.CustomMinimumSize = new Vector2(340, 76);
-        Dress(_run, Gold, 30);
-        _run.Pressed += () => RunPressed?.Invoke();
-        clockCol.AddChild(_run);
         var speeds = new HBoxContainer();
-        speeds.AddThemeConstantOverride("separation", 8);
+        speeds.AddThemeConstantOverride("separation", 6);
         foreach (Button b in new[] { _speed1, _speed2, _step }) { b.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill; speeds.AddChild(b); }
         _speed1.Pressed += () => SpeedPressed?.Invoke(false);
         _speed2.Pressed += () => SpeedPressed?.Invoke(true);
         _step.Pressed += () => StepPressed?.Invoke();
         clockCol.AddChild(speeds);
-        clock.AddChild(clockCol);
-        _root.AddChild(clock);
-        Pin(clock, Control.LayoutPreset.BottomRight);
+        clockRow.AddChild(clockCol);
+        _clock.AddThemeStyleboxOverride("panel", Box(Back, Edge, 2, 12, 8));
+        _clock.AddChild(clockRow);
+        _root.AddChild(_clock);
+        Pin(_clock, Control.LayoutPreset.BottomRight);
     }
 
     /// <summary>遊ぶ UI を出し入れする（今の窓＝編成の画面を開いているあいだは隠す）。</summary>
@@ -249,19 +249,21 @@ void fragment() {
         _history.Text = historyOpen ? "戦闘の記録 ▴" : "戦闘の記録";
     }
 
-    internal void SetToast(string text, Color color)
-    {
-        _toastPanel.Visible = text.Length > 0;
-        if (_toast.Text == text) return;
-        _toast.Text = text;
-        _toast.AddThemeColorOverride("font_color", color);
-        _toastPanel.ResetSize();
-    }
+    /// <summary>出来事の 1 行（空なら <see cref="SetHint"/> の 1 行が出る）。</summary>
+    internal void SetToast(string text, Color color) { _toast = text; _toastColor = color; ShowNote(); }
 
-    internal void SetHint(string text)
+    /// <summary>いま何をすればよいかの 1 行（出来事の 1 行が出ているあいだは隠れる）。</summary>
+    internal void SetHint(string text) { _hint = text; ShowNote(); }
+
+    private void ShowNote()
     {
-        _hintPanel.Visible = text.Length > 0;
-        _hint.Text = text;
+        bool toast = _toast.Length > 0;
+        string text = toast ? _toast : _hint;
+        _notePanel.Visible = text.Length > 0;
+        if (_note.Text == text) return;
+        _note.Text = text;
+        _note.AddThemeColorOverride("font_color", toast ? _toastColor : Ink);
+        _notePanel.ResetSize();
     }
 
     internal void SetSquads(IReadOnlyList<Map3DSquadCardInfo> squads)
@@ -280,12 +282,18 @@ void fragment() {
         }
     }
 
-    internal void SetReform(string text, bool enabled, string detail)
+    /// <summary>
+    /// 今の窓を開くボタン。<paramref name="slots"/> はまだ開けていない隊の枠の 1 行（「＋ 隊の枠（金 8）」・無ければ空 ＝ ボタンを出さない）。
+    /// </summary>
+    internal void SetReform(string text, bool enabled, string detail, string slots)
     {
         _reform.Text = text;
         _reform.Disabled = !enabled;
         _reform.TooltipText = enabled ? "" : "拠点にいる隊だけ組み直せます";
         _detail.Text = detail;
+        _slots.Visible = slots.Length > 0;
+        _slots.Text = slots;
+        _slots.TooltipText = "まだ使えない隊の枠。編成の窓で、金を払って開けます";
     }
 
     internal void SetClock(string run, bool busy, bool clockOn, bool fast, double fraction, string state)
@@ -304,11 +312,21 @@ void fragment() {
     internal Rect2 CardRect(int index) => _squadCards[index].GetGlobalRect();
     internal Rect2 RunRect => _run.GetGlobalRect();
 
-    /// <summary>遊ぶ UI が占める四角（盤の上の押す領域を重ねないため・検証の層も使う）。</summary>
+    /// <summary>下の UI（隊の札・刻を進める）が画面の高さに占める割合（3D のレイアウトの検査が 15% 以内を見る）。</summary>
+    internal float BottomShare
+    {
+        get
+        {
+            float top = Math.Min(_left.GetGlobalRect().Position.Y, _clock.GetGlobalRect().Position.Y);
+            return (_root.Size.Y - top) / Math.Max(1, _root.Size.Y);
+        }
+    }
+
+    /// <summary>遊ぶ UI が占める四角（名札を重ねないため・3D のレイアウトの検査も使う）。</summary>
     internal IEnumerable<Rect2> Blocks()
     {
         foreach (Node child in _root.GetChildren())
-            if (child is Control { Visible: true } c && c.MouseFilter != Control.MouseFilterEnum.Ignore) yield return c.GetGlobalRect();
+            if (child is Control { Visible: true } c) yield return c.GetGlobalRect();
     }
 }
 
@@ -326,15 +344,13 @@ public partial class Map3DCoin : Control
     }
 }
 
-/// <summary>左下の隊の札 1 枚（名前・顔ぶれ・HP・いまの命令）。押すとその隊を選ぶ。</summary>
+/// <summary>左下の隊の札 1 枚（名前・枚数と HP・顔ぶれ・いまの命令）。押すとその隊を選ぶ。</summary>
 public partial class Map3DSquadCard : Button
 {
     internal int Index { get; private set; }
-    private readonly Label _name = Map3DHud.Text("", 24, Map3DHud.Ink, bold: true);
-    private readonly Label _role = Map3DHud.Text("", 20, Map3DHud.Muted);
-    private readonly HBoxContainer _faces = new() { MouseFilter = MouseFilterEnum.Ignore };
+    private readonly Label _name = Map3DHud.Text("", 22, Map3DHud.Ink, bold: true);
     private readonly Label _hp = Map3DHud.Text("", 20, Map3DHud.Ink);
-    private readonly Label _where = Map3DHud.Text("", 20, Map3DHud.Muted);
+    private readonly HBoxContainer _faces = new() { MouseFilter = MouseFilterEnum.Ignore };
     private readonly Label _order = Map3DHud.Text("", 20, Map3DHud.Gold);
     private Map3DSquadCardInfo _info;
     private string _faceKey = "";
@@ -342,26 +358,23 @@ public partial class Map3DSquadCard : Button
     public Map3DSquadCard()
     {
         FocusMode = FocusModeEnum.None;
-        CustomMinimumSize = new Vector2(322, 196);
+        CustomMinimumSize = new Vector2(326, 132);
         MouseDefaultCursorShape = CursorShape.PointingHand;
         ClipContents = true;
         var col = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
-        col.AddThemeConstantOverride("separation", 3);
+        col.AddThemeConstantOverride("separation", 1);
         AddChild(col);
-        col.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect, margin: 12);
+        col.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect, margin: 10);
         var head = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
-        head.AddThemeConstantOverride("separation", 10);
-        _role.ClipText = true;
-        _role.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        _role.SizeFlagsVertical = SizeFlags.ShrinkEnd;
-        head.AddChild(_name); head.AddChild(_role);
+        head.AddThemeConstantOverride("separation", 12);
+        _hp.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        _hp.HorizontalAlignment = HorizontalAlignment.Right;
+        head.AddChild(_name); head.AddChild(_hp);
         col.AddChild(head);
         _faces.AddThemeConstantOverride("separation", 4);
-        _faces.CustomMinimumSize = new Vector2(0, 50);
+        _faces.CustomMinimumSize = new Vector2(0, 44);
         col.AddChild(_faces);
-        col.AddChild(_hp);
-        _where.ClipText = _order.ClipText = true;
-        col.AddChild(_where);
+        _order.ClipText = true;
         col.AddChild(_order);
     }
 
@@ -369,12 +382,7 @@ public partial class Map3DSquadCard : Button
     {
         _info = info;
         Index = info.Index;
-        // まだ使えない隊の札は細くする（枠を開ける値段だけ）。
-        CustomMinimumSize = new Vector2(info.Locked ? 214 : 322, 196);
-        _role.Visible = !info.Locked;
-        _hp.AutowrapMode = info.Locked ? TextServer.AutowrapMode.Arbitrary : TextServer.AutowrapMode.Off;
         _name.Text = info.Name;
-        _role.Text = info.Role;
         Disabled = info.Lost;
         string key = string.Join(",", info.Faces.Select(u => u.Id));
         if (key != _faceKey)
@@ -383,16 +391,14 @@ public partial class Map3DSquadCard : Button
             foreach (Node child in _faces.GetChildren()) { _faces.RemoveChild(child); child.QueueFree(); }
             foreach (UnitDef unit in info.Faces)
             {
-                var face = new UnitFaceIcon { CustomMinimumSize = new Vector2(50, 50) };
+                var face = new UnitFaceIcon { CustomMinimumSize = new Vector2(44, 44) };
                 face.SetUnit(unit);
                 _faces.AddChild(face);
             }
         }
-        _faces.Visible = info.Faces.Count > 0;
-        _hp.Text = info.Lost ? "失われた" : info.Locked ? info.LockText : info.Count == 0 ? "空席（駒を配る）" : $"{info.Count} 枚　HP {info.HpPercent:F0}%";
-        _where.Text = info.Lost || info.Locked ? "" : $"いま: {info.Where}";
-        _order.Text = info.Lost || info.Locked ? "" : info.Order;
-        Color edge = info.Selected ? Color.FromHtml("#ffd874") : info.Lost || info.Locked ? Map3DHud.Edge.Darkened(0.2f) : Color.FromHtml("#55d5b8").Darkened(0.25f);
+        _hp.Text = info.Lost ? "失われた" : info.Count == 0 ? "空席" : $"{info.Count} 枚　HP {info.HpPercent:F0}%";
+        _order.Text = info.Lost ? "" : info.Count == 0 ? "「編成・呼ぶ・強化」で駒を配る" : info.Order;
+        Color edge = info.Selected ? Color.FromHtml("#ffd874") : info.Lost ? Map3DHud.Edge.Darkened(0.2f) : Color.FromHtml("#55d5b8").Darkened(0.25f);
         Color back = info.Selected ? new Color(0.13f, 0.15f, 0.12f, 0.94f) : Map3DHud.Back;
         AddThemeStyleboxOverride("normal", Map3DHud.Box(back, edge, info.Selected ? 3 : 2, 12, 8));
         AddThemeStyleboxOverride("hover", Map3DHud.Box(back.Lightened(0.06f), edge.Lightened(0.2f), info.Selected ? 3 : 2, 12, 8));
@@ -404,8 +410,8 @@ public partial class Map3DSquadCard : Button
     public override void _Draw()
     {
         // HP の棒（札の下の縁に沿って）。
-        if (_info.Lost || _info.Locked || _info.Count == 0) return;
-        var bar = new Rect2(14, Size.Y - 12, Size.X - 28, 5);
+        if (_info.Lost || _info.Count == 0) return;
+        var bar = new Rect2(12, Size.Y - 9, Size.X - 24, 4);
         DrawRect(bar, new Color(1, 1, 1, 0.14f));
         DrawRect(new Rect2(bar.Position, new Vector2(bar.Size.X * (float)Math.Clamp(_info.HpPercent / 100.0, 0, 1), bar.Size.Y)), Color.FromHtml("#71d7a1"));
     }

@@ -212,7 +212,8 @@ public partial class Map11Main : Node3D
         // 第444期: 絵の口（`--map11-capture=`）だけ `--map-seed=N` で通しの seed を決められる（同じ絵を撮り直すため・遊ぶ起動では読まない）。
         string[] user = OS.GetCmdlineUserArgs();
         // 3D の fps を測る口（`--map3d-fps`）も、絵の口と同じく seed と 1 章を引数で決める（写しと同じ場面で測るため）。
-        bool pictured = user.Any(a => a.StartsWith("--map11-capture=", StringComparison.Ordinal)) || user.Contains("--map3d-fps", StringComparer.Ordinal);
+        bool pictured = user.Any(a => a.StartsWith("--map11-capture=", StringComparison.Ordinal)) || user.Contains("--map3d-fps", StringComparer.Ordinal)
+            || user.Contains("--map3d-layout-smoke", StringComparer.Ordinal);
         if (pictured
             && user.FirstOrDefault(a => a.StartsWith("--map-seed=", StringComparison.Ordinal)) is { } seedArg
             && int.TryParse(seedArg["--map-seed=".Length..], out int capSeed)

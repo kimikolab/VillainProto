@@ -76,7 +76,7 @@ public partial class Map11Main
         // ---- マスの円い台（味方 ／ 敵 ／ 空の色は `RefreshMap3D` が塗る） ----
         foreach (MapGraph.Cell c in St.Graph.Cells)
         {
-            float radius = c.Kind switch { MapGraph.Kind.Home => 2.4f, MapGraph.Kind.Portal => 2.2f, MapGraph.Kind.Outpost => 1.8f, _ => 1.4f };
+            float radius = c.Kind switch { MapGraph.Kind.Home => 2.5f, MapGraph.Kind.Portal => 2.3f, MapGraph.Kind.Outpost => 1.9f, _ => 1.55f };
             var mark = new Map3DCellMark(radius) { Position = PosOf(c.Id) };
             _map3d.AddChild(mark);
             _cellMarks3d[c.Id] = mark;
@@ -86,7 +86,7 @@ public partial class Map11Main
         // 敵の拠点へは経路ごとに入る（北から ／ 南から）ので、本陣の手前に経路ごとの小さな台を置く。
         for (int lane = 0; lane < St.Graph.Lanes.Count; lane++)
         {
-            var mark = new Map3DCellMark(0.95f) { Position = _layout3d.Approach[lane] };
+            var mark = new Map3DCellMark(1.05f) { Position = _layout3d.Approach[lane] };
             _map3d.AddChild(mark);
             _approachMarks3d.Add(mark);
         }
@@ -109,6 +109,14 @@ public partial class Map11Main
         _hud3d.SquadPressed += index => Select(index);
         _hud3d.DetailPressed += () => { _showSquadDetail = !_showSquadDetail; _showFoes = _showHistory = false; RefreshScreen(); };
         _hud3d.ReformPressed += ToggleReform;
+        // まだ開けていない隊の枠: 今の編成の窓で開ける（拠点にいる隊の組み直しを開く）。
+        _hud3d.SlotsPressed += () =>
+        {
+            int home = Enumerable.Range(0, St.Squads.Length).FirstOrDefault(St.CanReform, -1);
+            if (home < 0) { ShowToast("隊の枠は、拠点に隊がいるときに編成の窓で開けられます", EnemyColor, 3.0f); return; }
+            if (_selected != home) Select(home);
+            if (!_reform) ToggleReform();
+        };
         _hud3d.RunPressed += ToggleClock;
         _hud3d.StepPressed += AdvanceTurn;
         _hud3d.SpeedPressed += fast => { Map11Clock.Fast = fast; RefreshClock(); };
@@ -275,7 +283,8 @@ public partial class Map11Main
         if (_hud3d is null) return;
         int left = St.Nodes.Sum(r => r.Count(x => !x.Cleared)) + St.Spawns.Count(x => !x.Cleared) + (St.ReserveWaiting ? 1 : 0);
         string place = _layout3d?.Sheet?.Name is { Length: > 0 } name ? $"{St.Stage.Id}　{name}" : St.Stage.Title;
-        string title = (Chapter1.Active ? "1 章　" : "") + place + (St.Stage.FoeScale.Active ? $"　{St.Stage.FoeScale.BarText}" : "");
+        // 第474期: 敵の倍率（「敵 ×0.6」）は題字に出さない（検証の層 F3 が出す）。
+        string title = (Chapter1.Active ? "1 章　" : "") + place;
         string turn = !St.Time.On ? ""
             : $"作戦ターン {Map11Session.ShownTurn}" + (St.TimeLimitLeft is { } limit ? $"　／　期限まで あと {limit}" : "");
         string goal = St.HeroClock && St.Hero is { Cleared: false } hero ? $"目標　勇者を倒す（HP {hero.HpNow}）"
@@ -286,21 +295,23 @@ public partial class Map11Main
         _hud3d.SetGold(St.Stage.Gold.On ? St.Gold : null);
         _hud3d.SetWindows(_showFoes, _showHistory);
 
+        // 隊の札は使える隊だけ。まだ開けていない隊は「＋ 隊の枠」のボタン 1 つに畳む（第474期）。
         var cards = new List<Map3DSquadCardInfo>();
         foreach (Map11State.Squad s in St.Squads)
         {
-            bool locked = St.IsLocked(s.Index);
-            var faces = s.Lost || locked ? new List<UnitDef>()
+            if (St.IsLocked(s.Index)) continue;
+            var faces = s.Lost ? new List<UnitDef>()
                 : s.Units is { } units ? units.Where(u => u.IsAlive).OrderBy(u => u.Slot).Select(u => u.Def).ToList()
                 : s.Def.F.Occupied().OrderBy(u => u.Slot).Select(u => u.Def).ToList();
             string where = s.Pos == St.Graph.Home ? "拠点" : s.Pos == St.Graph.Portal ? Map11.PortalName : PlaceName(s.Pos);
-            cards.Add(new Map3DSquadCardInfo(s.Index, s.Label, s.Role, faces, faces.Count, faces.Count == 0 ? 0 : SquadHpPercent(s),
-                where, St.Time.On ? "→ " + OrderText(s.Index) : "", s.Index == _selected && _guideSquadChosen, s.Lost, locked,
-                locked ? $"枠を開ける: 金 {St.SlotPriceFor(s.Index)}" : ""));
+            cards.Add(new Map3DSquadCardInfo(s.Index, s.Label, faces, faces.Count, faces.Count == 0 ? 0 : SquadHpPercent(s),
+                St.Time.On ? "→ " + OrderText(s.Index) : where, s.Index == _selected && _guideSquadChosen, s.Lost));
         }
         _hud3d.SetSquads(cards);
         bool can = _selected >= 0 && _selected < St.Squads.Length && St.CanReform(_selected) && !St.Finished && !Map11Session.TurnRunning;
-        _hud3d.SetReform("編成・呼ぶ・強化", can, _showSquadDetail ? "配置を閉じる" : "配置を見る");
+        int locked = Enumerable.Range(0, St.Squads.Length).FirstOrDefault(St.IsLocked, -1);
+        _hud3d.SetReform("編成・呼ぶ・強化", can, _showSquadDetail ? "配置を閉じる" : "配置を見る",
+            locked < 0 ? "" : St.Stage.Gold.On ? $"＋ 隊の枠（金 {St.SlotPriceFor(locked)}）" : "＋ 隊の枠");
     }
 
     // =================================================================================
@@ -350,6 +361,7 @@ public partial class Map11Main
                 chip.HorizontalAlignment = HorizontalAlignment.Center;
                 _hud3d.Plates.AddChild(chip);
             }
+            // 「あと n」は選んだ隊が行ける先（と今の行き先）だけ。マスの名前は触れているあいだだけ添える（第474期 直し 3）。
             chip.Visible = reach || goal;
             if (!chip.Visible) continue;
             string eta = TurnsToDest(_selected, d.Dest) is { } steps ? $"あと {steps}" : "";
@@ -366,7 +378,7 @@ public partial class Map11Main
                     : Map3DHud.Box(new Color(0.07f, 0.06f, 0.03f, 0.86f), Color.FromHtml("#f1c96b"), 2, 16, 3));
                 chip.ResetSize();
             }
-            chip.Position = (center - chip.Size / 2 + new Vector2(0, -2)).Round();
+            _chipAt3d[chip] = new Rect2(center.X - half, center.Y - half * 0.66f, half * 2, half * 1.32f);
         }
         ProcessRoute3D(chosen, sel);
 
@@ -393,9 +405,140 @@ public partial class Map11Main
         string hint = St.Finished || Map11Session.TurnRunning ? ""
             : !_guideSquadChosen ? "隊の札か、盤の上の駒を押して隊を選ぶ"
             : !St.CanSend(_selected) ? (St.CanReform(_selected) ? "この隊は空席——「編成・呼ぶ・強化」で駒を配る" : "")
-            : _hoverDestination is null && !_guideDestinationChosen ? "光っているマスを押すと行き先が決まる（右ドラッグ: 横移動 ／ ホイール: 拡大）"
+            : _hoverDestination is null && !_guideDestinationChosen ? "光っているマスを押すと行き先が決まる"
             : _orderHint.Text;
         _hud3d.SetHint(hint);
+        PlaceLabels3D();
+    }
+
+    // =================================================================================
+    // 名札と「あと n」の札を置く（第474期 直し 7: 台・橋・旗・ほかの札・遊ぶ UI と重ねない）
+    // =================================================================================
+
+    /// <summary>「あと n」の札 → そのマスの台の画面の四角（このフレームに出ている札だけ）。</summary>
+    private readonly Dictionary<Label, Rect2> _chipAt3d = new();
+    /// <summary>このフレームに置いた物の四角（3D のレイアウトの検査が読む）。</summary>
+    private readonly List<(string Name, Rect2 Rect)> _plateRects3d = new(), _chipRects3d = new(), _bodyRects3d = new(), _discRects3d = new(),
+        _bridgeRects3d = new(), _hudRects3d = new(), _signRects3d = new();
+
+    private Rect2 ScreenBox(Vector3 centre, Vector3 halfX, Vector3 halfZ, float up = 0)
+    {
+        Rect2? box = null;
+        foreach (float a in new[] { -1f, 1f })
+            foreach (float b in new[] { -1f, 1f })
+                foreach (float y in up > 0 ? new[] { 0f, up } : new[] { 0f })
+                {
+                    Vector2 q = _camera.UnprojectPosition(centre + halfX * a + halfZ * b + Vector3.Up * y);
+                    box = box is { } r ? r.Expand(q) : new Rect2(q, Vector2.Zero);
+                }
+        return box ?? default;
+    }
+
+    private static float Overlap(Rect2 a, Rect2 b)
+    {
+        Rect2 c = a.Grow(-1).Intersection(b);
+        return c.Size.X > 0 && c.Size.Y > 0 ? c.Size.X * c.Size.Y : 0;
+    }
+
+    /// <summary>
+    /// 名札と「あと n」の札の置き場所を決める。候補（真下 → 右 → 左 → 頭の上 …）を順に見て、重なりが 0 の最初の所へ置く
+    /// （どこも重なるなら、重なりのいちばん小さい所）。<b>見た目だけ</b>——盤は読まない。
+    /// </summary>
+    private void PlaceLabels3D()
+    {
+        if (_hud3d is null || _map3d is null) return;
+        Vector2 view = GetViewport().GetVisibleRect().Size;
+        foreach (var list in new[] { _plateRects3d, _chipRects3d, _bodyRects3d, _discRects3d, _bridgeRects3d, _hudRects3d, _signRects3d }) list.Clear();
+        foreach (var (cell, mark) in _cellMarks3d)
+            _discRects3d.Add(($"台:{PlaceName(cell)}", ScreenBox(mark.GlobalPosition, Vector3.Right * mark.Radius * 1.06f, Vector3.Back * mark.Radius * 1.06f)));
+        for (int lane = 0; lane < _approachMarks3d.Count; lane++)
+            _discRects3d.Add(($"台:本陣の手前（{St.Stage.LaneMark(lane)}）",
+                ScreenBox(_approachMarks3d[lane].GlobalPosition, Vector3.Right * _approachMarks3d[lane].Radius * 1.06f, Vector3.Back * _approachMarks3d[lane].Radius * 1.06f)));
+        foreach (var (at, along) in _map3d.Bridges)
+            _bridgeRects3d.Add(("橋", ScreenBox(at + Vector3.Up * 0.2f, along * 2.7f, along.Cross(Vector3.Up) * 1.25f, 0.6f)));
+        foreach (Rect2 block in _hud3d.Blocks()) _hudRects3d.Add(("遊ぶ UI", block));
+        if (_homePlate3d is { Visible: true }) _signRects3d.Add(("名札:拠点", _homePlate3d.GetGlobalRect()));
+        if (_portalPlate3d is { Visible: true }) _signRects3d.Add(("名札:敵の拠点", _portalPlate3d.GetGlobalRect()));
+        var pieces = _mapPicks.Where(p => _pieces3d.TryGetValue(p.Marker, out Map3DPiece? piece) && piece.Shown)
+            .Select(p => (Piece: _pieces3d[p.Marker], Name: p.Foe is { } foe ? foe.Def.Name : St.Squads[p.Squad].Label))
+            .Select(p => (p.Piece, p.Name, Body: p.Piece.ScreenRect(_camera))).OrderBy(p => p.Body.End.Y).ThenBy(p => p.Body.Position.X).ToList();
+        foreach (var p in pieces) _bodyRects3d.Add(($"駒:{p.Name}", p.Body));
+
+        float Cost(Rect2 r, bool plate)
+        {
+            float cost = 0;
+            foreach (var (_, o) in _hudRects3d) cost += Overlap(r, o) * 4;
+            foreach (var (_, o) in _signRects3d) cost += Overlap(r, o) * 2;
+            foreach (var (_, o) in _bodyRects3d) cost += Overlap(r, o) * 2;
+            foreach (var (_, o) in _plateRects3d) cost += Overlap(r, o) * 2;
+            foreach (var (_, o) in _chipRects3d) cost += Overlap(r, o) * 2;
+            if (plate)
+            {
+                foreach (var (_, o) in _discRects3d) cost += Overlap(r, o);
+                foreach (var (_, o) in _bridgeRects3d) cost += Overlap(r, o);
+            }
+            var screen = new Rect2(8, 8, view.X - 16, view.Y - 16);
+            if (!screen.Encloses(r)) cost += r.Size.X * r.Size.Y * 6;
+            return cost;
+        }
+        Vector2 Choose(IEnumerable<Vector2> candidates, Vector2 size, bool plate)
+        {
+            Vector2 best = default;
+            float least = float.MaxValue;
+            foreach (Vector2 at in candidates)
+            {
+                float cost = Cost(new Rect2(at, size), plate);
+                if (cost < least) { least = cost; best = at; }
+                if (cost <= 0) break;
+            }
+            return best;
+        }
+
+        // ---- 駒の名札: 台のすぐ下 → 右 → 左 → 頭の上 → さらに下 ----
+        foreach (var p in pieces)
+        {
+            Vector2 size = p.Piece.Plate.Size;
+            Rect2 body = p.Body;
+            float cx = body.GetCenter().X;
+            // 駒が載っている台（体の足元と重なる台）の下の縁まで下げる。
+            float under = body.End.Y;
+            foreach (var (_, disc) in _discRects3d)
+                if (disc.Grow(2).HasPoint(new Vector2(cx, body.End.Y - 6))) under = Math.Max(under, disc.End.Y);
+            Vector2 at = Choose(new[]
+            {
+                new Vector2(cx - size.X / 2, under + 5),
+                new Vector2(body.End.X + 8, body.End.Y - size.Y + 6),
+                new Vector2(body.Position.X - 8 - size.X, body.End.Y - size.Y + 6),
+                new Vector2(cx - size.X / 2, body.Position.Y - size.Y - 6),
+                new Vector2(body.End.X + 8, body.Position.Y + 8),
+                new Vector2(body.Position.X - 8 - size.X, body.Position.Y + 8),
+                new Vector2(cx - size.X / 2, under + 40),
+                new Vector2(cx - size.X / 2 + size.X * 0.6f, under + 5),
+                new Vector2(cx - size.X / 2 - size.X * 0.6f, under + 5),
+            }, size, plate: true);
+            p.Piece.Plate.Visible = true;
+            p.Piece.Plate.Place(at, p.Piece.Clock);
+            _plateRects3d.Add(($"名札:{p.Name}", new Rect2(at.Round(), size)));
+        }
+
+        // ---- 「あと n」の札: 空の台なら真ん中、駒のいる台なら台の左 → 右 → 上 ----
+        foreach (var (chip, disc) in _chipAt3d)
+        {
+            if (!chip.Visible) continue;
+            Vector2 size = chip.Size, c = disc.GetCenter();
+            Vector2 at = Choose(new[]
+            {
+                c - size / 2 + new Vector2(0, -2),
+                new Vector2(disc.Position.X - size.X - 4, c.Y - size.Y / 2),
+                new Vector2(disc.End.X + 4, c.Y - size.Y / 2),
+                new Vector2(disc.Position.X - size.X * 0.7f, disc.Position.Y - size.Y - 2),
+                new Vector2(disc.End.X - size.X * 0.3f, disc.Position.Y - size.Y - 2),
+                new Vector2(c.X - size.X / 2, disc.End.Y + 4),
+            }, size, plate: false);
+            chip.Position = at.Round();
+            _chipRects3d.Add(($"あと n:{chip.Text}", new Rect2(at.Round(), size)));
+        }
+        _chipAt3d.Clear();
     }
 
     private void SetPlate(Label plate, string text, Color edge, Vector3 world)
@@ -550,24 +693,7 @@ public partial class Map11Main
 
     private async System.Threading.Tasks.Task Map3DCaptureSteps(string mode)
     {
-        if (_introOverlay is not null) _introOverlay.Visible = false;
-        if (_investOverlay is not null) _investOverlay.Visible = false;
-        if (Map11Session.Drafting && St.Bench.Count > 0)
-        {
-            // 1 章は手札から自分で組む（既定の組み方が無い）ので、使える隊へ前の席から順番に配る。単発の盤は既定の組み方。
-            if (Chapter1.Active)
-            {
-                int[] open = Enumerable.Range(0, St.Squads.Length).Where(i => !St.IsLocked(i)).Take(2).ToArray();
-                for (int k = 0; St.Bench.Count > 0 && k < open.Length * FormationRules.PlayableSlots.Length; k++)
-                    St.SwapWithBench(open[k % open.Length], FormationRules.PlayableSlots[k / open.Length], 0);
-            }
-            else St.UseDefaultSquads();
-        }
-        Map11Session.TakeOpening();
-        _reform = false;
-        ClearHold();
-        _guideSquadChosen = _guideDestinationChosen = false;
-        Refresh();
+        SceneStart3D();
         if (mode == "m3d-click") { await Map3DClickCheck(); return; }
         // 今の窓を開いたところ（重なりの確かめ用）: `m3d-detail` は隊の配置、`m3d-foes` は敵部隊の一覧。
         if (mode is "m3d-detail" or "m3d-foes")
@@ -577,34 +703,148 @@ public partial class Map11Main
             _showFoes = mode == "m3d-foes";
             Refresh();
         }
-        else if (mode != "m3d-start")
+        else if (mode == "m3d-win")
         {
-            int[] movers = Enumerable.Range(0, St.Squads.Length).Where(St.CanSend).Take(2).ToArray();
-            // 第1隊は北の道を奥へ。第2隊は `m3d-moved` では南の道の手前まで出て、`m3d-camp` では拠点で番をする（南から来る敵を迎え撃つ）。
-            for (int k = 0; k < movers.Length; k++)
-                Map11Session.SetDestination(movers[k], k == 0 ? Dest.Deep(St.Graph, 0)
-                    : mode == "m3d-camp" ? Dest.Home : Dest.Of(St.Graph, St.Graph.Lanes[^1][0]));
-            bool camp = mode == "m3d-camp";
-            bool Near() => movers.Any(m => !St.Squads[m].Lost && St.Graph.Lanes.Any(l => l[^1] == St.Squads[m].Pos));
-            for (int turn = 0; turn < (camp ? 14 : 2) && !St.Finished && !(camp && Near()); turn++)
+            // 1 章の 1-1 を 3D の画面で制圧まで（戦闘は器具が決着）: 本陣の手前まで進め、そのまま敵の拠点へ入る。合否は `MAP3D_WIN_COMPLETE`。
+            await SceneAdvance3D(camp: true);
+            for (int turn = 0; turn < 12 && !St.Finished; turn++)
             {
                 HeadlessTurn3D();
                 Refresh();
-                await ToSignal(GetTree().CreateTimer(0.5), SceneTreeTimer.SignalName.Timeout);   // 駒が歩き終えるのを待つ（絵を撮る通しでも歩かせる）
+                await ToSignal(GetTree().CreateTimer(0.5), SceneTreeTimer.SignalName.Timeout);
             }
-            int pick = movers.Where(m => !St.Squads[m].Lost).OrderByDescending(m => camp && St.Graph.Lanes.Any(l => l[^1] == St.Squads[m].Pos) ? 1 : 0)
-                .DefaultIfEmpty(0).First();
-            Select(pick);
-            if (camp && St.Portal.On && !St.Squads[pick].Lost)
-                Map11Session.SetDestination(pick, Dest.Portal(St.Graph, Math.Max(0, St.Squads[pick].Road)));
-            _showSquadDetail = false;
-            _guideDestinationChosen = camp;
-            ShowToast("", GoldColor, 0);
-            Refresh();
+            if (St.Finished) ShowResult();
+            GD.Print($"MAP3D_WIN_COMPLETE ok={St.Finished && St.Won} won={St.Won} captured={St.Captured} turn={St.Turn} battles={St.Battles} "
+                + $"lanes={string.Join("/", St.Graph.Lanes.Select(l => l.Length))} result={_resultOverlay.Visible}");
         }
+        else if (mode != "m3d-start") await SceneAdvance3D(camp: mode == "m3d-camp");
         GD.Print($"MAP3D_CAPTURE mode={mode} stage={St.Stage.Id} seed={Map11Session.Seed} turn={St.Turn} battles={St.Battles} "
-            + "squads=" + string.Join("/", St.Squads.Select(s => s.Lost ? "lost" : PlaceName(s.Pos))) + $" finished={St.Finished}");
+            + "squads=" + string.Join("/", St.Squads.Select(s => s.Lost ? "lost" : $"{PlaceName(s.Pos)}:{s.Units?.Count(u => u.IsAlive) ?? 0}枚")) + $" finished={St.Finished}");
         await ToSignal(GetTree().CreateTimer(1.6), SceneTreeTimer.SignalName.Timeout);   // 影と素材の読み込みが落ち着くのを待つ
+    }
+
+    /// <summary>写しの「開始時」: 頭の札を閉じ、手札を配って作戦の画面へ。</summary>
+    private void SceneStart3D()
+    {
+        if (_introOverlay is not null) _introOverlay.Visible = false;
+        if (_investOverlay is not null) _investOverlay.Visible = false;
+        if (Map11Session.Drafting && St.Bench.Count > 0)
+        {
+            // 1 章は手札から自分で組む（既定の組み方が無い）: 第1隊に 5 枚（主力）、残りを第2隊へ。単発の盤は既定の組み方。
+            if (Chapter1.Active)
+            {
+                int[] open = Enumerable.Range(0, St.Squads.Length).Where(i => !St.IsLocked(i)).Take(2).ToArray();
+                foreach (int squad in open)
+                    foreach (int seat in FormationRules.PlayableSlots)
+                        if (St.Bench.Count > 0) St.SwapWithBench(squad, seat, 0);
+            }
+            else St.UseDefaultSquads();
+        }
+        Map11Session.TakeOpening();
+        _reform = false;
+        ClearHold();
+        _guideSquadChosen = _guideDestinationChosen = false;
+        Refresh();
+    }
+
+    /// <summary>
+    /// 写しの「隊が動いた後」／「敵の本陣の手前」。主力（第1隊）は 1 作戦ターン目は拠点で迎え撃ち（先頭の敵は 1 歩で拠点に着く）、
+    /// そのあと北の道を進む。<paramref name="camp"/> なら敵の本陣の 1 つ手前のマスに着くまで。第2隊は拠点で番。戦闘は器具が決着（画面へは行かない）。
+    /// </summary>
+    private async System.Threading.Tasks.Task SceneAdvance3D(bool camp)
+    {
+        int main = Enumerable.Range(0, St.Squads.Length).Where(St.CanSend).DefaultIfEmpty(0).First();
+        bool Near() => !St.Squads[main].Lost && St.Squads[main].Pos == St.Graph.Lanes[0][^1];
+        for (int turn = 0; turn < 14 && !St.Finished && !St.Squads[main].Lost; turn++)
+        {
+            bool foesComing = St.Nodes.SelectMany(r => r).Any(n => !n.Cleared && St.TurnsToHome(n) is <= 1);
+            Dest to = foesComing && St.Squads[main].Pos == St.Graph.Home ? Dest.Home
+                : camp ? Dest.Deep(St.Graph, 0) : Dest.Of(St.Graph, St.Graph.Lanes[0][0]);
+            Map11Session.SetDestination(main, to);
+            if (!to.AtHome && St.AtDest(main, to)) break;
+            HeadlessTurn3D();
+            Refresh();
+            await ToSignal(GetTree().CreateTimer(0.5), SceneTreeTimer.SignalName.Timeout);   // 駒が歩き終えるのを待つ（絵を撮る通しでも歩かせる）
+            if (camp ? Near() : St.Squads[main].Pos != St.Graph.Home) break;
+        }
+        Select(main);
+        if (camp && St.Portal.On && Near()) Map11Session.SetDestination(main, Dest.Portal(St.Graph, 0));
+        _showSquadDetail = false;
+        _guideDestinationChosen = camp;
+        ShowToast("", GoldColor, 0);
+        Refresh();
+    }
+
+    /// <summary>
+    /// 3D 用のレイアウトの検査（<c>--map3d-layout-smoke</c>・第474期 直し 7）。写しの 3 場面（開始時 ／ 隊が動いた後 ／ 敵の本陣の手前）を続けて作り、
+    /// 名札が台・橋・旗（駒）・遊ぶ UI・ほかの札と重ならないこと、札とマスの台が画面に収まること、下の UI が画面の 15% 以内であることを見る。
+    /// 合否は <c>MAP3D_LAYOUT_SMOKE_COMPLETE</c> の行。<b>盤は読むだけ</b>（通しは写しの口と同じ）。
+    /// </summary>
+    private async System.Threading.Tasks.Task Map3DLayoutSmoke()
+    {
+        var fails = new List<string>();
+        try
+        {
+            await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+            SceneStart3D();
+            await Settle();
+            Check("開始時");
+            await SceneAdvance3D(camp: false);
+            await Settle();
+            Check("動いた後");
+            await SceneAdvance3D(camp: true);
+            await Settle();
+            Check("本陣の手前");
+        }
+        catch (Exception e) { fails.Add("例外:" + e.Message); GD.PrintErr(e.ToString()); }
+        foreach (string line in fails) GD.Print("MAP3D_LAYOUT_FAIL " + line);
+        Vector2 size = GetViewport().GetVisibleRect().Size;
+        GD.Print($"MAP3D_LAYOUT_SMOKE_COMPLETE stage={St.Stage.Id} lanes={string.Join("/", St.Graph.Lanes.Select(l => l.Length))} view={size.X:F0}x{size.Y:F0} "
+            + $"bottom={_hud3d!.BottomShare * 100:F1}% ok={fails.Count == 0} failed={fails.Count}");
+        GetTree().Quit(fails.Count == 0 ? 0 : 1);
+
+        async System.Threading.Tasks.Task Settle()
+        {
+            await ToSignal(GetTree().CreateTimer(0.7), SceneTreeTimer.SignalName.Timeout);
+            for (int i = 0; i < 3; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        }
+        void Check(string scene)
+        {
+            Vector2 view = GetViewport().GetVisibleRect().Size;
+            var screen = new Rect2(0, 0, view.X, view.Y);
+            void Against(string kind, List<(string Name, Rect2 Rect)> mine, List<(string Name, Rect2 Rect)> others, bool same = false)
+            {
+                for (int i = 0; i < mine.Count; i++)
+                    for (int j = same ? i + 1 : 0; j < others.Count; j++)
+                        if (Overlap(mine[i].Rect, others[j].Rect) > 4)
+                            fails.Add($"{scene}: {mine[i].Name} が {others[j].Name} に重なる（{kind}）");
+            }
+            // 名札: 台・橋・旗（駒）・遊ぶ UI・建物の名札・ほかの名札と重ならない。
+            Against("名札×台", _plateRects3d, _discRects3d);
+            Against("名札×橋", _plateRects3d, _bridgeRects3d);
+            Against("名札×駒", _plateRects3d, _bodyRects3d);
+            Against("名札×UI", _plateRects3d, _hudRects3d);
+            Against("名札×建物の名札", _plateRects3d, _signRects3d);
+            Against("名札×名札", _plateRects3d, _plateRects3d, same: true);
+            // 「あと n」: 駒・名札・遊ぶ UI・ほかの「あと n」と重ならない（空の台の上には載る）。
+            Against("あと n×駒", _chipRects3d, _bodyRects3d);
+            Against("あと n×名札", _chipRects3d, _plateRects3d);
+            Against("あと n×UI", _chipRects3d, _hudRects3d);
+            Against("あと n×あと n", _chipRects3d, _chipRects3d, same: true);
+            Against("建物の名札×UI", _signRects3d, _hudRects3d);
+            foreach (var (name, rect) in _plateRects3d.Concat(_chipRects3d).Concat(_signRects3d))
+                if (!screen.Encloses(rect)) fails.Add($"{scene}: {name} が画面からはみ出す");
+            // マスの台と駒: 画面に収まり、遊ぶ UI の下に隠れない。
+            foreach (var (name, rect) in _discRects3d.Concat(_bodyRects3d))
+            {
+                if (!screen.Encloses(rect)) fails.Add($"{scene}: {name} が画面からはみ出す");
+                foreach (var (_, block) in _hudRects3d)
+                    if (Overlap(rect, block) > 4) fails.Add($"{scene}: {name} が遊ぶ UI の下に隠れる");
+            }
+            if (_hud3d!.BottomShare > 0.15f) fails.Add($"{scene}: 下の UI が画面の {_hud3d.BottomShare * 100:F1}%（15% 以内）");
+            GD.Print($"MAP3D_LAYOUT {scene} 名札 {_plateRects3d.Count} あと n {_chipRects3d.Count} 駒 {_bodyRects3d.Count} 台 {_discRects3d.Count} 橋 {_bridgeRects3d.Count} "
+                + $"作戦ターン {St.Turn} 隊 " + string.Join("/", St.Squads.Where(q => !St.IsLocked(q.Index)).Select(q => q.Lost ? "失" : PlaceName(q.Pos))));
+        }
     }
 
     /// <summary>

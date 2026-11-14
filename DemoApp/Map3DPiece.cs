@@ -26,10 +26,10 @@ internal static class Map3DFonts
 public partial class Map3DPiece : Node3D
 {
     // ポンが触る値（駒の大きさ）。
-    internal const float BoardHeight = 4.0f;      // 立ち絵の板の高さ（基準の体格 2.5 の駒）
+    internal const float BoardHeight = 4.6f;      // 立ち絵の板の高さ（基準の体格 2.5 の駒）
     internal const float BoardLean = 24f;         // 板を奥へ倒す角度（見下ろしのカメラに顔を向ける）
-    internal const float BaseRadius = 1.02f;      // 台座の半径
-    internal const float FlagHeight = 3.9f;       // 敵の旗の竿の高さ
+    internal const float BaseRadius = 1.10f;      // 台座の半径
+    internal const float FlagHeight = 4.3f;       // 敵の旗の竿の高さ
     internal const float WalkSeconds = 0.4f;      // 1 マス歩く時間
 
     private static readonly Color AllyColor = Color.FromHtml("#55d5b8");
@@ -57,6 +57,9 @@ public partial class Map3DPiece : Node3D
     private Vector3 _target;
     private float _top = BoardHeight;
 
+    /// <summary>名札（2D）。置く場所は呼ぶ側が決める——台・橋・旗・ほかの名札と重ならない所を探すため（`Map11Main.PlaceLabels3D`）。</summary>
+    internal Map3DPlate Plate => _plate;
+    internal float Clock => _clock;
     /// <summary>歩き終えたときの位置。</summary>
     internal Vector3 Target => _target;
     internal bool Shown { get; private set; }
@@ -336,14 +339,6 @@ public partial class Map3DPiece : Node3D
             _ring.Scale = new Vector3(pulse, 1, pulse);
             _ringMaterial.EmissionEnergyMultiplier = 2.2f + 0.9f * Mathf.Sin(_clock * 4.2f);
         }
-        // 名札は台座のすぐ下（画面の平面）。
-        _camera = _cameraOf?.Invoke();
-        if (_camera is null) return;
-        bool behind = _camera.IsPositionBehind(GlobalPosition);
-        _plate.Visible = !behind;
-        if (behind) return;
-        Vector2 foot = _camera.UnprojectPosition(GlobalPosition + new Vector3(0, 0, BaseRadius * 0.9f));
-        _plate.Place(foot + new Vector2(0, 6), _clock);
     }
 
     /// <summary>画面の上で駒が占める四角（押す領域を重ねるために呼ぶ側が使う）。</summary>
@@ -364,13 +359,17 @@ public partial class Map3DPiece : Node3D
     }
 }
 
-/// <summary>駒の名札（2D）。名前・数・HP の棒と、その上の 1 行（「拠点まで あと n」など）。入力は受けない。</summary>
+/// <summary>
+/// 駒の名札（2D）。名前・数・HP の棒と、その下の 1 行（「拠点まで あと n」など）。入力は受けない。
+/// <b>大きさは添え書きの 1 行まで含む</b>（置く場所を探すとき、添え書きも重ねないため）。
+/// </summary>
 public partial class Map3DPlate : Control
 {
     internal const int NameSize = 20, NoteSize = 19, CountSize = 18;
+    private const float BoxHeight = 52, NoteHeight = 27;
     private Map3DPieceInfo _info;
     private Color _team;
-    private float _clock;
+    private float _clock, _boxWidth = 132;
     internal bool Selected { get; set; }
 
     public Map3DPlate() { MouseFilter = MouseFilterEnum.Ignore; }
@@ -379,48 +378,52 @@ public partial class Map3DPlate : Control
     {
         if (_info == info && _team == team) return;
         _info = info; _team = team;
-        Vector2 name = Map3DFonts.Bold.GetStringSize(info.Name, fontSize: NameSize);
-        Size = new Vector2(Math.Max(132, name.X + 28), 52);
+        Font font = Map3DFonts.Bold;
+        _boxWidth = Math.Max(132, font.GetStringSize(info.Name, fontSize: NameSize).X + 28);
+        float note = info.Note.Length > 0 ? font.GetStringSize(info.Note, fontSize: NoteSize).X + 12 : 0;
+        Size = new Vector2(Math.Max(_boxWidth, note), BoxHeight + (info.Note.Length > 0 ? NoteHeight : 0));
         QueueRedraw();
     }
 
-    /// <summary>上の辺の真ん中を <paramref name="top"/> に合わせる。</summary>
-    internal void Place(Vector2 top, float clock)
+    /// <summary>左上を <paramref name="at"/> に置く。</summary>
+    internal void Place(Vector2 at, float clock)
     {
-        Position = new Vector2(Mathf.Round(top.X - Size.X / 2), Mathf.Round(top.Y));
+        Position = at.Round();
         _clock = clock;
         if (_info.Urgent || Selected) QueueRedraw();
     }
 
     public override void _Draw()
     {
-        var box = new Rect2(Vector2.Zero, Size);
+        float left = (Size.X - _boxWidth) / 2;
+        var box = new Rect2(left, 0, _boxWidth, BoxHeight);
         Color edge = Selected ? Color.FromHtml("#ffd874") : _team;
+        int width = Selected ? 3 : 2;
         DrawStyleBox(new StyleBoxFlat
         {
-            BgColor = new Color(0.06f, 0.07f, 0.09f, 0.86f), BorderColor = edge,
-            BorderWidthLeft = Selected ? 3 : 2, BorderWidthRight = Selected ? 3 : 2, BorderWidthTop = Selected ? 3 : 2, BorderWidthBottom = Selected ? 3 : 2,
+            BgColor = new Color(0.06f, 0.07f, 0.09f, 0.88f), BorderColor = edge,
+            BorderWidthLeft = width, BorderWidthRight = width, BorderWidthTop = width, BorderWidthBottom = width,
             CornerRadiusTopLeft = 9, CornerRadiusTopRight = 9, CornerRadiusBottomLeft = 9, CornerRadiusBottomRight = 9,
         }, box);
         Font font = Map3DFonts.Bold;
         Vector2 name = font.GetStringSize(_info.Name, fontSize: NameSize);
-        DrawString(font, new Vector2((Size.X - name.X) / 2, 7 + font.GetAscent(NameSize)), _info.Name, fontSize: NameSize,
+        DrawString(font, new Vector2(left + (_boxWidth - name.X) / 2, 7 + font.GetAscent(NameSize)), _info.Name, fontSize: NameSize,
             modulate: Color.FromHtml("#f4f0dd"));
         // HP の棒と数。
         string count = _info.Count > 0 ? $"×{_info.Count}" : "—";
         Vector2 countSize = font.GetStringSize(count, fontSize: CountSize);
-        float barWidth = Size.X - 24 - countSize.X - 8;
-        var bar = new Rect2(12, 36, barWidth, 8);
+        float barWidth = _boxWidth - 24 - countSize.X - 8;
+        var bar = new Rect2(left + 12, 36, barWidth, 8);
         DrawRect(bar, new Color(1, 1, 1, 0.16f));
         DrawRect(new Rect2(bar.Position, new Vector2(barWidth * (float)Math.Clamp(_info.HpPercent / 100.0, 0, 1), bar.Size.Y)),
             _info.Enemy ? Color.FromHtml("#ee7962") : Color.FromHtml("#71d7a1"));
-        DrawString(font, new Vector2(Size.X - 12 - countSize.X, 30 + font.GetAscent(CountSize)), count, fontSize: CountSize,
+        DrawString(font, new Vector2(left + _boxWidth - 12 - countSize.X, 30 + font.GetAscent(CountSize)), count, fontSize: CountSize,
             modulate: Color.FromHtml("#e8e2cc"));
         if (_info.Note.Length == 0) return;
         Vector2 note = font.GetStringSize(_info.Note, fontSize: NoteSize);
         Color tint = _info.NoteColor;
         if (_info.Urgent) tint = tint.Lerp(Colors.White, 0.25f + 0.25f * Mathf.Sin(_clock * 6));
-        var at = new Vector2((Size.X - note.X) / 2, Size.Y + 3 + font.GetAscent(NoteSize));
+        var at = new Vector2((Size.X - note.X) / 2, BoxHeight + 2 + font.GetAscent(NoteSize));
         DrawStringOutline(font, at, _info.Note, fontSize: NoteSize, size: 6, modulate: new Color(0.03f, 0.03f, 0.05f, 0.95f));
         DrawString(font, at, _info.Note, fontSize: NoteSize, modulate: tint);
     }

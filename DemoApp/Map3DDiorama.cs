@@ -12,15 +12,23 @@ public partial class Map3DStage
     private const string Materials = "res://PolyBlocks/NatureBlocks/source_files/materials/";
 
     // 光と色（夕暮れ寄り・明るすぎない）。ポンが触る値なのでここに並べる。
-    internal static readonly Color SunColor = Color.FromHtml("#ffb07a");
-    internal const float SunEnergy = 1.30f;
-    internal static readonly Vector3 SunAngles = new(-31, -66, 0);
-    internal static readonly Color FillColor = Color.FromHtml("#7a8ad8");
-    internal const float FillEnergy = 0.30f;
-    internal static readonly Color AmbientColor = Color.FromHtml("#6d6a96");
-    internal const float AmbientEnergy = 0.66f;
-    internal static readonly Color HazeColor = Color.FromHtml("#4a3d5c");
-    internal static readonly Color VoidColor = Color.FromHtml("#191522");
+    // 第474期: 橙の木と紫の影が賑やかだったので、青灰の影と苔色の地面に落ち着かせた（夕日の暖色は残す）。
+    internal static readonly Color SunColor = Color.FromHtml("#ffc894");
+    internal const float SunEnergy = 1.12f;
+    internal static readonly Vector3 SunAngles = new(-34, -58, 0);
+    internal static readonly Color FillColor = Color.FromHtml("#7f97b8");
+    internal const float FillEnergy = 0.26f;
+    internal static readonly Color AmbientColor = Color.FromHtml("#8fa2b6");
+    internal const float AmbientEnergy = 0.60f;
+    internal static readonly Color HazeColor = Color.FromHtml("#2c3a46");
+    internal static readonly Color VoidColor = Color.FromHtml("#62788b");   // Filmic の暗部でかなり沈むので、狙いの色（暗い青灰）より明るく置く
+    /// <summary>彩度（1.0 ＝ そのまま）。</summary>
+    internal const float Saturation = 0.86f;
+    /// <summary>木の葉を寄せる苔色と、寄せる強さ（0 ＝ 素材の色のまま）。</summary>
+    internal static readonly Color LeafMoss = new(0.20f, 0.31f, 0.26f);
+    internal const float LeafCalm = 0.50f;
+    /// <summary>山の色（素材の灰色は夕日で茶色い壁に見えたので、青灰で塗る）。</summary>
+    internal static readonly Color MountainColor = Color.FromHtml("#5b6972");
 
     private static readonly Dictionary<string, PackedScene?> Scenes = new(StringComparer.Ordinal);
     private static readonly Dictionary<string, Aabb> Boxes = new(StringComparer.Ordinal);
@@ -31,6 +39,9 @@ public partial class Map3DStage
     /// <summary>木や岩を置かない場所（マス・待つ場所・本陣の手前）。</summary>
     private readonly List<Vector3> _keepClear = new();
     private readonly List<Vector3[]> _rivers = new();
+    private Rect2 _bounds;
+    /// <summary>橋の場所と向き（3D のレイアウトの検査が、名札が橋に重ならないかを見る）。</summary>
+    internal List<(Vector3 At, Vector3 Along)> Bridges { get; } = new();
 
     /// <summary>使った素材の部品（報告と検証の層に出す・重複なし）。</summary>
     internal SortedSet<string> UsedParts { get; } = new(StringComparer.Ordinal);
@@ -42,6 +53,7 @@ public partial class Map3DStage
         _sheet = layout.Sheet;
         foreach (MapGraph.Cell c in graph.Cells) _keepClear.Add(layout.PosOf(c.Id));
         _keepClear.AddRange(layout.Approach);
+        _bounds = layout.Bounds;
         if (_sheet is not null)
         {
             _keepClear.AddRange(_sheet.HomeSlots);
@@ -57,17 +69,17 @@ public partial class Map3DStage
             BuildFort(_sheet.Fort);
             BuildGraveyard(_sheet.Graveyard);
             if (graph.HasPortal) BuildCamp(_sheet.Camp);
+            if (layout.Pass is { } pass) BuildPass(pass.At, pass.Forward);
             BuildFoothills();
             foreach (var (at, radius) in _sheet.Wetlands) BuildWetland(at, radius);
             foreach (var (at, radius, count, kind) in _sheet.Woods) BuildWood(at, radius, count, kind);
-            BuildMeadow(new Rect2(-30, -10, 60, 26), 260);
+            BuildMeadow(_bounds.Grow(-1.5f), 240);
         }
         else
         {
-            // 表の無いステージ: 盤のまわりに木を散らすだけ。
-            Vector3 mid = layout.Look;
-            BuildWood(mid + new Vector3(0, 0, -24), new Vector2(34, 5), 60, "pine");
-            BuildMeadow(new Rect2(mid.X - 34, mid.Z - 20, 68, 40), 260);
+            // 表の無いステージ: 台の奥に木を並べ、草を散らすだけ。
+            BuildWood(new Vector3(_bounds.GetCenter().X, 0, _bounds.Position.Y + 5), new Vector2(_bounds.Size.X / 2 - 3, 3.5f), 50, "pine");
+            BuildMeadow(_bounds.Grow(-1.5f), 240);
         }
         GD.Print($"MAP3D_DIORAMA table={_sheet is not null} parts={PartCount} kinds={UsedParts.Count} tools={Map3DMode.ToolsAvailable}");
     }
@@ -92,21 +104,21 @@ public partial class Map3DStage
                 TonemapMode = Godot.Environment.ToneMapper.Filmic,
                 TonemapExposure = 1.0f,
                 GlowEnabled = true,
-                GlowIntensity = 0.55f,
+                GlowIntensity = 0.42f,
                 GlowBloom = 0.04f,
                 GlowHdrThreshold = 1.05f,
                 FogEnabled = true,
                 FogMode = Godot.Environment.FogModeEnum.Depth,
                 FogLightColor = HazeColor,
-                FogDepthBegin = 66,
-                FogDepthEnd = 150,
+                FogDepthBegin = 84,
+                FogDepthEnd = 190,
                 FogSkyAffect = 0,
                 SsaoEnabled = true,
                 SsaoRadius = 1.2f,
                 SsaoIntensity = 1.6f,
                 AdjustmentEnabled = true,
-                AdjustmentContrast = 1.06f,
-                AdjustmentSaturation = 1.06f,
+                AdjustmentContrast = 1.04f,
+                AdjustmentSaturation = Saturation,
             },
         });
         // 夕日は西（左）から少し手前向きに差す——駒と木の影が右奥へ長く伸びる。
@@ -139,7 +151,9 @@ public partial class Map3DStage
     private static float Oval(Vector3 p, Vector3 at, Vector2 radius)
         => new Vector2((p.X - at.X) / radius.X, (p.Z - at.Z) / radius.Y).Length();
 
-    /// <summary>地面の高さ。盤の上（道・マス・建物）は 0 のまま、山すそだけせり上げ、川と湿地だけ掘る。</summary>
+    /// <summary>
+    /// 地面の高さ。道とマスのまわりは<b>道の高さ</b>に合わせ（表が道を高い所に通せば、そこが峠になる）、奥は山すそへせり上げ、川と湿地だけ掘る。
+    /// </summary>
     internal float Height(float x, float z)
     {
         var p = new Vector3(x, 0, z);
@@ -147,12 +161,21 @@ public partial class Map3DStage
         float foot = _sheet?.FoothillZ ?? -1000;
         if (z < foot)
         {
-            float rise = Smooth(0, 10, foot - z);
-            h += rise * (3.4f + 1.3f * Mathf.Sin(x * 0.21f) + 0.8f * Mathf.Cos(x * 0.47f + 1.3f));
+            float rise = Smooth(0, 7, foot - z);
+            h += rise * ((_sheet!.NorthRange ? 5.0f : 3.4f) + 1.3f * Mathf.Sin(x * 0.21f) + 0.8f * Mathf.Cos(x * 0.47f + 1.3f));
         }
-        // 手前と左右の縁はゆるい起伏（UI の下・画面の外）。
-        float rim = Math.Max(Smooth(15, 26, z), Smooth(27, 38, Math.Abs(x)));
-        h += rim * (0.9f + 0.5f * Mathf.Sin(x * 0.3f + z * 0.2f));
+        float near = float.MaxValue, level = 0;
+        foreach (Vector3[] road in _layout.Roads)
+        {
+            float d = Map3DLayout.Nearest(road, p, out float y);
+            if (d < near) { near = d; level = y; }
+        }
+        foreach (Vector3 c in _keepClear)
+        {
+            float d = new Vector2(c.X - x, c.Z - z).Length() - 2.0f;
+            if (d < near) { near = d; level = c.Y; }
+        }
+        h = Mathf.Lerp(level, h, Smooth(2.6f, 8.0f, near));
         foreach (Vector3[] river in _rivers)
             h -= 1.0f * (1 - Smooth(1.0f, 2.5f, Map3DLayout.DistanceTo(river, p))) * Math.Max(0.35f, 1 - Math.Max(0, h) * 0.25f);
         if (_sheet is not null)
@@ -161,41 +184,47 @@ public partial class Map3DStage
         return h;
     }
 
-    private Color GroundTint(float x, float z)
+    private Color GroundTint(float x, float z, float height)
     {
         var p = new Vector3(x, 0, z);
         float grain = 0.5f + 0.5f * Mathf.Sin(x * 1.7f + Mathf.Sin(z * 1.3f) * 2.1f) * Mathf.Cos(z * 1.1f - x * 0.6f);
-        Color c = new Color(0.78f, 0.86f, 0.66f).Lerp(new Color(0.92f, 0.90f, 0.70f), grain * 0.55f);
+        // 苔色の地面（第474期: 黄緑を抑えた）。
+        Color c = new Color(0.47f, 0.56f, 0.50f).Lerp(new Color(0.56f, 0.60f, 0.50f), grain * 0.5f);
         if (_sheet is null) return c;
         foreach (var (at, radius, _, kind) in _sheet.Woods)
-            c = c.Lerp(kind == "pine" ? new Color(0.52f, 0.60f, 0.52f) : new Color(0.50f, 0.64f, 0.46f), 0.75f * (1 - Smooth(0.6f, 1.25f, Oval(p, at, radius))));
+            c = c.Lerp(kind == "pine" ? new Color(0.38f, 0.46f, 0.45f) : new Color(0.35f, 0.46f, 0.41f), 0.75f * (1 - Smooth(0.6f, 1.25f, Oval(p, at, radius))));
         foreach (var (at, radius) in _sheet.Wetlands)
-            c = c.Lerp(new Color(0.40f, 0.50f, 0.42f), 0.85f * (1 - Smooth(0.6f, 1.3f, Oval(p, at, radius))));
+            c = c.Lerp(new Color(0.34f, 0.45f, 0.43f), 0.85f * (1 - Smooth(0.6f, 1.3f, Oval(p, at, radius))));
         // 砦と墓地のまわりは枯れた土、本陣のまわりは踏み固めた土。
-        c = c.Lerp(new Color(0.58f, 0.52f, 0.56f), 0.80f * (1 - Smooth(0.55f, 1.2f, Oval(p, _sheet.Fort + new Vector3(1.5f, 0, 0), new Vector2(8.5f, 6.5f)))));
-        c = c.Lerp(new Color(0.50f, 0.46f, 0.52f), 0.85f * (1 - Smooth(0.6f, 1.2f, Oval(p, _sheet.Graveyard, new Vector2(5.2f, 3.6f)))));
-        c = c.Lerp(new Color(0.96f, 0.82f, 0.60f), 0.75f * (1 - Smooth(0.55f, 1.2f, Oval(p, _sheet.Camp - new Vector3(1.5f, 0, 0), new Vector2(8.0f, 6.0f)))));
-        // 山すそは岩の灰色へ。
-        c = c.Lerp(new Color(0.70f, 0.68f, 0.72f), Smooth(0, 6, _sheet.FoothillZ - z));
+        c = c.Lerp(new Color(0.50f, 0.49f, 0.53f), 0.80f * (1 - Smooth(0.55f, 1.2f, Oval(p, _sheet.Fort + new Vector3(1.5f, 0, 0), new Vector2(8.5f, 6.5f)))));
+        c = c.Lerp(new Color(0.43f, 0.43f, 0.49f), 0.85f * (1 - Smooth(0.6f, 1.2f, Oval(p, _sheet.Graveyard, new Vector2(5.2f, 3.6f)))));
+        c = c.Lerp(new Color(0.76f, 0.69f, 0.56f), 0.75f * (1 - Smooth(0.55f, 1.2f, Oval(p, _sheet.Camp - new Vector3(1.5f, 0, 0), new Vector2(8.0f, 6.0f)))));
+        // 山すそと高い所は岩の青灰へ。
+        float rock = Math.Max(Smooth(0, 6, _sheet.FoothillZ - z), 0.7f * Smooth(1.2f, 4.0f, height));
+        c = c.Lerp(new Color(0.60f, 0.64f, 0.69f), rock);
         foreach (Vector3[] river in _rivers)
-            c = c.Lerp(new Color(0.56f, 0.60f, 0.56f), 1 - Smooth(1.6f, 3.2f, Map3DLayout.DistanceTo(river, p)));
+            c = c.Lerp(new Color(0.50f, 0.56f, 0.56f), 1 - Smooth(1.6f, 3.2f, Map3DLayout.DistanceTo(river, p)));
         return c;
     }
 
+    /// <summary>地面は<b>厚い台</b>（表の `Bounds` の四角）。端は側面を落として、盤が箱庭の 1 枚に見えるようにする。</summary>
     private void BuildGround()
     {
-        Vector3 mid = _layout.Look;
         const float step = 1.0f;
-        int nx = 96, nz = 76;
-        float x0 = Mathf.Round(mid.X) - nx / 2 * step, z0 = Mathf.Round(mid.Z) - 40 * step;
+        int nx = Mathf.CeilToInt(_bounds.Size.X / step), nz = Mathf.CeilToInt(_bounds.Size.Y / step);
+        float X(int i) => Math.Min(_bounds.Position.X + i * step, _bounds.End.X);
+        float Z(int j) => Math.Min(_bounds.Position.Y + j * step, _bounds.End.Y);
+        var heights = new float[nx + 1, nz + 1];
+        for (int i = 0; i <= nx; i++)
+            for (int j = 0; j <= nz; j++) heights[i, j] = Height(X(i), Z(j));
         var st = new SurfaceTool();
         st.Begin(Mesh.PrimitiveType.Triangles);
         void Vertex(int i, int j)
         {
-            float x = x0 + i * step, z = z0 + j * step;
-            st.SetColor(GroundTint(x, z));
+            float x = X(i), z = Z(j);
+            st.SetColor(GroundTint(x, z, heights[i, j]));
             st.SetUV(new Vector2(x, z) * 0.1f);
-            st.AddVertex(new Vector3(x, Height(x, z), z));
+            st.AddVertex(new Vector3(x, heights[i, j], z));
         }
         for (int i = 0; i < nx; i++)
             for (int j = 0; j < nz; j++)
@@ -213,12 +242,37 @@ public partial class Map3DStage
             var copy = (StandardMaterial3D)terrain.Duplicate();
             copy.VertexColorUseAsAlbedo = true;
             copy.DisableReceiveShadows = false;
-            copy.AlbedoColor = new Color(1.02f, 1.0f, 0.94f);
+            copy.AlbedoColor = new Color(0.80f, 0.94f, 1.36f);   // 素材の地面は黄緑が強いので、青を足して苔色へ
             material = copy;
             UsedParts.Add("materials/terrain/nbmat_terrain_verdant");
         }
         else material = new StandardMaterial3D { VertexColorUseAsAlbedo = true, AlbedoColor = Color.FromHtml("#5d7a48"), Roughness = 1 };
         AddChild(new MeshInstance3D { Name = "Ground", Mesh = st.Commit(), MaterialOverride = material });
+
+        // 台の側面（土の断面）と、縁の細い帯。
+        const float floor = -4.5f;
+        var side = new SurfaceTool();
+        side.Begin(Mesh.PrimitiveType.Triangles);
+        void Wall(Vector3 a, Vector3 b, Vector3 normal)
+        {
+            Vector3 a0 = new(a.X, floor, a.Z), b0 = new(b.X, floor, b.Z);
+            foreach (Vector3 v in new[] { a, b, a0, b, b0, a0 }) { side.SetNormal(normal); side.AddVertex(v); }
+        }
+        for (int i = 0; i < nx; i++)
+        {
+            Wall(new Vector3(X(i + 1), heights[i + 1, nz], Z(nz)), new Vector3(X(i), heights[i, nz], Z(nz)), Vector3.Back);
+            Wall(new Vector3(X(i), heights[i, 0], Z(0)), new Vector3(X(i + 1), heights[i + 1, 0], Z(0)), Vector3.Forward);
+        }
+        for (int j = 0; j < nz; j++)
+        {
+            Wall(new Vector3(X(0), heights[0, j + 1], Z(j + 1)), new Vector3(X(0), heights[0, j], Z(j)), Vector3.Left);
+            Wall(new Vector3(X(nx), heights[nx, j], Z(j)), new Vector3(X(nx), heights[nx, j + 1], Z(j + 1)), Vector3.Right);
+        }
+        AddChild(new MeshInstance3D
+        {
+            Name = "GroundSides", Mesh = side.Commit(),
+            MaterialOverride = new StandardMaterial3D { AlbedoColor = Color.FromHtml("#3a3a3c"), Roughness = 1, CullMode = BaseMaterial3D.CullModeEnum.Disabled },
+        });
     }
 
     // ---------------- 道・川（素材の道具） ----------------
@@ -231,7 +285,7 @@ public partial class Map3DStage
     {
         if (!Map3DMode.ToolsAvailable || !ResourceLoader.Exists(toolScene) || points.Count < 2) return null;
         var curve = new Curve3D { BakeInterval = 0.25f };
-        foreach (Vector3 p in points) curve.AddPoint(new Vector3(p.X, y, p.Z));
+        foreach (Vector3 p in points) curve.AddPoint(new Vector3(p.X, p.Y + y, p.Z));
         var path = new Path3D { Curve = curve };
         AddChild(path);
         var tool = GD.Load<PackedScene>(toolScene).Instantiate<Node3D>();
@@ -272,8 +326,8 @@ public partial class Map3DStage
         {
             int cuts = Math.Clamp((int)(Map3DLayout.LengthOf(road) * 2.5f), 8, 200);
             var settings = new List<(string, Variant)>();
-            if (Tinted("nbmat_terrain_sand", new Color(1.02f, 0.92f, 0.76f)) is { } sand) settings.Add(("road_material", sand));
-            if (Tinted("nbmat_terrain_swamp", new Color(0.80f, 0.74f, 0.62f)) is { } verge) settings.Add(("road_side_material", verge));
+            if (Tinted("nbmat_terrain_sand", new Color(1.04f, 0.97f, 0.84f)) is { } sand) settings.Add(("road_material", sand));
+            if (Tinted("nbmat_terrain_swamp", new Color(0.78f, 0.76f, 0.68f)) is { } verge) settings.Add(("road_side_material", verge));
             Node3D? made = RunTool(PurchasedAssets.NatureRoadTool, "road_path", "generate_road", road, 0, settings,
                 ("road_width", 1.7f), ("road_level", 0.07f), ("side_top_width", 2.3f), ("side_height", 0.10f), ("outer_width", 3.2f),
                 ("length_subdivisions", cuts), ("width_variance", 0.22f), ("width_random_seed", 11));
@@ -286,7 +340,9 @@ public partial class Map3DStage
     {
         for (int r = 0; r < _rivers.Count; r++)
         {
-            Vector3[] river = _rivers[r];
+            // 台の外へ出る分は落とす。
+            Vector3[] river = _rivers[r].Where(q => _bounds.Grow(-0.4f).HasPoint(new Vector2(q.X, q.Z))).ToArray();
+            if (river.Length < 2) continue;
             // 川底を地面より下に置き、水面が地面のすぐ下（-0.14）に来るようにする（地面は `Height` で同じ線に沿って掘ってある）。
             var settings = new List<(string, Variant)>();
             if (DuskWater("nbmat_water_flow") is { } flow) settings.Add(("water_material", flow));
@@ -356,6 +412,8 @@ public partial class Map3DStage
     {
         var root = new Node3D { Position = at };
         AddChild(root);
+        along = new Vector3(along.X, 0, along.Z).Normalized();
+        Bridges.Add((at, along));
         root.LookAt(at + along, Vector3.Up);   // -Z が道の向き
         StandardMaterial3D deck = Paint("#7a6044"), rail = Paint("#4f3d2c");
         for (float z = -2.5f; z <= 2.5f; z += 0.42f)
@@ -531,10 +589,43 @@ public partial class Map3DStage
         node.Rotation = new Vector3(0, yaw, 0);
         node.Position = new Vector3(at.X, Height(at.X, at.Z) - box.Position.Y * k - sink, at.Z);
         if (!shadow) Each<GeometryInstance3D>(node, g => g.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off);
+        Tone(node, part);
         AddChild(node);
         UsedParts.Add(part[..part.LastIndexOf('/')]);
         PartCount++;
         return node;
+    }
+
+    private static readonly Dictionary<Material, Material> Toned = new();
+    private static StandardMaterial3D? _mountainMaterial;
+
+    /// <summary>
+    /// 素材の色を落ち着かせる（第474期）。木と茂みの葉は苔色へ寄せ、山は青灰で塗る。<b>原本のマテリアルは変えない</b>（複製を実体に差す）。
+    /// </summary>
+    private static void Tone(Node node, string part)
+    {
+        if (node is MeshInstance3D { Mesh: not null } mesh)
+        {
+            if (part.StartsWith("terrain/mountains", StringComparison.Ordinal))
+                mesh.MaterialOverride = _mountainMaterial ??= new StandardMaterial3D { AlbedoColor = MountainColor, Roughness = 1 };
+            else
+                for (int i = 0; i < mesh.Mesh.GetSurfaceCount(); i++)
+                {
+                    if (mesh.GetActiveMaterial(i) is not ShaderMaterial leaf || leaf.Shader is null
+                        || !leaf.Shader.ResourcePath.Contains("leaves", StringComparison.Ordinal)) continue;
+                    if (!Toned.TryGetValue(leaf, out Material? calm))
+                    {
+                        var copy = (ShaderMaterial)leaf.Duplicate();
+                        if (copy.GetShaderParameter("albedoColor").VariantType == Variant.Type.Color)
+                            copy.SetShaderParameter("albedoColor", copy.GetShaderParameter("albedoColor").AsColor().Lerp(LeafMoss, LeafCalm));
+                        if (copy.GetShaderParameter("ambientStrength").VariantType == Variant.Type.Float)
+                            copy.SetShaderParameter("ambientStrength", copy.GetShaderParameter("ambientStrength").AsSingle() * 0.4f);
+                        Toned[leaf] = calm = copy;
+                    }
+                    mesh.SetSurfaceOverrideMaterial(i, calm);
+                }
+        }
+        foreach (Node child in node.GetChildren()) Tone(child, part);
     }
 
     private static void Each<T>(Node node, Action<T> act) where T : Node
@@ -561,9 +652,10 @@ public partial class Map3DStage
         return all ?? new Aabb(Vector3.Zero, Vector3.One);
     }
 
-    /// <summary>その点に物を置いてよいか（道・川・マス・建物から離れているか）。</summary>
-    private bool Clear(Vector3 p, float road = 2.1f, float cell = 3.0f)
+    /// <summary>その点に物を置いてよいか（台の中で、道・川・マス・建物から離れているか）。</summary>
+    private bool Clear(Vector3 p, float road = 2.8f, float cell = 3.2f)
     {
+        if (!_bounds.Grow(-1.2f).HasPoint(new Vector2(p.X, p.Z))) return false;
         foreach (Vector3[] line in _layout.Roads) if (Map3DLayout.DistanceTo(line, p) < road) return false;
         foreach (Vector3[] river in _rivers) if (Map3DLayout.DistanceTo(river, p) < 2.5f) return false;
         foreach (Vector3 c in _keepClear) if (new Vector2(c.X - p.X, c.Z - p.Z).Length() < cell) return false;
@@ -576,14 +668,15 @@ public partial class Map3DStage
 
     /// <summary>
     /// その高さの物をそこに置くと、奥の道・マス・駒を隠すか（カメラは手前（+Z）から見下ろすので、物は自分より奥を隠す）。
+    /// 第474期: 道筋が切れて見えないよう、道の全部の点を見て、横の幅も広げた。
     /// </summary>
     private bool Hides(Vector3 p, float height)
     {
-        float reach = height / 1.25f + 0.9f;
-        bool Behind(Vector3 q) => q.Z < p.Z && p.Z - q.Z < reach && Mathf.Abs(q.X - p.X) < 1.9f;
+        float reach = height / 1.15f + 1.4f;
+        bool Behind(Vector3 q) => q.Z < p.Z && p.Z - q.Z < reach && Mathf.Abs(q.X - p.X) < 2.5f;
         foreach (Vector3 c in _keepClear) if (Behind(c + new Vector3(0, 0, 1.2f))) return true;
         foreach (Vector3[] line in _layout.Roads)
-            for (int i = 0; i < line.Length; i += 2) if (Behind(line[i])) return true;
+            foreach (Vector3 q in line) if (Behind(q)) return true;
         return false;
     }
 
@@ -595,10 +688,10 @@ public partial class Map3DStage
             var p = at + new Vector3(Mathf.Cos(a) * radius.X * r, 0, Mathf.Sin(a) * radius.Y * r);
             float height = kind == "pine" ? Range(4.2f, 6.2f) : Range(3.2f, 4.8f);
             if (!Clear(p) || Hides(p, height)) continue;
-            string tone = Pick("forest", "forest", "forest", "olive", "autumn");
+            string tone = Pick("forest", "forest", "olive");   // 第474期: 橙（autumn）は使わない
             string part = kind == "pine"
                 ? $"trees/pine/nb_pine{Pick(1, 2)}_{Pick("forest", "forest", "olive")}.tscn"
-                : _random.Next(6) == 0 ? $"trees/birch/nb_birch{Pick(1, 2, 3)}_{Pick("forest", "autumn")}.tscn"
+                : _random.Next(6) == 0 ? $"trees/birch/nb_birch{Pick(1, 2, 3)}_forest.tscn"
                 : $"trees/generic/{tone}/nb_tree{Pick(1, 2, 3, 4, 5)}_{tone}.tscn";
             if (Put(part, p, height, Range(0, Mathf.Tau)) is null) continue;
             placed++;
@@ -658,36 +751,87 @@ public partial class Map3DStage
         }
     }
 
-    /// <summary>北の山すそ: 崖と岩を道の奥に並べ、その奥に山並み。</summary>
+    /// <summary>北の山すそ: 崖と岩を道の奥に並べ、その奥（台の北の端）に山並み。<c>NorthRange</c> の表では山を 2 列にして厚くする。</summary>
     private void BuildFoothills()
     {
-        float foot = _sheet!.FoothillZ;
-        for (float x = -34; x <= 34; x += Range(4.2f, 6.0f))
+        float foot = _sheet!.FoothillZ, north = _bounds.Position.Y, west = _bounds.Position.X, east = _bounds.End.X;
+        bool range = _sheet.NorthRange;
+        for (float x = west + 3; x <= east - 3; x += Range(4.2f, 6.0f))
         {
-            var p = new Vector3(x + Range(-0.8f, 0.8f), 0, foot - Range(1.6f, 3.4f));
-            if (_rivers.Any(r => Map3DLayout.DistanceTo(r, p) < 3.4f)) continue;
-            Put($"terrain/cliffs/grey/nb_cliff{Pick(1, 2, 3, 4, 5)}_grey.tscn", p, Range(3.0f, 4.6f), Range(0, Mathf.Tau), 0.5f);
+            var p = new Vector3(x + Range(-0.8f, 0.8f), 0, foot - Range(1.0f, 2.6f));
+            if (_rivers.Any(r => Map3DLayout.DistanceTo(r, p) < 3.4f) || !Clear(p, 3.4f, 3.6f)) continue;
+            Put($"terrain/cliffs/grey/nb_cliff{Pick(1, 2, 3, 4, 5)}_grey.tscn", p, Range(2.6f, 4.0f), Range(0, Mathf.Tau), 0.5f);
         }
-        for (int i = 0; i < 26; i++)
+        for (int i = 0; i < 22; i++)
         {
-            var p = new Vector3(Range(-32, 32), 0, foot - Range(-0.4f, 4.5f));
-            if (!Clear(p, 2.0f, 2.8f)) continue;
+            var p = new Vector3(Range(west + 2, east - 2), 0, foot - Range(-0.6f, 4.0f));
+            if (!Clear(p, 2.6f, 3.2f) || Hides(p, 1.2f)) continue;
             string tone = Pick("grey", "grey", "moss");
             Put(_random.Next(2) == 0 ? $"ground/boulders/{tone}/nb_boulder{Pick(1, 2, 3, 4)}_{tone}.tscn"
                     : $"ground/rocks/{tone}/nb_rock{Pick(1, 2, 3, 4, 5, 6)}_{tone}.tscn",
-                p, Range(0.5f, 1.3f), Range(0, Mathf.Tau), 0.12f);
+                p, Range(0.5f, 1.2f), Range(0, Mathf.Tau), 0.12f);
         }
-        // 山並み（奥）。川の谷だけ少し空ける。
-        float[] xs = { -38, -27, -16, -6, 13, 23, 33, 42 };
-        for (int i = 0; i < xs.Length; i++)
+        // 山並み（台の北の端に沿って）。
+        int k = 0;
+        for (float x = west + 4.5f; x <= east - 4.5f; x += range ? 6.6f : 8.2f, k++)
         {
-            var p = new Vector3(xs[i] + Range(-1.5f, 1.5f), 0, foot - Range(7.5f, 10.5f));
-            string tone = i % 3 == 2 ? "moss" : "grey";
-            Put($"terrain/mountains/{tone}/nb_mountain{1 + i % 4}_{tone}.tscn", p, Range(13, 19), Range(0, Mathf.Tau), 2.2f);
+            var p = new Vector3(x + Range(-1.0f, 1.0f), 0, north + Range(4.2f, 5.4f));
+            Put($"terrain/mountains/grey/nb_mountain{1 + k % 4}_grey.tscn", p, range ? Range(10, 14) : Range(8, 11), Range(0, Mathf.Tau), 2.4f);
         }
-        // 左右の端にも低い山（画面の外へ盤が続いて見えるように）。
-        Put("terrain/mountains/moss/nb_mountain2_moss.tscn", new Vector3(-41, 0, 4), 11, 1.1f, 2.0f);
-        Put("terrain/mountains/moss/nb_mountain3_moss.tscn", new Vector3(42, 0, 2), 12, 2.6f, 2.0f);
+        if (!range) return;
+        // 2 列目（手前・低め）。峠の関の真後ろと、川の上は空ける。
+        for (float x = west + 8f; x <= east - 8f; x += 7.4f, k++)
+        {
+            var p = new Vector3(x + Range(-1.2f, 1.2f), 0, north + Range(9.6f, 10.8f));
+            if (!Clear(p, 6.5f, 7.0f)) continue;
+            Put($"terrain/mountains/grey/nb_mountain{1 + k % 4}_grey.tscn", p, Range(5.0f, 7.0f), Range(0, Mathf.Tau), 1.6f);
+        }
+    }
+
+    /// <summary>
+    /// 峠の関（第474期・北の道の 2 マス目）。道を挟む柵と門の柱・盾の並び・赤い旗・両脇の岩（仮の箱と素材の岩）。
+    /// マスの台と敵の旗が立つ真ん中は空け、道の本陣の側を門で狭める。
+    /// </summary>
+    private void BuildPass(Vector3 at, Vector3 forward)
+    {
+        forward = new Vector3(forward.X, 0, forward.Z).Normalized();
+        var root = new Node3D { Name = "Pass", Position = at };
+        AddChild(root);
+        root.LookAt(at + forward, Vector3.Up);   // -Z が本陣の向き・+X が道の右（南）
+        StandardMaterial3D wood = Paint("#5d4a36"), dark = Paint("#3d3228"), steel = Paint("#8f979c", 0.5f), red = Paint("#a3352c", 0.7f);
+        Color banner = Color.FromHtml("#c8392f");
+        foreach (float gate in new[] { -2.5f })   // 本陣の側の門
+            foreach (float side in new[] { -1f, 1f })
+            {
+                // 門の柱と、その外へ伸びる柵（尖った杭）。
+                Box(root, new Vector3(side * 1.75f, 1.7f, gate), new Vector3(0.8f, 3.4f, 0.8f), wood);
+                Box(root, new Vector3(side * 1.75f, 3.55f, gate), new Vector3(1.0f, 0.3f, 1.0f), dark);
+                for (int i = 0; i < 6; i++)
+                {
+                    float h = Range(1.7f, 2.1f);
+                    Shape(root, new CylinderMesh { TopRadius = 0.03f, BottomRadius = 0.17f, Height = h, RadialSegments = 5 },
+                        new Vector3(side * (2.5f + i * 0.42f), h / 2, gate + Range(-0.08f, 0.08f)), wood);
+                }
+                Banner(root, new Vector3(side * 1.75f, 3.6f, gate), 1.9f, banner, 0.8f);
+                // 盾の並び（柵の手前に立て掛ける）。
+                for (int i = 0; i < 4; i++)
+                {
+                    var shield = Box(root, new Vector3(side * (2.6f + i * 0.62f), 0.55f, gate + 0.42f), new Vector3(0.5f, 0.8f, 0.08f), i % 2 == 0 ? steel : red);
+                    shield.RotationDegrees = new Vector3(-16, 0, 0);
+                }
+            }
+        Box(root, new Vector3(0, 3.3f, -2.5f), new Vector3(3.6f, 0.26f, 0.3f), dark);   // 門の横木
+        // 両脇の岩。奥（北）は高く、手前（南）は低く（マスと駒を隠さない）。
+        foreach (var (x, z, h) in new[] { (-4.6f, -0.6f, 3.6f), (-5.2f, 2.2f, 2.8f), (-4.4f, -3.4f, 3.0f) })
+        {
+            Vector3 p = root.ToGlobal(new Vector3(x, 0, z));
+            Put($"terrain/cliffs/grey/nb_cliff{Pick(1, 2, 3, 4, 5)}_grey.tscn", p, h, Range(0, Mathf.Tau), 0.4f);
+        }
+        foreach (var (x, z, h) in new[] { (4.6f, -2.6f, 1.3f), (5.0f, 2.0f, 1.1f) })
+        {
+            Vector3 p = root.ToGlobal(new Vector3(x, 0, z));
+            Put($"ground/boulders/grey/nb_boulder{Pick(1, 2, 3, 4)}_grey.tscn", p, h, Range(0, Mathf.Tau), 0.15f);
+        }
     }
 
     /// <summary>草・花・小石を野原に散らす（道とマスは避ける）。</summary>
@@ -699,7 +843,7 @@ public partial class Map3DStage
             if (!Clear(p, 1.5f, 2.3f)) continue;
             int roll = _random.Next(20);
             if (roll < 14) Put($"vegetation/grass/verdant/nb_grass{Pick("1.1", "1.2", "2.1", "2.2")}_verdant.tscn", p, Range(0.35f, 0.7f), Range(0, Mathf.Tau), shadow: false);
-            else if (roll < 16) Put($"vegetation/flowers/nb_flower{Pick(1, 2)}_{Pick("white", "white", "blue", "red")}.tscn", p, Range(0.3f, 0.5f), Range(0, Mathf.Tau), shadow: false);
+            else if (roll < 16) Put($"vegetation/flowers/nb_flower{Pick(1, 2)}_{Pick("white", "white", "blue")}.tscn", p, Range(0.3f, 0.5f), Range(0, Mathf.Tau), shadow: false);
             else
             {
                 string tone = roll < 18 ? Pick("grey", "moss") : Pick("forest", "olive");

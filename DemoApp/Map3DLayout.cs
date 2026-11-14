@@ -8,12 +8,16 @@ using System.Linq;
 /// 3D のどこに置くか・道がどう曲がるか・川・建物・森の場所だけを持つ。
 /// 表の無いステージ（いまは 1-2 ／ 1-3）は盤の座標をそのまま使い、道はまっすぐ・地形は草地と木だけになる（<see cref="Generic"/>）。
 /// 1-2 ／ 1-3 を足すときは <see cref="Tables"/> に 1 つ足すだけでよい。
+/// <b>表は「ステージの Id ＋ 盤の形（経路ごとのマスの数）」で引く</b>——1-1 は単発（3 マス × 2 本）と 1 章の第474期（北 2 マス・南 4 マス）で
+/// Id が同じ "1-1" なので、盤の形で分ける。
 /// </summary>
 internal sealed class Map3DLayout
 {
     /// <summary>ステージ 1 つぶんの表。マスは「経路の番号 × 経路の上の番号」で書く（盤の Id に依らない）。</summary>
     internal sealed class Table
     {
+        /// <summary>どのステージの表か（<c>MapStage.Id</c>）。盤の形は <see cref="Lanes"/> のマスの数で合わせる。</summary>
+        public required string Stage { get; init; }
         /// <summary>場所の名前（左上の題・建物の名札に出す・仮）。</summary>
         public string Name { get; init; } = "";
         public string HomeName { get; init; } = "";
@@ -39,14 +43,25 @@ internal sealed class Map3DLayout
         public Vector3[] HomeSlots { get; init; } = Array.Empty<Vector3>();
         /// <summary>カメラが見る点（盤の真ん中より少し手前——下の UI のぶん）。</summary>
         public Vector3 Look { get; init; }
+        /// <summary>地形の台の端（x, z の四角）。地面・木・山はこの中にだけ置き、端は厚い台の側面になる。</summary>
+        public Rect2 Bounds { get; init; } = new(-30, -21, 60, 38);
+        /// <summary>カメラを引く倍率（1.0 ＝ `Map3DCamera.Height` のまま）。台の全体が 1 画面に入る値にする。</summary>
+        public float Reach { get; init; } = 1f;
+        /// <summary>峠の関（柵と盾の並ぶ狭い所）を置くマス（経路, 経路の上の番号）。無ければ null。</summary>
+        public (int Lane, int Index)? Pass { get; init; }
+        /// <summary>山を北へ寄せる（奥の山並みを厚く・高くする）。</summary>
+        public bool NorthRange { get; init; }
     }
 
     /// <summary>表のあるステージ。<b>Id は <c>MapStage.Id</c></b>（1 章の 1-1 も検証用の 1-1 も "1-1"）。</summary>
-    private static readonly Dictionary<string, Table> Tables = new(StringComparer.Ordinal)
+    private static readonly List<Table> Tables = new()
     {
-        // 1-1: 左に辺境の砦と墓地、右に討伐隊の本陣。北の道は山すそを回り、南の道は森と湿地を抜ける。真ん中に森と川。
-        ["1-1"] = new Table
+        // 1-1（単発・3 マス × 2 本）: 左に辺境の砦と墓地、右に討伐隊の本陣。北の道は山すそを回り、南の道は森と湿地を抜ける。真ん中に森と川。
+        new Table
         {
+            Stage = "1-1",
+            Bounds = new Rect2(-27.4f, -25, 54.4f, 42),
+            Reach = 1.34f,
             Name = "辺境の砦",
             HomeName = "辺境の砦",
             PortalName = "討伐隊の本陣",
@@ -61,8 +76,8 @@ internal sealed class Map3DLayout
             {
                 new[]
                 {
-                    new Vector3(4.6f, 0, -27f), new Vector3(3.2f, 0, -16f), new Vector3(1.9f, 0, -7.2f),
-                    new Vector3(0.4f, 0, 0.3f), new Vector3(2.0f, 0, 7.8f), new Vector3(3.8f, 0, 15f), new Vector3(4.6f, 0, 25f),
+                    new Vector3(3.4f, 0, -16.5f), new Vector3(1.9f, 0, -7.2f),
+                    new Vector3(0.4f, 0, 0.3f), new Vector3(2.0f, 0, 7.8f), new Vector3(3.8f, 0, 16.8f),
                 },
             },
             Fort = new Vector3(-21.6f, 0, 0.6f),
@@ -70,12 +85,12 @@ internal sealed class Map3DLayout
             Camp = new Vector3(20.6f, 0, 0.2f),
             Woods = new[]
             {
-                (new Vector3(-6.4f, 0, 0.6f), new Vector2(5.6f, 3.3f), 30, "forest"),    // 真ん中の森（川の西）
-                (new Vector3(8.4f, 0, 0.3f), new Vector2(4.8f, 3.2f), 24, "forest"),     // 真ん中の森（川の東）
-                (new Vector3(-9.0f, 0, 11.6f), new Vector2(7.0f, 2.6f), 22, "forest"),   // 南の道の手前の森
-                (new Vector3(-12f, 0, -12.5f), new Vector2(9.0f, 2.4f), 16, "pine"),     // 山すその松
-                (new Vector3(12f, 0, -12.5f), new Vector2(9.0f, 2.4f), 16, "pine"),
-                (new Vector3(14f, 0, 12.0f), new Vector2(6.0f, 2.4f), 12, "forest"),
+                (new Vector3(-6.4f, 0, 0.6f), new Vector2(5.6f, 3.3f), 22, "forest"),    // 真ん中の森（川の西）
+                (new Vector3(8.4f, 0, 0.3f), new Vector2(4.8f, 3.2f), 18, "forest"),     // 真ん中の森（川の東）
+                (new Vector3(-9.0f, 0, 12.6f), new Vector2(7.0f, 2.6f), 16, "forest"),   // 南の道の手前の森
+                (new Vector3(-12f, 0, -13.0f), new Vector2(9.0f, 2.0f), 12, "pine"),     // 山すその松
+                (new Vector3(12f, 0, -13.0f), new Vector2(9.0f, 2.0f), 12, "pine"),
+                (new Vector3(14f, 0, 13.0f), new Vector2(6.0f, 2.4f), 10, "forest"),
             },
             Wetlands = new[]
             {
@@ -86,9 +101,64 @@ internal sealed class Map3DLayout
             HomeSlots = new[]
             {
                 // 第1隊・第2隊は広場の手前（南）に並び、第3隊・第4隊は奥（北）。道（広場から北東・南東へ出る）は空ける。
-                new Vector3(-19.6f, 0, 5.9f), new Vector3(-15.3f, 0, 6.0f), new Vector3(-19.0f, 0, -3.0f), new Vector3(-14.8f, 0, -3.9f),
+                new Vector3(-21.4f, 0, 5.9f), new Vector3(-15.2f, 0, 6.4f), new Vector3(-21.0f, 0, -3.4f), new Vector3(-14.6f, 0, -4.2f),
             },
-            Look = new Vector3(0, 0, 2.6f),
+            Look = new Vector3(0, 0, 1.2f),
+        },
+        // 1-1（1 章・第474期・北 2 マス ／ 南 4 マス）: 上下で対称にしない。
+        //   北 ＝ 砦から山すそを上がり、峠の関を越えて本陣へ（短くまっすぐ・道は高い所を通る）
+        //   南 ＝ 森を抜け、湿地を回り、川を渡って本陣の裏へ（長く曲がる）
+        //   川は峠の下の斜面から湧いて、盤を斜めに（北東 → 南西）流れる。山は北に、森は南に寄せる。
+        new Table
+        {
+            Stage = "1-1",
+            Bounds = new Rect2(-28.4f, -26, 55.4f, 43.5f),
+            Reach = 1.34f,
+            NorthRange = true,
+            Name = "辺境の砦",
+            HomeName = "辺境の砦",
+            PortalName = "討伐隊の本陣",
+            Home = new Vector3(-17.4f, 0, -0.8f),
+            Portal = new Vector3(17.0f, 0, -2.0f),
+            Lanes = new[]
+            {
+                new[] { new Vector3(-6.0f, 1.5f, -8.0f), new Vector3(6.0f, 3.0f, -9.4f) },
+                new[] { new Vector3(-11.0f, 0, 6.4f), new Vector3(-3.8f, 0, 11.2f), new Vector3(6.8f, 0, 11.8f), new Vector3(15.6f, 0, 6.6f) },
+            },
+            Pass = (0, 1),
+            Rivers = new[]
+            {
+                new[]
+                {
+                    new Vector3(9.8f, 0, -3.6f), new Vector3(7.4f, 0, -0.4f), new Vector3(4.6f, 0, 4.6f),
+                    new Vector3(1.8f, 0, 11.4f), new Vector3(-0.4f, 0, 17.3f),
+                },
+            },
+            Fort = new Vector3(-23.0f, 0, -0.8f),
+            Graveyard = new Vector3(-22.6f, 0, -8.6f),
+            Camp = new Vector3(21.4f, 0, -3.4f),
+            Woods = new[]
+            {
+                (new Vector3(-13.5f, 0, 12.0f), new Vector2(7.5f, 3.6f), 26, "forest"),   // 南の道の入口の森
+                (new Vector3(-7.0f, 0, 3.4f), new Vector2(4.6f, 2.4f), 12, "forest"),     // 砦と川のあいだの林
+                (new Vector3(-6.0f, 0, 15.2f), new Vector2(7.0f, 1.5f), 10, "forest"),    // 手前の縁
+                (new Vector3(12.0f, 0, 15.0f), new Vector2(8.0f, 1.6f), 10, "forest"),
+                (new Vector3(12.6f, 0, 1.6f), new Vector2(3.0f, 2.2f), 6, "forest"),      // 本陣の手前の木立
+                (new Vector3(-15f, 0, -15.0f), new Vector2(9.0f, 2.0f), 10, "pine"),      // 山すその松
+                (new Vector3(17f, 0, -13.5f), new Vector2(8.0f, 2.2f), 10, "pine"),
+            },
+            Wetlands = new[]
+            {
+                (new Vector3(3.0f, 0, 7.4f), new Vector2(3.2f, 2.0f)),
+                (new Vector3(-2.4f, 0, 15.2f), new Vector2(3.4f, 1.4f)),
+            },
+            FoothillZ = -13.0f,
+            HomeSlots = new[]
+            {
+                // 第1隊・第2隊は広場の手前（南）、第3隊は道のあいだ（東）、第4隊は砦の南。
+                new Vector3(-22.0f, 0, 4.6f), new Vector3(-16.0f, 0, 5.4f), new Vector3(-12.4f, 0, 0.0f), new Vector3(-25.6f, 0, 7.4f),
+            },
+            Look = new Vector3(0, 0, 0.6f),
         },
     };
 
@@ -106,15 +176,18 @@ internal sealed class Map3DLayout
     internal Vector3 Look { get; }
     /// <summary>カメラを引く倍率（表のあるステージは 1・無いステージは盤が収まるだけ引く）。</summary>
     internal float Reach { get; } = 1f;
+    /// <summary>地形の台の端（x, z）。</summary>
+    internal Rect2 Bounds { get; }
+    /// <summary>峠の関のマスの位置と、そこでの道の向き（無ければ null）。</summary>
+    internal (Vector3 At, Vector3 Forward)? Pass
+        => Sheet?.Pass is { } p ? (_cells[_graph.Lanes[p.Lane][p.Index]], Forward(_graph.Lanes[p.Lane][p.Index])) : null;
 
     internal Map3DLayout(MapStage stage, MapGraph graph)
     {
         _graph = graph;
-        Sheet = Tables.GetValueOrDefault(stage.Id);
-        // 表の形が盤と合わなければ（経路の数・マスの数）仮の盤に落とす。
-        if (Sheet is not null && (Sheet.Lanes.Length != graph.Lanes.Count
-            || Enumerable.Range(0, graph.Lanes.Count).Any(l => Sheet.Lanes[l].Length != graph.Lanes[l].Length)))
-            Sheet = null;
+        // 表は Id と盤の形（経路の数・経路ごとのマスの数）の両方が合うもの。無ければ仮の盤に落とす。
+        Sheet = Tables.FirstOrDefault(t => t.Stage == stage.Id && t.Lanes.Length == graph.Lanes.Count
+            && Enumerable.Range(0, graph.Lanes.Count).All(l => t.Lanes[l].Length == graph.Lanes[l].Length));
 
         _cells = graph.Cells.Select(c => new Vector3(c.Pos.X, 0, c.Pos.Z)).ToArray();
         Approach = new Vector3[graph.Lanes.Count];
@@ -123,8 +196,11 @@ internal sealed class Map3DLayout
             Look = Generic();
             float wide = _cells.Max(c => c.X) - _cells.Min(c => c.X), deep = _cells.Max(c => c.Z) - _cells.Min(c => c.Z);
             Reach = Math.Max(1f, Math.Max((wide + 14) / 50f, (deep + 9) / 23f));
+            Bounds = new Rect2(_cells.Min(c => c.X) - 9, _cells.Min(c => c.Z) - 12, wide + 18, deep + 21);
             return;
         }
+        Reach = Sheet.Reach;
+        Bounds = Sheet.Bounds;
 
         _cells[graph.Home] = Sheet.Home;
         if (graph.HasPortal) _cells[graph.Portal] = Sheet.Portal;
@@ -138,6 +214,14 @@ internal sealed class Map3DLayout
             ids.AddRange(graph.Lanes[l]);
             if (graph.HasPortal) ids.Add(graph.Portal);
             Vector3[] line = Smooth(ids.Select(id => _cells[id]).ToArray(), out int[] at);
+            // マスのまわりは平らにする（坂の途中に台を置くと、台の山側が地面に埋もれる）。
+            for (int i = 0; i < line.Length; i++)
+                foreach (int id in ids)
+                {
+                    float d = new Vector2(line[i].X - _cells[id].X, line[i].Z - _cells[id].Z).Length();
+                    float reach = id == graph.Home || (graph.HasPortal && id == graph.Portal) ? 3.4f : 2.2f;
+                    line[i].Y = Mathf.Lerp(_cells[id].Y, line[i].Y, Mathf.SmoothStep(reach, reach + 3.0f, d));
+                }
             Roads.Add(line);
             for (int k = 0; k + 1 < ids.Count; k++)
             {
@@ -221,6 +305,23 @@ internal sealed class Map3DLayout
         float sum = 0;
         for (int i = 0; i + 1 < line.Count; i++) sum += line[i].DistanceTo(line[i + 1]);
         return sum;
+    }
+
+    /// <summary>点から点の列までの水平の距離と、いちばん近い所の高さ。地面を道の高さに合わせるのに使う。</summary>
+    internal static float Nearest(IReadOnlyList<Vector3> line, Vector3 p, out float height)
+    {
+        float best = float.MaxValue;
+        height = 0;
+        for (int i = 0; i + 1 < line.Count; i++)
+        {
+            Vector3 a = line[i], ab = line[i + 1] - a;
+            float flat = ab.X * ab.X + ab.Z * ab.Z;
+            float t = flat <= 0 ? 0 : Mathf.Clamp(((p.X - a.X) * ab.X + (p.Z - a.Z) * ab.Z) / flat, 0, 1);
+            Vector3 q = a + ab * t;
+            float d = new Vector2(p.X - q.X, p.Z - q.Z).Length();
+            if (d < best) { best = d; height = q.Y; }
+        }
+        return best;
     }
 
     /// <summary>点から点の列までの距離（水平）。木や岩を道・川から離すのに使う。</summary>

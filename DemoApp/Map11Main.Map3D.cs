@@ -28,6 +28,7 @@ public partial class Map11Main
         BuildHud3D();
         AddChild(new Map3DDebugLayer(() => _camera, _cam3d, _map3d));
         if (args.Contains("--map3d-fps", StringComparer.Ordinal)) _ = Map3DFps();
+        if (args.Contains("--map3d-layout-smoke", StringComparer.Ordinal)) _ = Map3DLayoutSmoke();
     }
 
     public override void _ExitTree()
@@ -139,7 +140,9 @@ public partial class Map3DDebugLayer : CanvasLayer
         Camera3D c = _camera();
         Vector3 at = c.Position, rot = c.RotationDegrees;
         string lens = c.Projection == Camera3D.ProjectionType.Orthogonal ? $"平行 大きさ {c.Size:F1}" : $"画角 {c.Fov:F1}";
-        _text.Text = $"検証（F3 で隠す ／ F2 で 2D）\n{st.Stage.Id}　seed {st.Seed}　作戦ターン {st.Turn}　戦闘 {st.Battles}\n"
+        // 第474期: 敵の倍率（「敵 ×0.6」）は題字から外してここへ（遊ぶ人には見せない値）。
+        string scale = st.Stage.FoeScale.Active ? $"　{st.Stage.FoeScale.BarText}" : "";
+        _text.Text = $"検証（F3 で隠す ／ F2 で 2D）\n{st.Stage.Id}　seed {st.Seed}　作戦ターン {st.Turn}　戦闘 {st.Battles}{scale}\n"
             + $"fps {Engine.GetFramesPerSecond():F0}　道具 {(Map3DMode.ToolsAvailable ? "あり" : "なし")}\n"
             + $"カメラ 位置 ({at.X:F1}, {at.Y:F1}, {at.Z:F1})　傾き {-rot.X:F1}°　{lens}";
         // 見た目の段: カメラの書き出しの値（T／G 傾き・Y／H 高さ・U／J 画角で動かせる・Home で拡大と横移動を戻す）と、置いた素材の数。
