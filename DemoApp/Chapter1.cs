@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -128,11 +128,18 @@ public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList
         V465.Scales, StarRule.V464, DealRule.Off, InvestRule.V470, RosterRule.V475, MapStage.Stage11Ch476, Story: true, Second: MapStage.Stage12Ch477);
 
     /// <summary>
+    /// 第478期の 1 章（指示書 design/PHASE478_STAGE12_NOHERO_SPEC.md §2）。第477期から <b>1-2 の勇者を外し</b>、本陣を 守り → 砦の守将 の連戦にした（<see cref="MapStage.Stage12Ch478"/>）。
+    /// 1-1 ／ 1-3（追ってくる勇者）・駒・加入の表・倍率は第477期のまま。
+    /// </summary>
+    public static readonly ChapterRule V478 = new(true, "第478期（第477期 ＋ 1-2 に勇者は出ない・山場は砦の守将）",
+        V465.Scales, StarRule.V464, DealRule.Off, InvestRule.V470, RosterRule.V475, MapStage.Stage11Ch476, Story: true, Second: MapStage.Stage12Ch478);
+
+    /// <summary>
     /// 版の一覧（第466期・遊びの写しが版をキーで持つ——写しの版で 1 章を始め直すため）。<b>版を足したらここにも足す。</b>
     /// </summary>
     public static IReadOnlyList<(string Key, ChapterRule Rule)> Versions
         => new[] { ("V460", V460), ("V461", V461), ("V462", V462), ("V463", V463), ("V464", V464), ("V465", V465), ("V467", V467), ("V468", V468), ("V469", V469),
-                   ("V470", V470), ("V471", V471), ("V474", V474), ("V475", V475), ("V476", V476), ("V477", V477) };
+                   ("V470", V470), ("V471", V471), ("V474", V474), ("V475", V475), ("V476", V476), ("V477", V477), ("V478", V478) };
 
     /// <summary>版のキー（「V465」・一覧に無ければ名前）。</summary>
     public string Key { get { string n = Name; return Versions.FirstOrDefault(v => v.Rule.Name == n).Key ?? n; } }

@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using Godot;
 using System;
 using System.Collections.Generic;
@@ -303,6 +303,17 @@ public partial class Main : Control
             catch (System.Exception ex) { GD.PrintErr(ex.ToString()); okS = false; }
             GD.Print($"CHAPTER1_STAGE11_SMOKE_COMPLETE ok={okS}");
             GetTree().Quit(okS ? 0 : 1);
+            return;
+        }
+        // 第478期 §5: 1-2 から勇者を外す門（門が開いても勇者が出ない・本陣は 守り → 砦の守将・守将を抜いた刻に制圧・1-3 と単発と V461〜V477 は今のまま）。画面なし。
+        // §3 の測り（守将の重さ・通し × 100 seed・線・候補と期限を振った表）つき。`--chapter1-nohero-quick` は測りを省く。
+        if (bootArgs.Contains("--chapter1-nohero-smoke", StringComparer.Ordinal) || bootArgs.Contains("--chapter1-nohero-quick", StringComparer.Ordinal))
+        {
+            bool okN;
+            try { okN = Chapter1NoheroSmoke.Run(GD.Print, ProjectSettings.GlobalizePath("res://"), bots: !bootArgs.Contains("--chapter1-nohero-quick", StringComparer.Ordinal)); }
+            catch (System.Exception ex) { GD.PrintErr(ex.ToString()); okN = false; }
+            GD.Print($"CHAPTER1_NOHERO_SMOKE_COMPLETE ok={okN}");
+            GetTree().Quit(okN ? 0 : 1);
             return;
         }
         // 第477期 §5: 1-2 の盤の作り直しの門（道の長さ 4 ／ 3 ／ 6・中間拠点ごとの見返り・どの 2 つでも門が開く・予備隊と湧きの道・ほかは今のまま）。画面なし。

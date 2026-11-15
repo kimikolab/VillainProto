@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -139,6 +139,9 @@ public sealed class MapStage
 
     /// <summary>ステージの頭の札に足す行（第476期・勝ち方と道の違い・<b>表示だけ</b>）。空なら足さない。</summary>
     public IReadOnlyList<string> Notes { get; init; } = Array.Empty<string>();
+
+    /// <summary>踏破したときの窓の頭に出す 1 行（第478期・次のステージへの予告・空なら出さない）。画面が読むだけ。</summary>
+    public string WinLine { get; init; } = "";
 
     /// <summary>
     /// 敵の数値の倍率（第462期・1 章だけ・<see cref="ChapterRule.V462"/>）。<b>盤の敵はすでに掛けた後の値</b>（<see cref="Scaled"/> が経路・湧き・予備隊・勇者の定義を写して掛ける）
@@ -759,6 +762,7 @@ public sealed class MapStage
         SpawnToThinLane = s.SpawnToThinLane,
         WarnEmptyHome = s.WarnEmptyHome,
         Notes = s.Notes,
+        WinLine = s.WinLine,
         ReserveOrder = s.ReserveOrder,
         SpawnLane = s.SpawnLane,
         OutpostRewards = s.OutpostRewards,
@@ -1078,7 +1082,8 @@ public sealed class MapStage
                                               int towerGold = Stage12Ch477TowerGold, int gateGold = Stage12Ch477GateGold, int ferryGold = Stage12Ch477FerryGold,
                                               int turnCap = Stage12Ch477TurnCap, bool passHolds = false, int spawnEvery = 0, string? reserve = null,
                                               string southFirst = "band_levy", string southSecond = "band_sellswords", string spawn = Stage12Ch477SpawnBand,
-                                              string garrison = "band_garrison", bool hero = true, int heroPercent = 100, bool retreatToOutpost = true)
+                                              string garrison = "band_garrison", bool hero = true, int heroPercent = 100, bool retreatToOutpost = true,
+                                              string? keeper = null, int keeperHp = 100, int keeperAtk = 100, int keeperGold = Stage12Ch478KeeperGold)
     {
         MapStage b = Stage12;
         Map11.RoadNode Wait(Map11.RoadNode n) => n with { Hold = true, Gold = Stage12Ch477FoeGold };
@@ -1093,7 +1098,11 @@ public sealed class MapStage
             Lanes = new IReadOnlyList<Map11.RoadNode>[]
             {
                 new[] { Wait(Hard(Band(0, 0, tower, 3), towerHp, towerAtk)) with { Tag = "硬い", Note = towerNote } },
-                new[] { Node(1, 0, EnemyCatalog.Stages[0], 0) with { Name = "物見の兵" }, Band(1, 1, midSecond, 2), Garrison(1, 2, garrison, 4) with { Name = "本陣の守り" } },
+                // 第478期: 砦の守将（`keeper`）を置く版は、本陣の守りの後ろにもう 1 つ動かない区画（守り → 守将の連戦・守将は自分の賞金を持つ）。
+                keeper is null
+                    ? new[] { Node(1, 0, EnemyCatalog.Stages[0], 0) with { Name = "物見の兵" }, Band(1, 1, midSecond, 2), Garrison(1, 2, garrison, 4) with { Name = "本陣の守り" } }
+                    : new[] { Node(1, 0, EnemyCatalog.Stages[0], 0) with { Name = "物見の兵" }, Band(1, 1, midSecond, 2), Garrison(1, 2, garrison, 4) with { Name = "本陣の守り" },
+                              Hard(Garrison(1, 3, keeper, 4), keeperHp, keeperAtk) with { Name = KeeperName, Gold = keeperGold } },
                 new[] { Wait(Band(2, 0, southFirst, 0)), Wait(Band(2, 1, southSecond, 2)) },
             },
             LaneNames = MapGraph.Lanes12F477,
@@ -1121,15 +1130,35 @@ public sealed class MapStage
             ReserveOrder = new[] { 1, 0, 2 },
             OutpostRewards = new[] { new OutpostReward(towerGold, true), new OutpostReward(gateGold, false), new OutpostReward(ferryGold, false) },
             WarnEmptyHome = true,
+            WinLine = keeper is null ? "" : "砦は落ちた。——王国は、勇者を差し向けた。",
             Notes = new[]
             {
-                "中間拠点を 2 つ取ると砦の門が開く。門番を倒して砦を制圧したら勝ち。",
+                keeper is null ? "中間拠点を 2 つ取ると砦の門が開く。門番を倒して砦を制圧したら勝ち。" : "中間拠点を 2 つ取ると砦の門が開く。本陣の守りと砦の守将を抜いて、砦を制圧したら勝ち。",
                 $"見張り台 ＝ レリック（硬い）／ 関所 ＝ 金 ＋{gateGold}（近い）／ 渡し場 ＝ 金 ＋{ferryGold}（遠い）。",
                 "敵は中の街道を歩いてくる。拠点を空にしないこと——関所に隊がいれば、そこで受けられる。",
-                "門番は 2 隊で順に当てて削る。引いた隊は中間拠点で休める。",
+                keeper is null ? "門番は 2 隊で順に当てて削る。引いた隊は中間拠点で休める。" : "守りを抜いた隊は傷んでいる。引いて中間拠点で休むか、2 隊目を待つ。守将の傷は残る。",
             },
         };
     }
+
+    // ---------------- 第478期: 1-2 から勇者を外す（指示書 design/PHASE478_STAGE12_NOHERO_SPEC.md §2） ----------------
+
+    /// <summary>砦の守将の名札（第478期・本陣の守りの後ろに立つ動かない部隊・勇者ではない）。画面と器具はこの名前で引く。</summary>
+    internal const string KeeperName = "砦の守将";
+    /// <summary>第478期の 1 章の 1-2 の値: 守将の部隊・その区画だけの倍率（最大HP ／ 攻撃・%）・賞金・期限。測り（`--chapter1-nohero-smoke`）で選んだ。</summary>
+    internal const string Stage12Ch478KeeperBand = "band_garrison_heavy";
+    internal const int Stage12Ch478KeeperHp = 100, Stage12Ch478KeeperAtk = 100, Stage12Ch478KeeperGold = 20, Stage12Ch478TurnCap = 14;
+
+    /// <summary>
+    /// 1 章の 1-2（第478期・`ChapterRule.V478` から）。第477期（<see cref="Stage12Ch477"/>）から<b>門番の勇者を外し</b>、本陣を「本陣の守り → <b>砦の守将</b>」の連戦にした。
+    /// 守将は今ある敵の部隊（動かない・賞金 ＋20・傷は持ち越す）。勝ちは今までどおり敵の拠点の制圧。盤・中間拠点・見返り・歩く敵・予備隊・湧きは第477期のまま。
+    /// 勇者が初めて現れるのは 1-3（追ってくる勇者・今のまま）。
+    /// </summary>
+    public static MapStage Stage12Ch478 { get; } = Stage12Ch478With();
+
+    /// <summary>値を替えた第478期の 1 章の 1-2（測りが候補を並べるための口）。</summary>
+    internal static MapStage Stage12Ch478With(string keeper = Stage12Ch478KeeperBand, int keeperHp = Stage12Ch478KeeperHp, int keeperAtk = Stage12Ch478KeeperAtk, int turnCap = Stage12Ch478TurnCap)
+        => Stage12Ch477With(hero: false, turnCap: turnCap, keeper: keeper, keeperHp: keeperHp, keeperAtk: keeperAtk);
 
     /// <summary>選べるステージ（編成画面の選択の並び）。</summary>
     public static IReadOnlyList<MapStage> All { get; } = new[] { Stage11, Stage12, Stage13 };

@@ -2015,6 +2015,9 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
         # **第477期**: 1-2 の盤の作り直しの門（`Chapter1Stage12Smoke.cs`・画面なし・`ChapterRule.V477` ／ `MapStage.Stage12Ch477`）。(a) 道の長さ 4 ／ 3 ／ 6・横の辺 1 本 ／ (b) 中間拠点ごとの見返り ／
         # (c) どの 2 つでも門が開く ／ (d) 予備隊と湧きの道・歩くのは中だけ ／ (e) 単発と第461〜476期は今のまま。測りつき（約 1 分）: 重さ・基準（今の 1-2）と新しい盤の通し（方針 4 つ × 留守番 × 組 A ／ B × 100 seed）・
         # 人が組んだ隊（`design/plays` の写し）・振った表。`--chapter1-stage12-quick` は測りを省く・`--chapter1-stage12-sweep` は振った表だけ。報告 `design/PHASE477_STAGE12_BOARD.md`
+    Godot_console.exe --path DemoApp --headless -- --chapter1-nohero-smoke
+        # **第478期**: 1-2 から勇者を外す門（`Chapter1NoheroSmoke.cs`・画面なし・`ChapterRule.V478` ／ `MapStage.Stage12Ch478`・**既定は V477 のまま**）。(a) 門が開いても勇者が出ない・本陣は 守り → 砦の守将 ／ (b) 守将を抜いた刻に制圧・踏破の窓の 1 行 ／
+        # (c) 1-3 は今のまま ／ (d) 単発と V461〜V477 は今のまま。測りつき（約 1 分）: 守将の重さ・通し（組 B ／ 写し・引く ／ 続ける器具）と線・守将の候補 × 期限 14 ／ 16 の表。`--chapter1-nohero-quick` は門だけ。報告は `design/PHASE478_STAGE12_NOHERO.md`
     Godot_console.exe --path DemoApp res://Map11Main.tscn -- --map3d --chapter1-rule=V477 --map-chapter=7 "--map3d-play=p1|p2|p3,<写しの置き場>"
         # **第477期**: 3D の 1-2 を本物のクリックで通す口（p1 ＝ 中＋北 ／ p2 ＝ 中＋南 ／ p3 ＝ 北＋南・1-1 は器具が通す）。`MAP3D_PLAY_COMPLETE` の行。p3 は 5 刻目で止まる不具合が残っている（報告 §13-3）
     Godot.exe --path DemoApp res://Map11Main.tscn -- --map3d "--map3d-play=north|south|split,<写しの置き場>"

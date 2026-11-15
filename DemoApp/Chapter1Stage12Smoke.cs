@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -43,7 +43,14 @@ public static class Chapter1Stage12Smoke
         public List<(string Foe, string Where, string Unit, int Turn)> Fell = new();
         /// <summary>勇者との戦闘の回数と勝ち（第477期 続き 3）。</summary>
         public int HeroFights, HeroWins;
+        /// <summary>砦の守将との戦闘（第478期）: 回数・勝ち・守りを抜いた刻に続けて戦って負けた回数・守将の前で引いた回数・最後に守将を抜いた隊が 1 度引いた隊か。</summary>
+        public int KeeperFights, KeeperWins, ContinuedLost, ContinuedWon, KeeperRetreats;
+        public bool RetreatWon;
+        public List<(bool Chained, bool Won, int AliveIn, double HpIn, double FoeHpIn)> Keeper = new();
     }
+
+    /// <summary>本陣の連戦で、守将（勇者）の前に立ったときの器具の決め方（第478期）。</summary>
+    internal enum Siege { Legacy, Continue, Hurt }
 
     private static readonly string[] AttackA = { "泥人形ムド", "のろまの巨兵ドルガ", "鬨の号令ガン", "墓守リィカ", "施しのリリ" };
     private static readonly string[] GuardA = { "胞子体ムグ" };
@@ -54,7 +61,7 @@ public static class Chapter1Stage12Smoke
         ["泥人形ムド"] = 0, ["のろまの巨兵ドルガ"] = 1, ["鬨の号令ガン"] = 2, ["墓守リィカ"] = 3, ["施しのリリ"] = 4, ["胞子体ムグ"] = 1,
     };
 
-    private static MapStage Dress(MapStage raw, ChapterRule rule, int index)
+    internal static MapStage Dress(MapStage raw, ChapterRule rule, int index)
         => raw.Scaled(rule.ScaleOf(index)).Starred(rule.Stars ?? StarRule.Off).Rostered(rule.Roster ?? RosterRule.Off);
 
     private static readonly Dictionary<(int, bool), Map11State.CarryPack?> _carry = new();
@@ -159,14 +166,16 @@ public static class Chapter1Stage12Smoke
     }
 
     /// <summary>1 通し（1-1 の終わりを持ち越して 1-2 を方針どおりに・戦闘は器具）。</summary>
-    internal static Result Play(MapStage stage, int chapterSeed, Policy policy, int guard, bool teamB, Action<Map11State>? watch = null, Action<string>? log = null)
+    internal static Result Play(MapStage stage, int chapterSeed, Policy policy, int guard, bool teamB, Action<Map11State>? watch = null, Action<string>? log = null, Siege siege = Siege.Legacy)
     {
         Map11State st = Setup(stage, chapterSeed, teamB, guard);
-        return Run(stage, st, policy, 0, 1, guard > 0 ? (st.SquadCap >= 3 ? 2 : 1) : -1, watch, log);
+        return Run(stage, st, policy, 0, 1, guard > 0 ? (st.SquadCap >= 3 ? 2 : 1) : -1, watch, log, siege);
     }
 
     /// <summary>組み終わった盤を方針どおりに回す。<paramref name="a"/> ＝ 主力・<paramref name="b"/> ＝ 別働・<paramref name="gSquad"/> ＝ 留守番（-1 なら置かない）の隊の番号。</summary>
-    internal static Result Run(MapStage stage, Map11State st, Policy policy, int a, int b, int gSquad, Action<Map11State>? watch = null, Action<string>? log = null)
+    /// 第478期: <paramref name="siege"/> は守将の前での決め方——<c>Legacy</c> ＝ 第477期のまま（勇者の前だけで待つ）／ <c>Continue</c> ＝ 必ず続けて戦う ／
+    /// <c>Hurt</c> ＝ 4 枚以下か HP 70% 未満なら引いて中間拠点で休む（もう 1 隊を待たない）。
+    internal static Result Run(MapStage stage, Map11State st, Policy policy, int a, int b, int gSquad, Action<Map11State>? watch = null, Action<string>? log = null, Siege siege = Siege.Legacy)
     {
         MapGraph g = st.Graph;
         var res = new Result();
@@ -190,13 +199,16 @@ public static class Chapter1Stage12Smoke
             }
         }
 
-        void Fight(int squad, Map11State.Node node, bool intercept, bool walked)
+        var retreated = new HashSet<int>();
+        bool Boss(Map11State.Node n) => n.IsHero || n.Def.Name == MapStage.KeeperName;
+        void Fight(int squad, Map11State.Node node, bool intercept, bool walked, bool chained = false)
         {
             var prep = intercept ? st.PrepareIntercept(squad, node) : st.Prepare(squad, node);
             if (prep is not { } q) return;
             int alive0 = q.Players.Count(u => u.IsAlive);
             int max0 = q.Players.Sum(u => u.MaxHp);
             double hpIn = max0 == 0 ? 0 : 100.0 * q.Players.Where(u => u.IsAlive).Sum(u => u.Hp) / max0;
+            double foeHpIn = node.DefMaxHp > 0 ? 100.0 * node.HpNow / node.DefMaxHp : 100;
             var standing = q.Players.Where(u => u.IsAlive).ToList();
             int where = st.Squads[squad].Pos;
             BattleResult r = BattleEngine.Run(q.Players, q.Enemies, q.Seed, verbose: false);
@@ -209,6 +221,13 @@ public static class Chapter1Stage12Smoke
             res.Fights.Add((node.Def.Name, squad, r.PlayerWon, hp, alive0 - alive1, alive0, hpIn, place, walked, intercept));
             if (walked && !intercept && where == gate) res.GateCatches++;
             if (node.IsHero) { res.HeroFights++; if (r.PlayerWon) res.HeroWins++; }
+            if (node.Def.Name == MapStage.KeeperName)
+            {
+                res.KeeperFights++;
+                res.Keeper.Add((chained, r.PlayerWon, alive0, hpIn, foeHpIn));
+                if (r.PlayerWon) { res.KeeperWins++; res.RetreatWon = retreated.Contains(squad); if (chained) res.ContinuedWon++; }
+                else if (chained) res.ContinuedLost++;
+            }
             log?.Invoke($"    {st.Turn + 1} 刻目 ・ 隊 {squad + 1}（{place}）対 {node.Def.Name}{(intercept ? "［迎撃］" : walked ? "［歩いてきた］" : "")}: {(r.PlayerWon ? "勝ち" : "負け")}・{r.Turns}T・{alive0} 枚 {hpIn:F0}% → {alive1} 枚 {hp:F0}%"
                 + (alive1 < alive0 ? $"・倒れた {string.Join("・", standing.Where(u => !u.IsAlive).Select(u => $"{u.Def.Name}（{u.LastDeathTurn}T）"))}" : "") + (node.IsHero ? $"・勇者の残り HP {node.HpNow}／{node.DefMaxHp}" : ""));
             TakeRelics();
@@ -216,9 +235,18 @@ public static class Chapter1Stage12Smoke
             if (!intercept && r.PlayerWon && !st.Finished && st.SiegeNext(squad) is { } nx && !ReferenceEquals(nx, node))
             {
                 // 次が勇者で、もう 1 隊がまだ本陣の手前に着いていなければ引いて待つ（傷が深いときも）。引けなければ続けて戦う。
-                bool wait = nx.IsHero && (squad == a || squad == b) && ((Attacker(squad == a ? b : a) && !Staged(squad == a ? b : a)) || hp < 40);
-                if (wait && st.SiegeRetreat(squad)) log?.Invoke($"    {st.Turn + 1} 刻目 ・ 隊 {squad + 1} は勇者の前で引いた → {g[st.Squads[squad].Pos].Name}");
-                else Fight(squad, nx, false, false);
+                bool wait = siege switch
+                {
+                    Siege.Continue => false,
+                    Siege.Hurt => Boss(nx) && (alive1 < 5 || hp < 70) && st.Turn < stage.TurnCap - 2,
+                    _ => nx.IsHero && (squad == a || squad == b) && ((Attacker(squad == a ? b : a) && !Staged(squad == a ? b : a)) || hp < 40),
+                };
+                if (wait && st.SiegeRetreat(squad))
+                {
+                    if (!nx.IsHero) { res.KeeperRetreats++; retreated.Add(squad); }
+                    log?.Invoke($"    {st.Turn + 1} 刻目 ・ 隊 {squad + 1} は{(nx.IsHero ? "勇者" : nx.Def.Name)}の前で引いた → {g[st.Squads[squad].Pos].Name}");
+                }
+                else Fight(squad, nx, false, false, chained: true);
             }
         }
 
@@ -246,7 +274,7 @@ public static class Chapter1Stage12Smoke
                 // 方針 1 の別働は関所の栓——主力が本陣の手前に着くまで関所を持つ。
                 if (i == b && policy == Policy.MidNorth && Attacker(a) && !Staged(a)) return Dest.Of(g, gate);
                 if (s.Pos != Staging(i)) return Dest.Of(g, Staging(i));
-                return Staged(i == a ? b : a) || st.Turn >= stage.TurnCap - 3 ? Dest.Portal(g, lane) : Dest.Of(g, Staging(i));
+                return siege != Siege.Legacy || Staged(i == a ? b : a) || st.Turn >= stage.TurnCap - 3 ? Dest.Portal(g, lane) : Dest.Of(g, Staging(i));
             }
             foreach (int cell in seq) if (!st.HeldOutposts.Contains(cell)) return Dest.Of(g, cell);
             return Dest.Of(g, seq[^1]);
@@ -337,7 +365,7 @@ public static class Chapter1Stage12Smoke
     /// 人が組んだ隊で 1 通し。隊は写しのまま（主力 ＝ いちばん枚数の多い隊・別働 ＝ 次）。留守番は 3 つ目の隊があればその隊、無ければ 3 隊目の枠を買い、
     /// 手札の駒 → 呼んだ駒の順に <paramref name="guard"/> 枚。残りの金は強化（器具の組と同じ `Spend`）。
     /// </summary>
-    internal static Result PlayHuman(MapStage stage, Human h, int seed, Policy policy, int guard, Action<string>? log = null)
+    internal static Result PlayHuman(MapStage stage, Human h, int seed, Policy policy, int guard, Action<string>? log = null, Siege siege = Siege.Legacy)
     {
         var st = new Map11State(Chapter1.StageSeed(seed, 1, 0), stage.Time, stage.Portal, draft: true, stage: stage);
         st.ApplyCarry(h.Pack);
@@ -355,7 +383,7 @@ public static class Chapter1Stage12Smoke
             }
         }
         Spend(st);
-        Result r = Run(stage, st, policy, a, b, gSquad, null, log);
+        Result r = Run(stage, st, policy, a, b, gSquad, null, log, siege);
         return r;
     }
 
@@ -447,7 +475,7 @@ public static class Chapter1Stage12Smoke
             bool single = MapStage.Stage12.OutpostRewards is null && MapStage.Stage12.SpawnLane < 0 && MapStage.Stage12.ReserveOrder is null
                           && MapStage.Stage12.TurnCap == 12 && MapStage.Stage12.LaneNames.SequenceEqual(MapGraph.Lanes12) && MapStage.Stage12.Board(true).Cells.Count == MapGraph.Build12F444(true).Cells.Count
                           && MapStage.Stage13.OutpostRewards is null && MapStage.Stage13.SpawnLane < 0 && MapStage.Stage13.ReserveOrder is null;
-            var old = ChapterRule.Versions.Where(v => v.Key != "V477").ToList();
+            var old = ChapterRule.Versions.Where(v => v.Key is not ("V477" or "V478")).ToList();   // 第478期の版も 1-2 を替える（門 `--chapter1-nohero-smoke` が見る）
             bool olds = old.All(v => v.Rule.Second is null && ReferenceEquals(Chapter1.StagesFor(v.Rule)[1].Board, MapStage.Stage12.Board) && Chapter1.StagesFor(v.Rule)[1].OutpostRewards is null);
             var now = Chapter1.StagesFor(rule);
             var prev = Chapter1.StagesFor(ChapterRule.V476);

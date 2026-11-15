@@ -1,0 +1,198 @@
+{
+  "format": 1,
+  "kind": "first",
+  "chapterSeed": 771715,
+  "stage": "1-2",
+  "stageIndex": 1,
+  "attempt": 1,
+  "stageSeed": 752956,
+  "rule": "V477",
+  "ruleName": "第477期（第476期 ＋ 1-2 は道の長さが 3 本とも違う盤）",
+  "scale": "×0.9（勇者の回復なし）",
+  "written": "2026-11-16T00:23:26",
+  "entry": true,
+  "pack": {
+    "gold": -6,
+    "squadCap": 3,
+    "relicHand": [],
+    "bench": [
+      {
+        "id": "zan",
+        "name": "仇討ちのザン",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      }
+    ],
+    "squads": [
+      [
+        {
+          "id": "mug",
+          "name": "胞子体ムグ",
+          "star": 1,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "zoto",
+          "name": "爆ぜるゾト",
+          "star": 1,
+          "pips": 0,
+          "slot": 1
+        },
+        {
+          "id": "mudo",
+          "name": "泥人形ムド",
+          "star": 1,
+          "pips": 0,
+          "slot": 2
+        },
+        {
+          "id": "vel",
+          "name": "継ぎ接ぎのヴェル",
+          "star": 1,
+          "pips": 0,
+          "slot": 3
+        },
+        {
+          "id": "rica",
+          "name": "墓守リィカ",
+          "star": 1,
+          "pips": 0,
+          "slot": 4
+        }
+      ],
+      [
+        {
+          "id": "dolga",
+          "name": "のろまの巨兵ドルガ",
+          "star": 1,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "doha",
+          "name": "分かちのドハ",
+          "star": 1,
+          "pips": 0,
+          "slot": 1
+        },
+        {
+          "id": "lili",
+          "name": "施しのリリ",
+          "star": 1,
+          "pips": 0,
+          "slot": 2
+        },
+        {
+          "id": "gan",
+          "name": "鬨の号令ガン",
+          "star": 1,
+          "pips": 0,
+          "slot": 3
+        }
+      ],
+      [
+        {
+          "id": "wata",
+          "name": "渡しのワタ",
+          "star": 1,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "gald",
+          "name": "廃棄聖騎士ガルド",
+          "star": 1,
+          "pips": 0,
+          "slot": 1
+        },
+        {
+          "id": "basa",
+          "name": "喧噪のバサ",
+          "star": 1,
+          "pips": 0,
+          "slot": 3
+        },
+        {
+          "id": "utsu",
+          "name": "逆しまのウツ",
+          "star": 1,
+          "pips": 0,
+          "slot": 4
+        }
+      ],
+      []
+    ],
+    "stars": {
+      "basa": [
+        1,
+        0
+      ],
+      "doha": [
+        1,
+        0
+      ],
+      "dolga": [
+        1,
+        0
+      ],
+      "gald": [
+        1,
+        0
+      ],
+      "gan": [
+        1,
+        0
+      ],
+      "lili": [
+        1,
+        0
+      ],
+      "mudo": [
+        1,
+        0
+      ],
+      "mug": [
+        1,
+        0
+      ],
+      "rica": [
+        1,
+        0
+      ],
+      "utsu": [
+        1,
+        0
+      ],
+      "vel": [
+        1,
+        0
+      ],
+      "wata": [
+        1,
+        0
+      ],
+      "zan": [
+        1,
+        0
+      ],
+      "zoto": [
+        1,
+        0
+      ]
+    },
+    "invest": [
+      [
+        "1-2",
+        "略奪"
+      ]
+    ]
+  },
+  "goldNow": 2,
+  "retries": 0,
+  "notes": [
+    "最初の作戦ターンの直前の写し（組み直しの窓で呼んだ駒・並べ替えを含む）。金は「このステージの始めの金を足す前」に直してある"
+  ],
+  "estimated": []
+}
