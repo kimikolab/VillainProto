@@ -58,6 +58,10 @@ internal sealed class Map3DLayout
         public Rect2? Pan { get; init; }
         /// <summary>中間拠点の建物の種類（第477期・経路の番号の順: "tower" ／ "gate" ／ "ferry"）。空なら今までの絵。</summary>
         public string[] Outposts { get; init; } = Array.Empty<string>();
+        /// <summary>敵の本陣を石の砦（城壁・門の扉が開閉する）にする（第477期・1-2）。偽なら天幕と柵の本陣（1-1）。</summary>
+        public bool StoneFort { get; init; }
+        /// <summary>奥に小さく見せる「前のステージで越えた峠の関」の場所（第477期・無ければ置かない）。</summary>
+        public Vector3? FarPass { get; init; }
     }
 
     /// <summary>表のあるステージ。<b>Id は <c>MapStage.Id</c></b>（1 章の 1-1 も検証用の 1-1 も "1-1"）。</summary>
@@ -198,7 +202,9 @@ internal sealed class Map3DLayout
             },
             Fort = new Vector3(-41.6f, 0, 0f),
             Graveyard = new Vector3(-41.2f, 0, -8.0f),
-            Camp = new Vector3(42.0f, 0, 0f),
+            Camp = new Vector3(44.6f, 0, 0f),
+            StoneFort = true,
+            FarPass = new Vector3(-45.0f, 0, -19.0f),
             Woods = new[]
             {
                 (new Vector3(-9.0f, 0, -6.0f), new Vector2(6.0f, 2.8f), 20, "forest"),    // 街道と山道のあいだの林
@@ -222,8 +228,9 @@ internal sealed class Map3DLayout
             {
                 new Vector3(-40.6f, 0, 5.4f), new Vector3(-34.6f, 0, 6.2f), new Vector3(-33.5f, 0, -5.6f), new Vector3(-44.2f, 0, 8.2f),
             },
-            Look = new Vector3(-21.0f, 0, 1.0f),
-            Pan = new Rect2(-3f, -10f, 47f, 20f),
+            // 開始時の視点: 辺境の砦・分かれ道・関所が端の札に隠れずに入る所（始めは -21 で、関所が右端の札の下になっていた）。
+            Look = new Vector3(-16.5f, 0, 1.0f),
+            Pan = new Rect2(-6f, -10f, 45.5f, 20f),
         },
     };
 

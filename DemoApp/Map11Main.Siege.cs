@@ -86,12 +86,33 @@ public partial class Map11Main
             $"{s.Label}: {alive} 枚 ・ HP {SquadHpPercent(s):F0}%\n"
             + $"{(next.IsHero ? "勇者" : next.Def.Name)}: {foeAlive} 体 ・ HP {NodeHpPercent(next):F0}%"
             + (after > 1 ? $"（{where}に残る敵 {after}）" : "") + "\n\n"
+            + HeroWaitLines(s, next)
             + $"引く: {PlaceName(cell)}へ戻る（無料・時間はかからない）。"
             + (held ? "味方の中間拠点なので、組み直し・呼ぶ・休むができる。" : St.Graph.IsOutpost(cell) ? "敵のものなので組み直しはできない。" : "")
             + $" {where}の敵はそのまま（HP は戻らない）。";
         _siegeGo.Text = $"続けて戦う（{(next.IsHero ? "勇者" : next.Def.Name)}）";
         _siegeBack.Text = $"引く（{PlaceName(cell)}へ）";
         _siegeOverlay.Visible = true;
+    }
+
+    /// <summary>
+    /// 第477期 §3-b: 次が勇者のとき、ほかの隊の枚数・HP・位置（本陣まで あと n 刻）を出す（新しい 1-2 の盤だけ・<b>表示だけ</b>）。
+    /// 「引いて待つ」を選びやすくするための行で、判定は持たない。
+    /// </summary>
+    private string HeroWaitLines(Map11State.Squad s, Map11State.Node next)
+    {
+        if (!next.IsHero || St.Stage.OutpostRewards is null) return "";
+        var lines = new System.Collections.Generic.List<string>();
+        foreach (Map11State.Squad q in St.Squads)
+        {
+            if (q.Index == s.Index || St.IsLocked(q.Index) || q.Lost || q.Units is not { } us || !us.Any(u => u.IsAlive)) continue;
+            int n = us.Count(u => u.IsAlive);
+            string at = q.Pos == St.Graph.Portal ? "本陣にいる（続けて当てられる）"
+                : St.Graph.Path(q.Pos, q.Via, St.Graph.Portal, -1) is { Count: > 1 } path ? $"{PlaceName(q.Pos)}（本陣まで あと {path.Count - 1} 刻）" : PlaceName(q.Pos);
+            lines.Add($"{q.Label}: {n} 枚 ・ HP {SquadHpPercent(q):F0}% ・ {at}");
+        }
+        return "門番は 2 隊で順に当てて削る相手（勇者の HP は戻らない）。もう 1 隊がまだなら、引いて待てる。\n"
+               + (lines.Count == 0 ? "ほかに動ける隊はいない。\n\n" : string.Join("\n", lines) + "\n\n");
     }
 
     /// <summary>敵の拠点のマスにいる敵部隊の数（窓の 1 行だけが読む）。</summary>

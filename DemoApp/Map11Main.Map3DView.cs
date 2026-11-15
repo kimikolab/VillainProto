@@ -172,6 +172,7 @@ public partial class Map11Main
 
     private void RefreshMap3D()
     {
+        _map3d?.SetGateOpen(St.Stage.PortalGate <= 0 || St.GateOpen || St.Captured);   // 第477期: 砦の門の扉（扉の無いステージでは何もしない）
         if (_layout3d is null || _hud3d is null) return;
         // 2D の矢印（隊 → 行き先・敵の次の 1 歩・予備隊の道）は出さない——行き先は 3D の点線、敵は名札の「拠点まで あと n」で見せる。
         foreach (Arrow a in _arrows) a.Hide();
@@ -300,7 +301,11 @@ public partial class Map11Main
             : St.Captured ? $"目標　残る敵部隊を倒す（あと {left}）"
             : $"目標　{Map11.PortalName}を制圧する　・　残る敵部隊 {left}";
         _hud3d.SetHeader(title, turn, goal);
-        _hud3d.SetGold(St.Stage.Gold.On ? St.Gold : null);
+        // 第477期 §3-a: 金を使える場所（拠点・取った中間拠点）に隊がいて、倒れた駒を呼び戻せるか金が 8 以上あるとき、隊の札と金の札に印（新しい 1-2 の盤だけ）。
+        bool teach = St.Stage.OutpostRewards is not null && St.Stage.Gold.On && !St.Finished;
+        bool Spendable(Map11State.Squad q) => teach && !q.Lost && q.Units is { Count: > 0 } && St.CanReform(q.Index)
+            && ((St.Stage.Gold.Revive > 0 && St.FallenUnits.Count > 0 && St.Gold >= St.Stage.Gold.Revive) || St.Gold >= 8);
+        _hud3d.SetGold(St.Stage.Gold.On ? St.Gold : null, St.Squads.Any(Spendable));
         _hud3d.SetWindows(_showFoes, _showHistory);
 
         // 隊の札は使える隊だけ。まだ開けていない隊は「＋ 隊の枠」のボタン 1 つに畳む（第474期）。
@@ -312,8 +317,8 @@ public partial class Map11Main
                 : s.Units is { } units ? units.Where(u => u.IsAlive).OrderBy(u => u.Slot).Select(u => u.Def).ToList()
                 : s.Def.F.Occupied().OrderBy(u => u.Slot).Select(u => u.Def).ToList();
             string where = s.Pos == St.Graph.Home ? "拠点" : s.Pos == St.Graph.Portal ? Map11.PortalName : PlaceName(s.Pos);
-            cards.Add(new Map3DSquadCardInfo(s.Index, s.Label, faces, faces.Count, faces.Count == 0 ? 0 : SquadHpPercent(s),
-                St.Time.On ? "→ " + OrderText(s.Index) : where, s.Index == _selected && _guideSquadChosen, s.Lost));
+            cards.Add(new Map3DSquadCardInfo(s.Index, s.Label + (Spendable(s) ? " ◆" : ""), faces, faces.Count, faces.Count == 0 ? 0 : SquadHpPercent(s),
+                (St.Time.On ? "→ " + OrderText(s.Index) : where) + (Spendable(s) ? "　◆ 金を使える" : ""), s.Index == _selected && _guideSquadChosen, s.Lost));
         }
         _hud3d.SetSquads(cards);
         bool can = _selected >= 0 && _selected < St.Squads.Length && St.CanReform(_selected) && !St.Finished && !Map11Session.TurnRunning;
@@ -589,6 +594,12 @@ public partial class Map11Main
         Vector2 view = GetViewport().GetVisibleRect().Size;
         Vector2 at = _camera.UnprojectPosition(world) - new Vector2(plate.Size.X / 2, plate.Size.Y);
         plate.Position = new Vector2(Mathf.Clamp(at.X, 12, view.X - plate.Size.X - 12), Mathf.Clamp(at.Y, 12, view.Y - plate.Size.Y - 12)).Round();
+        // 第477期: 1 画面に入らない盤では、画面の外にある物の札を端に張り付けない（端で札どうしが重なる）——外の出来事は端の印と全体図が知らせる。
+        if (_layout3d?.Pan is not null)
+        {
+            Vector2 raw = _camera.UnprojectPosition(world);
+            if (_camera.IsPositionBehind(world) || !new Rect2(0, 0, view.X, view.Y).Grow(24).HasPoint(raw)) plate.Visible = false;
+        }
     }
 
     /// <summary>
@@ -852,6 +863,7 @@ public partial class Map11Main
             SceneStart3D();
             await Settle();
             Check("開始時");
+            if (_layout3d!.Pan is not null) { await Wide(); goto done; }   // 第477期: 1 画面に入らない盤（1 章の 1-2）は別の 4 場面
             await SceneAdvance3D(camp: false);
             await Settle();
             Check("動いた後");
@@ -868,11 +880,49 @@ public partial class Map11Main
             }
         }
         catch (Exception e) { fails.Add("例外:" + e.Message); GD.PrintErr(e.ToString()); }
+        done:
         foreach (string line in fails) GD.Print("MAP3D_LAYOUT_FAIL " + line);
         Vector2 size = GetViewport().GetVisibleRect().Size;
         GD.Print($"MAP3D_LAYOUT_SMOKE_COMPLETE stage={St.Stage.Id} lanes={string.Join("/", St.Graph.Lanes.Select(l => l.Length))} view={size.X:F0}x{size.Y:F0} "
             + $"bottom={_hud3d!.BottomShare * 100:F1}% ok={fails.Count == 0} failed={fails.Count}");
         GetTree().Quit(fails.Count == 0 ? 0 : 1);
+
+        // 第477期 §5: 1-2 の場面（開始時 ／ 関所を取った後 ／ 門の前 ／ 画面を右へ寄せた所）。主力（いちばん枚数の多い隊）を 関所 → 見張り台 → 砦の手前 へ進める。
+        // 戦闘は器具が決着（`HeadlessTurn3D`）。着けなければ、その場面は「着けなかった」として落とす。
+        async System.Threading.Tasks.Task Wide()
+        {
+            MapGraph g = St.Graph;
+            int main = Enumerable.Range(0, St.SquadCap).Where(i => St.Squads[i].Units is { Count: > 0 }).OrderByDescending(i => St.Squads[i].Units!.Count).First();
+            int gate = g.Lanes[1].First(c => g.IsOutpost(c));
+            bool Up() => !St.Squads[main].Lost && St.Squads[main].Units!.Any(u => u.IsAlive) && !St.Finished;
+            void Go(Dest d, Func<bool> until)
+            {
+                for (int k = 0; k < 8 && Up() && !until(); k++) { Map11Session.SetDestination(main, d); HeadlessTurn3D(); }
+                Refresh();
+            }
+            Go(Dest.Of(g, gate), () => St.HeldOutposts.Contains(gate));
+            _cam3d!.FocusOn(PosOf(gate), snap: true);
+            await Settle();
+            Check("関所を取った後");
+            if (!St.HeldOutposts.Contains(gate)) fails.Add("関所を取った後: 主力が関所を取れなかった");
+            // 門を開ける 2 つ目は渡し場（別働が南の軽い 2 部隊を抜く）——見張り台は主力でも落ちることがあるので、場面を作る道には使わない。
+            int second = Enumerable.Range(0, St.SquadCap).Where(i => i != main && St.Squads[i].Units is { Count: > 0 }).OrderByDescending(i => St.Squads[i].Units!.Count).DefaultIfEmpty(-1).First();
+            int ferry = g.Lanes[2].First(c => g.IsOutpost(c));
+            for (int k = 0; k < 9 && second >= 0 && !St.GateOpen && !St.Finished; k++)
+            {
+                Map11Session.SetDestination(second, Dest.Of(g, ferry));
+                Map11Session.SetDestination(main, Dest.Of(g, gate));
+                HeadlessTurn3D();
+            }
+            Go(Dest.Of(g, g.Lanes[1][^1]), () => St.Squads[main].Pos == g.Lanes[1][^1]);
+            _cam3d.FocusOn(PosOf(g.Portal), snap: true);
+            await Settle();
+            Check("門の前");
+            if (!St.GateOpen) fails.Add("門の前: 門が開かなかった（別働が渡し場を取れなかった）");
+            _cam3d.FocusOn(PosOf(g.Portal) + new Vector3(12, 0, 0), snap: true);
+            await Settle();
+            Check("画面を右へ寄せた所");
+        }
 
         async System.Threading.Tasks.Task Settle()
         {
@@ -883,6 +933,11 @@ public partial class Map11Main
         {
             Vector2 view = GetViewport().GetVisibleRect().Size;
             var screen = new Rect2(0, 0, view.X, view.Y);
+            // 第477期: 1 画面に入らない盤では、画面の外・端で切れているもの・遊ぶ UI の下にあるものは見ない（視点を動かして見る物）。全部が見えているものどうしの重なりだけを見る。
+            bool wideBoard = _layout3d!.Pan is not null;
+            bool Seen(Rect2 r) => screen.Encloses(r) && !_hudRects3d.Any(h => Overlap(r, h.Rect) > 0);
+            List<(string Name, Rect2 Rect)> Pick(List<(string Name, Rect2 Rect)> all) => wideBoard ? all.Where(x => Seen(x.Rect)).ToList() : all;
+            var plates = Pick(_plateRects3d); var chips = Pick(_chipRects3d); var signs = Pick(_signRects3d); var discs = Pick(_discRects3d); var bodies = Pick(_bodyRects3d);
             void Against(string kind, List<(string Name, Rect2 Rect)> mine, List<(string Name, Rect2 Rect)> others, bool same = false)
             {
                 for (int i = 0; i < mine.Count; i++)
@@ -891,22 +946,22 @@ public partial class Map11Main
                             fails.Add($"{scene}: {mine[i].Name} が {others[j].Name} に重なる（{kind}）");
             }
             // 名札: 台・橋・旗（駒）・遊ぶ UI・建物の名札・ほかの名札と重ならない。
-            Against("名札×台", _plateRects3d, _discRects3d);
-            Against("名札×橋", _plateRects3d, _bridgeRects3d);
-            Against("名札×駒", _plateRects3d, _bodyRects3d);
-            Against("名札×UI", _plateRects3d, _hudRects3d);
-            Against("名札×建物の名札", _plateRects3d, _signRects3d);
-            Against("名札×名札", _plateRects3d, _plateRects3d, same: true);
+            Against("名札×台", plates, discs);
+            Against("名札×橋", plates, _bridgeRects3d);
+            Against("名札×駒", plates, bodies);
+            Against("名札×UI", plates, _hudRects3d);
+            Against("名札×建物の名札", plates, signs);
+            Against("名札×名札", plates, plates, same: true);
             // 「あと n」: 駒・名札・遊ぶ UI・ほかの「あと n」と重ならない（空の台の上には載る）。
-            Against("あと n×駒", _chipRects3d, _bodyRects3d);
-            Against("あと n×名札", _chipRects3d, _plateRects3d);
-            Against("あと n×UI", _chipRects3d, _hudRects3d);
-            Against("あと n×あと n", _chipRects3d, _chipRects3d, same: true);
-            Against("建物の名札×UI", _signRects3d, _hudRects3d);
-            foreach (var (name, rect) in _plateRects3d.Concat(_chipRects3d).Concat(_signRects3d))
+            Against("あと n×駒", chips, bodies);
+            Against("あと n×名札", chips, plates);
+            Against("あと n×UI", chips, _hudRects3d);
+            Against("あと n×あと n", chips, chips, same: true);
+            Against("建物の名札×UI", signs, _hudRects3d);
+            foreach (var (name, rect) in plates.Concat(chips).Concat(signs))
                 if (!screen.Encloses(rect)) fails.Add($"{scene}: {name} が画面からはみ出す");
             // マスの台と駒: 画面に収まり、遊ぶ UI の下に隠れない。
-            foreach (var (name, rect) in _discRects3d.Concat(_bodyRects3d))
+            foreach (var (name, rect) in discs.Concat(bodies))
             {
                 if (!screen.Encloses(rect)) fails.Add($"{scene}: {name} が画面からはみ出す");
                 foreach (var (_, block) in _hudRects3d)

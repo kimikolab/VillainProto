@@ -33,15 +33,16 @@ public partial class Map11Main
     {
         for (int road = 0; road < St.Stage.LaneCount; road++)
             foreach (Map11State.Node n in St.FoesOn(road))
-                if (!n.Cleared && St.TurnsToHome(n) is { } t && !Blocked(road, n)) yield return (n, t);
-
-        // 待ち構える敵の奥で詰まって進めない敵（北へ出た予備隊など）は「歩いてくる敵」に数えない（脇を抜ける盤は別）。
-        bool Blocked(int road, Map11State.Node n)
-            => !St.Stage.SpawnsPassHolds && n.FromPortal
-               && St.FoesOn(road).Any(x => !x.Cleared && x.Def.Hold && St.Graph.IndexOn(road, x.Pos) < St.Graph.IndexOn(road, n.Pos));
+                if (!n.Cleared && St.TurnsToHome(n) is { } t && StuckBehind(n) is null) yield return (n, t);
     }
 
+    /// <summary>次に拠点へ着く敵までの刻（「（次の敵は あと n 刻で着く）」・歩いてくる敵がいなければ空・第477期 §4）。</summary>
+    private string NextArrivalText()
+        => WalkingFoes3D().Select(x => (int?)x.Turns).Min() is { } t ? $"（次の敵は あと {t} 刻で着く）" : "";
+
     internal Vector3 RadarPos(int cell) => PosOf(cell);
+    /// <summary>印を重ねない四角（いま画面にあるマスの台と名札）。</summary>
+    internal IEnumerable<Rect2> RadarAvoid() => _discRects3d.Concat(_plateRects3d).Concat(_signRects3d).Select(x => x.Rect);
     internal Map11State RadarState => St;
     internal Camera3D RadarCamera => _camera;
 
@@ -231,7 +232,12 @@ public partial class Map3DRadar : Control
             Vector2 size = font.GetStringSize(text, HorizontalAlignment.Left, -1, 22) + new Vector2(28, 14);
             Vector2 corner = new(Mathf.Clamp(edge.X - (dir.X > 0 ? size.X : 0), 12, view.X - size.X - 12), Mathf.Clamp(edge.Y - size.Y / 2, safe.Position.Y, safe.End.Y));
             var box = new Rect2(corner, size);
-            for (int k = 0; k < 6 && placed.Any(r => r.Intersects(box)); k++) box.Position += new Vector2(0, size.Y + 6);
+            // 画面にあるマスの台・名札の上には載せない（端のマスが印に隠れて押せなくなる）。下へずらし、下が詰まれば上へ。
+            var avoid = _main.RadarAvoid().Where(r => new Rect2(0, 0, view.X, view.Y).Intersects(r)).ToList();
+            bool Busy(Rect2 r) => placed.Any(q => q.Intersects(r)) || avoid.Any(q => q.Intersects(r.Grow(6)));
+            Rect2 home0 = box;
+            for (int k = 0; k < 10 && Busy(box) && box.End.Y + size.Y + 6 < safe.End.Y + size.Y; k++) box.Position += new Vector2(0, size.Y + 6);
+            if (Busy(box)) { box = home0; for (int k = 0; k < 10 && Busy(box) && box.Position.Y - size.Y - 6 > safe.Position.Y - size.Y; k++) box.Position -= new Vector2(0, size.Y + 6); }
             placed.Add(box);
             DrawRect(box, Back);
             DrawRect(box, color, false, 2);

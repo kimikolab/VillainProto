@@ -69,7 +69,8 @@ public partial class Map3DStage
         {
             BuildFort(_sheet.Fort);
             BuildGraveyard(_sheet.Graveyard);
-            if (graph.HasPortal) BuildCamp(_sheet.Camp);
+            if (graph.HasPortal) { if (_sheet.StoneFort) BuildStoneFort(_sheet.Camp); else BuildCamp(_sheet.Camp); }
+            if (_sheet.FarPass is { } far) BuildPass(new Vector3(far.X, Height(far.X, far.Z), far.Z), new Vector3(0.94f, 0, 0.34f));   // 1-1 で越えた峠（奥に小さく）
             if (layout.Pass is { } pass) BuildPass(pass.At, pass.Forward);
             foreach (var (kind, at, forward) in layout.Outposts()) BuildOutpost(kind, at, forward);
             BuildFoothills();
@@ -569,6 +570,67 @@ public partial class Map3DStage
                 break;
             }
         }
+    }
+
+    // ---- 石の砦（第477期・1-2 の討伐隊の砦）: 城壁・角の塔・天守と、西の門の扉（門が閉じている間は閉まり、開くと開く） ----
+    private Node3D? _gateLeft, _gateRight;
+    private float _gateOpen, _gateTarget;
+
+    /// <summary>砦の門の扉を開け閉めする（画面が盤の「門が開いているか」を渡す・扉の無いステージでは何もしない）。</summary>
+    internal void SetGateOpen(bool open) => _gateTarget = open ? 1f : 0f;
+
+    public override void _Process(double delta)
+    {
+        if (_gateLeft is null || _gateRight is null || Mathf.IsEqualApprox(_gateOpen, _gateTarget)) return;
+        _gateOpen = Mathf.MoveToward(_gateOpen, _gateTarget, (float)delta * 1.1f);
+        _gateLeft.RotationDegrees = new Vector3(0, 84f * _gateOpen, 0);
+        _gateRight.RotationDegrees = new Vector3(0, -84f * _gateOpen, 0);
+    }
+
+    private void BuildStoneFort(Vector3 at)
+    {
+        var root = new Node3D { Name = "StoneFort", Position = at };
+        AddChild(root);
+        StandardMaterial3D stone = Paint("#8d8880", 0.95f), dark = Paint("#58534c", 0.95f), wood = Paint("#4f3c28"), roof = Paint("#7a3a2c", 0.85f);
+        Color red = Color.FromHtml("#c8392f");
+        const float X = 5.2f, Z = 4.6f, H = 2.6f, Gap = 1.35f;
+        // 城壁（北・南・東と、門を空けた西）
+        Box(root, new Vector3(0, H / 2, -Z), new Vector3(X * 2, H, 0.7f), stone);
+        Box(root, new Vector3(0, H / 2, Z), new Vector3(X * 2, H, 0.7f), stone);
+        Box(root, new Vector3(X, H / 2, 0), new Vector3(0.7f, H, Z * 2), stone);
+        float seg = Z - Gap;
+        Box(root, new Vector3(-X, H / 2, -(Gap + seg / 2)), new Vector3(0.7f, H, seg), stone);
+        Box(root, new Vector3(-X, H / 2, Gap + seg / 2), new Vector3(0.7f, H, seg), stone);
+        Box(root, new Vector3(-X, H + 0.55f, 0), new Vector3(0.9f, 0.7f, Gap * 2 + 1.0f), dark);   // 門の上の梁
+        // 胸壁
+        for (float x = -X + 0.6f; x <= X - 0.5f; x += 1.1f)
+            foreach (float z in new[] { -Z, Z }) Box(root, new Vector3(x, H + 0.25f, z), new Vector3(0.5f, 0.5f, 0.75f), dark);
+        for (float z = -Z + 0.9f; z <= Z - 0.8f; z += 1.1f) Box(root, new Vector3(X, H + 0.25f, z), new Vector3(0.75f, 0.5f, 0.5f), dark);
+        // 角の塔
+        foreach (var (x, z) in new[] { (-X, -Z), (-X, Z), (X, -Z), (X, Z) })
+        {
+            Box(root, new Vector3(x, 2.0f, z), new Vector3(1.6f, 4.0f, 1.6f), stone);
+            Box(root, new Vector3(x, 4.2f, z), new Vector3(2.0f, 0.4f, 2.0f), dark);
+        }
+        // 天守
+        Box(root, new Vector3(1.6f, 2.0f, 0), new Vector3(3.6f, 4.0f, 3.4f), stone);
+        Shape(root, new PrismMesh { Size = new Vector3(4.2f, 1.6f, 3.9f) }, new Vector3(1.6f, 4.8f, 0), roof);
+        Banner(root, new Vector3(1.6f, 5.5f, 0), 2.2f, red, 1.1f);
+        Banner(root, new Vector3(-X, 4.4f, -Z), 2.0f, red);
+        Banner(root, new Vector3(-X, 4.4f, Z), 2.0f, red);
+        // 門の扉（蝶番は門の両脇・閉じると門をふさぐ）
+        _gateLeft = new Node3D { Name = "GateLeft", Position = new Vector3(-X, 0, -Gap) };
+        _gateRight = new Node3D { Name = "GateRight", Position = new Vector3(-X, 0, Gap) };
+        root.AddChild(_gateLeft);
+        root.AddChild(_gateRight);
+        Box(_gateLeft, new Vector3(0, 1.2f, Gap / 2), new Vector3(0.18f, 2.4f, Gap), wood);
+        Box(_gateRight, new Vector3(0, 1.2f, -Gap / 2), new Vector3(0.18f, 2.4f, Gap), wood);
+        Box(_gateLeft, new Vector3(-0.1f, 1.2f, Gap / 2), new Vector3(0.06f, 0.2f, Gap * 0.9f), dark);
+        Box(_gateRight, new Vector3(-0.1f, 1.2f, -Gap / 2), new Vector3(0.06f, 0.2f, Gap * 0.9f), dark);
+        // 中庭のかがり火
+        Shape(root, new CylinderMesh { TopRadius = 0, BottomRadius = 0.34f, Height = 0.9f, RadialSegments = 6 }, new Vector3(-2.6f, 0.5f, 1.6f),
+            Paint("#ff7a2a", 0.4f, Color.FromHtml("#ff8a30"), 3.0f));
+        root.AddChild(new OmniLight3D { Position = new Vector3(-2.6f, 1.6f, 1.6f), LightColor = Color.FromHtml("#ff9a50"), LightEnergy = 2.4f, OmniRange = 8.5f, ShadowEnabled = false });
     }
 
     private void BuildCamp(Vector3 at)

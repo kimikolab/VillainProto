@@ -18,6 +18,7 @@ public partial class Map11Main
     private static readonly HashSet<string> _play3dOnce = new(StringComparer.Ordinal);
     // 第477期: 1-2 の方針（p1 ＝ 中＋北 ／ p2 ＝ 中＋南 ／ p3 ＝ 北＋南）。主力・別働・留守番の隊の番号は入ったときに 1 度決める。
     private static int _play3dMain = -1, _play3dSecond = -1, _play3dHeroSeen;
+    private static readonly int[] _play3dRests = new int[8];
     private static bool Play12 => _play3dPlan is "p1" or "p2" or "p3";
 
     /// <summary>起動の引数に `--map3d-play=` があるか（戦闘の画面の早回しも同じ引数を読む）。</summary>
@@ -136,12 +137,14 @@ public partial class Map11Main
                 await Shot("本陣の連戦の窓");
                 // 次が勇者で、もう 1 隊がまだ本陣の手前に着いていなければ引く。それ以外は続けて戦う。
                 bool hero = _siegeGo.Text.Contains("勇者");
+                bool weak = _siegeHp.Value < 45;   // 傷が深ければ引く（引いた先の中間拠点で休む）
                 int other = Enumerable.Range(0, St.SquadCap).FirstOrDefault(i => (i == _play3dMain || i == _play3dSecond) && St.Squads[i].Pos != St.Graph.Portal, -1);
                 bool alone = other >= 0 && !St.Squads[other].Lost && St.Squads[other].Units is { } ou && ou.Any(u => u.IsAlive)
                              && !St.Graph.Lanes.Any(l => l[^1] == St.Squads[other].Pos);
-                Click(OldUi(hero && alone ? _siegeBack : _siegeGo));
-                GD.Print($"MAP3D_PLAY siege={(hero && alone ? "引く" : "続けて戦う")} next={_siegeGo.Text}");
-                await Wait(hero && alone ? 0.6 : 3.0);
+                bool back = hero && (alone || weak);
+                Click(OldUi(back ? _siegeBack : _siegeGo));
+                GD.Print($"MAP3D_PLAY siege={(back ? "引く" : "続けて戦う")} next={_siegeGo.Text} hp={_siegeHp.Value:F0} 窓の文「{string.Join("／", _siegeBody.Text.Split((char)10))}」");
+                await Wait(back ? 0.6 : 3.0);
                 continue;
             }
             if (_encounterOverlay.Visible)
@@ -227,6 +230,8 @@ public partial class Map11Main
                     (int[] seq, int lane) = Route(i);
                     int other = i == _play3dMain ? _play3dSecond : _play3dMain;
                     if (St.Squads[i].Pos == g.Portal) return Dest.Portal(g, lane);
+                    // 取った中間拠点で傷が深ければ、動かずに休む（隊ごとに 4 回まで）。
+                    if (St.AtOutpost(i) && _play3dRests[i] < 4 && SquadHpPercent(St.Squads[i]) < (St.GateOpen ? 85 : 60)) { _play3dRests[i]++; return Dest.Of(g, St.Squads[i].Pos); }
                     if (St.GateOpen)
                     {
                         if (i == _play3dSecond && _play3dPlan == "p1" && Up(_play3dMain) && !Staged(_play3dMain)) return Dest.Of(g, gate);
@@ -236,6 +241,12 @@ public partial class Map11Main
                     }
                     foreach (int cell in seq) if (!St.HeldOutposts.Contains(cell)) return Dest.Of(g, cell);
                     return Dest.Of(g, seq[^1]);
+                }
+                // 器具の口: 拠点・取った中間拠点にいる隊がいれば、倒れた駒を呼び戻して空いた席へ入れ、残りの金で強化する（編成の窓の中の操作は見ない）。
+                {
+                    int gold0 = St.Gold, fallen0 = St.FallenUnits.Count;
+                    Chapter1Stage12Smoke.Spend(St);
+                    if (St.Gold != gold0) { Refresh(); GD.Print($"MAP3D_PLAY 金を使った {gold0} → {St.Gold}（呼び戻した {fallen0 - St.FallenUnits.Count} 枚・強化 {St.Enhances} 回）"); }
                 }
                 if (St.Hero is not null && _play3dHeroSeen == 0) { _play3dHeroSeen = 1; _cam3d!.FocusOn(PosOf(g.Portal), snap: true); await Frames(3); await Shot("勇者が現れた"); }
                 foreach (int squad in new[] { _play3dMain, _play3dSecond })

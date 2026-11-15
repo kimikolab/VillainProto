@@ -123,7 +123,7 @@ public static class Chapter1Stage12Smoke
     }
 
     /// <summary>金を強化に使う（主力 → 別働 → 留守番の順に、☆の低い駒から 1 枚ずつ・拠点か取った中間拠点にいる隊の駒だけ）。</summary>
-    private static void Spend(Map11State st)
+    internal static void Spend(Map11State st)
     {
         // 倒れた駒を呼び戻して、組み直せる隊の空いた席へ（主力 → 別働 → 留守番）。
         for (int n = 0; n < 10 && st.FallenUnits.Count > 0 && st.Stage.Gold.Revive > 0; n++)
@@ -580,13 +580,14 @@ public static class Chapter1Stage12Smoke
         var variants = new List<(string Label, MapStage Stage)>
         {
             ("基準 ＝ 今の 1-2（V476）", MapStage.Stage12),
-            ("新しい盤（勇者 ×1.0）", MapStage.Stage12Ch477),
-            ("（採らない）勇者の最大HP と攻撃 ×0.85", MapStage.Stage12Ch477With(heroPercent: 85)),
-            ("（採らない）勇者の最大HP と攻撃 ×0.7", MapStage.Stage12Ch477With(heroPercent: 70)),
-            ("（参考）引く先は今までどおり経路の奥のマス", MapStage.Stage12Ch477With(retreatToOutpost: false)),
-            ("（参考）歩く敵は始めの案（弓隊・傭兵崩れ・騎士の小隊）", MapStage.Stage12Ch477With(midSecond: "band_archers", spawn: "band_sellswords", reserve: "band_knights")),
-            ("（参考）期限 12", MapStage.Stage12Ch477With(turnCap: 12)),
-            ("（参考）門番の勇者を外す", MapStage.Stage12Ch477With(hero: false)),
+            ("期限 12", MapStage.Stage12Ch477With(turnCap: 12)),
+            ("期限 14", MapStage.Stage12Ch477With(turnCap: 14)),
+            ("期限 16", MapStage.Stage12Ch477With(turnCap: 16)),
+            ("期限 18", MapStage.Stage12Ch477With(turnCap: 18)),
+            ("（採らない）期限 16・勇者の最大HP と攻撃 ×0.85", MapStage.Stage12Ch477With(turnCap: 16, heroPercent: 85)),
+            ("（採らない）期限 16・勇者の最大HP と攻撃 ×0.7", MapStage.Stage12Ch477With(turnCap: 16, heroPercent: 70)),
+            ("（参考）期限 16・引く先は今までどおり経路の奥のマス", MapStage.Stage12Ch477With(turnCap: 16, retreatToOutpost: false)),
+            ("（参考）期限 16・門番の勇者を外す", MapStage.Stage12Ch477With(turnCap: 16, hero: false)),
         };
         foreach (var (label, raw) in variants)
         {

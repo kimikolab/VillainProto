@@ -1218,7 +1218,7 @@ public partial class Map11Main : Node3D
         if (!dest.AtHome && (St.FrontFoe(dest.Road) ?? St.PortalFoe()) is { } next)
             ShowFoe(next);
         if (EmptiesHome(_selected, dest))   // 第476期 §2-2: 止めはしない
-            ShowToast($"拠点が空になります（{s.Label}: {Map11Orders.Describe(St, _selected, dest)}）——敵が着けば陥落", EnemyColor, 5.0f);
+            ShowToast($"拠点が空になります（{s.Label}: {Map11Orders.Describe(St, _selected, dest)}）——敵が着けば陥落{NextArrivalText()}", EnemyColor, 5.0f);
         else ShowToast($"{s.Label}: {Map11Orders.Describe(St, _selected, dest)}", PlayerColor, 3.0f);
         Refresh();
     }
@@ -2179,6 +2179,8 @@ public partial class Map11Main : Node3D
                 ? "拠点まで来られた。ここで抜けなければ次の隊が出る。"
                 : node.IsReserve ? $"{St.LaneName(node.Def.Road)} ・ 敵の予備隊。"
                 : node.Def.Stationary ? $"{Map11.PortalName}の守り。抜けば制圧できる。"   // 第476期
+                : node.IsHero ? $"{(node.Pos == St.Graph.Portal ? Map11.PortalName : PlaceName(node.Pos))}の勇者。"   // 第477期: 経路の名前と通し番号（「中の街道 4 戦目」）は出さない
+                : node.FromPortal ? $"{St.LaneName(node.Def.Road)} ・ {Map11.PortalName}から出てきた部隊。"
                 : $"{St.Stage.LaneNames[node.Def.Road]} {node.Def.Index + 1} 戦目。")
             + "戦えば、傷も死者もそのまま持ち込みます。[/color]\n\n"
             + $"[color=#{PlayerColor.ToHtml(false)}]この隊の勝ち筋[/color]"
@@ -2953,6 +2955,8 @@ public partial class Map11Main : Node3D
 
         _foeDetail.AddChild(UiKit.Text(
             (node.IsReserve ? $"{St.LaneName(node.Def.Road)} ・ 予備隊 ・ {node.Def.Name}"
+                : node.Def.Stationary || node.IsHero ? $"{(node.Pos == St.Graph.Portal ? Map11.PortalName : PlaceName(node.Pos))} ・ {node.Def.Name}"   // 第477期
+                : node.FromPortal ? $"{St.LaneName(node.Def.Road)} ・ {Map11.PortalName}から出てきた部隊 ・ {node.Def.Name}"
                 : $"{St.Stage.LaneNames[node.Def.Road]} {node.Def.Index + 1} 戦目 ・ {node.Def.Name}")
             + (node.Cleared ? "（撃破済み）" : ""), 16, node.Cleared ? DeadColor : Colors.White));
 
@@ -3249,7 +3253,11 @@ public partial class Map11Main : Node3D
             Place(m, n, n.Def.Road, stackAtPortal: stack);
             // 第441期 §3: **予備隊は行き先の経路と「あと n 刻」**（先頭の「◀ あと」より優先）。
             if (n.IsReserve && !n.Cleared)
-                m.SetNote($"予備隊 → {St.LaneName(n.Def.Road)} ・ 拠点まで あと {St.ReserveEta ?? 0}", UiKit.Hurt, true);
+            {
+                // 第477期: 待ち構える敵の奥で詰まって動かない予備隊は「あと n」ではなく「◯◯の奥で待機」。
+                if (StuckBehind(n) is { } wall) m.SetNote($"予備隊 ・ {wall}の奥で待機", GoldColor, false);
+                else m.SetNote($"予備隊 → {St.LaneName(n.Def.Road)} ・ 拠点まで あと {St.ReserveEta ?? 0}", UiKit.Hurt, true);
+            }
         }
         for (int i = spawn; i < _spawnMarkers.Count; i++) _spawnMarkers[i].Set("", EnemyColor, false);
         RefreshFoeArrows();
@@ -3355,6 +3363,8 @@ public partial class Map11Main : Node3D
                       UiKit.Hurt, St.HeroChase() is { Steps: <= 1 });   // 第459期 §1-4
         else if (!n.Cleared && St.Time.On && n.Pos == St.Graph.Home)
             m.SetNote(St.HomeLost ? "◀ 落ちた拠点に居座る" : "◀ 拠点に到達", UiKit.Hurt, true);
+        else if (!n.Cleared && StuckBehind(n) is { } wall)
+            m.SetNote($"{wall}の奥で待機", GoldColor, false);   // 第477期
         else if (!n.Cleared && St.TurnsToHome(n) is { } left)
             m.SetNote($"◀ 拠点まで あと {left}", left <= 1 ? UiKit.Hurt : GoldColor, left <= 1);
         else m.SetNote("", GoldColor, false);
@@ -3544,6 +3554,18 @@ public partial class Map11Main : Node3D
                 : St.RewardAt(cell) is { } rw ? "　" + (rw with { Gold = St.OutpostGoldAt(cell) }).Text
                 : St.Stage.Gold.On && St.OutpostGold > 0 ? $"  ＋{St.OutpostGold}" : "");   // 第468期: 金の札を掛けた値
         }
+    }
+
+    /// <summary>
+    /// 待ち構える敵（`Hold`）の奥で詰まって進めない敵なら、その敵のいる場所の名前（第477期・<b>表示だけ</b>）。脇を抜ける盤・詰まっていない敵は null。
+    /// </summary>
+    internal string? StuckBehind(Map11State.Node n)
+    {
+        if (St.Stage.SpawnsPassHolds || !n.FromPortal || n.IsHero || n.Cleared || n.Def.Road < 0 || n.Def.Road >= St.Stage.LaneCount) return null;
+        int at = St.Graph.IndexOn(n.Def.Road, n.Pos);
+        Map11State.Node? wall = St.FoesOn(n.Def.Road).Where(x => !x.Cleared && x.Def.Hold && St.Graph.IndexOn(n.Def.Road, x.Pos) < at)
+            .OrderByDescending(x => St.Graph.IndexOn(n.Def.Road, x.Pos)).FirstOrDefault();
+        return wall is null ? null : PlaceName(wall.Pos);
     }
 
     private void ShowToast(string text, Color color, float seconds)

@@ -234,10 +234,11 @@ void fragment() {
     }
 
     /// <summary>金（金の無い盤では null ＝ 出さない）。</summary>
-    internal void SetGold(int? gold)
+    internal void SetGold(int? gold, bool spend = false)
     {
         _goldPanel.Visible = gold is not null;
-        _gold.Text = gold is { } g ? $"金 {g}" : "";
+        // 第477期: 金を使える場所に隊がいて、使い道（呼び戻す・強化）があるときの印。
+        _gold.Text = gold is { } g ? $"金 {g}" + (spend ? "　◆ 使える" : "") : "";
     }
 
     /// <summary>浮いた金の数字が飛んでいく先（画面の座標）。</summary>
