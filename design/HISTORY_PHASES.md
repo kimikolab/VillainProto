@@ -4,6 +4,8 @@ description: 第259期に `CLAUDE.md` の「現状値」節を**逐語で**移�
 
 `CLAUDE.md` には直近の値1ブロックと、歯止め・情報セルの定義（規則）だけが残っている。**以後の期の報告はこのファイルの冒頭（`## 現状値` の直後）に足す**。`CLAUDE.md` の現状値ブロックは差し替える（増やさない）。
 
+**第478期で、遊ぶ 1 章の既定を `ChapterRule.V478` にした**（指示書 `PHASE478_STAGE12_NOHERO_SPEC.md`・報告 `design/PHASE478_STAGE12_NOHERO.md`・遊ぶ口のレビュー `design/PHASE478_PLAY_REVIEW.md`）。1-2 から門番の勇者を外し、本陣を 本陣の守り → 砦の守将（本陣の守り（重）×0.8 ／ ×0.8・賞金 ＋20）の連戦にした。期限 16。勇者が初めて現れるのは 1-3。`compare` ／ `docs/` は動いていない（BattleCore は触っていない）。`CLAUDE.md` の現状値から外した第476〜477期の文（逐語）: **最後に動かした期: 第477期**（1-2 の盤の作り直し `ChapterRule.V477` ／ `MapStage.Stage12Ch477`・**遊ぶ 1 章の既定**: 北 4 ／ 中 3 ／ 南 6 マス・中間拠点ごとの見返り（見張り台 レリック ／ 関所 金 ＋8 ／ 渡し場 金 ＋12）・歩くのは中の街道の部隊と湧きと予備隊（徴募兵）・本陣から引く先は取っている中間拠点・期限 14・3D は横に約 2 画面と画面の外の知らせ・`--chapter1-stage12-smoke`・`--map3d-play=p1|p2|p3`。報告は `design/PHASE477_STAGE12_BOARD.md`）。その前は第476期（1-1 に道を選ぶ理由 `ChapterRule.V476` ／ `MapStage.Stage11Ch476`: 関の賞金 ＋14（雑兵 ＋4）・始めの 4 部隊は待ち構える・最初の湧きは 6 刻目（傭兵崩れ・待ち構える敵の脇を抜ける）・本陣の守り ＋4・3D の画面の直し 14 点・`--chapter1-reason-smoke`・`--map3d-play=`。報告は `design/PHASE476_STAGE11_REASON.md`）
+
 **第438期の段0 で、「試遊・呪い」を第437期の「試遊・呪い 萎縮」の並びに入れ替えた**（指示書 `PHASE438_MAP_GRAPH_SPEC.md`・報告 `design/PHASE438_MAP_GRAPH.md`）。ワタ・ムド・ウツ・クビ・ネル（`Presets.CurseDaunt437`）・旧の一覧は `Common.VersionsH437`。`compare` 0 セル・全66行 ／ 主判定19行 ／ 情報セルは動かない・`docs/` 差 0。本体は作戦マップ 1-1 の位置を盤 `MapGraph`（マスのグラフ）に持ち替えた（DemoApp だけ・規則と画面は不変）。
 
 **第437期の段0 で、ウツの萎縮を規定化した**（指示書 `PHASE437_UTSU_DAUNT_SETTLE_SPEC.md`・報告 `design/PHASE437_UTSU_DAUNT_SETTLE.md`・器具 `utsu437`）。規定のウツ ＝ 第436期の U-d2（萎縮して迎えた一振りは全発が倍・旧は `UtsuH435`）。`compare` 0 セル・全66行 ／ 主判定19行 ／ 情報セルは動かない。`elite` は逆しま改 (クビ×ウツ) の近衛 94.0 → 100.0 ／ 大隊 1.0 → 55.5。試遊の台「試遊・呪い 萎縮」（ワタ・ムド・ウツ・クビ・ネル）を足し、「版・萎縮 ウツ」を外した。
