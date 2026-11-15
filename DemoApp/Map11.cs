@@ -1847,7 +1847,10 @@ public sealed class Map11State
             StackRetreats++;
             return true;
         }
-        Place(s, Graph.Lanes[road][^1], road);
+        // 第477期: 引く先が「その経路の取っている中間拠点」の盤（1 章の 1-2 の新しい盤だけ・`MapStage.SiegeRetreatToOutpost`）。取っていなければ今までどおり経路の奥のマス。
+        int back = Graph.Lanes[road][^1];
+        if (Stage.SiegeRetreatToOutpost && Graph.Lanes[road].Where(c => HeldOutposts.Contains(c)).Select(c => (int?)c).LastOrDefault() is { } held) back = held;
+        Place(s, back, road);
         SiegeRetreats++;
         return true;
     }

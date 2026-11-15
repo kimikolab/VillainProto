@@ -125,6 +125,23 @@ public static class Chapter1Stage12Smoke
     /// <summary>金を強化に使う（主力 → 別働 → 留守番の順に、☆の低い駒から 1 枚ずつ・拠点か取った中間拠点にいる隊の駒だけ）。</summary>
     private static void Spend(Map11State st)
     {
+        // 倒れた駒を呼び戻して、組み直せる隊の空いた席へ（主力 → 別働 → 留守番）。
+        for (int n = 0; n < 10 && st.FallenUnits.Count > 0 && st.Stage.Gold.Revive > 0; n++)
+        {
+            int sq = -1, slot = -1;
+            for (int i = 0; i < st.SquadCap && sq < 0; i++)
+            {
+                if (st.Squads[i].Lost || st.Squads[i].Units is not { Count: > 0 } || !st.CanReform(i)) continue;
+                slot = new[] { 0, 1, 3, 2, 4 }.Where(x => st.UnitAt(i, x) is null).DefaultIfEmpty(-1).First();
+                if (slot >= 0) sq = i;
+            }
+            int idx = Enumerable.Range(0, st.FallenUnits.Count).Where(st.CanRevive).DefaultIfEmpty(-1).First();
+            if (sq < 0 || idx < 0) break;
+            string id = st.FallenUnits[idx].Def.Id;
+            if (!st.Revive(idx)) break;
+            int bi = st.Bench.FindIndex(u => u.Def.Id == id);
+            if (bi >= 0) st.SwapWithBench(sq, slot, bi);
+        }
         if (!st.Stage.Stars.On || st.Stage.Stars.EnhancePrice <= 0) return;
         for (int n = 0; n < 60 && st.Gold >= st.EnhancePrice; n++)
         {
@@ -140,12 +157,14 @@ public static class Chapter1Stage12Smoke
     }
 
     /// <summary>1 通し（1-1 の終わりを持ち越して 1-2 を方針どおりに・戦闘は器具）。</summary>
-    internal static Result Play(MapStage stage, int chapterSeed, Policy policy, int guard, bool teamB, Action<Map11State>? watch = null)
+    internal static Result Play(MapStage stage, int chapterSeed, Policy policy, int guard, bool teamB, Action<Map11State>? watch = null, Action<string>? log = null)
     {
         Map11State st = Setup(stage, chapterSeed, teamB, guard);
         MapGraph g = st.Graph;
         var res = new Result();
-        int gate = g.Lanes[1][2], tower = g.Lanes[0][3], ferry = g.Lanes[2][4];
+        // 中間拠点は盤から引く（基準の今の 1-2 でも同じ方針を立てるため）: 北 ＝ 見張り台 ／ 中 ＝ 関所 ／ 南 ＝ 渡し場 に当たる。
+        int Op(int lane) => g.Lanes[lane].First(c => g.IsOutpost(c));
+        int gate = Op(1), tower = Op(0), ferry = Op(2);
         int gSquad = guard > 0 ? (st.SquadCap >= 3 ? 2 : 1) : -1;
         res.Units = st.Squads.Sum(q => q.Units?.Count ?? 0);
         res.Squads = st.Squads.Count(q => q.Units is { Count: > 0 });
@@ -182,9 +201,17 @@ public static class Chapter1Stage12Smoke
             st.Resolve(squad, q.Node, r.PlayerWon, intercept);
             res.Fights.Add((node.Def.Name, squad, r.PlayerWon, hp, alive0 - alive1, alive0, hpIn, place, walked, intercept));
             if (walked && !intercept && where == gate) res.GateCatches++;
+            log?.Invoke($"    {st.Turn + 1} 刻目 ・ 隊 {squad + 1}（{place}）対 {node.Def.Name}{(intercept ? "［迎撃］" : walked ? "［歩いてきた］" : "")}: {(r.PlayerWon ? "勝ち" : "負け")}・{r.Turns}T・{alive0} 枚 {hpIn:F0}% → {alive1} 枚 {hp:F0}%"
+                + (alive1 < alive0 ? $"・倒れた {string.Join("・", standing.Where(u => !u.IsAlive).Select(u => $"{u.Def.Name}（{u.LastDeathTurn}T）"))}" : "") + (node.IsHero ? $"・勇者の残り HP {node.HpNow}／{node.DefMaxHp}" : ""));
             TakeRelics();
             // 本陣の連戦: 勝ったら同じ刻のうちに次の相手と続けて戦う。
-            if (!intercept && r.PlayerWon && !st.Finished && st.SiegeNext(squad) is { } nx && !ReferenceEquals(nx, node)) Fight(squad, nx, false, false);
+            if (!intercept && r.PlayerWon && !st.Finished && st.SiegeNext(squad) is { } nx && !ReferenceEquals(nx, node))
+            {
+                // 次が勇者で、もう 1 隊がまだ本陣の手前に着いていなければ引いて待つ（傷が深いときも）。引けなければ続けて戦う。
+                bool wait = nx.IsHero && squad < 2 && ((Attacker(1 - squad) && !Staged(1 - squad)) || hp < 40);
+                if (wait && st.SiegeRetreat(squad)) log?.Invoke($"    {st.Turn + 1} 刻目 ・ 隊 {squad + 1} は勇者の前で引いた → {g[st.Squads[squad].Pos].Name}");
+                else Fight(squad, nx, false, false);
+            }
         }
 
         (int[] Seq, int Lane) RouteOf(int i) => i == 0
@@ -217,7 +244,7 @@ public static class Chapter1Stage12Smoke
             return Dest.Of(g, seq[^1]);
         }
 
-        while (!st.Finished && st.Turn < 40 && !st.Fallen)
+        while (!st.Finished && st.Turn < 40 && !st.Fallen && !st.TimeUp)
         {
             for (int i = 0; i < st.SquadCap && !st.Finished; i++)
             {
@@ -248,7 +275,10 @@ public static class Chapter1Stage12Smoke
             if (st.HeldOutposts.Count < held) res.GateLost += held - st.HeldOutposts.Count;
             if (st.ReserveDepartTurn >= 0 && res.ReserveLane < 0 && st.Reserve is { } rv) res.ReserveLane = rv.Def.Road;
             watch?.Invoke(st);
+            log?.Invoke($"  {st.Turn} 刻の終わり ・ {string.Join(" ／ ", Enumerable.Range(0, st.SquadCap).Where(i => st.Squads[i].Units is { Count: > 0 }).Select(i => $"隊 {i + 1} {(st.Squads[i].Lost ? "全滅" : st.Squads[i].Pos == g.Home ? "拠点" : st.Squads[i].Pos == g.Portal ? "本陣" : g[st.Squads[i].Pos].Name)} {st.Squads[i].Units!.Count(u => u.IsAlive)} 枚 {HpPct(st, i):F0}%"))}"
+                + $" ・ 中間拠点 {string.Join("・", st.HeldOutposts.Select(c => g[c].Name).DefaultIfEmpty("—"))} ・ 門 {(st.GateOpen ? "開" : "閉")} ・ 金 {st.Gold} ・ 歩く敵 {string.Join("・", st.PlannedFoeSteps().Select(x => $"{x.Node.Def.Name}→{(x.To == g.Home ? "拠点" : g[x.To].Name)}").DefaultIfEmpty("—"))}");
         }
+        log?.Invoke($"  → {(st.Won ? $"制圧（{st.CapturedTurn + 1} 刻目）" : st.Fallen ? "陥落" : st.TimeUp ? "時間切れ" : "終わり")}・金 {st.Gold}");
         res.SpawnLanes = st.Spawns.Where(n => !n.IsHero && !n.IsReserve).Select(n => n.Def.Road).ToList();
         res.Won = st.Won; res.Fallen = st.Fallen; res.TimeUp = st.TimeUp;
         res.CaptureTurn = st.Captured ? st.CapturedTurn + 1 : -1;
@@ -363,11 +393,26 @@ public static class Chapter1Stage12Smoke
         var sw = System.Diagnostics.Stopwatch.StartNew();
         if (!sweepOnly) try { Weigh(write, rule); }
         catch (Exception ex) { crashed++; write($"  × 重さ: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}"); }
-        if (!sweepOnly) try { lines &= Routes(write, rule, s, "採る盤", full: true); }
+        var baseRows = new Dictionary<(bool, Policy, int), Row>();
+        try
+        {
+            if (!sweepOnly)
+            {
+                Routes(write, rule, Dress(MapStage.Stage12, rule, 1), "基準 ＝ 今の 1-2（V476・単発と同じ盤 ×0.9）", full: false, table: baseRows);
+                lines &= Routes(write, rule, s, "新しい盤", full: true, baseline: baseRows);
+            }
+        }
         catch (Exception ex) { crashed++; write($"  × 通し: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}"); }
         try { Sweep(write, rule); }
         catch (Exception ex) { crashed++; write($"  × 振った表: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}"); }
         write($"  （測り {sw.Elapsed.TotalSeconds:F0} 秒）");
+        if (!sweepOnly)
+            foreach (var (pol, gd, seed) in new[] { (Policy.MidNorth, 2, 0), (Policy.MidSouth, 2, 0), (Policy.NorthSouth, 3, 0) })
+            {
+                write("");
+                write($"  通しの写し（組 B・{PolicyName(pol)}・留守番 {gd} 枚・1 章の seed {seed}）");
+                Play(s, seed, pol, gd, teamB: true, log: write);
+            }
         Req(crashed == 0, "器具（重さ・通し × 100 seed）が落ちない");
         if (!sweepOnly) write($"{(lines ? "○" : "×")} §3-2 の線{(lines ? "" : "——通っていない（門の合否には入れない・報告を見る）")}");
         return ok;
@@ -424,7 +469,7 @@ public static class Chapter1Stage12Smoke
     private static readonly Policy[] Policies = { Policy.MidNorth, Policy.MidSouth, Policy.NorthSouth, Policy.All };
     private static readonly int[] Guards = { 0, 2, 3, 4 };
 
-    private sealed record Row(Policy Policy, int Guard, int Wins, int Fallen, int TimeUp, double Turn, double Lost, double Gold, double Relic, double Catch, double Home, double Hero, double GateLost, double FallTurn);
+    private sealed record Row(Policy Policy, int Guard, int Wins, int Fallen, int TimeUp, double Turn, double Lost, double Gold, double Relic, double Catch, double Home, double Hero, double GateLost, double FallTurn, double HeroDown);
 
     private static Row Measure(MapStage stage, Policy p, int guard, bool teamB, List<Result>? keep = null)
     {
@@ -438,9 +483,10 @@ public static class Chapter1Stage12Smoke
             won.Count == 0 ? double.NaN : won.Average(r => (double)r.Gold),
             100.0 * rs.Count(r => r.Relic) / rs.Count,
             rs.Average(r => (double)r.GateCatches), rs.Average(r => (double)r.HomeIntercepts),
-            won.Count == 0 ? double.NaN : won.Average(r => (double)r.HeroSquads),
+            rs.Any(r => r.HeroSquads > 0) ? rs.Where(r => r.HeroSquads > 0).Average(r => (double)r.HeroSquads) : double.NaN,   // 勇者と戦った通しの平均
             rs.Average(r => (double)r.GateLost),
-            fell.Count == 0 ? double.NaN : Med(fell.Select(r => (double)r.FallTurn)));
+            fell.Count == 0 ? double.NaN : Med(fell.Select(r => (double)r.FallTurn)),
+            100.0 * rs.Count(r => r.HeroDown) / rs.Count);
     }
 
     private static Policy? Dominant(IReadOnlyList<Row> rows)
@@ -459,7 +505,7 @@ public static class Chapter1Stage12Smoke
         return null;
     }
 
-    private static bool Routes(Action<string> write, ChapterRule rule, MapStage s, string label, bool full)
+    private static bool Routes(Action<string> write, ChapterRule rule, MapStage s, string label, bool full, Dictionary<(bool, Policy, int), Row>? table = null, Dictionary<(bool, Policy, int), Row>? baseline = null)
     {
         bool ok = true;
         foreach (bool teamB in new[] { false, true })
@@ -471,6 +517,7 @@ public static class Chapter1Stage12Smoke
                 {
                     var keep = new List<Result>();
                     rows.Add(Measure(s, p, gd, teamB, keep));
+                    if (table is not null) table[(teamB, p, gd)] = rows[^1];
                     kept[(p, gd)] = keep;
                 }
             var probe = kept[(Policy.MidSouth, 2)];
@@ -478,26 +525,26 @@ public static class Chapter1Stage12Smoke
             write($"  §3-2 通し・{label}（1 章の seed 0〜{Seeds - 1}・期限 {s.TurnCap} 刻・{(teamB ? "組 B" : "組 A")}・1-1 の終わりを持ち越し・留守番を置くなら 3 隊目を買い、残りの金で呼ぶ・戦闘は器具）"
                   + $"・駒 {probe.Average(r => (double)r.Units):F1} 枚（留守番 2 枚の通し）");
             write("");
-            write("  | 方針 | 留守番 | 勝ち | 陥落（中央の刻） | 時間切れ | 制圧の刻 | 失った枚数 | 金の余り | レリック（%） | 関所で受けた | 拠点の迎撃 | 勇者に当てた隊 | 取り返された中間拠点 |");
-            write("  |---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+            write("  | 方針 | 留守番 | 勝ち | 陥落（中央の刻） | 時間切れ | 制圧の刻 | 失った枚数 | 金の余り | レリック（%） | 関所で受けた | 拠点の迎撃 | 勇者に当てた隊 | 勇者を倒した（%） | 取り返された中間拠点 |");
+            write("  |---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
             foreach (Row r in rows)
-                write($"  | {PolicyName(r.Policy)} | {r.Guard} | {r.Wins} | {r.Fallen}{(r.Fallen > 0 ? $"（{r.FallTurn:0.#}）" : "")} | {r.TimeUp} | {(double.IsNaN(r.Turn) ? "—" : r.Turn.ToString("0.#"))} | {r.Lost:F2} | {(double.IsNaN(r.Gold) ? "—" : r.Gold.ToString("F1"))} | {r.Relic:F0} | {r.Catch:F2} | {r.Home:F2} | {(double.IsNaN(r.Hero) ? "—" : r.Hero.ToString("F2"))} | {r.GateLost:F2} |");
+                write($"  | {PolicyName(r.Policy)} | {r.Guard} | {r.Wins} | {r.Fallen}{(r.Fallen > 0 ? $"（{r.FallTurn:0.#}）" : "")} | {r.TimeUp} | {(double.IsNaN(r.Turn) ? "—" : r.Turn.ToString("0.#"))} | {r.Lost:F2} | {(double.IsNaN(r.Gold) ? "—" : r.Gold.ToString("F1"))} | {r.Relic:F0} | {r.Catch:F2} | {r.Home:F2} | {(double.IsNaN(r.Hero) ? "—" : r.Hero.ToString("F2"))} | {r.HeroDown:F0} | {r.GateLost:F2} |");
 
             Row At(Policy p, int g) => rows.First(r => r.Policy == p && r.Guard == g);
-            var three = new[] { Policy.MidNorth, Policy.MidSouth, Policy.NorthSouth };
-            bool l1 = three.All(p => At(p, 2).Wins >= 70);
-            bool l2 = new[] { Policy.MidSouth, Policy.NorthSouth }.All(p => At(p, 2).Catch + At(p, 2).Home >= 1.0);
-            bool l3a = three.Any(p => At(p, 0).Fallen >= 30), l3b = three.All(p => At(p, 2).Fallen <= 10);
-            bool l3c = three.All(p => Math.Max(At(p, 3).Wins, At(p, 4).Wins) <= At(p, 2).Wins) && three.Any(p => At(p, 4).Wins < At(p, 2).Wins);
             Policy? dom = Dominant(Policies.Select(p => At(p, 2)).ToList());
-            string M(bool b) => b ? "○" : "×";
+            string M(bool x) => x ? "○" : "×";
+            if (baseline is null) { write(""); write($"  （基準・線は見ない）全部の列で勝つ方針 {(dom is { } dd ? PolicyName(dd) : "無い")}"); continue; }
+            var two = new[] { Policy.MidNorth, Policy.MidSouth };
+            Row Base(Policy p) => baseline[(teamB, p, 2)];
+            bool l1 = two.All(p => At(p, 2).Wins >= Base(p).Wins);
+            bool l2 = two.All(p => At(p, 2).Fallen <= 10) && At(Policy.NorthSouth, 3).Fallen <= 30;
+            bool l3 = two.All(p => At(p, 2).Hero >= 1.5);
             write("");
-            write($"  線（{(teamB ? "組 B・線はこちらで見る" : "組 A・並べるだけ")}）: 方針 1〜3 は留守番 2 枚で勝ち 70 以上 {M(l1)}（{string.Join("・", three.Select(p => At(p, 2).Wins))}）"
-                  + $"・方針 2・3 で迎撃（拠点＋関所）平均 1 回以上 {M(l2)}（{At(Policy.MidSouth, 2).Catch + At(Policy.MidSouth, 2).Home:F2}・{At(Policy.NorthSouth, 2).Catch + At(Policy.NorthSouth, 2).Home:F2}）"
-                  + $"・留守番なしは陥落 30 以上 {M(l3a)}（{string.Join("・", three.Select(p => At(p, 0).Fallen))}）・2 枚で陥落 10 以下 {M(l3b)}（{string.Join("・", three.Select(p => At(p, 2).Fallen))}）"
-                  + $"・3 枚以上は勝ちが下がる {M(l3c)}（3 枚 {string.Join("・", three.Select(p => At(p, 3).Wins))} ／ 4 枚 {string.Join("・", three.Select(p => At(p, 4).Wins))}）"
+            write($"  線（{(teamB ? "組 B・線はこちらで見る" : "組 A・並べるだけ")}）: 方針 1・2 の勝ちが基準以上（留守番 2 枚） {M(l1)}（{string.Join("・", two.Select(p => $"{At(p, 2).Wins} ／ 基準 {Base(p).Wins}"))}）"
+                  + $"・留守番 2 枚で陥落 10 以下（方針 1・2） ／ 方針 3 は留守番 3 枚で 30 以下 {M(l2)}（{At(Policy.MidNorth, 2).Fallen}・{At(Policy.MidSouth, 2).Fallen} ／ {At(Policy.NorthSouth, 3).Fallen}）"
+                  + $"・勇者に当てた隊が平均 1.5 以上（方針 1・2） {M(l3)}（{string.Join("・", two.Select(p => At(p, 2).Hero.ToString("F2")))}）"
                   + $"・全部の列で勝つ方針は無い {M(dom is null)}{(dom is { } d ? $"（{PolicyName(d)}）" : "")}");
-            if (teamB) ok &= l1 && l2 && l3a && l3b && l3c && dom is null;
+            if (teamB) ok &= l1 && l2 && l3 && dom is null;
 
             if (!full) continue;
             write("");
@@ -528,22 +575,18 @@ public static class Chapter1Stage12Smoke
         write("");
         write("  振った表（組 B・留守番 2 枚 ｜ 留守番なしの陥落・勝ち ／ 制圧の刻 ／ 失った枚数 ／ 金の余り を 方針 1 ｜ 2 ｜ 3 ｜ 4 の順）");
         write("");
-        write("  | 盤 | 1 中＋北 | 2 中＋南 | 3 北＋南 | 4 3 つとも | 留守番なしの陥落（1・2・3） | 留守番 2 枚の陥落 | 留守番 3 枚の勝ち | 勇者に当てた隊 |");
-        write("  |---|---|---|---|---|---|---|---|---|");
-        const string L = "band_levy";
+        write("  | 盤 | 1 中＋北 | 2 中＋南 | 3 北＋南 | 4 3 つとも | 留守番なしの陥落（1・2・3） | 留守番 2 枚の陥落 | 留守番 3 枚の勝ち ／ 陥落 | 勇者に当てた隊 | 勇者を倒した（%） |");
+        write("  |---|---|---|---|---|---|---|---|---|---|");
         var variants = new List<(string Label, MapStage Stage)>
         {
-            ("採る盤", MapStage.Stage12Ch477),
-            ("中の 2 番手 徴募兵", MapStage.Stage12Ch477With(midSecond: L)),
-            ("＋ 湧き 徴募兵", MapStage.Stage12Ch477With(midSecond: L, spawn: L)),
-            ("＋ 予備隊 徴募兵", MapStage.Stage12Ch477With(midSecond: L, spawn: L, reserve: L)),
-            ("＋ 湧き 4 刻ごと", MapStage.Stage12Ch477With(midSecond: L, spawn: L, reserve: L, spawnEvery: 4)),
-            ("＋ 期限 16", MapStage.Stage12Ch477With(midSecond: L, spawn: L, reserve: L, turnCap: 16)),
-            ("＋ 見張り台 毒霧の部隊", MapStage.Stage12Ch477With(midSecond: L, spawn: L, reserve: L, tower: "band_miasma")),
-            ("＋ 渡し場の部隊 徴募兵", MapStage.Stage12Ch477With(midSecond: L, spawn: L, reserve: L, southSecond: L)),
-            ("（参考・規則の外）＋ 本陣の守り 徴募兵", MapStage.Stage12Ch477With(midSecond: L, spawn: L, reserve: L, garrison: L)),
-            ("（参考・規則の外）採る盤から門番の勇者だけを外す", MapStage.Stage12Ch477With(hero: false)),
-            ("（参考・規則の外）＋ 門番の勇者を外す", MapStage.Stage12Ch477With(midSecond: L, spawn: L, reserve: L, hero: false)),
+            ("基準 ＝ 今の 1-2（V476）", MapStage.Stage12),
+            ("新しい盤（勇者 ×1.0）", MapStage.Stage12Ch477),
+            ("（採らない）勇者の最大HP と攻撃 ×0.85", MapStage.Stage12Ch477With(heroPercent: 85)),
+            ("（採らない）勇者の最大HP と攻撃 ×0.7", MapStage.Stage12Ch477With(heroPercent: 70)),
+            ("（参考）引く先は今までどおり経路の奥のマス", MapStage.Stage12Ch477With(retreatToOutpost: false)),
+            ("（参考）歩く敵は始めの案（弓隊・傭兵崩れ・騎士の小隊）", MapStage.Stage12Ch477With(midSecond: "band_archers", spawn: "band_sellswords", reserve: "band_knights")),
+            ("（参考）期限 12", MapStage.Stage12Ch477With(turnCap: 12)),
+            ("（参考）門番の勇者を外す", MapStage.Stage12Ch477With(hero: false)),
         };
         foreach (var (label, raw) in variants)
         {
@@ -552,7 +595,7 @@ public static class Chapter1Stage12Smoke
             var at0 = Policies.Take(3).Select(p => Measure(v, p, 0, true)).ToList();
             var at3 = Policies.Take(3).Select(p => Measure(v, p, 3, true)).ToList();
             string C(Row r) => $"{r.Wins} ／ {(double.IsNaN(r.Turn) ? "—" : r.Turn.ToString("0.#"))} ／ {r.Lost:F2} ／ {(double.IsNaN(r.Gold) ? "—" : r.Gold.ToString("F1"))}";
-            write($"  | {label} | {string.Join(" | ", at2.Select(C))} | {string.Join("・", at0.Select(r => r.Fallen))} | {string.Join("・", at2.Take(3).Select(r => r.Fallen))} | {string.Join("・", at3.Select(r => r.Wins))} | {string.Join("・", at2.Take(3).Select(r => double.IsNaN(r.Hero) ? "—" : r.Hero.ToString("F1")))} |");
+            write($"  | {label} | {string.Join(" | ", at2.Select(C))} | {string.Join("・", at0.Select(r => r.Fallen))} | {string.Join("・", at2.Take(3).Select(r => r.Fallen))} | {string.Join("・", at3.Select(r => $"{r.Wins} ／ {r.Fallen}"))} | {string.Join("・", at2.Take(3).Select(r => double.IsNaN(r.Hero) ? "—" : r.Hero.ToString("F2")))} | {string.Join("・", at2.Take(3).Select(r => r.HeroDown.ToString("F0")))} |");
         }
     }
 }

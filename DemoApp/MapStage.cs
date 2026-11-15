@@ -128,6 +128,12 @@ public sealed class MapStage
     /// </summary>
     public IReadOnlyList<OutpostReward>? OutpostRewards { get; init; }
 
+    /// <summary>
+    /// 本陣の連戦で引く先を<b>その経路の取っている中間拠点</b>にする（第477期・1 章の 1-2 の新しい盤だけ——経路の奥のマスが中間拠点でない盤）。
+    /// 取っていなければ今までどおり経路の奥のマス。偽なら今まで（経路の奥のマス）。
+    /// </summary>
+    public bool SiegeRetreatToOutpost { get; init; }
+
     /// <summary>拠点を空にして出ようとしたとき、画面が確かめの 1 行を出す盤か（第476期・1 章の 1-1 だけ・<b>表示だけ</b>——止めはしない）。</summary>
     public bool WarnEmptyHome { get; init; }
 
@@ -756,6 +762,7 @@ public sealed class MapStage
         ReserveOrder = s.ReserveOrder,
         SpawnLane = s.SpawnLane,
         OutpostRewards = s.OutpostRewards,
+        SiegeRetreatToOutpost = s.SiegeRetreatToOutpost,
     };
 
     /// <summary>大群の 1 部隊（第458期・1-3 の C3・動かない・<see cref="Map11.RoadNode.Hold"/>）。</summary>
@@ -1053,12 +1060,12 @@ public sealed class MapStage
     // ---------------- 第477期: 1-2 の盤を作り直す（指示書 design/PHASE477_STAGE12_BOARD_SPEC.md §2） ----------------
 
     /// <summary>第477期の 1 章の 1-2 の値（測りが振る口の既定）。見張り台の部隊・中の 2 番手・中間拠点の金（北 ／ 中 ／ 南）・待ち構える部隊の賞金・期限。</summary>
-    internal const string Stage12Ch477TowerBand = "band_fire", Stage12Ch477MidSecond = "band_archers", Stage12Ch477SpawnBand = "band_sellswords", Stage12Ch477ReserveBand = "band_knights";
+    internal const string Stage12Ch477TowerBand = "band_fire", Stage12Ch477MidSecond = "band_levy", Stage12Ch477SpawnBand = "band_levy", Stage12Ch477ReserveBand = "band_levy";   // 歩く敵は徴募兵（ポン 2026-11-15・始めは 弓隊 ／ 傭兵崩れ ／ 騎士の小隊）
     internal const int Stage12Ch477TowerGold = 0, Stage12Ch477GateGold = 8, Stage12Ch477FerryGold = 12, Stage12Ch477FoeGold = 6, Stage12Ch477TurnCap = 14;
 
     /// <summary>
     /// 1 章の 1-2（第477期・`ChapterRule.V477` から）。盤は <see cref="MapGraph.Build12F477"/>（北 4 ／ 中 3 ／ 南 6 マス・横の辺は 関所 ⇔ 見張り台）:
-    /// <b>北の山道</b> 見張り台に帯 B の硬い部隊（待ち構える）・取ればレリックの候補 ／ <b>中の街道</b> 先頭（第一波）と 2 番手が拠点へ歩いてくる・関所は金 ＋8 ／
+    /// <b>北の山道</b> 見張り台に帯 B の硬い部隊（待ち構える）・取ればレリックの候補 ／ <b>中の街道</b> 先頭（物見の兵）と 2 番手（徴募兵）が拠点へ歩いてくる・関所は金 ＋8 ／
     /// <b>南の湿地の道</b> 軽い部隊が 2 つ待ち構える・渡し場は金 ＋12。<b>歩くのは中の街道の部隊・湧き・予備隊だけ</b>:
     /// 湧きは全部 中の街道へ（<see cref="SpawnLane"/>）・予備隊は隊のいない経路を 中 → 北 → 南 の順に選ぶ（<see cref="ReserveOrder"/>）。
     /// 門（中間拠点 2 つ）・門番の勇者・本陣の守り・連戦・湧きの間隔・金の規則・隊の枠・候補・レリックの引き方は単発の 1-2（<see cref="Stage12"/>）のまま。
@@ -1071,7 +1078,7 @@ public sealed class MapStage
                                               int towerGold = Stage12Ch477TowerGold, int gateGold = Stage12Ch477GateGold, int ferryGold = Stage12Ch477FerryGold,
                                               int turnCap = Stage12Ch477TurnCap, bool passHolds = false, int spawnEvery = 0, string? reserve = null,
                                               string southFirst = "band_levy", string southSecond = "band_sellswords", string spawn = Stage12Ch477SpawnBand,
-                                              string garrison = "band_garrison", bool hero = true)
+                                              string garrison = "band_garrison", bool hero = true, int heroPercent = 100, bool retreatToOutpost = true)
     {
         MapStage b = Stage12;
         Map11.RoadNode Wait(Map11.RoadNode n) => n with { Hold = true, Gold = Stage12Ch477FoeGold };
@@ -1103,12 +1110,14 @@ public sealed class MapStage
             MatchOffer = b.MatchOffer,
             PortalGate = b.PortalGate,
             Relic = b.Relic,
-            Hero = hero ? b.Hero : HeroRule.Off,
+            // 測りの口 `heroPercent`: 勇者の最大HP と攻撃だけに掛ける倍率（採らない・並べるだけ）。
+            Hero = !hero ? HeroRule.Off : heroPercent == 100 || b.Hero.Unit is not { } hu ? b.Hero : b.Hero with { Unit = hu.WithStats(MapFoeScale.Mul(hu.MaxHp, heroPercent), MapFoeScale.Mul(hu.Attack, heroPercent)) },
             Siege = b.Siege,
             CrossFacing = true,
             ViewScale = 1.35f,
             SpawnsPassHolds = passHolds,
             SpawnLane = 1,
+            SiegeRetreatToOutpost = retreatToOutpost,
             ReserveOrder = new[] { 1, 0, 2 },
             OutpostRewards = new[] { new OutpostReward(towerGold, true), new OutpostReward(gateGold, false), new OutpostReward(ferryGold, false) },
             WarnEmptyHome = true,
