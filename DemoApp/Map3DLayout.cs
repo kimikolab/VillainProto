@@ -51,6 +51,13 @@ internal sealed class Map3DLayout
         public (int Lane, int Index)? Pass { get; init; }
         /// <summary>山を北へ寄せる（奥の山並みを厚く・高くする）。</summary>
         public bool NorthRange { get; init; }
+        /// <summary>
+        /// 視点を動かせる範囲（第477期・<see cref="Look"/> からの x, z の四角）。null なら今まで（`Map3DCamera.PanLimit` の ±）。
+        /// 盤が 1 画面に入らないステージ（1 章の 1-2）は、<see cref="Look"/> を拠点の側に置き、ここで右（敵の砦）まで動かせるようにする。
+        /// </summary>
+        public Rect2? Pan { get; init; }
+        /// <summary>中間拠点の建物の種類（第477期・経路の番号の順: "tower" ／ "gate" ／ "ferry"）。空なら今までの絵。</summary>
+        public string[] Outposts { get; init; } = Array.Empty<string>();
     }
 
     /// <summary>表のあるステージ。<b>Id は <c>MapStage.Id</c></b>（1 章の 1-1 も検証用の 1-1 も "1-1"）。</summary>
@@ -160,6 +167,64 @@ internal sealed class Map3DLayout
             },
             Look = new Vector3(0, 0, 0.6f),
         },
+        // 1-2（1 章・第477期・分かれ道 ＋ 北 4 ／ 中 3 ／ 南 6 マス）: 横に約 2 画面ぶん。開始時は左（辺境の砦と分かれ道）を見る。
+        //   北 ＝ 尾根沿いの山道（見張り台は崖の上の塔） ／ 中 ＝ まっすぐな街道（関所は道をふさぐ柵と小屋） ／
+        //   南 ＝ 沼と葦の中を曲がる道（渡し場は川べりの桟橋と小舟）。川は尾根の下から湧いて南へ流れる。経路の先頭のマスは 3 本とも分かれ道。
+        new Table
+        {
+            Stage = "1-2",
+            Bounds = new Rect2(-51f, -29f, 102f, 59f),
+            Reach = 1.12f,
+            NorthRange = true,
+            Name = "討伐隊の砦",
+            HomeName = "辺境の砦",
+            PortalName = "討伐隊の砦",
+            Home = new Vector3(-36.0f, 0, 0f),
+            Portal = new Vector3(37.0f, 0, 0f),
+            Lanes = new[]
+            {
+                new[] { new Vector3(-27.0f, 0, 0.5f), new Vector3(-18.0f, 1.0f, -8.5f), new Vector3(-7.0f, 2.4f, -14.0f), new Vector3(5.0f, 3.2f, -15.5f), new Vector3(20.0f, 1.6f, -10.5f) },
+                new[] { new Vector3(-27.0f, 0, 0.5f), new Vector3(-15.0f, 0, 0.5f), new Vector3(0f, 0, -1.0f), new Vector3(17.0f, 0, 0f) },
+                new[] { new Vector3(-27.0f, 0, 0.5f), new Vector3(-20.0f, 0, 9.0f), new Vector3(-11.0f, 0, 15.0f), new Vector3(-1.0f, 0, 18.5f), new Vector3(10.0f, 0, 19.5f), new Vector3(23.0f, 0, 16.5f), new Vector3(31.5f, 0, 9.5f) },
+            },
+            Outposts = new[] { "tower", "gate", "ferry" },
+            Rivers = new[]
+            {
+                new[]
+                {
+                    new Vector3(10.5f, 0, -8.0f), new Vector3(8.8f, 0, -3.0f), new Vector3(8.2f, 0, 4.0f),
+                    new Vector3(7.2f, 0, 11.0f), new Vector3(5.6f, 0, 19.0f), new Vector3(5.0f, 0, 29.0f),
+                },
+            },
+            Fort = new Vector3(-41.6f, 0, 0f),
+            Graveyard = new Vector3(-41.2f, 0, -8.0f),
+            Camp = new Vector3(42.0f, 0, 0f),
+            Woods = new[]
+            {
+                (new Vector3(-9.0f, 0, -6.0f), new Vector2(6.0f, 2.8f), 20, "forest"),    // 街道と山道のあいだの林
+                (new Vector3(16.0f, 0, -5.0f), new Vector2(4.0f, 2.2f), 10, "forest"),
+                (new Vector3(-26.0f, 0, 17.0f), new Vector2(6.5f, 4.0f), 22, "forest"),   // 湿地の道の入口の森
+                (new Vector3(24.0f, 0, 7.0f), new Vector2(4.0f, 2.2f), 10, "forest"),     // 砦の手前の木立
+                (new Vector3(-12.0f, 0, 25.5f), new Vector2(10.0f, 1.5f), 12, "forest"),  // 手前の縁
+                (new Vector3(28.0f, 0, 25.0f), new Vector2(9.0f, 1.6f), 12, "forest"),
+                (new Vector3(-27f, 0, -20.0f), new Vector2(11.0f, 2.2f), 12, "pine"),     // 山すその松
+                (new Vector3(30f, 0, -19.5f), new Vector2(10.0f, 2.2f), 12, "pine"),
+            },
+            Wetlands = new[]
+            {
+                (new Vector3(-6.0f, 0, 12.0f), new Vector2(4.0f, 2.0f)),
+                (new Vector3(3.0f, 0, 14.5f), new Vector2(3.0f, 1.8f)),
+                (new Vector3(16.5f, 0, 22.5f), new Vector2(5.0f, 2.0f)),
+                (new Vector3(-4.0f, 0, 23.0f), new Vector2(4.5f, 1.6f)),
+            },
+            FoothillZ = -19.5f,
+            HomeSlots = new[]
+            {
+                new Vector3(-40.6f, 0, 5.4f), new Vector3(-34.6f, 0, 6.2f), new Vector3(-33.5f, 0, -5.6f), new Vector3(-44.2f, 0, 8.2f),
+            },
+            Look = new Vector3(-21.0f, 0, 1.0f),
+            Pan = new Rect2(-3f, -10f, 47f, 20f),
+        },
     };
 
     private readonly MapGraph _graph;
@@ -178,6 +243,18 @@ internal sealed class Map3DLayout
     internal float Reach { get; } = 1f;
     /// <summary>地形の台の端（x, z）。</summary>
     internal Rect2 Bounds { get; }
+    /// <summary>視点を動かせる範囲（<see cref="Look"/> からの四角・null なら今まで）。</summary>
+    internal Rect2? Pan => Sheet?.Pan;
+    /// <summary>中間拠点の建物（種類・マスの位置・そこでの道の向き）。表に無ければ空。</summary>
+    internal IEnumerable<(string Kind, Vector3 At, Vector3 Forward)> Outposts()
+    {
+        if (Sheet is null) yield break;
+        for (int l = 0; l < Sheet.Outposts.Length && l < _graph.Lanes.Count; l++)
+        {
+            int cell = _graph.Lanes[l].FirstOrDefault(c => _graph.IsOutpost(c), -1);
+            if (cell >= 0) yield return (Sheet.Outposts[l], _cells[cell], Forward(cell));
+        }
+    }
     /// <summary>峠の関のマスの位置と、そこでの道の向き（無ければ null）。</summary>
     internal (Vector3 At, Vector3 Forward)? Pass
         => Sheet?.Pass is { } p ? (_cells[_graph.Lanes[p.Lane][p.Index]], Forward(_graph.Lanes[p.Lane][p.Index])) : null;

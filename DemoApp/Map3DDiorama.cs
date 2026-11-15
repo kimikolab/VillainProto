@@ -71,6 +71,7 @@ public partial class Map3DStage
             BuildGraveyard(_sheet.Graveyard);
             if (graph.HasPortal) BuildCamp(_sheet.Camp);
             if (layout.Pass is { } pass) BuildPass(pass.At, pass.Forward);
+            foreach (var (kind, at, forward) in layout.Outposts()) BuildOutpost(kind, at, forward);
             BuildFoothills();
             foreach (var (at, radius) in _sheet.Wetlands) BuildWetland(at, radius);
             foreach (var (at, radius, count, kind) in _sheet.Woods) BuildWood(at, radius, count, kind);
@@ -503,6 +504,73 @@ public partial class Map3DStage
     }
 
     /// <summary>討伐隊の本陣。柵・天幕・赤い旗・物見やぐら・かがり火。門は西（道の側）。</summary>
+    /// <summary>
+    /// 中間拠点の建物（第477期・1 章の 1-2）。仮の箱だが、<b>3 つが一目で別の場所と分かる</b>形にする:
+    /// "tower" ＝ 崖の上の石の塔（見張り台） ／ "gate" ＝ 道をふさぐ柵と小屋（関所） ／ "ferry" ＝ 川べりの桟橋と小舟（渡し場）。
+    /// マスの台と名札を隠さないように、建物はマスの奥（北）か横に置く。
+    /// </summary>
+    private void BuildOutpost(string kind, Vector3 at, Vector3 forward)
+    {
+        var root = new Node3D { Name = "Outpost_" + kind, Position = at };
+        AddChild(root);
+        StandardMaterial3D stone = Paint("#8f8a80", 0.95f), dark = Paint("#5c574f", 0.95f), wood = Paint("#6a5238"), plank = Paint("#8a6c48"), roof = Paint("#7a3a2c", 0.85f);
+        Vector3 side = new Vector3(-forward.Z, 0, forward.X).Normalized();
+        switch (kind)
+        {
+            case "tower":
+            {
+                // 崖の上の塔: マスの奥（北）に石の台 ＋ 高い塔 ＋ 胸壁 ＋ 篝火の光 ＋ 旗。
+                var p = new Vector3(0.4f, 0, -3.6f);
+                Box(root, p + new Vector3(0, 0.5f, 0), new Vector3(3.6f, 1.0f, 3.2f), dark);
+                Box(root, p + new Vector3(0, 3.6f, 0), new Vector3(1.9f, 5.4f, 1.9f), stone);
+                Box(root, p + new Vector3(0, 6.5f, 0), new Vector3(2.6f, 0.45f, 2.6f), dark);
+                foreach (var (dx, dz) in new[] { (-1.05f, -1.05f), (1.05f, -1.05f), (-1.05f, 1.05f), (1.05f, 1.05f) })
+                    Box(root, p + new Vector3(dx, 7.05f, dz), new Vector3(0.5f, 0.7f, 0.5f), stone);
+                Box(root, p + new Vector3(0, 6.95f, 0), new Vector3(0.5f, 0.3f, 0.5f), Paint("#ffb066", 0.6f, Color.FromHtml("#ff9a3c"), 2.4f));
+                Banner(root, p + new Vector3(0.9f, 6.7f, 0.9f), 2.2f, Color.FromHtml("#c8392f"));
+                break;
+            }
+            case "gate":
+            {
+                // 関所: 道をふさぐ柵（道の両脇に柱・上に横木・左右へ柵）と、脇の番小屋。
+                Vector3 across = side * 2.5f, ahead = forward * 2.6f;
+                foreach (float k in new[] { -1f, 1f })
+                {
+                    Box(root, ahead + across * k + new Vector3(0, 1.3f, 0), new Vector3(0.36f, 2.6f, 0.36f), wood);
+                    for (int i = 1; i <= 4; i++)
+                        Shape(root, new CylinderMesh { TopRadius = 0.03f, BottomRadius = 0.15f, Height = 1.5f, RadialSegments = 5 },
+                            ahead + side * k * (2.5f + i * 0.7f) + new Vector3(0, 0.75f, 0), wood);
+                }
+                float yaw = Mathf.RadToDeg(Mathf.Atan2(-side.Z, side.X));
+                Box(root, ahead + new Vector3(0, 2.5f, 0), new Vector3(5.4f, 0.26f, 0.26f), wood, yaw);
+                Box(root, ahead + new Vector3(0, 1.0f, 0), new Vector3(4.6f, 0.16f, 0.16f), Paint("#c8392f", 0.8f), yaw);
+                Vector3 hut = side * -4.6f + forward * 0.6f;
+                Box(root, hut + new Vector3(0, 0.9f, 0), new Vector3(2.4f, 1.8f, 2.0f), plank);
+                Box(root, hut + new Vector3(0, 2.05f, 0), new Vector3(2.9f, 0.5f, 2.5f), roof);
+                Banner(root, ahead + across + new Vector3(0, 2.6f, 0), 1.6f, Color.FromHtml("#c8392f"));
+                break;
+            }
+            default:
+            {
+                // 渡し場: 川（西）へ突き出た桟橋 ＋ 杭 ＋ 小舟 2 艘 ＋ 網小屋。
+                for (int i = 0; i < 5; i++)
+                    Box(root, new Vector3(-2.2f - i * 0.8f, 0.28f, 2.6f), new Vector3(0.7f, 0.12f, 1.5f), plank);
+                foreach (var (dx, dz) in new[] { (-2.2f, 1.9f), (-2.2f, 3.3f), (-5.4f, 1.9f), (-5.4f, 3.3f) })
+                    Shape(root, new CylinderMesh { TopRadius = 0.09f, BottomRadius = 0.11f, Height = 1.1f, RadialSegments = 6 }, new Vector3(dx, 0.35f, dz), wood);
+                foreach (var (dx, dz, yaw) in new[] { (-5.6f, 4.5f, 20f), (-3.9f, 0.9f, -12f) })
+                {
+                    Box(root, new Vector3(dx, 0.2f, dz), new Vector3(1.9f, 0.3f, 0.75f), wood, yaw);
+                    Box(root, new Vector3(dx, 0.36f, dz), new Vector3(1.5f, 0.06f, 0.5f), plank, yaw);
+                }
+                Vector3 hut = new Vector3(2.6f, 0, 3.8f);
+                Box(root, hut + new Vector3(0, 0.8f, 0), new Vector3(2.2f, 1.6f, 1.8f), plank);
+                Box(root, hut + new Vector3(0, 1.85f, 0), new Vector3(2.7f, 0.45f, 2.3f), Paint("#4f6a5a", 0.85f));
+                Banner(root, new Vector3(-2.0f, 0.3f, 3.5f), 2.0f, Color.FromHtml("#c8392f"));
+                break;
+            }
+        }
+    }
+
     private void BuildCamp(Vector3 at)
     {
         var root = new Node3D { Name = "Camp", Position = at, Scale = Vector3.One * 0.88f };

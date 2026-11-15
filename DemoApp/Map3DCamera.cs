@@ -32,6 +32,33 @@ public partial class Map3DCamera : Node3D
     private Vector3 _look;
     private float _reach = 1f;
     private bool _dragging;
+    /// <summary>視点を動かせる範囲（見る点からの四角・第477期）。null なら <see cref="PanLimit"/> の ±。</summary>
+    private Rect2? _range;
+    /// <summary>寄せている先（見る点からのずれ・第477期）。右ドラッグ・矢印で動かしたら消える。</summary>
+    private static Vector2? _glide;
+
+    /// <summary>その場所が画面の真ん中に来るように、なめらかに寄せる（画面の外の知らせ・全体図を押したとき・出来事で時計が止まったとき）。</summary>
+    internal void FocusOn(Vector3 world, bool snap = false)
+    {
+        Vector2 want = Clamp(new Vector2(world.X - _look.X, world.Z - _look.Z));
+        if (snap) { _pan = want; _glide = null; Apply(); } else _glide = want;
+    }
+
+    private Vector2 Clamp(Vector2 p) => _range is { } r
+        ? new Vector2(Mathf.Clamp(p.X, r.Position.X, r.End.X), Mathf.Clamp(p.Y, r.Position.Y, r.End.Y))
+        : new Vector2(Mathf.Clamp(p.X, -PanLimit.X, PanLimit.X), Mathf.Clamp(p.Y, -PanLimit.Y, PanLimit.Y));
+
+    /// <summary>いま地面のどこが画面に入っているか（x, z の四角・全体図の枠に使う・およその値）。</summary>
+    internal Rect2 Seen()
+    {
+        float tilt = Mathf.DegToRad(Tilt);
+        float distance = Height / Mathf.Sin(tilt) * _zoom * _reach;
+        float halfZ = distance * Mathf.Tan(Mathf.DegToRad(Fov) / 2) / Mathf.Sin(tilt);
+        Vector2 size = GetViewport()?.GetVisibleRect().Size ?? new Vector2(16, 9);
+        float halfX = distance * Mathf.Tan(Mathf.DegToRad(Fov) / 2) * size.X / Math.Max(1, size.Y);
+        Vector3 f = Focus;
+        return new Rect2(f.X - halfX, f.Z - halfZ, halfX * 2, halfZ * 2);
+    }
 
     public Camera3D Camera { get; } = new() { Near = 1f, Far = 400f };
     /// <summary>今の窓（引き出し）が開いているあいだ、盤を横へ寄せる量。</summary>
@@ -39,11 +66,13 @@ public partial class Map3DCamera : Node3D
     internal float Zoom => _zoom;
     internal Vector3 Focus => _look + new Vector3(_pan.X + Shift, 0, _pan.Y);
 
-    internal void Setup(string stageId, Vector3 look, float reach = 1f)
+    internal void Setup(string stageId, Vector3 look, float reach = 1f, Rect2? range = null)
     {
         _look = look;
         _reach = reach;
-        if (_stage != stageId) { _stage = stageId; _zoom = _zoomTarget = 1f; _pan = Vector2.Zero; }
+        _range = range;
+        if (_stage != stageId) { _stage = stageId; _zoom = _zoomTarget = 1f; _pan = Vector2.Zero; _glide = null; }
+        _pan = Clamp(_pan);
         if (OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--map3d-cam=", StringComparison.Ordinal)) is { } arg && _tuned is null)
         {
             float[] v = arg["--map3d-cam=".Length..].Split(',')
@@ -67,11 +96,12 @@ public partial class Map3DCamera : Node3D
         Camera.LookAt(focus, Vector3.Up);
     }
 
-    internal void ResetView() { _zoom = _zoomTarget = 1f; _pan = Vector2.Zero; Apply(); }
+    internal void ResetView() { _zoom = _zoomTarget = 1f; _pan = Clamp(Vector2.Zero); _glide = null; Apply(); }
 
     private void Pan(Vector2 by)
     {
-        _pan = new Vector2(Mathf.Clamp(_pan.X + by.X, -PanLimit.X, PanLimit.X), Mathf.Clamp(_pan.Y + by.Y, -PanLimit.Y, PanLimit.Y));
+        _glide = null;
+        _pan = Clamp(_pan + by);
     }
 
     public override void _UnhandledInput(InputEvent e)
@@ -124,6 +154,11 @@ public partial class Map3DCamera : Node3D
         if (Input.IsKeyPressed(Key.Down) || Input.IsKeyPressed(Key.S)) keys.Y += 1;
         if (keys != Vector2.Zero && GetViewport().GuiGetFocusOwner() is null) Pan(keys * (float)delta * 16f * _zoom);
         _zoom = Mathf.Lerp(_zoom, _zoomTarget, 1 - Mathf.Exp(-(float)delta * 12f));
+        if (_glide is { } to)
+        {
+            _pan = _pan.Lerp(to, 1 - Mathf.Exp(-(float)delta * 6f));
+            if (_pan.DistanceTo(to) < 0.05f) { _pan = to; _glide = null; }
+        }
         Apply();
     }
 }

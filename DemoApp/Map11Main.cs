@@ -242,6 +242,10 @@ public partial class Map11Main : Node3D
             }
         }
         // 第476期 §3-3: 3D を本物のクリックで通す口（`--map3d-play=<方針>,<置き場>`）。1 章を 1 度だけ始める（戦闘から戻るたびに場面は読み直される）。
+        // 第477期: 方針 p1 ／ p2 ／ p3 は 1-2 を遊ぶ——1-1 は器具の方針で通し、持ち越して 1-2 に入ったところから（頭の札は残す）。
+        if (Play3DRequested(user) && !Chapter1.Active && user.Any(a => a.StartsWith("--map3d-play=p", StringComparison.Ordinal)))
+            PlayChapterUntil(user.FirstOrDefault(a => a.StartsWith("--map-chapter=", StringComparison.Ordinal)) is { } pc12
+                             && int.TryParse(pc12["--map-chapter=".Length..], out int playSeed12) ? playSeed12 : 7, 1, keepIntro: true);
         if (Play3DRequested(user) && !Chapter1.Active)
             Map11Session.PickChapter(user.FirstOrDefault(a => a.StartsWith("--map-chapter=", StringComparison.Ordinal)) is { } pc
                                      && int.TryParse(pc["--map-chapter=".Length..], out int playSeed) ? playSeed : 11);
@@ -1972,6 +1976,7 @@ public partial class Map11Main : Node3D
         Map11Session.BeginTurn();
         Map11Session.StepKind kind = Map11Session.StepTurn();
         Refresh();
+        FocusEvent3D(kind);   // 第477期: 出来事の場所が画面の外なら視点を寄せる（3D の層だけ）
         switch (kind)
         {
             case Map11Session.StepKind.Battle: _running = false; ShowEncounter(); return true;
@@ -2071,6 +2076,7 @@ public partial class Map11Main : Node3D
     {
         Map11Session.StepKind kind = Map11Session.StepTurn();
         Refresh();
+        FocusEvent3D(kind);   // 第477期: 出来事の場所が画面の外なら視点を寄せる（3D の層だけ）
         switch (kind)
         {
             case Map11Session.StepKind.Battle: ShowEncounter(); return;
@@ -3533,7 +3539,10 @@ public partial class Map11Main : Node3D
             Color c = mine ? PlayerColor : EnemyColor;
             if (_outpostArt.TryGetValue(cell, out var art)) art.Texture = OutpostTexture(cell, mine);
             name.Modulate = c;
-            name.Text = PlaceName(cell) + (mine ? "（味方）" : St.Stage.Gold.On && St.OutpostGold > 0 ? $"  ＋{St.OutpostGold}" : "");   // 第468期: 金の札を掛けた値
+            // 第477期: 中間拠点ごとの見返りを持つ盤では「関所　金 ＋8」「見張り台　レリック」（金は金の札を掛けた値）。
+            name.Text = PlaceName(cell) + (mine ? "（味方）"
+                : St.RewardAt(cell) is { } rw ? "　" + (rw with { Gold = St.OutpostGoldAt(cell) }).Text
+                : St.Stage.Gold.On && St.OutpostGold > 0 ? $"  ＋{St.OutpostGold}" : "");   // 第468期: 金の札を掛けた値
         }
     }
 

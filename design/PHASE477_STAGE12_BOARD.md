@@ -497,3 +497,13 @@
 - 画面で遊ぶレビュー（指示の 6）・3D（指示書 §4）・観察ログの雛形。
 - 全部の門の「0 行」の照合・`audit`・`sweep fast`。足した口は既定が今まで（null ／ -1 ／ 偽）で、`--chapter1-reason-quick`・`--map12-smoke`・`--map13-smoke` は ok。
 - 遊ぶ 1 章の既定は第476期のまま（`--chapter1-rule=V477` で新しい盤）。
+
+## 11. 3D の 1-2 と、画面で遊んだレビュー（2026-11-15・ポンの決定「3D を建ててから」）
+
+- 位置の表（`Map3DLayout` の 1-2・横に約 2 画面ぶん・引きの倍率 1.12・視点を動かせる範囲 `Table.Pan`）・カメラの寄せ（`Map3DCamera.FocusOn` ／ `Seen`）・3 つの中間拠点の建物（`Map3DStage.BuildOutpost`）。
+- 画面の外の知らせ（`Map11Main.Map3DRadar.cs`）: 端の矢印の印・左下の全体図・歩く敵の赤い点線・出来事の場所へ寄せる。**判定は持たない**（`Map11State` を読むだけ）。
+- 中間拠点の名札に見返り（`RefreshOutposts`・2D の画面も同じ文になる）。
+- 遊ぶ口 `--map3d-play=p1|p2|p3,<置き場>`（1-1 は器具で通し、1-2 から本物のクリック）。
+- **レビューは `design/PHASE477_PLAY_REVIEW.md`**。3 回とも負けた（遊ぶ口は金を使わず休まない）。画面で見つけた 3 点はその場で直し、残り 7 点を書いた。
+- 確かめた回帰: 1-1 の 3D の検査 `--map3d-layout-smoke`（ok・failed 0）・1-1 の `--map3d-play=north`（3 刻目に制圧・前と同じ）・`--chapter1-stage12-quick`・`--chapter1-reason-quick`・`--map12-smoke`。全部の門の「0 行」の照合・`audit`・`sweep fast` はまだ。
+- 指示書 §4 のうち未着手: 討伐隊の砦の石の城壁と門の開閉・1-1 の峠を奥に見せる・「あと n 刻で着く」・3D のレイアウトの検査に 1-2 の場面。

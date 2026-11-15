@@ -45,7 +45,7 @@ public partial class Map11Main
         _map3d.Build(_layout3d, St.Graph);
         _cam3d = new Map3DCamera { Name = "Map3DCamera" };
         AddChild(_cam3d);
-        _cam3d.Setup(St.Stage.Id, _layout3d.Look, _layout3d.Reach);
+        _cam3d.Setup(St.Stage.Id, _layout3d.Look, _layout3d.Reach, _layout3d.Pan);
         _camera = _cam3d.Camera;
 
         // ---- 今の画面が読み書きする札（2D の盤の板）。3D では見せない——中身（出ているか・添え書き）だけを駒が読む。 ----
@@ -94,8 +94,8 @@ public partial class Map11Main
         foreach (MapGraph.Cell c in St.Graph.Cells.Where(c => c.Kind == MapGraph.Kind.Outpost))
         {
             Vector3 at = PosOf(c.Id);
-            AddOutpostArt(c.Id);
-            Label3D name = WorldLabel(c.Name, new Vector3(at.X, 0.6f, at.Z + 4.2f), 30, EnemyColor);
+            if (_layout3d.Sheet is not { Outposts.Length: > 0 }) AddOutpostArt(c.Id);   // 第477期: 表に建物のある中間拠点は建物が絵
+            Label3D name = WorldLabel(c.Name, new Vector3(at.X, at.Y + 0.6f, at.Z + 4.2f), 30, EnemyColor);
             AddChild(name);
             _outpostMarks.Add((c.Id, name));
         }
@@ -336,6 +336,7 @@ public partial class Map11Main
         _headline.Visible = _toast.Visible = _reform;
         if (_portalInfo is not null) _portalInfo.Visible = false;
         _hud3d.SetShown(!_reform);
+        ProcessRadar3D(!_reform);   // 第477期: 画面の外の知らせ・全体図・歩く敵の赤い点線
         if (_reform) return;
 
         // 第476期（自分で遊んで見つけた）: 行き先に触れているあいだは、出来事の 1 行より案内の 1 行（経路上の敵・「峠の関: 硬い・賞金 14」・拠点が空になる）を先に出す

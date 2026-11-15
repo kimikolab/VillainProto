@@ -16,6 +16,9 @@ public partial class Map11Main
     private static int _play3dShot, _play3dGuard;
     private static bool _play3dFormed, _play3dHovered;
     private static readonly HashSet<string> _play3dOnce = new(StringComparer.Ordinal);
+    // 第477期: 1-2 の方針（p1 ＝ 中＋北 ／ p2 ＝ 中＋南 ／ p3 ＝ 北＋南）。主力・別働・留守番の隊の番号は入ったときに 1 度決める。
+    private static int _play3dMain = -1, _play3dSecond = -1, _play3dHeroSeen;
+    private static bool Play12 => _play3dPlan is "p1" or "p2" or "p3";
 
     /// <summary>起動の引数に `--map3d-play=` があるか（戦闘の画面の早回しも同じ引数を読む）。</summary>
     internal static bool Play3DRequested(IEnumerable<string> user) => user.Any(a => a.StartsWith("--map3d-play=", StringComparison.Ordinal));
@@ -107,6 +110,40 @@ public partial class Map11Main
                 continue;
             }
             if (_resultOverlay.Visible) { await Shot("結果"); Finish(true); return; }
+            if (_investOverlay is { Visible: true })
+            {
+                await Shot("投資の札", once: true);
+                if (Find(_investOverlay, _ => true) is { } card) Click(OldUi(card));
+                await Wait(0.5);
+                if (_investOverlay is { Visible: true }) { Chapter1.AutoInvest(); _investOverlay.Visible = false; Refresh(); }   // 押せなければ器具の選び方で
+                continue;
+            }
+            if (Play12 && St.RelicOffer.Count > 0)
+            {
+                // 器具の口: レリックの候補は 1 枚目を取り、主力の先頭の駒に持たせる（候補の窓の中の操作は見ない）。
+                await Shot("レリックの候補");
+                string got = RelicCatalog.Info(St.RelicOffer[0]).Name;
+                St.ChooseRelic(0);
+                if (St.RelicHand.Count > 0 && _play3dMain >= 0 && St.Squads[_play3dMain].Units?.FirstOrDefault(u => u.IsAlive && u.Relic is null && St.CanEquip(u)) is { } holder)
+                    St.EquipRelic(holder, St.RelicHand[^1]);
+                GD.Print($"MAP3D_PLAY relic={got}");
+                Refresh();
+                await Wait(0.4);
+                continue;
+            }
+            if (Play12 && _siegeOverlay.Visible)
+            {
+                await Shot("本陣の連戦の窓");
+                // 次が勇者で、もう 1 隊がまだ本陣の手前に着いていなければ引く。それ以外は続けて戦う。
+                bool hero = _siegeGo.Text.Contains("勇者");
+                int other = Enumerable.Range(0, St.SquadCap).FirstOrDefault(i => (i == _play3dMain || i == _play3dSecond) && St.Squads[i].Pos != St.Graph.Portal, -1);
+                bool alone = other >= 0 && !St.Squads[other].Lost && St.Squads[other].Units is { } ou && ou.Any(u => u.IsAlive)
+                             && !St.Graph.Lanes.Any(l => l[^1] == St.Squads[other].Pos);
+                Click(OldUi(hero && alone ? _siegeBack : _siegeGo));
+                GD.Print($"MAP3D_PLAY siege={(hero && alone ? "引く" : "続けて戦う")} next={_siegeGo.Text}");
+                await Wait(hero && alone ? 0.6 : 3.0);
+                continue;
+            }
             if (_encounterOverlay.Visible)
             {
                 await Shot($"遭遇_{_encounterTitle.Text.Replace(' ', '_').Replace('×', 'x').Replace('　', '_')}");
@@ -130,6 +167,27 @@ public partial class Map11Main
             }
             if (_reform)
             {
+                if (!_play3dFormed && Play12)
+                {
+                    // 1-2 は持ち越した隊のまま出る。主力 ＝ いちばん枚数の多い隊・別働 ＝ 次・残りは留守番（拠点で待つ）。
+                    var live = Enumerable.Range(0, St.SquadCap).Where(i => St.Squads[i].Units is { Count: > 0 })
+                        .OrderByDescending(i => St.Squads[i].Units!.Count).ThenBy(i => i).ToList();
+                    _play3dMain = live.Count > 0 ? live[0] : 0;
+                    _play3dSecond = live.Count > 1 ? live[1] : -1;
+                    int guard = live.Count > 2 ? live[2] : -1;
+                    await Shot("編成の窓_持ち越した隊");
+                    if (_play3dPlan == "p3" && guard >= 0 && _play3dSecond >= 0 && St.Squads[guard].Units!.Count < 3 && St.Squads[_play3dSecond].Units!.Count > 3)
+                    {
+                        // 器具の口: 方針 3 は留守番を 3 枚にする（別働の後ろの 1 枚を留守番の空いた席へ）。
+                        int from = St.Squads[_play3dSecond].Units!.Max(u => u.Slot);
+                        int to = FormationRules.PlayableSlots.First(x => St.UnitAt(guard, x) is null);
+                        St.SwapSeats(_play3dSecond, from, guard, to);
+                        Refresh();
+                        await Shot("編成の窓_留守番を3枚に（器具の口）");
+                    }
+                    GD.Print($"MAP3D_PLAY roles main=第{_play3dMain + 1}隊 second={(_play3dSecond < 0 ? "—" : $"第{_play3dSecond + 1}隊")} guard={(guard < 0 ? "—" : $"第{guard + 1}隊")}");
+                    _play3dFormed = true;
+                }
                 if (!_play3dFormed)
                 {
                     await Shot("編成の窓_開いたところ");
@@ -154,6 +212,60 @@ public partial class Map11Main
             if (Map11Session.TurnRunning || St.Finished) { await Wait(0.3); continue; }
             await Shot("作戦の画面_始め", once: true);
 
+            if (Play12)
+            {
+                // ---- 1-2 の命令（第477期）: 隊の札を押して選び、行き先が画面の外なら全体図を押して視点を動かし、マスに触れて案内を読み、押して決める ----
+                MapGraph g = St.Graph;
+                int gate = g.Lanes[1].First(c => g.IsOutpost(c)), tower = g.Lanes[0].First(c => g.IsOutpost(c)), ferry = g.Lanes[2].First(c => g.IsOutpost(c));
+                (int[] Seq, int Lane) Route(int i) => i == _play3dMain
+                    ? _play3dPlan switch { "p2" => (new[] { gate }, 1), "p3" => (new[] { tower }, 0), _ => (new[] { gate, tower }, 0) }
+                    : _play3dPlan == "p1" ? (new[] { gate }, 1) : (new[] { ferry }, 2);
+                bool Up(int i) => i >= 0 && !St.Squads[i].Lost && St.Squads[i].Units is { } us && us.Any(u => u.IsAlive);
+                bool Staged(int i) => !Up(i) || St.Squads[i].Pos == g.Portal || St.Squads[i].Pos == g.Lanes[Route(i).Lane][^1];
+                Dest Want(int i)
+                {
+                    (int[] seq, int lane) = Route(i);
+                    int other = i == _play3dMain ? _play3dSecond : _play3dMain;
+                    if (St.Squads[i].Pos == g.Portal) return Dest.Portal(g, lane);
+                    if (St.GateOpen)
+                    {
+                        if (i == _play3dSecond && _play3dPlan == "p1" && Up(_play3dMain) && !Staged(_play3dMain)) return Dest.Of(g, gate);
+                        int stage = g.Lanes[lane][^1];
+                        if (St.Squads[i].Pos != stage) return Dest.Of(g, stage);
+                        return Staged(other) || St.Turn >= St.Stage.TurnCap - 3 ? Dest.Portal(g, lane) : Dest.Of(g, stage);
+                    }
+                    foreach (int cell in seq) if (!St.HeldOutposts.Contains(cell)) return Dest.Of(g, cell);
+                    return Dest.Of(g, seq[^1]);
+                }
+                if (St.Hero is not null && _play3dHeroSeen == 0) { _play3dHeroSeen = 1; _cam3d!.FocusOn(PosOf(g.Portal), snap: true); await Frames(3); await Shot("勇者が現れた"); }
+                foreach (int squad in new[] { _play3dMain, _play3dSecond })
+                {
+                    if (!Up(squad) || !St.CanSend(squad)) continue;
+                    Dest want = Want(squad);
+                    if (Map11Session.Destinations[squad] == want || St.AtDest(squad, want)) continue;
+                    Click(_hud3d!.CardRect(squad).GetCenter());
+                    await Frames(4);
+                    Vector3 world = _cellMarks3d[want.IsPortal ? g.Portal : want.Id].GlobalPosition;
+                    Vector2 view = GetViewport().GetVisibleRect().Size;
+                    Vector2 at = _camera.UnprojectPosition(world);
+                    if (!new Rect2(120, 150, view.X - 240, view.Y - 150 - 260).HasPoint(at) && _radar3d is not null)
+                    {
+                        Click(_radar3d.MapPoint(world));   // 全体図を押して視点を動かす
+                        await Wait(1.1);
+                        at = _camera.UnprojectPosition(world);
+                    }
+                    Move(at);
+                    await Frames(4);
+                    string name = want.IsPortal ? "敵の拠点" : PlaceName(want.Id);
+                    await Shot($"第{squad + 1}隊_行き先に触れた_{name}", once: true);
+                    Click(at);
+                    await Frames(4);
+                    bool set = Map11Session.Destinations[squad] == want;
+                    if (!set) { Map11Session.SetDestination(squad, want); GD.Print($"MAP3D_PLAY 行き先は器具の口で決めた 第{squad + 1}隊 → {name}"); }
+                    else await Shot($"第{squad + 1}隊_行き先を決めた_{name}", once: true);
+                }
+            }
+            else
             // ---- 命令: 駒を押して隊を選び、マスに触れて案内を読み、押して行き先を決める ----
             foreach (int squad in _play3dPlan == "split" ? new[] { 0, 1 } : new[] { 0 })
             {
