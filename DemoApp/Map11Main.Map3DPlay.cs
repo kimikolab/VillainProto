@@ -158,7 +158,7 @@ public partial class Map11Main
                 int mine = Map11Session.SiegeSquad >= 0 ? St.Squads[Map11Session.SiegeSquad].Units?.Count(u => u.IsAlive) ?? 0 : 0;
                 // 勇者のいない盤では、次が守将でなくても（本陣の守り・湧いた部隊）3 枚以下か HP 50% 未満なら引く——頭の札の「削られたら中間拠点へ引いて休める」のとおり。
                 bool back = keeper ? (mine < 5 || _siegeHp.Value < 70) && St.Turn < St.Stage.TurnCap - 2
-                    : !St.Stage.Hero.On ? (mine <= 3 || _siegeHp.Value < 50) && St.Turn < St.Stage.TurnCap - 2 : hero && (alone || weak);
+                    : !St.Stage.Hero.On ? (mine <= 2 || _siegeHp.Value < 40) && St.Turn < St.Stage.TurnCap - 2 : hero && (alone || weak);
                 Click(OldUi(back ? _siegeBack : _siegeGo));
                 GD.Print($"MAP3D_PLAY siege={(back ? "引く" : "続けて戦う")} next={_siegeGo.Text} hp={_siegeHp.Value:F0} 上の行「{string.Join("／", _siegeStats.Text.Split((char)10))}」引くボタン「{_siegeBack.Text}」窓の文「{string.Join("／", _siegeBody.Text.Split((char)10))}」");
                 await Wait(back ? 0.6 : 3.0);
@@ -248,7 +248,9 @@ public partial class Map11Main
                     int other = i == _play3dMain ? _play3dSecond : _play3dMain;
                     if (St.Squads[i].Pos == g.Portal) return Dest.Portal(g, lane);
                     // 取った中間拠点で傷が深ければ、動かずに休む（隊ごとに 4 回まで）。
-                    if (St.AtOutpost(i) && _play3dRests[i] < 4 && SquadHpPercent(St.Squads[i]) < (St.GateOpen ? 85 : 60)) { _play3dRests[i]++; return Dest.Of(g, St.Squads[i].Pos); }
+                    // 勇者のいない盤（第478期）では、門が開いた後も 70% 未満のときだけ休み、期限の 4 刻前からは休まない（1 回目の通しは休みすぎて時間切れになった）。
+                    int restBelow = !St.Stage.Hero.On ? (St.Turn >= St.Stage.TurnCap - 4 ? 0 : St.GateOpen ? 70 : 60) : St.GateOpen ? 85 : 60;
+                    if (St.AtOutpost(i) && _play3dRests[i] < 4 && SquadHpPercent(St.Squads[i]) < restBelow) { _play3dRests[i]++; return Dest.Of(g, St.Squads[i].Pos); }
                     if (St.GateOpen)
                     {
                         if (i == _play3dSecond && _play3dPlan == "p1" && Up(_play3dMain) && !Staged(_play3dMain)) return Dest.Of(g, gate);

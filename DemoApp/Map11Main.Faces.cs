@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using Godot;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -60,6 +60,7 @@ public partial class Map11Main
         => foe.IsHero ? "勇者" : foe.IsReserve ? "予備隊"
             // 第458期 §0-4: 大群は「徴募兵 ×3」。第476期: 待ち構える敵が 1 部隊ずつの盤（1 章の 1-1）では「×1」を付けない。
             : foe.Def.Hold && !foe.Cleared && (St.Stage.Siege.Stacks || HordeCount(foe) > 1 || foe.Def.Gold < 0) ? $"{foe.Def.Name} ×{HordeCount(foe)}"
+            : foe.Def.Name == MapStage.KeeperName ? MapStage.KeeperName                    // 第478期: 砦の守将は自分の名前で（動かない区画だが守りではない）
             : foe.Def.Stationary ? "本陣の守り"                                     // 第458期 §0-4: 守り（重）も札は「本陣の守り ＋12」
             : Regex.IsMatch(foe.Def.Name, "第[^波]+波") ? "第" + WaveMark(foe.Def.Name) + "波" : foe.Def.Name;   // 第448期: 帯 A は部隊の名前
 

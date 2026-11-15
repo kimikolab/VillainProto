@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -274,7 +274,8 @@ public static class Map11
     /// 帯 A でない部隊（波の写し）は空。
     /// </summary>
     public static string SquadLineOf(string name)
-        => EnemyCatalog.MapSquads.FirstOrDefault(m => m.Name == name)?.Line ?? "";
+        => name == MapStage.KeeperName ? "砦を預かる聖騎士長 2 枚と、回復する司祭長。硬い——削られたら中間拠点へ引いて休める"   // 第478期: 砦の守将（画面の 1 行だけ）
+           : EnemyCatalog.MapSquads.FirstOrDefault(m => m.Name == name)?.Line ?? "";
 
     public static string RuleLineOf(Formation f)
     {

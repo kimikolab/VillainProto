@@ -482,6 +482,8 @@ public partial class Map11Main
             plate.Visible = !modal;
             string text = _outpostMarks.First(m => m.Cell == cell).Name.Text;
             SetPlate(plate, "◆ " + text, mine ? PlayerColor : EnemyColor, PosOf(cell) + new Vector3(0, 6.6f, 0));
+            // 遊ぶ UI（隊の札・刻を進める）の下に入った名札は出さない（失われた隊の薄い札の下に透けて見えた）。
+            if (plate.Visible && _hud3d.Blocks().Any(block => block.Intersects(plate.GetGlobalRect()))) plate.Visible = false;
         }
         ProcessNotices3D(modal);
 
