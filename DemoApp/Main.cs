@@ -305,6 +305,17 @@ public partial class Main : Control
             GetTree().Quit(okS ? 0 : 1);
             return;
         }
+        // 第476期 §5: 1-1 に「道を選ぶ理由」の門（賞金 ＋4 ／ ＋14 ／ ＋4・始めの 4 部隊は動かない・湧きは 6 刻目から歩く・本陣の守り・峠の関の名前と頭の札の 3 行・ほかは今のまま）。画面なし。
+        // §3 の測り（`--foe-weight` の式の重さ・通し 北だけ ／ 南だけ ／ 2 隊に分ける × 100 seed・線）つき。`--chapter1-reason-quick` は測りを省く。
+        if (bootArgs.Contains("--chapter1-reason-smoke", StringComparer.Ordinal) || bootArgs.Contains("--chapter1-reason-quick", StringComparer.Ordinal))
+        {
+            bool okZ;
+            try { okZ = Chapter1ReasonSmoke.Run(GD.Print, ProjectSettings.GlobalizePath("res://"), bots: !bootArgs.Contains("--chapter1-reason-quick", StringComparer.Ordinal)); }
+            catch (System.Exception ex) { GD.PrintErr(ex.ToString()); okZ = false; }
+            GD.Print($"CHAPTER1_REASON_SMOKE_COMPLETE ok={okZ}");
+            GetTree().Quit(okZ ? 0 : 1);
+            return;
+        }
         // 第474期 §4: 1-1 の盤を非対称にする門（北 2 マス・南 4 マス・湧きは北が先・行き先までの作戦ターン・単発と第461〜471期は今のまま）。画面なし。
         // §1 の重さの調べ（峠の関の候補）と通し（北だけ ／ 南だけ ／ 2 隊に分ける）つき（報告だけ）。`--chapter1-asym-quick` は報告だけの 2 つを省く。
         if (bootArgs.Contains("--chapter1-asym-smoke", StringComparer.Ordinal) || bootArgs.Contains("--chapter1-asym-quick", StringComparer.Ordinal))

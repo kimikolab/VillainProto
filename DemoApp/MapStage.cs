@@ -104,6 +104,18 @@ public sealed class MapStage
     public bool CrossFacing { get; init; }
 
     /// <summary>
+    /// 湧いた部隊は、待ち構える敵（<see cref="Map11.RoadNode.Hold"/>）の脇を抜けて拠点へ歩く（第476期・1 章の 1-1 だけ）。
+    /// 偽なら第458期からの規則（動かない区画の奥で詰まる・1-3 の大群）。隊は今までどおり、敵のいるマスを素通りできない。
+    /// </summary>
+    public bool SpawnsPassHolds { get; init; }
+
+    /// <summary>拠点を空にして出ようとしたとき、画面が確かめの 1 行を出す盤か（第476期・1 章の 1-1 だけ・<b>表示だけ</b>——止めはしない）。</summary>
+    public bool WarnEmptyHome { get; init; }
+
+    /// <summary>ステージの頭の札に足す行（第476期・勝ち方と道の違い・<b>表示だけ</b>）。空なら足さない。</summary>
+    public IReadOnlyList<string> Notes { get; init; } = Array.Empty<string>();
+
+    /// <summary>
     /// 敵の数値の倍率（第462期・1 章だけ・<see cref="ChapterRule.V462"/>）。<b>盤の敵はすでに掛けた後の値</b>（<see cref="Scaled"/> が経路・湧き・予備隊・勇者の定義を写して掛ける）
     /// ——ここは表示（ステージの頭の札・上の帯）と、勇者の固定回復を掛ける口（`Map11State` が勇者の駒を作るとき・<see cref="MapFoeScale.MendHero"/>）だけが読む。
     /// 単発のステージは <see cref="MapFoeScale.None"/>。
@@ -718,6 +730,9 @@ public sealed class MapStage
         Hero = scale is { } sh && s.Hero.Unit is { } hu ? s.Hero with { Unit = sh.HeroDef(hu) } : s.Hero,
         Siege = s.Siege,
         ViewScale = s.ViewScale,
+        SpawnsPassHolds = s.SpawnsPassHolds,
+        WarnEmptyHome = s.WarnEmptyHome,
+        Notes = s.Notes,
     };
 
     /// <summary>大群の 1 部隊（第458期・1-3 の C3・動かない・<see cref="Map11.RoadNode.Hold"/>）。</summary>
@@ -935,6 +950,77 @@ public sealed class MapStage
         SquadCap = Stage11Ch471.SquadCap,
         Gold = gateHolds ? Stage11Ch471.Gold with { Horde = Stage11Ch474GateGold } : Stage11Ch471.Gold,
     };
+
+    // ---------------- 第476期: 1-1 に「道を選ぶ理由」（指示書 design/PHASE476_STAGE11_REASON_SPEC.md §2） ----------------
+
+    /// <summary>第476期の 1 章の 1-1 の賞金: 雑兵（物見の兵・徴募兵・騎士の小隊）＋4・峠の関 ＋14・本陣の守り ＋4。</summary>
+    internal const int Stage11Ch476FoeGold = 4, Stage11Ch476GateGold = 14, Stage11Ch476GarrisonGold = 4;
+    /// <summary>最初の湧きは 6 刻目（5 作戦ターンが終わったとき）。2 回目からは今までの間隔（S = 8）。</summary>
+    internal const int Stage11Ch476FirstSpawn = 5;
+    /// <summary>本陣の守り（軽い帯・`--foe-weight` で決めた）。</summary>
+    internal const string Stage11Ch476GarrisonBand = "band_levy";
+    /// <summary>
+    /// 湧く部隊（北も南も傭兵崩れ）。第471期は北が徴募兵だったが、`--chapter1-reason-smoke` の重さで「拠点に 1 枚だけ残しても勝つ」（ムド 1 枚 20／20）と出て、
+    /// 「3 枚の隊 15／20 以上・1 枚では負ける」の線を通る傭兵崩れに替えた（3 枚 20／20・1 枚は最大でリリ 7／20）。
+    /// </summary>
+    internal const string Stage11Ch476SpawnBand = "band_sellswords";
+    /// <summary>峠の関の名前（札・遭遇の窓・敵部隊の一覧・記録）。中身は盾の列（<see cref="Stage11Ch474GateBand"/>）。</summary>
+    internal const string Stage11Ch476GateName = "峠の関";
+
+    /// <summary>
+    /// 1 章の 1-1（第476期・`ChapterRule.V476` から）。盤・関の重さ・倍率・手札・隊の枠・始めの金は第474期のまま（<see cref="Stage11Ch474"/>）に:
+    /// <b>関の賞金</b>（雑兵 ＋4・峠の関 ＋14）／ <b>始めの 4 部隊は待ち構える</b>（どれも <see cref="Map11.RoadNode.Hold"/>・歩くのは湧きだけ）／
+    /// <b>最初の湧きは 6 刻目</b>（北も傭兵崩れ・湧いた部隊は待ち構える敵の脇を抜けて拠点へ歩く・<see cref="SpawnsPassHolds"/>）／ <b>本陣の守り</b>（動かない・抜くと ＋4・勝てば制圧）。
+    /// 単発の 1-1 と第461〜475期の 1 章の 1-1 は変えない。
+    /// </summary>
+    public static MapStage Stage11Ch476 { get; } = Stage11Ch476With();
+
+    /// <summary>賞金・最初の湧きの刻・本陣の守りを替えた 1 章の 1-1（第476期の測りが候補を並べるための口・遊ぶ盤は <see cref="Stage11Ch476"/>）。</summary>
+    internal static MapStage Stage11Ch476With(int gateGold = Stage11Ch476GateGold, int firstSpawn = Stage11Ch476FirstSpawn, string? garrison = Stage11Ch476GarrisonBand,
+                                              bool spawnsPass = true, string spawn = Stage11Ch476SpawnBand)
+    {
+        MapStage b = Stage11Ch474;
+        EnemyCatalog.MapSquad sp = EnemyCatalog.MapSquadOf(spawn);
+        string shields = EnemyCatalog.MapSquadOf(Stage11Ch474GateBand).Name;
+        Map11.RoadNode Wait(Map11.RoadNode n) => n with { Hold = true, Gold = Stage11Ch476FoeGold };
+        var south = new List<Map11.RoadNode> { Wait(b.Lanes[1][0]), Wait(b.Lanes[1][1]) };
+        if (garrison is not null) south.Add(Garrison(1, 2, garrison, 4) with { Name = "本陣の守り", Gold = Stage11Ch476GarrisonGold });
+        return new()
+        {
+            Id = b.Id,
+            Title = b.Title,
+            Board = b.Board,
+            Lanes = new IReadOnlyList<Map11.RoadNode>[]
+            {
+                new[]
+                {
+                    Wait(b.Lanes[0][0]) with { Name = "物見の兵" },
+                    b.Lanes[0][1] with
+                    {
+                        Name = Stage11Ch476GateName, Gold = gateGold, Tag = "硬い",
+                        Note = $"最大HP ×{Stage11Ch474GateHp / 100.0:0.#}・攻撃 ×{Stage11Ch474GateAtk / 100.0:0.#}（中身は{shields}）",
+                    },
+                },
+                south.ToArray(),
+            },
+            LaneNames = b.LaneNames,
+            Spawn = lane => lane == 0 ? (sp.Enemy, sp.Name, 2) : b.Spawn(lane),
+            Portal = b.Portal with { FirstSpawn = firstSpawn },
+            Time = b.Time,
+            Arrival = b.Arrival,
+            SquadCap = b.SquadCap,
+            WinOnCapture = true,
+            Gold = b.Gold,
+            SpawnsPassHolds = spawnsPass,
+            WarnEmptyHome = true,
+            Notes = new[]
+            {
+                "敵の本陣を制圧したら勝ち。",
+                "北は近道だが峠の関が硬い（抜けば賞金）。南は回り道だが軽い。",
+                $"{firstSpawn + 1} 刻目から、敵の本陣から部隊が歩いてくる。拠点を空にしないこと。",
+            },
+        };
+    }
 
     /// <summary>選べるステージ（編成画面の選択の並び）。</summary>
     public static IReadOnlyList<MapStage> All { get; } = new[] { Stage11, Stage12, Stage13 };

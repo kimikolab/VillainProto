@@ -112,11 +112,19 @@ public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList
         V465.Scales, StarRule.V464, DealRule.Off, InvestRule.V470, RosterRule.V475, MapStage.Stage11Ch474, Story: true);
 
     /// <summary>
+    /// 第476期の 1 章（指示書 design/PHASE476_STAGE11_REASON_SPEC.md §2）。第475期に、<b>1-1 に道を選ぶ理由</b>（<see cref="MapStage.Stage11Ch476"/>）を載せただけ:
+    /// 関の賞金（雑兵 ＋4・峠の関 ＋14）・始めの 4 部隊は待ち構える（歩くのは湧きだけ・最初の湧きは 6 刻目）・本陣の守り（＋4）・頭の札に勝ち方の 3 行。
+    /// 駒・加入の表・倍率・1-2 ／ 1-3 は第475期のまま。
+    /// </summary>
+    public static readonly ChapterRule V476 = new(true, "第476期（持ち越し・敵の倍率・☆の強化・勇者の回復なし・投資は 1-2 から・盤と金の札・加入の表は 35 体・始めの 6 枚はガン入り・1-1 は道を選ぶ理由つき）",
+        V465.Scales, StarRule.V464, DealRule.Off, InvestRule.V470, RosterRule.V475, MapStage.Stage11Ch476, Story: true);
+
+    /// <summary>
     /// 版の一覧（第466期・遊びの写しが版をキーで持つ——写しの版で 1 章を始め直すため）。<b>版を足したらここにも足す。</b>
     /// </summary>
     public static IReadOnlyList<(string Key, ChapterRule Rule)> Versions
         => new[] { ("V460", V460), ("V461", V461), ("V462", V462), ("V463", V463), ("V464", V464), ("V465", V465), ("V467", V467), ("V468", V468), ("V469", V469),
-                   ("V470", V470), ("V471", V471), ("V474", V474), ("V475", V475) };
+                   ("V470", V470), ("V471", V471), ("V474", V474), ("V475", V475), ("V476", V476) };
 
     /// <summary>版のキー（「V465」・一覧に無ければ名前）。</summary>
     public string Key { get { string n = Name; return Versions.FirstOrDefault(v => v.Rule.Name == n).Key ?? n; } }
@@ -132,7 +140,7 @@ public static class Chapter1
 {
     /// <summary>遊ぶ 1 章の規則（編成画面の札「1 章」・絵の口が始める版）。</summary>
     /// 第474期: `--chapter1-rule=<版のキー>` で起動したときだけ、その版を遊ぶ 1 章にする（<see cref="ReadPlayRuleArg"/>・既定は変えない）。
-    public static ChapterRule Default => _playRule ?? ChapterRule.V475;   // 第476期から加入の表は 35 体（第475期の表・ポン 2026-11-15）・第474期から 1-1 は道の長さが違う盤・第461期から持ち越しのある 1 章・第462期から敵の倍率・第463期から☆の重ね・第464期から☆は強化で・第465期から勇者の回復なし・第467期から軸への投資・第468期から盤と金の札・第469期から加入の表・第470期から 1 章の手直し・第471期から始めの 6 枚はガン入り
+    public static ChapterRule Default => _playRule ?? ChapterRule.V476;   // 第476期から 1-1 に道を選ぶ理由（関の賞金・敵は待ち構える・本陣の守り）と加入の表は 35 体（第475期の表・ポン 2026-11-15）・第474期から 1-1 は道の長さが違う盤・第461期から持ち越しのある 1 章・第462期から敵の倍率・第463期から☆の重ね・第464期から☆は強化で・第465期から勇者の回復なし・第467期から軸への投資・第468期から盤と金の札・第469期から加入の表・第470期から 1 章の手直し・第471期から始めの 6 枚はガン入り
     private static ChapterRule? _playRule;
 
     /// <summary>
@@ -421,6 +429,7 @@ public static class Chapter1
     public static (string Title, string Body) Intro(MapStage s)
     {
         var (title, body) = Rule.Story && Tales470.TryGetValue(s.Id, out Tale? t) ? ($"1 章 ・ {s.Id} {t.Heading}", t.Body) : IntroText(s);   // 第470期 §1-4
+        if (s.Notes.Count > 0) body += "\n" + string.Join("\n", s.Notes.Select(n => "・" + n));   // 第476期 §2-5: 勝ち方と道の違い（その盤が持つ行）
         return s.FoeScale.Active ? (title, body + "\n" + s.FoeScale.IntroLine) : (title, body);
     }
 

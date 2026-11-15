@@ -115,7 +115,10 @@ public static class Map11
     /// 制圧するには抜く必要がある（<see cref="Map11State.PortalFoe"/> に数える）。湧きの列は塞がない。</para>
     /// <para><c>Hold</c>（第458期 §0-2）は<b>自分の初期位置から動かない区画</b>（1-3 の大群・徴募兵 ×3 が C3 に重なって待つ）。
     /// 先頭の前進（<see cref="Map11State.NextNode"/>）からは飛ばし、湧いた部隊はその手前で詰まる。敵の拠点の守備隊（<c>Stationary</c>）とは別の札。</para>
-    public sealed record RoadNode(int Road, int Index, string Name, Formation Enemy, int StageIndex, bool Stationary = false, bool Hold = false);
+    /// <para>第476期: <c>Gold</c> はその区画を抜いたときの金（0 以上なら種類ごとの値 <see cref="GoldRule"/> より先に読む・-1 が今まで）。
+    /// <c>Tag</c> ／ <c>Note</c> は<b>表示だけ</b>（「硬い」・「最大HP ×2.5・攻撃 ×2（中身は盾の列）」——札・遭遇の窓・案内の行）。規則は読まない。</para>
+    public sealed record RoadNode(int Road, int Index, string Name, Formation Enemy, int StageIndex, bool Stationary = false, bool Hold = false,
+                                  int Gold = -1, string Tag = "", string Note = "");
 
     /// <summary>道ごとの敵部隊。<b>手前を抜かないと奥に当たれない。</b></summary>
     public static IReadOnlyList<RoadNode>[] Roads { get; } =
@@ -351,8 +354,11 @@ public readonly record struct TimeRule(bool On, int AdvanceEvery, int RestPercen
 /// <b>同じポータルを使う</b>ので、1 回使うとこのターン数だけ誰も使えない。
 /// <b>湧きと同じ1本のタイマーを共有する</b>——<c>0</c> なら連続で使える。
 /// </param>
+/// <param name="FirstSpawn">
+/// 第476期: 最初の湧きまでの作戦ターン（0 なら <c>SpawnEvery</c>・今まで）。2 回目からは <c>SpawnEvery</c> の間隔。
+/// </param>
 public readonly record struct PortalRule(bool On, int SpawnEvery, int BattleCap = 120,
-                                         int WarpEvery = 3)
+                                         int WarpEvery = 3, int FirstSpawn = 0)
 {
     /// <summary>敵の拠点なし（第175期の規則そのもの）。</summary>
     public static readonly PortalRule Off = new(false, 0, Map11.BattleCap);
@@ -1054,7 +1060,7 @@ public sealed class Map11State
         _outposts = Graph.Cells.Where(c => c.Kind == MapGraph.Kind.Outpost).Select(c => c.Id).ToArray();
         _holds = Stage.Lanes.Any(l => l.Any(n => n.Hold));
         // 最初の1回まで S ターン（第176期の `Turn % S == 0` と同じ立ち上がり）。
-        _portalReady = Portal.On ? Math.Max(0, Portal.SpawnEvery) : 0;
+        _portalReady = Portal.On ? Math.Max(0, Portal.FirstSpawn > 0 ? Portal.FirstSpawn : Portal.SpawnEvery) : 0;   // 第476期: 最初の湧きだけ早める口
         // 第177期 §3: 自分で組む通しでは、**3 隊の 15 枚をばらして手札にする**。
         if (draft && Stage.Arrival.On)
         {
@@ -2323,6 +2329,7 @@ public sealed class Map11State
 
     private int BaseKillGold(Node node)
         => node.IsHero ? Stage.Hero.Gold   // 第454期: 勇者
+           : node.Def.Gold >= 0 ? node.Def.Gold   // 第476期: 区画が自分の賞金を持つ（峠の関 ＋14 など）
            : node.Def.Hold ? Stage.Gold.Horde   // 第458期: 大群は 1 部隊ずつ
            : node.Def.Stationary ? Stage.Gold.Garrison : node.FromPortal && !node.IsReserve ? Stage.Gold.SpawnKill : Stage.Gold.Kill;
 
@@ -2548,7 +2555,8 @@ public sealed class Map11State
                 // 第454期: 勇者は StepEvery 刻に 1 マス（現れた刻からかぞえて）。
                 if (sp.IsHero && Stage.Hero.StepEvery > 1 && (Turn - HeroTurn) % Stage.Hero.StepEvery != 0) continue;
                 int target = Graph.TowardHome(road, sp.Pos);
-                if (FoesOn(road).Any(x => !ReferenceEquals(x, sp) && x.Pos == target)) continue;
+                // 第476期: 待ち構える敵（`Hold`）の脇を湧いた部隊が抜ける盤（`MapStage.SpawnsPassHolds`）では、動かない区画を詰まりに数えない。
+                if (FoesOn(road).Any(x => !ReferenceEquals(x, sp) && x.Pos == target && !(Stage.SpawnsPassHolds && x.Def.Hold))) continue;
                 if (!Step(sp)) return list;
             }
         }
@@ -2853,7 +2861,7 @@ public sealed class Map11State
                 if (sp.IsHero && Stage.Hero.Chaser) continue;   // 第459期: 追ってくる勇者は下で（`MoveChaser` と同じ式）
                 if (sp.IsHero && Stage.Hero.StepEvery > 1 && (Turn + 1 - HeroTurn) % Stage.Hero.StepEvery != 0) continue;   // 第454期（同じ式・次の刻）
                 int target = Graph.TowardHome(road, sp.Pos);
-                if (FoesOn(road).Any(x => !ReferenceEquals(x, sp) && PosOf(x) == target)) continue;
+                if (FoesOn(road).Any(x => !ReferenceEquals(x, sp) && PosOf(x) == target && !(Stage.SpawnsPassHolds && x.Def.Hold))) continue;   // 第476期（`AdvanceFoes` と同じ式）
                 list.Add((sp, target));
                 moved[sp] = target;
             }

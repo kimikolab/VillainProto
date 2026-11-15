@@ -143,7 +143,7 @@ public static class Chapter1AsymSmoke
 
     private static string Band(string id) => EnemyCatalog.MapSquadOf(id).Name;
 
-    private static double Med(IEnumerable<double> xs)
+    internal static double Med(IEnumerable<double> xs)
     {
         var o = xs.OrderBy(x => x).ToList();
         return o.Count == 0 ? double.NaN : o.Count % 2 == 1 ? o[o.Count / 2] : (o[o.Count / 2 - 1] + o[o.Count / 2]) / 2;
@@ -206,9 +206,9 @@ public static class Chapter1AsymSmoke
 
     // ---------------- §1 の通し（北だけ ／ 南だけ ／ 2 隊に分ける） ----------------
 
-    private enum Plan { North, South, Split, Turtle, Hold }
+    internal enum Plan { North, South, Split, Turtle, Hold }
 
-    private static string PlanName(Plan p) => p switch
+    internal static string PlanName(Plan p) => p switch
     {
         Plan.North => "北だけ（主力 5 枚が北・残りは拠点で番）",
         Plan.South => "南だけ（主力 5 枚が南・残りは拠点で番）",
@@ -216,7 +216,7 @@ public static class Chapter1AsymSmoke
         _ => "（参考）拠点で迎え撃ってから出る（道の敵が尽きたら主力が北へ）",
     };
 
-    private sealed class Result
+    internal sealed class Result
     {
         public bool Won, Fallen;
         public int CaptureTurn = -1, EndTurn, Lost, Battles, Spawns, Recruits;
@@ -225,6 +225,8 @@ public static class Chapter1AsymSmoke
         public int Gold;
         /// <summary>相手の名前 → その戦闘の後の隊の HP（%）と失った枚数（隊ごと）。</summary>
         public List<(string Foe, int Squad, bool Won, double Hp, int Lost, int Turns, bool AtHome)> Fights = new();
+        /// <summary>第476期の測りが読む列（<see cref="Fights"/> と同じ順）: 入る前の隊の HP（%）・生きている枚数・相手が湧いた部隊か。</summary>
+        public List<(double HpIn, int AliveIn, bool Spawn)> Ins = new();
     }
 
     /// <summary>主力の席（`design/weights/p471_start6` の第1隊と同じ）。</summary>
@@ -242,7 +244,7 @@ public static class Chapter1AsymSmoke
     /// 1 通し。始めの 6 枚から主力 5 枚（第1隊）を組み、金 8 で 2 枚呼んで残りの 1 枚と 3 枚の隊（第2隊）にする。
     /// 行き先は方針のとおり——制圧の後は盤に残った敵部隊のいちばん近いものへ。戦闘は器具（台本なし）。
     /// </summary>
-    private static Result Play(MapStage stage, int chapterSeed, Plan plan, Action<Map11State>? watch = null, int endless = 0, bool teamB = false)
+    internal static Result Play(MapStage stage, int chapterSeed, Plan plan, Action<Map11State>? watch = null, int endless = 0, bool teamB = false)
     {
         var st = new Map11State(Chapter1.StageSeed(chapterSeed, 0, 0), stage.Time, stage.Portal, draft: true, stage: stage);
         MapGraph g = st.Graph;
@@ -267,6 +269,8 @@ public static class Chapter1AsymSmoke
             var prep = intercept ? st.PrepareIntercept(squad, node) : st.Prepare(squad, node);
             if (prep is not { } q) return;
             int alive0 = q.Players.Count(u => u.IsAlive);
+            int max0 = q.Players.Sum(u => u.MaxHp);
+            res.Ins.Add((max0 == 0 ? 0 : 100.0 * q.Players.Where(u => u.IsAlive).Sum(u => u.Hp) / max0, alive0, node.FromPortal));
             BattleResult r = BattleEngine.Run(q.Players, q.Enemies, q.Seed, verbose: false);
             // 戦闘の直後（道中の回復が乗る前）の HP。
             int max = q.Players.Sum(u => u.MaxHp);
