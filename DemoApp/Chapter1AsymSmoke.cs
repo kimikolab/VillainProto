@@ -227,6 +227,8 @@ public static class Chapter1AsymSmoke
         public List<(string Foe, int Squad, bool Won, double Hp, int Lost, int Turns, bool AtHome)> Fights = new();
         /// <summary>第476期の測りが読む列（<see cref="Fights"/> と同じ順）: 入る前の隊の HP（%）・生きている枚数・相手が湧いた部隊か。</summary>
         public List<(double HpIn, int AliveIn, bool Spawn)> Ins = new();
+        /// <summary>倒れた味方（第476期・相手 ／ 隊 ／ 駒 ／ その戦闘の何ターン目か）。</summary>
+        public List<(string Foe, int Squad, string Unit, int Turn)> Fell = new();
     }
 
     /// <summary>主力の席（`design/weights/p471_start6` の第1隊と同じ）。</summary>
@@ -271,7 +273,9 @@ public static class Chapter1AsymSmoke
             int alive0 = q.Players.Count(u => u.IsAlive);
             int max0 = q.Players.Sum(u => u.MaxHp);
             res.Ins.Add((max0 == 0 ? 0 : 100.0 * q.Players.Where(u => u.IsAlive).Sum(u => u.Hp) / max0, alive0, node.FromPortal));
+            var standing = q.Players.Where(u => u.IsAlive).ToList();
             BattleResult r = BattleEngine.Run(q.Players, q.Enemies, q.Seed, verbose: false);
+            foreach (UnitState u in standing.Where(u => !u.IsAlive)) res.Fell.Add((node.Def.Name, squad, u.Def.Name, u.LastDeathTurn));
             // 戦闘の直後（道中の回復が乗る前）の HP。
             int max = q.Players.Sum(u => u.MaxHp);
             double hp = max == 0 ? 0 : 100.0 * q.Players.Where(u => u.IsAlive).Sum(u => u.Hp) / max;

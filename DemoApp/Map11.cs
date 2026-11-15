@@ -2169,11 +2169,17 @@ public sealed class Map11State
             if (Squads[s].Units is { } u) { Bench.AddRange(u); u.Clear(); }
         var order = Map11.Squads.SelectMany(d => d.F.Occupied().Select(o => o.Def.Id)).ToList();
         Bench.Sort((a, b) => order.IndexOf(a.Def.Id).CompareTo(order.IndexOf(b.Def.Id)));
+        // 第476期（不具合の直し）: 既定の 3 隊の定義に無い駒（1 章の手札）は -1——下で空いた席へ順に置く。
+        // 第475期までは `First` が落ち、「既定の組み方で 2 隊を組む」を押すと各隊に 1 枚置いたところで止まっていた（画面も引き直されない）。
         int DefSlot(UnitState u)
-            => Map11.Squads.SelectMany(d => d.F.Occupied()).First(o => o.Def.Id == u.Def.Id).Slot;
+            => Map11.Squads.SelectMany(d => d.F.Occupied()).Where(o => o.Def.Id == u.Def.Id).Select(o => o.Slot).FirstOrDefault(-1);
         bool Free(int squad, int slot) => Roster(squad).All(x => x.Slot != slot);
         void Put(UnitState u, int squad, int slot) { Bench.Remove(u); u.Slot = slot; Roster(squad).Add(u); }
 
+        // 第476期: 加入の表が始めの手札の組み方を持っていれば、それを先に（1 章の 1-1・主力 5 枚 ＋ 1 枚）。
+        foreach (var (name, squad, slot) in Stage.Roster.StartSeats)
+            if (squad < fill && Bench.FirstOrDefault(x => x.Def.Name == name) is { } hit && Roster(squad).Count < 5 && Free(squad, slot))
+                Put(hit, squad, slot);
         for (int i = 0; i < fill; i++)
             foreach (var want in Squads[i].Def.F.Occupied())
                 if (Bench.FirstOrDefault(x => x.Def.Id == want.Def.Id) is { } hit && Free(i, want.Slot))
@@ -2181,7 +2187,7 @@ public sealed class Map11State
         foreach (UnitState u in Bench.ToList())
         {
             int slot = DefSlot(u);
-            int squad = Enumerable.Range(0, fill).FirstOrDefault(k => Roster(k).Count < 5 && Free(k, slot), -1);
+            int squad = slot < 0 ? -1 : Enumerable.Range(0, fill).FirstOrDefault(k => Roster(k).Count < 5 && Free(k, slot), -1);
             if (squad < 0)
             {
                 squad = Enumerable.Range(0, fill).FirstOrDefault(k => Roster(k).Count < 5, -1);

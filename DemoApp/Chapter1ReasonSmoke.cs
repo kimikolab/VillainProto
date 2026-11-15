@@ -130,6 +130,19 @@ public static class Chapter1ReasonSmoke
             Req(okE && others && roster, "(e) 1-2・1-3・単発・第461〜475期の 1 章は今のまま");
         }
 
+        // ---- 不具合 3: 1 章の手札で「既定の組み方で 2 隊を組む」 ----
+        {
+            var st = new Map11State(0, s.Time, s.Portal, draft: true, stage: s);
+            int fill = st.DefaultSquadsFilled;
+            bool done = false;
+            string err = "";
+            try { done = st.UseDefaultSquads(); } catch (Exception ex) { err = ex.GetType().Name; }
+            string seats = string.Join(" ／ ", st.Squads.Take(2).Select(q => string.Join("・", (q.Units ?? new List<UnitState>()).OrderBy(u => u.Slot).Select(u => $"{u.Def.Name}@{u.Slot}"))));
+            write($"  不具合 3: 既定の組み方で {fill} 隊を組む → {(err.Length > 0 ? "落ちた " + err : done.ToString())}・{seats}・控え {st.Bench.Count}");
+            Req(done && fill == 2 && st.Squads[0].Units is { Count: 5 } && st.Squads[1].Units is { Count: 1 } && st.Bench.Count == 0 && st.CanSend(0) && st.CanSend(1),
+                "「既定の組み方で 2 隊を組む」が 1 章の手札でも落ちず、主力 5 枚 ＋ 1 枚に配る（第475期までは各隊 1 枚で止まっていた）");
+        }
+
         if (!bots) return ok;
         int crashed = 0;
         bool lines = true;
@@ -299,6 +312,22 @@ public static class Chapter1ReasonSmoke
             write("");
             write($"  線（組 {(teamB ? "B" : "A")}）: {(teamB ? $"どの方針も勝ち 85 以上 {(l1 ? "○" : "×")}（{string.Join("・", rows.Select(r => r.Wins))}）・" : "")}北だけは南だけより金の余りが 8 以上多い {(l2 ? "○" : "×")}（{n.Gold - so.Gold:+0.0;-0.0}）"
                   + $"・失った枚数が 1 枚以上多い {(l3 ? "○" : "×")}（{n.Lost - so.Lost:+0.00;-0.00}）・全部の列で勝つ方針は無い {(l4 ? "○" : $"×（{Short(dom!.Value)}）")}");
+            // 誰が何ターン目に倒れたか（方針 × 相手 × 駒・倒れた通しの割合と、その戦闘の中の平均ターン）
+            write("");
+            write($"  誰が何 T に倒れたか（組 {(teamB ? "B" : "A")}・{Seeds} 通しのうち倒れた通しの割合・その戦闘の中の平均ターン）");
+            write("");
+            write("  | 方針 | 相手 | 隊 | 戦闘（勝ち ／ 数） | 倒れた駒（割合・平均 T） |");
+            write("  |---|---|---|--:|---|");
+            foreach (Plan plan in Plans)
+            {
+                var rs = Enumerable.Range(0, Seeds).Select(c => Chapter1AsymSmoke.Play(s, c, plan, teamB: teamB)).ToList();
+                foreach (var g in rs.SelectMany(r => r.Fights).GroupBy(f => (f.Foe, f.Squad)).OrderBy(g => g.Key.Squad).ThenBy(g => g.Key.Foe, StringComparer.Ordinal))
+                {
+                    var fell = rs.SelectMany(r => r.Fell).Where(f => f.Foe == g.Key.Foe && f.Squad == g.Key.Squad).GroupBy(f => f.Unit)
+                        .OrderByDescending(x => x.Count()).Select(x => $"{x.Key} {100.0 * x.Count() / Seeds:F0}%・{x.Average(f => (double)f.Turn):F1}T").ToList();
+                    write($"  | {Short(plan)} | {g.Key.Foe} | {(g.Key.Squad == 0 ? "主力" : "3 枚の隊")} | {g.Count(f => f.Won)} ／ {g.Count()} | {(fell.Count == 0 ? "—" : string.Join(" ／ ", fell))} |");
+                }
+            }
             // 線は組 B で見る（指示書 §3-2）。組 A は並べるだけ——ただし「全部の列で勝つ方針」はどちらの組でも止める理由。
             if (teamB) ok &= l1 && l2 && l3;
             ok &= l4;

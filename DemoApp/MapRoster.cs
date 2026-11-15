@@ -26,6 +26,11 @@ public sealed class RosterRule
     public string StartStage { get; init; } = "";
     /// <summary>始めの手札（駒の名前・☆は盤の☆の規則で☆1）。</summary>
     public IReadOnlyList<string> Start { get; init; } = Array.Empty<string>();
+    /// <summary>
+    /// 始めの手札の「既定の組み方」（第476期・駒の名前 → 隊の番号（0 から）と席）。空なら決まっていない（`Map11State` が空いた席へ順に置く）。
+    /// 値は `design/weights/p471_start6` の第1隊（測りの主力）と同じ: 主力 5 枚 ＋ 残りの 1 枚は第2隊。
+    /// </summary>
+    public IReadOnlyList<(string Unit, int Squad, int Slot)> StartSeats { get; init; } = Array.Empty<(string, int, int)>();
     /// <summary>ステージごとに、そのステージから呼べる駒（駒の名前・表の並びがステージの順・積み上がる）。</summary>
     public IReadOnlyList<(string Stage, IReadOnlyList<string> Units)> Joins { get; init; } = Array.Empty<(string, IReadOnlyList<string>)>();
 
@@ -65,6 +70,7 @@ public sealed class RosterRule
         Name = "第471期（始めの 6 枚はガン入り・1-1 で 6 体 → 1-2 で 20 体 → 1-3 で 27 体）",
         StartStage = "1-1",
         Start = new[] { "墓守リィカ", "胞子体ムグ", "のろまの巨兵ドルガ", "鬨の号令ガン", "施しのリリ", "泥人形ムド" },
+        StartSeats = new[] { ("泥人形ムド", 0, 0), ("のろまの巨兵ドルガ", 0, 1), ("鬨の号令ガン", 0, 2), ("墓守リィカ", 0, 3), ("施しのリリ", 0, 4), ("胞子体ムグ", 1, 1) },
         Joins = new (string, IReadOnlyList<string>)[]
         {
             ("1-1", new[] { "彼岸花のハギ", "継ぎ接ぎのヴェル", "分かちのドハ", "見境なしのミサ", "爆ぜるゾト", "呪詛官ネル" }),
@@ -84,6 +90,7 @@ public sealed class RosterRule
         Name = "第475期（始めの 6 枚はガン入り・1-1 で 5 体 → 1-2 で 21 体 → 1-3 で 29 体・ウツ ／ ワタは 1-2 から・ハギは 1-3 から）",
         StartStage = "1-1",
         Start = V471.Start,
+        StartSeats = V471.StartSeats,
         Joins = new (string, IReadOnlyList<string>)[]
         {
             ("1-1", new[] { "継ぎ接ぎのヴェル", "分かちのドハ", "見境なしのミサ", "爆ぜるゾト", "呪詛官ネル" }),
