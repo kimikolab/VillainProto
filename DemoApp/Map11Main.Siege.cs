@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using Godot;
 using System.Linq;
 
@@ -18,6 +18,8 @@ public partial class Map11Main
     private Label _siegeTag = null!;
     private HBoxContainer _siegeFaces = null!;
     private ProgressBar _siegeHp = null!;
+    /// <summary>今の隊と次の相手の枚数・HP（第478期 §4-4: 窓の上に大きく）。</summary>
+    private Label _siegeStats = null!;
 
     private void BuildSiegeOverlay(Control root)
     {
@@ -30,6 +32,9 @@ public partial class Map11Main
         _siegeFaces.AddThemeConstantOverride("separation", 45);
         _siegeFaces.CustomMinimumSize = new Vector2(0, 130);
         col.AddChild(_siegeFaces);
+        _siegeStats = UiKit.Text("", 21, Color.FromHtml("#ffe9a8"));
+        _siegeStats.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        col.AddChild(_siegeStats);
         _siegeHp = new ProgressBar { CustomMinimumSize = new Vector2(0, 30), ShowPercentage = true };
         _siegeHp.AddThemeStyleboxOverride("fill", UiKit.Box(PlayerColor, PlayerColor));
         col.AddChild(_siegeHp);
@@ -45,7 +50,7 @@ public partial class Map11Main
         _siegeGo.CustomMinimumSize = new Vector2(0, 58);
         _siegeGo.Pressed += SiegeContinue;
         row.AddChild(_siegeGo);
-        _siegeBack = UiKit.ActionButton("引く", UiKit.Muted);
+        _siegeBack = UiKit.ActionButton("引く", PlayerColor);   // 第478期 §4-4: 「続けて戦う」と同じ大きさ・同じ強さの色
         _siegeBack.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         _siegeBack.CustomMinimumSize = new Vector2(0, 58);
         _siegeBack.Pressed += SiegeRetreat;
@@ -82,16 +87,17 @@ public partial class Map11Main
         _siegeHp.Value = SquadHpPercent(s);
         _siegeTag.Text = portal ? "SIEGE ・ 本陣の連戦" : $"SIEGE ・ {where}の連戦";
         _siegeTitle.Text = $"{s.Label} が{where}で勝った——次は {(next.IsHero ? "勇者" : next.Def.Name)}";
+        _siegeStats.Text = $"{s.Label}　{alive} 枚 ・ HP {SquadHpPercent(s):F0}%\n次の相手　{(next.IsHero ? "勇者" : next.Def.Name)}　{foeAlive} 体 ・ HP {NodeHpPercent(next):F0}%"
+            + (after > 1 ? $"（{where}に残る敵 {after}）" : "");
+        if (portal && St.Stage.SiegeRetreatToOutpost && St.Graph.Lanes[road].Where(c => St.HeldOutposts.Contains(c)).Select(c => (int?)c).LastOrDefault() is { } heldCell)
+        { cell = heldCell; held = true; }   // 引く先の表示は `SiegeRetreat` と同じ式（取っている中間拠点へ引く盤では、その中間拠点）
         _siegeBody.Text =
-            $"{s.Label}: {alive} 枚 ・ HP {SquadHpPercent(s):F0}%\n"
-            + $"{(next.IsHero ? "勇者" : next.Def.Name)}: {foeAlive} 体 ・ HP {NodeHpPercent(next):F0}%"
-            + (after > 1 ? $"（{where}に残る敵 {after}）" : "") + "\n\n"
-            + HeroWaitLines(s, next)
+            HeroWaitLines(s, next)
             + $"引く: {PlaceName(cell)}へ戻る（無料・時間はかからない）。"
             + (held ? "味方の中間拠点なので、組み直し・呼ぶ・休むができる。" : St.Graph.IsOutpost(cell) ? "敵のものなので組み直しはできない。" : "")
             + $" {where}の敵はそのまま（HP は戻らない）。";
         _siegeGo.Text = $"続けて戦う（{(next.IsHero ? "勇者" : next.Def.Name)}）";
-        _siegeBack.Text = $"引く（{PlaceName(cell)}へ）";
+        _siegeBack.Text = St.Stage.OutpostRewards is not null ? $"引いて待つ（{PlaceName(cell)}へ）" : $"引く（{PlaceName(cell)}へ）";
         _siegeOverlay.Visible = true;
     }
 
@@ -101,7 +107,8 @@ public partial class Map11Main
     /// </summary>
     private string HeroWaitLines(Map11State.Squad s, Map11State.Node next)
     {
-        if (!next.IsHero || St.Stage.OutpostRewards is null) return "";
+        bool keeper = next.Def.Name == MapStage.KeeperName;
+        if ((!next.IsHero && !keeper) || St.Stage.OutpostRewards is null) return "";
         var lines = new System.Collections.Generic.List<string>();
         foreach (Map11State.Squad q in St.Squads)
         {
@@ -111,7 +118,8 @@ public partial class Map11Main
                 : St.Graph.Path(q.Pos, q.Via, St.Graph.Portal, -1) is { Count: > 1 } path ? $"{PlaceName(q.Pos)}（本陣まで あと {path.Count - 1} 刻）" : PlaceName(q.Pos);
             lines.Add($"{q.Label}: {n} 枚 ・ HP {SquadHpPercent(q):F0}% ・ {at}");
         }
-        return "門番は 2 隊で順に当てて削る相手（勇者の HP は戻らない）。もう 1 隊がまだなら、引いて待てる。\n"
+        return (keeper ? "砦の守将は硬い。削られたら中間拠点へ引いて休める（守将の傷は残る）。\n"
+                       : "門番は 2 隊で順に当てて削る相手（勇者の HP は戻らない）。もう 1 隊がまだなら、引いて待てる。\n")
                + (lines.Count == 0 ? "ほかに動ける隊はいない。\n\n" : string.Join("\n", lines) + "\n\n");
     }
 

@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using Godot;
 using System;
 using System.Collections.Generic;
@@ -214,6 +214,7 @@ public partial class Map11Main : Node3D
         // 3D の fps を測る口（`--map3d-fps`）も、絵の口と同じく seed と 1 章を引数で決める（写しと同じ場面で測るため）。
         bool pictured = user.Any(a => a.StartsWith("--map11-capture=", StringComparison.Ordinal)) || user.Contains("--map3d-fps", StringComparer.Ordinal)
             || user.Contains("--map3d-layout-smoke", StringComparer.Ordinal);
+        if (pictured) _noticesOff = true;   // 第478期: 絵の口・検査は器具が盤を進めるので、出来事の窓は出さない
         if (pictured
             && user.FirstOrDefault(a => a.StartsWith("--map-seed=", StringComparison.Ordinal)) is { } seedArg
             && int.TryParse(seedArg["--map-seed=".Length..], out int capSeed)
@@ -3106,6 +3107,7 @@ public partial class Map11Main : Node3D
         lines.Add("");
         lines.Add($"seed {Map11Session.Seed}（この数字を控えれば同じ通しを再現できます）");
         // 第477期 続き 3: 負けた通しでは「どの隊が誰に負けたか」を頭に 1 行（負けた理由が分かるように・戦闘の記録から読むだけ）。
+        if (St.Won && St.Stage.WinLine.Length > 0) lines.Insert(0, St.Stage.WinLine + Nl);   // 第478期: 次のステージへの予告の 1 行
         if (!St.Won && Map11Session.BattleLog.Where(l => !l.Won).ToList() is { Count: > 0 } lostFights)
             lines.Insert(0, "負けた戦闘: " + string.Join(" ／ ", lostFights.Select(l =>
                 $"{l.Squad} が {System.Text.RegularExpressions.Regex.Replace(l.Foe, @"^\d+\.\s*", "")} に負けた" + (l.Turn > 0 || l.Intercept ? $"（{(l.Turn > 0 ? $"{l.Turn} 刻目" : "")}{(l.Turn > 0 && l.Intercept ? "・" : "")}{(l.Intercept ? "拠点の迎撃" : "")}）" : ""))));

@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using Godot;
 using System;
 using System.Collections.Generic;
@@ -24,6 +24,7 @@ public partial class Map11Main
     /// <summary>起動の引数に `--map3d-play=` があるか（戦闘の画面の早回しも同じ引数を読む）。</summary>
     internal static bool Play3DRequested(IEnumerable<string> user) => user.Any(a => a.StartsWith("--map3d-play=", StringComparison.Ordinal));
 
+    private static int _play3dStalls;
     private void StartPlay3D(string[] user)
     {
         if (!Map3DMode.Active || user.FirstOrDefault(a => a.StartsWith("--map3d-play=", StringComparison.Ordinal)) is not { } arg) return;
@@ -133,6 +134,16 @@ public partial class Map11Main
                 await Wait(0.4);
                 continue;
             }
+            if (NoticeShown)
+            {
+                // 第478期: 出来事の窓（負けた戦闘・中間拠点を取った・金を使える場所）。写しを撮って、「休む」があれば押し、無ければ閉じる（金は器具の口で使う）。
+                await Shot($"出来事の窓_{_noticeTitle.Text.Replace(' ', '_')}");
+                GD.Print($"MAP3D_PLAY notice=「{_noticeTitle.Text}」文「{string.Join("／", _noticeBody.Text.Split((char)10))}」ボタン {(_noticeRevive.Visible ? _noticeRevive.Text + " " : "")}{(_noticeEnhance.Visible ? _noticeEnhance.Text + " " : "")}{(_noticeRest.Visible ? "休む" : "")}");
+                Click(OldUi(_noticeRest.Visible ? _noticeRest : _noticeClose));
+                await Wait(0.5);
+                if (NoticeShown) { _noticeOverlay!.Visible = false; Refresh(); }
+                continue;
+            }
             if (Play12 && _siegeOverlay.Visible)
             {
                 await Shot("本陣の連戦の窓");
@@ -142,9 +153,14 @@ public partial class Map11Main
                 int other = Enumerable.Range(0, St.SquadCap).FirstOrDefault(i => (i == _play3dMain || i == _play3dSecond) && St.Squads[i].Pos != St.Graph.Portal, -1);
                 bool alone = other >= 0 && !St.Squads[other].Lost && St.Squads[other].Units is { } ou && ou.Any(u => u.IsAlive)
                              && !St.Graph.Lanes.Any(l => l[^1] == St.Squads[other].Pos);
-                bool back = hero && (alone || weak);
+                // 第478期: 次が砦の守将なら、4 枚以下か HP 70% 未満のとき引いて休む（期限の 2 刻前からは続ける）。
+                bool keeper = _siegeGo.Text.Contains(MapStage.KeeperName);
+                int mine = Map11Session.SiegeSquad >= 0 ? St.Squads[Map11Session.SiegeSquad].Units?.Count(u => u.IsAlive) ?? 0 : 0;
+                // 勇者のいない盤では、次が守将でなくても（本陣の守り・湧いた部隊）3 枚以下か HP 50% 未満なら引く——頭の札の「削られたら中間拠点へ引いて休める」のとおり。
+                bool back = keeper ? (mine < 5 || _siegeHp.Value < 70) && St.Turn < St.Stage.TurnCap - 2
+                    : !St.Stage.Hero.On ? (mine <= 3 || _siegeHp.Value < 50) && St.Turn < St.Stage.TurnCap - 2 : hero && (alone || weak);
                 Click(OldUi(back ? _siegeBack : _siegeGo));
-                GD.Print($"MAP3D_PLAY siege={(back ? "引く" : "続けて戦う")} next={_siegeGo.Text} hp={_siegeHp.Value:F0} 窓の文「{string.Join("／", _siegeBody.Text.Split((char)10))}」");
+                GD.Print($"MAP3D_PLAY siege={(back ? "引く" : "続けて戦う")} next={_siegeGo.Text} hp={_siegeHp.Value:F0} 上の行「{string.Join("／", _siegeStats.Text.Split((char)10))}」引くボタン「{_siegeBack.Text}」窓の文「{string.Join("／", _siegeBody.Text.Split((char)10))}」");
                 await Wait(back ? 0.6 : 3.0);
                 continue;
             }
@@ -238,7 +254,8 @@ public partial class Map11Main
                         if (i == _play3dSecond && _play3dPlan == "p1" && Up(_play3dMain) && !Staged(_play3dMain)) return Dest.Of(g, gate);
                         int stage = g.Lanes[lane][^1];
                         if (St.Squads[i].Pos != stage) return Dest.Of(g, stage);
-                        return Staged(other) || St.Turn >= St.Stage.TurnCap - 3 ? Dest.Portal(g, lane) : Dest.Of(g, stage);
+                        // 勇者のいない盤（第478期）では、もう 1 隊がそろうのを待たない。
+                        return !St.Stage.Hero.On || Staged(other) || St.Turn >= St.Stage.TurnCap - 3 ? Dest.Portal(g, lane) : Dest.Of(g, stage);
                     }
                     foreach (int cell in seq) if (!St.HeldOutposts.Contains(cell)) return Dest.Of(g, cell);
                     return Dest.Of(g, seq[^1]);
@@ -309,6 +326,18 @@ public partial class Map11Main
             await Wait(1.2);
             if (IsInsideTree() && !Map11Session.TurnRunning && St.Turn != before && !St.Finished && !_encounterOverlay.Visible && !_interceptOverlay.Visible)
                 await Shot($"作戦ターン{before + 1}の後");
+            // 「1 刻」が効かなかったとき（窓も出ず、刻も流れず、作戦ターンも進まない）は、案内の行と押した場所を残す（第478期・方針 3 が止まる件の調べ）。
+            else if (IsInsideTree() && !Map11Session.TurnRunning && St.Turn == before && !St.Finished && !_encounterOverlay.Visible && !_interceptOverlay.Visible && !_siegeOverlay.Visible
+                     && !_confirmOverlay.Visible && !NoticeShown && !_reform)
+            {
+                Move(_hud3d!.StepRect.GetCenter());
+                await Frames(3);
+                Control? under = GetViewport().GuiGetHoveredControl();
+                GD.Print($"MAP3D_PLAY 押した所の上にある物={(under is null ? "無し" : under.GetPath().ToString())} 文「{(under is Button ub ? ub.Text : "")}」四角={under?.GetGlobalRect()} 行き先の札か={_destButtons.Any(d => ReferenceEquals(d.Node, under))} 層の拡大={_uiScale:F2} filter={under?.MouseFilter} disabled={_hud3d.StepDisabled} 誰も出ていない={NothingDeployed()} drafting={Map11Session.Drafting} bench={St.Bench.Count}");
+                if (++_play3dStalls >= 3) { Finish(false, "stall"); return; }
+                GD.Print($"MAP3D_PLAY 1刻が効かない turn={St.Turn} 押した所={_hud3d!.StepRect} 画面={GetViewport().GetVisibleRect().Size} 下の UI の割合={_hud3d.BottomShare * 100:F0}% 隊の札={string.Join("・", Enumerable.Range(0, St.SquadCap).Select(i => _hud3d.CardRect(i).Size.Y.ToString("F0")))} 案内「{_toast.Text}」「{_orderHint.Text}」迎撃の合間={Map11Session.InterceptBreak} 時計={Map11Clock.On}/{Map11Clock.Running} running={_running} "
+                         + $"行き先 {string.Join(" ／ ", Enumerable.Range(0, St.SquadCap).Select(i => $"{St.Squads[i].Label}:{(St.CanSend(i) ? Map11Orders.Where(St.Graph, Map11Session.Destinations[i]) : "出せない")}"))}");
+            }
         }
     }
 }

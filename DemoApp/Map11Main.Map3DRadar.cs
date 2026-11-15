@@ -1,4 +1,4 @@
-using Godot;
+﻿using Godot;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -52,7 +52,7 @@ public partial class Map11Main
         if (_radar3d is null || _layout3d is null || _map3d is null) return;
         // 窓（遭遇・迎撃・連戦・結果・確かめ・頭の札・投資の札）が出ているあいだは隠す——窓の暗幕の上に全体図と印だけが明るく残るため。
         shown &= !(_encounterOverlay.Visible || _interceptOverlay.Visible || _siegeOverlay.Visible || _resultOverlay.Visible || _confirmOverlay.Visible
-                   || _introOverlay is { Visible: true } || _investOverlay is { Visible: true });
+                   || _introOverlay is { Visible: true } || _investOverlay is { Visible: true } || NoticeShown);
         _radar3d.Visible = shown;
         var points = new List<List<Vector3>>();
         if (shown && !St.Finished)
@@ -184,8 +184,10 @@ public partial class Map3DRadar : Control
                     case MapGraph.Kind.Home: DrawRect(new Rect2(p - new Vector2(7, 7), new Vector2(14, 14)), Mine); break;
                     case MapGraph.Kind.Portal: DrawRect(new Rect2(p - new Vector2(7, 7), new Vector2(14, 14)), st.Captured ? Mine : Foe); break;
                     case MapGraph.Kind.Outpost:
-                        DrawRect(new Rect2(p - new Vector2(5, 5), new Vector2(10, 10)), st.HeldOutposts.Contains(c.Id) ? Mine : Foe.Darkened(0.25f));
-                        DrawRect(new Rect2(p - new Vector2(5, 5), new Vector2(10, 10)), Ink, false, 1.5f);
+                        // 第478期: 中間拠点は菱形（拠点・敵の拠点の四角、ふつうのマスの点と形で見分ける）。
+                        var diamond = new[] { p + new Vector2(0, -8), p + new Vector2(8, 0), p + new Vector2(0, 8), p + new Vector2(-8, 0) };
+                        DrawColoredPolygon(diamond, st.HeldOutposts.Contains(c.Id) ? Mine : Foe.Darkened(0.25f));
+                        DrawPolyline(diamond.Append(diamond[0]).ToArray(), Ink, 1.5f);
                         break;
                     default: DrawCircle(p, 2.5f, Line); break;
                 }

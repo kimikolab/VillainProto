@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using Godot;
 using System;
 using System.Collections.Generic;
@@ -73,6 +73,7 @@ public partial class Map11Main
         BuildEncounterOverlay(_uiRoot);
         BuildInterceptOverlay(_uiRoot);
         BuildSiegeOverlay(_uiRoot);   // 第457期: 本陣の連戦の合間
+        BuildNoticeOverlay(_uiRoot);   // 第478期: 出来事の窓（負けた戦闘・中間拠点を取った・金を使える場所）
         BuildResultOverlay(_uiRoot);
         BuildConfirmOverlay(_uiRoot);
         BuildStaging();

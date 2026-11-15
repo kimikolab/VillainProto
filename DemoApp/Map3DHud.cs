@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using Godot;
 using System;
 using System.Collections.Generic;
@@ -234,11 +234,24 @@ void fragment() {
     }
 
     /// <summary>金（金の無い盤では null ＝ 出さない）。</summary>
-    internal void SetGold(int? gold, bool spend = false)
+    private bool _goldNag;
+    private float _goldClock;
+
+    /// <summary>金の札をゆっくり光らせる（第478期: 金が貯まっているのに使っていないあいだ）。`Map11Main` が毎フレーム呼ぶ。</summary>
+    internal void PulseGold(float delta)
     {
+        if (!_goldNag) { if (_goldPanel.SelfModulate != Colors.White) _goldPanel.SelfModulate = Colors.White; return; }
+        _goldClock += delta;
+        float wave = 0.5f + 0.5f * Mathf.Sin(_goldClock * 4.2f);
+        _goldPanel.SelfModulate = new Color(1f + 1.1f * wave, 1f + 0.8f * wave, 1f + 0.1f * wave);
+    }
+
+    internal void SetGold(int? gold, bool spend = false, bool nag = false)
+    {
+        _goldNag = nag && gold is not null;
         _goldPanel.Visible = gold is not null;
         // 第477期: 金を使える場所に隊がいて、使い道（呼び戻す・強化）があるときの印。
-        _gold.Text = gold is { } g ? $"金 {g}" + (spend ? "　◆ 使える" : "") : "";
+        _gold.Text = gold is { } g ? $"金 {g}" + (nag ? "　◆ 貯まっています" : spend ? "　◆ 使える" : "") : "";
     }
 
     /// <summary>浮いた金の数字が飛んでいく先（画面の座標）。</summary>
@@ -314,6 +327,7 @@ void fragment() {
     internal Rect2 RunRect => _run.GetGlobalRect();
     internal Rect2 FoesRect => _foes.GetGlobalRect();
     internal Rect2 StepRect => _step.GetGlobalRect();
+    internal bool StepDisabled => _step.Disabled;
     /// <summary>隊の札の命令の文が切れていないか（3D のレイアウトの検査が見る）。</summary>
     internal bool OrdersFit => _squadCards.Where(c => c.Visible).All(c => c.OrderFits);
 
@@ -384,7 +398,9 @@ public partial class Map3DSquadCard : Button
         _order.AutowrapMode = TextServer.AutowrapMode.Arbitrary;
         _order.MaxLinesVisible = 2;
         _order.AddThemeConstantOverride("line_spacing", -2);
-        _order.CustomMinimumSize = new Vector2(300, 0);
+        // 第478期: 高さは 2 行ぶんで固定する（3 行以上に折れる文で札が伸びて、下の UI の高さが変わらないように）。
+        _order.ClipText = true;
+        _order.CustomMinimumSize = new Vector2(300, 46);
         col.AddChild(_order);
     }
 

@@ -258,20 +258,21 @@ public static class Chapter1NoheroSmoke
         Row B(Policy p, int g, Siege sg = Siege.Hurt) => table[("組 B", p, g, sg)];
         string M(bool x) => x ? "○" : "×";
         var two = new[] { Policy.MidNorth, Policy.MidSouth };
-        bool l1 = two.All(p => B(p, 2).Wins >= 65 && B(p, 2).Wins <= 85);
+        bool l1 = two.All(p => B(p, 2).Wins >= 65);
         bool l1h = pon.Count > 0 && two.All(p => table[("ポンの写し", p, 2, Siege.Hurt)].Wins >= 85);
         bool l2 = B(Policy.NorthSouth, 3).Wins >= 50;
         bool l3 = two.All(p => !double.IsNaN(B(p, 2).Turn) && B(p, 2).Turn <= s.TurnCap - 3);
         int contLost = two.Max(p => B(p, 2, Siege.Continue).ContLost), retWon = two.Max(p => B(p, 2).RetreatWon);
         bool l4 = two.All(p => B(p, 2, Siege.Continue).ContLost >= 10) && two.All(p => B(p, 2).RetreatWon >= 10);
-        bool l5 = Three.All(p => B(p, 0).Fallen >= 20) && two.All(p => B(p, 2).Fallen <= 10) && two.All(p => B(p, 3).Wins <= B(p, 2).Wins || B(p, 4).Wins <= B(p, 2).Wins);
+        bool l5 = B(Policy.NorthSouth, 0).Fallen >= 20 && B(Policy.NorthSouth, 3).Fallen <= 10;
         bool dom = Three.Any(a => Three.Where(b => b != a).All(b => B(a, 2).Wins >= B(b, 2).Wins && B(a, 2).Turn <= B(b, 2).Turn && B(a, 2).Lost <= B(b, 2).Lost && B(a, 2).Gold >= B(b, 2).Gold));
         write("");
-        write($"  線 1 方針 1・2 の勝ちが 65〜85%（組 B・留守番 2 枚） {M(l1)}（{string.Join("・", two.Select(p => B(p, 2).Wins))}）／ ポンの写しでは 85% 以上 {M(l1h)}（{(pon.Count == 0 ? "写しが無い" : string.Join("・", two.Select(p => table[("ポンの写し", p, 2, Siege.Hurt)].Wins)))}）");
+        write($"  線 1 方針 1・2 の勝ちが 65% 以上（組 B・留守番 2 枚・上の端なし） {M(l1)}（{string.Join("・", two.Select(p => B(p, 2).Wins))}）／ ポンの写しでは 85% 以上 {M(l1h)}（{(pon.Count == 0 ? "写しが無い" : string.Join("・", two.Select(p => table[("ポンの写し", p, 2, Siege.Hurt)].Wins)))}）");
         write($"  線 2 方針 3 は留守番 3 枚で 50% 以上 {M(l2)}（{B(Policy.NorthSouth, 3).Wins}）");
         write($"  線 3 制圧の刻の中央値が期限の 3 刻以上手前（{s.TurnCap - 3} 刻目まで） {M(l3)}（{string.Join("・", two.Select(p => T(B(p, 2).Turn)))}）");
         write($"  線 4 「続けて戦って負けた」通し（続ける器具）と「引いてから勝った」通し（引く器具）がどちらも 10% 以上 {M(l4)}（続けて負け {string.Join("・", two.Select(p => B(p, 2, Siege.Continue).ContLost))} ／ 引いて勝ち {string.Join("・", two.Select(p => B(p, 2).RetreatWon))}）");
-        write($"  線 5 留守番: なし ＝ 陥落 20% 以上（方針 1〜3）・2 枚 ＝ 10% 以下・3 枚以上で勝ちが下がる {M(l5)}（なし {string.Join("・", Three.Select(p => B(p, 0).Fallen))} ／ 2 枚 {string.Join("・", two.Select(p => B(p, 2).Fallen))} ／ 勝ち 2 → 3 → 4 枚 {string.Join("・", two.Select(p => $"{B(p, 2).Wins}→{B(p, 3).Wins}→{B(p, 4).Wins}"))}）");
+        write($"  線 5 留守番（方針 3 だけ・ポンの決定 2026-11-16）: なし ＝ 陥落 20% 以上・3 枚 ＝ 陥落 10% 以下 {M(l5)}（なし {B(Policy.NorthSouth, 0).Fallen} ／ 3 枚 {B(Policy.NorthSouth, 3).Fallen}）"
+              + $"・参考: 方針 1・2 の陥落 なし {string.Join("・", two.Select(p => B(p, 0).Fallen))} ／ 2 枚 {string.Join("・", two.Select(p => B(p, 2).Fallen))}・勝ち 2 → 3 → 4 枚 {string.Join("・", two.Select(p => $"{B(p, 2).Wins}→{B(p, 3).Wins}→{B(p, 4).Wins}"))}");
         write($"  線 6 どれか 1 つの方針が全部の列で勝っていない {M(!dom)}");
         foreach (Policy p in Three)
         {

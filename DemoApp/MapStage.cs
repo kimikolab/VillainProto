@@ -1135,8 +1135,8 @@ public sealed class MapStage
             {
                 keeper is null ? "中間拠点を 2 つ取ると砦の門が開く。門番を倒して砦を制圧したら勝ち。" : "中間拠点を 2 つ取ると砦の門が開く。本陣の守りと砦の守将を抜いて、砦を制圧したら勝ち。",
                 $"見張り台 ＝ レリック（硬い）／ 関所 ＝ 金 ＋{gateGold}（近い）／ 渡し場 ＝ 金 ＋{ferryGold}（遠い）。",
-                "敵は中の街道を歩いてくる。拠点を空にしないこと——関所に隊がいれば、そこで受けられる。",
-                keeper is null ? "門番は 2 隊で順に当てて削る。引いた隊は中間拠点で休める。" : "守りを抜いた隊は傷んでいる。引いて中間拠点で休むか、2 隊目を待つ。守将の傷は残る。",
+                keeper is null ? "敵は中の街道を歩いてくる。拠点を空にしないこと——関所に隊がいれば、そこで受けられる。" : "関所を取れば、歩いてくる敵はそこで止められる。関所を飛ばすなら、拠点に守りを残すこと。",
+                keeper is null ? "門番は 2 隊で順に当てて削る。引いた隊は中間拠点で休める。" : "砦の守将は硬い。削られたら中間拠点へ引いて休める。",
             },
         };
     }
@@ -1147,7 +1147,7 @@ public sealed class MapStage
     internal const string KeeperName = "砦の守将";
     /// <summary>第478期の 1 章の 1-2 の値: 守将の部隊・その区画だけの倍率（最大HP ／ 攻撃・%）・賞金・期限。測り（`--chapter1-nohero-smoke`）で選んだ。</summary>
     internal const string Stage12Ch478KeeperBand = "band_garrison_heavy";
-    internal const int Stage12Ch478KeeperHp = 100, Stage12Ch478KeeperAtk = 100, Stage12Ch478KeeperGold = 20, Stage12Ch478TurnCap = 14;
+    internal const int Stage12Ch478KeeperHp = 80, Stage12Ch478KeeperAtk = 80, Stage12Ch478KeeperGold = 20, Stage12Ch478TurnCap = 16;   // ポンの決定 2026-11-16: 本陣の守り（重）×0.8 ／ ×0.8・期限 16
 
     /// <summary>
     /// 1 章の 1-2（第478期・`ChapterRule.V478` から）。第477期（<see cref="Stage12Ch477"/>）から<b>門番の勇者を外し</b>、本陣を「本陣の守り → <b>砦の守将</b>」の連戦にした。

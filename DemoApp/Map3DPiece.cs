@@ -1,4 +1,4 @@
-using Godot;
+﻿using Godot;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -460,12 +460,39 @@ public partial class Map3DCellMark : Node3D
     private bool _reach, _goal;
     internal float Radius { get; }
 
-    internal Map3DCellMark(float radius)
+    private readonly StandardMaterial3D? _flagMaterial;
+
+    /// <param name="outpost">第478期: 中間拠点の台（八角・外にもう 1 本の輪・持ち主の色の旗）。ふつうのマスと形で見分ける。</param>
+    internal Map3DCellMark(float radius, bool outpost = false)
     {
         Radius = radius;
+        if (outpost)
+        {
+            AddChild(new MeshInstance3D
+            {
+                Mesh = new TorusMesh { InnerRadius = radius * 1.12f, OuterRadius = radius * 1.24f, Rings = 8, RingSegments = 6 },
+                Position = new Vector3(0, 0.14f, 0), Rotation = new Vector3(0, Mathf.Pi / 8, 0), MaterialOverride = _rimMaterial,
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            });
+            _flagMaterial = new StandardMaterial3D { Roughness = 0.7f, EmissionEnabled = true, CullMode = BaseMaterial3D.CullModeEnum.Disabled };
+            var pole = new MeshInstance3D
+            {
+                Mesh = new CylinderMesh { TopRadius = 0.07f, BottomRadius = 0.09f, Height = 5.2f, RadialSegments = 8 },
+                Position = new Vector3(-radius * 0.92f, 2.6f, radius * 0.55f),
+                MaterialOverride = new StandardMaterial3D { AlbedoColor = Color.FromHtml("#3a2f25"), Roughness = 0.9f },
+            };
+            AddChild(pole);
+            pole.AddChild(new MeshInstance3D
+            {
+                Mesh = new BoxMesh { Size = new Vector3(1.7f, 1.05f, 0.06f) },
+                Position = new Vector3(0.9f, 1.95f, 0), MaterialOverride = _flagMaterial,
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            });
+        }
         AddChild(new MeshInstance3D
         {
-            Mesh = new CylinderMesh { TopRadius = radius, BottomRadius = radius * 1.06f, Height = 0.16f, RadialSegments = 36 },
+            Mesh = new CylinderMesh { TopRadius = radius, BottomRadius = radius * 1.06f, Height = 0.16f, RadialSegments = outpost ? 8 : 36 },
+            Rotation = new Vector3(0, outpost ? Mathf.Pi / 8 : 0, 0),
             Position = new Vector3(0, 0.10f, 0),
             MaterialOverride = new StandardMaterial3D { AlbedoColor = Color.FromHtml("#6f6a62"), Roughness = 0.95f },
         });
@@ -496,6 +523,16 @@ public partial class Map3DCellMark : Node3D
         _rimMaterial.AlbedoColor = c;
         _rimMaterial.Emission = c;
         _rimMaterial.EmissionEnergyMultiplier = owner == Owner.Empty ? 0.12f : 0.55f;
+    }
+
+    /// <summary>中間拠点の旗の色（味方 ／ 敵・台の縁とは別に、隊や敵が載っていなくても持ち主を示す）。</summary>
+    internal void SetFlag(bool mine)
+    {
+        if (_flagMaterial is null) return;
+        Color c = RimColors[mine ? (int)Owner.Ally : (int)Owner.Enemy];
+        _flagMaterial.AlbedoColor = c;
+        _flagMaterial.Emission = c;
+        _flagMaterial.EmissionEnergyMultiplier = 0.45f;
     }
 
     /// <summary><paramref name="reach"/> ＝ 選んだ隊が行ける先、<paramref name="goal"/> ＝ その隊の今の行き先。</summary>
