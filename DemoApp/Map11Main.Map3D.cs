@@ -149,6 +149,8 @@ public partial class Map3DDebugLayer : CanvasLayer
         if (_rig is not null)
             _text.Text += $"\n書き出しの値 傾き {_rig.Tilt:F0}°　高さ {_rig.Height:F0}　画角 {_rig.Fov:F0}°　拡大 {_rig.Zoom:F2}　見る点 ({_rig.Focus.X:F1}, {_rig.Focus.Z:F1})"
                 + "\nT／G 傾き　Y／H 高さ　U／J 画角　Home 視点を戻す";
+        // 第476期: 結果の窓から外した検証の数（部分点・生存枚数の 2 通りの数え方）。
+        _text.Text += $"\n抜いた敵部隊 {st.ClearedCount} / {st.Stage.TotalNodes}（部分点 {st.Partial():F2}）　盤上に残った枚数 {Map11Session.AliveOnMap} ／ 未出撃を含む {Map11Session.AliveIncludingReserve}";
         if (_stage is not null)
             _text.Text += $"\n素材の部品 {_stage.PartCount} 個（{_stage.UsedParts.Count} 種）　光 夕日 {Map3DStage.SunEnergy:F2}　環境 {Map3DStage.AmbientEnergy:F2}";
     }

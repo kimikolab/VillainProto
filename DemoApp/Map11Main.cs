@@ -241,6 +241,10 @@ public partial class Map11Main : Node3D
                 else PlayChapterForCapture(cpSeed);
             }
         }
+        // 第476期 §3-3: 3D を本物のクリックで通す口（`--map3d-play=<方針>,<置き場>`）。1 章を 1 度だけ始める（戦闘から戻るたびに場面は読み直される）。
+        if (Play3DRequested(user) && !Chapter1.Active)
+            Map11Session.PickChapter(user.FirstOrDefault(a => a.StartsWith("--map-chapter=", StringComparison.Ordinal)) is { } pc
+                                     && int.TryParse(pc["--map-chapter=".Length..], out int playSeed) ? playSeed : 11);
         // 第466期 §2: `--map-chapter-from=<写しのパス>` は写しのステージから 1 章を始める（`--map-chapter-rule=snap` なら写しの版・既定は今の版）。
         // 起動 1 回につき 1 度だけ読む（次のステージ・やり直しでシーンを読み直しても始め直さない）。
         if (!_fromArgRead && user.FirstOrDefault(a => a.StartsWith("--map-chapter-from=", StringComparison.Ordinal)) is { } fromArg)
@@ -307,6 +311,7 @@ public partial class Map11Main : Node3D
             Map11Session.Reset(PortalSmokeSeed);
         if (_draftSmoke && St.Turn == 0 && St.Battles == 0 && !Map11Session.TurnRunning)
             Map11Session.Reset(0);
+        StartPlay3D(args);   // 第476期 §3-3（引数が無ければ何もしない）
         if (args.Contains("--map-addendum-smoke", StringComparer.Ordinal)) Callable.From(AddendumSmoke).CallDeferred();
         else if (args.Contains("--map-layout-smoke", StringComparer.Ordinal)) Callable.From(LayoutSmoke).CallDeferred();
         else if (args.Contains("--map-guide-smoke", StringComparer.Ordinal)) Callable.From(GuideSmoke).CallDeferred();
@@ -1208,9 +1213,20 @@ public partial class Map11Main : Node3D
         // 行き先の道の中身を右に出しておく（決める瞬間の隣に相手を置く・第171期 §1-3）。
         if (!dest.AtHome && (St.FrontFoe(dest.Road) ?? St.PortalFoe()) is { } next)
             ShowFoe(next);
-        ShowToast($"{s.Label}: {Map11Orders.Describe(St, _selected, dest)}", PlayerColor, 3.0f);
+        if (EmptiesHome(_selected, dest))   // 第476期 §2-2: 止めはしない
+            ShowToast($"拠点が空になります（{s.Label}: {Map11Orders.Describe(St, _selected, dest)}）——敵が着けば陥落", EnemyColor, 5.0f);
+        else ShowToast($"{s.Label}: {Map11Orders.Describe(St, _selected, dest)}", PlayerColor, 3.0f);
         Refresh();
     }
+
+    /// <summary>
+    /// その行き先を選ぶと拠点に隊が 1 つも残らないか（第476期 §2-2・<b>表示だけ</b>——確かめの 1 行を出す盤 <see cref="MapStage.WarnEmptyHome"/> でだけ真になる）。
+    /// 拠点にいて、ほかに拠点で待つ（行き先が拠点の）出せる隊がいないとき。
+    /// </summary>
+    private static bool EmptiesHome(int squad, Dest dest)
+        => St.Stage.WarnEmptyHome && !dest.AtHome && !St.HomeLost && !St.Captured && St.Squads[squad].Pos == St.Graph.Home
+           && !Enumerable.Range(0, St.Squads.Length).Any(i => i != squad && St.CanSend(i) && St.Squads[i].Units is { Count: > 0 }
+                                                             && St.Squads[i].Pos == St.Graph.Home && Map11Session.Destinations[i].AtHome);
 
     /// <summary>札の位置と文字を引き直す（カメラは動かないが、画面の大きさは変わる）。</summary>
     private void RefreshDestButtons()
@@ -2094,6 +2110,13 @@ public partial class Map11Main : Node3D
             re.Pressed += OpenBreakReform;
             _interceptList.AddChild(re);
         }
+        // 第476期（3D の見せ方 11）: 出せる隊が 1 つで、ほかに選ぶもの（合間の組み直し）も無ければ「隊を選ぶ」を飛ばして遭遇の窓へ。
+        if (Map3DMode.Active && _interceptList.GetChildren().Count(c => !c.IsQueuedForDeletion()) == 1
+            && Enumerable.Range(0, St.Squads.Length).Where(i => !St.Squads[i].Lost && St.Squads[i].Cell < 0 && St.CanSend(i) && !node.Tried.Contains(i)).ToList() is { Count: 1 } only)
+        {
+            ChooseInterceptor(only[0]);
+            return;
+        }
         _interceptOverlay.Visible = true;
     }
 
@@ -2144,11 +2167,12 @@ public partial class Map11Main : Node3D
         RefreshEncounterFaces(s, node);
         // 第177期 §3: 自分で組んだ隊には既定の「勝ち筋」が当てはまらないので、そう書く。
         string plan = PlanOf(s).Replace("**", "");
-        if (plan.Length == 0) plan = "自分で組んだ隊です（この5枚がどう噛み合うかは、左の図の線で読めます）。";
+        if (plan.Length == 0) plan = "自分で組んだ隊です。";   // 第476期: 「左の図の線で読めます」は外した（遭遇の窓に図は無い）
         _encounterBody.Text =
             "[color=#8f9b90]" + (athome
                 ? "拠点まで来られた。ここで抜けなければ次の隊が出る。"
                 : node.IsReserve ? $"{St.LaneName(node.Def.Road)} ・ 敵の予備隊。"
+                : node.Def.Stationary ? $"{Map11.PortalName}の守り。抜けば制圧できる。"   // 第476期
                 : $"{St.Stage.LaneNames[node.Def.Road]} {node.Def.Index + 1} 戦目。")
             + "戦えば、傷も死者もそのまま持ち込みます。[/color]\n\n"
             + $"[color=#{PlayerColor.ToHtml(false)}]この隊の勝ち筋[/color]"
@@ -2156,6 +2180,10 @@ public partial class Map11Main : Node3D
             + Shared(plan) + "\n\n"
             + $"[color=#{EnemyColor.ToHtml(false)}]この部隊のルール[/color]"
             + $"　[color=#8f9b90]{alive} 体 ・ HP {NodeHpPercent(node):F0}%[/color]\n"
+            // 第476期 §2-4: 硬い部隊（峠の関）と賞金。
+            + (node.Def.Tag.Length > 0 ? $"[b][color=#ffd874]{node.Def.Tag}[/color][/b]　{node.Def.Note}\n" : "")
+            + (St.Stage.Gold.On && node.Def.Gold >= 0 && St.KillGold(node) > 0
+                ? $"[color=#{(node.Def.Tag.Length > 0 ? "ffd874" : "c9b27a")}]賞金 ＋{St.KillGold(node)}[/color]\n" : "")
             // 第448期: 帯 A の部隊は 1 行の説明を先に。
             + (Map11.SquadLineOf(node.Def.Name) is { Length: > 0 } line ? $"[color=#8f9b90]{line}[/color]\n" : "")
             + Shared(Map11.RuleLineOf(node.Def.Enemy));
@@ -2296,7 +2324,7 @@ public partial class Map11Main : Node3D
     {
         bool done = St.UseDefaultSquads();
         ShowToast(done
-            ? (St.Stage.Arrival.On ? $"既定の組み方で{St.Squads.Count(q => q.Units is { Count: > 0 })}隊を組みました（残りの駒は途中で拠点に届きます・あとから組み直せます）"
+            ? (St.Stage.Arrival.On ? $"既定の組み方で{St.Squads.Count(q => q.Units is { Count: > 0 })}隊を組みました（{(St.Stage.Arrival.Delivers ? "残りの駒は途中で拠点に届きます・" : "")}あとから組み直せます）"
                : $"既定の{St.Squads.Length}隊で始めます（あとから組み直せます）")
             : "駒が拠点に揃っていません（道の上に出した隊があります）",
             done ? PlayerColor : EnemyColor, 4.0f);
@@ -2990,8 +3018,9 @@ public partial class Map11Main : Node3D
         {
             // 第440期 §3-2: **ステージ名**を頭に。
             St.Stage.Title,
-            $"抜いた敵部隊 {St.ClearedCount} / {St.Stage.TotalNodes}（部分点 {St.Partial():F2}）",
-            $"盤上に残った枚数 {Map11Session.AliveOnMap} 枚"
+            // 第476期: 3D では検証の数（部分点・数え方 2 通り）を出さない——検証の層（F3）が持つ。
+            Map3DMode.Active ? $"抜いた敵部隊 {St.ClearedCount} / {St.Stage.TotalNodes}" : $"抜いた敵部隊 {St.ClearedCount} / {St.Stage.TotalNodes}（部分点 {St.Partial():F2}）",
+            Map3DMode.Active ? $"生き残った駒 {Map11Session.AliveIncludingReserve} 枚" : $"盤上に残った枚数 {Map11Session.AliveOnMap} 枚"
             + $" ／ 未出撃を含む枚数 {Map11Session.AliveIncludingReserve} 枚",
             $"戦闘回数 {St.Battles} 回",
         };
@@ -3223,7 +3252,8 @@ public partial class Map11Main : Node3D
         RefreshPortal();
         RefreshOutposts();
 
-        int waiting = St.Squads.Count(x => !x.Lost && x.Road < 0);
+        // 第476期（不具合の直し）: まだ開けていない隊の枠と、駒のいない隊は数えない（「待機 4 隊」と出ていた）。
+        int waiting = St.Squads.Count(x => !x.Lost && x.Road < 0 && !St.IsLocked(x.Index) && (x.Units is not { } wu || wu.Any(u => u.IsAlive)));
         _homeLabel.Text = St.HomeLost ? "拠点（陥落）"   // 第459期 §7
             : waiting == 0 ? "拠点" : $"拠点（待機 {waiting} 隊）";
         _homeLabel.Modulate = St.HomeLost ? new Color(1.0f, 0.45f, 0.40f) : Colors.White;

@@ -988,7 +988,7 @@ public sealed class MapStage
         return new()
         {
             Id = b.Id,
-            Title = b.Title,
+            Title = "1 章 1-1 辺境の砦",   // 題と結果の窓（第475期までは「検証用マップ 1-1」）
             Board = b.Board,
             Lanes = new IReadOnlyList<Map11.RoadNode>[]
             {

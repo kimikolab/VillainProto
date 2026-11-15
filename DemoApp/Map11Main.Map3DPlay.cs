@@ -1,0 +1,190 @@
+using BattleCore;
+using Godot;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+// 第476期 §3-3: 3D の画面を「本物のクリック」で通して遊び、場面ごとに写しを撮る口（`--map3d-play=<方針>,<写しの置き場>`）。
+// 方針は north（北だけ）／ south（南だけ）／ split（2 隊に分ける）。<b>判定は 1 つも持たない</b>——駒・マス・ボタンを画面の座標で押すだけで、
+// 何が起きるかは今の画面（`Map11Main` ／ `Map11Session`）が決める。戦闘は戦闘の画面へ行き、早回しで戻る（通しの門と同じ `_fastSmoke`）。
+// 戦闘のたびにこの場面は作り直されるので、どこまで進んだかは static に置き、毎回「いま画面に何が出ているか」を見て次の 1 手を決める。
+// 例外: 「2 隊に分ける」で 2 枚呼んで第2隊の席に置くところだけは器具の口（`Map11State.Recruit` ／ `SwapWithBench`）で行う（編成の窓の中の操作は見ない）。
+// 合否は `MAP3D_PLAY_COMPLETE` の行。遊ぶ起動では読まない。
+public partial class Map11Main
+{
+    private static string? _play3dPlan, _play3dDir;
+    private static int _play3dShot, _play3dGuard;
+    private static bool _play3dFormed, _play3dHovered;
+    private static readonly HashSet<string> _play3dOnce = new(StringComparer.Ordinal);
+
+    /// <summary>起動の引数に `--map3d-play=` があるか（戦闘の画面の早回しも同じ引数を読む）。</summary>
+    internal static bool Play3DRequested(IEnumerable<string> user) => user.Any(a => a.StartsWith("--map3d-play=", StringComparison.Ordinal));
+
+    private void StartPlay3D(string[] user)
+    {
+        if (!Map3DMode.Active || user.FirstOrDefault(a => a.StartsWith("--map3d-play=", StringComparison.Ordinal)) is not { } arg) return;
+        string[] parts = arg["--map3d-play=".Length..].Split(',', 2);
+        _play3dPlan = parts[0];
+        _play3dDir = parts.Length > 1 ? parts[1].Trim('"') : ProjectSettings.GlobalizePath("user://map3d_play");
+        System.IO.Directory.CreateDirectory(_play3dDir);
+        _ = Play3D();
+    }
+
+    private async System.Threading.Tasks.Task Play3D()
+    {
+        try { await Play3DLoop(); }
+        catch (ObjectDisposedException) { /* 戦闘の画面へ移った（この場面は捨てられた） */ }
+        catch (Exception e)
+        {
+            GD.PrintErr($"MAP3D_PLAY_FAILED plan={_play3dPlan} {e}");
+            GetTree().Quit(1);
+        }
+    }
+
+    private async System.Threading.Tasks.Task Play3DLoop()
+    {
+        async System.Threading.Tasks.Task Wait(double seconds) => await ToSignal(GetTree().CreateTimer(seconds), SceneTreeTimer.SignalName.Timeout);
+        async System.Threading.Tasks.Task Frames(int n = 3)
+        {
+            for (int i = 0; i < n; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        }
+        void Move(Vector2 at)
+        {
+            Vector2 p = GetViewport().GetFinalTransform() * at;
+            Input.ParseInputEvent(new InputEventMouseMotion { Position = p, GlobalPosition = p });
+        }
+        void Click(Vector2 at)
+        {
+            Vector2 p = GetViewport().GetFinalTransform() * at;
+            Input.ParseInputEvent(new InputEventMouseMotion { Position = p, GlobalPosition = p });
+            Input.ParseInputEvent(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = true, Position = p, GlobalPosition = p });
+            Input.ParseInputEvent(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = false, Position = p, GlobalPosition = p });
+        }
+        // 今の窓の層（1440×900 の作りを拡げた層）のボタンは、層の拡大率を掛けた画面の座標で押す。
+        Vector2 OldUi(Control c) => c.GetGlobalRect().GetCenter() * _uiScale;
+        Button? Find(Control root, Func<Button, bool> match)
+        {
+            var stack = new Stack<Node>();
+            stack.Push(root);
+            while (stack.Count > 0)
+            {
+                Node n = stack.Pop();
+                if (n is Button { Visible: true, Disabled: false } b && b.IsVisibleInTree() && match(b)) return b;
+                foreach (Node child in n.GetChildren()) stack.Push(child);
+            }
+            return null;
+        }
+        string State()
+            => $"作戦ターン {Map11Session.ShownTurn} 金 {St.Gold} 戦闘 {St.Battles} 湧き {St.SpawnCount}（湧くまで {St.PortalCooldown}）隊 "
+               + string.Join(" ／ ", St.Squads.Where(q => !St.IsLocked(q.Index)).Select(q => q.Lost ? $"{q.Label} 失" : $"{q.Label} {PlaceName(q.Pos)} {q.Units?.Count(u => u.IsAlive) ?? 0}枚 HP{SquadHpPercent(q):F0}%"))
+               + $" 敵 {string.Join("・", St.Nodes.SelectMany(r => r).Concat(St.Spawns).Where(n => !n.Cleared).Select(n => $"{n.Def.Name}@{(n.Pos == St.Graph.Portal ? "本陣" : n.Pos == St.Graph.Home ? "拠点" : PlaceName(n.Pos))}"))}";
+        async System.Threading.Tasks.Task Shot(string tag, bool once = false)
+        {
+            if (once && !_play3dOnce.Add(tag)) return;
+            await Wait(0.45);
+            await Frames(2);
+            string name = $"{_play3dPlan}_{++_play3dShot:00}_{tag}.png";
+            GetViewport().GetTexture().GetImage().SavePng(System.IO.Path.Combine(_play3dDir!, name));
+            GD.Print($"MAP3D_PLAY shot={name} {State()} 案内「{_toast.Text}」「{_orderHint.Text}」");
+        }
+        void Finish(bool ok, string why = "")
+        {
+            int lost = St.Squads.Sum(q => q.Units?.Count(u => !u.IsAlive) ?? 0) + St.FallenUnits.Count;
+            GD.Print($"MAP3D_PLAY_COMPLETE plan={_play3dPlan} ok={ok && St.Finished} won={St.Won} fallen={St.Fallen} captured_turn={(St.Captured ? St.CapturedTurn + 1 : -1)} "
+                + $"gold={St.Gold} lost={lost} battles={St.Battles} spawns={St.SpawnCount} shots={_play3dShot} {why}");
+            GetTree().Quit(ok ? 0 : 1);
+        }
+
+        await Wait(0.8);
+        while (IsInsideTree())
+        {
+            if (_play3dGuard++ > 500) { Finish(false, "step-limit"); return; }
+            if (_introOverlay is { Visible: true })
+            {
+                await Shot("頭の札", once: true);
+                if (Find(_introOverlay, b => b.Text == "始める") is { } go) Click(OldUi(go));
+                await Wait(0.5);
+                continue;
+            }
+            if (_resultOverlay.Visible) { await Shot("結果"); Finish(true); return; }
+            if (_encounterOverlay.Visible)
+            {
+                await Shot($"遭遇_{_encounterTitle.Text.Replace(' ', '_').Replace('×', 'x').Replace('　', '_')}");
+                if (Find(_encounterOverlay, b => b.Text == "戦う") is { } fight) { Click(OldUi(fight)); await Wait(3.0); continue; }
+                Fight();
+                return;
+            }
+            if (_interceptOverlay.Visible)
+            {
+                await Shot("迎撃の窓");
+                if (Find(_interceptOverlay, _ => true) is { } pick) Click(OldUi(pick));
+                await Wait(0.5);
+                continue;
+            }
+            if (_confirmOverlay.Visible)
+            {
+                await Shot("確かめの窓", once: true);
+                if (Find(_confirmOverlay, b => b.Text == "このまま出る") is { } go) Click(OldUi(go));
+                await Wait(0.5);
+                continue;
+            }
+            if (_reform)
+            {
+                if (!_play3dFormed)
+                {
+                    await Shot("編成の窓_開いたところ");
+                    Click(OldUi(_defaultButton));
+                    await Wait(0.4);
+                    await Shot("編成の窓_既定の組み方を押した直後");
+                    if (_play3dPlan == "split")
+                    {
+                        // 器具の口: 金 8 で 2 枚呼び、ムグのいる第2隊の空いた席へ（編成の窓の中の操作は通さない）。
+                        while (St.Recruit(0)) { }
+                        foreach (int slot in new[] { 0, 3, 2, 4 })
+                            if (St.Bench.Count > 0 && St.UnitAt(1, slot) is null) St.SwapWithBench(1, slot, 0);
+                        Refresh();
+                        await Shot("編成の窓_2枚呼んで第2隊へ（器具の口）");
+                    }
+                    _play3dFormed = true;
+                }
+                Click(OldUi(_reformButton));   // 「出撃」
+                await Wait(0.6);
+                continue;
+            }
+            if (Map11Session.TurnRunning || St.Finished) { await Wait(0.3); continue; }
+            await Shot("作戦の画面_始め", once: true);
+
+            // ---- 命令: 駒を押して隊を選び、マスに触れて案内を読み、押して行き先を決める ----
+            foreach (int squad in _play3dPlan == "split" ? new[] { 0, 1 } : new[] { 0 })
+            {
+                Map11State.Squad s = St.Squads[squad];
+                if (s.Lost || !St.CanSend(squad)) continue;
+                bool south = _play3dPlan == "south" || squad == 1;
+                bool deepSouth = St.Graph[s.Pos].Lane == 1 && St.Graph.IndexOn(1, s.Pos) >= 1;
+                Dest want = !south || deepSouth ? Dest.Portal(St.Graph, south ? 1 : 0) : Dest.Of(St.Graph, St.Graph.Lanes[1][^1]);
+                if (Map11Session.Destinations[squad] == want || St.AtDest(squad, want)) continue;
+                var piece = _mapPicks.FirstOrDefault(p => p.Foe is null && p.Squad == squad);
+                if (piece.Marker is null || !_pieces3d.TryGetValue(piece.Marker, out Map3DPiece? body)) continue;
+                Click(body.ScreenRect(_camera).GetCenter());
+                await Frames(4);
+                if (_selected != squad) { Click(_hud3d!.CardRect(squad).GetCenter()); await Frames(4); }
+                Vector2 at = _camera.UnprojectPosition(_cellMarks3d[want.IsPortal ? St.Graph.Portal : want.Id].GlobalPosition);
+                Move(at);
+                await Frames(4);
+                await Shot($"第{squad + 1}隊_行き先に触れた_{(want.IsPortal ? "敵の拠点" : PlaceName(want.Id))}");
+                Click(at);
+                await Frames(4);
+                bool set = Map11Session.Destinations[squad] == want || (want.IsPortal && Map11Session.Destinations[squad].IsPortal);
+                await Shot($"第{squad + 1}隊_行き先を{(set ? "決めた" : "決められなかった")}");
+                if (!set) Map11Session.SetDestination(squad, want);
+            }
+            Move(new Vector2(GetViewport().GetVisibleRect().Size.X / 2, 140));
+            await Frames(3);
+            int before = St.Turn;
+            Click(_hud3d!.StepRect.GetCenter());   // 「1 刻」
+            await Wait(1.2);
+            if (IsInsideTree() && !Map11Session.TurnRunning && St.Turn != before && !St.Finished && !_encounterOverlay.Visible && !_interceptOverlay.Visible)
+                await Shot($"作戦ターン{before + 1}の後");
+        }
+    }
+}

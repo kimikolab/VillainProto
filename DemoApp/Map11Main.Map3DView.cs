@@ -129,8 +129,10 @@ public partial class Map11Main
         FitOldUi();
         // 引き出し（隊の配置・敵部隊・戦闘の記録）は四隅の UI に重ならない高さに。
         Bounds(_squadDrawer, 20, 150, 354, -224, anchorBottom: 1);
-        Bounds(_foeDrawer, -354, 150, -20, -224, anchorLeft: 1, anchorRight: 1, anchorBottom: 1);
+        // 第476期（不具合 5）: 敵部隊の窓は中身の幅（約 410）が枠（334）より広く、右へはみ出して画面の外に切れていた——枠を広げ、足りなければ左へ伸ばす。
+        Bounds(_foeDrawer, -440, 150, -20, -224, anchorLeft: 1, anchorRight: 1, anchorBottom: 1);
         Bounds(_historyDrawer, -640, 150, -20, -224, anchorLeft: 1, anchorRight: 1, anchorBottom: 1);
+        _foeDrawer.GrowHorizontal = _historyDrawer.GrowHorizontal = Control.GrowDirection.Begin;
         // 行き先の札は「押す領域」としてだけ残す（見た目はマスの台と「あと n」の札）。経路の線も 3D の点線に替える。
         foreach (DestButton d in _destButtons)
         {
@@ -202,9 +204,12 @@ public partial class Map11Main
                     Vector3 forward = _layout3d.Forward(cell), side = forward.Cross(Vector3.Up);
                     at = PosOf(cell) + forward * (squadsOn.ContainsKey((cell, -1)) ? 1.35f : 0) + side * rank * 2.4f;
                 }
-                piece.Show(new Map3DPieceInfo(FoeBadgeName(foe), Representative(foe)?.Id, true, foe.IsHero,
+                // 第476期 §2-1: 区画が自分の賞金を持つ盤では「賞金 ＋n」と出す（関だけ明るい金）。ほかの盤は今までどおり名前に「＋n」。
+                bool bounty = St.Stage.Gold.On && foe.Def.Gold >= 0 && !foe.IsHero && St.KillGold(foe) > 0;
+                piece.Show(new Map3DPieceInfo(bounty ? FoeBadgeHead(foe) : FoeBadgeName(foe), Representative(foe)?.Id, true, foe.IsHero,
                     ((MapUnitBadge)pick.Button).Count, NodeHpPercent(foe), pick.Marker.Note, pick.Marker.NoteColor,
-                    pick.Marker.Note.Length > 0 && pick.Marker.NoteColor == UiKit.Hurt, WaveMark(foe.Def.Name)));
+                    pick.Marker.Note.Length > 0 && pick.Marker.NoteColor == UiKit.Hurt, WaveMark(foe.Def.Name),
+                    bounty ? $"賞金 ＋{St.KillGold(foe)}" : "", bounty && foe.Def.Tag.Length > 0));
             }
             else
             {
@@ -249,8 +254,8 @@ public partial class Map11Main
             if (cell == St.Graph.Portal) { ally = St.Captured; enemy = !St.Captured; }
             mark.SetOwner(ally ? Map3DCellMark.Owner.Ally : enemy ? Map3DCellMark.Owner.Enemy : Map3DCellMark.Owner.Empty);
         }
-        for (int lane = 0; lane < _approachMarks3d.Count; lane++)
-            _approachMarks3d[lane].SetOwner(squadsOn.ContainsKey((St.Graph.Portal, lane)) ? Map3DCellMark.Owner.Ally : Map3DCellMark.Owner.Empty);
+        // 第476期: 本陣の手前の小さな台は見せない（マスに見えるので）。位置だけ使う。
+        foreach (Map3DCellMark approach in _approachMarks3d) approach.Visible = false;
 
         RefreshHud3D();
     }
@@ -284,11 +289,12 @@ public partial class Map11Main
         int left = St.Nodes.Sum(r => r.Count(x => !x.Cleared)) + St.Spawns.Count(x => !x.Cleared) + (St.ReserveWaiting ? 1 : 0);
         string place = _layout3d?.Sheet?.Name is { Length: > 0 } name ? $"{St.Stage.Id}　{name}" : St.Stage.Title;
         // 第474期: 敵の倍率（「敵 ×0.6」）は題字に出さない（検証の層 F3 が出す）。
-        string title = (Chapter1.Active ? "1 章　" : "") + place;
+        string title = (Chapter1.Active && !place.StartsWith("1 章", StringComparison.Ordinal) ? "1 章　" : "") + place;
         string turn = !St.Time.On ? ""
             : $"作戦ターン {Map11Session.ShownTurn}" + (St.TimeLimitLeft is { } limit ? $"　／　期限まで あと {limit}" : "");
         string goal = St.HeroClock && St.Hero is { Cleared: false } hero ? $"目標　勇者を倒す（HP {hero.HpNow}）"
             : !St.Portal.On ? $"目標　敵部隊をすべて抜く（{St.ClearedCount} / {St.Stage.TotalNodes}）"
+            : St.Won ? $"目標　{Map11.PortalName}を制圧した"   // 第476期: 制圧で勝つ盤で、勝った後に「残る敵部隊を倒す」と出ていた
             : St.Captured ? $"目標　残る敵部隊を倒す（あと {left}）"
             : $"目標　{Map11.PortalName}を制圧する　・　残る敵部隊 {left}";
         _hud3d.SetHeader(title, turn, goal);
@@ -330,7 +336,10 @@ public partial class Map11Main
         _hud3d.SetShown(!_reform);
         if (_reform) return;
 
-        _hud3d.SetToast(_toast.Text, _toast.GetThemeColor("font_color"));
+        // 第476期（自分で遊んで見つけた）: 行き先に触れているあいだは、出来事の 1 行より案内の 1 行（経路上の敵・「峠の関: 硬い・賞金 14」・拠点が空になる）を先に出す
+        // ——編成を終えた直後の 3 秒は「編成を終えました」が案内を隠していた。
+        bool reading = _hoverDestination is { Node.Disabled: false } && _guideSquadChosen && !St.Finished && !Map11Session.TurnRunning;
+        _hud3d.SetToast(reading ? "" : _toast.Text, _toast.GetThemeColor("font_color"));
         bool on = Map11Clock.On;
         string state = Map11Session.TurnRunning ? "戦闘中" : !on ? "出来事が起きるまで進む" : Map11Clock.Running ? "▶ 動いています" : "⏸ 止まっています";
         _hud3d.SetClock(on && Map11Clock.Running ? "⏸ 止める" : "▶ 刻を進める", _run.Disabled, on && St.Time.On, Map11Clock.Fast,
@@ -341,13 +350,38 @@ public partial class Map11Main
         Map11State.Squad sel = St.Squads[_selected];
         bool chosen = _guideSquadChosen && !sel.Lost && !St.Finished;
         Dest now = Map11Session.Destinations[_selected];
+        // 第476期（不具合 4）: 窓（遭遇・迎撃・結果・確かめ・連戦・頭の札）が出ているあいだは「あと n」を出さない（窓の上に透けて出ていた）。
+        bool modal = _encounterOverlay.Visible || _interceptOverlay.Visible || _resultOverlay.Visible || _confirmOverlay.Visible || _siegeOverlay.Visible
+                     || _introOverlay is { Visible: true } || _investOverlay is { Visible: true };
+        // 第476期（不具合 1・2）: 敵の拠点へは<b>最短の道の 1 つだけ</b>を、本陣の大きな台に出す（今の行き先が敵の拠点ならそれ）。
+        // 道の途中の小さな丸（経路ごとの入口）はマスに見えないよう隠す——回り道で入りたいときは、その道のマスを先に選ぶ。
+        DestButton? portalPick = null;
+        int portalSteps = int.MaxValue;
         foreach (DestButton d in _destButtons)
         {
-            Map3DCellMark mark = d.Dest.IsPortal ? _approachMarks3d[Math.Clamp(d.Dest.Road, 0, _approachMarks3d.Count - 1)] : _cellMarks3d[d.Dest.Id];
+            if (!d.Dest.IsPortal) continue;
+            if (now == d.Dest && !St.AtDest(_selected, d.Dest)) { portalPick = d; break; }
+            int steps = TurnsToDest(_selected, d.Dest) ?? (St.AtDest(_selected, d.Dest) ? 0 : int.MaxValue);
+            if (d.Node.Visible && !d.Node.Disabled && steps < portalSteps) { portalPick = d; portalSteps = steps; }
+        }
+        foreach (Map3DCellMark approach in _approachMarks3d) { approach.Visible = false; approach.SetReach(false, false); }
+        bool portalLit = false;
+        foreach (DestButton d in _destButtons)
+        {
+            if (d.Dest.IsPortal && !ReferenceEquals(d, portalPick))
+            {
+                // 最短でない入口は押す領域ごと畳む。
+                d.Node.Position = new Vector2(-400, -400);
+                d.Node.Size = Vector2.Zero;
+                if (_chips3d.TryGetValue(d, out Label? idle)) idle.Visible = false;
+                continue;
+            }
+            Map3DCellMark mark = d.Dest.IsPortal ? _cellMarks3d[St.Graph.Portal] : _cellMarks3d[d.Dest.Id];
             bool there = St.AtDest(_selected, d.Dest);
             bool reach = chosen && d.Node.Visible && !d.Node.Disabled && !there;
             bool goal = chosen && now == d.Dest && !there && !sel.Lost;
             mark.SetReach(reach, goal);
+            if (d.Dest.IsPortal) portalLit = true;
             // 押す領域（今の窓の層の座標）。
             Vector2 center = _camera.UnprojectPosition(mark.GlobalPosition);
             float half = Math.Max(36, _camera.UnprojectPosition(mark.GlobalPosition + new Vector3(mark.Radius * 1.08f, 0, 0)).X - center.X);
@@ -361,12 +395,13 @@ public partial class Map11Main
                 chip.HorizontalAlignment = HorizontalAlignment.Center;
                 _hud3d.Plates.AddChild(chip);
             }
-            // 「あと n」は選んだ隊が行ける先（と今の行き先）だけ。マスの名前は触れているあいだだけ添える（第474期 直し 3）。
-            chip.Visible = reach || goal;
-            if (!chip.Visible) continue;
-            string eta = TurnsToDest(_selected, d.Dest) is { } steps ? $"あと {steps}" : "";
+            // 第476期（見せ方 7）: 「あと n」は<b>次の 1 歩と今の行き先だけ</b>。ほかの行ける先は、マスに触れているあいだだけ（名前を添えて）。
+            int? turns = TurnsToDest(_selected, d.Dest);
             bool hover = ReferenceEquals(_hoverDestination, d);
-            string where = d.Dest.AtHome ? "拠点" : d.Dest.IsPortal ? $"{Map11.PortalName}（{St.Stage.LaneMark(d.Dest.Road)}から）" : PlaceName(d.Dest.Id);
+            chip.Visible = !modal && (goal || (reach && (hover || turns == 1)));
+            if (!chip.Visible) continue;
+            string eta = turns is { } steps ? $"あと {steps}" : "";
+            string where = d.Dest.AtHome ? "拠点" : d.Dest.IsPortal ? $"{Map11.PortalName}（{St.Stage.LaneNames[d.Dest.Road]}から）" : PlaceName(d.Dest.Id);
             string text = goal ? (eta.Length > 0 ? $"◆ 行き先　{eta}" : "◆ 行き先") : hover ? $"{where}　{eta}" : eta.Length > 0 ? eta : where;
             if (chip.Text != text || chip.HasMeta("goal") != goal)
             {
@@ -380,7 +415,8 @@ public partial class Map11Main
             }
             _chipAt3d[chip] = new Rect2(center.X - half, center.Y - half * 0.66f, half * 2, half * 1.32f);
         }
-        ProcessRoute3D(chosen, sel);
+        if (!portalLit && St.Portal.On && _cellMarks3d.TryGetValue(St.Graph.Portal, out Map3DCellMark? camp)) camp.SetReach(false, false);
+        ProcessRoute3D(chosen && !modal, sel);
 
         // ---- 建物の名札（拠点 ／ 敵の拠点）。文は今の画面の札と同じ。 ----
         Map3DLayout.Table? sheet = _layout3d.Sheet;
@@ -405,6 +441,7 @@ public partial class Map11Main
         string hint = St.Finished || Map11Session.TurnRunning ? ""
             : !_guideSquadChosen ? "隊の札か、盤の上の駒を押して隊を選ぶ"
             : !St.CanSend(_selected) ? (St.CanReform(_selected) ? "この隊は空席——「編成・呼ぶ・強化」で駒を配る" : "")
+            : reading ? _orderHint.Text
             : _hoverDestination is null && !_guideDestinationChosen ? "光っているマスを押すと行き先が決まる"
             : _orderHint.Text;
         _hud3d.SetHint(hint);
@@ -451,9 +488,6 @@ public partial class Map11Main
         foreach (var list in new[] { _plateRects3d, _chipRects3d, _bodyRects3d, _discRects3d, _bridgeRects3d, _hudRects3d, _signRects3d }) list.Clear();
         foreach (var (cell, mark) in _cellMarks3d)
             _discRects3d.Add(($"台:{PlaceName(cell)}", ScreenBox(mark.GlobalPosition, Vector3.Right * mark.Radius * 1.06f, Vector3.Back * mark.Radius * 1.06f)));
-        for (int lane = 0; lane < _approachMarks3d.Count; lane++)
-            _discRects3d.Add(($"台:本陣の手前（{St.Stage.LaneMark(lane)}）",
-                ScreenBox(_approachMarks3d[lane].GlobalPosition, Vector3.Right * _approachMarks3d[lane].Radius * 1.06f, Vector3.Back * _approachMarks3d[lane].Radius * 1.06f)));
         foreach (var (at, along) in _map3d.Bridges)
             _bridgeRects3d.Add(("橋", ScreenBox(at + Vector3.Up * 0.2f, along * 2.7f, along.Cross(Vector3.Up) * 1.25f, 0.6f)));
         foreach (Rect2 block in _hud3d.Blocks()) _hudRects3d.Add(("遊ぶ UI", block));
@@ -717,6 +751,7 @@ public partial class Map11Main
             GD.Print($"MAP3D_WIN_COMPLETE ok={St.Finished && St.Won} won={St.Won} captured={St.Captured} turn={St.Turn} battles={St.Battles} "
                 + $"lanes={string.Join("/", St.Graph.Lanes.Select(l => l.Length))} result={_resultOverlay.Visible}");
         }
+        else if (mode == "m3d-south") { await SceneAdvance3D(camp: true); await SceneSouth3D(); }   // 第476期: 南の道を進む場面
         else if (mode != "m3d-start") await SceneAdvance3D(camp: mode == "m3d-camp");
         GD.Print($"MAP3D_CAPTURE mode={mode} stage={St.Stage.Id} seed={Map11Session.Seed} turn={St.Turn} battles={St.Battles} "
             + "squads=" + string.Join("/", St.Squads.Select(s => s.Lost ? "lost" : $"{PlaceName(s.Pos)}:{s.Units?.Count(u => u.IsAlive) ?? 0}枚")) + $" finished={St.Finished}");
@@ -776,6 +811,31 @@ public partial class Map11Main
     }
 
     /// <summary>
+    /// 「南の道を進む場面」（第476期 §5）。主力を南の道の 2 マス目まで歩かせ（途中の敵とは器具が決着）、次の行き先を 3 マス目にして選んだところ。
+    /// 着けたら true。
+    /// </summary>
+    private async System.Threading.Tasks.Task<bool> SceneSouth3D()
+    {
+        int main = Enumerable.Range(0, St.Squads.Length).Where(St.CanSend).DefaultIfEmpty(0).First();
+        int target = St.Graph.Lanes[1][1];
+        for (int turn = 0; turn < 8 && !St.Finished && !St.Squads[main].Lost && St.Squads[main].Pos != target; turn++)
+        {
+            Map11Session.SetDestination(main, Dest.Of(St.Graph, target));
+            HeadlessTurn3D();
+            Refresh();
+            await ToSignal(GetTree().CreateTimer(0.5), SceneTreeTimer.SignalName.Timeout);
+        }
+        bool there = !St.Squads[main].Lost && St.Squads[main].Pos == target;
+        Select(main);
+        if (there && !St.Finished) Map11Session.SetDestination(main, Dest.Of(St.Graph, St.Graph.Lanes[1][2]));
+        _showSquadDetail = false;
+        _guideDestinationChosen = true;
+        ShowToast("", GoldColor, 0);
+        Refresh();
+        return there;
+    }
+
+    /// <summary>
     /// 3D 用のレイアウトの検査（<c>--map3d-layout-smoke</c>・第474期 直し 7）。写しの 3 場面（開始時 ／ 隊が動いた後 ／ 敵の本陣の手前）を続けて作り、
     /// 名札が台・橋・旗（駒）・遊ぶ UI・ほかの札と重ならないこと、札とマスの台が画面に収まること、下の UI が画面の 15% 以内であることを見る。
     /// 合否は <c>MAP3D_LAYOUT_SMOKE_COMPLETE</c> の行。<b>盤は読むだけ</b>（通しは写しの口と同じ）。
@@ -795,6 +855,14 @@ public partial class Map11Main
             await SceneAdvance3D(camp: true);
             await Settle();
             Check("本陣の手前");
+            // 第476期 §5: 南の道を進む場面（長い道・橋・湧いた部隊が歩いている刻）。南の道が 2 マス以上ある盤だけ。
+            if (St.Graph.Lanes.Count > 1 && St.Graph.Lanes[1].Length >= 3)
+            {
+                bool south = await SceneSouth3D();
+                await Settle();
+                Check("南の道");
+                if (!south) fails.Add("南の道: 主力が南の道の 2 マス目に着けなかった");
+            }
         }
         catch (Exception e) { fails.Add("例外:" + e.Message); GD.PrintErr(e.ToString()); }
         foreach (string line in fails) GD.Print("MAP3D_LAYOUT_FAIL " + line);
@@ -842,6 +910,8 @@ public partial class Map11Main
                     if (Overlap(rect, block) > 4) fails.Add($"{scene}: {name} が遊ぶ UI の下に隠れる");
             }
             if (_hud3d!.BottomShare > 0.15f) fails.Add($"{scene}: 下の UI が画面の {_hud3d.BottomShare * 100:F1}%（15% 以内）");
+            if (!_hud3d.OrdersFit) fails.Add($"{scene}: 隊の札の命令の文が 2 行に収まらない");
+            if (_chips3d.Count(kv => kv.Key.Dest.IsPortal && kv.Value.Visible) > 1) fails.Add($"{scene}: 敵の拠点の「あと n」が 2 つ出ている");
             GD.Print($"MAP3D_LAYOUT {scene} 名札 {_plateRects3d.Count} あと n {_chipRects3d.Count} 駒 {_bodyRects3d.Count} 台 {_discRects3d.Count} 橋 {_bridgeRects3d.Count} "
                 + $"作戦ターン {St.Turn} 隊 " + string.Join("/", St.Squads.Where(q => !St.IsLocked(q.Index)).Select(q => q.Lost ? "失" : PlaceName(q.Pos))));
         }
@@ -888,6 +958,28 @@ public partial class Map11Main
         Click(_hud3d!.CardRect(0).GetCenter());
         await Frames();
         if (_selected != 0) fails.Add("card-select");
+        // 第476期（不具合 1）: 本陣の大きな台を押す → 行き先が敵の拠点（最短の道）になる。「あと n」は 1 つだけ。
+        Click(_pieces3d[pick.Marker].ScreenRect(_camera).GetCenter());
+        await Frames();
+        Vector2 camp = _camera.UnprojectPosition(_cellMarks3d[St.Graph.Portal].GlobalPosition);
+        Move(camp);
+        await Frames();
+        int portalChips = _chips3d.Count(kv => kv.Key.Dest.IsPortal && kv.Value.Visible);
+        if (_hoverDestination?.Dest.IsPortal != true || portalChips != 1) fails.Add($"camp-hover(chips={portalChips})");
+        Click(camp);
+        await Frames();
+        Dest shortest = Enumerable.Range(0, St.Graph.Lanes.Count).Select(l => Dest.Portal(St.Graph, l))
+            .OrderBy(d => St.Graph.Path(St.Squads[squad].Pos, St.Squads[squad].Via, d.Id, d.Lane).Count).First();
+        if (Map11Session.Destinations[squad] != shortest) fails.Add("camp-destination");
+        // 第476期（不具合 5）: 「敵部隊」を押す → 敵部隊の一覧が開く。もう一度押すと閉じる。
+        Click(_hud3d.FoesRect.GetCenter());
+        await Frames();
+        bool opened = _foeDrawer.Visible && _foeDrawer.GetGlobalRect().Size.X > 100
+            && new Rect2(Vector2.Zero, UiViewSize).Grow(2).Encloses(_foeDrawer.GetGlobalRect());
+        if (!opened) fails.Add($"foes-open(visible={_foeDrawer.Visible} rect={_foeDrawer.GetGlobalRect()} view={UiViewSize})");
+        Click(_hud3d.FoesRect.GetCenter());
+        await Frames();
+        if (_foeDrawer.Visible) fails.Add("foes-close");
         bool clock = Map11Clock.On;
         Click(_hud3d.RunRect.GetCenter());
         await Frames();

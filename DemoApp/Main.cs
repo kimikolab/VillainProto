@@ -639,7 +639,8 @@ public partial class Main : Control
         // 第169期。検証用マップ 1-1 の通し確認（画面あり・頭なし）。
         // **第177期に (c)(d) の2本を足した**——ここへ足し忘れると、
         // 戦闘の再生が等速のまま止まらず、**通しが1戦目から先へ進まない**（実際に踏んだ）。
-        _map11FlowSmoke = Map11Smokes.Any(f => userArgs.Contains(f, StringComparer.Ordinal));
+        _map11FlowSmoke = Map11Smokes.Any(f => userArgs.Contains(f, StringComparer.Ordinal))
+                          || Map11Main.Play3DRequested(userArgs);   // 第476期: 3D を本物のクリックで通す口（`--map3d-play=`）も戦闘は早回しで戻る
         if (_map11FlowSmoke) _fastSmoke = true;
         if (_fastSmoke) _speed = 1000.0;
         // 第172期 部B。**編成画面の当たりを1枚だけ撮る**（見た目の確認だけ。判定には使わない）。

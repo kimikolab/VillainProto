@@ -10,7 +10,7 @@ using System.Globalization;
 /// <summary>駒 1 つに見せる中身（呼ぶ側が盤から読んで渡す・駒は計算しない）。</summary>
 internal readonly record struct Map3DPieceInfo(
     string Name, string? UnitId, bool Enemy, bool Hero, int Count, double HpPercent,
-    string Note, Color NoteColor, bool Urgent, string Glyph);
+    string Note, Color NoteColor, bool Urgent, string Glyph, string Reward = "", bool Prize = false);
 
 /// <summary>3D の層の文字（遊ぶ UI・名札）。1920×1080 を 1280×720 に縮めても読める大きさは呼ぶ側が決める。</summary>
 internal static class Map3DFonts
@@ -365,7 +365,7 @@ public partial class Map3DPiece : Node3D
 /// </summary>
 public partial class Map3DPlate : Control
 {
-    internal const int NameSize = 20, NoteSize = 19, CountSize = 18;
+    internal const int NameSize = 20, NoteSize = 19, CountSize = 18, RewardSize = 19;
     private const float BoxHeight = 52, NoteHeight = 27;
     private Map3DPieceInfo _info;
     private Color _team;
@@ -379,7 +379,9 @@ public partial class Map3DPlate : Control
         if (_info == info && _team == team) return;
         _info = info; _team = team;
         Font font = Map3DFonts.Bold;
-        _boxWidth = Math.Max(132, font.GetStringSize(info.Name, fontSize: NameSize).X + 28);
+        // 第476期: 賞金（「賞金 ＋14」）は名前の右に金色で。
+        float reward = info.Reward.Length > 0 ? font.GetStringSize(info.Reward, fontSize: RewardSize).X + 10 : 0;
+        _boxWidth = Math.Max(132, font.GetStringSize(info.Name, fontSize: NameSize).X + reward + 28);
         float note = info.Note.Length > 0 ? font.GetStringSize(info.Note, fontSize: NoteSize).X + 12 : 0;
         Size = new Vector2(Math.Max(_boxWidth, note), BoxHeight + (info.Note.Length > 0 ? NoteHeight : 0));
         QueueRedraw();
@@ -407,8 +409,13 @@ public partial class Map3DPlate : Control
         }, box);
         Font font = Map3DFonts.Bold;
         Vector2 name = font.GetStringSize(_info.Name, fontSize: NameSize);
-        DrawString(font, new Vector2(left + (_boxWidth - name.X) / 2, 7 + font.GetAscent(NameSize)), _info.Name, fontSize: NameSize,
+        float rewardWidth = _info.Reward.Length > 0 ? font.GetStringSize(_info.Reward, fontSize: RewardSize).X + 10 : 0;
+        float nameLeft = left + (_boxWidth - name.X - rewardWidth) / 2;
+        DrawString(font, new Vector2(nameLeft, 7 + font.GetAscent(NameSize)), _info.Name, fontSize: NameSize,
             modulate: Color.FromHtml("#f4f0dd"));
+        if (_info.Reward.Length > 0)
+            DrawString(font, new Vector2(nameLeft + name.X + 10, 8 + font.GetAscent(NameSize)), _info.Reward, fontSize: RewardSize,
+                modulate: _info.Prize ? Color.FromHtml("#ffd24a") : Color.FromHtml("#d8c391"));
         // HP の棒と数。
         string count = _info.Count > 0 ? $"×{_info.Count}" : "—";
         Vector2 countSize = font.GetStringSize(count, fontSize: CountSize);

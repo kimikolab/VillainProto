@@ -28,7 +28,8 @@ public partial class Map3DStage
     internal static readonly Color LeafMoss = new(0.20f, 0.31f, 0.26f);
     internal const float LeafCalm = 0.50f;
     /// <summary>山の色（素材の灰色は夕日で茶色い壁に見えたので、青灰で塗る）。</summary>
-    internal static readonly Color MountainColor = Color.FromHtml("#5b6972");
+    /// 第476期: さらに暗い岩の色へ（夕日の当たる面が白く飛んで、奥の山だけ目立っていた）。
+    internal static readonly Color MountainColor = Color.FromHtml("#2f353b");
 
     private static readonly Dictionary<string, PackedScene?> Scenes = new(StringComparer.Ordinal);
     private static readonly Dictionary<string, Aabb> Boxes = new(StringComparer.Ordinal);
@@ -771,12 +772,23 @@ public partial class Map3DStage
                     : $"ground/rocks/{tone}/nb_rock{Pick(1, 2, 3, 4, 5, 6)}_{tone}.tscn",
                 p, Range(0.5f, 1.2f), Range(0, Mathf.Tau), 0.12f);
         }
-        // 山並み（台の北の端に沿って）。
+        // 山並み（台の北の端に沿って）。第476期（見せ方 13）: 白く目立つ円錐に見えていた——暗い岩の色に落とし、
+        // 横に潰して少し傾け、間を詰めて重ね、手前に同じ色の崖を噛ませて輪郭を崩す。
         int k = 0;
-        for (float x = west + 4.5f; x <= east - 4.5f; x += range ? 6.6f : 8.2f, k++)
+        for (float x = west + 3.5f; x <= east - 3.5f; x += range ? 4.6f : 6.0f, k++)
         {
-            var p = new Vector3(x + Range(-1.0f, 1.0f), 0, north + Range(4.2f, 5.4f));
-            Put($"terrain/mountains/grey/nb_mountain{1 + k % 4}_grey.tscn", p, range ? Range(10, 14) : Range(8, 11), Range(0, Mathf.Tau), 2.4f);
+            var p = new Vector3(x + Range(-1.2f, 1.2f), 0, north + Range(3.6f, 5.8f));
+            Ridge(Put($"terrain/mountains/grey/nb_mountain{1 + k % 4}_grey.tscn", p, range ? Range(8.5f, 13.5f) : Range(7, 10.5f), Range(0, Mathf.Tau), 2.6f));
+        }
+        for (float x = west + 2.5f; x <= east - 2.5f; x += Range(3.4f, 5.2f))
+        {
+            var p = new Vector3(x, 0, north + Range(6.4f, 8.6f));
+            if (!Clear(p, 4.0f, 4.4f)) continue;
+            if (Put($"terrain/cliffs/grey/nb_cliff{Pick(1, 2, 3, 4, 5)}_grey.tscn", p, Range(4.5f, 7.5f), Range(0, Mathf.Tau), 0.8f) is { } crag)
+            {
+                crag.Scale *= new Vector3(Range(1.2f, 1.7f), 1, Range(1.0f, 1.4f));
+                Each<MeshInstance3D>(crag, m => m.MaterialOverride = _mountainMaterial ??= new StandardMaterial3D { AlbedoColor = MountainColor, Roughness = 1 });
+            }
         }
         if (!range) return;
         // 2 列目（手前・低め）。峠の関の真後ろと、川の上は空ける。
@@ -784,13 +796,28 @@ public partial class Map3DStage
         {
             var p = new Vector3(x + Range(-1.2f, 1.2f), 0, north + Range(9.6f, 10.8f));
             if (!Clear(p, 6.5f, 7.0f)) continue;
-            Put($"terrain/mountains/grey/nb_mountain{1 + k % 4}_grey.tscn", p, Range(5.0f, 7.0f), Range(0, Mathf.Tau), 1.6f);
+            Ridge(Put($"terrain/mountains/grey/nb_mountain{1 + k % 4}_grey.tscn", p, Range(4.5f, 6.5f), Range(0, Mathf.Tau), 1.8f));
         }
     }
 
+    /// <summary>山を尾根に見せる: 東西に伸ばして奥行きを潰し、少し傾ける（円錐の輪郭を崩す・見た目だけ）。</summary>
+    private void Ridge(Node3D? mountain)
+    {
+        if (mountain is null) return;
+        float yaw = mountain.Rotation.Y;
+        // 伸ばす向きは世界の東西に揃える（素材は好きな向きに回してあるので、親を 1 つ挟む）。
+        var holder = new Node3D { Position = mountain.Position };
+        RemoveChild(mountain);
+        AddChild(holder);
+        holder.AddChild(mountain);
+        mountain.Position = Vector3.Zero;
+        mountain.Rotation = new Vector3(Mathf.DegToRad(Range(-7, 7)), yaw, Mathf.DegToRad(Range(-9, 9)));
+        holder.Scale = new Vector3(Range(1.35f, 1.9f), Range(0.85f, 1.1f), Range(0.75f, 1.0f));
+    }
+
     /// <summary>
-    /// 峠の関（第474期・北の道の 2 マス目）。道を挟む柵と門の柱・盾の並び・赤い旗・両脇の岩（仮の箱と素材の岩）。
-    /// マスの台と敵の旗が立つ真ん中は空け、道の本陣の側を門で狭める。
+    /// 峠の関（第474期・北の道の 2 マス目）。第476期（見せ方 14）: <b>道をまたぐ石の門</b>（両脇の塔 ＋ 上の渡り）と、両脇の崖で道幅を絞る
+    /// ——戦闘の背景の城門の印象に寄せた。マスの台と敵の旗が立つ真ん中は空け、手前（南・カメラの側）の崖は低く、門の奥へ寄せる（マスと駒を隠さない）。
     /// </summary>
     private void BuildPass(Vector3 at, Vector3 forward)
     {
@@ -799,35 +826,64 @@ public partial class Map3DStage
         AddChild(root);
         root.LookAt(at + forward, Vector3.Up);   // -Z が本陣の向き・+X が道の右（南）
         StandardMaterial3D wood = Paint("#5d4a36"), dark = Paint("#3d3228"), steel = Paint("#8f979c", 0.5f), red = Paint("#a3352c", 0.7f);
+        StandardMaterial3D stone = Paint("#6a6d72", 0.95f), stoneDark = Paint("#4a4d52", 0.95f);
         Color banner = Color.FromHtml("#c8392f");
-        foreach (float gate in new[] { -2.5f })   // 本陣の側の門
-            foreach (float side in new[] { -1f, 1f })
+        const float gate = 0f, post = 2.35f;
+        // 門は道の先（本陣の側）に置き、道の曲がりに合わせて南へ向ける——南から見下ろすカメラに門の正面と開口が見えるように。
+        var house = new Node3D { Name = "Gatehouse", Position = new Vector3(1.5f, 0, -5.0f), RotationDegrees = new Vector3(0, -42, 0) };
+        root.AddChild(house);
+        foreach (float side in new[] { -1f, 1f })
+        {
+            // 塔（石）と胸壁。
+            Box(house, new Vector3(side * post, 2.3f, gate), new Vector3(1.7f, 4.6f, 1.7f), stone);
+            Box(house, new Vector3(side * post, 0.35f, gate), new Vector3(2.0f, 0.7f, 2.0f), stoneDark);
+            Box(house, new Vector3(side * post, 4.7f, gate), new Vector3(2.0f, 0.3f, 2.0f), stoneDark);
+            foreach (float mx in new[] { -0.75f, 0.75f })
+                foreach (float mz in new[] { -0.75f, 0.75f })
+                    Box(house, new Vector3(side * post + mx, 5.1f, gate + mz), new Vector3(0.45f, 0.5f, 0.45f), stone);
+            Banner(house, new Vector3(side * post, 5.3f, gate), 1.9f, banner, 0.8f);
+            // 塔から崖へ延びる石の壁（低い）と、その上の胸壁。
+            Box(house, new Vector3(side * (post + 1.75f), 1.35f, gate), new Vector3(1.9f, 2.7f, 1.0f), stone);
+            for (int i = 0; i < 3; i++)
+                Box(house, new Vector3(side * (post + 1.15f + i * 0.62f), 2.9f, gate), new Vector3(0.36f, 0.4f, 1.0f), stoneDark);
+            // 門の内側の受け（アーチに見せる斜めの石）。
+            var brace = Box(house, new Vector3(side * (post - 1.15f), 3.25f, gate), new Vector3(0.9f, 0.5f, 1.2f), stoneDark);
+            brace.RotationDegrees = new Vector3(0, 0, side * 38);
+            // 開いた門扉（木）。
+            var door = Box(house, new Vector3(side * (post - 0.95f), 1.5f, gate + 0.95f), new Vector3(0.16f, 3.0f, 1.5f), wood);
+            door.RotationDegrees = new Vector3(0, side * -22, 0);
+            // 盾の並び（壁の手前に立て掛ける）と、壁の外の尖った杭。
+            for (int i = 0; i < 3; i++)
             {
-                // 門の柱と、その外へ伸びる柵（尖った杭）。
-                Box(root, new Vector3(side * 1.75f, 1.7f, gate), new Vector3(0.8f, 3.4f, 0.8f), wood);
-                Box(root, new Vector3(side * 1.75f, 3.55f, gate), new Vector3(1.0f, 0.3f, 1.0f), dark);
-                for (int i = 0; i < 6; i++)
-                {
-                    float h = Range(1.7f, 2.1f);
-                    Shape(root, new CylinderMesh { TopRadius = 0.03f, BottomRadius = 0.17f, Height = h, RadialSegments = 5 },
-                        new Vector3(side * (2.5f + i * 0.42f), h / 2, gate + Range(-0.08f, 0.08f)), wood);
-                }
-                Banner(root, new Vector3(side * 1.75f, 3.6f, gate), 1.9f, banner, 0.8f);
-                // 盾の並び（柵の手前に立て掛ける）。
-                for (int i = 0; i < 4; i++)
-                {
-                    var shield = Box(root, new Vector3(side * (2.6f + i * 0.62f), 0.55f, gate + 0.42f), new Vector3(0.5f, 0.8f, 0.08f), i % 2 == 0 ? steel : red);
-                    shield.RotationDegrees = new Vector3(-16, 0, 0);
-                }
+                var shield = Box(house, new Vector3(side * (post + 1.15f + i * 0.62f), 0.55f, gate + 0.66f), new Vector3(0.5f, 0.8f, 0.08f), i % 2 == 0 ? steel : red);
+                shield.RotationDegrees = new Vector3(-16, 0, 0);
             }
-        Box(root, new Vector3(0, 3.3f, -2.5f), new Vector3(3.6f, 0.26f, 0.3f), dark);   // 門の横木
-        // 両脇の岩。奥（北）は高く、手前（南）は低く（マスと駒を隠さない）。
-        foreach (var (x, z, h) in new[] { (-4.6f, -0.6f, 3.6f), (-5.2f, 2.2f, 2.8f), (-4.4f, -3.4f, 3.0f) })
+            for (int i = 0; i < 4; i++)
+            {
+                float h = Range(1.5f, 1.9f);
+                Shape(house, new CylinderMesh { TopRadius = 0.03f, BottomRadius = 0.16f, Height = h, RadialSegments = 5 },
+                    new Vector3(side * (post + 3.0f + i * 0.4f), h / 2, gate + Range(-0.08f, 0.08f)), wood);
+            }
+        }
+        // 道をまたぐ渡り（石）と胸壁・落とし格子の先。
+        Box(house, new Vector3(0, 3.95f, gate), new Vector3(post * 2 - 1.5f, 1.0f, 1.3f), stone);
+        Box(house, new Vector3(0, 4.55f, gate), new Vector3(post * 2 - 1.3f, 0.22f, 1.5f), stoneDark);
+        for (int i = -2; i <= 2; i++)
+            Box(house, new Vector3(i * 0.62f, 4.9f, gate - 0.5f), new Vector3(0.36f, 0.45f, 0.4f), stone);
+        for (int i = -3; i <= 3; i++)
+            Shape(house, new CylinderMesh { TopRadius = 0.05f, BottomRadius = 0.05f, Height = 0.7f, RadialSegments = 5 }, new Vector3(i * 0.42f, 3.15f, gate), dark);
+        // 両脇の崖。奥（北）は高く塔に迫り、手前（南）は低く門の奥へ寄せる。
+        foreach (var (x, z, h) in new[] { (-5.9f, -2.2f, 5.2f), (-5.6f, 0.8f, 4.2f), (-6.2f, 3.4f, 3.2f), (-5.2f, -5.0f, 4.0f) })
         {
             Vector3 p = root.ToGlobal(new Vector3(x, 0, z));
             Put($"terrain/cliffs/grey/nb_cliff{Pick(1, 2, 3, 4, 5)}_grey.tscn", p, h, Range(0, Mathf.Tau), 0.4f);
         }
-        foreach (var (x, z, h) in new[] { (4.6f, -2.6f, 1.3f), (5.0f, 2.0f, 1.1f) })
+        foreach (var (x, z, h) in new[] { (5.9f, -3.4f, 2.6f), (6.3f, -5.6f, 2.2f) })
+        {
+            Vector3 p = root.ToGlobal(new Vector3(x, 0, z));
+            Put($"terrain/cliffs/grey/nb_cliff{Pick(1, 2, 3, 4, 5)}_grey.tscn", p, h, Range(0, Mathf.Tau), 0.4f);
+        }
+        foreach (var (x, z, h) in new[] { (5.2f, 1.9f, 1.0f), (4.9f, -0.9f, 0.8f) })
         {
             Vector3 p = root.ToGlobal(new Vector3(x, 0, z));
             Put($"ground/boulders/grey/nb_boulder{Pick(1, 2, 3, 4)}_grey.tscn", p, h, Range(0, Mathf.Tau), 0.15f);

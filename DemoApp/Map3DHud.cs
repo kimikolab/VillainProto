@@ -311,6 +311,10 @@ void fragment() {
     /// <summary>隊の札と「刻を進める」の四角（押す操作の確かめが使う）。</summary>
     internal Rect2 CardRect(int index) => _squadCards[index].GetGlobalRect();
     internal Rect2 RunRect => _run.GetGlobalRect();
+    internal Rect2 FoesRect => _foes.GetGlobalRect();
+    internal Rect2 StepRect => _step.GetGlobalRect();
+    /// <summary>隊の札の命令の文が切れていないか（3D のレイアウトの検査が見る）。</summary>
+    internal bool OrdersFit => _squadCards.Where(c => c.Visible).All(c => c.OrderFits);
 
     /// <summary>下の UI（隊の札・刻を進める）が画面の高さに占める割合（3D のレイアウトの検査が 15% 以内を見る）。</summary>
     internal float BottomShare
@@ -348,23 +352,24 @@ public partial class Map3DCoin : Control
 public partial class Map3DSquadCard : Button
 {
     internal int Index { get; private set; }
+    internal bool OrderFits => _order.GetLineCount() <= 2;
     private readonly Label _name = Map3DHud.Text("", 22, Map3DHud.Ink, bold: true);
     private readonly Label _hp = Map3DHud.Text("", 20, Map3DHud.Ink);
     private readonly HBoxContainer _faces = new() { MouseFilter = MouseFilterEnum.Ignore };
-    private readonly Label _order = Map3DHud.Text("", 20, Map3DHud.Gold);
+    private readonly Label _order = Map3DHud.Text("", 18, Map3DHud.Gold);
     private Map3DSquadCardInfo _info;
     private string _faceKey = "";
 
     public Map3DSquadCard()
     {
         FocusMode = FocusModeEnum.None;
-        CustomMinimumSize = new Vector2(326, 132);
+        CustomMinimumSize = new Vector2(326, 138);
         MouseDefaultCursorShape = CursorShape.PointingHand;
         ClipContents = true;
         var col = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         col.AddThemeConstantOverride("separation", 1);
         AddChild(col);
-        col.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect, margin: 10);
+        col.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect, margin: 8);
         var head = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         head.AddThemeConstantOverride("separation", 12);
         _hp.SizeFlagsHorizontal = SizeFlags.ExpandFill;
@@ -372,9 +377,13 @@ public partial class Map3DSquadCard : Button
         head.AddChild(_name); head.AddChild(_hp);
         col.AddChild(head);
         _faces.AddThemeConstantOverride("separation", 4);
-        _faces.CustomMinimumSize = new Vector2(0, 44);
+        _faces.CustomMinimumSize = new Vector2(0, 40);
         col.AddChild(_faces);
-        _order.ClipText = true;
+        // 第476期（見せ方 9）: 命令の文は切らずに 2 行まで折る（「北の道 2 マス目 で 峠の関 と接敵（あと 1）」が切れていた）。
+        _order.AutowrapMode = TextServer.AutowrapMode.Arbitrary;
+        _order.MaxLinesVisible = 2;
+        _order.AddThemeConstantOverride("line_spacing", -2);
+        _order.CustomMinimumSize = new Vector2(300, 0);
         col.AddChild(_order);
     }
 
@@ -391,7 +400,7 @@ public partial class Map3DSquadCard : Button
             foreach (Node child in _faces.GetChildren()) { _faces.RemoveChild(child); child.QueueFree(); }
             foreach (UnitDef unit in info.Faces)
             {
-                var face = new UnitFaceIcon { CustomMinimumSize = new Vector2(44, 44) };
+                var face = new UnitFaceIcon { CustomMinimumSize = new Vector2(40, 40) };
                 face.SetUnit(unit);
                 _faces.AddChild(face);
             }
