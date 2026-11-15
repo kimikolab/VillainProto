@@ -953,6 +953,16 @@ public sealed class Map11State
     /// <summary>中間拠点を取ったときの金（第468期: 金の札を掛ける）。画面の拠点の名札も同じ値を読む。</summary>
     public int OutpostGold => Loot(Stage.Gold.Outpost);
 
+    /// <summary>その中間拠点の見返り（第477期・盤が中間拠点ごとの見返りを持たなければ null ＝ 今までの「どこも同じ金 ＋ 初めて取ればレリック」）。</summary>
+    public OutpostReward? RewardAt(int cell)
+        => Stage.OutpostRewards is { } rw && Graph[cell].Lane is var lane and >= 0 && lane < rw.Count ? rw[lane] : null;
+
+    /// <summary>その中間拠点を取ったときの金（金の札を掛けた値・画面の札も同じ値を読む）。</summary>
+    public int OutpostGoldAt(int cell) => RewardAt(cell) is { } r ? Loot(r.Gold) : OutpostGold;
+
+    /// <summary>その中間拠点を初めて取ったときにレリックの候補が出るか。</summary>
+    public bool OutpostGivesRelic(int cell) => RewardAt(cell) is not { } r || r.Relic;
+
     /// <summary>作戦ターンの終わりの利子（第468期・蓄え: 手持ち 10 につき +1）。利子の無い盤では 0。</summary>
     public int InterestNow => Stage.Gold.On ? Gold / 10 * DocSum(d => d.InterestPer10) : 0;
 
@@ -1886,9 +1896,9 @@ public sealed class Map11State
                 if (mine < 0 || foe) continue;
                 HeldOutposts.Add(cell);
                 OutpostCaptures++;
-                if (Stage.Relic.On && _relicCells.Add(cell)) OfferRelics();   // 第452期: 初めて取った中間拠点だけ
+                if (Stage.Relic.On && OutpostGivesRelic(cell) && _relicCells.Add(cell)) OfferRelics();   // 第452期: 初めて取った中間拠点だけ・第477期: 見返りを持つ盤ではレリックの中間拠点だけ
                 Deliver(Stage.Arrival.OnOutpost, Graph[cell].Name, $"{Graph[cell].Name}を取った");
-                Earn(OutpostGold, $"{Graph[cell].Name}を取った", cell);
+                Earn(OutpostGoldAt(cell), $"{Graph[cell].Name}を取った", cell);
                 RelocateHomeless();   // 第459期: 拠点が落ちた後、拠点に取り残された隊（0 枚・枠を開けていない隊）をここへ
             }
             else if (foe && mine < 0)
@@ -2813,6 +2823,14 @@ public sealed class Map11State
                 any[s.Road] = true;
                 alive[s.Road] += u.Count(x => x.IsAlive);
             }
+        // 第477期: 盤が経路を見る順を持てば（`MapStage.ReserveOrder`・1 章の 1-2 は 中 → 北 → 南）その順で。無ければ番号の順（今まで）。
+        if (Stage.ReserveOrder is { } order)
+        {
+            foreach (int lane in order) if (!any[lane]) return lane;
+            int b = order[0];
+            foreach (int lane in order) if (alive[lane] < alive[b]) b = lane;
+            return b;
+        }
         for (int lane = 0; lane < Stage.LaneCount; lane++) if (!any[lane]) return lane;
         int best = 0;
         for (int lane = 1; lane < Stage.LaneCount; lane++) if (alive[lane] < alive[best]) best = lane;
@@ -2927,7 +2945,7 @@ public sealed class Map11State
     /// 次に湧く部隊が向かう経路（<b>盤面は1ビットも動かさない</b>・画面の札も読む）。今までは経路を順に回す（`SpawnCount % 経路の数`）。
     /// 第476期の測りの口 <see cref="MapStage.SpawnToThinLane"/> の盤では、予備隊と同じ選び方（味方の隊のいない経路 → 生存枚数の少ない経路）。
     /// </summary>
-    public int NextSpawnRoad => Stage.SpawnToThinLane ? ReserveTarget() : SpawnCount % Stage.LaneCount;
+    public int NextSpawnRoad => Stage.SpawnLane >= 0 ? Stage.SpawnLane : Stage.SpawnToThinLane ? ReserveTarget() : SpawnCount % Stage.LaneCount;   // 第477期: 湧く経路が決まった盤
 
     /// <summary>そのマスにいる隊のうち、いちばん番号の若いもの（いなければ -1）。</summary>
     public int SquadAt(int cellId)

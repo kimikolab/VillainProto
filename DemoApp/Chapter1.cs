@@ -23,7 +23,7 @@ using System.Linq;
 /// 第470期: <c>First</c> は持ち越しのある 1 章の 1-1 の盤（null なら <see cref="MapStage.Stage11Ch"/>・第461〜469期）。
 /// <c>Story</c> はステージの頭の札を物語の文（<see cref="Chapter1.Tales470"/>）にするか（偽なら第460期からの仮の文）。
 public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList<MapFoeScale>? Scales = null, StarRule? Stars = null, DealRule? Deal = null,
-                                          InvestRule? Invest = null, RosterRule? Roster = null, MapStage? First = null, bool Story = false)
+                                          InvestRule? Invest = null, RosterRule? Roster = null, MapStage? First = null, bool Story = false, MapStage? Second = null)
 {
     /// <summary>第460期の 1 章（持ち越し無し）。`--chapter1-smoke` はこれで回す。</summary>
     public static readonly ChapterRule V460 = new(false, "第460期（持ち越し無し）");
@@ -120,11 +120,19 @@ public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList
         V465.Scales, StarRule.V464, DealRule.Off, InvestRule.V470, RosterRule.V475, MapStage.Stage11Ch476, Story: true);
 
     /// <summary>
+    /// 第477期の 1 章（指示書 design/PHASE477_STAGE12_BOARD_SPEC.md §2）。第476期に、<b>1-2 の盤の作り直し</b>（<see cref="MapStage.Stage12Ch477"/>・<c>Second</c>）を載せただけ:
+    /// 道の長さが 3 本とも違う（北 4 ／ 中 3 ／ 南 6）・中間拠点ごとの見返り（見張り台 レリック ／ 関所 金 ／ 渡し場 金）・敵は中の街道を歩いてくる。
+    /// 1-1 ／ 1-3・駒・加入の表・倍率（1-2 ×0.9）は第476期のまま。
+    /// </summary>
+    public static readonly ChapterRule V477 = new(true, "第477期（第476期 ＋ 1-2 は道の長さが 3 本とも違う盤）",
+        V465.Scales, StarRule.V464, DealRule.Off, InvestRule.V470, RosterRule.V475, MapStage.Stage11Ch476, Story: true, Second: MapStage.Stage12Ch477);
+
+    /// <summary>
     /// 版の一覧（第466期・遊びの写しが版をキーで持つ——写しの版で 1 章を始め直すため）。<b>版を足したらここにも足す。</b>
     /// </summary>
     public static IReadOnlyList<(string Key, ChapterRule Rule)> Versions
         => new[] { ("V460", V460), ("V461", V461), ("V462", V462), ("V463", V463), ("V464", V464), ("V465", V465), ("V467", V467), ("V468", V468), ("V469", V469),
-                   ("V470", V470), ("V471", V471), ("V474", V474), ("V475", V475), ("V476", V476) };
+                   ("V470", V470), ("V471", V471), ("V474", V474), ("V475", V475), ("V476", V476), ("V477", V477) };
 
     /// <summary>版のキー（「V465」・一覧に無ければ名前）。</summary>
     public string Key { get { string n = Name; return Versions.FirstOrDefault(v => v.Rule.Name == n).Key ?? n; } }
@@ -162,7 +170,7 @@ public static class Chapter1
     /// 第461期: 持ち越しのある 1 章の 1-1 は <see cref="MapStage.Stage11Ch"/>（手札 6・隊の枠 2・金 8）。
     /// 第462期: 倍率のある 1 章は、各ステージの敵に倍率を掛けた写し（<see cref="MapStage.Scaled"/>・同じ倍率なら同じインスタンス）。
     public static IReadOnlyList<MapStage> StagesFor(ChapterRule rule)
-        => new[] { rule.Carry ? rule.First ?? MapStage.Stage11Ch : MapStage.Stage11, MapStage.Stage12, MapStage.Stage13 }   // 第470期: 版が替えた 1-1
+        => new[] { rule.Carry ? rule.First ?? MapStage.Stage11Ch : MapStage.Stage11, rule.Second ?? MapStage.Stage12, MapStage.Stage13 }   // 第470期: 版が替えた 1-1
             .Select((s, i) => s.Scaled(rule.ScaleOf(i)).Starred(rule.Stars ?? StarRule.Off)   // 第463期: ☆の規則を載せる（☆なしならそのまま）
                 .Dealt(i == 0 ? rule.Deal ?? DealRule.Off : DealRule.Off)                      // 第464期: 1-1 の配りの規則（52 枚から・軸の保証）
                 .Invested(i >= (rule.Invest?.FromStage ?? 0) ? rule.Invest ?? InvestRule.Off : InvestRule.Off)   // 第467期: 軸への投資（第470期から 1-1 は札なし）

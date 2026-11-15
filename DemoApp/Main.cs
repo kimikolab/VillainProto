@@ -305,6 +305,17 @@ public partial class Main : Control
             GetTree().Quit(okS ? 0 : 1);
             return;
         }
+        // 第477期 §5: 1-2 の盤の作り直しの門（道の長さ 4 ／ 3 ／ 6・中間拠点ごとの見返り・どの 2 つでも門が開く・予備隊と湧きの道・ほかは今のまま）。画面なし。
+        // §3 の測り（重さ・通し 方針 4 つ × 留守番 × 100 seed・線・振った表）つき。`--chapter1-stage12-quick` は測りを省く。
+        if (bootArgs.Contains("--chapter1-stage12-smoke", StringComparer.Ordinal) || bootArgs.Contains("--chapter1-stage12-quick", StringComparer.Ordinal) || bootArgs.Contains("--chapter1-stage12-sweep", StringComparer.Ordinal))
+        {
+            bool okW;
+            try { okW = Chapter1Stage12Smoke.Run(GD.Print, ProjectSettings.GlobalizePath("res://"), bots: !bootArgs.Contains("--chapter1-stage12-quick", StringComparer.Ordinal), sweepOnly: bootArgs.Contains("--chapter1-stage12-sweep", StringComparer.Ordinal)); }
+            catch (System.Exception ex) { GD.PrintErr(ex.ToString()); okW = false; }
+            GD.Print($"CHAPTER1_STAGE12_SMOKE_COMPLETE ok={okW}");
+            GetTree().Quit(okW ? 0 : 1);
+            return;
+        }
         // 第476期 §5: 1-1 に「道を選ぶ理由」の門（賞金 ＋4 ／ ＋14 ／ ＋4・始めの 4 部隊は動かない・湧きは 6 刻目から歩く・本陣の守り・峠の関の名前と頭の札の 3 行・ほかは今のまま）。画面なし。
         // §3 の測り（`--foe-weight` の式の重さ・通し 北だけ ／ 南だけ ／ 2 隊に分ける × 100 seed・線）つき。`--chapter1-reason-quick` は測りを省く。
         if (bootArgs.Contains("--chapter1-reason-smoke", StringComparer.Ordinal) || bootArgs.Contains("--chapter1-reason-quick", StringComparer.Ordinal))

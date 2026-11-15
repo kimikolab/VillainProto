@@ -322,6 +322,65 @@ public sealed class MapGraph
         return b.Build();
     }
 
+    /// <summary>第477期の 1 章の 1-2 の経路の名前（<see cref="MapStage.Stage12Ch477"/> と同じ並び・頭の 1 文字は 北 ／ 中 ／ 南 のまま）。</summary>
+    internal static readonly string[] Lanes12F477 = { "北の山道", "中の街道", "南の湿地の道" };
+
+    /// <summary>第477期の 1 章の 1-2 の中間拠点の名前（経路の順・仮）。北 3 マス目 ／ 中 2 マス目 ／ 南 4 マス目。</summary>
+    internal static readonly string[] Outposts12F477 = { "見張り台", "関所", "渡し場" };
+
+    /// <summary>第477期の 1 章の 1-2 の敵の初期位置（経路の上の位置・分かれ道が 0）。北: 見張り台(3) ／ 中: 先頭と 2 番手はどちらも 中3(3) ／ 南: 南2(2)・渡し場(4)。</summary>
+    internal static readonly int[][] Starts12F477 = { new[] { 3 }, new[] { 3, 3 }, new[] { 2, 4 } };
+
+    /// <summary>
+    /// 1 章の 1-2 の盤・第477期（指示書 design/PHASE477_STAGE12_BOARD_SPEC.md §2・`ChapterRule.V477` だけが使う）。<b>道の長さが 3 本とも違う</b>:
+    /// <code>
+    ///                       ┌─ 北1 ─ 北2 ─[見張り台]─ 北4 ─┐
+    ///                       │              ║               │
+    ///   拠点 ── 分かれ道 ───┼─ 中1 ─[関所]─ 中3 ───────────┼── 敵の拠点
+    ///                       │                              │
+    ///                       └─ 南1 ─ 南2 ─ 南3 ─[渡し場]─ 南5 ─ 南6 ┘
+    /// </code>
+    /// 分かれ道から門まで 北 4 ／ 中 3 ／ 南 6 マス。拠点から中間拠点まで 関所 3 歩・見張り台 4 歩・渡し場 5 歩。<b>横の辺は 関所 ⇔ 見張り台 の 1 本だけ</b>（隊だけが使う）。
+    /// 経路は 1-3 と同じく<b>分かれ道を先頭に含む</b>（分かれ道の <c>Lane</c> は -1）。<c>Pos</c> は上下で対称にしない（北は尾根へ上がり、南は大きく下へ膨らむ）。
+    /// 単発の 1-2（<see cref="Build12F444"/>）は変えない。
+    /// </summary>
+    public static MapGraph Build12F477(bool portalOn)
+    {
+        var b = new Builder();
+        int home = b.Add("拠点", Kind.Home, (-20.0f, 0f));
+        int fork = b.Add(Fork13, Kind.Open, (-13.0f, 0.5f));
+        (float X, float Z)[][] pos =
+        {
+            new[] { (-7.0f, -8.0f), (1.0f, -13.0f), (10.0f, -14.5f), (20.0f, -10.0f) },
+            new[] { (-4.0f, 0.5f), (6.0f, -1.0f), (17.0f, 0f) },
+            new[] { (-9.0f, 8.5f), (-3.0f, 14.0f), (5.0f, 17.0f), (14.0f, 18.0f), (22.0f, 15.5f), (27.0f, 9.0f) },
+        };
+        int[] outpost = { 2, 1, 3 };
+        var lanes = new int[pos.Length][];
+        for (int lane = 0; lane < pos.Length; lane++)
+        {
+            lanes[lane] = new int[pos[lane].Length + 1];
+            lanes[lane][0] = fork;
+            for (int k = 0; k < pos[lane].Length; k++)
+            {
+                bool op = k == outpost[lane];
+                lanes[lane][k + 1] = b.Add(op ? Outposts12F477[lane] : $"{Lanes12F477[lane]} {k + 1} マス目", op ? Kind.Outpost : Kind.Open, pos[lane][k], lane);
+            }
+        }
+        int portal = portalOn ? b.Add(Map11.PortalName, Kind.Portal, (30.0f, 0f)) : -1;
+        b.Link(home, fork);
+        for (int lane = 0; lane < pos.Length; lane++)
+        {
+            int from = fork;
+            foreach (int c in lanes[lane].Skip(1)) { b.Link(from, c); from = c; }
+            if (portal >= 0) b.Link(from, portal);
+            b.Lane(Lanes12F477[lane], lanes[lane], Starts12F477[lane].Select(i => lanes[lane][i]).ToArray());
+        }
+        // 横の辺（関所 ⇔ 見張り台・隊だけが使う）。南はつながらない。
+        b.Link(lanes[1][2], lanes[0][3]);
+        return b.Build();
+    }
+
     /// <summary>1-3 の経路の名前（<see cref="MapStage.Stage13"/> と同じ並び・1-2 と同じ）。</summary>
     internal static readonly string[] Lanes13 = Lanes12;
 

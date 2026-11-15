@@ -114,6 +114,20 @@ public sealed class MapStage
     /// </summary>
     public bool SpawnToThinLane { get; init; }
 
+    /// <summary>
+    /// 予備隊（と <see cref="SpawnToThinLane"/> の湧き）が「隊のいない経路」を探す順（第477期・1 章の 1-2 は 中 → 北 → 南）。null なら番号の順（今まで）。
+    /// </summary>
+    public IReadOnlyList<int>? ReserveOrder { get; init; }
+
+    /// <summary>湧く部隊の経路（第477期・1 章の 1-2 は中の街道だけ）。-1 なら経路を順に回す（今まで）。</summary>
+    public int SpawnLane { get; init; } = -1;
+
+    /// <summary>
+    /// 中間拠点ごとの見返り（第477期・<b>経路の番号の順</b>——その経路の中間拠点を取ったときの金と、初めて取ったときにレリックの候補が出るか）。
+    /// null なら今まで（どこも <see cref="GoldRule.Outpost"/>・どの中間拠点も初めて取ればレリック）。
+    /// </summary>
+    public IReadOnlyList<OutpostReward>? OutpostRewards { get; init; }
+
     /// <summary>拠点を空にして出ようとしたとき、画面が確かめの 1 行を出す盤か（第476期・1 章の 1-1 だけ・<b>表示だけ</b>——止めはしない）。</summary>
     public bool WarnEmptyHome { get; init; }
 
@@ -739,6 +753,9 @@ public sealed class MapStage
         SpawnToThinLane = s.SpawnToThinLane,
         WarnEmptyHome = s.WarnEmptyHome,
         Notes = s.Notes,
+        ReserveOrder = s.ReserveOrder,
+        SpawnLane = s.SpawnLane,
+        OutpostRewards = s.OutpostRewards,
     };
 
     /// <summary>大群の 1 部隊（第458期・1-3 の C3・動かない・<see cref="Map11.RoadNode.Hold"/>）。</summary>
@@ -1033,8 +1050,86 @@ public sealed class MapStage
         };
     }
 
+    // ---------------- 第477期: 1-2 の盤を作り直す（指示書 design/PHASE477_STAGE12_BOARD_SPEC.md §2） ----------------
+
+    /// <summary>第477期の 1 章の 1-2 の値（測りが振る口の既定）。見張り台の部隊・中の 2 番手・中間拠点の金（北 ／ 中 ／ 南）・待ち構える部隊の賞金・期限。</summary>
+    internal const string Stage12Ch477TowerBand = "band_fire", Stage12Ch477MidSecond = "band_archers", Stage12Ch477SpawnBand = "band_sellswords", Stage12Ch477ReserveBand = "band_knights";
+    internal const int Stage12Ch477TowerGold = 0, Stage12Ch477GateGold = 8, Stage12Ch477FerryGold = 12, Stage12Ch477FoeGold = 6, Stage12Ch477TurnCap = 14;
+
+    /// <summary>
+    /// 1 章の 1-2（第477期・`ChapterRule.V477` から）。盤は <see cref="MapGraph.Build12F477"/>（北 4 ／ 中 3 ／ 南 6 マス・横の辺は 関所 ⇔ 見張り台）:
+    /// <b>北の山道</b> 見張り台に帯 B の硬い部隊（待ち構える）・取ればレリックの候補 ／ <b>中の街道</b> 先頭（第一波）と 2 番手が拠点へ歩いてくる・関所は金 ＋8 ／
+    /// <b>南の湿地の道</b> 軽い部隊が 2 つ待ち構える・渡し場は金 ＋12。<b>歩くのは中の街道の部隊・湧き・予備隊だけ</b>:
+    /// 湧きは全部 中の街道へ（<see cref="SpawnLane"/>）・予備隊は隊のいない経路を 中 → 北 → 南 の順に選ぶ（<see cref="ReserveOrder"/>）。
+    /// 門（中間拠点 2 つ）・門番の勇者・本陣の守り・連戦・湧きの間隔・金の規則・隊の枠・候補・レリックの引き方は単発の 1-2（<see cref="Stage12"/>）のまま。
+    /// 単発の 1-2 と第461〜476期の 1 章の 1-2 は変えない。
+    /// </summary>
+    public static MapStage Stage12Ch477 { get; } = Stage12Ch477With();
+
+    /// <summary>値を替えた第477期の 1 章の 1-2（測りが候補を並べるための口・遊ぶ盤は <see cref="Stage12Ch477"/>）。</summary>
+    internal static MapStage Stage12Ch477With(string tower = Stage12Ch477TowerBand, int towerHp = 100, int towerAtk = 100, string midSecond = Stage12Ch477MidSecond,
+                                              int towerGold = Stage12Ch477TowerGold, int gateGold = Stage12Ch477GateGold, int ferryGold = Stage12Ch477FerryGold,
+                                              int turnCap = Stage12Ch477TurnCap, bool passHolds = false, int spawnEvery = 0, string? reserve = null,
+                                              string southFirst = "band_levy", string southSecond = "band_sellswords", string spawn = Stage12Ch477SpawnBand,
+                                              string garrison = "band_garrison", bool hero = true)
+    {
+        MapStage b = Stage12;
+        Map11.RoadNode Wait(Map11.RoadNode n) => n with { Hold = true, Gold = Stage12Ch477FoeGold };
+        EnemyCatalog.MapSquad sp = EnemyCatalog.MapSquadOf(spawn);
+        EnemyCatalog.MapSquad rs = EnemyCatalog.MapSquadOf(reserve ?? Stage12Ch477ReserveBand);
+        string towerNote = towerHp == 100 && towerAtk == 100 ? "" : $"最大HP ×{towerHp / 100.0:0.##}・攻撃 ×{towerAtk / 100.0:0.##}";
+        return new()
+        {
+            Id = b.Id,
+            Title = "1 章 1-2 討伐隊の砦",
+            Board = MapGraph.Build12F477,
+            Lanes = new IReadOnlyList<Map11.RoadNode>[]
+            {
+                new[] { Wait(Hard(Band(0, 0, tower, 3), towerHp, towerAtk)) with { Tag = "硬い", Note = towerNote } },
+                new[] { Node(1, 0, EnemyCatalog.Stages[0], 0) with { Name = "物見の兵" }, Band(1, 1, midSecond, 2), Garrison(1, 2, garrison, 4) with { Name = "本陣の守り" } },
+                new[] { Wait(Band(2, 0, southFirst, 0)), Wait(Band(2, 1, southSecond, 2)) },
+            },
+            LaneNames = MapGraph.Lanes12F477,
+            Spawn = _ => (sp.Enemy, sp.Name, 2),
+            Portal = spawnEvery > 0 ? b.Portal with { SpawnEvery = spawnEvery } : b.Portal,
+            Time = b.Time,
+            Arrival = b.Arrival,
+            Reserve = new ReserveRule(true, rs.Enemy, rs.Name, 1),
+            SquadCap = b.SquadCap,
+            TurnCap = turnCap,
+            TimeLimit = b.TimeLimit,
+            WinOnCapture = b.WinOnCapture,
+            Gold = b.Gold,
+            MatchOffer = b.MatchOffer,
+            PortalGate = b.PortalGate,
+            Relic = b.Relic,
+            Hero = hero ? b.Hero : HeroRule.Off,
+            Siege = b.Siege,
+            CrossFacing = true,
+            ViewScale = 1.35f,
+            SpawnsPassHolds = passHolds,
+            SpawnLane = 1,
+            ReserveOrder = new[] { 1, 0, 2 },
+            OutpostRewards = new[] { new OutpostReward(towerGold, true), new OutpostReward(gateGold, false), new OutpostReward(ferryGold, false) },
+            WarnEmptyHome = true,
+            Notes = new[]
+            {
+                "中間拠点を 2 つ取ると砦の門が開く。門番を倒して砦を制圧したら勝ち。",
+                $"見張り台 ＝ レリック（硬い）／ 関所 ＝ 金 ＋{gateGold}（近い）／ 渡し場 ＝ 金 ＋{ferryGold}（遠い）。",
+                "敵は中の街道を歩いてくる。拠点を空にしないこと——関所に隊がいれば、そこで受けられる。",
+            },
+        };
+    }
+
     /// <summary>選べるステージ（編成画面の選択の並び）。</summary>
     public static IReadOnlyList<MapStage> All { get; } = new[] { Stage11, Stage12, Stage13 };
+}
+
+/// <summary>中間拠点 1 つの見返り（第477期）。<c>Gold</c> は取るたびに入る金、<c>Relic</c> は初めて取ったときにレリックの候補が出るか。</summary>
+public readonly record struct OutpostReward(int Gold, bool Relic)
+{
+    /// <summary>画面の名札の文（「金 ＋8」「レリック」「金 ＋8・レリック」）。</summary>
+    public string Text => (Gold > 0 ? $"金 ＋{Gold}" : "") + (Gold > 0 && Relic ? "・" : "") + (Relic ? "レリック" : "");
 }
 
 /// <summary>
