@@ -2011,6 +2011,12 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
         # **第476期**: 1-1 に「道を選ぶ理由」の門（`Chapter1ReasonSmoke.cs`・画面なし・`ChapterRule.V476` ／ `MapStage.Stage11Ch476`）。(a) 金 雑兵 ＋4・峠の関 ＋14・本陣の守り ＋4 ／ (b) 始めの 4 部隊は動かない・湧きは 6 刻目から歩く・空の拠点は 1 刻目に落ちない
         # ／ (c) 本陣の守りに勝つと制圧 ／ (d) 「峠の関」と頭の札の 3 行 ／ (e) 1-2・1-3・単発・第461〜475期の 1 章は今のまま ／ 既定の組み方が 1 章の手札で落ちない。測り（線つき）: 重さ（本陣の守り × 4 枚・HP 60% ／ 湧く部隊の候補 × 拠点の 3 枚 ／ 1 枚）・
         # 通し（北だけ ／ 南だけ ／ 2 隊に分ける × 組 A ／ B × 100 seed・勝ち ／ 制圧の刻 ／ 失った枚数 ／ 金の余り ／ 湧きと戦った回数）・賞金 12／14／16 × 湧き 5／6／7 刻目・比べる相手。約 2 分。`--chapter1-reason-quick` は測りを省く（約 3 秒）
+    Godot_console.exe --path DemoApp --headless -- --chapter1-stage12-smoke
+        # **第477期**: 1-2 の盤の作り直しの門（`Chapter1Stage12Smoke.cs`・画面なし・`ChapterRule.V477` ／ `MapStage.Stage12Ch477`）。(a) 道の長さ 4 ／ 3 ／ 6・横の辺 1 本 ／ (b) 中間拠点ごとの見返り ／
+        # (c) どの 2 つでも門が開く ／ (d) 予備隊と湧きの道・歩くのは中だけ ／ (e) 単発と第461〜476期は今のまま。測りつき（約 1 分）: 重さ・基準（今の 1-2）と新しい盤の通し（方針 4 つ × 留守番 × 組 A ／ B × 100 seed）・
+        # 人が組んだ隊（`design/plays` の写し）・振った表。`--chapter1-stage12-quick` は測りを省く・`--chapter1-stage12-sweep` は振った表だけ。報告 `design/PHASE477_STAGE12_BOARD.md`
+    Godot_console.exe --path DemoApp res://Map11Main.tscn -- --map3d --chapter1-rule=V477 --map-chapter=7 "--map3d-play=p1|p2|p3,<写しの置き場>"
+        # **第477期**: 3D の 1-2 を本物のクリックで通す口（p1 ＝ 中＋北 ／ p2 ＝ 中＋南 ／ p3 ＝ 北＋南・1-1 は器具が通す）。`MAP3D_PLAY_COMPLETE` の行。p3 は 5 刻目で止まる不具合が残っている（報告 §13-3）
     Godot.exe --path DemoApp res://Map11Main.tscn -- --map3d "--map3d-play=north|south|split,<写しの置き場>"
         # **第476期**: 3D の 1 章の 1-1 を本物のクリック（駒 → マス → 「1 刻」→ 窓の「戦う」）で制圧まで通し、場面ごとに写しを撮る（`Map11Main.Map3DPlay.cs`・戦闘は早回し）。合否は `MAP3D_PLAY_COMPLETE` の行。
         # `split` の「2 枚呼んで第2隊へ」だけは器具の口。写しの口に `,m3d-south`（南の道を進む場面）を足し、`--map3d-layout-smoke` は 4 場面（＋ 南の道）・`,m3d-click` は本陣の台と「敵部隊」も押す

@@ -3105,6 +3105,10 @@ public partial class Map11Main : Node3D
         }
         lines.Add("");
         lines.Add($"seed {Map11Session.Seed}（この数字を控えれば同じ通しを再現できます）");
+        // 第477期 続き 3: 負けた通しでは「どの隊が誰に負けたか」を頭に 1 行（負けた理由が分かるように・戦闘の記録から読むだけ）。
+        if (!St.Won && Map11Session.BattleLog.Where(l => !l.Won).ToList() is { Count: > 0 } lostFights)
+            lines.Insert(0, "負けた戦闘: " + string.Join(" ／ ", lostFights.Select(l =>
+                $"{l.Squad} が {System.Text.RegularExpressions.Regex.Replace(l.Foe, @"^\d+\.\s*", "")} に負けた" + (l.Turn > 0 || l.Intercept ? $"（{(l.Turn > 0 ? $"{l.Turn} 刻目" : "")}{(l.Turn > 0 && l.Intercept ? "・" : "")}{(l.Intercept ? "拠点の迎撃" : "")}）" : ""))));
         _resultBody.Text = string.Join("\n", lines);
         RefreshResultFaces();
         _resultScroll.ScrollVertical = 0;

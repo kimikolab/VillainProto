@@ -103,6 +103,7 @@ public partial class Map11Main
         while (IsInsideTree())
         {
             if (_play3dGuard++ > 500) { Finish(false, "step-limit"); return; }
+            if (_play3dGuard % 40 == 0) GD.Print($"MAP3D_PLAY 診断 step={_play3dGuard} running={Map11Session.TurnRunning} reform={_reform} 窓: 遭遇={_encounterOverlay.Visible} 迎撃={_interceptOverlay.Visible} 連戦={_siegeOverlay.Visible} 確かめ={_confirmOverlay.Visible} 結果={_resultOverlay.Visible} 候補={St.RelicOffer.Count} pending={Map11Session.HasPendingBattle} {State()}");
             if (_introOverlay is { Visible: true })
             {
                 await Shot("頭の札", once: true);
