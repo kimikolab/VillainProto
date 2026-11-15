@@ -2911,7 +2911,7 @@ public sealed class Map11State
         if (Portal.SpawnEvery <= 0 || Turn <= 0 || !PortalReady) return list;
         _portalReady = Turn + Portal.SpawnEvery;
 
-        int road = SpawnCount % Stage.LaneCount;
+        int road = NextSpawnRoad;
         var (enemy, name, stageIndex) = Stage.Spawn(road);
         var def = new Map11.RoadNode(road, Map11.RoadCells, name, enemy, stageIndex);
         int hp = def.Enemy.Occupied().Sum(o => o.Def.MaxHp);
@@ -2922,6 +2922,12 @@ public sealed class Map11State
         SpawnCount++;
         return list;
     }
+
+    /// <summary>
+    /// 次に湧く部隊が向かう経路（<b>盤面は1ビットも動かさない</b>・画面の札も読む）。今までは経路を順に回す（`SpawnCount % 経路の数`）。
+    /// 第476期の測りの口 <see cref="MapStage.SpawnToThinLane"/> の盤では、予備隊と同じ選び方（味方の隊のいない経路 → 生存枚数の少ない経路）。
+    /// </summary>
+    public int NextSpawnRoad => Stage.SpawnToThinLane ? ReserveTarget() : SpawnCount % Stage.LaneCount;
 
     /// <summary>そのマスにいる隊のうち、いちばん番号の若いもの（いなければ -1）。</summary>
     public int SquadAt(int cellId)

@@ -262,7 +262,12 @@ public static class Map11Session
         // 第467期 §3: 味方の雷・粉で倒れた枚数（1 章だけ・台本のある戦闘だけ——単発の記録は第466期のまま）。
         int allyShock = Chapter1.Active && result is not null
             ? Map11Info.AllyShockDowns(result, unitsBefore.Select(u => u.InstanceId).ToHashSet()) : 0;
-        BattleLog.Add(new Line(Battles, squadName, State.LaneName(road),
+        // 試遊（2026-11-15）: 記録に倒れた駒の名前が無かった（「残り 4 枚」だけ）。1 章だけ・この戦闘で倒れた駒と何ターン目か（単発の記録は今のまま）。
+        if (Chapter1.Active && unitsBefore.Where(u => !u.IsAlive && !u.Def.Traits.Contains(TraitId.Ephemeral)).ToList() is { Count: > 0 } fell)
+            notes.Add("倒れた: " + string.Join("・", fell.Select(u => u.LastDeathTurn > 0 ? $"{u.Def.Name}（{u.LastDeathTurn}T）" : u.Def.Name)));
+        // 同: 本陣の守り（敵の拠点から動かない区画）との戦闘は、区画の定義の経路（南）ではなく敵の拠点と書く（北から入っても「南の道」と記録されていた）。
+        string where = Chapter1.Active && node.Def.Stationary && node.Pos == State.Graph.Portal ? Map11.PortalName : State.LaneName(road);
+        BattleLog.Add(new Line(Battles, squadName, where,
                                $"{node.Def.Index + 1}. {node.Def.Name}",
                                playerWon, alive, hpPct, notes,
                                State.Time.On ? ShownTurn : 0, wasIntercept, allyShock));

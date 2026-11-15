@@ -363,6 +363,53 @@ public static class Chapter1ReasonSmoke
                  })
             foreach (Row r in Measure(stage, teamB: true))
                 write($"  | {label} | {Short(r.Plan)} | {r.Wins} | {r.Fallen} | {r.Turn:0.#} | {r.Lost:F2} | {r.Gold:F1} | {r.SpawnFights:F2} |");
+
+        // ---- 追記（ポン・Codex の試遊 2026-11-15 の問い 3 から）: 湧きが「通常の攻めが終わる前」に届く案 ----
+        write("");
+        write("  追記: 湧きが届く案（100 seed・勝ち ／ 陥落 ／ 拠点で迎撃のあった通し ／ 制圧の刻。迎撃の勝ち ／ 数は次の表）");
+        write("  守り 3 枚 ＝ 組 B（主力 ドルガ・ガン・リィカ ＋ 呼んだ 2 枚 ／ 拠点に ムド・ムグ・リリ）・守り 1 枚 ＝ 既定の組み方のまま呼ばない（主力 5 枚 ／ 拠点にムグ）");
+        write("");
+        write("  | 案 | 北だけ・守り 3 枚 | 南だけ・守り 3 枚 | 2 隊に分ける（空） | 北だけ・守り 1 枚（ムグ） | 南だけ・守り 1 枚（ムグ） |");
+        write("  |---|---|---|---|---|---|");
+        var variants = new List<(string Name, MapStage Stage)>
+        {
+            ("今（6 刻目・北から）", s),
+        };
+        foreach (int k in new[] { 5, 4, 3, 2 })
+            variants.Add(($"{k} 刻目・北から", Dress(MapStage.Stage11Ch476With(firstSpawn: k - 1), rule)));
+        foreach (int k in new[] { 4, 3, 2 })
+            variants.Add(($"{k} 刻目・隊のいない道へ", Dress(MapStage.Stage11Ch476With(firstSpawn: k - 1, thinLane: true), rule)));
+        variants.Add(("本陣で待つ部隊（最初の接敵の後に隊のいない道へ）＋ 湧きは今のまま", Dress(MapStage.Stage11Ch476With(reserve: true), rule)));
+        variants.Add(("道の先頭（物見の兵・徴募兵）が 1 刻目から歩く（第474期と同じ）・湧きは今のまま", Dress(MapStage.Stage11Ch476With(leadsWalk: true), rule)));
+        variants.Add(("本陣で待つ部隊 ＋ 湧きは 4 刻目・隊のいない道へ", Dress(MapStage.Stage11Ch476With(firstSpawn: 3, thinLane: true, reserve: true), rule)));
+        var detail = new List<string>();
+        foreach (var (name, stage) in variants)
+        {
+            var cells = new List<string>();
+            foreach (var (plan, teamB, recruit, tag) in new[]
+                     {
+                         (Plan.North, true, true, "北・守り 3"), (Plan.South, true, true, "南・守り 3"), (Plan.Split, true, true, "分ける"),
+                         (Plan.North, false, false, "北・守り 1"), (Plan.South, false, false, "南・守り 1"),
+                     })
+            {
+                var rs = Enumerable.Range(0, Seeds).Select(c => Chapter1AsymSmoke.Play(stage, c, plan, teamB: teamB, recruit: recruit)).ToList();
+                var won = rs.Where(r => r.Won).ToList();
+                var home = rs.SelectMany(r => r.Fights).Where(f => f.AtHome).ToList();
+                int withHome = rs.Count(r => r.Fights.Any(f => f.AtHome));
+                cells.Add($"{won.Count} ／ {rs.Count(r => r.Fallen)} ／ {withHome} ／ {(won.Count == 0 ? "—" : $"{Med(won.Select(r => (double)r.CaptureTurn)):0.#}")}");
+                var fell = rs.SelectMany(r => r.Fell).Where(f => home.Any(h => h.Foe == f.Foe) && f.Squad == 1).GroupBy(f => f.Unit)
+                    .OrderByDescending(x => x.Count()).Take(3).Select(x => $"{x.Key} {100.0 * x.Count() / Seeds:F0}%・{x.Average(f => (double)f.Turn):F1}T").ToList();
+                if (home.Count > 0)
+                    detail.Add($"  | {name} | {tag} | {home.Count(f => f.Won)} ／ {home.Count} | {Med(home.Select(f => f.Hp)):F0}% | {(fell.Count == 0 ? "—" : string.Join(" ／ ", fell))} | {rs.Average(r => (double)r.Lost):F2} | {(won.Count == 0 ? "—" : $"{won.Average(r => (double)r.Gold):F1}")} |");
+            }
+            write($"  | {name} | {string.Join(" | ", cells)} |");
+        }
+        write("");
+        write("  拠点の迎撃の中身（迎撃のあった組だけ・倒れた駒は拠点の隊）");
+        write("");
+        write("  | 案 | 方針 | 迎撃 勝ち ／ 数 | 後の HP（中央値） | 倒れた駒（100 通しの割合・平均 T） | 失った枚数（通し平均） | 金の余り（勝った通し） |");
+        write("  |---|---|--:|--:|---|--:|--:|");
+        foreach (string line in detail) write(line);
         return ok;
     }
 }

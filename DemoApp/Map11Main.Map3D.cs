@@ -14,7 +14,8 @@ public partial class Map11Main
     /// <summary><c>_Ready</c> が盤と UI を組んだ直後に 1 度呼ぶ。</summary>
     private void BuildMap3D()
     {
-        AddChild(new Map3DSwitch());
+        // 試遊（2026-11-15）: 頭の札を開いたまま F2 を押すと札が閉じていた——開いていたら、読み直した場面でもう一度出す。
+        AddChild(new Map3DSwitch { BeforeReload = () => { if (_introOverlay is { Visible: true }) Chapter1.IntroPending = true; } });
         string[] args = OS.GetCmdlineUserArgs();
         if (args.Contains("--map3d-tool-check", StringComparer.Ordinal)) Callable.From(Map3DToolCheck).CallDeferred();
         if (!Map3DMode.Active) return;
@@ -92,9 +93,13 @@ public partial class Map3DStage : Node3D
 /// <summary>F2 で 2D ／ 3D を切り替える（作戦ターンを流している最中は聞かない）。場面を読み直すだけで、通しの状態は `Map11Session` に残る。</summary>
 public partial class Map3DSwitch : Node
 {
+    /// <summary>場面を読み直す直前に 1 度呼ぶ（開いている窓を覚えるため）。</summary>
+    public Action? BeforeReload { get; init; }
+
     public override void _UnhandledInput(InputEvent e)
     {
         if (e is not InputEventKey { Pressed: true, Echo: false, Keycode: Key.F2 } || Map11Session.TurnRunning) return;
+        BeforeReload?.Invoke();
         Map3DMode.Select(!Map3DMode.On);
         GetViewport().SetInputAsHandled();
         GetTree().ReloadCurrentScene();

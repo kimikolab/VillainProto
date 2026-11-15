@@ -291,7 +291,9 @@ public partial class Map11Main
         // 第474期: 敵の倍率（「敵 ×0.6」）は題字に出さない（検証の層 F3 が出す）。
         string title = (Chapter1.Active && !place.StartsWith("1 章", StringComparison.Ordinal) ? "1 章　" : "") + place;
         string turn = !St.Time.On ? ""
-            : $"作戦ターン {Map11Session.ShownTurn}" + (St.TimeLimitLeft is { } limit ? $"　／　期限まで あと {limit}" : "");
+            : $"作戦ターン {Map11Session.ShownTurn}" + (St.TimeLimitLeft is { } limit ? $"　／　期限まで あと {limit}" : "")
+              // 試遊（2026-11-15）: 「敵部隊」「戦闘の記録」の窓を開くと敵の拠点の名札（湧くまで あと n）が隠れる——左上にも出す。
+              + (St.Portal.On && St.Portal.SpawnEvery > 0 && !St.Captured && !St.Fallen ? $"　／　湧くまで あと {St.PortalCooldown}" : "");
         string goal = St.HeroClock && St.Hero is { Cleared: false } hero ? $"目標　勇者を倒す（HP {hero.HpNow}）"
             : !St.Portal.On ? $"目標　敵部隊をすべて抜く（{St.ClearedCount} / {St.Stage.TotalNodes}）"
             : St.Won ? $"目標　{Map11.PortalName}を制圧した"   // 第476期: 制圧で勝つ盤で、勝った後に「残る敵部隊を倒す」と出ていた

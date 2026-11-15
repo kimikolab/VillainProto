@@ -3253,7 +3253,9 @@ public partial class Map11Main : Node3D
         RefreshOutposts();
 
         // 第476期（不具合の直し）: まだ開けていない隊の枠と、駒のいない隊は数えない（「待機 4 隊」と出ていた）。
-        int waiting = St.Squads.Count(x => !x.Lost && x.Road < 0 && !St.IsLocked(x.Index) && (x.Units is not { } wu || wu.Any(u => u.IsAlive)));
+        // 試遊（2026-11-15）: 行き先を拠点の外に決めた隊も数えていて、「拠点が空になります」の警告と食い違っていた——3D では拠点で待つ隊だけ。
+        int waiting = St.Squads.Count(x => !x.Lost && x.Road < 0 && !St.IsLocked(x.Index) && (x.Units is not { } wu || wu.Any(u => u.IsAlive))
+                                          && (!Map3DMode.Active || !St.Time.On || Map11Session.Destinations[x.Index].AtHome));
         _homeLabel.Text = St.HomeLost ? "拠点（陥落）"   // 第459期 §7
             : waiting == 0 ? "拠点" : $"拠点（待機 {waiting} 隊）";
         _homeLabel.Modulate = St.HomeLost ? new Color(1.0f, 0.45f, 0.40f) : Colors.White;
@@ -3467,6 +3469,13 @@ public partial class Map11Main : Node3D
         if (!mine && !St.GateOpen) body += Nl + $"門 ・ 中間拠点 あと {St.GateNeed}";
         // 第444期 §0-3: **勇者の予告**（刻の上限を盤ごとに持つ盤だけ）。上限で負け。
         if (St.HeroTurnsLeft is { } hero) body += Nl + $"勇者パーティー あと {hero} 作戦ターン";
+        // 第476期（試遊の問い 3）: 3D では、次に湧く部隊がどの道を通って何刻で拠点に着くかを添える（表示だけ・`Map11State.NextSpawnRoad`）。
+        if (Map3DMode.Active && !mine && St.Portal.SpawnEvery > 0 && !St.Fallen)
+        {
+            int lane = St.NextSpawnRoad;
+            int steps = Math.Max(0, St.Graph.Path(St.Graph.Portal, lane, St.Graph.Home, -1).Count - 1);
+            body += Nl + $"→ {St.LaneName(lane)}を通り {steps} 刻で拠点";
+        }
         _portalMarker.Set(head + Nl + body, tint);
         // **湧く瞬間（＝残り 0）に脈打つ**／制圧したら止める。
         _portalMarker.SetNote(mine ? "" : wait <= 1 ? "◀ 湧く" : "", UiKit.Hurt, true);

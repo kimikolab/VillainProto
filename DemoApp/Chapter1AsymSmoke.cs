@@ -246,7 +246,7 @@ public static class Chapter1AsymSmoke
     /// 1 通し。始めの 6 枚から主力 5 枚（第1隊）を組み、金 8 で 2 枚呼んで残りの 1 枚と 3 枚の隊（第2隊）にする。
     /// 行き先は方針のとおり——制圧の後は盤に残った敵部隊のいちばん近いものへ。戦闘は器具（台本なし）。
     /// </summary>
-    internal static Result Play(MapStage stage, int chapterSeed, Plan plan, Action<Map11State>? watch = null, int endless = 0, bool teamB = false)
+    internal static Result Play(MapStage stage, int chapterSeed, Plan plan, Action<Map11State>? watch = null, int endless = 0, bool teamB = false, bool recruit = true)
     {
         var st = new Map11State(Chapter1.StageSeed(chapterSeed, 0, 0), stage.Time, stage.Portal, draft: true, stage: stage);
         MapGraph g = st.Graph;
@@ -262,7 +262,7 @@ public static class Chapter1AsymSmoke
         // 組 A: 主力 ＝ 始めの 5 枚・3 枚の隊 ＝ ムグ ＋ 呼んだ 2 枚 ／ 組 B: 主力 ＝ 攻めの 3 枚 ＋ 呼んだ 2 枚・3 枚の隊 ＝ 守りの 3 枚（ムド・ムグ・リリ）
         Seat(0, teamB ? MainSeatsB : MainSeats);
         if (teamB) Seat(1, SmallSeatsB);
-        while (st.Recruit(0)) res.Recruits++;
+        while (recruit && st.Recruit(0)) res.Recruits++;   // 第476期: 呼ばない通し（拠点の番はムグ 1 枚）も測る
         foreach (int slot in new[] { 0, 1, 3, 2, 4 })
             if (st.Bench.Count > 0 && st.UnitAt(teamB ? 0 : 1, slot) is null) st.SwapWithBench(teamB ? 0 : 1, slot, 0);
 

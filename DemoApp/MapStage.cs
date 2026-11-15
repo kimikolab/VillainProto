@@ -109,6 +109,11 @@ public sealed class MapStage
     /// </summary>
     public bool SpawnsPassHolds { get; init; }
 
+    /// <summary>
+    /// 湧く部隊は<b>味方の隊のいない経路</b>へ向かう（第476期の測りの口・予備隊と同じ選び方 `Map11State.ReserveTarget`）。偽なら経路を順に回す（今まで・遊ぶ盤はどれも偽）。
+    /// </summary>
+    public bool SpawnToThinLane { get; init; }
+
     /// <summary>拠点を空にして出ようとしたとき、画面が確かめの 1 行を出す盤か（第476期・1 章の 1-1 だけ・<b>表示だけ</b>——止めはしない）。</summary>
     public bool WarnEmptyHome { get; init; }
 
@@ -731,6 +736,7 @@ public sealed class MapStage
         Siege = s.Siege,
         ViewScale = s.ViewScale,
         SpawnsPassHolds = s.SpawnsPassHolds,
+        SpawnToThinLane = s.SpawnToThinLane,
         WarnEmptyHome = s.WarnEmptyHome,
         Notes = s.Notes,
     };
@@ -977,13 +983,15 @@ public sealed class MapStage
 
     /// <summary>賞金・最初の湧きの刻・本陣の守りを替えた 1 章の 1-1（第476期の測りが候補を並べるための口・遊ぶ盤は <see cref="Stage11Ch476"/>）。</summary>
     internal static MapStage Stage11Ch476With(int gateGold = Stage11Ch476GateGold, int firstSpawn = Stage11Ch476FirstSpawn, string? garrison = Stage11Ch476GarrisonBand,
-                                              bool spawnsPass = true, string spawn = Stage11Ch476SpawnBand)
+                                              bool spawnsPass = true, string spawn = Stage11Ch476SpawnBand, bool thinLane = false, bool reserve = false, bool leadsWalk = false)
     {
         MapStage b = Stage11Ch474;
         EnemyCatalog.MapSquad sp = EnemyCatalog.MapSquadOf(spawn);
         string shields = EnemyCatalog.MapSquadOf(Stage11Ch474GateBand).Name;
         Map11.RoadNode Wait(Map11.RoadNode n) => n with { Hold = true, Gold = Stage11Ch476FoeGold };
-        var south = new List<Map11.RoadNode> { Wait(b.Lanes[1][0]), Wait(b.Lanes[1][1]) };
+        // 測りの口 `leadsWalk`: 道の先頭（物見の兵・徴募兵）だけ第474期と同じに 1 刻目から歩かせる（賞金はそのまま）。
+        Map11.RoadNode Lead(Map11.RoadNode n) => leadsWalk ? n with { Gold = Stage11Ch476FoeGold } : Wait(n);
+        var south = new List<Map11.RoadNode> { Lead(b.Lanes[1][0]), Wait(b.Lanes[1][1]) };
         if (garrison is not null) south.Add(Garrison(1, 2, garrison, 4) with { Name = "本陣の守り", Gold = Stage11Ch476GarrisonGold });
         return new()
         {
@@ -994,7 +1002,7 @@ public sealed class MapStage
             {
                 new[]
                 {
-                    Wait(b.Lanes[0][0]) with { Name = "物見の兵" },
+                    Lead(b.Lanes[0][0]) with { Name = "物見の兵" },
                     b.Lanes[0][1] with
                     {
                         Name = Stage11Ch476GateName, Gold = gateGold, Tag = "硬い",
@@ -1012,6 +1020,9 @@ public sealed class MapStage
             WinOnCapture = true,
             Gold = b.Gold,
             SpawnsPassHolds = spawnsPass,
+            SpawnToThinLane = thinLane,
+            // 測りの口: 本陣で出番を待つ部隊（1-2 の予備隊と同じ規則——最初の接敵が決着した刻の終わりに、味方の隊のいない経路へ出る）。
+            Reserve = reserve ? new ReserveRule(true, sp.Enemy, sp.Name, 2) : ReserveRule.Off,
             WarnEmptyHome = true,
             Notes = new[]
             {
