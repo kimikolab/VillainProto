@@ -291,7 +291,9 @@ public partial class Map11Main
         _clashResultLeft = 2.0f;
         _clashFrames = 0;
         _clash.Visible = true;
-        GD.Print($"MAP3D_CLASH_RESULT {snap.OwnName} 対 {snap.FoeName} {(line.Won ? "勝ち" : "負け")} 味方 {own.Count(x => x.Alive)}／{own.Count} 敵 {foe.Count(x => x.Alive)}／{foe.Count} 賞金 {gold}");
+        // 誰が何ターン目に倒れたか（倒れた駒の列から読むだけ・写しの行に添える）。
+        string fell = string.Join("・", own.Where(x => !x.Alive).Select(x => St.FallenUnits.LastOrDefault(u => BaseId(u.Def) == BaseId(x.Def)) is { } f ? $"{x.Def.Name}（{f.LastDeathTurn}T）" : x.Def.Name));
+        GD.Print($"MAP3D_CLASH_RESULT {snap.OwnName} 対 {snap.FoeName} {(line.Won ? "勝ち" : "負け")} 味方 {own.Count(x => x.Alive)}／{own.Count} 敵 {foe.Count(x => x.Alive)}／{foe.Count} 賞金 {gold} {St.Turn + 1} 刻目 倒れた: {(fell.Length > 0 ? fell : "—")}");
     }
 
     private void EndClashResult()

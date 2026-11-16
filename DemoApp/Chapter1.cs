@@ -450,8 +450,9 @@ public static class Chapter1
 
     /// <summary>ステージの頭の札（見出し ＋ 2〜3 行・<b>仮の文</b>——本文は後で Web 側が書く）。</summary>
     /// 第462期 §1-3: 敵に倍率のかかったステージは最後に「敵の強さ ×1.3」の 1 行（1-1 ＝ ×1.0 は出さない）。
-    public static (string Title, string Body) Intro(MapStage s)
+    public static (string Title, string Body) Intro(MapStage s, ChapterRule? of = null)
     {
+        ChapterRule Rule = of ?? Chapter1.Rule;   // 第479期: 門が版を指して読めるように（遊ぶ画面は今の 1 章の版）
         var (title, body) = Rule.Story && Tales470.TryGetValue(s.Id, out Tale? t) ? ($"1 章 ・ {s.Id} {t.Heading}", t.Body) : IntroText(s);   // 第470期 §1-4
         // 第479期（`Lean`）: 勝ち方や道の違いの説明・敵の倍率の行は出さない。物語の文（主人公の内心）と目標の 1 行だけ。
         if (Rule.Lean)

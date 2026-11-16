@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -86,7 +86,7 @@ public static class Chapter1ReasonSmoke
         {
             var st = new Map11State(0, s.Time, s.Portal, draft: true, stage: s);
             Map11State.Node gate = st.Nodes[0][1];
-            string body = Chapter1.Intro(s).Body;
+            string body = Chapter1.Intro(s, ChapterRule.V476).Body;   // 第479期: 遊ぶ 1 章の既定（V479）は頭の札の説明を外したので、この門は自分の版を指して読む
             string[] want =
             {
                 "敵の本陣を制圧したら勝ち。",
