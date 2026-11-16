@@ -305,6 +305,17 @@ public partial class Main : Control
             GetTree().Quit(okS ? 0 : 1);
             return;
         }
+        // 第479期 §7: 本陣を重くする版の門（V479 の本陣の中身と重さ・引いた隊は待つ・V461〜V478 と単発は今のまま）。画面なし。
+        // §6 の測り（守将 ／ 本陣の守りの候補 × 写しの隊と通し × 100 seed・線）つき。`--chapter1-keep-quick` は測りを省く。
+        if (bootArgs.Contains("--chapter1-keep-smoke", StringComparer.Ordinal) || bootArgs.Contains("--chapter1-keep-quick", StringComparer.Ordinal))
+        {
+            bool okK;
+            try { okK = Chapter1KeepSmoke.Run(GD.Print, ProjectSettings.GlobalizePath("res://"), bots: !bootArgs.Contains("--chapter1-keep-quick", StringComparer.Ordinal)); }
+            catch (System.Exception ex) { GD.PrintErr(ex.ToString()); okK = false; }
+            GD.Print($"CHAPTER1_KEEP_SMOKE_COMPLETE ok={okK}");
+            GetTree().Quit(okK ? 0 : 1);
+            return;
+        }
         // 第478期 §5: 1-2 から勇者を外す門（門が開いても勇者が出ない・本陣は 守り → 砦の守将・守将を抜いた刻に制圧・1-3 と単発と V461〜V477 は今のまま）。画面なし。
         // §3 の測り（守将の重さ・通し × 100 seed・線・候補と期限を振った表）つき。`--chapter1-nohero-quick` は測りを省く。
         if (bootArgs.Contains("--chapter1-nohero-smoke", StringComparer.Ordinal) || bootArgs.Contains("--chapter1-nohero-quick", StringComparer.Ordinal))

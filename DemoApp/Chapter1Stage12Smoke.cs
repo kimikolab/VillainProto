@@ -475,7 +475,7 @@ public static class Chapter1Stage12Smoke
             bool single = MapStage.Stage12.OutpostRewards is null && MapStage.Stage12.SpawnLane < 0 && MapStage.Stage12.ReserveOrder is null
                           && MapStage.Stage12.TurnCap == 12 && MapStage.Stage12.LaneNames.SequenceEqual(MapGraph.Lanes12) && MapStage.Stage12.Board(true).Cells.Count == MapGraph.Build12F444(true).Cells.Count
                           && MapStage.Stage13.OutpostRewards is null && MapStage.Stage13.SpawnLane < 0 && MapStage.Stage13.ReserveOrder is null;
-            var old = ChapterRule.Versions.Where(v => v.Key is not ("V477" or "V478")).ToList();   // 第478期の版も 1-2 を替える（門 `--chapter1-nohero-smoke` が見る）
+            var old = ChapterRule.Versions.Where(v => v.Key is not ("V477" or "V478" or "V479")).ToList();   // 第478期の版も 1-2 を替える（門 `--chapter1-nohero-smoke` が見る）
             bool olds = old.All(v => v.Rule.Second is null && ReferenceEquals(Chapter1.StagesFor(v.Rule)[1].Board, MapStage.Stage12.Board) && Chapter1.StagesFor(v.Rule)[1].OutpostRewards is null);
             var now = Chapter1.StagesFor(rule);
             var prev = Chapter1.StagesFor(ChapterRule.V476);

@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -391,7 +391,11 @@ public static class Map11Session
         if (State is null || SiegeSquad < 0) return false;
         int squad = SiegeSquad;
         ClearSiege();
-        return State.SiegeRetreat(squad);
+        bool back = State.SiegeRetreat(squad);
+        // 第479期: 引いた隊は引いた先で待つ（その盤だけ）——「敵の拠点へ進む」を残すと、補給の直後にまた突っ込む（Codex の試遊 2026-11-16）。
+        if (back && State.Stage.SiegeRetreatHolds && squad < Destinations.Length)
+            Destinations[squad] = Dest.Of(State.Graph, State.Squads[squad].Pos);
+        return back;
     }
 
     private static void ClearSiege() { SiegeNode = null; SiegeSquad = -1; _siegeShown = false; }

@@ -134,6 +134,9 @@ public sealed class MapStage
     /// </summary>
     public bool SiegeRetreatToOutpost { get; init; }
 
+    /// <summary>連戦で引いた隊の行き先を<b>引いた先のマス</b>にする盤か（第479期・Codex の試遊 2026-11-16: 「敵の拠点へ進む」が残って補給の直後にまた突っ込む）。行き先を書き換えるのは `Map11Session.RetreatSiege`。</summary>
+    public bool SiegeRetreatHolds { get; init; }
+
     /// <summary>拠点を空にして出ようとしたとき、画面が確かめの 1 行を出す盤か（第476期・1 章の 1-1 だけ・<b>表示だけ</b>——止めはしない）。</summary>
     public bool WarnEmptyHome { get; init; }
 
@@ -767,6 +770,7 @@ public sealed class MapStage
         SpawnLane = s.SpawnLane,
         OutpostRewards = s.OutpostRewards,
         SiegeRetreatToOutpost = s.SiegeRetreatToOutpost,
+        SiegeRetreatHolds = s.SiegeRetreatHolds,
     };
 
     /// <summary>大群の 1 部隊（第458期・1-3 の C3・動かない・<see cref="Map11.RoadNode.Hold"/>）。</summary>
@@ -1083,7 +1087,8 @@ public sealed class MapStage
                                               int turnCap = Stage12Ch477TurnCap, bool passHolds = false, int spawnEvery = 0, string? reserve = null,
                                               string southFirst = "band_levy", string southSecond = "band_sellswords", string spawn = Stage12Ch477SpawnBand,
                                               string garrison = "band_garrison", bool hero = true, int heroPercent = 100, bool retreatToOutpost = true,
-                                              string? keeper = null, int keeperHp = 100, int keeperAtk = 100, int keeperGold = Stage12Ch478KeeperGold)
+                                              string? keeper = null, int keeperHp = 100, int keeperAtk = 100, int keeperGold = Stage12Ch478KeeperGold,
+                                              int garrisonHp = 100, int garrisonAtk = 100, bool lean = false, bool retreatHolds = false)
     {
         MapStage b = Stage12;
         Map11.RoadNode Wait(Map11.RoadNode n) => n with { Hold = true, Gold = Stage12Ch477FoeGold };
@@ -1101,7 +1106,7 @@ public sealed class MapStage
                 // 第478期: 砦の守将（`keeper`）を置く版は、本陣の守りの後ろにもう 1 つ動かない区画（守り → 守将の連戦・守将は自分の賞金を持つ）。
                 keeper is null
                     ? new[] { Node(1, 0, EnemyCatalog.Stages[0], 0) with { Name = "物見の兵" }, Band(1, 1, midSecond, 2), Garrison(1, 2, garrison, 4) with { Name = "本陣の守り" } }
-                    : new[] { Node(1, 0, EnemyCatalog.Stages[0], 0) with { Name = "物見の兵" }, Band(1, 1, midSecond, 2), Garrison(1, 2, garrison, 4) with { Name = "本陣の守り" },
+                    : new[] { Node(1, 0, EnemyCatalog.Stages[0], 0) with { Name = "物見の兵" }, Band(1, 1, midSecond, 2), Hard(Garrison(1, 2, garrison, 4), garrisonHp, garrisonAtk) with { Name = "本陣の守り" },
                               Hard(Garrison(1, 3, keeper, 4), keeperHp, keeperAtk) with { Name = KeeperName, Gold = keeperGold } },
                 new[] { Wait(Band(2, 0, southFirst, 0)), Wait(Band(2, 1, southSecond, 2)) },
             },
@@ -1127,11 +1132,13 @@ public sealed class MapStage
             SpawnsPassHolds = passHolds,
             SpawnLane = 1,
             SiegeRetreatToOutpost = retreatToOutpost,
+            SiegeRetreatHolds = retreatHolds,
             ReserveOrder = new[] { 1, 0, 2 },
             OutpostRewards = new[] { new OutpostReward(towerGold, true), new OutpostReward(gateGold, false), new OutpostReward(ferryGold, false) },
             WarnEmptyHome = true,
-            WinLine = keeper is null ? "" : "砦は落ちた。——王国は、勇者を差し向けた。",
-            Notes = new[]
+            // 第479期（`lean`）: 予告の 1 行は出さない・頭の札は目標の 1 行だけ（説明はセリフで・`Map11Lines`）。
+            WinLine = keeper is null || lean ? "" : "砦は落ちた。——王国は、勇者を差し向けた。",
+            Notes = lean ? new[] { "中間拠点を 2 つ取り、砦を制圧する。" } : new[]
             {
                 keeper is null ? "中間拠点を 2 つ取ると砦の門が開く。門番を倒して砦を制圧したら勝ち。" : "中間拠点を 2 つ取ると砦の門が開く。本陣の守りと砦の守将を抜いて、砦を制圧したら勝ち。",
                 $"見張り台 ＝ レリック（硬い）／ 関所 ＝ 金 ＋{gateGold}（近い）／ 渡し場 ＝ 金 ＋{ferryGold}（遠い）。",
@@ -1159,6 +1166,24 @@ public sealed class MapStage
     /// <summary>値を替えた第478期の 1 章の 1-2（測りが候補を並べるための口）。</summary>
     internal static MapStage Stage12Ch478With(string keeper = Stage12Ch478KeeperBand, int keeperHp = Stage12Ch478KeeperHp, int keeperAtk = Stage12Ch478KeeperAtk, int turnCap = Stage12Ch478TurnCap)
         => Stage12Ch477With(hero: false, turnCap: turnCap, keeper: keeper, keeperHp: keeperHp, keeperAtk: keeperAtk);
+
+    // ---------------- 第479期: 本陣を重く（指示書 design/PHASE479_LESS_WINDOWS_SPEC.md §6） ----------------
+
+    /// <summary>第479期の 1 章の 1-2 の値（守将と本陣の守りの、その区画だけの倍率・%）。測り（`--chapter1-keep-smoke`）で選んだ。</summary>
+    internal const int Stage12Ch479KeeperHp = 80, Stage12Ch479KeeperAtk = 80, Stage12Ch479GarrisonHp = 100, Stage12Ch479GarrisonAtk = 100;
+    internal const string Stage12Ch479GarrisonBand = "band_garrison";
+
+    /// <summary>
+    /// 1 章の 1-2（第479期・`ChapterRule.V479` から）。第478期（<see cref="Stage12Ch478"/>）から本陣の重さだけを替え、引いた隊は引いた先で待つ（<see cref="SiegeRetreatHolds"/>）。
+    /// 頭の札は目標の 1 行だけ・踏破の窓の予告の 1 行は無い（説明はセリフで）。盤・中間拠点・見返り・歩く敵は第478期のまま。
+    /// </summary>
+    public static MapStage Stage12Ch479 { get; } = Stage12Ch479With();
+
+    /// <summary>値を替えた第479期の 1 章の 1-2（測りが候補を並べるための口）。</summary>
+    internal static MapStage Stage12Ch479With(int keeperHp = Stage12Ch479KeeperHp, int keeperAtk = Stage12Ch479KeeperAtk, string garrison = Stage12Ch479GarrisonBand,
+                                              int garrisonHp = Stage12Ch479GarrisonHp, int garrisonAtk = Stage12Ch479GarrisonAtk, string keeper = Stage12Ch478KeeperBand)
+        => Stage12Ch477With(hero: false, turnCap: Stage12Ch478TurnCap, keeper: keeper, keeperHp: keeperHp, keeperAtk: keeperAtk,
+                            garrison: garrison, garrisonHp: garrisonHp, garrisonAtk: garrisonAtk, lean: true, retreatHolds: true);
 
     /// <summary>選べるステージ（編成画面の選択の並び）。</summary>
     public static IReadOnlyList<MapStage> All { get; } = new[] { Stage11, Stage12, Stage13 };

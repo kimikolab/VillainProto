@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -102,7 +102,7 @@ public static class Chapter1NoheroSmoke
             bool single = MapStage.Stage12.Hero.Gatekeeper && MapStage.Stage12.Lanes[1].Count == 3 && MapStage.Stage13.Hero.Chaser;
             MapStage s477 = Chapter1.StagesFor(ChapterRule.V477)[1];
             bool v477 = s477.Hero.Gatekeeper && s477.Lanes[1].Count == 3 && s477.TurnCap == MapStage.Stage12Ch477TurnCap && s477.Notes[0].Contains("門番");
-            var old = ChapterRule.Versions.Where(v => v.Key != "V477" && v.Key != "V478").ToList();
+            var old = ChapterRule.Versions.Where(v => v.Key != "V477" && v.Key != "V478" && v.Key != "V479").ToList();
             bool olds = old.All(v => v.Rule.Second is null && Chapter1.StagesFor(v.Rule)[1].Hero.Gatekeeper);
             bool rest = ReferenceEquals(rule.Roster, ChapterRule.V477.Roster) && rule.Scales == ChapterRule.V477.Scales
                         && s.OutpostRewards!.SequenceEqual(s477.OutpostRewards!) && s.Board == s477.Board && s.Lanes[0][0].Name == s477.Lanes[0][0].Name;

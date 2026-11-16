@@ -135,11 +135,18 @@ public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList
         V465.Scales, StarRule.V464, DealRule.Off, InvestRule.V470, RosterRule.V475, MapStage.Stage11Ch476, Story: true, Second: MapStage.Stage12Ch478);
 
     /// <summary>
+    /// 第479期の 1 章（指示書 design/PHASE479_LESS_WINDOWS_SPEC.md §6）。第478期から <b>1-2 の本陣の重さ</b>を替え（<see cref="MapStage.Stage12Ch479"/>）、連戦で引いた隊は引いた先で待つ。
+    /// 頭の札は目標の 1 行だけ・踏破の窓の予告の 1 行は無い（説明はセリフで）。1-1 ／ 1-3・駒・加入の表・倍率は第478期のまま。
+    /// </summary>
+    public static readonly ChapterRule V479 = new(true, "第479期（第478期 ＋ 1-2 の本陣を重く・引いた隊は待つ・説明はセリフで）",
+        V465.Scales, StarRule.V464, DealRule.Off, InvestRule.V470, RosterRule.V475, MapStage.Stage11Ch476, Story: true, Second: MapStage.Stage12Ch479);
+
+    /// <summary>
     /// 版の一覧（第466期・遊びの写しが版をキーで持つ——写しの版で 1 章を始め直すため）。<b>版を足したらここにも足す。</b>
     /// </summary>
     public static IReadOnlyList<(string Key, ChapterRule Rule)> Versions
         => new[] { ("V460", V460), ("V461", V461), ("V462", V462), ("V463", V463), ("V464", V464), ("V465", V465), ("V467", V467), ("V468", V468), ("V469", V469),
-                   ("V470", V470), ("V471", V471), ("V474", V474), ("V475", V475), ("V476", V476), ("V477", V477), ("V478", V478) };
+                   ("V470", V470), ("V471", V471), ("V474", V474), ("V475", V475), ("V476", V476), ("V477", V477), ("V478", V478), ("V479", V479) };
 
     /// <summary>版のキー（「V465」・一覧に無ければ名前）。</summary>
     public string Key { get { string n = Name; return Versions.FirstOrDefault(v => v.Rule.Name == n).Key ?? n; } }
