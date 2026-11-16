@@ -1856,6 +1856,47 @@ public sealed class Map11State
         return true;
     }
 
+    /// <summary>遭遇で引き返した回数（第479期・測るためだけ）。</summary>
+    public int EncounterRetreats { get; private set; }
+
+    /// <summary>
+    /// 遭遇で引き返す（第479期の追記・<see cref="MapStage.EncounterRetreat"/> の盤だけ）。戦わずに、拠点へ戻る道の 1 マス手前へ戻る（無料）。敵はそのまま。
+    /// 開戦の用意（<see cref="Prepare"/>）で差した盤の札の数値は戻す。拠点にいる隊（迎撃）は引き返せない。
+    /// </summary>
+    public bool EncounterRetreat(int squadIndex)
+    {
+        if (!Stage.EncounterRetreat) return false;
+        Squad s = Squads[squadIndex];
+        if (s.Lost || s.Units is null || s.Pos == Graph.Home) return false;
+        List<int> path = Graph.Path(s.Pos, s.Via, Graph.Home, -1);
+        if (path.Count < 2) return false;
+        int road = s.Road >= 0 && s.Road < Stage.LaneCount ? s.Road : 0;
+        DisarmDoctrine();
+        Place(s, path[1], road);
+        EncounterRetreats++;
+        return true;
+    }
+
+    /// <summary>勝ち目を見るための駒の写し（第479期・画面が同じ戦闘を裏で回す——<b>盤は 1 ビットも動かさない</b>）。</summary>
+    public static UnitState CloneForOdds(UnitState u)
+    {
+        var n = new UnitState
+        {
+            Def = u.Def, TeamId = u.TeamId, Shape = u.Shape, Slot = u.Slot, Hp = u.Hp, MaxHp = u.MaxHp,
+            Traits = u.Relic is TraitId r ? RelicCatalog.Attach(u.Def.Traits, r) : TraitCatalog.Resolve(u.Def.Traits),
+            Relic = u.Relic,
+            HasFallenBack = u.HasFallenBack, ActionIndex = u.ActionIndex, LastDeathTurn = u.LastDeathTurn, TakenTurn = u.TakenTurn,
+        };
+        foreach (var (k, v) in u.Counters) n.Counters[k] = v;
+        return n;
+    }
+
+    /// <summary>その敵部隊のいまの駒（まだ 1 度も戦っていなければ、満タンで作った写し）。<b>読むだけ</b>——盤には置かない（勝ち目と遭遇の台が読む）。</summary>
+    public List<UnitState> PeekFoe(Node node) => node.Units ?? FoeUnits(node);
+
+    /// <summary>その隊のいまの駒（未出撃なら定義から作った写し）。<b>読むだけ。</b></summary>
+    public List<UnitState> PeekSquad(int squadIndex) => Squads[squadIndex].Units ?? Roster(squadIndex);
+
     /// <summary>その隊は制圧した第2拠点にいるか（<b>休む・組み直しができる</b>）。</summary>
     public bool AtSecondBase(int squadIndex)
         => Captured && Squads[squadIndex].Units is not null && Squads[squadIndex].Pos == Graph.Portal;

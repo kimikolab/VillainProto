@@ -99,8 +99,8 @@ public partial class Map11Main
         _siegeGo.Text = $"続けて戦う（{(next.IsHero ? "勇者" : next.Def.Name)}）";
         _siegeBack.Text = St.Stage.OutpostRewards is not null ? $"引いて待つ（{PlaceName(cell)}へ）" : $"引く（{PlaceName(cell)}へ）";
         _siegeHp.Visible = _siegeBody.Visible = true;
-        if (Map3DMode.Active) LeanSiege(s, next, alive, foeAlive, cell);   // 第479期: 3D は横の札
         _siegeOverlay.Visible = true;
+        if (Map3DMode.Active) { ShowClash(ClashMode.Siege); if (next.Def.Name == MapStage.KeeperName) SayOnce(Map11Lines.Keeper12); }   // 第479期の追記: 3D は遭遇の台
     }
 
     /// <summary>

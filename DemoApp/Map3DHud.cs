@@ -292,6 +292,17 @@ void fragment() {
     internal Rect2? ActionRect(int card, int kind)
         => card < _squadActions.Count && _squadActions[card].Visible && _squadActions[card].GetChild(kind) is Button { Visible: true } b ? b.GetGlobalRect() : null;
 
+    private bool _bottomShown = true;
+    /// <summary>下の UI（隊の札・刻を進める）を出し入れする（第479期の追記: 遭遇の台が出ているあいだは隠す）。</summary>
+    internal void SetBottomShown(bool shown)
+    {
+        if (_bottomShown == shown) return;
+        _bottomShown = shown;
+        _left.Visible = _clock.Visible = shown;
+        if (!shown) foreach (HBoxContainer row in _squadActions) row.Visible = false;
+    }
+    internal bool BottomShown => _bottomShown;
+
     /// <summary>遊ぶ UI を出し入れする（今の窓＝編成の画面を開いているあいだは隠す）。</summary>
     internal void SetShown(bool shown) => Visible = shown;
 
@@ -384,6 +395,7 @@ void fragment() {
             bool[] on = i < squads.Count ? new[] { squads[i].Revive, squads[i].Enhance, squads[i].Rest } : new[] { false, false, false };
             for (int k = 0; k < on.Length; k++) ((Button)_squadActions[i].GetChild(k)).Visible = on[k];
             bool any = on.Any(x => x);
+            any &= _bottomShown;
             if (any != _squadActions[i].Visible) { _squadActions[i].Visible = any; }
             if (any) _squadActions[i].ResetSize();
         }

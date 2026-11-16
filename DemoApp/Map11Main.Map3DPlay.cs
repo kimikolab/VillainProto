@@ -159,7 +159,7 @@ public partial class Map11Main
                 // 勇者のいない盤では、次が守将でなくても（本陣の守り・湧いた部隊）3 枚以下か HP 50% 未満なら引く——頭の札の「削られたら中間拠点へ引いて休める」のとおり。
                 bool back = keeper ? (mine < 5 || _siegeHp.Value < 70) && St.Turn < St.Stage.TurnCap - 2
                     : !St.Stage.Hero.On ? (mine <= 2 || _siegeHp.Value < 40) && St.Turn < St.Stage.TurnCap - 2 : hero && (alone || weak);
-                Click(OldUi(back ? _siegeBack : _siegeGo));
+                Click(OldUi(back ? _clashB : _clashA));   // 第479期の追記: 遭遇の台のボタン
                 GD.Print($"MAP3D_PLAY siege={(back ? "引く" : "続けて戦う")} next={_siegeGo.Text} hp={_siegeHp.Value:F0} 上の行「{string.Join("／", _siegeStats.Text.Split((char)10))}」引くボタン「{_siegeBack.Text}」窓の文「{string.Join("／", _siegeBody.Text.Split((char)10))}」");
                 await Wait(back ? 0.6 : 3.0);
                 continue;
@@ -168,7 +168,8 @@ public partial class Map11Main
             {
                 _play3dSides++;
                 await Shot($"遭遇_{_encounterTitle.Text.Replace(' ', '_').Replace('×', 'x').Replace('　', '_')}");
-                if (Find(_encounterOverlay, b => b.Text == "戦う") is { } fight) { Click(OldUi(fight)); await Wait(3.0); continue; }
+                GD.Print($"MAP3D_PLAY clash 台={ClashRect} 勝ち目「{ClashOddsText}」敵 {_clashFoeLead.NameText} 席 {_clashFoe.SeatCount} 味方 {_clashOwnLead.NameText} 席 {_clashOwn.SeatCount} 線 {_clashOwn.LinkCount} 引き返す {_clashB.Visible}");
+                if (ClashShown && _clashA.Visible) { Click(OldUi(_clashA)); await Wait(3.0); continue; }
                 Fight();
                 return;
             }
@@ -176,7 +177,7 @@ public partial class Map11Main
             {
                 _play3dSides++;
                 await Shot("迎撃の窓");
-                if (Find(_interceptOverlay, _ => true) is { } pick) Click(OldUi(pick));
+                if (ClashShown && _clashA.Visible) Click(OldUi(_clashA));
                 await Wait(0.5);
                 continue;
             }
@@ -232,6 +233,7 @@ public partial class Map11Main
                 await Wait(0.6);
                 continue;
             }
+            if (_clashMode == ClashMode.Result && _play3dOnce.Add($"result:{Map11Session.BattleLog.Count}")) { await Shot("戦闘の後_台の上の結果"); continue; }
             if (Map11Session.TurnRunning || St.Finished) { await Wait(0.3); continue; }
             await Shot("作戦の画面_始め", once: true);
 

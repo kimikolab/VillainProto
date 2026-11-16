@@ -342,7 +342,7 @@ public partial class Map11Main : Node3D
             Callable.From(AutoStep).CallDeferred();
         }
         // 戦闘から戻ってきた——作戦ターンの続きを流す（第174期）。
-        else if (Map11Session.TurnRunning) Callable.From(Pump).CallDeferred();
+        else if (Map11Session.TurnRunning) Callable.From(Map3DMode.Active ? AfterBattle3D : Pump).CallDeferred();   // 第479期の追記: 3D は結果の帯を出してから続きを流す
         else if (args.FirstOrDefault(a => a.StartsWith("--map11-capture=", StringComparison.Ordinal))
                  is { } shot)
             _ = Capture(shot["--map11-capture=".Length..]);
@@ -2126,6 +2126,7 @@ public partial class Map11Main : Node3D
             return;
         }
         _interceptOverlay.Visible = true;
+        if (Map3DMode.Active) ShowClash(ClashMode.Intercept);   // 第479期の追記: 出す隊は左右の矢印で切り替える
     }
 
     /// <summary>
@@ -2197,8 +2198,8 @@ public partial class Map11Main : Node3D
             // 第448期: 帯 A の部隊は 1 行の説明を先に。
             + (Map11.SquadLineOf(node.Def.Name) is { Length: > 0 } line ? $"[color=#8f9b90]{line}[/color]\n" : "")
             + Shared(Map11.RuleLineOf(node.Def.Enemy));
-        if (Map3DMode.Active) LeanEncounter(s, node, alive);   // 第479期: 3D は横の札（顔・数・重さの印・賞金だけ）
         _encounterOverlay.Visible = true;
+        if (Map3DMode.Active) ShowClash(ClashMode.Encounter);   // 第479期の追記: 3D は遭遇の台（下 1／3）
     }
 
     /// <summary>
@@ -2232,6 +2233,7 @@ public partial class Map11Main : Node3D
     {
         _encounterOverlay.Visible = false;
         if (!Map11Session.HasPendingBattle) { ShowToast("出撃できません", EnemyColor, 3.0f); Pump(); return; }
+        RememberClash();   // 第479期の追記: 戦闘から戻ったら、同じ台の上に結果を出す（3D だけ）
         GetTree().ChangeSceneToFile(CampaignSession.BattleScene);
     }
 

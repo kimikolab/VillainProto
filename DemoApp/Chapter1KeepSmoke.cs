@@ -12,6 +12,7 @@ using Siege = Chapter1Stage12Smoke.Siege;
 //   (a) V479 の本陣の中身と重さ（本陣の守り → 砦の守将・その区画だけの倍率）
 //   (b) 連戦で引いた隊の行き先が「引いた先のマス」になる（V478 の盤では今までどおり残る）
 //   (c) V461〜V478・単発は今のまま
+//   (d) 遭遇で引き返せる（第479期の追記・V479 の 3 ステージだけ・`Map11Session.DeclineBattle`）
 //
 // §6 の測り（`--chapter1-keep-quick` は省く）: 守将 ／ 本陣の守りの候補 × ポンの写しの隊（満タン ／ 守りを抜いた直後）と通し × 100 seed・線。
 // 器具は第477期の門（`Chapter1Stage12Smoke`）のものを使う。**ここには Godot の型を1つも使わない。**
@@ -148,6 +149,52 @@ public static class Chapter1KeepSmoke
             var old = Try(Chapter1.StagesFor(ChapterRule.V478)[1]);
             write($"  (b) V479: 引いた {now.Back} → {now.Where}・行き先は引いた先 {now.Holds}・次の刻の命令「{now.Order}」 ／ V478: 引いた {old.Back} → {old.Where}・行き先は引いた先 {old.Holds}・命令「{old.Order}」");
             Req(now.Back && now.Holds && old.Back && !old.Holds, "(b) 連戦で引いた隊の行き先は引いた先のマス（V478 の盤では敵の拠点のまま）");
+        }
+
+        // ---- (d) 遭遇で引き返す（第479期の追記）----
+        {
+            (bool Met, bool Back, string From, string To, bool Holds, bool FoeStays, bool Cleared, int Battles) Try(MapStage stage)
+            {
+                Map11Session.Reset(0, draft: true, stage: stage);
+                Map11State st = Map11Session.State!;
+                st.UseDefaultSquads();
+                MapGraph g = st.Graph;
+                Map11Session.SetDestination(0, Dest.Deep(g, 1));
+                bool met = false;
+                for (int turn = 0; turn < 6 && !met && !st.Finished; turn++)
+                {
+                    if (!Map11Session.TurnRunning) Map11Session.BeginTurn();
+                    for (int step = 0; step < 30 && Map11Session.TurnRunning && !met; step++)
+                    {
+                        Map11Session.StepKind kind = Map11Session.StepTurn();
+                        if (kind == Map11Session.StepKind.Battle && Map11Session.PendingSquad == 0 && !Map11Session.PendingIntercept) { met = true; break; }
+                        if (kind is Map11Session.StepKind.Done or Map11Session.StepKind.Fallen) break;
+                        if (kind == Map11Session.StepKind.Battle)
+                        {
+                            foreach (UnitState u in CampaignSession.CarriedEnemies!) u.Hp = 0;
+                            CampaignSession.ClearCarriedBattle();
+                            Map11Session.CompleteBattle(true);
+                        }
+                        else break;
+                    }
+                }
+                if (!met) { Map11Session.Reset(0, draft: true, stage: stage); return (false, false, "—", "—", false, false, false, 0); }
+                Map11State.Node foe = Map11Session.PendingNode!;
+                int from = st.Squads[0].Pos, foeAt = foe.Pos, battles = st.Battles;
+                bool back = Map11Session.DeclineBattle();
+                int to = st.Squads[0].Pos;
+                bool holds = back && !Map11Session.HasPendingBattle && Map11Session.Destinations[0].Id == to;
+                var r = (true, back, g[from].Name, g[to].Name, holds, foe.Pos == foeAt && !foe.Cleared, foe.Cleared, st.Battles - battles);
+                Map11Session.Reset(0, draft: true, stage: stage);
+                return r;
+            }
+            var now = Try(s);
+            var old = Try(Chapter1.StagesFor(ChapterRule.V478)[1]);
+            bool flags = stages.All(x => x.EncounterRetreat && x.SiegeRetreatHolds) && Chapter1.StagesFor(ChapterRule.V478).All(x => !x.EncounterRetreat) && !MapStage.Stage12.EncounterRetreat && !MapStage.Stage11.EncounterRetreat;
+            write($"  (d) V479: 遭遇した {now.Met}（{now.From}）→ 引き返した {now.Back} → {now.To}・行き先は戻った先 {now.Holds}・敵はそのまま {now.FoeStays}・戦闘は数えない {now.Battles == 0} ／ V478: 引き返せる {old.Back}"
+                  + $"・V479 の 3 ステージとも 引き返せる ／ 引いた隊は待つ・ほかの版と単発は引き返せない {flags}");
+            Req(now.Met && now.Back && now.Holds && now.FoeStays && now.Battles == 0 && now.From != now.To && old.Met && !old.Back && flags,
+                "(d) 遭遇で引き返すと 1 マス拠点寄りへ戻ってそこで待つ・敵はそのまま（V479 の 3 ステージだけ）");
         }
 
         // ---- (c) ほかの版・単発は今のまま ----

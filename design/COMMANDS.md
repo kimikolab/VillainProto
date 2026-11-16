@@ -2018,6 +2018,13 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     Godot_console.exe --path DemoApp --headless -- --chapter1-nohero-smoke
         # **第478期**: 1-2 から勇者を外す門（`Chapter1NoheroSmoke.cs`・画面なし・`ChapterRule.V478` ／ `MapStage.Stage12Ch478`・**遊ぶ 1 章の既定**・守将 ＝ 本陣の守り（重）×0.8 ／ ×0.8・期限 16）。(a) 門が開いても勇者が出ない・本陣は 守り → 砦の守将 ／ (b) 守将を抜いた刻に制圧・踏破の窓の 1 行 ／
         # (c) 1-3 は今のまま ／ (d) 単発と V461〜V477 は今のまま。測りつき（約 1 分）: 守将の重さ・通し（組 B ／ 写し・引く ／ 続ける器具）と線・守将の候補 × 期限 14 ／ 16 の表。`--chapter1-nohero-quick` は門だけ。報告は `design/PHASE478_STAGE12_NOHERO.md`
+    Godot_console.exe --path DemoApp --headless -- --chapter1-keep-smoke
+        # **第479期**: 本陣を重くする版の門（`Chapter1KeepSmoke.cs`・画面なし・`ChapterRule.V479` ／ `MapStage.Stage12Ch479`）。(a) V479 の本陣の中身と重さ ／ (b) 連戦で引いた隊の行き先は引いた先のマス（`SiegeRetreatHolds`・V478 の盤では今のまま）／
+        # (c) V461〜V478・単発は今のまま。測りつき（約 30 秒）: 守将 ／ 本陣の守りの候補（指示書の 10 個 ＋ 参考 9 個）× ポンの写しの隊（満タン ／ 守りを抜いた直後）と通し（組 B・引く ／ 続ける器具 × 100 seed）・線 A〜F。
+        # `--chapter1-keep-quick` は門だけ。報告は `design/PHASE479_LESS_WINDOWS.md`
+    Godot_console.exe --path DemoApp res://Map11Main.tscn -- --map3d --chapter1-rule=V479 --map-chapter=7 "--map3d-play=p1|p2|p3,<写しの置き場>" ["--map3d-end-shot=<置き場>"]
+        # **第479期**: 遊ぶ口の `MAP3D_PLAY_COMPLETE` の行に `covers=`（時計を止めて盤を隠す窓の数・頭の札と結果は数えない）・`sides=`（横の札）・`says=`（セリフ）・`rest_clicks=`（隊の札の上の「休む」）。
+        # `--map3d-end-shot=` は 3D の作戦マップから来た戦闘の終わりの札を、勝ち ／ 負け 1 枚ずつ写す。セリフは `MAP3D_SAY` の行。`--map3d-layout-smoke` は 引いた視点 ／ セリフ ／ 横の札 の 3 場面を足した
     Godot_console.exe --path DemoApp res://Map11Main.tscn -- --map3d --chapter1-rule=V477 --map-chapter=7 "--map3d-play=p1|p2|p3,<写しの置き場>"
         # **第477期**: 3D の 1-2 を本物のクリックで通す口（p1 ＝ 中＋北 ／ p2 ＝ 中＋南 ／ p3 ＝ 北＋南・1-1 は器具が通す）。`MAP3D_PLAY_COMPLETE` の行。p3 は 5 刻目で止まる不具合が残っている（報告 §13-3）
     Godot.exe --path DemoApp res://Map11Main.tscn -- --map3d "--map3d-play=north|south|split,<写しの置き場>"

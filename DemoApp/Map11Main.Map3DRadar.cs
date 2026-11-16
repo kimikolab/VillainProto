@@ -52,7 +52,7 @@ public partial class Map11Main
         if (_radar3d is null || _layout3d is null || _map3d is null) return;
         // 窓（遭遇・迎撃・連戦・結果・確かめ・頭の札・投資の札）が出ているあいだは隠す——窓の暗幕の上に全体図と印だけが明るく残るため。
         // 第479期: 遭遇・迎撃・連戦は横の札なので、盤も全体図も見せたまま。
-        shown &= !CoverShown;
+        shown &= !CoverShown && !ClashShown;   // 遭遇の台が出ているあいだは下の場所を台が使う
         _radar3d.Visible = shown;
         var points = new List<List<Vector3>>();
         if (shown && !St.Finished)

@@ -189,7 +189,8 @@ public static class Chapter1
             .Select((s, i) => s.Scaled(rule.ScaleOf(i)).Starred(rule.Stars ?? StarRule.Off)   // 第463期: ☆の規則を載せる（☆なしならそのまま）
                 .Dealt(i == 0 ? rule.Deal ?? DealRule.Off : DealRule.Off)                      // 第464期: 1-1 の配りの規則（52 枚から・軸の保証）
                 .Invested(i >= (rule.Invest?.FromStage ?? 0) ? rule.Invest ?? InvestRule.Off : InvestRule.Off)   // 第467期: 軸への投資（第470期から 1-1 は札なし）
-                .Rostered(rule.Roster ?? RosterRule.Off)).ToArray();                            // 第469期: 加入の表（3 ステージとも）
+                .Rostered(rule.Roster ?? RosterRule.Off)
+                .Leaned(rule.Lean)).ToArray();                                                  // 第479期: 遭遇で引き返せる・引いた隊は待つ（3 ステージとも）                            // 第469期: 加入の表（3 ステージとも）
 
     /// <summary>いまの 1 章のステージ。</summary>
     public static IReadOnlyList<MapStage> Stages => StagesFor(Rule);

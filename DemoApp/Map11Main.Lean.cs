@@ -6,7 +6,7 @@ using System.Linq;
 // =====================================================================================
 // 窓を減らして盤を見せる（第479期・指示書 design/PHASE479_LESS_WINDOWS_SPEC.md §1〜§3・3D の層）。**画面は判定を1つも持たない。**
 //
-//   1. 横の札: 遭遇・連戦・迎撃の窓を、暗幕なしで画面の右 1／4 に寄せる（盤は見えたまま・時計はもともと戦闘の前で止まっている）
+//   1. 遭遇・連戦・迎撃は、盤の中央を空けた「遭遇の台」（画面の下 1／3・`Map11Main.Clash.cs`・ポンの決定 2026-11-16 で横の札から替えた）
 //   2. 出来事の窓（第478期）はやめる: 中間拠点を取った ＝ 旗と浮く金 ／ 金の使いどころ ＝ 隊の札の上の小さなボタン ／ 負けた戦闘 ＝ 隊の札の 1 行
 //   3. 説明はセリフで: 顔つきの 1 行（`Map11Lines`）を、盤の出来事に合わせて 1 度だけ出す
 //   4. 結果の窓は 踏破・刻・失った駒の顔・金 だけ。細かい戦績は「詳細」の奥
@@ -14,33 +14,26 @@ using System.Linq;
 
 public partial class Map11Main
 {
-    /// <summary>横の札にした窓の中身（遭遇・連戦・迎撃）。</summary>
-    private readonly List<Control> _sidePanels = new();
-
-    /// <summary>窓を横の札にする（3D だけ）。暗幕は透かして入力も通す——出ているあいだは作戦ターンの途中なので、盤を押しても行き先は変わらない。</summary>
+    /// <summary>
+    /// 今までの窓（遭遇・連戦・迎撃）は 3D では中身を出さない（暗幕も透かして入力も通す）——出すのは遭遇の台（`Map11Main.Clash.cs`）。
+    /// 窓そのものは「出ている」の印として残す（通しの門・遊ぶ口・作戦ターンの流れが読む）。
+    /// </summary>
     private void MakeSide(Control overlay)
     {
         if (!Map3DMode.Active || overlay is not ColorRect dim || overlay.GetChildCount() == 0 || overlay.GetChild(0) is not Control panel) return;
         dim.Color = new Color(0, 0, 0, 0);
         dim.MouseFilter = Control.MouseFilterEnum.Ignore;
-        // 札は透かさない（下の名札が文字の後ろに透けて読みにくかった）。
-        if (panel is PanelContainer box) box.AddThemeStyleboxOverride("panel", UiKit.Box(new Color(0.03f, 0.05f, 0.043f, 1f), UiKit.Line));
-        panel.AnchorLeft = 0.75f; panel.AnchorRight = 0.992f;
-        panel.AnchorTop = panel.AnchorBottom = 0.47f;
-        panel.OffsetLeft = panel.OffsetRight = panel.OffsetTop = panel.OffsetBottom = 0;
-        panel.GrowVertical = Control.GrowDirection.Both;
-        _sidePanels.Add(panel);
+        panel.Visible = false;
     }
 
-    /// <summary>いま出ている横の札の四角（画面の座標・名札を重ねない・検査が読む）。</summary>
+    /// <summary>いま出ている遭遇の台の四角（画面の座標・名札を重ねない・検査が読む）。</summary>
     internal IEnumerable<Rect2> SideRects()
     {
-        foreach (Control p in _sidePanels)
-            if (p.IsVisibleInTree()) { Rect2 r = p.GetGlobalRect(); yield return new Rect2(r.Position * _uiScale, r.Size * _uiScale); }
+        if (ClashShown) yield return ClashRect;
     }
 
-    /// <summary>横の札が出ているか。</summary>
-    internal bool SideShown => _sidePanels.Any(p => p.IsVisibleInTree());
+    /// <summary>遭遇の台が出ているか。</summary>
+    internal bool SideShown => ClashShown;
 
     /// <summary>盤を隠す窓（暗幕つき）が出ているか——結果・確かめ・頭の札・投資の札。3D の遭遇・連戦・迎撃は横の札なので数えない。</summary>
     internal bool CoverShown => _resultOverlay.Visible || _confirmOverlay.Visible || _introOverlay is { Visible: true } || _investOverlay is { Visible: true }
@@ -66,40 +59,6 @@ public partial class Map11Main
     }
 
     // ---------------- 横の札の中身 ----------------
-
-    /// <summary>遭遇の札（3D）: 敵の顔と数・名前・重さの印・賞金・「戦う」だけ。</summary>
-    private void LeanEncounter(Map11State.Squad s, Map11State.Node node, int alive)
-    {
-        _encounterTitle.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        _encounterTitle.Text = (node.Cell < 0 ? "迎撃　" : "") + (node.IsHero ? "勇者" : node.Def.Name);
-        _encounterFaces.AddThemeConstantOverride("separation", 10);
-        string gold = St.Stage.Gold.On && node.Def.Gold >= 0 && St.KillGold(node) > 0 ? $"　[color=#ffd874]賞金 ＋{St.KillGold(node)}[/color]" : "";
-        string tag = node.Def.Tag.Length > 0 ? $"　[b][color=#ffd874]{node.Def.Tag}[/color][/b]" : "";
-        _encounterBody.AddThemeFontSizeOverride("normal_font_size", 17);
-        _encounterBody.Text = $"{alive} 体 ・ HP {NodeHpPercent(node):F0}%{tag}{gold}";
-        foreach (Button b in ButtonsIn(_encounterOverlay)) { b.AddThemeFontSizeOverride("font_size", 20); b.CustomMinimumSize = new Vector2(0, 52); }
-    }
-
-    /// <summary>連戦の札（3D）: 次の相手の顔と数・今の隊の枚数と HP・同じ大きさのボタン 2 つ。</summary>
-    private void LeanSiege(Map11State.Squad s, Map11State.Node next, int alive, int foeAlive, int backCell)
-    {
-        string foe = next.IsHero ? "勇者" : next.Def.Name;
-        _siegeTag.Text = "連戦";
-        _siegeTitle.Text = $"次は {foe}";
-        foreach (Node child in _siegeFaces.GetChildren())
-            if (child is MapNoRecovery) { _siegeFaces.RemoveChild(child); child.QueueFree(); }
-        _siegeFaces.AddThemeConstantOverride("separation", 10);
-        _siegeStats.AddThemeFontSizeOverride("font_size", 18);
-        _siegeStats.Text = $"{s.Label}　{alive} 枚 ・ HP {SquadHpPercent(s):F0}%\n{foe}　{foeAlive} 体 ・ HP {NodeHpPercent(next):F0}%";
-        _siegeHp.Visible = false;
-        _siegeBody.Visible = false;
-        _siegeGo.Text = "続けて戦う";
-        _siegeBack.Text = "引いて待つ";
-        _siegeBack.TooltipText = $"{PlaceName(backCell)}へ戻る";
-        _siegeGo.AddThemeFontSizeOverride("font_size", 20);
-        _siegeBack.AddThemeFontSizeOverride("font_size", 20);
-        if (next.Def.Name == MapStage.KeeperName) SayOnce(Map11Lines.Keeper12);
-    }
 
     // ---------------- 隊の札: 小さなボタンと、失われた隊の 1 行 ----------------
 

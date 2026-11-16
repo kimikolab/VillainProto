@@ -1669,7 +1669,7 @@ public partial class Main : Control
         _battleField.ShowBanner(verdict, color, 2.2);
         _battleField.SetSubline($"{(_result.PlayerWon ? "勝利" : "敗北")} ・ {_result.Turns}ターン ・ 生存 {_result.PlayerSurvivors}体 ・ 最大連鎖 {_result.MaxEnemyKillsInOneTurn}");
         AppendLog($"[color=#{color.ToHtml(false)}][b]{verdict}[/b][/color]  {_result.Turns}ターン");
-        // 第479期: 3D の作戦マップから来た戦闘は、終わりの札（勝敗・倒れた駒の顔・残りの HP・賞金・「作戦マップへ」）だけ。戦績の表は「詳細」の奥。
+        // 第479期: 3D の作戦マップから来た戦闘は、終わりの札（勝敗と「作戦マップへ」）だけ。戦績の表は「詳細」の奥。
         bool leanEnd = Map11Session.HasPendingBattle && Map3DMode.Active;
         int goldBefore = Map11Session.State?.Gold ?? 0;
         if (!leanEnd) SetScoreVisible(true);

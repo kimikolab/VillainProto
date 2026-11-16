@@ -378,6 +378,7 @@ public partial class Map11Main
         _headline.Visible = _toast.Visible = _reform;
         if (_portalInfo is not null) _portalInfo.Visible = false;
         _hud3d.SetShown(!_reform);
+        ProcessClash3D((float)delta);   // 第479期の追記: 遭遇の台（下 1／3）と盤の上の輪
         ProcessRadar3D(!_reform);   // 第477期: 画面の外の知らせ・全体図・歩く敵の赤い点線
         if (_reform) return;
 
@@ -1017,7 +1018,7 @@ public partial class Map11Main
             Check("画面を右へ寄せた所");
         }
 
-        // 第479期 §7: 引いた視点で拠点の名札が読める大きさ ／ セリフの吹き出しが名札・札と重ならない ／ 横の札が出ているとき盤の中央 60% が隠れていない。
+        // 第479期 §7: 引いた視点で拠点の名札が読める大きさ ／ セリフの吹き出しが名札・札と重ならない ／ 遭遇の台が出ているとき盤の上 2／3 が隠れていない・当たる 2 者が画面に入っている。
         async System.Threading.Tasks.Task LeanScenes()
         {
             Vector2 view = GetViewport().GetVisibleRect().Size;
@@ -1051,7 +1052,7 @@ public partial class Map11Main
                 _hud3d.HideSay();
             }
 
-            // ---- 横の札（遭遇）----
+            // ---- 遭遇の台 ----
             int main = Enumerable.Range(0, St.SquadCap).Where(i => !St.Squads[i].Lost && St.Squads[i].Units is { } us && us.Any(u => u.IsAlive))
                 .OrderByDescending(i => St.Squads[i].Units!.Count(u => u.IsAlive)).DefaultIfEmpty(-1).First();
             bool met = false;
@@ -1081,26 +1082,36 @@ public partial class Map11Main
                     else break;
                 }
             }
-            if (!met) { fails.Add("横の札: 遭遇の札を出せなかった（主力が敵に当たらなかった）"); return; }
+            if (!met) { fails.Add("遭遇の台: 遭遇を作れなかった（主力が敵に当たらなかった）"); return; }
             Refresh();
             ShowEncounter();
-            _cam3d.FocusOn(PosOf(St.Squads[main].Pos), snap: true);
             await Settle();
-            var sides = SideRects().ToList();
-            var middle = new Rect2(view.X * 0.2f, view.Y * 0.2f, view.X * 0.6f, view.Y * 0.6f);
-            float hidden = sides.Sum(r => Overlap(r, middle)) / (middle.Size.X * middle.Size.Y);
+            for (int i = 0; i < 6; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+            await Settle();
+            // 第479期の追記 8: 遭遇の台が出ているとき、盤の上 2／3 が隠れていない・当たる 2 者が画面に入っている。
+            Rect2 stand = ClashShown ? ClashRect : default;
+            var (ringOwn, ringFoe) = ClashRings();
+            var upper = new Rect2(0, 0, view.X, view.Y * 2f / 3f);
             bool dim = _encounterOverlay is ColorRect { Color.A: > 0.01f };
-            GD.Print($"MAP3D_LAYOUT 横の札 {(sides.Count == 0 ? "出ていない" : $"{sides[0].Position.X:F0},{sides[0].Position.Y:F0} {sides[0].Size.X:F0}x{sides[0].Size.Y:F0}（画面の幅の {sides[0].Size.X / view.X * 100:F0}%）")} "
-                + $"盤の中央 60% のうち隠れている {hidden * 100:F1}% 暗幕 {(dim ? "あり" : "なし")} 盤を隠す窓 {(CoverShown ? "あり" : "なし")} 文「{_encounterTitle.Text}／{_encounterBody.Text}」");
-            if (sides.Count != 1) fails.Add("横の札: 遭遇の札が出ていない");
+            float hidden = Overlap(stand, upper.Grow(-2)) / (upper.Size.X * upper.Size.Y);
+            for (int wait = 0; wait < 40 && ClashOddsText == "…"; wait++) await ToSignal(GetTree().CreateTimer(0.1), SceneTreeTimer.SignalName.Timeout);
+            GD.Print($"MAP3D_LAYOUT 遭遇の台 {(ClashShown ? $"{stand.Position.X:F0},{stand.Position.Y:F0} {stand.Size.X:F0}x{stand.Size.Y:F0}（画面の高さの {stand.Size.Y / view.Y * 100:F0}%）" : "出ていない")} "
+                + $"盤の上 2／3 のうち隠れている {hidden * 100:F1}% 暗幕 {(dim ? "あり" : "なし")} 盤を隠す窓 {(CoverShown ? "あり" : "なし")} 下の UI {(_hud3d!.BottomShown ? "出ている" : "隠した")} "
+                + $"青い輪 {ringOwn.Position.X:F0},{ringOwn.Position.Y:F0} 赤い輪 {ringFoe.Position.X:F0},{ringFoe.Position.Y:F0} 勝ち目「{ClashOddsText}」"
+                + $"敵 {_clashFoeLead.NameText} 席 {_clashFoe.SeatCount} ／ 味方 {_clashOwnLead.NameText} 席 {_clashOwn.SeatCount} 線 {_clashOwn.LinkCount} ボタン「{_clashA.Text}」{(_clashB.Visible ? $"「{_clashB.Text}」" : "")}");
+            if (!ClashShown) fails.Add("遭遇の台: 出ていない");
             else
             {
-                if (sides[0].Size.X > view.X * 0.27f) fails.Add($"横の札: 幅が画面の 1／4 を超える（{sides[0].Size.X / view.X * 100:F0}%）");
-                if (!new Rect2(0, 0, view.X, view.Y).Encloses(sides[0])) fails.Add("横の札: 画面からはみ出す");
-                foreach (Rect2 block in _hud3d!.Blocks()) if (Overlap(block, sides[0]) > 4) fails.Add("横の札: 遊ぶ UI に重なる");
+                if (stand.Position.Y < view.Y * 2f / 3f - 3) fails.Add($"遭遇の台: 画面の下 1／3 を超えている（上の端 {stand.Position.Y:F0}・画面の高さ {view.Y:F0}）");
+                if (hidden > 0.005f || dim || CoverShown) fails.Add("遭遇の台: 盤の上 2／3 が隠れている");
+                foreach (var (whom, ring) in new[] { ("当たる隊（青い輪）", ringOwn), ("敵（赤い輪）", ringFoe) })
+                    if (!upper.Encloses(ring)) fails.Add($"遭遇の台: {whom}が画面の上 2／3 に入っていない（{ring.Position.X:F0},{ring.Position.Y:F0} {ring.Size.X:F0}x{ring.Size.Y:F0}）");
+                if (_hud3d.BottomShown) fails.Add("遭遇の台: いつもの隊の札と刻のボタンが出たまま");
+                if (_clashOwn.SeatCount == 0 || _clashFoe.SeatCount == 0) fails.Add("遭遇の台: 陣形の台に駒がいない");
+                if (ClashOddsText is not ("優勢" or "互角" or "劣勢")) fails.Add($"遭遇の台: 勝ち目の印が出ていない（「{ClashOddsText}」）");
+                if (!_clashA.Visible || _clashA.Text != "戦う") fails.Add("遭遇の台: 「戦う」が出ていない");
+                if (St.Stage.EncounterRetreat != _clashB.Visible) fails.Add("遭遇の台: 「引き返す」の出し方が盤の規則と合わない");
             }
-            if (hidden > 0.10f) fails.Add($"横の札: 盤の中央 60% の {hidden * 100:F1}% が隠れている（10% まで）");
-            if (dim || CoverShown) fails.Add("横の札: 暗幕 ／ 盤を隠す窓が出ている");
             _encounterOverlay.Visible = false;
             foreach (UnitState u in CampaignSession.CarriedEnemies!) u.Hp = 0;
             CampaignSession.ClearCarriedBattle();

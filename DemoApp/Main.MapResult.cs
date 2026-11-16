@@ -4,7 +4,7 @@ using System.Linq;
 
 // =====================================================================================
 // 作戦マップ（3D）から来た戦闘の、終わりの札（第479期・指示書 design/PHASE479_LESS_WINDOWS_SPEC.md §2）。
-// 出すのは 勝敗・倒れた駒の顔・残りの HP・賞金・「作戦マップへ」だけ。戦績の表は「詳細」の奥（今までの「戦績 (T)」と同じ表）。
+// 出すのは 勝敗と「作戦マップへ」だけ。倒れた駒・残りの HP・賞金は、戻った作戦マップの遭遇の台の上に出る（`Map11Main.Clash.cs`）。戦績の表は「詳細」の奥。
 // **判定は 1 つも持たない**——勝敗と倒れた駒は `BattleResult`、残りの枚数と HP は作戦マップの戦闘の記録、賞金は金の増えた分を読むだけ。
 // 再生の速さは次の戦闘へ持ち越す（Codex の試遊 2026-11-16: 戦闘ごとに ×2 に戻っていた）。
 // =====================================================================================
@@ -35,26 +35,6 @@ public partial class Main
         Label title = UiKit.Text(result.PlayerWon ? "勝利" : "敗北", 34, result.PlayerWon ? UiKit.Heal : UiKit.Hurt);
         title.HorizontalAlignment = HorizontalAlignment.Center;
         col.AddChild(title);
-        // 倒れた駒の顔（出撃した駒のうち、決着のときに立っていない駒）。
-        var fallen = result.PlayerStarterFallen.Select(id => UnitCatalog.Everyone.FirstOrDefault(d => d.Id == id)).Where(d => d is not null).ToList();
-        if (fallen.Count > 0)
-        {
-            var faces = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
-            faces.AddThemeConstantOverride("separation", 6);
-            foreach (UnitDef? d in fallen)
-            {
-                var face = new UnitFaceIcon { CustomMinimumSize = new Vector2(60, 60), TooltipText = d!.Name, Modulate = new Color(0.75f, 0.62f, 0.62f) };
-                face.SetUnit(d);
-                faces.AddChild(face);
-            }
-            col.AddChild(faces);
-        }
-        Map11Session.Line? last = Map11Session.BattleLog.LastOrDefault();
-        string line = (last is null ? "" : $"残り {last.Alive} 枚 ・ HP {last.HpPercent:F0}%") + (gold > 0 ? $"　　賞金 ＋{gold}" : "");
-        if (fallen.Count > 0) line = $"倒れた {fallen.Count}　　" + line;
-        Label stat = UiKit.Text(line, 22, Colors.White);
-        stat.HorizontalAlignment = HorizontalAlignment.Center;
-        col.AddChild(stat);
         Button back = UiKit.ActionButton("作戦マップへ", UiKit.Gold);
         back.CustomMinimumSize = new Vector2(0, 60);
         back.AddThemeFontSizeOverride("font_size", 24);

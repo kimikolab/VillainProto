@@ -385,6 +385,26 @@ public static class Map11Session
         return BeginBattle(squad, node);
     }
 
+    /// <summary>
+    /// 遭遇で「引き返す」（第479期の追記）。用意した戦闘を捨て、隊を 1 マス拠点寄りへ戻して、そこを行き先にする。迎撃では引き返せない。
+    /// 呼ぶ側は作戦ターンの続きを流す。
+    /// </summary>
+    public static bool DeclineBattle()
+    {
+        if (State is null || PendingNode is null || _pendingIntercept || !State.Stage.EncounterRetreat) return false;
+        int squad = PendingSquad;
+        if (!State.EncounterRetreat(squad)) return false;
+        PendingNode = null;
+        PendingSquad = -1;
+        CampaignSession.ClearCarriedBattle();
+        if (squad < Destinations.Length)
+            Destinations[squad] = State.Squads[squad].Pos == State.Graph.Home ? Dest.Home : Dest.Of(State.Graph, State.Squads[squad].Pos);
+        return true;
+    }
+
+    /// <summary>いま用意されている戦闘は拠点の迎撃か（遭遇の台が「引き返す」を出すかどうかに読む）。</summary>
+    public static bool PendingIntercept => _pendingIntercept;
+
     /// <summary>連戦の合間で「引く」（第457期）。隊を入ってきた経路の中間拠点へ戻す（呼ぶ側は作戦ターンの続きを流す）。</summary>
     public static bool RetreatSiege()
     {

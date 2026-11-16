@@ -137,6 +137,16 @@ public sealed class MapStage
     /// <summary>連戦で引いた隊の行き先を<b>引いた先のマス</b>にする盤か（第479期・Codex の試遊 2026-11-16: 「敵の拠点へ進む」が残って補給の直後にまた突っ込む）。行き先を書き換えるのは `Map11Session.RetreatSiege`。</summary>
     public bool SiegeRetreatHolds { get; init; }
 
+    /// <summary>
+    /// 遭遇で<b>引き返せる</b>盤か（第479期の追記・ポンの決定 2026-11-16: 遭遇の台のボタンは「戦う」「引き返す」）。戦わずに 1 マス拠点寄りへ戻り、そこで待つ（無料・その刻の手は使う）。
+    /// 迎撃（拠点まで来られた）では引き返せない。規則は `Map11State.EncounterRetreat`、口は `Map11Session.DeclineBattle`。
+    /// </summary>
+    public bool EncounterRetreat { get; init; }
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<MapStage, MapStage> _leaned = new();
+    /// <summary>「窓を減らす」版（第479期・<see cref="ChapterRule"/> の <c>Lean</c>）の写し: 遭遇で引き返せる・連戦で引いた隊は引いた先で待つ。盤と敵は同じ。</summary>
+    public MapStage Leaned(bool on) => !on || (EncounterRetreat && SiegeRetreatHolds) ? this : _leaned.GetOrAdd(this, static s => Copy(s, lean: true));
+
     /// <summary>拠点を空にして出ようとしたとき、画面が確かめの 1 行を出す盤か（第476期・1 章の 1-1 だけ・<b>表示だけ</b>——止めはしない）。</summary>
     public bool WarnEmptyHome { get; init; }
 
@@ -731,8 +741,9 @@ public sealed class MapStage
     /// <summary>ステージの写し（第460期・版を足すための道具）。<paramref name="crossFacing"/> を渡したときだけ横の辺の直しを替える。</summary>
     /// 第462期: <paramref name="scale"/> を渡したときは敵の数値に倍率を掛ける（<see cref="Scaled"/> だけが渡す）。
     private static MapStage Copy(MapStage s, bool? crossFacing = null, MapFoeScale? scale = null, StarRule? stars = null, DealRule? deal = null, InvestRule? invest = null,
-                                 RosterRule? roster = null) => new()
+                                 RosterRule? roster = null, bool lean = false) => new()
     {
+        EncounterRetreat = lean || s.EncounterRetreat,
         Roster = roster ?? s.Roster,
         Invest = invest ?? s.Invest,
         Stars = stars ?? s.Stars,
@@ -770,7 +781,7 @@ public sealed class MapStage
         SpawnLane = s.SpawnLane,
         OutpostRewards = s.OutpostRewards,
         SiegeRetreatToOutpost = s.SiegeRetreatToOutpost,
-        SiegeRetreatHolds = s.SiegeRetreatHolds,
+        SiegeRetreatHolds = lean || s.SiegeRetreatHolds,
     };
 
     /// <summary>大群の 1 部隊（第458期・1-3 の C3・動かない・<see cref="Map11.RoadNode.Hold"/>）。</summary>
