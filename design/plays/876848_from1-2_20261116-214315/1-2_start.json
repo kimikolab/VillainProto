@@ -1,0 +1,122 @@
+{
+  "format": 1,
+  "kind": "start",
+  "chapterSeed": 876848,
+  "stage": "1-2",
+  "stageIndex": 1,
+  "attempt": 0,
+  "stageSeed": 1474,
+  "rule": "V478",
+  "ruleName": "第478期（第477期 ＋ 1-2 に勇者は出ない・山場は砦の守将）",
+  "scale": "×0.9（勇者の回復なし）",
+  "written": "2026-11-16T21:43:15",
+  "entry": true,
+  "pack": {
+    "gold": 22,
+    "squadCap": 2,
+    "relicHand": [],
+    "bench": [],
+    "squads": [
+      [
+        {
+          "id": "mudo",
+          "name": "泥人形ムド",
+          "star": 1,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "dolga",
+          "name": "のろまの巨兵ドルガ",
+          "star": 1,
+          "pips": 0,
+          "slot": 1
+        },
+        {
+          "id": "gan",
+          "name": "鬨の号令ガン",
+          "star": 1,
+          "pips": 0,
+          "slot": 2
+        },
+        {
+          "id": "rica",
+          "name": "墓守リィカ",
+          "star": 1,
+          "pips": 0,
+          "slot": 3
+        },
+        {
+          "id": "lili",
+          "name": "施しのリリ",
+          "star": 1,
+          "pips": 0,
+          "slot": 4
+        }
+      ],
+      [
+        {
+          "id": "tome",
+          "name": "見境なしのミサ",
+          "star": 1,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "mug",
+          "name": "胞子体ムグ",
+          "star": 1,
+          "pips": 0,
+          "slot": 1
+        },
+        {
+          "id": "zoto",
+          "name": "爆ぜるゾト",
+          "star": 1,
+          "pips": 0,
+          "slot": 2
+        }
+      ],
+      [],
+      []
+    ],
+    "stars": {
+      "dolga": [
+        1,
+        0
+      ],
+      "gan": [
+        1,
+        0
+      ],
+      "lili": [
+        1,
+        0
+      ],
+      "mudo": [
+        1,
+        0
+      ],
+      "mug": [
+        1,
+        0
+      ],
+      "rica": [
+        1,
+        0
+      ],
+      "tome": [
+        1,
+        0
+      ],
+      "zoto": [
+        1,
+        0
+      ]
+    }
+  },
+  "goldNow": 30,
+  "retries": 0,
+  "notes": [],
+  "estimated": []
+}

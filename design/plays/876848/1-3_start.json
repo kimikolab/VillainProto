@@ -1,0 +1,173 @@
+{
+  "format": 1,
+  "kind": "start",
+  "chapterSeed": 876848,
+  "stage": "1-3",
+  "stageIndex": 2,
+  "attempt": 0,
+  "stageSeed": 106203,
+  "rule": "V478",
+  "ruleName": "第478期（第477期 ＋ 1-2 に勇者は出ない・山場は砦の守将）",
+  "scale": "×1.6（勇者の回復なし）",
+  "written": "2026-11-16T21:42:00",
+  "entry": true,
+  "pack": {
+    "gold": 65,
+    "squadCap": 3,
+    "relicHand": [],
+    "bench": [],
+    "squads": [
+      [
+        {
+          "id": "mudo",
+          "name": "泥人形ムド",
+          "star": 1,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "dolga",
+          "name": "のろまの巨兵ドルガ",
+          "star": 2,
+          "pips": 0,
+          "slot": 1
+        },
+        {
+          "id": "gan",
+          "name": "鬨の号令ガン",
+          "star": 1,
+          "pips": 0,
+          "slot": 2
+        },
+        {
+          "id": "rica",
+          "name": "墓守リィカ",
+          "star": 1,
+          "pips": 0,
+          "slot": 3
+        },
+        {
+          "id": "lili",
+          "name": "施しのリリ",
+          "star": 1,
+          "pips": 0,
+          "slot": 4
+        }
+      ],
+      [
+        {
+          "id": "tome",
+          "name": "見境なしのミサ",
+          "star": 2,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "mug",
+          "name": "胞子体ムグ",
+          "star": 1,
+          "pips": 0,
+          "slot": 1
+        },
+        {
+          "id": "hisa",
+          "name": "囃し立てのヒサ",
+          "star": 1,
+          "pips": 0,
+          "slot": 2
+        },
+        {
+          "id": "utsu",
+          "name": "逆しまのウツ",
+          "star": 1,
+          "pips": 0,
+          "slot": 3
+        },
+        {
+          "id": "zoto",
+          "name": "爆ぜるゾト",
+          "star": 1,
+          "pips": 0,
+          "slot": 4
+        }
+      ],
+      [
+        {
+          "id": "gald",
+          "name": "廃棄聖騎士ガルド",
+          "star": 1,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "hota",
+          "name": "熾のホタ",
+          "star": 1,
+          "pips": 0,
+          "slot": 1
+        }
+      ],
+      []
+    ],
+    "stars": {
+      "dolga": [
+        2,
+        0
+      ],
+      "gald": [
+        1,
+        0
+      ],
+      "gan": [
+        1,
+        0
+      ],
+      "hisa": [
+        1,
+        0
+      ],
+      "hota": [
+        1,
+        0
+      ],
+      "lili": [
+        1,
+        0
+      ],
+      "mudo": [
+        1,
+        0
+      ],
+      "mug": [
+        1,
+        0
+      ],
+      "rica": [
+        1,
+        0
+      ],
+      "tome": [
+        2,
+        0
+      ],
+      "utsu": [
+        1,
+        0
+      ],
+      "zoto": [
+        1,
+        0
+      ]
+    },
+    "invest": [
+      [
+        "1-2",
+        "自傷"
+      ]
+    ]
+  },
+  "goldNow": 73,
+  "retries": 0,
+  "notes": [],
+  "estimated": []
+}

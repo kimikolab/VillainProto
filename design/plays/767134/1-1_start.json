@@ -1,0 +1,99 @@
+{
+  "format": 1,
+  "kind": "start",
+  "chapterSeed": 767134,
+  "stage": "1-1",
+  "stageIndex": 0,
+  "attempt": 0,
+  "stageSeed": 71579,
+  "rule": "V478",
+  "ruleName": "第478期（第477期 ＋ 1-2 に勇者は出ない・山場は砦の守将）",
+  "scale": "×0.6（勇者の回復なし）",
+  "written": "2026-11-16T12:38:35",
+  "entry": false,
+  "pack": {
+    "gold": 0,
+    "squadCap": 2,
+    "relicHand": [],
+    "bench": [
+      {
+        "id": "rica",
+        "name": "墓守リィカ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "mug",
+        "name": "胞子体ムグ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "dolga",
+        "name": "のろまの巨兵ドルガ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "gan",
+        "name": "鬨の号令ガン",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "lili",
+        "name": "施しのリリ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "mudo",
+        "name": "泥人形ムド",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      }
+    ],
+    "squads": [
+      [],
+      [],
+      [],
+      []
+    ],
+    "stars": {
+      "dolga": [
+        1,
+        0
+      ],
+      "gan": [
+        1,
+        0
+      ],
+      "lili": [
+        1,
+        0
+      ],
+      "mudo": [
+        1,
+        0
+      ],
+      "mug": [
+        1,
+        0
+      ],
+      "rica": [
+        1,
+        0
+      ]
+    }
+  },
+  "goldNow": 8,
+  "retries": 0,
+  "notes": [],
+  "estimated": []
+}

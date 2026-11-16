@@ -1,0 +1,407 @@
+{
+  "format": 1,
+  "kind": "end",
+  "chapterSeed": 876848,
+  "stage": "1-2",
+  "stageIndex": 1,
+  "attempt": 0,
+  "stageSeed": 1474,
+  "rule": "V478",
+  "ruleName": "第478期（第477期 ＋ 1-2 に勇者は出ない・山場は砦の守将）",
+  "scale": "×0.9（勇者の回復なし）",
+  "written": "2026-11-16T21:51:01",
+  "entry": true,
+  "pack": {
+    "gold": 30,
+    "squadCap": 3,
+    "relicHand": [
+      "RelicOverflowEdge"
+    ],
+    "bench": [
+      {
+        "id": "rica",
+        "name": "墓守リィカ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "gan",
+        "name": "鬨の号令ガン",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "zoto",
+        "name": "爆ぜるゾト",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "mug",
+        "name": "胞子体ムグ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "utsu",
+        "name": "逆しまのウツ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "wata",
+        "name": "渡しのワタ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "hane",
+        "name": "突き返しのハネ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "mudo",
+        "name": "泥人形ムド",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "basa",
+        "name": "喧噪のバサ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "yomi",
+        "name": "軋みのヨミ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      }
+    ],
+    "squads": [
+      [
+        {
+          "id": "borg",
+          "name": "焼け残りのボルグ",
+          "star": 1,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "dolga",
+          "name": "のろまの巨兵ドルガ",
+          "star": 1,
+          "pips": 0,
+          "slot": 1
+        },
+        {
+          "id": "hiyo",
+          "name": "火選りのヒヨ",
+          "star": 1,
+          "pips": 0,
+          "slot": 2
+        },
+        {
+          "id": "hota",
+          "name": "熾のホタ",
+          "star": 1,
+          "pips": 0,
+          "slot": 3
+        },
+        {
+          "id": "lili",
+          "name": "施しのリリ",
+          "star": 1,
+          "pips": 0,
+          "slot": 4
+        }
+      ],
+      [
+        {
+          "id": "hisa",
+          "name": "囃し立てのヒサ",
+          "star": 1,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "gald",
+          "name": "廃棄聖騎士ガルド",
+          "star": 1,
+          "pips": 0,
+          "slot": 1
+        },
+        {
+          "id": "doha",
+          "name": "分かちのドハ",
+          "star": 1,
+          "pips": 0,
+          "slot": 2
+        },
+        {
+          "id": "tome",
+          "name": "見境なしのミサ",
+          "star": 1,
+          "pips": 0,
+          "slot": 3
+        },
+        {
+          "id": "zan",
+          "name": "仇討ちのザン",
+          "star": 1,
+          "pips": 0,
+          "slot": 4
+        }
+      ],
+      [
+        {
+          "id": "shiga",
+          "name": "電気鞭のシガ",
+          "star": 1,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "kugu",
+          "name": "縛めのクグ",
+          "star": 1,
+          "pips": 0,
+          "slot": 1
+        },
+        {
+          "id": "som",
+          "name": "背かれのソム",
+          "star": 1,
+          "pips": 0,
+          "slot": 2
+        },
+        {
+          "id": "tou",
+          "name": "痺れ粉のトウ",
+          "star": 1,
+          "pips": 0,
+          "slot": 3
+        }
+      ],
+      []
+    ],
+    "stars": {
+      "basa": [
+        1,
+        0
+      ],
+      "borg": [
+        1,
+        0
+      ],
+      "doha": [
+        1,
+        0
+      ],
+      "dolga": [
+        1,
+        0
+      ],
+      "gald": [
+        1,
+        0
+      ],
+      "gan": [
+        1,
+        0
+      ],
+      "hane": [
+        1,
+        0
+      ],
+      "hisa": [
+        1,
+        0
+      ],
+      "hiyo": [
+        1,
+        0
+      ],
+      "hota": [
+        1,
+        0
+      ],
+      "kugu": [
+        1,
+        0
+      ],
+      "lili": [
+        1,
+        0
+      ],
+      "mudo": [
+        1,
+        0
+      ],
+      "mug": [
+        1,
+        0
+      ],
+      "rica": [
+        1,
+        0
+      ],
+      "shiga": [
+        1,
+        0
+      ],
+      "som": [
+        1,
+        0
+      ],
+      "tome": [
+        1,
+        0
+      ],
+      "tou": [
+        1,
+        0
+      ],
+      "utsu": [
+        1,
+        0
+      ],
+      "wata": [
+        1,
+        0
+      ],
+      "yomi": [
+        1,
+        0
+      ],
+      "zan": [
+        1,
+        0
+      ],
+      "zoto": [
+        1,
+        0
+      ]
+    },
+    "invest": [
+      [
+        "1-2",
+        "感電"
+      ]
+    ]
+  },
+  "goldNow": 30,
+  "result": "制圧（作戦ターン 8）",
+  "retries": 0,
+  "battles": [
+    {
+      "no": 1,
+      "turn": 2,
+      "squad": "第2隊",
+      "road": "中の街道",
+      "foe": "1. 物見の兵",
+      "won": true,
+      "intercept": false,
+      "alive": 5,
+      "hp": 100,
+      "notes": []
+    },
+    {
+      "no": 2,
+      "turn": 3,
+      "squad": "第2隊",
+      "road": "中の街道",
+      "foe": "2. 徴募兵",
+      "won": true,
+      "intercept": false,
+      "alive": 5,
+      "hp": 100,
+      "notes": []
+    },
+    {
+      "no": 3,
+      "turn": 4,
+      "squad": "第2隊",
+      "road": "中の街道",
+      "foe": "4. 徴募兵",
+      "won": true,
+      "intercept": false,
+      "alive": 5,
+      "hp": 100,
+      "notes": []
+    },
+    {
+      "no": 4,
+      "turn": 7,
+      "squad": "第3隊",
+      "road": "北の山道",
+      "foe": "1. 火の魔術師の部隊",
+      "won": true,
+      "intercept": false,
+      "alive": 4,
+      "hp": 100,
+      "notes": []
+    },
+    {
+      "no": 5,
+      "turn": 7,
+      "squad": "第3隊",
+      "road": "北の山道",
+      "foe": "4. 徴募兵",
+      "won": true,
+      "intercept": false,
+      "alive": 4,
+      "hp": 100,
+      "notes": []
+    },
+    {
+      "no": 6,
+      "turn": 7,
+      "squad": "第2隊",
+      "road": "中の街道",
+      "foe": "4. 徴募兵",
+      "won": true,
+      "intercept": false,
+      "alive": 5,
+      "hp": 100,
+      "notes": []
+    },
+    {
+      "no": 7,
+      "turn": 8,
+      "squad": "第2隊",
+      "road": "敵の拠点",
+      "foe": "3. 本陣の守り",
+      "won": true,
+      "intercept": false,
+      "alive": 5,
+      "hp": 92.2,
+      "notes": []
+    },
+    {
+      "no": 8,
+      "turn": 8,
+      "squad": "第2隊",
+      "road": "敵の拠点",
+      "foe": "4. 砦の守将",
+      "won": true,
+      "intercept": false,
+      "alive": 5,
+      "hp": 88.9,
+      "notes": []
+    }
+  ],
+  "notes": [],
+  "estimated": []
+}
