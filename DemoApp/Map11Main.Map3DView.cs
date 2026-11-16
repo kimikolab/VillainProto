@@ -503,6 +503,9 @@ public partial class Map11Main
                 (sheet?.Camp ?? PortalPos) + new Vector3(0, 8.4f, 0));
         }
 
+        // 第479期の続き: 拠点の名札は、上の固定の UI（題字・金・ボタン）の下に入れない——下へ逃がし、逃がせなければ出さない。
+        if (_homePlate3d is { Visible: true } homeDodge) DodgePlate(homeDodge);
+        if (_portalPlate3d is { Visible: true } portalDodge) DodgePlate(portalDodge);
         // 第479期: 横の札の下に入る名札は出さない。
         if (_portalPlate3d is { Visible: true } pp && sideRects.Any(r => r.Intersects(pp.GetGlobalRect()))) pp.Visible = false;
         if (_homePlate3d is { Visible: true } hp && sideRects.Any(r => r.Intersects(hp.GetGlobalRect()))) hp.Visible = false;
@@ -520,7 +523,8 @@ public partial class Map11Main
             string text = _outpostMarks.First(m => m.Cell == cell).Name.Text;
             SetPlate(plate, "◆ " + text, mine ? PlayerColor : Color.FromHtml("#9aa0a6"), PosOf(cell) + new Vector3(0, 6.6f, 0));   // 第479期: 取っていなければ灰
             // 遊ぶ UI（隊の札・刻を進める）の下に入った名札は出さない（失われた隊の薄い札の下に透けて見えた）。
-            if (plate.Visible && (_hud3d.Blocks().Any(block => block.Intersects(plate.GetGlobalRect())) || sideRects.Any(r => r.Intersects(plate.GetGlobalRect())))) plate.Visible = false;
+            if (plate.Visible) DodgePlate(plate);
+            if (plate.Visible && sideRects.Any(r => r.Intersects(plate.GetGlobalRect()))) plate.Visible = false;
         }
         ProcessLines3D();   // 第479期: 出来事の窓（第478期）はやめた——説明は顔つきの 1 行で
 
@@ -628,7 +632,7 @@ public partial class Map11Main
             float under = body.End.Y;
             foreach (var (_, disc) in _discRects3d)
                 if (disc.Grow(2).HasPoint(new Vector2(cx, body.End.Y - 6))) under = Math.Max(under, disc.End.Y);
-            Vector2 at = Choose(new[]
+            var spots = new[]
             {
                 new Vector2(cx - size.X / 2, under + 5),
                 new Vector2(body.End.X + 8, body.End.Y - size.Y + 6),
@@ -639,7 +643,11 @@ public partial class Map11Main
                 new Vector2(cx - size.X / 2, under + 40),
                 new Vector2(cx - size.X / 2 + size.X * 0.6f, under + 5),
                 new Vector2(cx - size.X / 2 - size.X * 0.6f, under + 5),
-            }, size, plate: true);
+            };
+            // 第479期の続き: 固定の UI に重なる候補は、その UI のすぐ下へ逃がした場所も候補に足す（ほかの札との重なりも一緒に見て選ぶ）。
+            // それでも固定の UI に重なるなら出さない（駒そのものが UI の下にいる）。
+            Vector2 at = Choose(spots.Concat(spots.Select(q => Dodge(new Rect2(q, size))).Where(r => r is not null).Select(r => r!.Value.Position)), size, plate: true);
+            if (Dodge(new Rect2(at, size)) is not { } free || free.Position != at) { p.Piece.Plate.Visible = false; continue; }
             p.Piece.Plate.Visible = true;
             p.Piece.Plate.Place(at, p.Piece.Clock);
             _plateRects3d.Add(($"名札:{p.Name}", new Rect2(at.Round(), size)));
@@ -663,6 +671,41 @@ public partial class Map11Main
             _chipRects3d.Add(($"あと n:{chip.Text}", new Rect2(at.Round(), size)));
         }
         _chipAt3d.Clear();
+    }
+
+    /// <summary>
+    /// 札の四角を、固定の UI（題字・金・ボタン・隊の札・台）の外へ逃がす（重なっていれば、その UI のすぐ下へ）。逃がせなければ null。<b>見た目だけ。</b>
+    /// </summary>
+    private Rect2? Dodge(Rect2 r)
+    {
+        if (_hud3d is null) return r;
+        Vector2 view = GetViewport().GetVisibleRect().Size;
+        var blocks = _hud3d.Blocks().Concat(SideRects()).ToList();
+        for (int pass = 0; pass < 3; pass++)
+        {
+            Rect2? hit = null;
+            foreach (Rect2 b in blocks) if (b.Grow(3).Intersects(r)) { hit = b; break; }
+            if (hit is not { } block) return r;
+            r = new Rect2(new Vector2(r.Position.X, block.End.Y + 6), r.Size);
+            if (r.End.Y > view.Y - 8) return null;
+        }
+        return blocks.Any(b => b.Grow(3).Intersects(r)) ? null : r;
+    }
+
+    private void DodgePlate(Label plate)
+    {
+        // 遠くへは逃がさない（札が元の建物から離れると、どの建物の札か分からなくなる・ほかの札の上に落ちる）——そのときは出さない。
+        if (Dodge(plate.GetGlobalRect()) is { } free && free.Position.Y - plate.GetGlobalRect().Position.Y <= 130) plate.Position = free.Position.Round();
+        else plate.Visible = false;
+    }
+
+    /// <summary>名札と固定の UI の重なりの数（レイアウトの検査と遊ぶ口が読む）。</summary>
+    internal int PlatesUnderHud3D()
+    {
+        if (_hud3d is null) return 0;
+        var blocks = _hud3d.Blocks().Concat(SideRects()).ToList();
+        var plates = _plateRects3d.Select(p => p.Rect).Concat(_signRects3d.Select(p => p.Rect)).ToList();
+        return plates.Count(p => blocks.Any(b => b.Intersects(p)));
     }
 
     private void SetPlate(Label plate, string text, Color edge, Vector3 world)
@@ -1090,6 +1133,16 @@ public partial class Map11Main
             await Settle();
             // 第479期の追記 8: 遭遇の台が出ているとき、盤の上 2／3 が隠れていない・当たる 2 者が画面に入っている。
             Rect2 stand = ClashShown ? ClashRect : default;
+            // 第479期の続き: 名札が固定の UI の下に入っていない・「引き返す」に触れると引く先が光る。
+            int under = PlatesUnderHud3D();
+            ClashBackHover = true;
+            for (int i = 0; i < 4; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+            int backCell = ClashBackCell;
+            int wantCell = _clashSquad >= 0 ? St.RetreatCellOf(_clashSquad, siege: false) : -1;
+            GD.Print($"MAP3D_LAYOUT 続き 名札と固定の UI の重なり {under}・引く先の輪 {(backCell >= 0 ? PlaceName(backCell) : "—")}（規則の引く先 {(wantCell >= 0 ? PlaceName(wantCell) : "—")}）・割れの印 {ClashRiskCount}");
+            ClashBackHover = false;
+            if (under > 0) fails.Add($"名札: 固定の UI の下に {under} 枚");
+            if (_clashB.Visible && (backCell < 0 || backCell != wantCell)) fails.Add("引く先の輪: 出ていない ／ 規則の引く先と違う");
             var (ringOwn, ringFoe) = ClashRings();
             var upper = new Rect2(0, 0, view.X, view.Y * 2f / 3f);
             bool dim = _encounterOverlay is ColorRect { Color.A: > 0.01f };

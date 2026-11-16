@@ -13,6 +13,8 @@ using System.Linq;
 public partial class Map11Main
 {
     private static string? _play3dPlan, _play3dDir;
+    private static bool _play3dReadOdds;
+    private static int _play3dDeclines;
     private static int _play3dShot, _play3dGuard;
     private static bool _play3dFormed, _play3dHovered;
     private static readonly HashSet<string> _play3dOnce = new(StringComparer.Ordinal);
@@ -33,6 +35,8 @@ public partial class Map11Main
         if (!Map3DMode.Active || user.FirstOrDefault(a => a.StartsWith("--map3d-play=", StringComparison.Ordinal)) is not { } arg) return;
         string[] parts = arg["--map3d-play=".Length..].Split(',', 2);
         _play3dPlan = parts[0];
+        // 第479期の続き: 末尾に r を付けると、勝ち目の印を読む（劣勢なら引き返す ／ 引いて待つ・期限の 3 刻前からは戦う）——人が印を見て決める遊び方の代わり。
+        if (_play3dPlan is "p1r" or "p2r" or "p3r") { _play3dPlan = _play3dPlan[..2]; _play3dReadOdds = true; }
         _play3dDir = parts.Length > 1 ? parts[1].Trim('"') : ProjectSettings.GlobalizePath("user://map3d_play");
         System.IO.Directory.CreateDirectory(_play3dDir);
         _ = Play3D();
@@ -100,7 +104,7 @@ public partial class Map11Main
             int lost = St.Squads.Sum(q => q.Units?.Count(u => !u.IsAlive) ?? 0) + St.FallenUnits.Count;
             GD.Print($"MAP3D_PLAY_COMPLETE plan={_play3dPlan} ok={ok && St.Finished} won={St.Won} fallen={St.Fallen} captured_turn={(St.Captured ? St.CapturedTurn + 1 : -1)} "
                 + $"gold={St.Gold} lost={lost} battles={St.Battles} spawns={St.SpawnCount} shots={_play3dShot} covers={_play3dCovers.Count}{(_play3dCovers.Count > 0 ? "（" + string.Join("・", _play3dCovers) + "）" : "")} "
-                + $"sides={_play3dSides} says={_play3dSays} rest_clicks={_play3dRestClicks} {why}");
+                + $"sides={_play3dSides} says={_play3dSays} declines={_play3dDeclines} rest_clicks={_play3dRestClicks} {why}");
             GetTree().Quit(ok ? 0 : 1);
         }
 
@@ -159,6 +163,18 @@ public partial class Map11Main
                 // 勇者のいない盤では、次が守将でなくても（本陣の守り・湧いた部隊）3 枚以下か HP 50% 未満なら引く——頭の札の「削られたら中間拠点へ引いて休める」のとおり。
                 bool back = keeper ? (mine < 5 || _siegeHp.Value < 70) && St.Turn < St.Stage.TurnCap - 2
                     : !St.Stage.Hero.On ? (mine <= 2 || _siegeHp.Value < 40) && St.Turn < St.Stage.TurnCap - 2 : hero && (alone || weak);
+                // 第479期の続き: 「引いて待つ」に触れると引く先が光る——写しを 1 枚撮って、輪が画面の上 2／3 に入っているかを書く。
+                ClashBackHover = true;
+                await Wait(0.9);
+                {
+                    Vector2 v = GetViewport().GetVisibleRect().Size;
+                    Rect2 ring = ClashBackRect;
+                    bool seen = ClashBackCell >= 0 && new Rect2(0, 0, v.X, v.Y * 2f / 3f).Intersects(ring);
+                    GD.Print($"MAP3D_PLAY back-hint 引く先 {(ClashBackCell >= 0 ? PlaceName(ClashBackCell) : "—")} 輪 {ring} 画面の上 2／3 に見える {seen} 名札と固定の UI の重なり {PlatesUnderHud3D()}");
+                    await Shot("引く先の輪", once: true);
+                }
+                ClashBackHover = false;
+                if (_play3dReadOdds && St.Turn < St.Stage.TurnCap - 3) back = ClashOddsText == "劣勢";   // 印を読む遊び方: 劣勢なら引いて待つ・それ以外は続ける
                 Click(OldUi(back ? _clashB : _clashA));   // 第479期の追記: 遭遇の台のボタン
                 GD.Print($"MAP3D_PLAY siege={(back ? "引く" : "続けて戦う")} next={_siegeGo.Text} hp={_siegeHp.Value:F0} 上の行「{string.Join("／", _siegeStats.Text.Split((char)10))}」引くボタン「{_siegeBack.Text}」窓の文「{string.Join("／", _siegeBody.Text.Split((char)10))}」");
                 await Wait(back ? 0.6 : 3.0);
@@ -168,7 +184,20 @@ public partial class Map11Main
             {
                 _play3dSides++;
                 await Shot($"遭遇_{_encounterTitle.Text.Replace(' ', '_').Replace('×', 'x').Replace('　', '_')}");
-                GD.Print($"MAP3D_PLAY clash 台={ClashRect} 勝ち目「{ClashOddsText}」敵 {_clashFoeLead.NameText} 席 {_clashFoe.SeatCount} 味方 {_clashOwnLead.NameText} 席 {_clashOwn.SeatCount} 線 {_clashOwn.LinkCount} 引き返す {_clashB.Visible}");
+                GD.Print($"MAP3D_PLAY clash 台={ClashRect} 勝ち目「{ClashOddsText}」敵 {_clashFoeLead.NameText} 席 {_clashFoe.SeatCount} 味方 {_clashOwnLead.NameText} 席 {_clashOwn.SeatCount} 線 {_clashOwn.LinkCount} 引き返す {_clashB.Visible} 割れの印 {ClashRiskCount} 名札と固定の UI の重なり {PlatesUnderHud3D()}");
+                if (_play3dReadOdds && ClashShown && _clashB.Visible && ClashOddsText == "劣勢" && St.Turn < St.Stage.TurnCap - 3)
+                {
+                    int sq = Map11Session.PendingSquad, from = St.Squads[sq].Pos;
+                    ClashBackHover = true;
+                    await Wait(0.9);
+                    await Shot("引き返す先の輪", once: true);
+                    ClashBackHover = false;
+                    Click(OldUi(_clashB));
+                    await Wait(0.8);
+                    _play3dDeclines++;
+                    GD.Print($"MAP3D_PLAY decline {St.Squads[sq].Label} {PlaceName(from)} → {PlaceName(St.Squads[sq].Pos)} 行き先「{Map11Session.OrderText(sq)}」台は消えた {!ClashShown} 引き返した回数 {St.EncounterRetreats}");
+                    continue;
+                }
                 if (ClashShown && _clashA.Visible) { Click(OldUi(_clashA)); await Wait(3.0); continue; }
                 Fight();
                 return;

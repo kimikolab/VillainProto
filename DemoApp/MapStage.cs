@@ -1180,8 +1180,8 @@ public sealed class MapStage
 
     // ---------------- 第479期: 本陣を重く（指示書 design/PHASE479_LESS_WINDOWS_SPEC.md §6） ----------------
 
-    /// <summary>第479期の 1 章の 1-2 の値（守将と本陣の守りの、その区画だけの倍率・%）。測り（`--chapter1-keep-smoke`）で選んだ。</summary>
-    internal const int Stage12Ch479KeeperHp = 80, Stage12Ch479KeeperAtk = 80, Stage12Ch479GarrisonHp = 100, Stage12Ch479GarrisonAtk = 100;
+    /// <summary>第479期の 1 章の 1-2 の値（守将と本陣の守りの、その区画だけの倍率・%）。測り（`--chapter1-keep-smoke`）の #17 をポンが採った（2026-11-17・線 A・B・C・F が通る・線 D・E は外した）。</summary>
+    internal const int Stage12Ch479KeeperHp = 120, Stage12Ch479KeeperAtk = 120, Stage12Ch479GarrisonHp = 130, Stage12Ch479GarrisonAtk = 130;
     internal const string Stage12Ch479GarrisonBand = "band_garrison";
 
     /// <summary>

@@ -30,7 +30,7 @@ public static class Chapter1KeepSmoke
     /// <summary>候補（守将の倍率・本陣の守りの部隊と倍率）。先頭が今（第478期）。<b>軽い順</b>に並べる（通る候補のうち先頭を採る）。</summary>
     internal static readonly (string Label, int KHp, int KAtk, string Garrison, int GHp, int GAtk)[] Candidates =
     {
-        ("今（守将 ×0.8／×0.8・守り ×1.0）", 80, 80, "band_garrison", 100, 100),
+        ("第478期（守将 ×0.8／×0.8・守り ×1.0）", 80, 80, "band_garrison", 100, 100),
         ("守将 ×0.8／×0.8・守り 最大HP ×1.3", 80, 80, "band_garrison", 130, 100),
         ("守将 ×1.0／×0.8", 100, 80, "band_garrison", 100, 100),
         ("守将 ×1.0／×1.0", 100, 100, "band_garrison", 100, 100),
@@ -48,11 +48,13 @@ public static class Chapter1KeepSmoke
         ("参考: 守将 ×2.0／×1.0", 200, 100, "band_garrison", 100, 100),
         ("参考: 守将 ×1.0／×1.0・守り 攻撃 ×1.3", 100, 100, "band_garrison", 100, 130),
         ("参考: 守将 ×1.0／×1.0・守り ×1.3／×1.3", 100, 100, "band_garrison", 130, 130),
-        ("参考: 守将 ×1.2／×1.2・守り ×1.3／×1.3", 120, 120, "band_garrison", 130, 130),
+        ("採った（ポン 2026-11-17）: 守将 ×1.2／×1.2・守り ×1.3／×1.3", 120, 120, "band_garrison", 130, 130),
         ("参考: 守将 ×1.0／×1.0・守り ＝ 本陣の守り（重）×0.8／×0.8", 100, 100, "band_garrison_heavy", 80, 80),
     };
     /// <summary>指示書 §6 の候補の数（これより後ろは参考・採らない）。</summary>
     private const int InSpec = 10;
+    /// <summary>採った候補（ポンの決定 2026-11-17）。線 D・E は外した（器具の動かし方に左右される線だった）——列は参考に残す。</summary>
+    internal const int Adopted = 17;
 
     private static MapStage Cand(int i)
     {
@@ -91,6 +93,7 @@ public static class Chapter1KeepSmoke
 
         // ---- (b) 引いた隊の行き先 ----
         {
+            bool peeksOk = true;
             (bool Back, bool Holds, string Order, string Where) Try(MapStage stage)
             {
                 Map11Session.Reset(0, draft: true, stage: stage);
@@ -124,8 +127,10 @@ public static class Chapter1KeepSmoke
                 }
                 if (!siege) { Map11Session.Reset(0, draft: true, stage: stage); return (false, false, "連戦の合間に着かない", "—"); }
                 int sq = Map11Session.SiegeSquad;
+                int peek = st.RetreatCellOf(sq, siege: true);
                 bool back = Map11Session.RetreatSiege();
                 int pos = st.Squads[sq].Pos;
+                peeksOk &= !back || peek == pos;
                 bool holds = Map11Session.Destinations[sq].Id == pos && !Map11Session.Destinations[sq].IsPortal;
                 // 作戦ターンの続きを流し切ってから、次の刻の命令を読む。
                 for (int step = 0; step < 30 && Map11Session.TurnRunning; step++)
@@ -149,6 +154,7 @@ public static class Chapter1KeepSmoke
             var old = Try(Chapter1.StagesFor(ChapterRule.V478)[1]);
             write($"  (b) V479: 引いた {now.Back} → {now.Where}・行き先は引いた先 {now.Holds}・次の刻の命令「{now.Order}」 ／ V478: 引いた {old.Back} → {old.Where}・行き先は引いた先 {old.Holds}・命令「{old.Order}」");
             Req(now.Back && now.Holds && old.Back && !old.Holds, "(b) 連戦で引いた隊の行き先は引いた先のマス（V478 の盤では敵の拠点のまま）");
+            Req(peeksOk, "(e) 台が光らせる「引く先」（`RetreatCellOf`）は、連戦で実際に引いた先と同じ");
         }
 
         // ---- (d) 遭遇で引き返す（第479期の追記）----
@@ -181,8 +187,10 @@ public static class Chapter1KeepSmoke
                 if (!met) { Map11Session.Reset(0, draft: true, stage: stage); return (false, false, "—", "—", false, false, false, 0); }
                 Map11State.Node foe = Map11Session.PendingNode!;
                 int from = st.Squads[0].Pos, foeAt = foe.Pos, battles = st.Battles;
+                int peek = st.RetreatCellOf(0, siege: false);
                 bool back = Map11Session.DeclineBattle();
                 int to = st.Squads[0].Pos;
+                if (back && peek != to) back = false;   // (e) 台が光らせる先と違ったら落とす
                 bool holds = back && !Map11Session.HasPendingBattle && Map11Session.Destinations[0].Id == to;
                 var r = (true, back, g[from].Name, g[to].Name, holds, foe.Pos == foeAt && !foe.Cleared, foe.Cleared, st.Battles - battles);
                 Map11Session.Reset(0, draft: true, stage: stage);
@@ -222,7 +230,7 @@ public static class Chapter1KeepSmoke
         catch (Exception ex) { crashed++; write($"  × 測り: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}"); }
         write($"  （測り {sw.Elapsed.TotalSeconds:F0} 秒）");
         Req(crashed == 0, "器具（重さ・通し × 100 seed）が落ちない");
-        write(pick < 0 ? "× §6 の線——通る候補が無い（門の合否には入れない・報告を見る）" : $"○ §6 の線——通る候補のうちいちばん軽いもの: {Candidates[pick].Label}");
+        Req(pick == Adopted, $"§6 の線 A・B・C・F——採った候補が通る: {Candidates[Adopted].Label}");
         return ok;
     }
 
@@ -248,7 +256,7 @@ public static class Chapter1KeepSmoke
 
     private static int Measure(Action<string> write, ChapterRule rule, string demoDir)
     {
-        MapStage basis = Dress(Cand(0), rule);
+        MapStage basis = Dress(Cand(Adopted), rule);
         var dropped = new List<string>();
         var humans = Chapter1Stage12Smoke.Humans(demoDir, basis, dropped);
         var pon = humans.Where(h => PonPlays.Any(k => h.Label.StartsWith(k + "/", StringComparison.Ordinal))).ToList();
@@ -258,10 +266,10 @@ public static class Chapter1KeepSmoke
         write("  部隊の中身（素の値）: " + string.Join(" ／ ", new[] { "band_garrison", "band_knights", "band_garrison_heavy" }
             .Select(id => $"{EnemyCatalog.MapSquadOf(id).Name} ＝ {string.Join("・", EnemyCatalog.MapSquadOf(id).Enemy.Occupied().Select(x => $"{x.Item2.Name} {x.Item2.MaxHp}/{x.Item2.Attack}"))}")));
         write("  線: A 写しの隊・満タンで守将 90% 以上（18／20）・終わりの HP 30〜50% ／ B 写しの隊・守りを抜いた直後に続けて守将 40〜60%（8〜12／20）");
-        write("      C 通し 方針 1・2 の勝ち（組 B・留守番 2 枚・引く器具）60% 以上 ／ D 「引いてから勝った」通しが方針 1・2 とも 30% 以上");
-        write("      E 引く器具の勝ち − 続ける器具の勝ち が 10pt 以上（方針 1・2 とも）／ F 制圧の刻の中央値が 13 刻目まで");
+        write("      C 通し 方針 1・2 の勝ち（組 B・留守番 2 枚・引く器具）60% 以上 ／ F 制圧の刻の中央値が 13 刻目まで");
+        write("      （線 D「引いてから勝った 30% 以上」・E「引く − 続ける 10pt 以上」は外した——ポン 2026-11-17・器具の動かし方に左右される線。列は参考）");
         write("");
-        write("  | # | 候補 | A 満タンで守将（勝ち・後の HP・失った枚数） | B 守りの後（入る前の枚数・HP → 守将に勝ち） | 守りに負けた | C 勝ち 引く（1・2） | 勝ち 続ける（1・2） | D 引いて勝った（1・2） | 引いた通し（1・2） | 続けて負けた（1・2） | F 制圧の刻（1・2） | 時間切れ（1・2） | ポンの写しの通し 引く（1・2） | 線 A B C D E F |");
+        write("  | # | 候補 | A 満タンで守将（勝ち・後の HP・失った枚数） | B 守りの後（入る前の枚数・HP → 守将に勝ち） | 守りに負けた | C 勝ち 引く（1・2） | 勝ち 続ける（1・2） | 参考 引いて勝った（1・2） | 引いた通し（1・2） | 続けて負けた（1・2） | F 制圧の刻（1・2） | 時間切れ（1・2） | ポンの写しの通し 引く（1・2） | 線 A B C F |");
         write("  |--:|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|:-:|");
 
         List<UnitState>? HumanSquad(MapStage s, int k)
@@ -312,9 +320,10 @@ public static class Chapter1KeepSmoke
             string M(bool x) => x ? "○" : "×";
             string P(List<Row> rs, Func<Row, string> f) => string.Join("・", rs.Select(f));
             write($"  | {i} | {Candidates[i].Label} | {fullWins}／{n}（{a:F0}%）・{hp:F0}%・{(fullLost.Count == 0 ? 0 : fullLost.Average()):F1} | {(inAlive.Count == 0 ? "—" : $"{Med(inAlive):0.#} 枚 {Med(inHp):F0}%")} → {aftWins}／{aftN}（{b:F0}%） | {gLost} | {P(hurt, r => r.Wins.ToString())} | {P(cont, r => r.Wins.ToString())}"
-                  + $" | {P(hurt, r => r.RetreatWon.ToString())} | {P(hurt, r => r.Retreats.ToString())} | {P(cont, r => r.ContLost.ToString())} | {P(hurt, r => T(r.Turn))} | {P(hurt, r => r.TimeUp.ToString())} | {(ponRun is null ? "—" : P(ponRun, r => $"{r.Wins}（{T(r.Turn)}）"))} | {M(lA)}{M(lB)}{M(lC)}{M(lD)}{M(lE)}{M(lF)} |");
+                  + $" | {P(hurt, r => r.RetreatWon.ToString())} | {P(hurt, r => r.Retreats.ToString())} | {P(cont, r => r.ContLost.ToString())} | {P(hurt, r => T(r.Turn))} | {P(hurt, r => r.TimeUp.ToString())} | {(ponRun is null ? "—" : P(ponRun, r => $"{r.Wins}（{T(r.Turn)}）"))} | {M(lA)}{M(lB)}{M(lC)}{M(lF)} |");
             fellAll.Add($"  | {i} | {(fell.Count == 0 ? "—" : string.Join(" ／ ", fell.GroupBy(x => x.Item1).OrderByDescending(x => x.Count()).Take(5).Select(x => $"{x.Key} {100.0 * x.Count() / Math.Max(1, n):F0}%・{x.Average(y => (double)y.Item2):F1}T")))} |");
-            if (pick < 0 && i < InSpec && lA && lB && lC && lD && lE && lF) pick = i;
+            _ = lD; _ = lE; _ = InSpec;
+            if (i == Adopted && lA && lB && lC && lF) pick = i;
         }
         write("");
         write("  誰が何 T に倒れたか（ポンの写しの隊・満タンで守将・倒れた戦闘の割合と平均ターン）");

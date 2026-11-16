@@ -22,6 +22,8 @@ public partial class Map11Main
     private enum ClashMode { None, Encounter, Siege, Intercept, Result }
 
     internal const int OddsRuns = 20, OddsGood = 16, OddsEven = 8;
+    /// <summary>裏の 20 回のうち、この回数以上で倒れた味方の駒の顔に割れの印を付ける（第479期の続き・ポン 2026-11-17・敵の側は付けない・文なし）。</summary>
+    internal const int RiskRuns = 10;
 
     private ClashMode _clashMode;
     private Control? _clash;
@@ -30,7 +32,15 @@ public partial class Map11Main
     private ClashLead _clashFoeLead = null!, _clashOwnLead = null!;
     private Label _clashOdds = null!, _clashGold = null!, _clashBand = null!, _clashTag = null!;
     private Button _clashA = null!, _clashB = null!, _clashC = null!, _clashPrev = null!, _clashNext = null!;
-    private MeshInstance3D? _ringOwn, _ringFoe;
+    private MeshInstance3D? _ringOwn, _ringFoe, _ringBack;
+    private volatile int[]? _oddsFell;
+    private bool _backPanned;
+    /// <summary>「引いて待つ」「引き返す」に触れているあいだ光らせている、引く先のマス（-1 ＝ 光らせていない・検査と遊ぶ口が読む）。</summary>
+    internal int ClashBackCell { get; private set; } = -1;
+    /// <summary>遊ぶ口 ／ 検査が「触れている」ことにする口（本物のマウスが無い頭なしの検査のため・見た目だけ）。</summary>
+    internal bool ClashBackHover;
+    internal int ClashRiskCount => _clashOwn.RiskCount;
+    internal Rect2 ClashBackRect => _ringBack is { Visible: true } r ? ScreenBox(r.GlobalPosition, Vector3.Right * 2.6f, Vector3.Back * 2.6f) : default;
     private int _clashSquad = -1;
     private Map11State.Node? _clashNode;
     private readonly List<int> _clashPicks = new();
@@ -192,12 +202,18 @@ public partial class Map11Main
         System.Threading.Tasks.Task.Run(() =>
         {
             int wins = 0;
+            var fell = new int[9];
             try
             {
                 for (int k = 0; k < OddsRuns; k++)
-                    if (BattleEngine.Run(ownCopy.Select(Map11State.CloneForOdds).ToList(), foeCopy.Select(Map11State.CloneForOdds).ToList(), 7919 * k + 13, verbose: false).PlayerWon) wins++;
+                {
+                    var mine = ownCopy.Select(Map11State.CloneForOdds).ToList();
+                    if (BattleEngine.Run(mine, foeCopy.Select(Map11State.CloneForOdds).ToList(), 7919 * k + 13, verbose: false).PlayerWon) wins++;
+                    foreach (UnitState u in mine) if (!u.IsAlive && u.Slot >= 0 && u.Slot < fell.Length) fell[u.Slot]++;   // 戦闘の終わりに倒れていた駒を数えるだけ
+                }
             }
             catch (Exception) { wins = -1; }
+            _oddsFell = fell;
             _oddsWins = wins;
             _oddsToken = token;
         });
@@ -317,6 +333,32 @@ public partial class Map11Main
         // 輪は当たる前だけ（結果の帯のあいだは出さない——抜いた敵の輪が隊の足元に残って見えた）。
         if (_ringOwn is not null) _ringOwn.Visible = shown && _clashMode != ClashMode.Result;
         if (_ringFoe is not null) _ringFoe.Visible = shown && _clashMode != ClashMode.Result;
+        // 「引いて待つ」「引き返す」に触れているあいだ、引く先のマスを盤の上で光らせる（文は足さない）。
+        int backCell = -1;
+        if (shown && _clashSquad >= 0 && _clashB.Visible && _clashMode is ClashMode.Siege or ClashMode.Encounter && (_clashB.IsHovered() || ClashBackHover))
+            backCell = St.RetreatCellOf(_clashSquad, siege: _clashMode == ClashMode.Siege);
+        if (!shown) ClashBackHover = false;
+        ClashBackCell = backCell;
+        if (backCell >= 0 && _map3d is not null)
+        {
+            _ringBack ??= ClashRing(Color.FromHtml("#ffe27a"));
+            float beat = 1.25f + 0.16f * Mathf.Sin(_clock3d * 7f);
+            _ringBack.GlobalPosition = PosOf(backCell) + new Vector3(0, 0.42f, 0);
+            _ringBack.Scale = new Vector3(beat, 0.5f, beat);
+        }
+        if (_ringBack is not null) _ringBack.Visible = backCell >= 0;
+        // 引く先が画面の上 2／3 の外なら、隊と引く先の真ん中へ視点を寄せる（触れているあいだだけ・離したら元の 2 者へ戻す）。
+        if (backCell >= 0 && !_backPanned && _map3d is not null)
+        {
+            Vector2 v = GetViewport().GetVisibleRect().Size;
+            Vector2 on = _camera.UnprojectPosition(PosOf(backCell));
+            if (!new Rect2(40, 40, v.X - 80, v.Y * 2f / 3f - 80).HasPoint(on))
+            {
+                _cam3d!.FocusOn((PosOf(backCell) + ClashPos(null, _clashSquad)) / 2, snap: false);
+                _backPanned = true;
+            }
+        }
+        else if (backCell < 0 && _backPanned) { _backPanned = false; _clashFrames = 0; }
         if (!shown) return;
 
         if (_clashMode == ClashMode.Result)
@@ -334,7 +376,12 @@ public partial class Map11Main
                 _clashOdds.Text = text;
                 _clashOdds.AddThemeColorOverride("font_color", Color.FromHtml(color));
                 _clashOdds.TooltipText = $"同じ戦闘を {OddsRuns} 回回して {_oddsWins} 勝";
-                GD.Print($"MAP3D_CLASH_ODDS {St.Squads[_clashSquad].Label} 対 {_clashNode?.Def.Name} {_oddsWins}／{OddsRuns} {text}");
+                // 倒れやすい駒（20 回のうち 10 回以上で倒れた）の顔に割れの印。味方の側だけ。
+                int[] fell = _oddsFell ?? new int[9];
+                var risky = new HashSet<int>(Enumerable.Range(0, fell.Length).Where(i => fell[i] >= RiskRuns));
+                _clashOwn.SetRisk(risky);
+                string names = string.Join("・", St.PeekSquad(_clashSquad).Where(u => u.IsAlive && risky.Contains(u.Slot)).OrderBy(u => u.Slot).Select(u => $"{u.Def.Name}（{fell[u.Slot]}／{OddsRuns}）"));
+                GD.Print($"MAP3D_CLASH_ODDS {St.Squads[_clashSquad].Label} 対 {_clashNode?.Def.Name} {_oddsWins}／{OddsRuns} {text} 割れの印: {(names.Length > 0 ? names : "—")}");
             }
         }
 
@@ -403,6 +450,8 @@ public partial class ClashBoard : Control
     private readonly Color _tint;
     private List<Seat> _seats = new();
     private List<Map11Relations.Link> _links = new();
+    private HashSet<int> _risk = new();
+    private readonly Control _marks = new() { MouseFilter = MouseFilterEnum.Ignore };
     private readonly List<UnitFaceIcon> _faces = new();
     private const float Face = 62, StepX = 104, StepY = 74;
 
@@ -416,6 +465,34 @@ public partial class ClashBoard : Control
         CustomMinimumSize = new Vector2(StepX * 2 + Face + 34, StepY * 2 + Face + 40);
         SizeFlagsVertical = SizeFlags.ShrinkCenter;
         MouseFilter = MouseFilterEnum.Ignore;
+        _marks.SetAnchorsPreset(LayoutPreset.FullRect);
+        _marks.Draw += DrawMarks;
+        AddChild(_marks);
+    }
+
+    internal int RiskCount => _risk.Count(slot => _seats.Any(s => s.Slot == slot && s.Alive));
+
+    /// <summary>倒れやすい席（割れの印を付ける席）。顔の上に描く。</summary>
+    internal void SetRisk(HashSet<int> slots)
+    {
+        _risk = slots;
+        _marks.QueueRedraw();
+    }
+
+    /// <summary>割れの印（顔の右上・暗い丸に白い割れ目）。文は出さない。</summary>
+    private void DrawMarks()
+    {
+        foreach (Seat s in _seats)
+        {
+            if (!s.Alive || !_risk.Contains(s.Slot)) continue;
+            Vector2 c = Centre(s.Slot) + new Vector2(Face / 2 - 8, -Face / 2 + 8);
+            _marks.DrawCircle(c, 13, new Color(0.10f, 0.03f, 0.03f, 0.95f));
+            _marks.DrawArc(c, 13, 0, Mathf.Tau, 24, Color.FromHtml("#ff6b5e"), 2f, true);
+            var crack = new[] { c + new Vector2(2, -10), c + new Vector2(-3, -3), c + new Vector2(3, 0), c + new Vector2(-2, 10) };
+            _marks.DrawPolyline(crack, Colors.White, 2.5f, true);
+            _marks.DrawLine(c + new Vector2(-3, -3), c + new Vector2(-8, -1), Colors.White, 1.5f, true);
+            _marks.DrawLine(c + new Vector2(3, 0), c + new Vector2(8, 3), Colors.White, 1.5f, true);
+        }
     }
 
     internal int SeatCount => _seats.Count;
@@ -433,6 +510,7 @@ public partial class ClashBoard : Control
     {
         _seats = seats;
         _links = links ?? new List<Map11Relations.Link>();
+        _risk = new HashSet<int>();
         foreach (UnitFaceIcon f in _faces) { RemoveChild(f); f.QueueFree(); }
         _faces.Clear();
         foreach (Seat s in seats)
@@ -443,8 +521,10 @@ public partial class ClashBoard : Control
             AddChild(face);
             _faces.Add(face);
         }
+        MoveChild(_marks, -1);   // 印は顔の上
         Place();
         QueueRedraw();
+        _marks.QueueRedraw();
     }
 
     private void Place()
@@ -465,8 +545,10 @@ public partial class ClashBoard : Control
         {
             Vector2 c = Centre(slot);
             var tile = new Rect2(c - new Vector2(Face / 2 + 7, Face / 2 + 7), new Vector2(Face + 14, Face + 26));
-            DrawRect(tile, new Color(_tint.R * 0.22f, _tint.G * 0.22f, _tint.B * 0.22f, 0.85f));
-            DrawRect(tile, new Color(_tint.R, _tint.G, _tint.B, 0.45f), false, 1.5f);
+            // 空の席は薄い床だけ（詰めない——席の位置は意味があるので動かさない・ポン 2026-11-17）。
+            bool empty = _seats.All(s => s.Slot != slot);
+            DrawRect(tile, new Color(_tint.R * 0.22f, _tint.G * 0.22f, _tint.B * 0.22f, empty ? 0.22f : 0.85f));
+            DrawRect(tile, new Color(_tint.R, _tint.G, _tint.B, empty ? 0.14f : 0.45f), false, empty ? 1f : 1.5f);
         }
         // 隣どうしの関係の線（得 ＝ 緑・損 ＝ 赤・両方 ＝ 金——今の編成の画面と同じ色）。条件つきは細く。
         foreach (Map11Relations.Link l in _links)

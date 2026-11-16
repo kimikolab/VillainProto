@@ -2023,6 +2023,7 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
         # (c) V461〜V478・単発は今のまま。測りつき（約 30 秒）: 守将 ／ 本陣の守りの候補（指示書の 10 個 ＋ 参考 9 個）× ポンの写しの隊（満タン ／ 守りを抜いた直後）と通し（組 B・引く ／ 続ける器具 × 100 seed）・線 A〜F。
         # `--chapter1-keep-quick` は門だけ。報告は `design/PHASE479_LESS_WINDOWS.md`
     Godot_console.exe --path DemoApp res://Map11Main.tscn -- --map3d --chapter1-rule=V479 --map-chapter=7 "--map3d-play=p1|p2|p3,<写しの置き場>" ["--map3d-end-shot=<置き場>"]
+        # 第479期の続き: `p1r|p2r|p3r` は勝ち目の印を読む遊び方（劣勢なら引き返す ／ 引いて待つ・期限の 3 刻前からは戦う）。`MAP3D_PLAY decline`・`back-hint` の行と `declines=`。
         # **第479期**: 遊ぶ口の `MAP3D_PLAY_COMPLETE` の行に `covers=`（時計を止めて盤を隠す窓の数・頭の札と結果は数えない）・`sides=`（横の札）・`says=`（セリフ）・`rest_clicks=`（隊の札の上の「休む」）。
         # `--map3d-end-shot=` は 3D の作戦マップから来た戦闘の終わりの札を、勝ち ／ 負け 1 枚ずつ写す。セリフは `MAP3D_SAY` の行。`--map3d-layout-smoke` は 引いた視点 ／ セリフ ／ 横の札 の 3 場面を足した
     Godot_console.exe --path DemoApp res://Map11Main.tscn -- --map3d --chapter1-rule=V477 --map-chapter=7 "--map3d-play=p1|p2|p3,<写しの置き場>"

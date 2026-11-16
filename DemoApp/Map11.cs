@@ -1856,6 +1856,28 @@ public sealed class Map11State
         return true;
     }
 
+    /// <summary>
+    /// 引く先のマス（第479期の続き・<b>読むだけ</b>——台の「引いて待つ」「引き返す」に触れたとき、画面が盤の上で光らせる）。引けなければ -1。
+    /// <see cref="SiegeRetreat"/> ／ <see cref="EncounterRetreat"/> と同じ決め方（門 `--chapter1-keep-smoke` (e) が実際に引いた先と比べる）。
+    /// </summary>
+    public int RetreatCellOf(int squadIndex, bool siege)
+    {
+        Squad s = Squads[squadIndex];
+        if (s.Lost || s.Units is null || s.Pos == Graph.Home) return -1;
+        int road = s.Road >= 0 && s.Road < Stage.LaneCount ? s.Road : 0;
+        if (siege)
+        {
+            if (!Stage.Siege.On) return -1;
+            if (s.Pos != Graph.Portal) return Stage.Siege.Stacks ? Graph.TowardHome(road, s.Pos) : -1;
+            int back = Graph.Lanes[road][^1];
+            if (Stage.SiegeRetreatToOutpost && Graph.Lanes[road].Where(c => HeldOutposts.Contains(c)).Select(c => (int?)c).LastOrDefault() is { } held) back = held;
+            return back;
+        }
+        if (!Stage.EncounterRetreat) return -1;
+        List<int> path = Graph.Path(s.Pos, s.Via, Graph.Home, -1);
+        return path.Count < 2 ? -1 : path[1];
+    }
+
     /// <summary>遭遇で引き返した回数（第479期・測るためだけ）。</summary>
     public int EncounterRetreats { get; private set; }
 
