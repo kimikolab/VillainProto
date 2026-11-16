@@ -183,7 +183,7 @@ public partial class Map11Main
         _resultBody.Text = _resultOpen ? _resultFull : string.Join(Nl, lines);
         _resultMore!.Text = _resultOpen ? "詳細を閉じる" : "詳細";
         // 窓は中身の分だけ（詳細を開いたら今までの高さ）。
-        if (_resultOverlay.GetChild(0) is Control panel) { panel.OffsetTop = _resultOpen ? -300 : -150; panel.OffsetBottom = _resultOpen ? 300 : 150; }
+        if (_resultOverlay.GetChild(0) is Control panel) { panel.OffsetTop = _resultOpen ? 90 : 250; panel.OffsetBottom = _resultOpen ? -90 : -250; }   // 箱は上下の端からの余白で決まる（`BuildResultOverlay`）——中央からの高さを入れて画面の外へはみ出していた（Codex の試遊 2026-11-17）
         // 失った駒の顔（詳細を開いたら、終わりの隊の並びに戻す）。
         if (_resultOpen) { RefreshResultFaces(); return; }
         foreach (Node child in _resultFaces.GetChildren()) { _resultFaces.RemoveChild(child); child.QueueFree(); }
