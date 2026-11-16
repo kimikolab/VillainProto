@@ -18,6 +18,8 @@ public partial class Map11Main
     private Map3DHud? _hud3d;
     /// <summary>今の窓（2D の UI の層）の拡大率。3D の層は基準が 1920×1080 なので、1440×900 用の窓を同じ見かけの大きさに拡げる。</summary>
     private float _uiScale = 1f;
+    /// <summary>拠点が空になる行き先を選ぼうとしているか（第479期・名札の点滅と敵の点線の太さだけが読む）。</summary>
+    private bool _homeWarn3d;
     private ColorRect? _headerBand;
     private readonly Dictionary<Marker, Map3DPiece> _pieces3d = new();
     private readonly Dictionary<Map3DPiece, int> _pieceCell = new();
@@ -83,8 +85,16 @@ public partial class Map11Main
         {
             // 第478期 §4-2: 中間拠点ごとの見返りを持つ盤では、中間拠点の台を大きく・八角に・旗つきにする（ほかの盤は今のまま）。
             bool flagged = c.Kind == MapGraph.Kind.Outpost && St.Stage.OutpostRewards is not null;
-            float radius = c.Kind switch { MapGraph.Kind.Home => 2.5f, MapGraph.Kind.Portal => 2.3f, MapGraph.Kind.Outpost => flagged ? 2.25f : 1.9f, _ => 1.55f };
-            var mark = new Map3DCellMark(radius, flagged) { Position = PosOf(c.Id) };
+            // 第479期 §5: 拠点 3 種（味方の拠点・中間拠点・敵の拠点）は高い旗竿と大きな幟・地面の色の輪。中間拠点の台は 1.5 倍・ふつうのマスは小さく。
+            bool lean = St.Stage.OutpostRewards is not null || (Chapter1.Active && Chapter1.Rule.Lean);
+            float radius = c.Kind switch { MapGraph.Kind.Home => 2.5f, MapGraph.Kind.Portal => 2.3f, MapGraph.Kind.Outpost => flagged ? 3.3f : 1.9f, _ => lean ? 1.25f : 1.55f };
+            var kind = !lean ? Map3DCellMark.Base.None : c.Kind switch
+            {
+                MapGraph.Kind.Home => Map3DCellMark.Base.Home, MapGraph.Kind.Portal => Map3DCellMark.Base.Portal,
+                MapGraph.Kind.Outpost => Map3DCellMark.Base.Outpost, _ => Map3DCellMark.Base.None,
+            };
+            var reward = flagged && St.RewardAt(c.Id) is { } rw ? (rw.Relic ? Map3DCellMark.Reward.Relic : rw.Gold > 0 ? Map3DCellMark.Reward.Gold : Map3DCellMark.Reward.None) : Map3DCellMark.Reward.None;
+            var mark = new Map3DCellMark(radius, flagged, kind, reward) { Position = PosOf(c.Id) };
             _map3d.AddChild(mark);
             _cellMarks3d[c.Id] = mark;
         }
@@ -114,6 +124,8 @@ public partial class Map11Main
         _hud3d = new Map3DHud { Name = "Map3DHud" };
         AddChild(_hud3d);
         _hud3d.SquadPressed += index => Select(index);
+        _hud3d.SquadAction += OnSquadAction3D;   // 第479期: 隊の札の上の小さなボタン（呼び戻す・強化・休む）
+        _hud3d.LeanText = true;
         _hud3d.DetailPressed += () => { _showSquadDetail = !_showSquadDetail; _showFoes = _showHistory = false; RefreshScreen(); };
         _hud3d.ReformPressed += ToggleReform;
         // まだ開けていない隊の枠: 今の編成の窓で開ける（拠点にいる隊の組み直しを開く）。
@@ -168,6 +180,9 @@ public partial class Map11Main
         _hud3d!.Plates.AddChild(plate);
         return plate;
     }
+
+    /// <summary>拠点の名札（味方の拠点・中間拠点・敵の拠点）の文字の大きさ（第479期 §5・引いた視点ほど大きく・21〜28）。</summary>
+    internal int BasePlateFont3D() => Mathf.Clamp(Mathf.RoundToInt(21f * Mathf.Max(1f, _cam3d?.Zoom ?? 1f) * 1.02f), 21, 28);
 
     /// <summary>今の窓の層を画面の高さに合わせて拡げる（高さ 900 の作りを保つ）。</summary>
     private void FitOldUi()
@@ -313,13 +328,16 @@ public partial class Map11Main
             : !St.Portal.On ? $"目標　敵部隊をすべて抜く（{St.ClearedCount} / {St.Stage.TotalNodes}）"
             : St.Won ? $"目標　{Map11.PortalName}を制圧した"   // 第476期: 制圧で勝つ盤で、勝った後に「残る敵部隊を倒す」と出ていた
             : St.Captured ? $"目標　残る敵部隊を倒す（あと {left}）"
+            // 第479期: 門のある盤は、門が開くまで「中間拠点を取る」・開いたら「砦を制圧」（窓は出さない——目標の札が変わる）。
+            : St.Stage.PortalGate > 0 && Chapter1.Active && Chapter1.Rule.Lean ? (St.GateOpen ? "目標　砦を制圧する" : $"目標　中間拠点を取る（{St.HeldOutposts.Count}／{St.Stage.PortalGate}）")
             : $"目標　{Map11.PortalName}を制圧する　・　残る敵部隊 {left}";
         _hud3d.SetHeader(title, turn, goal);
         // 第477期 §3-a: 金を使える場所（拠点・取った中間拠点）に隊がいて、倒れた駒を呼び戻せるか金が 8 以上あるとき、隊の札と金の札に印（新しい 1-2 の盤だけ）。
         bool teach = St.Stage.OutpostRewards is not null && St.Stage.Gold.On && !St.Finished;
         bool Spendable(Map11State.Squad q) => teach && !q.Lost && q.Units is { Count: > 0 } && St.CanReform(q.Index)
             && ((St.Stage.Gold.Revive > 0 && St.FallenUnits.Count > 0 && St.Gold >= St.Stage.Gold.Revive) || St.Gold >= 8);
-        bool idleGold = GoldIdle3D();   // 第478期 §4-3: 金が貯まっているのに 2 刻使っていない
+        // 第479期: 金の札は光るだけ（金が 20 以上・使える場所に隊がいる）。文は足さない。
+        bool idleGold = teach && St.Gold >= Map11Lines.GoldLine && St.Squads.Any(q => CardActions(q) is { Revive: true } or { Enhance: true });
         _hud3d.SetGold(St.Stage.Gold.On ? St.Gold : null, St.Squads.Any(Spendable), idleGold);
         _hud3d.SetWindows(_showFoes, _showHistory);
 
@@ -332,8 +350,11 @@ public partial class Map11Main
                 : s.Units is { } units ? units.Where(u => u.IsAlive).OrderBy(u => u.Slot).Select(u => u.Def).ToList()
                 : s.Def.F.Occupied().OrderBy(u => u.Slot).Select(u => u.Def).ToList();
             string where = s.Pos == St.Graph.Home ? "拠点" : s.Pos == St.Graph.Portal ? Map11.PortalName : PlaceName(s.Pos);
-            cards.Add(new Map3DSquadCardInfo(s.Index, s.Label + (Spendable(s) ? " ◆" : ""), faces, faces.Count, faces.Count == 0 ? 0 : SquadHpPercent(s),
-                (St.Time.On ? "→ " + OrderText(s.Index) : where) + (Spendable(s) ? "　◆ 金を使える" : ""), s.Index == _selected && _guideSquadChosen, s.Lost));
+            // 第479期: 金の使いどころは札の上の小さなボタン（文の印「◆ 金を使える」はやめた）。失われた隊は 1 行「全滅　砦の守将 残り 1」。
+            var act = CardActions(s);
+            cards.Add(new Map3DSquadCardInfo(s.Index, s.Label, faces, faces.Count, faces.Count == 0 ? 0 : SquadHpPercent(s),
+                St.Time.On ? "→ " + OrderText(s.Index) : where, s.Index == _selected && _guideSquadChosen, s.Lost,
+                act.Revive, act.Enhance, act.Resting, s.Lost ? LostLine(s) : ""));
         }
         _hud3d.SetSquads(cards);
         bool can = _selected >= 0 && _selected < St.Squads.Length && St.CanReform(_selected) && !St.Finished && !Map11Session.TurnRunning;
@@ -363,7 +384,7 @@ public partial class Map11Main
         // 第476期（自分で遊んで見つけた）: 行き先に触れているあいだは、出来事の 1 行より案内の 1 行（経路上の敵・「峠の関: 硬い・賞金 14」・拠点が空になる）を先に出す
         // ——編成を終えた直後の 3 秒は「編成を終えました」が案内を隠していた。
         bool reading = _hoverDestination is { Node.Disabled: false } && _guideSquadChosen && !St.Finished && !Map11Session.TurnRunning;
-        _hud3d.SetToast(reading ? "" : _toast.Text, _toast.GetThemeColor("font_color"));
+        _hud3d.SetToast(reading ? "" : ShortToast(_toast.Text), _toast.GetThemeColor("font_color"));   // 第479期: 出来事の 1 行は 20 字まで
         bool on = Map11Clock.On;
         string state = Map11Session.TurnRunning ? "戦闘中" : !on ? "出来事が起きるまで進む" : Map11Clock.Running ? "▶ 動いています" : "⏸ 止まっています";
         _hud3d.SetClock(on && Map11Clock.Running ? "⏸ 止める" : "▶ 刻を進める", _run.Disabled, on && St.Time.On, Map11Clock.Fast,
@@ -375,8 +396,12 @@ public partial class Map11Main
         bool chosen = _guideSquadChosen && !sel.Lost && !St.Finished;
         Dest now = Map11Session.Destinations[_selected];
         // 第476期（不具合 4）: 窓（遭遇・迎撃・結果・確かめ・連戦・頭の札）が出ているあいだは「あと n」を出さない（窓の上に透けて出ていた）。
-        bool modal = _encounterOverlay.Visible || _interceptOverlay.Visible || _resultOverlay.Visible || _confirmOverlay.Visible || _siegeOverlay.Visible
-                     || _introOverlay is { Visible: true } || _investOverlay is { Visible: true } || NoticeShown;
+        // 第479期: 遭遇・迎撃・連戦は横の札になった（盤は見えたまま）——行き先の札・道の点線は出さないが、名札は出しておく。
+        bool modal = CoverShown || SideShown;
+        var sideRects = SideRects().ToList();
+        // 第479期: 拠点が空になる行き先（触れているマスか、今の行き先）なら、拠点の名札を赤く点滅させ、歩いてくる敵の点線を太くする（文は出さない）。
+        _homeWarn3d = !St.Finished && _guideSquadChosen && !sel.Lost && St.CanSend(_selected)
+                      && EmptiesHome(_selected, _hoverDestination is { Node.Disabled: false } hd ? hd.Dest : now);
         // 第476期（不具合 1・2）: 敵の拠点へは<b>最短の道の 1 つだけ</b>を、本陣の大きな台に出す（今の行き先が敵の拠点ならそれ）。
         // 道の途中の小さな丸（経路ごとの入口）はマスに見えないよう隠す——回り道で入りたいときは、その道のマスを先に選ぶ。
         DestButton? portalPick = null;
@@ -464,7 +489,9 @@ public partial class Map11Main
         if (_homePlate3d is not null)
         {
             string head = sheet?.HomeName is { Length: > 0 } hn ? hn + "\n" : "";
-            SetPlate(_homePlate3d, head + _homeLabel.Text, St.HomeLost ? UiKit.Hurt : PlayerColor,
+            bool blink = _homeWarn3d && Mathf.PosMod(_clock3d, 0.7f) < 0.35f;
+            _homePlate3d.SelfModulate = blink ? new Color(1.9f, 0.55f, 0.5f) : Colors.White;
+            SetPlate(_homePlate3d, head + _homeLabel.Text, St.HomeLost || _homeWarn3d ? UiKit.Hurt : PlayerColor,
                 (sheet?.Fort ?? BasePos) + new Vector3(0, 9.8f, 0));
         }
         if (_portalPlate3d is not null && _portalMarker is not null)
@@ -475,23 +502,31 @@ public partial class Map11Main
                 (sheet?.Camp ?? PortalPos) + new Vector3(0, 8.4f, 0));
         }
 
+        // 第479期: 横の札の下に入る名札は出さない。
+        if (_portalPlate3d is { Visible: true } pp && sideRects.Any(r => r.Intersects(pp.GetGlobalRect()))) pp.Visible = false;
+        if (_homePlate3d is { Visible: true } hp && sideRects.Any(r => r.Intersects(hp.GetGlobalRect()))) hp.Visible = false;
+        // 第479期 §5: 味方の拠点 ＝ 青緑 ／ 敵の拠点 ＝ 赤（制圧したら青緑）。引いた視点では拠点の名札を大きくする。
+        if (_cellMarks3d.TryGetValue(St.Graph.Home, out Map3DCellMark? homeMark)) homeMark.SetBanner(St.HomeLost ? Map3DCellMark.Owner.Enemy : Map3DCellMark.Owner.Ally);
+        if (St.Portal.On && _cellMarks3d.TryGetValue(St.Graph.Portal, out Map3DCellMark? portalMark)) portalMark.SetBanner(St.Captured ? Map3DCellMark.Owner.Ally : Map3DCellMark.Owner.Enemy);
+        int plateFont = BasePlateFont3D();
+        foreach (Label? big in new[] { _homePlate3d, _portalPlate3d }.Concat(_outpostPlates3d.Values))
+            if (big is not null && big.GetThemeFontSize("font_size") != plateFont) { big.AddThemeFontSizeOverride("font_size", plateFont); big.ResetSize(); }
         foreach (var (cell, plate) in _outpostPlates3d)
         {
             bool mine = St.HeldOutposts.Contains(cell);
             if (_cellMarks3d.TryGetValue(cell, out Map3DCellMark? flag)) flag.SetFlag(mine);
-            plate.Visible = !modal;
+            plate.Visible = !CoverShown;
             string text = _outpostMarks.First(m => m.Cell == cell).Name.Text;
-            SetPlate(plate, "◆ " + text, mine ? PlayerColor : EnemyColor, PosOf(cell) + new Vector3(0, 6.6f, 0));
+            SetPlate(plate, "◆ " + text, mine ? PlayerColor : Color.FromHtml("#9aa0a6"), PosOf(cell) + new Vector3(0, 6.6f, 0));   // 第479期: 取っていなければ灰
             // 遊ぶ UI（隊の札・刻を進める）の下に入った名札は出さない（失われた隊の薄い札の下に透けて見えた）。
-            if (plate.Visible && _hud3d.Blocks().Any(block => block.Intersects(plate.GetGlobalRect()))) plate.Visible = false;
+            if (plate.Visible && (_hud3d.Blocks().Any(block => block.Intersects(plate.GetGlobalRect())) || sideRects.Any(r => r.Intersects(plate.GetGlobalRect())))) plate.Visible = false;
         }
-        ProcessNotices3D(modal);
+        ProcessLines3D();   // 第479期: 出来事の窓（第478期）はやめた——説明は顔つきの 1 行で
 
         // ---- いま何をすればよいかの 1 行（左下・隊の札の上） ----
         string hint = St.Finished || Map11Session.TurnRunning ? ""
-            : GoldIdle3D() && !_reform && _hoverDestination is null ? "金が貯まっています（強化・呼び戻し）——拠点か取った中間拠点にいる隊の「編成・呼ぶ・強化」で使える"
             : !_guideSquadChosen ? "隊の札か、盤の上の駒を押して隊を選ぶ"
-            : !St.CanSend(_selected) ? (St.CanReform(_selected) ? "この隊は空席——「編成・呼ぶ・強化」で駒を配る" : "")
+            : !St.CanSend(_selected) ? (St.CanReform(_selected) ? "空席——編成で駒を配る" : "")
             : reading ? _orderHint.Text
             : _hoverDestination is null && !_guideDestinationChosen ? "光っているマスを押すと行き先が決まる"
             : _orderHint.Text;
@@ -542,6 +577,7 @@ public partial class Map11Main
         foreach (var (at, along) in _map3d.Bridges)
             _bridgeRects3d.Add(("橋", ScreenBox(at + Vector3.Up * 0.2f, along * 2.7f, along.Cross(Vector3.Up) * 1.25f, 0.6f)));
         foreach (Rect2 block in _hud3d.Blocks()) _hudRects3d.Add(("遊ぶ UI", block));
+        foreach (Rect2 side in SideRects()) _hudRects3d.Add(("横の札", side));   // 第479期: 名札は横の札（遭遇・連戦・迎撃）を避ける
         if (_homePlate3d is { Visible: true }) _signRects3d.Add(("名札:拠点", _homePlate3d.GetGlobalRect()));
         if (_portalPlate3d is { Visible: true }) _signRects3d.Add(("名札:敵の拠点", _portalPlate3d.GetGlobalRect()));
         foreach (var (cell, plate) in _outpostPlates3d)
@@ -908,11 +944,11 @@ public partial class Map11Main
         try
         {
             await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
-            _noticesOff = true;   // 第478期: 検査の場面は器具が進めるので、出来事の窓は出さない
+            _linesOff = true;   // 第479期: 検査の場面は器具が進めるので、セリフは検査が自分で出す
             SceneStart3D();
             await Settle();
             Check("開始時");
-            if (_layout3d!.Pan is not null) { await Wide(); goto done; }   // 第477期: 1 画面に入らない盤（1 章の 1-2）は別の 4 場面
+            if (_layout3d!.Pan is not null) { await Wide(); await LeanScenes(); goto done; }   // 第477期: 1 画面に入らない盤（1 章の 1-2）は別の 4 場面
             await SceneAdvance3D(camp: false);
             await Settle();
             Check("動いた後");
@@ -927,6 +963,7 @@ public partial class Map11Main
                 Check("南の道");
                 if (!south) fails.Add("南の道: 主力が南の道の 2 マス目に着けなかった");
             }
+            await LeanScenes();
         }
         catch (Exception e) { fails.Add("例外:" + e.Message); GD.PrintErr(e.ToString()); }
         done:
@@ -978,6 +1015,96 @@ public partial class Map11Main
             _cam3d.FocusOn(PosOf(g.Portal) + new Vector3(12, 0, 0), snap: true);
             await Settle();
             Check("画面を右へ寄せた所");
+        }
+
+        // 第479期 §7: 引いた視点で拠点の名札が読める大きさ ／ セリフの吹き出しが名札・札と重ならない ／ 横の札が出ているとき盤の中央 60% が隠れていない。
+        async System.Threading.Tasks.Task LeanScenes()
+        {
+            Vector2 view = GetViewport().GetVisibleRect().Size;
+            // ---- 引いた視点 ----
+            float zoom0 = _cam3d!.Zoom;
+            _cam3d.SetZoom(_cam3d.ZoomFar);
+            await Settle();
+            int font = BasePlateFont3D();
+            var bases = new[] { ("拠点", _homePlate3d), ("敵の拠点", _portalPlate3d) }.Concat(_outpostPlates3d.Select(kv => (PlaceName(kv.Key), (Label?)kv.Value)))
+                .Where(x => x.Item2 is { Visible: true }).ToList();
+            int smallest = bases.Count == 0 ? 0 : bases.Min(x => x.Item2!.GetThemeFontSize("font_size"));
+            float lowest = bases.Count == 0 ? 0 : bases.Min(x => x.Item2!.Size.Y);
+            GD.Print($"MAP3D_LAYOUT 引いた視点 引き具合 {_cam3d.Zoom:0.##}（ふだん {zoom0:0.##}）拠点の名札の文字 {smallest}px（決まり {font}px・ふだん 21px）札の高さ {lowest:F0}px 出ている札 {string.Join("・", bases.Select(x => x.Item1))}");
+            if (St.Stage.OutpostRewards is not null && (bases.Count == 0 || smallest < 26 || lowest < 30)) fails.Add($"引いた視点: 拠点の名札が小さい（文字 {smallest}px・高さ {lowest:F0}px）");
+            _cam3d.SetZoom(zoom0);
+            await Settle();
+
+            // ---- セリフの吹き出し ----
+            if (Map11Lines.SpeakerOf(St, "ガン") is { } who)
+            {
+                _hud3d!.Say(who, $"「{Map11Lines.All.OrderByDescending(l => l.Text.Length).First().Text}」", 30f);
+                await Settle();
+                Check("セリフ");
+                Rect2 say = _hud3d.SayRect;
+                if (!new Rect2(0, 0, view.X, view.Y).Encloses(say)) fails.Add("セリフ: 吹き出しが画面からはみ出す");
+                foreach (Rect2 block in _hud3d.Blocks())
+                    if (!block.IsEqualApprox(say) && Overlap(block, say) > 4) fails.Add("セリフ: 吹き出しが遊ぶ UI のほかの札に重なる");
+                foreach (var (name, rect) in _signRects3d.Concat(_plateRects3d).Concat(_chipRects3d))
+                    if (Overlap(rect, say) > 4) fails.Add($"セリフ: 吹き出しが {name} に重なる");
+                GD.Print($"MAP3D_LAYOUT セリフ 吹き出し {say.Position.X:F0},{say.Position.Y:F0} {say.Size.X:F0}x{say.Size.Y:F0}「{_hud3d.SayText}」");
+                _hud3d.HideSay();
+            }
+
+            // ---- 横の札（遭遇）----
+            int main = Enumerable.Range(0, St.SquadCap).Where(i => !St.Squads[i].Lost && St.Squads[i].Units is { } us && us.Any(u => u.IsAlive))
+                .OrderByDescending(i => St.Squads[i].Units!.Count(u => u.IsAlive)).DefaultIfEmpty(-1).First();
+            bool met = false;
+            for (int turn = 0; turn < 6 && main >= 0 && !met && !St.Finished && St.Portal.On; turn++)
+            {
+                int lane = St.Squads[main].Road >= 0 && St.Squads[main].Road < St.Stage.LaneCount ? St.Squads[main].Road : 0;
+                Map11Session.SetDestination(main, St.GateOpen ? Dest.Portal(St.Graph, lane) : Dest.Deep(St.Graph, lane));
+                if (!Map11Session.TurnRunning) Map11Session.BeginTurn();
+                for (int step = 0; step < 30 && Map11Session.TurnRunning && !met; step++)
+                {
+                    Map11Session.StepKind kind = Map11Session.StepTurn();
+                    if (kind == Map11Session.StepKind.Battle && Map11Session.PendingSquad == main) { met = true; break; }
+                    if (kind == Map11Session.StepKind.Battle)
+                    {
+                        foreach (UnitState u in CampaignSession.CarriedEnemies!) u.Hp = 0;
+                        CampaignSession.ClearCarriedBattle();
+                        Map11Session.CompleteBattle(true);
+                    }
+                    else if (kind == Map11Session.StepKind.Intercept)
+                    {
+                        if (!(St.NextInterceptor(Map11Session.InterceptNode!) is var j && j >= 0 && Map11Session.ChooseInterceptor(j))) break;
+                        foreach (UnitState u in CampaignSession.CarriedEnemies!) u.Hp = 0;
+                        CampaignSession.ClearCarriedBattle();
+                        Map11Session.CompleteBattle(true);
+                    }
+                    else if (kind == Map11Session.StepKind.Siege) { if (!Map11Session.ContinueSiege()) break; met = Map11Session.PendingSquad == main; }
+                    else break;
+                }
+            }
+            if (!met) { fails.Add("横の札: 遭遇の札を出せなかった（主力が敵に当たらなかった）"); return; }
+            Refresh();
+            ShowEncounter();
+            _cam3d.FocusOn(PosOf(St.Squads[main].Pos), snap: true);
+            await Settle();
+            var sides = SideRects().ToList();
+            var middle = new Rect2(view.X * 0.2f, view.Y * 0.2f, view.X * 0.6f, view.Y * 0.6f);
+            float hidden = sides.Sum(r => Overlap(r, middle)) / (middle.Size.X * middle.Size.Y);
+            bool dim = _encounterOverlay is ColorRect { Color.A: > 0.01f };
+            GD.Print($"MAP3D_LAYOUT 横の札 {(sides.Count == 0 ? "出ていない" : $"{sides[0].Position.X:F0},{sides[0].Position.Y:F0} {sides[0].Size.X:F0}x{sides[0].Size.Y:F0}（画面の幅の {sides[0].Size.X / view.X * 100:F0}%）")} "
+                + $"盤の中央 60% のうち隠れている {hidden * 100:F1}% 暗幕 {(dim ? "あり" : "なし")} 盤を隠す窓 {(CoverShown ? "あり" : "なし")} 文「{_encounterTitle.Text}／{_encounterBody.Text}」");
+            if (sides.Count != 1) fails.Add("横の札: 遭遇の札が出ていない");
+            else
+            {
+                if (sides[0].Size.X > view.X * 0.27f) fails.Add($"横の札: 幅が画面の 1／4 を超える（{sides[0].Size.X / view.X * 100:F0}%）");
+                if (!new Rect2(0, 0, view.X, view.Y).Encloses(sides[0])) fails.Add("横の札: 画面からはみ出す");
+                foreach (Rect2 block in _hud3d!.Blocks()) if (Overlap(block, sides[0]) > 4) fails.Add("横の札: 遊ぶ UI に重なる");
+            }
+            if (hidden > 0.10f) fails.Add($"横の札: 盤の中央 60% の {hidden * 100:F1}% が隠れている（10% まで）");
+            if (dim || CoverShown) fails.Add("横の札: 暗幕 ／ 盤を隠す窓が出ている");
+            _encounterOverlay.Visible = false;
+            foreach (UnitState u in CampaignSession.CarriedEnemies!) u.Hp = 0;
+            CampaignSession.ClearCarriedBattle();
+            Map11Session.CompleteBattle(true);
         }
 
         async System.Threading.Tasks.Task Settle()

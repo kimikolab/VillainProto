@@ -1,4 +1,4 @@
-using Godot;
+﻿using Godot;
 using System;
 using System.Linq;
 
@@ -6,6 +6,8 @@ using System.Linq;
 public partial class MapStageIllustration : Control
 {
     public MapStage State { get; set; } = null!;
+    /// <summary>道・拠点・見返りの印だけを描く（第479期・敵部隊の名前と賞金は描かない）。</summary>
+    public bool Lean { get; set; }
     public override void _Ready() { MouseFilter = MouseFilterEnum.Ignore; Resized += QueueRedraw; }
     public override void _Draw()
     {
@@ -32,7 +34,29 @@ public partial class MapStageIllustration : Control
             else DrawCircle(p, cell.Kind == MapGraph.Kind.Outpost ? 6 : 3, color);
         }
         // 第476期 §2-1 ／ §2-2: 区画が自分の賞金を持つ盤（1 章の 1-1）は、敵部隊の名前と賞金（関だけ明るい金）・最初の湧きの刻を図に書く。大きい図だけ。
-        if (Size.Y >= 120 && State.Lanes.Any(l => l.Any(n => n.Gold >= 0)))
+        if (Lean && Size.Y >= 120)
+        {
+            Font f = ThemeDB.FallbackFont;
+            void Mark(Vector2 at, string text, Color color)
+            {
+                Vector2 box = f.GetStringSize(text, fontSize: 14);
+                Vector2 pos = new(Mathf.Clamp(at.X - box.X / 2, 6, Size.X - box.X - 6), Mathf.Clamp(at.Y, 18, Size.Y - 6));
+                DrawStringOutline(f, pos, text, fontSize: 14, size: 5, modulate: new Color(0.03f, 0.05f, 0.04f, 0.95f));
+                DrawString(f, pos, text, fontSize: 14, modulate: color);
+            }
+            for (int lane = 0; lane < graph.Lanes.Count; lane++)
+            {
+                int cell = graph.Lanes[lane].Where(c => graph.IsOutpost(c)).DefaultIfEmpty(-1).First();
+                if (cell < 0) continue;
+                Vector2 p = Point(cell);
+                DrawColoredPolygon(new[] { p + new Vector2(0, -10), p + new Vector2(10, 0), p + new Vector2(0, 10), p + new Vector2(-10, 0) }, Color.FromHtml("#f1c96b"));
+                string reward = State.OutpostRewards is { } rw && lane < rw.Count ? (rw[lane].Relic ? "　レリック" : rw[lane].Gold > 0 ? $"　金＋{rw[lane].Gold}" : "") : "";
+                Mark(p + new Vector2(0, p.Y < Size.Y / 2 ? -14 : 26), graph[cell].Name + reward, Color.FromHtml("#ffe9a8"));
+            }
+            Mark(Point(graph.Home) + new Vector2(0, -12), "拠点", UiKit.Heal);
+            if (graph.HasPortal) Mark(Point(graph.Portal) + new Vector2(0, -20), "砦", UiKit.Enemy);
+        }
+        else if (Size.Y >= 120 && State.Lanes.Any(l => l.Any(n => n.Gold >= 0)))
         {
             Font font = ThemeDB.FallbackFont;
             void Tag(Vector2 at, string text, Color color, int size = 13)

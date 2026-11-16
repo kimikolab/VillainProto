@@ -96,6 +96,9 @@ public partial class Map3DCamera : Node3D
         Camera.LookAt(focus, Vector3.Up);
     }
 
+    /// <summary>引き具合を決める（第479期・3D のレイアウトの検査が「引いた視点」を作る）。</summary>
+    internal void SetZoom(float zoom) { _zoom = _zoomTarget = Mathf.Clamp(zoom, ZoomNear, ZoomFar); Apply(); }
+
     internal void ResetView() { _zoom = _zoomTarget = 1f; _pan = Clamp(Vector2.Zero); _glide = null; Apply(); }
 
     private void Pan(Vector2 by)

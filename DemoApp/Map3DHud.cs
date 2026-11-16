@@ -12,8 +12,10 @@ using System.Linq;
 // まだ開けていない隊は小さなボタン 1 つに畳む。「いま何をすればよいか」の 1 行は上の真ん中（出来事の 1 行と同じ場所）へ移した。
 
 /// <summary>隊の札 1 枚に出す中身（使える隊だけ）。</summary>
+/// 第479期: <c>Revive</c> ／ <c>Enhance</c> ／ <c>Rest</c> は札の上に出す小さなボタン（金の使いどころ・休む）。<c>LostLine</c> は失われた隊の 1 行（「全滅　砦の守将 残り 1」）。
 internal readonly record struct Map3DSquadCardInfo(
-    int Index, string Name, IReadOnlyList<UnitDef> Faces, int Count, double HpPercent, string Order, bool Selected, bool Lost);
+    int Index, string Name, IReadOnlyList<UnitDef> Faces, int Count, double HpPercent, string Order, bool Selected, bool Lost,
+    bool Revive = false, bool Enhance = false, bool Rest = false, string LostLine = "");
 
 public partial class Map3DHud : CanvasLayer
 {
@@ -27,6 +29,8 @@ public partial class Map3DHud : CanvasLayer
     internal event Action<int>? SquadPressed;
     internal event Action? ReformPressed, DetailPressed, SlotsPressed, RunPressed, StepPressed, FoesPressed, HistoryPressed;
     internal event Action<bool>? SpeedPressed;
+    /// <summary>隊の札の上の小さなボタンが押された（隊の番号・0 ＝ 呼び戻す ／ 1 ＝ 強化 ／ 2 ＝ 休む）。</summary>
+    internal event Action<int, int>? SquadAction;
 
     private readonly Control _root = new() { MouseFilter = Control.MouseFilterEnum.Ignore };
     /// <summary>駒の名札と、マスの「あと n」を置く層（遊ぶ UI の下）。</summary>
@@ -45,6 +49,14 @@ public partial class Map3DHud : CanvasLayer
     private readonly HBoxContainer _left = new();
     private readonly HBoxContainer _cards = new();
     private readonly List<Map3DSquadCard> _squadCards = new();
+    /// <summary>隊の札の上に浮かせる小さなボタンの列（第479期・札 1 枚に 1 列・出すのは使えるものだけ）。</summary>
+    private readonly List<HBoxContainer> _squadActions = new();
+    private static readonly string[] ActionNames = { "呼び戻す", "強化", "休む" };
+    // セリフの吹き出し（第479期 §3・顔つきの 1 行・時計は止めない・押せば消える）。
+    private readonly PanelContainer _say = Panel(10);
+    private readonly UnitFaceIcon _sayFace = new() { CustomMinimumSize = new Vector2(76, 76), MouseFilter = Control.MouseFilterEnum.Ignore };
+    private readonly Label _sayName = Text("", 18, Muted), _sayText = Text("", 26, Ink, bold: true);
+    private float _sayLeft;
     private readonly Button _slots = Small("＋ 隊の枠"), _reform = Small("編成・呼ぶ・強化"), _detail = Small("配置を見る");
     private readonly PanelContainer _clock = Panel();
     private readonly Label _clockState = Text("", 20, Ink);
@@ -194,6 +206,22 @@ void fragment() {
         _detail.Pressed += () => DetailPressed?.Invoke();
         _slots.Pressed += () => SlotsPressed?.Invoke();
 
+        // ---- 左: セリフの吹き出し（左上の札の下）。出ていないあいだは場所を取らない ----
+        var sayRow = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+        sayRow.AddThemeConstantOverride("separation", 12);
+        sayRow.AddChild(_sayFace);
+        var sayCol = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore, Alignment = BoxContainer.AlignmentMode.Center };
+        sayCol.AddThemeConstantOverride("separation", 0);
+        sayCol.AddChild(_sayName); sayCol.AddChild(_sayText);
+        sayRow.AddChild(sayCol);
+        _say.AddChild(sayRow);
+        _say.AddThemeStyleboxOverride("panel", Box(new Color(0.09f, 0.085f, 0.06f, 0.94f), Gold, 2, 16, 10));
+        _say.MouseFilter = Control.MouseFilterEnum.Stop;
+        _say.MouseDefaultCursorShape = Control.CursorShape.PointingHand;
+        _say.GuiInput += e => { if (e is InputEventMouseButton { Pressed: true }) HideSay(); };
+        _say.Visible = false;
+        _root.AddChild(_say);
+
         // ---- 右下: 刻を進める ----
         var clockRow = new HBoxContainer();
         clockRow.AddThemeConstantOverride("separation", 10);
@@ -224,6 +252,46 @@ void fragment() {
         Pin(_clock, Control.LayoutPreset.BottomRight);
     }
 
+    /// <summary>顔つきの 1 行を出す（第479期・<paramref name="seconds"/> 秒で消える・押しても消える）。</summary>
+    internal void Say(UnitDef who, string text, float seconds)
+    {
+        _sayFace.SetUnit(who);
+        _sayName.Text = who.Name;
+        _sayText.Text = text;
+        _sayLeft = seconds;
+        _say.Visible = true;
+        _say.ResetSize();
+    }
+
+    internal void HideSay() { _say.Visible = false; _sayLeft = 0; }
+    internal bool SayShown => _say.Visible;
+    internal string SayText => _say.Visible ? _sayText.Text : "";
+    internal Rect2 SayRect => _say.GetGlobalRect();
+
+    public override void _Process(double delta)
+    {
+        // 吹き出しは左上の札のすぐ下。
+        if (_say.Visible)
+        {
+            _sayLeft -= (float)delta;
+            if (_sayLeft <= 0) { _say.Visible = false; }
+            else if (_root.GetChildCount() > 0 && _root.GetChild(0) is Control head)
+                _say.Position = new Vector2(Margin, head.GetGlobalRect().End.Y + 10);
+        }
+        // 隊の札の上の小さなボタンの列は、札の左上に合わせて浮かせる（下の UI の高さには数えない——出るのは使えるあいだだけ）。
+        for (int i = 0; i < _squadActions.Count; i++)
+        {
+            HBoxContainer row = _squadActions[i];
+            if (!row.Visible || i >= _squadCards.Count) continue;
+            Rect2 card = _squadCards[i].GetGlobalRect();
+            row.Position = new Vector2(card.Position.X, card.Position.Y - row.Size.Y - 6);
+        }
+    }
+
+    /// <summary>隊の札の上のボタンの四角（出ているものだけ・検査と遊ぶ口が読む）。</summary>
+    internal Rect2? ActionRect(int card, int kind)
+        => card < _squadActions.Count && _squadActions[card].Visible && _squadActions[card].GetChild(kind) is Button { Visible: true } b ? b.GetGlobalRect() : null;
+
     /// <summary>遊ぶ UI を出し入れする（今の窓＝編成の画面を開いているあいだは隠す）。</summary>
     internal void SetShown(bool shown) => Visible = shown;
 
@@ -232,6 +300,9 @@ void fragment() {
         _title.Text = title; _turn.Text = turn; _goal.Text = goal;
         _turn.Visible = turn.Length > 0; _goal.Visible = goal.Length > 0;
     }
+
+    /// <summary>文を足さない画面か（第479期・金の札の「◆ 使える」などを出さない）。`Map11Main` が決める。</summary>
+    internal bool LeanText { get; set; }
 
     /// <summary>金（金の無い盤では null ＝ 出さない）。</summary>
     private bool _goldNag;
@@ -251,7 +322,8 @@ void fragment() {
         _goldNag = nag && gold is not null;
         _goldPanel.Visible = gold is not null;
         // 第477期: 金を使える場所に隊がいて、使い道（呼び戻す・強化）があるときの印。
-        _gold.Text = gold is { } g ? $"金 {g}" + (nag ? "　◆ 貯まっています" : spend ? "　◆ 使える" : "") : "";
+        // 第479期: 文は足さない（金の札が光るだけ・`lean`）。
+        _gold.Text = gold is { } g ? $"金 {g}" + (LeanText ? "" : nag ? "　◆ 貯まっています" : spend ? "　◆ 使える" : "") : "";
     }
 
     /// <summary>浮いた金の数字が飛んでいく先（画面の座標）。</summary>
@@ -289,10 +361,31 @@ void fragment() {
             _cards.AddChild(card);
             _squadCards.Add(card);
         }
+        while (_squadActions.Count < _squadCards.Count)
+        {
+            int slot = _squadActions.Count;
+            var row = new HBoxContainer { Visible = false };
+            row.AddThemeConstantOverride("separation", 6);
+            for (int k = 0; k < ActionNames.Length; k++)
+            {
+                int kind = k;
+                var b = new Button { Text = ActionNames[k], FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(0, 40) };
+                Dress(b, k == 2 ? Color.FromHtml("#55d5b8") : Gold, 20);
+                b.Pressed += () => SquadAction?.Invoke(_squadCards[slot].Index, kind);
+                row.AddChild(b);
+            }
+            _root.AddChild(row);
+            _squadActions.Add(row);
+        }
         for (int i = 0; i < _squadCards.Count; i++)
         {
             _squadCards[i].Visible = i < squads.Count;
             if (i < squads.Count) _squadCards[i].Set(squads[i]);
+            bool[] on = i < squads.Count ? new[] { squads[i].Revive, squads[i].Enhance, squads[i].Rest } : new[] { false, false, false };
+            for (int k = 0; k < on.Length; k++) ((Button)_squadActions[i].GetChild(k)).Visible = on[k];
+            bool any = on.Any(x => x);
+            if (any != _squadActions[i].Visible) { _squadActions[i].Visible = any; }
+            if (any) _squadActions[i].ResetSize();
         }
     }
 
@@ -423,7 +516,7 @@ public partial class Map3DSquadCard : Button
             }
         }
         _hp.Text = info.Lost ? "失われた" : info.Count == 0 ? "空席" : $"{info.Count} 枚　HP {info.HpPercent:F0}%";
-        _order.Text = info.Lost ? "" : info.Count == 0 ? "「編成・呼ぶ・強化」で駒を配る" : info.Order;
+        _order.Text = info.Lost ? info.LostLine : info.Count == 0 ? "「編成・呼ぶ・強化」で駒を配る" : info.Order;
         Color edge = info.Selected ? Color.FromHtml("#ffd874") : info.Lost ? Map3DHud.Edge.Darkened(0.2f) : Color.FromHtml("#55d5b8").Darkened(0.25f);
         Color back = info.Selected ? new Color(0.13f, 0.15f, 0.12f, 0.94f) : Map3DHud.Back;
         AddThemeStyleboxOverride("normal", Map3DHud.Box(back, edge, info.Selected ? 3 : 2, 12, 8));

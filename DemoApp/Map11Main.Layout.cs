@@ -72,8 +72,9 @@ public partial class Map11Main
         BuildGuide(_uiRoot);
         BuildEncounterOverlay(_uiRoot);
         BuildInterceptOverlay(_uiRoot);
-        BuildSiegeOverlay(_uiRoot);   // 第457期: 本陣の連戦の合間
-        BuildNoticeOverlay(_uiRoot);   // 第478期: 出来事の窓（負けた戦闘・中間拠点を取った・金を使える場所）
+        BuildSiegeOverlay(_uiRoot);
+        // 第479期: 3D では遭遇・迎撃・連戦は盤を隠さない横の札（`Map11Main.Lean.cs`）。
+        MakeSide(_encounterOverlay); MakeSide(_interceptOverlay); MakeSide(_siegeOverlay);   // 第457期: 本陣の連戦の合間
         BuildResultOverlay(_uiRoot);
         BuildConfirmOverlay(_uiRoot);
         BuildStaging();

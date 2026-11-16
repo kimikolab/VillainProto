@@ -462,39 +462,88 @@ public partial class Map3DCellMark : Node3D
 
     private readonly StandardMaterial3D? _flagMaterial;
 
-    /// <param name="outpost">第478期: 中間拠点の台（八角・外にもう 1 本の輪・持ち主の色の旗）。ふつうのマスと形で見分ける。</param>
-    internal Map3DCellMark(float radius, bool outpost = false)
+    /// <summary>拠点の種類（第479期 §5・遠くからでも形で分かるように——高い旗竿と大きな幟・地面の色の輪）。</summary>
+    internal enum Base { None, Home, Outpost, Portal }
+    /// <summary>幟に付ける見返りの印。</summary>
+    internal enum Reward { None, Gold, Relic }
+    private static readonly Color Unheld = Color.FromHtml("#9aa0a6");
+
+    /// <param name="outpost">第478期: 中間拠点の台（八角・外にもう 1 本の輪）。ふつうのマスと形で見分ける。</param>
+    /// <param name="kind">第479期: 拠点の種類（味方の拠点 ／ 中間拠点 ／ 敵の拠点）。高い旗竿と大きな幟（持ち主の色）・地面の色の輪を付ける。</param>
+    internal Map3DCellMark(float radius, bool outpost = false, Base kind = Base.None, Reward reward = Reward.None)
     {
         Radius = radius;
         if (outpost)
-        {
             AddChild(new MeshInstance3D
             {
                 Mesh = new TorusMesh { InnerRadius = radius * 1.12f, OuterRadius = radius * 1.24f, Rings = 8, RingSegments = 6 },
                 Position = new Vector3(0, 0.14f, 0), Rotation = new Vector3(0, Mathf.Pi / 8, 0), MaterialOverride = _rimMaterial,
                 CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
             });
+        if (kind != Base.None)
+        {
             _flagMaterial = new StandardMaterial3D { Roughness = 0.7f, EmissionEnabled = true, CullMode = BaseMaterial3D.CullModeEnum.Disabled };
+            // 地面の色の輪（持ち主の色・台の外）。
+            AddChild(new MeshInstance3D
+            {
+                Mesh = new TorusMesh { InnerRadius = radius * 1.34f, OuterRadius = radius * 1.52f, Rings = 48, RingSegments = 4 },
+                Position = new Vector3(0, 0.06f, 0), Scale = new Vector3(1, 0.25f, 1), MaterialOverride = _flagMaterial,
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            });
+            // 高い旗竿と大きな幟（縦に長い布・横木から下げる）。
+            const float tall = 9.2f;
+            var wood = new StandardMaterial3D { AlbedoColor = Color.FromHtml("#3a2f25"), Roughness = 0.9f };
             var pole = new MeshInstance3D
             {
-                Mesh = new CylinderMesh { TopRadius = 0.07f, BottomRadius = 0.09f, Height = 5.2f, RadialSegments = 8 },
-                Position = new Vector3(-radius * 0.92f, 2.6f, radius * 0.55f),
-                MaterialOverride = new StandardMaterial3D { AlbedoColor = Color.FromHtml("#3a2f25"), Roughness = 0.9f },
+                Mesh = new CylinderMesh { TopRadius = 0.09f, BottomRadius = 0.13f, Height = tall, RadialSegments = 8 },
+                Position = new Vector3(-radius * 0.95f, tall / 2, radius * 0.5f), MaterialOverride = wood,
             };
             AddChild(pole);
             pole.AddChild(new MeshInstance3D
             {
-                Mesh = new BoxMesh { Size = new Vector3(1.7f, 1.05f, 0.06f) },
-                Position = new Vector3(0.9f, 1.95f, 0), MaterialOverride = _flagMaterial,
-                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+                Mesh = new BoxMesh { Size = new Vector3(2.5f, 0.14f, 0.14f) }, Position = new Vector3(1.05f, tall / 2 - 0.35f, 0), MaterialOverride = wood,
             });
+            var cloth = new MeshInstance3D
+            {
+                Mesh = new BoxMesh { Size = new Vector3(2.1f, 4.4f, 0.06f) }, Position = new Vector3(1.15f, tall / 2 - 0.45f - 2.2f, 0),
+                MaterialOverride = _flagMaterial, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            };
+            pole.AddChild(cloth);
+            // 見返りの印（金貨 ／ レリックの札）。布の両面に。
+            foreach (float side in new[] { 0.05f, -0.05f })
+            {
+                if (reward == Reward.Gold)
+                    cloth.AddChild(new MeshInstance3D
+                    {
+                        Mesh = new CylinderMesh { TopRadius = 0.62f, BottomRadius = 0.62f, Height = 0.05f, RadialSegments = 24 },
+                        Position = new Vector3(0, 0.7f, side), Rotation = new Vector3(Mathf.Pi / 2, 0, 0),
+                        MaterialOverride = new StandardMaterial3D { AlbedoColor = Color.FromHtml("#f1c96b"), EmissionEnabled = true, Emission = Color.FromHtml("#f1c96b"), EmissionEnergyMultiplier = 0.7f },
+                        CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+                    });
+                else if (reward == Reward.Relic)
+                {
+                    var card = new MeshInstance3D
+                    {
+                        Mesh = new BoxMesh { Size = new Vector3(0.95f, 1.35f, 0.04f) }, Position = new Vector3(0, 0.7f, side),
+                        MaterialOverride = new StandardMaterial3D { AlbedoColor = Color.FromHtml("#efe6ff"), EmissionEnabled = true, Emission = Color.FromHtml("#b89cff"), EmissionEnergyMultiplier = 0.8f },
+                        CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+                    };
+                    card.AddChild(new MeshInstance3D
+                    {
+                        Mesh = new BoxMesh { Size = new Vector3(0.42f, 0.42f, 0.05f) }, Rotation = new Vector3(0, 0, Mathf.Pi / 4), Position = new Vector3(0, 0, side > 0 ? 0.01f : -0.01f),
+                        MaterialOverride = new StandardMaterial3D { AlbedoColor = Color.FromHtml("#6a3fd0"), EmissionEnabled = true, Emission = Color.FromHtml("#6a3fd0"), EmissionEnergyMultiplier = 0.6f },
+                        CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+                    });
+                    cloth.AddChild(card);
+                }
+            }
         }
         AddChild(new MeshInstance3D
         {
             Mesh = new CylinderMesh { TopRadius = radius, BottomRadius = radius * 1.06f, Height = 0.16f, RadialSegments = outpost ? 8 : 36 },
             Rotation = new Vector3(0, outpost ? Mathf.Pi / 8 : 0, 0),
             Position = new Vector3(0, 0.10f, 0),
-            MaterialOverride = new StandardMaterial3D { AlbedoColor = Color.FromHtml("#6f6a62"), Roughness = 0.95f },
+            MaterialOverride = new StandardMaterial3D { AlbedoColor = Color.FromHtml(kind != Base.None || outpost ? "#7d776c" : "#5a564f"), Roughness = 0.95f },   // 第479期: ふつうのマスは地味に
         });
         AddChild(new MeshInstance3D
         {
@@ -526,10 +575,13 @@ public partial class Map3DCellMark : Node3D
     }
 
     /// <summary>中間拠点の旗の色（味方 ／ 敵・台の縁とは別に、隊や敵が載っていなくても持ち主を示す）。</summary>
-    internal void SetFlag(bool mine)
+    internal void SetFlag(bool mine) => SetBanner(mine ? Owner.Ally : Owner.Empty);
+
+    /// <summary>幟と地面の輪の色（味方 ＝ 青緑 ／ 敵 ＝ 赤 ／ 取っていない中間拠点 ＝ 灰）。</summary>
+    internal void SetBanner(Owner owner)
     {
         if (_flagMaterial is null) return;
-        Color c = RimColors[mine ? (int)Owner.Ally : (int)Owner.Enemy];
+        Color c = owner == Owner.Empty ? Unheld : RimColors[(int)owner];
         _flagMaterial.AlbedoColor = c;
         _flagMaterial.Emission = c;
         _flagMaterial.EmissionEnergyMultiplier = 0.45f;

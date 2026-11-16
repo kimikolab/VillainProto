@@ -98,6 +98,8 @@ public partial class Map11Main
             + $" {where}の敵はそのまま（HP は戻らない）。";
         _siegeGo.Text = $"続けて戦う（{(next.IsHero ? "勇者" : next.Def.Name)}）";
         _siegeBack.Text = St.Stage.OutpostRewards is not null ? $"引いて待つ（{PlaceName(cell)}へ）" : $"引く（{PlaceName(cell)}へ）";
+        _siegeHp.Visible = _siegeBody.Visible = true;
+        if (Map3DMode.Active) LeanSiege(s, next, alive, foeAlive, cell);   // 第479期: 3D は横の札
         _siegeOverlay.Visible = true;
     }
 
@@ -132,7 +134,8 @@ public partial class Map11Main
     private void SiegeContinue()
     {
         _siegeOverlay.Visible = false;
-        if (Map11Session.ContinueSiege()) { Refresh(); ShowEncounter(); return; }
+        // 第479期（Codex の試遊 2026-11-16）: 3D では「続けて戦う」を押したらそのまま開戦する（同じ相手にもう 1 度「戦う」を押させない）。
+        if (Map11Session.ContinueSiege()) { Refresh(); if (Map3DMode.Active) Fight(); else ShowEncounter(); return; }
         Pump();
     }
 

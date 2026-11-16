@@ -1,4 +1,4 @@
-using Godot;
+﻿using Godot;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -42,7 +42,7 @@ public partial class Map11Main
         _routePreview.SetRoute(path.Select(Project).ToArray(), enemies.Select(n => Project(n.Pos)).ToArray());
         string home = pick.Dest.AtHome ? "　帰還後に回復・補充" : "";
         // 試遊（2026-11-15）: 警告が行の末尾で折り返されて読みにくかった——拠点が空になるときは行の頭に出す。
-        _orderHint.Text = (EmptiesHome(_selected, pick.Dest) ? $"※ 拠点が空になります{NextArrivalText()}　" : "")
+        _orderHint.Text = (EmptiesHome(_selected, pick.Dest) && !Map3DMode.Active ? $"※ 拠点が空になります{NextArrivalText()}　" : "")   // 第479期: 3D は名札の点滅で知らせる
             + $"{squad.Label} → {PlaceName(pick.Dest.Id)}　{(warp ? "ワープ" : "移動")} {Math.Max(0, path.Count - 1)} 作戦ターン"
             + (enemies.Length > 0 ? $"　経路上の敵 {enemies.Length}隊" : "") + home
             // 第476期 §2-4: 進む前に分かるように——道の上の硬い部隊と賞金（「峠の関: 硬い・賞金 14」）。§2-2: 拠点が空になるなら 1 行。

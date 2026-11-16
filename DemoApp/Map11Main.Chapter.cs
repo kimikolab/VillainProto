@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using Godot;
 using System.Linq;
 
@@ -142,7 +142,7 @@ public partial class Map11Main
         var groups = Chapter1.JoinGroups(St.Stage);   // 第470期 §1-4: 段（1-2 は「流れ着いた者」を別の段に）
         int extra = groups.Count(g => g.Heading is not null);
         _introOverlay = Modal(_uiRoot, 330, joins.Count > 0 ? 245 + 30 + 40 * extra : 245, out VBoxContainer col, "1 章", GoldColor);
-        col.AddChild(new MapStageIllustration { State = St.Stage, CustomMinimumSize = new Vector2(0, 160), SizeFlagsHorizontal = Control.SizeFlags.ExpandFill });
+        col.AddChild(new MapStageIllustration { State = St.Stage, Lean = Chapter1.Rule.Lean, CustomMinimumSize = new Vector2(0, 160), SizeFlagsHorizontal = Control.SizeFlags.ExpandFill });
         col.AddChild(UiKit.Text(title, 24, Colors.White));
         Label text = UiKit.Text(body, 15, Color.FromHtml("#ccd5cb"));
         text.AutowrapMode = TextServer.AutowrapMode.WordSmart;

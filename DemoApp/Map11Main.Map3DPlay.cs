@@ -25,6 +25,9 @@ public partial class Map11Main
     internal static bool Play3DRequested(IEnumerable<string> user) => user.Any(a => a.StartsWith("--map3d-play=", StringComparison.Ordinal));
 
     private static int _play3dStalls;
+    /// <summary>通しのあいだに出た「時計を止めて盤を隠す窓」（第479期 §7・頭の札と投資の札・編成の窓・結果の窓・戦闘の画面は数えない）。</summary>
+    private static readonly List<string> _play3dCovers = new();
+    private static int _play3dSides, _play3dSays, _play3dRestClicks;
     private void StartPlay3D(string[] user)
     {
         if (!Map3DMode.Active || user.FirstOrDefault(a => a.StartsWith("--map3d-play=", StringComparison.Ordinal)) is not { } arg) return;
@@ -96,7 +99,8 @@ public partial class Map11Main
         {
             int lost = St.Squads.Sum(q => q.Units?.Count(u => !u.IsAlive) ?? 0) + St.FallenUnits.Count;
             GD.Print($"MAP3D_PLAY_COMPLETE plan={_play3dPlan} ok={ok && St.Finished} won={St.Won} fallen={St.Fallen} captured_turn={(St.Captured ? St.CapturedTurn + 1 : -1)} "
-                + $"gold={St.Gold} lost={lost} battles={St.Battles} spawns={St.SpawnCount} shots={_play3dShot} {why}");
+                + $"gold={St.Gold} lost={lost} battles={St.Battles} spawns={St.SpawnCount} shots={_play3dShot} covers={_play3dCovers.Count}{(_play3dCovers.Count > 0 ? "（" + string.Join("・", _play3dCovers) + "）" : "")} "
+                + $"sides={_play3dSides} says={_play3dSays} rest_clicks={_play3dRestClicks} {why}");
             GetTree().Quit(ok ? 0 : 1);
         }
 
@@ -125,6 +129,7 @@ public partial class Map11Main
             {
                 // 器具の口: レリックの候補は 1 枚目を取り、主力の先頭の駒に持たせる（候補の窓の中の操作は見ない）。
                 await Shot("レリックの候補");
+                _play3dCovers.Add("レリックの候補");
                 string got = RelicCatalog.Info(St.RelicOffer[0]).Name;
                 St.ChooseRelic(0);
                 if (St.RelicHand.Count > 0 && _play3dMain >= 0 && St.Squads[_play3dMain].Units?.FirstOrDefault(u => u.IsAlive && u.Relic is null && St.CanEquip(u)) is { } holder)
@@ -134,27 +139,22 @@ public partial class Map11Main
                 await Wait(0.4);
                 continue;
             }
-            if (NoticeShown)
-            {
-                // 第478期: 出来事の窓（負けた戦闘・中間拠点を取った・金を使える場所）。写しを撮って、「休む」があれば押し、無ければ閉じる（金は器具の口で使う）。
-                await Shot($"出来事の窓_{_noticeTitle.Text.Replace(' ', '_')}");
-                GD.Print($"MAP3D_PLAY notice=「{_noticeTitle.Text}」文「{string.Join("／", _noticeBody.Text.Split((char)10))}」ボタン {(_noticeRevive.Visible ? _noticeRevive.Text + " " : "")}{(_noticeEnhance.Visible ? _noticeEnhance.Text + " " : "")}{(_noticeRest.Visible ? "休む" : "")}");
-                Click(OldUi(_noticeRest.Visible ? _noticeRest : _noticeClose));
-                await Wait(0.5);
-                if (NoticeShown) { _noticeOverlay!.Visible = false; Refresh(); }
-                continue;
-            }
+            // 第479期: 盤を隠す窓がほかに出ていれば数える（頭の札・投資の札・結果の窓・確かめの窓・レリックの候補は上で扱っている）。
+            if (CoverShown && !_confirmOverlay.Visible) _play3dCovers.Add("名前の分からない窓");
+            if (_hud3d is { SayShown: true } && _play3dOnce.Add("say:" + _hud3d.SayText)) { _play3dSays++; await Shot($"セリフ_{_play3dSays}"); }
             if (Play12 && _siegeOverlay.Visible)
             {
+                _play3dSides++;
                 await Shot("本陣の連戦の窓");
                 // 次が勇者で、もう 1 隊がまだ本陣の手前に着いていなければ引く。それ以外は続けて戦う。
-                bool hero = _siegeGo.Text.Contains("勇者");
+                Map11State.Node? nextFoe = Map11Session.SiegeNode;   // 第479期: 連戦の札のボタンは短い文になった（相手は盤に聞く）
+                bool hero = nextFoe is { IsHero: true };
                 bool weak = _siegeHp.Value < 45;   // 傷が深ければ引く（引いた先の中間拠点で休む）
                 int other = Enumerable.Range(0, St.SquadCap).FirstOrDefault(i => (i == _play3dMain || i == _play3dSecond) && St.Squads[i].Pos != St.Graph.Portal, -1);
                 bool alone = other >= 0 && !St.Squads[other].Lost && St.Squads[other].Units is { } ou && ou.Any(u => u.IsAlive)
                              && !St.Graph.Lanes.Any(l => l[^1] == St.Squads[other].Pos);
                 // 第478期: 次が砦の守将なら、4 枚以下か HP 70% 未満のとき引いて休む（期限の 2 刻前からは続ける）。
-                bool keeper = _siegeGo.Text.Contains(MapStage.KeeperName);
+                bool keeper = nextFoe?.Def.Name == MapStage.KeeperName;
                 int mine = Map11Session.SiegeSquad >= 0 ? St.Squads[Map11Session.SiegeSquad].Units?.Count(u => u.IsAlive) ?? 0 : 0;
                 // 勇者のいない盤では、次が守将でなくても（本陣の守り・湧いた部隊）3 枚以下か HP 50% 未満なら引く——頭の札の「削られたら中間拠点へ引いて休める」のとおり。
                 bool back = keeper ? (mine < 5 || _siegeHp.Value < 70) && St.Turn < St.Stage.TurnCap - 2
@@ -166,6 +166,7 @@ public partial class Map11Main
             }
             if (_encounterOverlay.Visible)
             {
+                _play3dSides++;
                 await Shot($"遭遇_{_encounterTitle.Text.Replace(' ', '_').Replace('×', 'x').Replace('　', '_')}");
                 if (Find(_encounterOverlay, b => b.Text == "戦う") is { } fight) { Click(OldUi(fight)); await Wait(3.0); continue; }
                 Fight();
@@ -173,6 +174,7 @@ public partial class Map11Main
             }
             if (_interceptOverlay.Visible)
             {
+                _play3dSides++;
                 await Shot("迎撃の窓");
                 if (Find(_interceptOverlay, _ => true) is { } pick) Click(OldUi(pick));
                 await Wait(0.5);
@@ -180,6 +182,7 @@ public partial class Map11Main
             }
             if (_confirmOverlay.Visible)
             {
+                _play3dCovers.Add("確かめの窓");
                 await Shot("確かめの窓", once: true);
                 if (Find(_confirmOverlay, b => b.Text == "このまま出る") is { } go) Click(OldUi(go));
                 await Wait(0.5);
@@ -274,6 +277,14 @@ public partial class Map11Main
                     if (!Up(squad) || !St.CanSend(squad)) continue;
                     Dest want = Want(squad);
                     if (Map11Session.Destinations[squad] == want || St.AtDest(squad, want)) continue;
+                    // 第479期: 今いる場所で休むなら、隊の札の上の「休む」を押す（出ていれば）。
+                    if (!want.IsPortal && want.Id == St.Squads[squad].Pos && _hud3d!.ActionRect(squad, 2) is { } restAt)
+                    {
+                        await Shot($"第{squad + 1}隊_札の上の休む", once: true);
+                        Click(restAt.GetCenter());
+                        await Frames(4);
+                        if (Map11Session.Destinations[squad] == want) { _play3dRestClicks++; continue; }
+                    }
                     Click(_hud3d!.CardRect(squad).GetCenter());
                     await Frames(4);
                     Vector3 world = _cellMarks3d[want.IsPortal ? g.Portal : want.Id].GlobalPosition;
@@ -330,7 +341,7 @@ public partial class Map11Main
                 await Shot($"作戦ターン{before + 1}の後");
             // 「1 刻」が効かなかったとき（窓も出ず、刻も流れず、作戦ターンも進まない）は、案内の行と押した場所を残す（第478期・方針 3 が止まる件の調べ）。
             else if (IsInsideTree() && !Map11Session.TurnRunning && St.Turn == before && !St.Finished && !_encounterOverlay.Visible && !_interceptOverlay.Visible && !_siegeOverlay.Visible
-                     && !_confirmOverlay.Visible && !NoticeShown && !_reform)
+                     && !_confirmOverlay.Visible && !_reform)
             {
                 Move(_hud3d!.StepRect.GetCenter());
                 await Frames(3);

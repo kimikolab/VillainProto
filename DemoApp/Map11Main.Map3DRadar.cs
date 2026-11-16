@@ -51,8 +51,8 @@ public partial class Map11Main
     {
         if (_radar3d is null || _layout3d is null || _map3d is null) return;
         // 窓（遭遇・迎撃・連戦・結果・確かめ・頭の札・投資の札）が出ているあいだは隠す——窓の暗幕の上に全体図と印だけが明るく残るため。
-        shown &= !(_encounterOverlay.Visible || _interceptOverlay.Visible || _siegeOverlay.Visible || _resultOverlay.Visible || _confirmOverlay.Visible
-                   || _introOverlay is { Visible: true } || _investOverlay is { Visible: true } || NoticeShown);
+        // 第479期: 遭遇・迎撃・連戦は横の札なので、盤も全体図も見せたまま。
+        shown &= !CoverShown;
         _radar3d.Visible = shown;
         var points = new List<List<Vector3>>();
         if (shown && !St.Finished)
@@ -87,6 +87,7 @@ public partial class Map11Main
                     _foeDots3d.Add(dot);
                 }
                 _foeDots3d[used].Visible = true;
+                _foeDots3d[used].Scale = _homeWarn3d ? new Vector3(2.1f, 1, 2.1f) : Vector3.One;   // 第479期: 拠点が空になるなら、歩いてくる敵の点線を太く
                 // 道の脇（味方の金の点線と重ならない側）を流れる。
                 _foeDots3d[used].Position = Map3DLayout.Along(line, at) + new Vector3(0, 0.22f, 0.42f);
             }
@@ -137,7 +138,7 @@ public partial class Map3DRadar : Control
     private Rect2 MapRect()
     {
         float w = 330f, h = w * _bounds.Size.Y / Math.Max(1f, _bounds.Size.X);
-        return new Rect2(22, GetViewportRect().Size.Y - 168 - h, w, h);   // 左下（隊の札の上）——右上は金と敵の砦の札、左上は題字が使っている
+        return new Rect2(22, GetViewportRect().Size.Y - 216 - h, w, h);   // 第479期: 隊の札の上の小さなボタンの列（高さ 40）のぶん上げた   // 左下（隊の札の上）——右上は金と敵の砦の札、左上は題字が使っている
     }
 
     /// <summary>その場所の全体図の上の点（画面の座標・遊ぶ口が全体図を押すのに使う）。</summary>
@@ -181,15 +182,25 @@ public partial class Map3DRadar : Control
                 Vector2 p = P(c.Id);
                 switch (c.Kind)
                 {
-                    case MapGraph.Kind.Home: DrawRect(new Rect2(p - new Vector2(7, 7), new Vector2(14, 14)), Mine); break;
-                    case MapGraph.Kind.Portal: DrawRect(new Rect2(p - new Vector2(7, 7), new Vector2(14, 14)), st.Captured ? Mine : Foe); break;
+                    // 第479期 §5: 味方の拠点 ＝ 青緑の四角に旗 ／ 敵の拠点 ＝ 赤い砦（凹みのある四角）／ 中間拠点 ＝ 菱形（取っていなければ灰）。
+                    case MapGraph.Kind.Home:
+                        DrawRect(new Rect2(p - new Vector2(8, 8), new Vector2(16, 16)), Mine);
+                        DrawRect(new Rect2(p - new Vector2(8, 8), new Vector2(16, 16)), Ink, false, 1.5f);
+                        DrawLine(p + new Vector2(-8, -8), p + new Vector2(-8, -19), Ink, 1.5f);
+                        DrawColoredPolygon(new[] { p + new Vector2(-8, -19), p + new Vector2(2, -15.5f), p + new Vector2(-8, -12) }, Mine);
+                        break;
+                    case MapGraph.Kind.Portal:
+                        Color fort = st.Captured ? Mine : Foe;
+                        DrawColoredPolygon(new[] { p + new Vector2(-9, 8), p + new Vector2(-9, -9), p + new Vector2(-4, -9), p + new Vector2(-4, -4), p + new Vector2(4, -4), p + new Vector2(4, -9), p + new Vector2(9, -9), p + new Vector2(9, 8) }, fort);
+                        DrawPolyline(new[] { p + new Vector2(-9, 8), p + new Vector2(-9, -9), p + new Vector2(-4, -9), p + new Vector2(-4, -4), p + new Vector2(4, -4), p + new Vector2(4, -9), p + new Vector2(9, -9), p + new Vector2(9, 8), p + new Vector2(-9, 8) }, Ink, 1.5f);
+                        break;
                     case MapGraph.Kind.Outpost:
                         // 第478期: 中間拠点は菱形（拠点・敵の拠点の四角、ふつうのマスの点と形で見分ける）。
                         var diamond = new[] { p + new Vector2(0, -8), p + new Vector2(8, 0), p + new Vector2(0, 8), p + new Vector2(-8, 0) };
-                        DrawColoredPolygon(diamond, st.HeldOutposts.Contains(c.Id) ? Mine : Foe.Darkened(0.25f));
+                        DrawColoredPolygon(diamond, st.HeldOutposts.Contains(c.Id) ? Mine : new Color(0.60f, 0.63f, 0.65f));
                         DrawPolyline(diamond.Append(diamond[0]).ToArray(), Ink, 1.5f);
                         break;
-                    default: DrawCircle(p, 2.5f, Line); break;
+                    default: DrawCircle(p, 2f, Line); break;
                 }
             }
             for (int road = 0; road < st.Stage.LaneCount; road++)
@@ -240,6 +251,7 @@ public partial class Map3DRadar : Control
             Rect2 home0 = box;
             for (int k = 0; k < 10 && Busy(box) && box.End.Y + size.Y + 6 < safe.End.Y + size.Y; k++) box.Position += new Vector2(0, size.Y + 6);
             if (Busy(box)) { box = home0; for (int k = 0; k < 10 && Busy(box) && box.Position.Y - size.Y - 6 > safe.Position.Y - size.Y; k++) box.Position -= new Vector2(0, size.Y + 6); }
+            if (_main.SideRects().Any(r => r.Intersects(box.Grow(20)))) continue;   // 第479期: 横の札（遭遇・連戦・迎撃）の上には出さない
             placed.Add(box);
             DrawRect(box, Back);
             DrawRect(box, color, false, 2);

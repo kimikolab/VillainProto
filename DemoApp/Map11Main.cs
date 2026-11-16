@@ -214,7 +214,7 @@ public partial class Map11Main : Node3D
         // 3D の fps を測る口（`--map3d-fps`）も、絵の口と同じく seed と 1 章を引数で決める（写しと同じ場面で測るため）。
         bool pictured = user.Any(a => a.StartsWith("--map11-capture=", StringComparison.Ordinal)) || user.Contains("--map3d-fps", StringComparer.Ordinal)
             || user.Contains("--map3d-layout-smoke", StringComparer.Ordinal);
-        if (pictured) _noticesOff = true;   // 第478期: 絵の口・検査は器具が盤を進めるので、出来事の窓は出さない
+        if (pictured) _linesOff = true;   // 第479期: 絵の口・検査は器具が盤を進めるので、セリフは出さない
         if (pictured
             && user.FirstOrDefault(a => a.StartsWith("--map-seed=", StringComparison.Ordinal)) is { } seedArg
             && int.TryParse(seedArg["--map-seed=".Length..], out int capSeed)
@@ -1218,7 +1218,8 @@ public partial class Map11Main : Node3D
         // 行き先の道の中身を右に出しておく（決める瞬間の隣に相手を置く・第171期 §1-3）。
         if (!dest.AtHome && (St.FrontFoe(dest.Road) ?? St.PortalFoe()) is { } next)
             ShowFoe(next);
-        if (EmptiesHome(_selected, dest))   // 第476期 §2-2: 止めはしない
+        if (EmptiesHome(_selected, dest) && Map3DMode.Active) { }   // 第479期: 3D は文を出さない（拠点の名札が赤く点滅する・歩いてくる敵の点線が太くなる）
+        else if (EmptiesHome(_selected, dest))   // 第476期 §2-2: 止めはしない
             ShowToast($"拠点が空になります（{s.Label}: {Map11Orders.Describe(St, _selected, dest)}）——敵が着けば陥落{NextArrivalText()}", EnemyColor, 5.0f);
         else ShowToast($"{s.Label}: {Map11Orders.Describe(St, _selected, dest)}", PlayerColor, 3.0f);
         Refresh();
@@ -1670,7 +1671,7 @@ public partial class Map11Main : Node3D
         _interceptTitle = UiKit.Text("", 22, Colors.White);
         _interceptTitle.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         col.AddChild(_interceptTitle);
-        col.AddChild(UiKit.Text("拠点にいる隊を1つ選んでください（抜けなければ次の隊）", 13, UiKit.Faint));
+        col.AddChild(UiKit.Text(Map3DMode.Active ? "出す隊を選ぶ" : "拠点にいる隊を1つ選んでください（抜けなければ次の隊）", 13, UiKit.Faint));
         _interceptList = new VBoxContainer();
         _interceptList.AddThemeConstantOverride("separation", 6);
         _interceptList.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
@@ -2092,7 +2093,7 @@ public partial class Map11Main : Node3D
     private void ShowIntercept()
     {
         if (Map11Session.InterceptNode is not { } node) { Pump(); return; }
-        _interceptTitle.Text = $"迎撃: {node.Def.Name} が拠点に来た";
+        _interceptTitle.Text = Map3DMode.Active ? $"迎撃　{node.Def.Name}" : $"迎撃: {node.Def.Name} が拠点に来た";
         foreach (Node child in _interceptList.GetChildren()) child.QueueFree();
         for (int i = 0; i < St.Squads.Length; i++)
         {
@@ -2196,6 +2197,7 @@ public partial class Map11Main : Node3D
             // 第448期: 帯 A の部隊は 1 行の説明を先に。
             + (Map11.SquadLineOf(node.Def.Name) is { Length: > 0 } line ? $"[color=#8f9b90]{line}[/color]\n" : "")
             + Shared(Map11.RuleLineOf(node.Def.Enemy));
+        if (Map3DMode.Active) LeanEncounter(s, node, alive);   // 第479期: 3D は横の札（顔・数・重さの印・賞金だけ）
         _encounterOverlay.Visible = true;
     }
 
@@ -3113,6 +3115,7 @@ public partial class Map11Main : Node3D
                 $"{l.Squad} が {System.Text.RegularExpressions.Regex.Replace(l.Foe, @"^\d+\.\s*", "")} に負けた" + (l.Turn > 0 || l.Intercept ? $"（{(l.Turn > 0 ? $"{l.Turn} 刻目" : "")}{(l.Turn > 0 && l.Intercept ? "・" : "")}{(l.Intercept ? "拠点の迎撃" : "")}）" : ""))));
         _resultBody.Text = string.Join("\n", lines);
         RefreshResultFaces();
+        LeanResult();   // 第479期: 3D は 踏破・刻・失った駒の顔・金 だけ（細かい戦績は「詳細」の奥）
         _resultScroll.ScrollVertical = 0;
         _resultOverlay.Visible = true;
         ChapterResultView();   // 第460期 §A-3: 1 章ならボタンを替える（単発は「もう一度」のまま）

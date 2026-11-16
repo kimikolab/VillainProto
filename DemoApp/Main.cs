@@ -153,7 +153,7 @@ public partial class Main : Control
     private bool _battleMode;
     private bool _playing;
     private bool _paused;
-    private double _speed = 2.0;
+    private double _speed = SpeedOf(_keptSpeed);   // 第479期: 選んだ速さは次の戦闘へ持ち越す（`Main.MapResult.cs`）
     private bool _quitAfterPlayback;
 
     /// <summary>
@@ -1063,7 +1063,7 @@ public partial class Main : Control
         _speedPicker = new OptionButton { CustomMinimumSize = new Vector2(112, 42), FocusMode = FocusModeEnum.None };
         foreach ((string label, int id) in new[] { ("×0.5", 0), ("×1", 1), ("×2", 2), ("×4", 3) })
             _speedPicker.AddItem(label, id);
-        _speedPicker.Selected = 2;
+        _speedPicker.Selected = _keptSpeed;
         _speedPicker.ItemSelected += i => SetSpeed((int)i);
         _battleActions.AddChild(_speedPicker);
         row.AddChild(_battleActions);
@@ -1669,19 +1669,24 @@ public partial class Main : Control
         _battleField.ShowBanner(verdict, color, 2.2);
         _battleField.SetSubline($"{(_result.PlayerWon ? "勝利" : "敗北")} ・ {_result.Turns}ターン ・ 生存 {_result.PlayerSurvivors}体 ・ 最大連鎖 {_result.MaxEnemyKillsInOneTurn}");
         AppendLog($"[color=#{color.ToHtml(false)}][b]{verdict}[/b][/color]  {_result.Turns}ターン");
-        SetScoreVisible(true);
+        // 第479期: 3D の作戦マップから来た戦闘は、終わりの札（勝敗・倒れた駒の顔・残りの HP・賞金・「作戦マップへ」）だけ。戦績の表は「詳細」の奥。
+        bool leanEnd = Map11Session.HasPendingBattle && Map3DMode.Active;
+        int goldBefore = Map11Session.State?.Gold ?? 0;
+        if (!leanEnd) SetScoreVisible(true);
         bool returnsToCampaign = CampaignSession.HasPendingEncounter || Map11Session.HasPendingBattle;
         // 第169期。**精算はここ1箇所**。`Map11Session` 側が「戻った1回だけ」に絞っているので、
         // 「最初から」で台本を再生し直しても二度は走らない。
         Map11Session.CompleteBattle(_result.PlayerWon, _result);
         CampaignSession.ClearCarriedBattle();
         CampaignSession.CompleteBattle(_result.PlayerWon);
+        if (leanEnd) ShowMapBattleResult(_result, (Map11Session.State?.Gold ?? 0) - goldBefore);
         Notice(returnsToCampaign
             ? "戦闘終了。結果を持って作戦マップへ戻れます。"
             : "戦闘終了。配置を変えるか、同じ台本をもう一度再生できます。", color);
         if (_map11FlowSmoke)
         {
             GD.Print($"MAP11_BATTLE_DONE won={_result.PlayerWon} turns={_result.Turns}");
+            if (leanEnd) await ShotMapBattleEnd();   // 第479期: 絵の口（`--map3d-end-shot=<置き場>`・負けた戦闘と最初の勝った戦闘を 1 枚ずつ）
             GetTree().ChangeSceneToFile(Map11Session.Scene);
         }
         else if (_campaignFlowSmoke)
@@ -2994,7 +2999,8 @@ public partial class Main : Control
 
     private void SetSpeed(int index)
     {
-        _speed = index switch { 0 => 0.5, 2 => 2.0, 3 => 4.0, _ => 1.0 };
+        _speed = SpeedOf(index);
+        _keptSpeed = index;
         _battleField.SetSomClock(_paused, _speed);
         _battleField.SetWhipClock(_paused, _speed);
         _battleField.SetTouPowderClock(_paused, _speed);

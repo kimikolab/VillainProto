@@ -21,9 +21,10 @@ using System.Linq;
 /// </summary>
 /// 第469期: <c>Roster</c> は体験版の加入の表（null なら表なし・<see cref="RosterRule"/>）。
 /// 第470期: <c>First</c> は持ち越しのある 1 章の 1-1 の盤（null なら <see cref="MapStage.Stage11Ch"/>・第461〜469期）。
+/// 第479期: <c>Lean</c> は「窓を減らす」画面の版か（頭の札は物語の文と目標の 1 行だけ・説明はセリフで・<see cref="Map11Lines"/>）。<b>表示だけ</b>——規則は読まない。
 /// <c>Story</c> はステージの頭の札を物語の文（<see cref="Chapter1.Tales470"/>）にするか（偽なら第460期からの仮の文）。
 public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList<MapFoeScale>? Scales = null, StarRule? Stars = null, DealRule? Deal = null,
-                                          InvestRule? Invest = null, RosterRule? Roster = null, MapStage? First = null, bool Story = false, MapStage? Second = null)
+                                          InvestRule? Invest = null, RosterRule? Roster = null, MapStage? First = null, bool Story = false, MapStage? Second = null, bool Lean = false)
 {
     /// <summary>第460期の 1 章（持ち越し無し）。`--chapter1-smoke` はこれで回す。</summary>
     public static readonly ChapterRule V460 = new(false, "第460期（持ち越し無し）");
@@ -139,7 +140,7 @@ public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList
     /// 頭の札は目標の 1 行だけ・踏破の窓の予告の 1 行は無い（説明はセリフで）。1-1 ／ 1-3・駒・加入の表・倍率は第478期のまま。
     /// </summary>
     public static readonly ChapterRule V479 = new(true, "第479期（第478期 ＋ 1-2 の本陣を重く・引いた隊は待つ・説明はセリフで）",
-        V465.Scales, StarRule.V464, DealRule.Off, InvestRule.V470, RosterRule.V475, MapStage.Stage11Ch476, Story: true, Second: MapStage.Stage12Ch479);
+        V465.Scales, StarRule.V464, DealRule.Off, InvestRule.V470, RosterRule.V475, MapStage.Stage11Ch476, Story: true, Second: MapStage.Stage12Ch479, Lean: true);
 
     /// <summary>
     /// 版の一覧（第466期・遊びの写しが版をキーで持つ——写しの版で 1 章を始め直すため）。<b>版を足したらここにも足す。</b>
@@ -451,6 +452,9 @@ public static class Chapter1
     public static (string Title, string Body) Intro(MapStage s)
     {
         var (title, body) = Rule.Story && Tales470.TryGetValue(s.Id, out Tale? t) ? ($"1 章 ・ {s.Id} {t.Heading}", t.Body) : IntroText(s);   // 第470期 §1-4
+        // 第479期（`Lean`）: 勝ち方や道の違いの説明・敵の倍率の行は出さない。物語の文（主人公の内心）と目標の 1 行だけ。
+        if (Rule.Lean)
+            return (title, (s.Id == "1-3" ? Map11Lines.Stage13Lead + "\n" : "") + body + (Map11Lines.Goals.TryGetValue(s.Id, out string? goal) ? "\n\n" + goal : ""));
         if (s.Notes.Count > 0) body += "\n" + string.Join("\n", s.Notes.Select(n => "・" + n));   // 第476期 §2-5: 勝ち方と道の違い（その盤が持つ行）
         return s.FoeScale.Active ? (title, body + "\n" + s.FoeScale.IntroLine) : (title, body);
     }
