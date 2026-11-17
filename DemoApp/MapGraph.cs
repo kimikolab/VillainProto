@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -378,6 +378,68 @@ public sealed class MapGraph
         }
         // 横の辺（関所 ⇔ 見張り台・隊だけが使う）。南はつながらない。
         b.Link(lanes[1][2], lanes[0][3]);
+        return b.Build();
+    }
+
+    /// <summary>第480期の 1 章の 1-3 の経路の名前（頭の 1 文字は 北 ／ 中 ／ 南 のまま）。</summary>
+    internal static readonly string[] Lanes13F480 = { "北の尾根道", "中の谷道", "南の森の道" };
+
+    /// <summary>第480期の 1 章の 1-3 の中間拠点の名前（経路の順・仮）。北 3 マス目 ／ 中 3 マス目 ／ 南 2 マス目。</summary>
+    internal static readonly string[] Outposts13F480 = { "尾根の砦跡", "谷の橋", "森の集落" };
+
+    /// <summary>第480期の 1 章の 1-3 の味方の拠点（1-2 で取った砦）と敵の拠点の名前。</summary>
+    internal const string Home13F480 = "討伐隊の砦", Camp13F480 = "残党の野営地";
+
+    /// <summary>第480期の 1 章の 1-3 の敵の初期位置（経路の上の位置・分かれ道が 0）。北: 北2(2)・砦跡(3)・北5(5) ／ 中: 中1(1)・橋(3) ／ 南: 集落(2)・南4(4)。</summary>
+    internal static readonly int[][] Starts13F480 = { new[] { 2, 3, 5 }, new[] { 1, 3 }, new[] { 2, 4 } };
+
+    /// <summary>
+    /// 1 章の 1-3 の盤・第480期（指示書 design/PHASE480_STAGE13_HUNTER_SPEC.md §2-1・`ChapterRule.V480` だけが使う）:
+    /// <code>
+    ///                        ┌ 北1 ─ 北2 ─[尾根の砦跡]─ 北4 ─ 北5 ┐
+    ///   討伐隊の砦 ─ 分かれ道 ┼ 中1 ─ 中2 ─[谷の橋]─ 中4 ──────────┼ 残党の野営地（門）
+    ///                        └ 南1 ─[森の集落]─ 南3 ─ 南4 ─ 南5 ┘
+    ///   横の辺: 尾根の砦跡 ⇔ 谷の橋 ／ 谷の橋 ⇔ 南3
+    /// </code>
+    /// 分かれ道から野営地まで 北 5 ／ 中 4 ／ 南 5 マス。拠点から中間拠点まで 森の集落 3 歩・尾根の砦跡 4 歩・谷の橋 4 歩。
+    /// <b>「門」はマスにしない</b>（今までどおり「中間拠点を 2 つ取ると敵の拠点へ入れる」の規則）——狩る者は野営地のマス（開いた門）に現れる（報告 §1-2）。
+    /// 経路は分かれ道を先頭に含む（1-3 ／ 第477期の 1-2 と同じ）。単発の 1-3（<see cref="Build13(bool)"/>）は変えない。
+    /// </summary>
+    public static MapGraph Build13F480(bool portalOn)
+    {
+        var b = new Builder();
+        int home = b.Add(Home13F480, Kind.Home, (-20.0f, 0f));
+        int fork = b.Add(Fork13, Kind.Open, (-13.0f, 0.5f));
+        (float X, float Z)[][] pos =
+        {
+            new[] { (-7.0f, -8.0f), (1.0f, -13.0f), (10.0f, -14.5f), (19.0f, -13.0f), (27.0f, -8.0f) },
+            new[] { (-4.0f, 0.5f), (5.0f, -1.0f), (14.0f, 0f), (23.0f, 0.5f) },
+            new[] { (-8.0f, 8.5f), (-1.0f, 14.0f), (8.0f, 16.5f), (17.0f, 16.0f), (26.0f, 10.0f) },
+        };
+        int[] outpost = { 2, 2, 1 };
+        var lanes = new int[pos.Length][];
+        for (int lane = 0; lane < pos.Length; lane++)
+        {
+            lanes[lane] = new int[pos[lane].Length + 1];
+            lanes[lane][0] = fork;
+            for (int k = 0; k < pos[lane].Length; k++)
+            {
+                bool op = k == outpost[lane];
+                lanes[lane][k + 1] = b.Add(op ? Outposts13F480[lane] : $"{Lanes13F480[lane]} {k + 1} マス目", op ? Kind.Outpost : Kind.Open, pos[lane][k], lane);
+            }
+        }
+        int portal = portalOn ? b.Add(Camp13F480, Kind.Portal, (33.0f, 0f)) : -1;
+        b.Link(home, fork);
+        for (int lane = 0; lane < pos.Length; lane++)
+        {
+            int from = fork;
+            foreach (int c in lanes[lane].Skip(1)) { b.Link(from, c); from = c; }
+            if (portal >= 0) b.Link(from, portal);
+            b.Lane(Lanes13F480[lane], lanes[lane], Starts13F480[lane].Select(i => lanes[lane][i]).ToArray());
+        }
+        // 横の辺（隊と狩る者が使う）: 尾根の砦跡 ⇔ 谷の橋 ／ 谷の橋 ⇔ 南3。
+        b.Link(lanes[0][3], lanes[1][3]);
+        b.Link(lanes[1][3], lanes[2][3]);
         return b.Build();
     }
 

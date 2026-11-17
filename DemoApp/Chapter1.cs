@@ -24,7 +24,8 @@ using System.Linq;
 /// 第479期: <c>Lean</c> は「窓を減らす」画面の版か（頭の札は物語の文と目標の 1 行だけ・説明はセリフで・<see cref="Map11Lines"/>）。<b>表示だけ</b>——規則は読まない。
 /// <c>Story</c> はステージの頭の札を物語の文（<see cref="Chapter1.Tales470"/>）にするか（偽なら第460期からの仮の文）。
 public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList<MapFoeScale>? Scales = null, StarRule? Stars = null, DealRule? Deal = null,
-                                          InvestRule? Invest = null, RosterRule? Roster = null, MapStage? First = null, bool Story = false, MapStage? Second = null, bool Lean = false)
+                                          InvestRule? Invest = null, RosterRule? Roster = null, MapStage? First = null, bool Story = false, MapStage? Second = null, bool Lean = false,
+                                          MapStage? Third = null)
 {
     /// <summary>第460期の 1 章（持ち越し無し）。`--chapter1-smoke` はこれで回す。</summary>
     public static readonly ChapterRule V460 = new(false, "第460期（持ち越し無し）");
@@ -142,12 +143,23 @@ public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList
     public static readonly ChapterRule V479 = new(true, "第479期（第478期 ＋ 1-2 の本陣を重く・引いた隊は待つ・説明はセリフで）",
         V465.Scales, StarRule.V464, DealRule.Off, InvestRule.V470, RosterRule.V475, MapStage.Stage11Ch476, Story: true, Second: MapStage.Stage12Ch479, Lean: true);
 
+    /// <summary>第480期の 1 章の敵の倍率（1-1 ／ 1-2 は第465期のまま・1-3 は「それ以外」と「勇者」を別に持つ・測り `--chapter1-hunter-smoke` で選んだ）。</summary>
+    internal const int Stage13Ch480FoePercent = 110, Stage13Ch480HeroPercent = 160;
+
+    /// <summary>
+    /// 第480期の 1 章（指示書 design/PHASE480_STAGE13_HUNTER_SPEC.md §2）。第479期から <b>1-3 を「狩る者」に</b>替えた（<see cref="MapStage.Stage13Ch480"/>・<c>Third</c>）:
+    /// 前半は優勢・門が開いた刻の終わりに勇者が現れて撤退戦（生きて拠点へ戻れば勝ち・勇者の HP を半分まで削れば退く）。1-1 ／ 1-2・駒・加入の表は第479期のまま。
+    /// </summary>
+    public static readonly ChapterRule V480 = new(true, "第480期（第479期 ＋ 1-3 は優勢からの逆転と撤退戦）",
+        new MapFoeScale[] { V465.Scales![0], V465.Scales![1], new(Stage13Ch480FoePercent, Stage13Ch480HeroPercent, HeroMends: false) },
+        StarRule.V464, DealRule.Off, InvestRule.V470, RosterRule.V475, MapStage.Stage11Ch476, Story: true, Second: MapStage.Stage12Ch479, Lean: true, Third: MapStage.Stage13Ch480);
+
     /// <summary>
     /// 版の一覧（第466期・遊びの写しが版をキーで持つ——写しの版で 1 章を始め直すため）。<b>版を足したらここにも足す。</b>
     /// </summary>
     public static IReadOnlyList<(string Key, ChapterRule Rule)> Versions
         => new[] { ("V460", V460), ("V461", V461), ("V462", V462), ("V463", V463), ("V464", V464), ("V465", V465), ("V467", V467), ("V468", V468), ("V469", V469),
-                   ("V470", V470), ("V471", V471), ("V474", V474), ("V475", V475), ("V476", V476), ("V477", V477), ("V478", V478), ("V479", V479) };
+                   ("V470", V470), ("V471", V471), ("V474", V474), ("V475", V475), ("V476", V476), ("V477", V477), ("V478", V478), ("V479", V479), ("V480", V480) };
 
     /// <summary>版のキー（「V465」・一覧に無ければ名前）。</summary>
     public string Key { get { string n = Name; return Versions.FirstOrDefault(v => v.Rule.Name == n).Key ?? n; } }
@@ -185,7 +197,7 @@ public static class Chapter1
     /// 第461期: 持ち越しのある 1 章の 1-1 は <see cref="MapStage.Stage11Ch"/>（手札 6・隊の枠 2・金 8）。
     /// 第462期: 倍率のある 1 章は、各ステージの敵に倍率を掛けた写し（<see cref="MapStage.Scaled"/>・同じ倍率なら同じインスタンス）。
     public static IReadOnlyList<MapStage> StagesFor(ChapterRule rule)
-        => new[] { rule.Carry ? rule.First ?? MapStage.Stage11Ch : MapStage.Stage11, rule.Second ?? MapStage.Stage12, MapStage.Stage13 }   // 第470期: 版が替えた 1-1
+        => new[] { rule.Carry ? rule.First ?? MapStage.Stage11Ch : MapStage.Stage11, rule.Second ?? MapStage.Stage12, rule.Third ?? MapStage.Stage13 }   // 第470期: 版が替えた 1-1
             .Select((s, i) => s.Scaled(rule.ScaleOf(i)).Starred(rule.Stars ?? StarRule.Off)   // 第463期: ☆の規則を載せる（☆なしならそのまま）
                 .Dealt(i == 0 ? rule.Deal ?? DealRule.Off : DealRule.Off)                      // 第464期: 1-1 の配りの規則（52 枚から・軸の保証）
                 .Invested(i >= (rule.Invest?.FromStage ?? 0) ? rule.Invest ?? InvestRule.Off : InvestRule.Off)   // 第467期: 軸への投資（第470期から 1-1 は札なし）

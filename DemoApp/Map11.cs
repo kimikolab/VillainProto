@@ -1402,7 +1402,8 @@ public sealed class Map11State
         => (!OnBoardOrHand(d) || (Stage.Stars.StackOffers && Stackable(d))) && Offers.All(o => o.Id != d.Id);   // 第463期: ☆のあるステージでは持っている駒も（☆3 は出さない）・第464期の強化の盤では持っていない駒だけ
 
     /// <summary>金を動かせるか（呼ぶ・枠・売る）。<b>拠点・取った中間拠点・第2拠点にいる隊がいて、組み直しの窓が開けるとき</b>（迎撃の合間も含む）。</summary>
-    public bool CanTrade => Stage.Gold.On && !Finished && Squads.Any(q => CanReform(q.Index));
+    /// 第480期: 撤退の局面では閉じる（全滅した隊を拠点で呼び戻して「生還」にできてしまう）。
+    public bool CanTrade => Stage.Gold.On && !Finished && !Rout && Squads.Any(q => CanReform(q.Index));
 
     /// <summary>呼べるか（候補 <paramref name="offer"/> 番目）。</summary>
     public bool CanRecruit(int offer) => CanTrade && offer >= 0 && offer < Offers.Count && (FreePicks > 0 || Gold >= RecruitPrice);
@@ -1658,7 +1659,54 @@ public sealed class Map11State
     public string LaneName(int road) => road < 0 ? Map11.PortalName : Stage.LaneNames[road];
 
     public bool Finished => (Portal.On ? Won : AllCleared) || NoSquadsLeft || Battles >= BattleCapNow
-                            || Fallen || (Time.On && Turn >= Stage.TurnCap && !HeroClock) || HeroStalled;
+                            || Fallen || (Time.On && Turn >= Stage.TurnCap && !HeroClock && !Rout) || HeroStalled
+                            || HunterLost || HunterStalled;
+
+    // ---------------- 狩る者（第480期・`HeroRule.Hunter`・指示書 design/PHASE480_STAGE13_HUNTER_SPEC.md §2） ----------------
+
+    /// <summary>勇者が経路の列の外で動く盤か（第459期の追ってくる勇者 ／ 第480期の狩る者）。どちらでもない盤では 1 行も変わらない。</summary>
+    private bool HeroRoams => Stage.Hero.Chaser || Stage.Hero.Hunter;
+
+    /// <summary>
+    /// <b>撤退の局面</b>か（第480期 §2-3・狩る者の盤で勇者が現れた後）。真の間は: 目標が「生きて拠点へ戻れ」・敵の拠点へは入れない・湧きと予備隊は止まる・
+    /// 残っている敵部隊は動かない・呼ぶ ／ 呼び戻すは閉じる・刻の期限は外れる。<b>読むのはここ 1 つ</b>（勝ち負け・`AdvanceFoes`・`SpawnIfDue`・`CanTrade` ほか）。
+    /// </summary>
+    public bool Rout => Stage.Hero.Hunter && HeroTurn >= 0;
+
+    /// <summary>生きている駒のいる隊（撤退の局面の勝ち負けと、狩る者が追う相手）。</summary>
+    private IEnumerable<Squad> LivingSquads => Squads.Where(s => !s.Lost && s.Units is { } u && u.Any(x => x.IsAlive));
+
+    /// <summary>勝ち B: 勇者を退かせた（HP が <see cref="HeroRule.RoutPercent"/>% を割った）か、倒した。</summary>
+    public bool HunterDriven => Rout && Hero is { Cleared: true };
+    /// <summary>勝ち A: 生きている駒のいる隊が 1 つ以上あり、その全部が拠点にいる。</summary>
+    public bool HunterEscaped => Rout && !HunterDriven && LivingSquads.Any() && LivingSquads.All(s => s.Pos == Graph.Home);
+    /// <summary>負け: 隊に生きている駒が 1 枚もいない。</summary>
+    public bool HunterLost => Rout && !HunterDriven && !LivingSquads.Any();
+    /// <summary>勇者が現れてから <see cref="Map11.HeroStallTurns"/> 刻たっても終わらない（器具の打ち切り・拠点の外で待ち続けても勇者が来るのでふつうは起きない）。</summary>
+    public bool HunterStalled => Rout && Turn >= HeroTurn + Map11.HeroStallTurns && !Won;
+    /// <summary>勇者が退いた刻（-1 ＝ 退いていない・倒した刻も含む）。</summary>
+    public int HeroRoutTurn { get; private set; } = -1;
+    /// <summary>自分から勇者のマスへ入った隊（殿・隊の番号・重ねない・戦果の窓と器具が読む）。</summary>
+    public HashSet<int> RearGuards { get; } = new();
+    /// <summary>勇者に追いつかれた回数（勇者の歩みで起きた戦闘・測るためだけ）。</summary>
+    public int HunterCatches { get; private set; }
+    /// <summary>拠点へ生きて戻った駒の数（撤退の局面・拠点にいる隊の生きている駒。退かせたときは生きている駒の全部）。</summary>
+    public int HunterSurvivors => !Rout ? 0 : LivingSquads.Where(s => HunterDriven || s.Pos == Graph.Home).Sum(s => s.Units!.Count(u => u.IsAlive));
+    /// <summary>勇者が現れた刻に隊にいた生きている駒の数（生還の割合の分母・測るためだけ）。</summary>
+    public int HunterStartUnits { get; private set; }
+    private bool _hunterPaid;
+    /// <summary>勇者の歩みで起きた戦闘がまだ片付いていない（<see cref="Resolve"/> が殿の戦闘と見分けるためだけ）。</summary>
+    private bool _hunterStruck;
+    /// <summary>殿に足を止められた刻（その刻の終わりの勇者の歩みを丸ごと止める）。</summary>
+    private int _hunterHeldTurn = -1;
+
+    /// <summary>生還のおまけ（第480期 §2-4・生還 1 枚につき ＋1・終わったときに 1 度だけ）。退かせた ＋20 は勇者の賞金（<see cref="KillGold"/>）。</summary>
+    private void PayHunter()
+    {
+        if (_hunterPaid || !(HunterDriven || HunterEscaped)) return;
+        _hunterPaid = true;
+        if (HunterSurvivors > 0) Earn(HunterSurvivors, $"生還 {HunterSurvivors} 枚");
+    }
 
     /// <summary>
     /// 制圧の後の勇者が時計になっているか（第455期 §0・<see cref="HeroRule.AfterCapture"/> の盤で制圧した後）。
@@ -1682,17 +1730,18 @@ public sealed class Map11State
     public int? HeroTurnsLeft => Stage.HeroAtCap && Time.On ? Math.Max(0, Stage.TurnCap - Turn) : null;
 
     /// <summary>「n 作戦ターン以内に制圧」の残り（第447期・勝ち条件の文を出す盤だけ）。</summary>
-    public int? TimeLimitLeft => Stage.TimeLimit && Time.On && !HeroClock ? Math.Max(0, Stage.TurnCap - Turn) : null;
+    public int? TimeLimitLeft => Stage.TimeLimit && Time.On && !HeroClock && !Rout ? Math.Max(0, Stage.TurnCap - Turn) : null;
 
     /// <summary>時間切れで負けた（第447期・勝ち条件の文を出す盤で、上限の刻に勝っていない）。第455期: 制圧の後の勇者の盤では期限を外す。</summary>
-    public bool TimeUp => Stage.TimeLimit && Time.On && Turn >= Stage.TurnCap && !Won && !Fallen && !HeroClock;
+    public bool TimeUp => Stage.TimeLimit && Time.On && Turn >= Stage.TurnCap && !Won && !Fallen && !HeroClock && !Rout;
 
     /// <summary>
     /// 勝ち。<b>拠点ありでは「制圧した ＋ 盤上の敵部隊が 0」</b>（第176期 §1-4）
     /// ——道を抜くだけでは終わらない。拠点なしでは第175期のまま。
     /// </summary>
     /// 第455期: 制圧の後に勇者が現れる盤（<see cref="HeroRule.AfterCapture"/>）では、<b>勇者を倒すまで勝ちにならない</b>。
-    public bool Won => Portal.On ? (Captured && (Stage.WinOnCapture || !FoesLeft) && !Fallen && !HeroStanding) : (AllCleared && !Fallen);
+    public bool Won => Rout ? HunterDriven || HunterEscaped   // 第480期: 撤退の局面の勝ちは 生還 ／ 退かせた
+                     : Portal.On ? (Captured && (Stage.WinOnCapture || !FoesLeft) && !Fallen && !HeroStanding) : (AllCleared && !Fallen);
 
     /// <summary>盤に残っている敵部隊の数（第445期: 制圧で勝ったとき「退いた敵部隊」として結果に出す）。</summary>
     public int FoesRemaining => Nodes.Sum(r => r.Count(n => !n.Cleared)) + Spawns.Count(n => !n.Cleared) + (ReserveWaiting ? 1 : 0);
@@ -1732,7 +1781,7 @@ public sealed class Map11State
     /// <summary>その道でいちばん拠点に近い敵部隊。<b>拠点なしでは <see cref="NextNode"/> と同じもの。</b></summary>
     /// 第459期: <b>追ってくる勇者は数えない</b>——勇者は隊の後ろ（拠点の側）から来ることがあり、「先頭の敵は隊より奥にいる」を崩す。
     /// 勇者とは<b>同じマスにいるときだけ</b>当たる（<see cref="ChaserAt"/>・<see cref="FoeFacing"/>）。追ってくる勇者のいない盤では 1 行も変わらない。
-    public Node? FrontFoe(int road) => Stage.Hero.Chaser ? FoesOn(road).FirstOrDefault(n => !n.IsHero) : FoesOn(road).FirstOrDefault();
+    public Node? FrontFoe(int road) => HeroRoams ? FoesOn(road).FirstOrDefault(n => !n.IsHero) : FoesOn(road).FirstOrDefault();
 
     /// <summary>
     /// 進む隊が見る「道の先頭の敵」（第479期の続き・不具合の直し）。<see cref="FrontFoe"/> から<b>落ちた拠点に居座っている敵を除いた</b>もの。
@@ -1741,11 +1790,11 @@ public sealed class Map11State
     /// 拠点が落ちていない盤では <see cref="FrontFoe"/> と同じ。
     /// </summary>
     public Node? AheadFoe(int road)
-        => HomeLost ? FoesOn(road).FirstOrDefault(n => !(Stage.Hero.Chaser && n.IsHero) && n.Pos != Graph.Home) : FrontFoe(road);
+        => HomeLost ? FoesOn(road).FirstOrDefault(n => !(HeroRoams && n.IsHero) && n.Pos != Graph.Home) : FrontFoe(road);
 
     /// <summary>そのマスに立っている追ってくる勇者（第459期・拠点と本陣のマスは除く——拠点は迎撃、本陣は守りの後ろに並ぶ）。いなければ null。</summary>
     public Node? ChaserAt(int cell)
-        => Stage.Hero.Chaser && Hero is { Cleared: false } h && h.Pos == cell && cell != Graph.Home && cell != Graph.Portal ? h : null;
+        => HeroRoams && Hero is { Cleared: false } h && h.Pos == cell && cell != Graph.Home && cell != Graph.Portal ? h : null;
 
     /// <summary>そのマスにいる敵部隊（道 <paramref name="road"/> の手前の順で最初の1つ）。</summary>
     public Node? FoeAt(int road, int cellId) => FoesOn(road).FirstOrDefault(n => n.Pos == cellId);
@@ -1914,10 +1963,14 @@ public sealed class Map11State
             if (Stage.SiegeRetreatToOutpost && Graph.Lanes[road].Where(c => HeldOutposts.Contains(c)).Select(c => (int?)c).LastOrDefault() is { } held) back = held;
             return back;
         }
-        if (!Stage.EncounterRetreat) return -1;
+        if (!Stage.EncounterRetreat || FacingHunter(squadIndex)) return -1;
         List<int> path = Graph.Path(s.Pos, s.Via, Graph.Home, -1);
         return path.Count < 2 ? -1 : path[1];
     }
+
+    /// <summary>その隊は狩る者と同じマスにいるか（第480期 §2-4: 勇者との会戦に「引き返す」は無い・画面もここを読む）。</summary>
+    public bool FacingHunter(int squadIndex)
+        => Stage.Hero.Hunter && Hero is { Cleared: false } h && Squads[squadIndex] is { Lost: false } s && s.Pos == h.Pos && s.Pos != Graph.Home;
 
     /// <summary>遭遇で引き返した回数（第479期・測るためだけ）。</summary>
     public int EncounterRetreats { get; private set; }
@@ -1928,7 +1981,7 @@ public sealed class Map11State
     /// </summary>
     public bool EncounterRetreat(int squadIndex)
     {
-        if (!Stage.EncounterRetreat) return false;
+        if (!Stage.EncounterRetreat || FacingHunter(squadIndex)) return false;
         Squad s = Squads[squadIndex];
         if (s.Lost || s.Units is null || s.Pos == Graph.Home) return false;
         List<int> path = Graph.Path(s.Pos, s.Via, Graph.Home, -1);
@@ -1971,7 +2024,8 @@ public sealed class Map11State
     public int GateNeed => Math.Max(0, Stage.PortalGate - HeldOutposts.Count);
 
     /// <summary>その隊はいまそのマスへ入れるか（第451期: 門が閉じている間は敵の拠点のマスへ新しく入れない）。</summary>
-    public bool CanEnter(int squadIndex, int cell) => cell != Graph.Portal || GateOpen || Squads[squadIndex].Pos == Graph.Portal;
+    /// 第480期: 狩る者の盤では門が開いた刻の終わりに勇者がそこに立つので、敵の拠点のマスへは入れない（開いた刻のうちに駆け込めない）。
+    public bool CanEnter(int squadIndex, int cell) => cell != Graph.Portal || (GateOpen && !Stage.Hero.Hunter) || Squads[squadIndex].Pos == Graph.Portal;
 
     /// <summary>その隊は味方のものになった中間拠点にいるか（第444期 §0-1・<b>休む・組み直し・届いた駒を受け取るができる</b>）。</summary>
     public bool AtOutpost(int squadIndex)
@@ -1995,7 +2049,7 @@ public sealed class Map11State
         {
             int lane = Graph[cell].Lane;
             // 第455期: 制圧の後の勇者は中間拠点を取り返さない（味方の拠点だけを目指す）。第459期: 追ってくる勇者も取り返さない（隊だけを追う）。
-            bool foe = FoesOn(lane).Any(n => n.Pos == cell && !(n.IsHero && (Stage.Hero.AfterCapture || Stage.Hero.Chaser)));
+            bool foe = FoesOn(lane).Any(n => n.Pos == cell && !(n.IsHero && (Stage.Hero.AfterCapture || HeroRoams)));
             int mine = -1;
             for (int i = 0; i < Squads.Length; i++)
                 if (!Squads[i].Lost && Squads[i].Units is { } u && Squads[i].Pos == cell && u.Any(x => x.IsAlive)) { mine = i; break; }
@@ -2065,6 +2119,7 @@ public sealed class Map11State
         s.Pos = pos;
         s.Via = Graph[pos].Lane >= 0 ? -1 : via;
         UpdateOutposts();
+        if (Rout) PayHunter();   // 第480期: 最後の隊が拠点に入った
     }
 
     /// <summary>その隊は行き先に着いているか（敵の拠点なら、行き先の経路から入ったか）。<b>盤面は1ビットも動かさない。</b></summary>
@@ -2091,7 +2146,7 @@ public sealed class Map11State
     public bool Withdraw(int squadIndex)
     {
         Squad s = Squads[squadIndex];
-        if (s.Lost || s.Units is null || s.Road < 0 || HomeLost) return false;   // 第459期: 落ちた拠点へは戻せない
+        if (s.Lost || s.Units is null || s.Road < 0 || HomeLost || Rout) return false;   // 第459期: 落ちた拠点へは戻せない・第480期: 撤退は歩いて戻る
         Place(s, Graph.Home, -1);
         return true;
     }
@@ -2100,7 +2155,7 @@ public sealed class Map11State
     public bool CanWithdraw(int squadIndex)
     {
         Squad s = Squads[squadIndex];
-        return !s.Lost && s.Units is not null && s.Road >= 0 && !HomeLost;
+        return !s.Lost && s.Units is not null && s.Road >= 0 && !HomeLost && !Rout;
     }
 
     // =============================================================================
@@ -2362,6 +2417,12 @@ public sealed class Map11State
         List<UnitState> eu = node.Units!;
         Battles++;
         if (node.IsHero) { HeroBattles++; HeroSquads.Add(squadIndex); _heroFoughtTurn = Turn; }   // 第454期（測るためだけ）・第455期: 当たった刻
+        // 第480期 §2-4: 勇者の歩みで起きた戦闘（追いつかれた）か、隊の番に起きた戦闘（殿）か。殿はその刻の終わりの勇者の歩みを止める。
+        if (node.IsHero && Stage.Hero.Hunter)
+        {
+            if (_hunterStruck) { _hunterStruck = false; HunterCatches++; }
+            else { RearGuards.Add(squadIndex); _hunterHeldTurn = Turn + 1; }
+        }
 
         var aliveP = pu.Where(u => u.IsAlive).ToList();
         var aliveE = eu.Where(u => u.IsAlive).ToList();
@@ -2391,6 +2452,13 @@ public sealed class Map11State
             if (node.Def.Road == s.Home && !node.FromPortal) s.Cleared++;
         }
         else node.Units = EngagementEngine.CrossBoundary(aliveE);
+        // 第480期 §2-4 勝ち B: 勇者の HP が RoutPercent% を割ったら退く（盤から消える・「退いた」の札）。
+        if (node.IsHero && Stage.Hero.Hunter && !node.Cleared && Stage.Hero.RoutPercent > 0 && node.HpNow * 100 < node.DefMaxHp * Stage.Hero.RoutPercent)
+        {
+            node.Cleared = true;
+            node.Retreated = true;
+        }
+        if (node.IsHero && Stage.Hero.Hunter && node.Cleared && HeroRoutTurn < 0) HeroRoutTurn = Turn;
         if (node.IsHero) HeroHpTrail.Add(node.HpNow);   // 第455期: 勇者の HP の推移（結果画面・測るためだけ）
         if (node.IsHero && node.Cleared && HeroDownTurn < 0) HeroDownTurn = Turn;   // 第457期: 勇者を倒した刻（測るためだけ）
 
@@ -2431,7 +2499,8 @@ public sealed class Map11State
             Deliver(Stage.Arrival.OnKill, intercept ? "拠点" : DeliveryPlace(squadIndex), $"{node.Def.Name}を抜いた");
         // 第445期: 抜いた見返りの金（湧いた部隊は安い）。
         if (node.Cleared)
-            Earn(KillGold(node), $"{node.Def.Name}を抜いた", node.Pos);
+            Earn(KillGold(node), node.Retreated ? $"{node.Def.Name}を退かせた" : $"{node.Def.Name}を抜いた", node.Pos);
+        PayHunter();   // 第480期: 退かせた ／ 最後の隊が倒れて残りが全員拠点にいる
         DisarmDoctrine();   // 第468期: 盤の札の写しを元の定義へ（盤の札が無ければ何もしない）
     }
 
@@ -2638,6 +2707,8 @@ public sealed class Map11State
         // 第468期: 蓄えの利子（作戦ターンの終わり・手持ち 10 につき・利子の無い盤では何もしない）。
         if (InterestNow > 0) Earn(InterestNow, "蓄えの利子");
         LastArrived.Clear();
+        // 第480期 §2-3 ／ §2-4: 撤退の局面では残っている敵部隊は動かず、湧きも予備隊も出ない。動くのは勇者だけ。
+        if (Rout) { MoveHunter(list); UpdateOutposts(); ArriveIfDue(); return list; }
         if (Time.AdvanceEvery <= 0 || Turn % Time.AdvanceEvery != 0)
         { LoseSecondBaseIfEmpty(); UpdateOutposts(); ArriveIfDue(); ReserveIfDue(); HeroIfDue(); return SpawnIfDue(list); }
 
@@ -2674,7 +2745,7 @@ public sealed class Map11State
             foreach (Node sp in FoesOn(road).Where(x => x.FromPortal).ToList())
             {
                 if (sp.IsHero && Stage.Hero.Gatekeeper) continue;   // 第456期: 門番の勇者は動かない
-                if (sp.IsHero && Stage.Hero.Chaser) continue;   // 第459期: 追ってくる勇者は経路の列の外で動く（下の `MoveChaser`）
+                if (sp.IsHero && HeroRoams) continue;   // 第459期: 追ってくる勇者は経路の列の外で動く（下の `MoveChaser`）
                 // 第455期: 制圧の後の勇者は、味方の隊と同じマスにいれば素通りせずその場で戦闘・拠点に居座れば 2 刻ごとに迎撃をやり直す。
                 if (sp.IsHero && Stage.Hero.AfterCapture)
                 {
@@ -2733,6 +2804,55 @@ public sealed class Map11State
     }
 
     /// <summary>
+    /// 狩る者の 1 刻（第480期 §2-4）: <see cref="HeroRule.Steps"/> 歩まで、いちばん近い隊へ（<see cref="HunterChase"/>）。隊のいるマスへ入ればそこで戦闘になり、残りの歩みは無い。
+    /// 現れた刻は動かない・殿に足を止められた刻は丸ごと動かない・拠点へは入らない・中間拠点は素通りする（取り返さない）。
+    /// </summary>
+    private void MoveHunter(List<Encounter> list)
+    {
+        _hunterStruck = false;
+        if (Hero is not { Cleared: false } h || Turn <= HeroTurn || _hunterHeldTurn == Turn) return;
+        for (int step = 0; step < Math.Max(1, Stage.Hero.Steps); step++)
+        {
+            if (HunterChase() is not { } chase) return;
+            if (chase.Steps > 0)
+            {
+                if (chase.Next == Graph.Home || chase.Next == h.Pos) return;
+                h.Pos = chase.Next;
+                if (Graph[h.Pos].Lane >= 0) h.Def = h.Def with { Road = Graph[h.Pos].Lane };
+            }
+            if (SquadAt(h.Pos) is var sq and >= 0)
+            {
+                list.Add(new Encounter(sq, h, false));
+                _hunterStruck = true;
+                return;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 狩る者が追う相手（第480期 §2-4・<b>盤面は1ビットも動かさない</b>・画面の赤い点線も読む）: 拠点の外にいる、<b>いちばん近い隊</b>
+    /// （横の辺も含めた盤の最短路の歩数・同じなら生きている駒の多い隊・それも同じなら若い番号）と、そこへの次のマス・歩数。追う相手がいなければ null。
+    /// </summary>
+    public (int Squad, int Next, int Steps)? HunterChase() => HunterChaseFrom(Hero is { Cleared: false } h ? h.Pos : -1, Hero?.Def.Road ?? -1);
+
+    /// <summary><see cref="HunterChase"/> を、勇者が <paramref name="pos"/> にいるものとして引く（画面が 2 歩ぶん先まで線を引くため）。</summary>
+    public (int Squad, int Next, int Steps)? HunterChaseFrom(int pos, int road)
+    {
+        if (!Rout || pos < 0 || Hero is not { Cleared: false }) return null;
+        (int Squad, int Next, int Steps, int Alive)? best = null;
+        foreach (Squad s in LivingSquads)
+        {
+            if (s.Pos == Graph.Home) continue;
+            List<int> path = Graph.Path(pos, pos == Graph.Portal ? -1 : road, s.Pos, -1);
+            if (path.Count == 0) continue;
+            int steps = path.Count - 1, alive = s.Units!.Count(u => u.IsAlive);
+            if (best is null || steps < best.Value.Steps || (steps == best.Value.Steps && alive > best.Value.Alive))
+                best = (s.Index, path.Count >= 2 ? path[1] : pos, steps, alive);
+        }
+        return best is { } b ? (b.Squad, b.Next, b.Steps) : null;
+    }
+
+    /// <summary>
     /// 拠点が落ちた後に追ってくる勇者の行き先（第459期 §1-4・<b>盤面は1ビットも動かさない</b>）: <b>いちばん近い味方の隊</b>
     /// （横の辺も含めた盤の最短路の歩数・同じなら若い番号）と、そこへの次のマス・歩数。追う相手がいなければ null。
     /// </summary>
@@ -2773,6 +2893,25 @@ public sealed class Map11State
     {
         if (!Stage.Hero.On || Stage.Hero.Unit is not UnitDef hero || !Portal.On || !Graph.HasPortal) return;
         if (GateOpenedTurn < 0 && Stage.PortalGate > 0 && GateOpen) GateOpenedTurn = Turn;
+        // 第480期 §2-3（狩る者）: 門が開いた刻の終わり（開かなければ FallbackTurn 刻目の終わり）に、敵の拠点のマス（開いた門）に立つ。現れた刻は動かない。
+        if (Stage.Hero.Hunter)
+        {
+            if (Hero is not null || Captured || Fallen) return;
+            if (GateOpenedTurn < 0 && !(Stage.Hero.FallbackTurn > 0 && Turn >= Stage.Hero.FallbackTurn)) return;
+            int road = Stage.LaneCount / 2;
+            var fh = Formation.Build(center: hero);
+            Hero = new Node
+            {
+                Def = new Map11.RoadNode(road, Map11.RoadCells, hero.Name, fh, EnemyCatalog.Stages.Count - 1),
+                Graph = Graph, FromPortal = true, IsHero = true, DefMaxHp = hero.MaxHp, HpNow = hero.MaxHp, Pos = Graph.Portal,
+            };
+            Spawns.Add(Hero);
+            HeroTurn = Turn;
+            HeroHpTrail.Add(hero.MaxHp);
+            HunterStartUnits = LivingSquads.Sum(s => s.Units!.Count(u => u.IsAlive));
+            PayHunter();
+            return;
+        }
         // 第459期 §1-1: 門が開いた刻に、味方の拠点から FromHome 歩のマス（経路の上）へ。経路は `ChaserLane`。拠点へ向かってくる（`MoveChaser`）。
         if (Stage.Hero.Chaser)
         {
@@ -3001,7 +3140,7 @@ public sealed class Map11State
                 if (sp.Pos == Graph.Home) continue;
                 if (sp.IsHero && Stage.Hero.AfterCapture && SquadAt(sp.Pos) >= 0) continue;   // 第455期: 隊と同じマスの勇者は動かずに戦う
                 if (sp.IsHero && Stage.Hero.Gatekeeper) continue;   // 第456期: 門番の勇者は動かない
-                if (sp.IsHero && Stage.Hero.Chaser) continue;   // 第459期: 追ってくる勇者は下で（`MoveChaser` と同じ式）
+                if (sp.IsHero && HeroRoams) continue;   // 第459期: 追ってくる勇者は下で（`MoveChaser` と同じ式）
                 if (sp.IsHero && Stage.Hero.StepEvery > 1 && (Turn + 1 - HeroTurn) % Stage.Hero.StepEvery != 0) continue;   // 第454期（同じ式・次の刻）
                 int target = Graph.TowardHome(road, sp.Pos);
                 if (FoesOn(road).Any(x => !ReferenceEquals(x, sp) && PosOf(x) == target && !(Stage.SpawnsPassHolds && x.Def.Hold))) continue;   // 第476期（`AdvanceFoes` と同じ式）
@@ -3043,7 +3182,7 @@ public sealed class Map11State
     /// </summary>
     private List<Encounter> SpawnIfDue(List<Encounter> list)
     {
-        if (!Portal.On || Captured || Fallen) return list;
+        if (!Portal.On || Captured || Fallen || Rout) return list;
         // 第177期 §1: **ポータルは使うたびに塞がる**（湧きと味方のワープで1本を共有する）。
         if (Portal.SpawnEvery <= 0 || Turn <= 0 || !PortalReady) return list;
         _portalReady = Turn + Portal.SpawnEvery;

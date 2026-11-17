@@ -1205,6 +1205,60 @@ public sealed class MapStage
         => Stage12Ch477With(hero: false, turnCap: Stage12Ch478TurnCap, keeper: keeper, keeperHp: keeperHp, keeperAtk: keeperAtk,
                             garrison: garrison, garrisonHp: garrisonHp, garrisonAtk: garrisonAtk, lean: true, retreatHolds: true);
 
+    // ---------------- 第480期: 1-3「狩る者」（指示書 design/PHASE480_STAGE13_HUNTER_SPEC.md §2） ----------------
+
+    /// <summary>第480期の 1 章の 1-3 の値（測りが振る口の既定）: 待ち構える部隊の賞金・湧きの間隔と最初の湧き・前半の部隊。</summary>
+    internal const int Stage13Ch480FoeGold = 6, Stage13Ch480SpawnEvery = 4, Stage13Ch480FirstSpawn = 3;
+    internal const string Stage13Ch480SpawnBand = "band_levy";
+
+    /// <summary>
+    /// 1 章の 1-3（第480期・`ChapterRule.V480` から）。盤は <see cref="MapGraph.Build13F480"/>（北 5 ／ 中 4 ／ 南 5 マス）。<b>前半は優勢・勇者の登場で撤退戦</b>（<see cref="HeroRule.V480"/>）。
+    /// 敵は敗走する残党で、始めの部隊はどれも待ち構える（歩くのは湧きの徴募兵だけ）: 北 徴募兵 ／ 砦跡に弓隊 ／ 奥に雷杖の部隊 ・ 中 物見の兵 ／ 橋に傭兵崩れ ・ 南 集落に徴募兵 ／ 奥に槍兵の部隊。
+    /// 野営地には本陣の守りが立つが、門が開いた刻の終わりに勇者が現れるので戦うことは無い（敵の拠点へは入れない）。刻の期限・予備隊は無い（門が開かなければ 10 刻目に勇者）。
+    /// 隊の枠・金・候補・レリック・門（中間拠点 2 つ）は単発の 1-3（<see cref="Stage13"/>）のまま。単発の 1-3 と第461〜479期の 1 章の 1-3 は変えない。
+    /// </summary>
+    public static MapStage Stage13Ch480 { get; } = Stage13Ch480With();
+
+    /// <summary>値を替えた第480期の 1 章の 1-3（測りが候補を並べるための口・遊ぶ盤は <see cref="Stage13Ch480"/>）。</summary>
+    internal static MapStage Stage13Ch480With(int steps = 2, int fallback = 10, int routPercent = 50, int spawnEvery = Stage13Ch480SpawnEvery, int firstSpawn = Stage13Ch480FirstSpawn,
+                                              string spawn = Stage13Ch480SpawnBand, bool deep = true, Func<bool, MapGraph>? board = null)
+    {
+        MapStage b = Stage13;
+        Map11.RoadNode Wait(Map11.RoadNode n) => n with { Hold = true, Gold = Stage13Ch480FoeGold };
+        EnemyCatalog.MapSquad sp = EnemyCatalog.MapSquadOf(spawn);
+        // 測りの口 `deep`: 偽なら奥の 2 部隊（雷杖・槍兵）を徴募兵に替える（前半の重さだけを見るとき）。
+        return new()
+        {
+            Id = b.Id,
+            Title = "1 章 1-3 狩る者",
+            Board = board ?? MapGraph.Build13F480,
+            Lanes = new IReadOnlyList<Map11.RoadNode>[]
+            {
+                new[] { Wait(Band(0, 0, "band_levy", 0)), Wait(Band(0, 1, "band_archers", 2)), Wait(Band(0, 2, deep ? "band_shock" : "band_levy", 3)) },
+                new[] { Wait(Node(1, 0, EnemyCatalog.Stages[0], 0)) with { Name = "物見の兵" }, Wait(Band(1, 1, "band_sellswords", 2)), Garrison(1, 2, "band_garrison", 4) with { Name = "野営地の守り" } },
+                new[] { Wait(Band(2, 0, "band_levy", 0)), Wait(Band(2, 1, deep ? "band_lance" : "band_levy", 2)) },
+            },
+            LaneNames = MapGraph.Lanes13F480,
+            Spawn = _ => (sp.Enemy, sp.Name, 0),
+            Portal = b.Portal with { SpawnEvery = spawnEvery, FirstSpawn = firstSpawn },
+            Time = b.Time,
+            Arrival = b.Arrival,
+            SquadCap = b.SquadCap,
+            WinOnCapture = true,
+            Gold = b.Gold,
+            MatchOffer = b.MatchOffer,
+            PortalGate = b.PortalGate,
+            Relic = b.Relic,
+            Hero = HeroRule.V480 with { Steps = steps, FallbackTurn = fallback, RoutPercent = routPercent },
+            Siege = SiegeRule.V457,
+            CrossFacing = true,
+            ViewScale = 1.35f,
+            SpawnsPassHolds = true,
+            WarnEmptyHome = true,
+            Notes = new[] { "中間拠点を 2 つ取り、残党の野営地を制圧する。" },
+        };
+    }
+
     /// <summary>選べるステージ（編成画面の選択の並び）。</summary>
     public static IReadOnlyList<MapStage> All { get; } = new[] { Stage11, Stage12, Stage13 };
 }
@@ -1439,9 +1493,17 @@ public readonly record struct MapFoeScale(int FoePercent, int HeroPercent, bool 
     }
 }
 
+/// <param name="Hunter">
+/// 第480期 §2（狩る者・1 章の 1-3）: <b>門が開いた刻の終わり</b>（開かなければ <c>FallbackTurn</c> 刻目の終わり）に<b>敵の拠点のマス</b>に現れ、そこから<b>撤退の局面</b>になる
+/// （`Map11State.Rout`）: 目標は「生きて拠点へ戻れ」・敵の拠点へは入れない・湧きと残りの敵は止まる。勇者は <b>1 刻に <c>Steps</c> 歩</b>、拠点の外のいちばん近い隊を追う
+/// （横の辺も使う・同じ距離なら枚数の多い隊）。追いつけば戦闘で「引き返す」は無い。隊が自分から勇者のマスへ入った刻（殿）は、勇者は動かない。拠点へは入らない。
+/// 勝ちは 生きている隊が全部拠点に入る ／ 勇者の HP が <c>RoutPercent</c>% を割る（退く）。負けは生きている駒が 0。<c>AfterGate</c> ／ <c>StepEvery</c> ／ <c>FromHome</c> は読まない。
+/// </param>
 public readonly record struct HeroRule(bool On, int AfterGate, int StepEvery, UnitDef? Unit, int Gold, bool AfterCapture = false, bool Gatekeeper = false,
-                                       bool Chaser = false, int FromHome = 0)
+                                       bool Chaser = false, int FromHome = 0, bool Hunter = false, int Steps = 1, int FallbackTurn = 0, int RoutPercent = 0)
 {
+    /// <summary>第480期の値（1 章の 1-3）: 狩る者・1 刻 2 歩・門が開かなければ 10 刻目・HP が半分を割ったら退く・退かせて ＋20。駒は今の勇者（新しい特性は足さない）。</summary>
+    public static readonly HeroRule V480 = new(true, 0, 1, EnemyCatalog.HeroMap, 20, Hunter: true, Steps: 2, FallbackTurn: 10, RoutPercent: 50);
     public static readonly HeroRule Off = new(false, 0, 0, null, 0);
     /// <summary>第454期の値: 門の 2 刻後・2 刻に 1 マス・版 B（`EnemyCatalog.HeroMap`・固定 300 回復）・倒して ＋20。</summary>
     public static readonly HeroRule V454 = new(true, 2, 2, EnemyCatalog.HeroMap, 20);
