@@ -622,11 +622,15 @@ public partial class Map11Main
             return best;
         }
 
+        var hudBlocks = _hud3d!.Blocks().ToList();
         // ---- 駒の名札: 台のすぐ下 → 右 → 左 → 頭の上 → さらに下 ----
         foreach (var p in pieces)
         {
             Vector2 size = p.Piece.Plate.Size;
             Rect2 body = p.Body;
+            // 第479期の続き 2（ポンの写し 2026-11-17・峠の関）: 駒そのものが固定の UI（題字・金・ボタン）の下にいるなら、名札は出さない
+            // ——横へ逃がした札だけが UI の隣に残って、何の札か分からなくなっていた。遭遇の台は数えない（台の縁に掛かる駒の札は残す）。
+            if (hudBlocks.Any(b => b.Intersects(body))) { p.Piece.Plate.Visible = false; continue; }
             float cx = body.GetCenter().X;
             // 駒が載っている台（体の足元と重なる台）の下の縁まで下げる。
             float under = body.End.Y;
