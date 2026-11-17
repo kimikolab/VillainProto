@@ -897,6 +897,13 @@ public partial class Map11Main
             GD.Print($"MAP3D_WIN_COMPLETE ok={St.Finished && St.Won} won={St.Won} captured={St.Captured} turn={St.Turn} battles={St.Battles} "
                 + $"lanes={string.Join("/", St.Graph.Lanes.Select(l => l.Length))} result={_resultOverlay.Visible}");
         }
+        else if (mode.StartsWith("m3d-at:", StringComparison.Ordinal))
+        {
+            // 第480期: 視点を盤の座標（x:z）へ寄せただけの絵（地形の確かめ用）。
+            string[] xz = mode["m3d-at:".Length..].Split(':');
+            _cam3d!.FocusOn(new Vector3(float.Parse(xz[0], System.Globalization.CultureInfo.InvariantCulture), 0, float.Parse(xz[1], System.Globalization.CultureInfo.InvariantCulture)), snap: true);
+            Refresh();
+        }
         else if (mode == "m3d-south") { await SceneAdvance3D(camp: true); await SceneSouth3D(); }   // 第476期: 南の道を進む場面
         else if (mode != "m3d-start") await SceneAdvance3D(camp: mode == "m3d-camp");
         GD.Print($"MAP3D_CAPTURE mode={mode} stage={St.Stage.Id} seed={Map11Session.Seed} turn={St.Turn} battles={St.Battles} "

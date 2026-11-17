@@ -1,4 +1,4 @@
-using Godot;
+﻿using Godot;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -62,6 +62,12 @@ internal sealed class Map3DLayout
         public bool StoneFort { get; init; }
         /// <summary>奥に小さく見せる「前のステージで越えた峠の関」の場所（第477期・無ければ置かない）。</summary>
         public Vector3? FarPass { get; init; }
+        /// <summary>味方の拠点を石の砦にする（第480期・1-3: 1-2 で取った討伐隊の砦・門は東・味方の幟）。偽なら辺境の砦。</summary>
+        public bool HomeStone { get; init; }
+        /// <summary>敵の拠点を「敗走した残党の野営地」にする（第480期・破れた天幕・倒れた柵・西の門の扉は勇者が内側から吹き飛ばす）。</summary>
+        public bool RuinedCamp { get; init; }
+        /// <summary>墓地を置かない（第480期・拠点が辺境の砦ではないステージ）。</summary>
+        public bool NoGraveyard { get; init; }
     }
 
     /// <summary>表のあるステージ。<b>Id は <c>MapStage.Id</c></b>（1 章の 1-1 も検証用の 1-1 も "1-1"）。</summary>
@@ -231,6 +237,81 @@ internal sealed class Map3DLayout
             // 開始時の視点: 辺境の砦・分かれ道・関所が端の札に隠れずに入る所（始めは -21 で、関所が右端の札の下になっていた）。
             Look = new Vector3(-16.5f, 0, 1.0f),
             Pan = new Rect2(-6f, -10f, 45.5f, 20f),
+        },
+        // 1-3（1 章・第480期「狩る者」・分かれ道 ＋ 北 7 ／ 中 6 ／ 南 7 マス）: 1-2 の地形の東の続き。横に約 2.5 画面ぶん。
+        //   西 ＝ 1-2 で取った討伐隊の砦（同じ石の砦・味方の幟） ／ 東 ＝ 残党の野営地（破れた天幕・倒れた柵）と門。
+        //   北 ＝ 尾根（崩れた砦跡） ／ 中 ＝ 谷と橋 ／ 南 ＝ 森と集落。川は尾根の下から湧いて谷を横切り、南へ流れる。
+        //   横の辺: 尾根の砦跡 ⇔ 谷の橋 ／ 谷の橋 ⇔ 南の 4 マス目（まっすぐな小道）。
+        new Table
+        {
+            Stage = "1-3",
+            Bounds = new Rect2(-62f, -30f, 124f, 61f),
+            Reach = 1.12f,
+            NorthRange = true,
+            Name = "残党の野営地",
+            HomeName = "討伐隊の砦",
+            PortalName = "残党の野営地",
+            Home = new Vector3(-44.0f, 0, 0f),
+            Portal = new Vector3(45.0f, 0, 0f),
+            Lanes = new[]
+            {
+                new[]
+                {
+                    new Vector3(-35.0f, 0, 0.5f), new Vector3(-27.0f, 1.0f, -8.0f), new Vector3(-18.0f, 2.2f, -13.5f), new Vector3(-8.0f, 3.0f, -16.0f),
+                    new Vector3(3.0f, 3.4f, -16.5f), new Vector3(14.0f, 3.0f, -15.5f), new Vector3(25.0f, 2.0f, -12.5f), new Vector3(34.5f, 0.8f, -7.5f),
+                },
+                new[]
+                {
+                    new Vector3(-35.0f, 0, 0.5f), new Vector3(-25.0f, 0, 0.5f), new Vector3(-15.0f, 0, -0.5f), new Vector3(-5.0f, 0, 0.5f),
+                    new Vector3(5.5f, 0, 0f), new Vector3(17.0f, 0, 0.5f), new Vector3(28.0f, 0, 0f),
+                },
+                new[]
+                {
+                    new Vector3(-35.0f, 0, 0.5f), new Vector3(-28.0f, 0, 9.0f), new Vector3(-19.0f, 0, 14.5f), new Vector3(-9.0f, 0, 17.5f),
+                    new Vector3(3.0f, 0, 16.0f), new Vector3(15.0f, 0, 18.5f), new Vector3(26.5f, 0, 16.0f), new Vector3(36.0f, 0, 9.0f),
+                },
+            },
+            Outposts = new[] { "ruin", "bridge", "village" },
+            Rivers = new[]
+            {
+                new[]
+                {
+                    new Vector3(12.5f, 0, -9.0f), new Vector3(11.0f, 0, -4.0f), new Vector3(10.6f, 0, 3.0f),
+                    new Vector3(9.6f, 0, 10.0f), new Vector3(8.8f, 0, 19.0f), new Vector3(8.0f, 0, 30.0f),
+                },
+            },
+            Fort = new Vector3(-51.8f, 0, 0f),
+            Graveyard = new Vector3(-999f, 0, -999f),
+            NoGraveyard = true,
+            HomeStone = true,
+            Camp = new Vector3(52.4f, 0, 0f),
+            RuinedCamp = true,
+            Woods = new[]
+            {
+                (new Vector3(-17.0f, 0, -6.0f), new Vector2(6.0f, 2.6f), 16, "forest"),   // 谷の道と尾根のあいだの林
+                (new Vector3(22.0f, 0, -5.5f), new Vector2(5.0f, 2.2f), 10, "forest"),
+                (new Vector3(-31.0f, 0, 17.5f), new Vector2(7.0f, 4.0f), 24, "forest"),   // 森の道の入口
+                (new Vector3(-14.0f, 0, 8.5f), new Vector2(7.5f, 2.6f), 22, "forest"),    // 集落の北の森
+                (new Vector3(-9.0f, 0, 24.5f), new Vector2(12.0f, 2.2f), 26, "forest"),   // 集落の手前（南）の森
+                (new Vector3(20.5f, 0, 10.0f), new Vector2(6.0f, 3.0f), 20, "forest"),    // 川の東の森
+                (new Vector3(21.0f, 0, 24.5f), new Vector2(11.0f, 2.0f), 22, "forest"),
+                (new Vector3(40.0f, 0, 18.0f), new Vector2(6.0f, 3.0f), 12, "forest"),
+                (new Vector3(-34f, 0, -21.5f), new Vector2(12.0f, 2.2f), 12, "pine"),     // 山すその松
+                (new Vector3(8f, 0, -23.5f), new Vector2(12.0f, 1.8f), 10, "pine"),
+                (new Vector3(40f, 0, -19.5f), new Vector2(10.0f, 2.4f), 12, "pine"),
+            },
+            Wetlands = new[]
+            {
+                (new Vector3(13.0f, 0, 6.5f), new Vector2(2.6f, 1.8f)),
+            },
+            FoothillZ = -21.0f,
+            HomeSlots = new[]
+            {
+                // 石の砦（門は東）の門の前の広場: 第1隊・第2隊は手前（南）、第3隊・第4隊は奥（北）。分かれ道への道は空ける。
+                new Vector3(-44.6f, 0, 6.4f), new Vector3(-39.2f, 0, 6.6f), new Vector3(-39.4f, 0, -5.8f), new Vector3(-44.8f, 0, -6.6f),
+            },
+            Look = new Vector3(-28.5f, 0, 1.0f),
+            Pan = new Rect2(-5f, -10f, 66f, 20f),
         },
     };
 
