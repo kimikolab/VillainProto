@@ -814,6 +814,7 @@ public partial class Main : Control
         _presetState = UiKit.Text("", 10, UiKit.Muted);
         presetBox.AddChild(_presetState);
         row.AddChild(presetBox);
+        _verifyControls.Add(presetBox);
 
         var rows = PresetRows();
         _presetPicker = new OptionButton { CustomMinimumSize = new Vector2(300, 40), FocusMode = FocusModeEnum.None };
@@ -821,8 +822,11 @@ public partial class Main : Control
         for (int i = 0; i < rows.Length; i++) _presetPicker.AddItem(rows[i].Name, i);
         _presetPicker.ItemSelected += index => ApplyPreset((int)index);
         row.AddChild(_presetPicker);
+        _verifyControls.Add(_presetPicker);
 
-        row.AddChild(HeaderCaption("敵ウェーブ"));
+        Control waveCaption = HeaderCaption("敵ウェーブ");
+        row.AddChild(waveCaption);
+        _verifyControls.Add(waveCaption);
         _stagePicker = new OptionButton { CustomMinimumSize = new Vector2(230, 40), FocusMode = FocusModeEnum.None };
         for (int i = 0; i < EnemyCatalog.Stages.Count; i++) _stagePicker.AddItem(EnemyCatalog.Stages[i].Name, i);
         _stagePicker.AddSeparator("── 検証 ──");
@@ -835,8 +839,11 @@ public partial class Main : Control
             if (!_battleMode) ShowEnemyDetails();
         };
         row.AddChild(_stagePicker);
+        _verifyControls.Add(_stagePicker);
 
-        row.AddChild(HeaderCaption("戦闘 seed"));
+        Control seedCaption = HeaderCaption("戦闘 seed");
+        row.AddChild(seedCaption);
+        _verifyControls.Add(seedCaption);
         _seed = new SpinBox
         {
             MinValue = 0,
@@ -854,6 +861,8 @@ public partial class Main : Control
         badgeText.VerticalAlignment = VerticalAlignment.Center;
         badge.AddChild(badgeText);
         row.AddChild(badge);
+        _verifyControls.Add(_seed);
+        _verifyControls.Add(badge);
         // 波・seed の下に置き、既存のヘッダーを横へ押し広げない。
         _enemyScaleSettings = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.End };
         _enemyScaleSettings.AddThemeConstantOverride("separation", 14);
@@ -1430,6 +1439,7 @@ public partial class Main : Control
         _seed.Value = CampaignSession.CarriedSeed;
         // 編成画面へは戻さない（この戦闘の編成は作戦マップが持っている）。
         _back.Visible = false;
+        HideVerifyForMapBattle();   // 第479期の続き 2: 3D の作戦マップから来た戦闘では検証の欄とボタンを隠す（倍速と一時停止は残す）
         EnterBattle(players, enemies, CampaignSession.CarriedSeed, stageIndex, title);
     }
 
@@ -1666,7 +1676,7 @@ public partial class Main : Control
         }
         Color color = _result.PlayerWon ? UiKit.Heal : UiKit.Hurt;
         if (_result.PlayerWon) _battleField.ShowVictoryPortraits();
-        _battleField.ShowBanner(verdict, color, 2.2);
+        if (!_mapBattle3D) _battleField.ShowBanner(verdict, color, 2.2);   // 第479期の続き 2: 3D の作戦マップの戦闘は、画面を横切る帯（`ShowMapBattleResult`）だけ
         _battleField.SetSubline($"{(_result.PlayerWon ? "勝利" : "敗北")} ・ {_result.Turns}ターン ・ 生存 {_result.PlayerSurvivors}体 ・ 最大連鎖 {_result.MaxEnemyKillsInOneTurn}");
         AppendLog($"[color=#{color.ToHtml(false)}][b]{verdict}[/b][/color]  {_result.Turns}ターン");
         // 第479期: 3D の作戦マップから来た戦闘は、終わりの札（勝敗と「作戦マップへ」）だけ。戦績の表は「詳細」の奥。
@@ -1679,7 +1689,7 @@ public partial class Main : Control
         Map11Session.CompleteBattle(_result.PlayerWon, _result);
         CampaignSession.ClearCarriedBattle();
         CampaignSession.CompleteBattle(_result.PlayerWon);
-        if (leanEnd) ShowMapBattleResult(_result, (Map11Session.State?.Gold ?? 0) - goldBefore);
+        if (leanEnd) ShowMapBattleResult(_result, auto: !_map11FlowSmoke);
         Notice(returnsToCampaign
             ? "戦闘終了。結果を持って作戦マップへ戻れます。"
             : "戦闘終了。配置を変えるか、同じ台本をもう一度再生できます。", color);

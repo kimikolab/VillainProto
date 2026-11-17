@@ -46,7 +46,7 @@ public partial class Map11Main
             + $"{squad.Label} → {PlaceName(pick.Dest.Id)}　{(warp ? "ワープ" : "移動")} {Math.Max(0, path.Count - 1)} 作戦ターン"
             + (enemies.Length > 0 ? $"　経路上の敵 {enemies.Length}隊" : "") + home
             // 第476期 §2-4: 進む前に分かるように——道の上の硬い部隊と賞金（「峠の関: 硬い・賞金 14」）。§2-2: 拠点が空になるなら 1 行。
-            + string.Concat(enemies.Where(n => n.Def.Tag.Length > 0).Select(n => $"　{n.Def.Name}: {n.Def.Tag}・賞金 {St.KillGold(n)}"));
+            + string.Concat(enemies.Where(n => n.Def.Tag.Length > 0).Select(n => $"　{n.Def.Name}: 賞金 {St.KillGold(n)}"));
     }
 
     // 横断路は細い板橋。主街道の土の帯と、色だけでなく床板・欄干の形で分ける。

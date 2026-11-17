@@ -960,6 +960,7 @@ public sealed class MapStage
     private static Map11.RoadNode Hard(Map11.RoadNode node, int hpPercent, int atkPercent)
         => hpPercent == 100 && atkPercent == 100 ? node : node with
         {
+            Crown = node.Crown || hpPercent > 100 || atkPercent > 100,   // 第479期の続き 2: 表示だけ（王冠の印）
             Enemy = _hard.GetOrAdd((node.Enemy, hpPercent, atkPercent), static k =>
             {
                 Formation c = k.Item1.Clone();

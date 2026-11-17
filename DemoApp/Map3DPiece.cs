@@ -10,7 +10,7 @@ using System.Globalization;
 /// <summary>駒 1 つに見せる中身（呼ぶ側が盤から読んで渡す・駒は計算しない）。</summary>
 internal readonly record struct Map3DPieceInfo(
     string Name, string? UnitId, bool Enemy, bool Hero, int Count, double HpPercent,
-    string Note, Color NoteColor, bool Urgent, string Glyph, string Reward = "", bool Prize = false);
+    string Note, Color NoteColor, bool Urgent, string Glyph, string Reward = "", bool Prize = false, bool Crown = false);
 
 /// <summary>3D の層の文字（遊ぶ UI・名札）。1920×1080 を 1280×720 に縮めても読める大きさは呼ぶ側が決める。</summary>
 internal static class Map3DFonts
@@ -110,7 +110,7 @@ public partial class Map3DPiece : Node3D
     internal void Show(in Map3DPieceInfo info)
     {
         Shown = Visible = true;
-        string shape = $"{info.Enemy}/{info.Hero}/{info.UnitId}/{info.Glyph}/{(info.Enemy ? info.Count : 0)}";
+        string shape = $"{info.Enemy}/{info.Hero}/{info.UnitId}/{info.Glyph}/{(info.Enemy ? info.Count : 0)}/{info.Crown}";
         if (shape != _shape)
         {
             _shape = shape;
@@ -261,6 +261,31 @@ public partial class Map3DPiece : Node3D
             Mesh = new BoxMesh { Size = new Vector3(width + 0.14f, drop + 0.14f, 0.03f) },
             Position = new Vector3(0, pole - 0.16f - drop / 2, 0), MaterialOverride = new StandardMaterial3D { AlbedoColor = cloth.Darkened(0.6f) },
         });
+        // 強い敵（区画だけの倍率が付く部隊・守将）は竿の上に王冠（第479期の続き 2・文なし）。
+        if (info.Crown)
+        {
+            var gold = new StandardMaterial3D
+            {
+                AlbedoColor = Color.FromHtml("#ffd24a"), Roughness = 0.35f, Metallic = 0.6f, EmissionEnabled = true,
+                Emission = Color.FromHtml("#ffb81f"), EmissionEnergyMultiplier = 0.9f,
+            };
+            float cy = pole + 0.22f;
+            _lean.AddChild(new MeshInstance3D
+            {
+                Mesh = new CylinderMesh { TopRadius = 0.46f, BottomRadius = 0.40f, Height = 0.26f, RadialSegments = 12 },
+                Position = new Vector3(0, cy, 0), MaterialOverride = gold, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            });
+            for (int i = 0; i < 5; i++)
+            {
+                float a = Mathf.Tau * i / 5f + Mathf.Pi / 2;
+                _lean.AddChild(new MeshInstance3D
+                {
+                    Mesh = new CylinderMesh { TopRadius = 0f, BottomRadius = 0.15f, Height = 0.42f, RadialSegments = 6 },
+                    Position = new Vector3(Mathf.Cos(a) * 0.36f, cy + 0.32f, Mathf.Sin(a) * 0.36f), MaterialOverride = gold,
+                    CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+                });
+            }
+        }
         // 紋（先頭の敵の顔か、部隊の 1 文字）と、数。
         float crestY = pole - 0.16f - drop * 0.36f;
         Token(info.UnitId is { Length: > 0 } id ? UnitFaceIcon.TextureFor(id) : null, info.Glyph,

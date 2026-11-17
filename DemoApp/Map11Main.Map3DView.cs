@@ -239,7 +239,7 @@ public partial class Map11Main
                 piece.Show(new Map3DPieceInfo(bounty ? FoeBadgeHead(foe) : FoeBadgeName(foe), Representative(foe)?.Id, true, foe.IsHero,
                     ((MapUnitBadge)pick.Button).Count, NodeHpPercent(foe), pick.Marker.Note, pick.Marker.NoteColor,
                     pick.Marker.Note.Length > 0 && pick.Marker.NoteColor == UiKit.Hurt, WaveMark(foe.Def.Name),
-                    bounty ? $"賞金 ＋{St.KillGold(foe)}" : "", bounty && foe.Def.Tag.Length > 0));
+                    bounty ? $"賞金 ＋{St.KillGold(foe)}" : "", bounty && foe.Def.Tag.Length > 0, Crown: foe.Def.Strong));
             }
             else
             {
@@ -1143,6 +1143,14 @@ public partial class Map11Main
             ClashBackHover = false;
             if (under > 0) fails.Add($"名札: 固定の UI の下に {under} 枚");
             if (_clashB.Visible && (backCell < 0 || backCell != wantCell)) fails.Add("引く先の輪: 出ていない ／ 規則の引く先と違う");
+            // 第479期の続き 2: 味方の台が左・敵の台が右・勝ち目が出たら先頭の駒が 1 行話す・強い敵の顔にだけ王冠。
+            for (int i = 0; i < 240 && ClashOddsText == "…"; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+            var (ownSide, foeSide) = ClashSides;
+            bool strong = _clashNode?.Def.Strong ?? false;
+            GD.Print($"MAP3D_LAYOUT 続き 2 味方の台 x={ownSide.Position.X:F0} 敵の台 x={foeSide.Position.X:F0}・勝ち目「{ClashOddsText}」セリフ {ClashSayText}・王冠 {ClashFoeCrown}（強い敵 {strong}）");
+            if (ownSide.End.X > foeSide.Position.X) fails.Add("遭遇の台: 味方の台が敵の台の左に無い");
+            if (ClashOddsText.Length > 0 && ClashOddsText != "…" && ClashSayText.Length == 0) fails.Add("遭遇の台: 勝ち目が出たのに先頭の駒が話していない");
+            if (ClashFoeCrown != strong) fails.Add("遭遇の台: 王冠の印が強い敵かどうかと合っていない");
             var (ringOwn, ringFoe) = ClashRings();
             var upper = new Rect2(0, 0, view.X, view.Y * 2f / 3f);
             bool dim = _encounterOverlay is ColorRect { Color.A: > 0.01f };

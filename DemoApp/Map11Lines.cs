@@ -29,6 +29,39 @@ public static class Map11Lines
         new Line(Gold, "", "金が 20 貯まったとき（最初の 1 回）", "ガン", "金が余ってる。強化しとけ"),
     };
 
+    // ---- 会戦の台: 味方の先頭の駒が勝ち目に合わせて 1 行話す（第479期の続き 2・文は仮） ----
+    public const string OddsGood = "odds.good", OddsEven = "odds.even", OddsBad = "odds.bad", OddsRisk = "odds.risk", OddsRiskSelf = "odds.risk.self";
+
+    /// <summary>勝ち目のセリフ（全員の文）。<c>{0}</c> は倒れやすい駒の名前。</summary>
+    public static readonly IReadOnlyDictionary<string, string> OddsLines = new Dictionary<string, string>
+    {
+        [OddsGood] = "行ける",
+        [OddsEven] = "五分だな",
+        [OddsBad] = "分が悪い。引くか",
+        [OddsRisk] = "{0}は持たないぞ",
+        [OddsRiskSelf] = "行けるが、こっちは持たないぞ",
+    };
+
+    /// <summary>駒ごとの言い回し（駒の Id → 鍵 → 文）。<b>今は空</b>——全員が <see cref="OddsLines"/> の文で話す。足せばその駒だけ替わる。</summary>
+    public static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> OddsLinesBy = new Dictionary<string, IReadOnlyDictionary<string, string>>();
+
+    /// <summary>
+    /// 勝ち目のセリフを選ぶ。<paramref name="wins"/> ＝ 裏の <paramref name="runs"/> 回の勝ちの数、<paramref name="risky"/> ＝ 倒れやすい駒（倒れた回数の多い順）。
+    /// 優勢でも倒れやすい駒がいれば「＜駒の名前＞は持たないぞ」（話す駒自身しかいなければ自分の文）。線は呼ぶ側（画面）の 優勢 ／ 互角 の線をそのまま貰う。
+    /// </summary>
+    public static (string Key, string Text) OddsLine(UnitDef speaker, int wins, int good, int even, IReadOnlyList<UnitDef> risky)
+    {
+        string key = wins >= good ? OddsGood : wins >= even ? OddsEven : OddsBad;
+        UnitDef? named = null;
+        if (key == OddsGood && risky.Count > 0)
+        {
+            named = risky.FirstOrDefault(d => d.Id != speaker.Id);
+            key = named is null ? OddsRiskSelf : OddsRisk;
+        }
+        string text = OddsLinesBy.TryGetValue(speaker.Id, out var own) && own.TryGetValue(key, out string? t) ? t : OddsLines[key];
+        return (key, named is null ? text : string.Format(text, named.Name));
+    }
+
     /// <summary>ステージの頭の札の目標の 1 行（20 字まで）。</summary>
     public static readonly IReadOnlyDictionary<string, string> Goals = new Dictionary<string, string>
     {

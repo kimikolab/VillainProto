@@ -118,7 +118,14 @@ public static class Map11
     /// <para>第476期: <c>Gold</c> はその区画を抜いたときの金（0 以上なら種類ごとの値 <see cref="GoldRule"/> より先に読む・-1 が今まで）。
     /// <c>Tag</c> ／ <c>Note</c> は<b>表示だけ</b>（「硬い」・「最大HP ×2.5・攻撃 ×2（中身は盾の列）」——札・遭遇の窓・案内の行）。規則は読まない。</para>
     public sealed record RoadNode(int Road, int Index, string Name, Formation Enemy, int StageIndex, bool Stationary = false, bool Hold = false,
-                                  int Gold = -1, string Tag = "", string Note = "");
+                                  int Gold = -1, string Tag = "", string Note = "", bool Crown = false)
+    {
+        /// <summary>
+        /// 強い敵か（第479期の続き 2・<b>表示だけ</b>——盤の旗と台の顔の王冠の印）。区画だけの倍率で上げた部隊（<c>Crown</c>・`MapStage.Hard`）・
+        /// 今までの「硬い」の札の部隊・砦の守将。規則は読まない。
+        /// </summary>
+        public bool Strong => Crown || Tag.Length > 0 || Name == MapStage.KeeperName;
+    }
 
     /// <summary>道ごとの敵部隊。<b>手前を抜かないと奥に当たれない。</b></summary>
     public static IReadOnlyList<RoadNode>[] Roads { get; } =

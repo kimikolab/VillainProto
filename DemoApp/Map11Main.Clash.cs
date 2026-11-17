@@ -8,7 +8,8 @@ using System.Linq;
 // 遭遇の台（第479期の追記・ポンの決定 2026-11-16・3D の層）。遭遇・連戦・迎撃を、盤の中央を空けたまま画面の下 1／3 に出す。
 //
 //   盤の上: 当たる隊に青い輪・敵に赤い輪
-//   下 1／3: 左 ＝ 敵の陣形の台 ／ 右 ＝ 味方の陣形の台（席に顔・HP の棒・☆・倒れた席は暗く・味方は隣どうしの関係の線）
+//   下 1／3: 左 ＝ 味方の陣形の台 ／ 右 ＝ 敵の陣形の台（第479期の続き 2 で入れ替えた——戦闘画面・マップと同じ向き・前列どうしが中央で向き合う）
+//           席に顔・HP の棒・☆・倒れた席は暗く・味方は隣どうしの関係の線・強い敵の顔に王冠・味方の先頭の駒が勝ち目を 1 行話す
 //   中央下: 勝ち目の印（同じ戦闘を裏で 20 回回した勝ちの数——16 以上 ＝ 優勢・8〜15 ＝ 互角・7 以下 ＝ 劣勢）・賞金・ボタン
 //   戦闘から戻ったら、同じ台の上に結果（勝ち ／ 負けの帯・倒れた駒が暗くなる）を 2 秒
 //
@@ -30,7 +31,12 @@ public partial class Map11Main
     private PanelContainer _clashPanel = null!;
     private ClashBoard _clashFoe = null!, _clashOwn = null!;
     private ClashLead _clashFoeLead = null!, _clashOwnLead = null!;
-    private Label _clashOdds = null!, _clashGold = null!, _clashBand = null!, _clashTag = null!;
+    private Label _clashOdds = null!, _clashGold = null!, _clashBand = null!, _clashSay = null!;
+    /// <summary>台のセリフ（検査と遊ぶ口が読む）。</summary>
+    internal string ClashSayText => _clashSay.Visible ? _clashSay.Text : "";
+    /// <summary>台の左右（検査が読む）: 味方の台と敵の台の四角（古い UI の座標）。</summary>
+    internal (Rect2 Own, Rect2 Foe) ClashSides => (_clashOwn.GetGlobalRect(), _clashFoe.GetGlobalRect());
+    internal bool ClashFoeCrown => _clashFoeLead.Crowned;
     private Button _clashA = null!, _clashB = null!, _clashC = null!, _clashPrev = null!, _clashNext = null!;
     private MeshInstance3D? _ringOwn, _ringFoe, _ringBack;
     private volatile int[]? _oddsFell;
@@ -80,11 +86,11 @@ public partial class Map11Main
         var row = new HBoxContainer();
         row.AddThemeConstantOverride("separation", 14);
         _clashPanel.AddChild(row);
-        // 左 ＝ 敵（台の外の端に旗と先頭の駒）
-        _clashFoeLead = new ClashLead(EnemyColor);
-        _clashFoe = new ClashBoard(frontOnRight: true, EnemyColor);
-        row.AddChild(_clashFoeLead);
-        row.AddChild(_clashFoe);
+        // 左 ＝ 味方（台の外の端に旗と先頭の駒・前列は中央寄り ＝ 右）
+        _clashOwnLead = new ClashLead(PlayerColor);
+        _clashOwn = new ClashBoard(frontOnRight: true, PlayerColor);
+        row.AddChild(_clashOwnLead);
+        row.AddChild(_clashOwn);
         // 中央下 ＝ 勝ち目・賞金・ボタン
         var mid = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, Alignment = BoxContainer.AlignmentMode.Center };
         mid.AddThemeConstantOverride("separation", 8);
@@ -92,15 +98,19 @@ public partial class Map11Main
         _clashBand = UiKit.Text("", 44, Colors.White);
         _clashBand.HorizontalAlignment = HorizontalAlignment.Center;
         mid.AddChild(_clashBand);
+        // 味方の先頭の駒のセリフ（味方の台の側 ＝ 左へ寄せた吹き出し）。
+        _clashSay = UiKit.Text("", 20, Colors.White);
+        _clashSay.AddThemeStyleboxOverride("normal", Map3DHud.Box(new Color(0.09f, 0.12f, 0.16f, 0.96f), PlayerColor.Darkened(0.1f), 2, 12, 6));
+        _clashSay.SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin;
+        _clashSay.Visible = false;
+        mid.AddChild(_clashSay);
         _clashOdds = UiKit.Text("", 34, GoldColor);
         _clashOdds.HorizontalAlignment = HorizontalAlignment.Center;
         mid.AddChild(_clashOdds);
         var info = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
         info.AddThemeConstantOverride("separation", 16);
-        _clashTag = UiKit.Text("", 18, Color.FromHtml("#1b1608"));
-        _clashTag.AddThemeStyleboxOverride("normal", UiKit.Box(Color.FromHtml("#ffd874"), Color.FromHtml("#fff1c4")));
         _clashGold = UiKit.Text("", 22, Color.FromHtml("#ffd874"));
-        info.AddChild(_clashTag); info.AddChild(_clashGold);
+        info.AddChild(_clashGold);
         mid.AddChild(info);
         var buttons = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
         buttons.AddThemeConstantOverride("separation", 10);
@@ -123,11 +133,11 @@ public partial class Map11Main
         _clashC.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter;
         _clashC.Pressed += OpenBreakReform;
         mid.AddChild(_clashC);
-        // 右 ＝ 味方
-        _clashOwn = new ClashBoard(frontOnRight: false, PlayerColor);
-        _clashOwnLead = new ClashLead(PlayerColor);
-        row.AddChild(_clashOwn);
-        row.AddChild(_clashOwnLead);
+        // 右 ＝ 敵（前列は中央寄り ＝ 左）
+        _clashFoe = new ClashBoard(frontOnRight: false, EnemyColor);
+        _clashFoeLead = new ClashLead(EnemyColor);
+        row.AddChild(_clashFoe);
+        row.AddChild(_clashFoeLead);
     }
 
     // ---------------- 出す ----------------
@@ -185,9 +195,8 @@ public partial class Map11Main
         _clashFoe.Set(SeatsOf(foe, own: false), null);
         string foeName = node.IsHero ? "勇者" : node.Def.Name;
         _clashOwnLead.Set(own.Where(u => u.IsAlive).OrderBy(u => u.Slot).Select(u => u.Def).FirstOrDefault(), s.Label, $"{own.Count(u => u.IsAlive)} 枚");
-        _clashFoeLead.Set(foe.Where(u => u.IsAlive).OrderBy(u => u.Slot).Select(u => u.Def).FirstOrDefault(), foeName, $"{foe.Count(u => u.IsAlive)} 体");
-        _clashTag.Text = node.Def.Tag;
-        _clashTag.Visible = node.Def.Tag.Length > 0;
+        _clashFoeLead.Set(foe.Where(u => u.IsAlive).OrderBy(u => u.Slot).Select(u => u.Def).FirstOrDefault(), foeName, $"{foe.Count(u => u.IsAlive)} 体", crown: node.Def.Strong);
+        _clashSay.Visible = false;
         int gold = St.Stage.Gold.On && node.Def.Gold >= 0 ? St.KillGold(node) : 0;
         _clashGold.Text = gold > 0 ? $"賞金 ＋{gold}" : "";
         _clashGold.Visible = gold > 0;
@@ -294,12 +303,12 @@ public partial class Map11Main
         _clashOwn.Set(own, null);
         _clashFoe.Set(foe, null);
         _clashOwnLead.Set(own.Where(x => x.Alive).Select(x => x.Def).FirstOrDefault() ?? own.Select(x => x.Def).FirstOrDefault(), snap.OwnName, $"{own.Count(x => x.Alive)} 枚", down: !own.Any(x => x.Alive));
-        _clashFoeLead.Set(foe.Where(x => x.Alive).Select(x => x.Def).FirstOrDefault() ?? foe.Select(x => x.Def).FirstOrDefault(), snap.FoeName, $"{foe.Count(x => x.Alive)} 体", down: !foe.Any(x => x.Alive));
+        _clashFoeLead.Set(foe.Where(x => x.Alive).Select(x => x.Def).FirstOrDefault() ?? foe.Select(x => x.Def).FirstOrDefault(), snap.FoeName, $"{foe.Count(x => x.Alive)} 体", down: !foe.Any(x => x.Alive), crown: snap.Node.Def.Strong);
         _clashBand.Text = line.Won ? "勝ち" : "負け";
         _clashBand.AddThemeColorOverride("font_color", line.Won ? Color.FromHtml("#71d7a1") : Color.FromHtml("#ff6b5e"));
         _clashBand.Visible = true;
         _clashOdds.Visible = false;
-        _clashTag.Visible = false;
+        _clashSay.Visible = false;
         int gold = St.Gold - snap.Gold;
         _clashGold.Text = gold > 0 ? $"賞金 ＋{gold}" : "";
         _clashGold.Visible = gold > 0;
@@ -381,7 +390,17 @@ public partial class Map11Main
                 var risky = new HashSet<int>(Enumerable.Range(0, fell.Length).Where(i => fell[i] >= RiskRuns));
                 _clashOwn.SetRisk(risky);
                 string names = string.Join("・", St.PeekSquad(_clashSquad).Where(u => u.IsAlive && risky.Contains(u.Slot)).OrderBy(u => u.Slot).Select(u => $"{u.Def.Name}（{fell[u.Slot]}／{OddsRuns}）"));
-                GD.Print($"MAP3D_CLASH_ODDS {St.Squads[_clashSquad].Label} 対 {_clashNode?.Def.Name} {_oddsWins}／{OddsRuns} {text} 割れの印: {(names.Length > 0 ? names : "—")}");
+                // 味方の先頭の駒が勝ち目に合わせて 1 行話す（文は `Map11Lines`・倒れやすい駒は倒れた回数の多い順）。
+                var alive = St.PeekSquad(_clashSquad).Where(u => u.IsAlive).OrderBy(u => u.Slot).ToList();
+                string said = "";
+                if (alive.Count > 0)
+                {
+                    var riskyDefs = alive.Where(u => risky.Contains(u.Slot)).OrderByDescending(u => fell[u.Slot]).ThenBy(u => u.Slot).Select(u => u.Def).ToList();
+                    said = Map11Lines.OddsLine(alive[0].Def, _oddsWins, OddsGood, OddsEven, riskyDefs).Text;
+                    _clashSay.Text = $"「{said}」";
+                    _clashSay.Visible = true;
+                }
+                GD.Print($"MAP3D_CLASH_ODDS {St.Squads[_clashSquad].Label} 対 {_clashNode?.Def.Name} {_oddsWins}／{OddsRuns} {text} 割れの印: {(names.Length > 0 ? names : "—")} セリフ: {(said.Length > 0 ? $"{alive[0].Def.Name}「{said}」" : "—")}");
             }
         }
 
@@ -597,9 +616,35 @@ public partial class ClashLead : VBoxContainer
     }
 
     internal string NameText => _name.Text;
+    internal bool Crowned => _crown.Visible;
+    private readonly Control _crown = new() { MouseFilter = MouseFilterEnum.Ignore, Visible = false };
 
-    internal void Set(UnitDef? lead, string name, string count, bool down = false)
+    /// <summary>王冠の印（顔の上の真ん中・文なし）。強い敵（区画だけの倍率が付く部隊・守将）だけ。</summary>
+    private void DrawCrown()
     {
+        Vector2 c = new(_crown.Size.X / 2, 4);
+        var gold = Color.FromHtml("#ffd24a");
+        var shape = new[]
+        {
+            c + new Vector2(-24, 14), c + new Vector2(-28, -12), c + new Vector2(-13, 0), c + new Vector2(0, -18),
+            c + new Vector2(13, 0), c + new Vector2(28, -12), c + new Vector2(24, 14),
+        };
+        _crown.DrawColoredPolygon(shape, gold);
+        _crown.DrawPolyline(shape.Append(shape[0]).ToArray(), Color.FromHtml("#5a3d05"), 2f, true);
+        _crown.DrawRect(new Rect2(c + new Vector2(-24, 8), new Vector2(48, 6)), Color.FromHtml("#c98f12"));
+        foreach (Vector2 tip in new[] { shape[1], shape[3], shape[5] }) _crown.DrawCircle(tip, 4, Color.FromHtml("#fff1c4"));
+    }
+
+    internal void Set(UnitDef? lead, string name, string count, bool down = false, bool crown = false)
+    {
+        if (_crown.GetParent() is null)
+        {
+            _crown.SetAnchorsPreset(LayoutPreset.FullRect);
+            _crown.Draw += DrawCrown;
+            _face.AddChild(_crown);
+        }
+        _crown.Visible = crown && lead is not null;
+        _crown.QueueRedraw();
         _face.Modulate = down ? new Color(0.28f, 0.28f, 0.30f) : Colors.White;
         _face.Visible = lead is not null;
         if (lead is not null) _face.SetUnit(lead);
