@@ -395,7 +395,7 @@ public static class Chapter1HunterSmoke
                          && g[g.Home].Name == MapGraph.Home13F480 && g[g.Portal].Name == MapGraph.Camp13F480;
             MapFoeScale sc = rule.ScaleOf(2);
             UnitDef hero = s.Hero.Unit!;
-            bool rules = s.Hero.Hunter && s.Hero.Steps == 2 && s.Hero.FallbackTurn == 0 && s.Hero.RoutPercent == 50 && !s.Hero.Chaser && s.PortalGate == 2 && s.TimeLimit && s.TurnCap == 12 && s.Hero.HoldTurns == 3 && !s.Reserve.On
+            bool rules = s.Hero.Hunter && s.Hero.Steps == 2 && s.Hero.FallbackTurn == 0 && s.Hero.RoutPercent == 50 && !s.Hero.Chaser && s.PortalGate == 2 && s.TimeLimit && s.TurnCap == 12 && s.Hero.HoldTurns == 4 && !s.Reserve.On
                          && s.Portal.SpawnEvery == 0 && s.EncounterRetreat && s.WipedReforms && !sc.HeroMends && !hero.Traits.Contains(TraitId.BossMend300)
                          && hero.MaxHp == MapFoeScale.Mul(EnemyCatalog.HeroMap.MaxHp, MapStage.Stage13Ch480HeroHp) && hero.Attack == MapFoeScale.Mul(EnemyCatalog.HeroMap.Attack, MapStage.Stage13Ch480HeroAtk)
                          && MapStage.Stage13Ch480HeroHp == 800 && MapStage.Stage13Ch480HeroAtk == 250
@@ -407,7 +407,7 @@ public static class Chapter1HunterSmoke
             write($"      敵 {string.Join(" ／ ", s.Lanes.Select((l, i) => $"{s.LaneMark(i)}: {string.Join("・", l.Select(n => n.Name))}"))}・歩いてくる湧き {(s.Portal.SpawnEvery > 0 ? "あり" : "なし")}・期限 {s.TurnCap} 刻");
             write($"      敵の倍率 ×{sc.FoePercent / 100.0:0.##}・勇者 HP {hero.MaxHp}（×{MapStage.Stage13Ch480HeroHp / 100.0:0.##}） 攻 {hero.Attack}（×{MapStage.Stage13Ch480HeroAtk / 100.0:0.##}）・{s.Hero.Steps} 歩・HP {s.Hero.RoutPercent}% で退く");
             Req(shape, "(a) 盤: 北 7 ／ 中 6 ／ 南 7 マス・中間拠点 3（北 4 ／ 中 4 ／ 南 3 マス目）・横の辺 2 本（砦跡 ⇔ 橋・橋 ⇔ 南4）");
-            Req(rules && foes, "(a) 前半の敵は待ち構える（中間拠点に 2 部隊ずつ・雷杖と槍兵は 1 部隊ずつ）・歩いてくる湧きと予備隊は無い・勇者は HP ×8 ／ 攻 ×2.5・期限 12 刻・足止めは 3 ターン以上");
+            Req(rules && foes, "(a) 前半の敵は待ち構える（中間拠点に 2 部隊ずつ・雷杖と槍兵は 1 部隊ずつ）・歩いてくる湧きと予備隊は無い・勇者は HP ×8 ／ 攻 ×2.5・期限 12 刻・足止めは 4 ターン以上");
         }
 
         // ---- (b) 現れる ／ (c) 目標が替わる ----
@@ -478,7 +478,7 @@ public static class Chapter1HunterSmoke
             Req(two, "(d) 勇者は 1 刻に 2 歩、いちばん近い隊を追う（野営地 → 北7 → 北6）");
             Req(rearMeet && held && st.HunterHolds == 1, "(d) 隊が自分から勇者のマスへ入り、戦闘が 3 ターン以上続いた刻（殿）は、勇者は動かない");
             {
-                // 2 ターンで終わった殿では止まらない（勇者はその刻も歩く）・撤退の局面では手札との出し入れが閉じる。
+                // 3 ターンで終わった殿では止まらない（勇者はその刻も歩く）・撤退の局面では手札との出し入れが閉じる。
                 var x = Fresh(s);
                 Walk(x, 0, Dest.Of(g, fort));
                 Walk(x, 1, Dest.Of(g, village));
@@ -489,13 +489,13 @@ public static class Chapter1HunterSmoke
                 var hx = x.Hero!;
                 Map11State.Node? mx = null;
                 for (int k = 0; k < 3 && mx is null; k++) mx = Map11Orders.Apply(x, 0, Dest.Portal(g, 0), Map11Orders.Plan(x, 0, Dest.Portal(g, 0)));
-                if (ReferenceEquals(mx, hx)) Lose(x, 0, hx, turns: 2);
+                if (ReferenceEquals(mx, hx)) Lose(x, 0, hx, turns: 3);
                 int before = hx.Pos;
                 Tick(x);
                 int slot0 = x.Squads[1].Units![0].Slot;
                 bool benchShut = x.BenchClosed && !x.SwapWithBench(1, slot0, -1) && x.CanReform(1) && x.Squads[1].Units!.Count == 5;
-                write($"  (d) 2 ターンで終わった殿: 勇者 {Cell(x, before)} → {Cell(x, hx.Pos)}（止めた {x.HunterHolds}・止められなかった {x.HunterSlips}） ／ 手札: 前半は出し入れできる {benchBefore}・撤退の局面では閉じる {benchShut}（組み直しの窓は開く {x.CanReform(1)}）");
-                Req(ReferenceEquals(mx, hx) && hx.Pos != before && x.HunterHolds == 0 && x.HunterSlips == 1 && x.RearGuards.Contains(0), "(d) 3 ターン未満で終わった戦闘では止まらない（勇者はその刻も歩く）");
+                write($"  (d) 3 ターンで終わった殿: 勇者 {Cell(x, before)} → {Cell(x, hx.Pos)}（止めた {x.HunterHolds}・止められなかった {x.HunterSlips}） ／ 手札: 前半は出し入れできる {benchBefore}・撤退の局面では閉じる {benchShut}（組み直しの窓は開く {x.CanReform(1)}）");
+                Req(ReferenceEquals(mx, hx) && hx.Pos != before && x.HunterHolds == 0 && x.HunterSlips == 1 && x.RearGuards.Contains(0), "(d) 4 ターン未満で終わった戦闘では止まらない（勇者はその刻も歩く）");
                 Req(benchBefore && benchShut, "(h) 撤退の局面では手札との出し入れが閉じる（中間拠点で下げて拠点で組めない・席の入れ替えと休むは残る）");
             }
             Req(p2 == fort && p3 == s4 && h.Pos == village && m4.Count == 1 && m4[0].Squad == 1, "(d) 横の辺を使って次の隊を追う（砦跡 → 橋 → 南4 → 集落）");
@@ -592,7 +592,7 @@ public static class Chapter1HunterSmoke
     // ---------------- §4 の測り ----------------
 
     internal sealed record Cand(string Label, int Foe, int HeroHp, int HeroAtk, int Stack = MapStage.Stage13Ch480Stack, int Steps = 2,
-                                int Rout = 50, int[]? Len = null, int[]? Op = null, int Hold = 3, bool SoloWeak = false);
+                                int Rout = 50, int[]? Len = null, int[]? Op = null, int Hold = 4, bool SoloWeak = false);
 
     /// <summary>今の定数の候補。</summary>
     internal static readonly Cand Now = new("今", ChapterRule.Stage13Ch480FoePercent, MapStage.Stage13Ch480HeroHp, MapStage.Stage13Ch480HeroAtk);
@@ -759,9 +759,9 @@ public static class Chapter1HunterSmoke
         }
         detail("");
         detail($"- 線: {string.Join(" ／ ", lines.Select(l => $"{(l.Ok ? "○" : "×")} {l.Name}"))}");
-        bool eOk = double.IsNaN(eSurv) || eSurv is >= 60 and <= 85;
-        lines.Add(("e 生還した駒 60〜85%", eOk));
-        detail($"- 線（追記 2）: e の生還した駒（1 枚の隊を作れた通しの平均）{T(eSurv)}%・枠のかぎり {T(eRep)}% → {(eOk ? "60〜85% に入る" : "外れる")}");
+        bool eOk = double.IsNaN(eSurv) || eSurv is >= 50 and <= 85;
+        lines.Add(("e 生還した駒 50〜85%", eOk));
+        detail($"- 線（追記 3）: e の生還した駒（1 枚の隊を作れた通しの平均）{T(eSurv)}%・枠のかぎり {T(eRep)}% → {(eOk ? "50〜85% に入る" : "外れる")}");
         if (compact)
             write($"| {c.Label} | {group} | {lostBefore:0.00} | {T(gate)}（{timeUp}） | {T(good)}% | {T(Med(weigh.Select(w => (double)w.Wins)))}／{weigh.Select(w => w.Wins).DefaultIfEmpty(0).Max()} "
                 + $"| {T(Med(weigh.Select(w => w.Cut)))}%／{T(weigh.Select(w => w.Cut).DefaultIfEmpty(0).Max())}% | {T(Pct(R(Flee.Home), r => r.Won))}% | {T(Surv(Flee.Home))}% | {T(Pct(deepRs, r => r.DeepCaught))}% "
@@ -828,7 +828,7 @@ public static class Chapter1HunterSmoke
         return (three, four, wins, Med(turns));
     }
 
-    private static string Mark(int n) => n >= 16 ? "足止めできる" : n <= 7 ? "足止めできない" : "五分";
+    internal static string Mark(int n) => n >= 16 ? "足止めできる" : n <= 7 ? "足止めできない" : "五分";
 
     private static void Stand(Action<string> write, ChapterRule rule, MapStage stage, List<Map11State.CarryPack> packsB, List<Map11State.CarryPack> packsA, List<Team> humans)
     {
@@ -856,8 +856,8 @@ public static class Chapter1HunterSmoke
             rows.Add((d.Name, hp1, three, four1));
         }
         foreach (var r in rows.OrderByDescending(r => r.Three[1]).ThenByDescending(r => r.Three[2]).ThenByDescending(r => r.Hp))
-            write($"| {r.Name} | {r.Hp} | {r.Three[1]}／20 | {r.Three[2]}／20 | {r.Three[3]}／20 | {r.Four}／20 | {Mark(r.Three[1])} |");
-        write($"- ☆1 で「足止めできる」（16 以上）{rows.Count(r => r.Three[1] >= 16)} 体・「五分」{rows.Count(r => r.Three[1] is > 7 and < 16)} 体・「足止めできない」{rows.Count(r => r.Three[1] <= 7)} 体 ／ ☆2 で足止めできる {rows.Count(r => r.Three[2] >= 16)} 体 ／ ☆3 で {rows.Count(r => r.Three[3] >= 16)} 体");
+            write($"| {r.Name} | {r.Hp} | {r.Three[1]}／20 | {r.Three[2]}／20 | {r.Three[3]}／20 | {r.Four}／20 | {Mark(r.Four)} |");
+        write($"- 印は 4 ターンで数える（追記 3）: ☆1 で「足止めできる」（4 ターン以上が 16 以上）{rows.Count(r => r.Four >= 16)} 体・「五分」{rows.Count(r => r.Four is > 7 and < 16)} 体・「足止めできない」{rows.Count(r => r.Four <= 7)} 体 ／ 3 ターン以上が 16 以上: ☆1 {rows.Count(r => r.Three[1] >= 16)} 体・☆2 {rows.Count(r => r.Three[2] >= 16)} 体・☆3 {rows.Count(r => r.Three[3] >= 16)} 体");
 
         // 2) 2 枚・3 枚・5 枚の隊（器具の組の 1-3 の始めの隊から、席の前から k 枚）。
         write("");

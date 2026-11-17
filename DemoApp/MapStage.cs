@@ -1232,7 +1232,7 @@ public sealed class MapStage
     public static MapStage Stage13Ch480 { get; } = Stage13Ch480With();
 
     /// <summary>値を替えた第480期の 1 章の 1-3（測りが候補を並べるための口・遊ぶ盤は <see cref="Stage13Ch480"/>）。</summary>
-    internal static MapStage Stage13Ch480With(int steps = 2, int fallback = 0, int routPercent = 50, int holdTurns = 3, int spawnEvery = Stage13Ch480SpawnEvery, int firstSpawn = Stage13Ch480FirstSpawn,
+    internal static MapStage Stage13Ch480With(int steps = 2, int fallback = 0, int routPercent = 50, int holdTurns = 4, int spawnEvery = Stage13Ch480SpawnEvery, int firstSpawn = Stage13Ch480FirstSpawn,
                                               string spawn = Stage13Ch480SpawnBand, bool deep = true, int heroHp = Stage13Ch480HeroHp, int heroAtk = Stage13Ch480HeroAtk,
                                               int stack = Stage13Ch480Stack, int[]? len = null, int[]? op = null)
     {
@@ -1521,7 +1521,7 @@ public readonly record struct HeroRule(bool On, int AfterGate, int StepEvery, Un
                                        bool Chaser = false, int FromHome = 0, bool Hunter = false, int Steps = 1, int FallbackTurn = 0, int RoutPercent = 0, int HoldTurns = 0)
 {
     /// <summary>第480期の値（1 章の 1-3）: 狩る者・1 刻 2 歩・門が開いた刻の終わりにだけ現れる（開かなければ刻の期限で時間切れ）・HP が半分を割ったら退く・退かせて ＋20。駒は今の勇者（新しい特性は足さない）。</summary>
-    public static readonly HeroRule V480 = new(true, 0, 1, EnemyCatalog.HeroMap, 20, Hunter: true, Steps: 2, FallbackTurn: 0, RoutPercent: 50, HoldTurns: 3);
+    public static readonly HeroRule V480 = new(true, 0, 1, EnemyCatalog.HeroMap, 20, Hunter: true, Steps: 2, FallbackTurn: 0, RoutPercent: 50, HoldTurns: 4);
     public static readonly HeroRule Off = new(false, 0, 0, null, 0);
     /// <summary>第454期の値: 門の 2 刻後・2 刻に 1 マス・版 B（`EnemyCatalog.HeroMap`・固定 300 回復）・倒して ＋20。</summary>
     public static readonly HeroRule V454 = new(true, 2, 2, EnemyCatalog.HeroMap, 20);
