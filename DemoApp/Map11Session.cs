@@ -239,6 +239,8 @@ public static class Map11Session
         int golds = State.GoldLog.Count;
         var unitsBefore = sq.Units?.ToList() ?? new List<UnitState>();   // 第454期: 札の持ち主を台本の番号で引くため（精算で倒れた駒は隊から外れる）
         State.Resolve(squad, node, playerWon, wasIntercept);
+        // 第479期の続き: 全滅して空の隊に戻ったら、行き先も拠点に戻す（組み直した直後に前の行き先へ歩き出さない）。
+        if (sq is { Lost: false, Units: { Count: 0 } }) Destinations[squad] = Dest.Home;
         Battles = State.Battles;
         if (wasIntercept && TurnRunning) _interceptFought = true;
         // 第457期: 本陣で勝って、まだそこに敵がいれば連戦の合間（次の `StepTurn` が `Siege` で止まる）。

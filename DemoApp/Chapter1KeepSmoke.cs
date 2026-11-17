@@ -196,9 +196,46 @@ public static class Chapter1KeepSmoke
                 Map11Session.Reset(0, draft: true, stage: stage);
                 return r;
             }
+            // ---- (f) 全滅した隊は空の隊として拠点へ戻り、組み直せる（第479期の続き・ポンの決定 2026-11-17）----
+            (bool Met, bool Lost, int Count, bool Reform, bool Home, bool DestHome, int Wipes) Wipe(MapStage stage)
+            {
+                Map11Session.Reset(0, draft: true, stage: stage);
+                Map11State st = Map11Session.State!;
+                st.UseDefaultSquads();
+                Map11Session.SetDestination(0, Dest.Deep(st.Graph, 1));
+                bool met = false;
+                for (int turn = 0; turn < 6 && !met && !st.Finished; turn++)
+                {
+                    if (!Map11Session.TurnRunning) Map11Session.BeginTurn();
+                    for (int step = 0; step < 30 && Map11Session.TurnRunning && !met; step++)
+                    {
+                        Map11Session.StepKind kind = Map11Session.StepTurn();
+                        if (kind == Map11Session.StepKind.Battle && Map11Session.PendingSquad == 0 && !Map11Session.PendingIntercept) { met = true; break; }
+                        if (kind != Map11Session.StepKind.Battle) break;
+                        foreach (UnitState u in CampaignSession.CarriedEnemies!) u.Hp = 0;
+                        CampaignSession.ClearCarriedBattle();
+                        Map11Session.CompleteBattle(true);
+                    }
+                }
+                if (!met) { Map11Session.Reset(0, draft: true, stage: stage); return (false, false, -1, false, false, false, 0); }
+                foreach (UnitState u in CampaignSession.CarriedPlayers!) u.Hp = 0;   // 隊を全滅させる
+                CampaignSession.ClearCarriedBattle();
+                Map11Session.CompleteBattle(false);
+                Map11State.Squad q = st.Squads[0];
+                var r = (true, q.Lost, q.Units?.Count ?? -1, st.CanReform(0), q.Pos == st.Graph.Home, Map11Session.Destinations[0].AtHome, st.Wipes);
+                Map11Session.Reset(0, draft: true, stage: stage);
+                return r;
+            }
+            var wNow = Wipe(s);
+            var wOld = Wipe(Chapter1.StagesFor(ChapterRule.V478)[1]);
+            write($"  (f) V479: 全滅させた {wNow.Met} → 失われた {wNow.Lost}・枚数 {wNow.Count}・組み直せる {wNow.Reform}・拠点にいる {wNow.Home}・行き先は拠点 {wNow.DestHome}・数え {wNow.Wipes} ／ V478: 失われた {wOld.Lost}・組み直せる {wOld.Reform}");
+            Req(wNow.Met && !wNow.Lost && wNow.Count == 0 && wNow.Reform && wNow.Home && wNow.DestHome && wNow.Wipes == 1 && wOld.Met && wOld.Lost && !wOld.Reform
+                && stages.All(x => x.WipedReforms) && Chapter1.StagesFor(ChapterRule.V478).All(x => !x.WipedReforms),
+                "(f) 全滅した隊は空の隊として拠点へ戻り、組み直せる（V479 の 3 ステージだけ・V478 は失われたまま）");
+
             var now = Try(s);
             var old = Try(Chapter1.StagesFor(ChapterRule.V478)[1]);
-            bool flags = stages.All(x => x.EncounterRetreat && x.SiegeRetreatHolds) && Chapter1.StagesFor(ChapterRule.V478).All(x => !x.EncounterRetreat) && !MapStage.Stage12.EncounterRetreat && !MapStage.Stage11.EncounterRetreat;
+            bool flags =stages.All(x => x.EncounterRetreat && x.SiegeRetreatHolds) && Chapter1.StagesFor(ChapterRule.V478).All(x => !x.EncounterRetreat) && !MapStage.Stage12.EncounterRetreat && !MapStage.Stage11.EncounterRetreat;
             write($"  (d) V479: 遭遇した {now.Met}（{now.From}）→ 引き返した {now.Back} → {now.To}・行き先は戻った先 {now.Holds}・敵はそのまま {now.FoeStays}・戦闘は数えない {now.Battles == 0} ／ V478: 引き返せる {old.Back}"
                   + $"・V479 の 3 ステージとも 引き返せる ／ 引いた隊は待つ・ほかの版と単発は引き返せない {flags}");
             Req(now.Met && now.Back && now.Holds && now.FoeStays && now.Battles == 0 && now.From != now.To && old.Met && !old.Back && flags,

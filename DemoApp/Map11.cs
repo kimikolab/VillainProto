@@ -1618,7 +1618,31 @@ public sealed class Map11State
     public bool AllCleared => ClearedCount >= Stage.TotalNodes;
 
     /// <summary>出せる隊が1つも残っていない（盤上に居らず、かつ出していないわけでもない）。</summary>
-    public bool NoSquadsLeft => Squads.All(s => s.Units is null && (s.Lost || s.Deployed));
+    public bool NoSquadsLeft => Squads.All(s => s.Units is null && (s.Lost || s.Deployed)) || (Stage.WipedReforms && Spent);
+
+    /// <summary>隊が全滅して空の隊に戻った回数（第479期の続き・測るためだけの計数）。</summary>
+    public int Wipes { get; private set; }
+
+    /// <summary>
+    /// 全滅した隊が空の隊に戻る盤（<see cref="MapStage.WipedReforms"/>）での「隊が尽きた」: 1 度は全滅していて、生きている駒が隊にも手札にも無く、
+    /// 呼び戻すことも呼ぶこともできない（金が足りない ／ 組み直せる場所が無い）。
+    /// </summary>
+    private bool Spent
+    {
+        get
+        {
+            if (Wipes == 0 || Bench.Any(u => u.IsAlive)) return false;
+            foreach (Squad s in Squads)
+            {
+                if (IsLocked(s.Index) || s.Lost) continue;
+                if (s.Units is not { } u || u.Any(x => x.IsAlive)) return false;
+            }
+            if (!Stage.Gold.On || !Squads.Any(q => CanReform(q.Index))) return true;
+            bool revive = Stage.Gold.Revive > 0 && FallenUnits.Count > 0 && Gold >= Stage.Gold.Revive;
+            bool recruit = Offers.Count > 0 && (FreePicks > 0 || Gold >= RecruitPrice);
+            return !revive && !recruit;
+        }
+    }
 
     /// <summary>盤上に敵部隊が1つでも残っているか（<b>湧いたものも数える</b>）。</summary>
     public bool FoesLeft => Nodes.Any(r => r.Any(n => !n.Cleared)) || Spawns.Any(n => !n.Cleared) || ReserveWaiting;
@@ -1703,6 +1727,15 @@ public sealed class Map11State
     /// 勇者とは<b>同じマスにいるときだけ</b>当たる（<see cref="ChaserAt"/>・<see cref="FoeFacing"/>）。追ってくる勇者のいない盤では 1 行も変わらない。
     public Node? FrontFoe(int road) => Stage.Hero.Chaser ? FoesOn(road).FirstOrDefault(n => !n.IsHero) : FoesOn(road).FirstOrDefault();
 
+    /// <summary>
+    /// 進む隊が見る「道の先頭の敵」（第479期の続き・不具合の直し）。<see cref="FrontFoe"/> から<b>落ちた拠点に居座っている敵を除いた</b>もの。
+    /// 居座る敵は拠点のマス（<c>Cell = -1</c>）にいるので、先頭に数えると「自分より拠点寄りの敵へ引き返して当たる」の枝が
+    /// 何マス離れていても隊を拠点へ一気に引き戻していた（1-3・北の砦の隊が次の刻に拠点で戦闘になった）。
+    /// 拠点が落ちていない盤では <see cref="FrontFoe"/> と同じ。
+    /// </summary>
+    public Node? AheadFoe(int road)
+        => HomeLost ? FoesOn(road).FirstOrDefault(n => !(Stage.Hero.Chaser && n.IsHero) && n.Pos != Graph.Home) : FrontFoe(road);
+
     /// <summary>そのマスに立っている追ってくる勇者（第459期・拠点と本陣のマスは除く——拠点は迎撃、本陣は守りの後ろに並ぶ）。いなければ null。</summary>
     public Node? ChaserAt(int cell)
         => Stage.Hero.Chaser && Hero is { Cleared: false } h && h.Pos == cell && cell != Graph.Home && cell != Graph.Portal ? h : null;
@@ -1760,6 +1793,7 @@ public sealed class Map11State
             }
         Node? f = FrontFoe(s.Road);
         if (f is not null && f.Pos == s.Pos) return f;
+        if (HomeLost && AheadFoe(s.Road) is { } ahead && ahead.Pos == s.Pos) return ahead;   // 第479期の続き: 居座る敵の後ろの先頭
         // 第460期 §B（横の辺の穴の直し・`MapStage.CrossFacing`）: 先頭でなくても、隊のいるマスに敵がいれば当たる（並びは `FoesOn` のまま）。
         return Stage.CrossFacing ? FoeAt(s.Road, s.Pos) : null;
     }
@@ -2355,9 +2389,20 @@ public sealed class Map11State
 
         if (aliveP.Count == 0)
         {
-            s.Units = null;
-            s.Lost = true;
-            Place(s, Graph.Home, -1);
+            if (Stage.WipedReforms)
+            {
+                // 第479期の続き: 全滅した隊は空の隊として拠点へ戻る（枠は残る・駒は呼び戻しの口にいる）。拠点が落ちていれば取っている中間拠点へ。
+                s.Units = new List<UnitState>();
+                Wipes++;
+                Place(s, Graph.Home, -1);
+                RelocateHomeless();
+            }
+            else
+            {
+                s.Units = null;
+                s.Lost = true;
+                Place(s, Graph.Home, -1);
+            }
         }
         else
         {
@@ -2460,7 +2505,7 @@ public sealed class Map11State
             // その敵が自分より拠点寄りにいる（決着しなかった戦闘の後に脇を抜けられた）ならそのマスへ引き返して当たる
             // （第437期の `Math.Min(Cell + 1, 先頭の敵のマス)` をそのまま写した）。
             int next = Graph.NextStep(s.Pos, road, Graph.At(road, MaxCellOf(road)), road);   // 第458期: 経路ごとの奥（1-1 ／ 1-2 は MaxCell と同じ）
-            if (FrontFoe(road) is { } front && front.Cell < Graph.IndexOn(road, next)) next = front.Pos;
+            if (AheadFoe(road) is { } front && front.Cell < Graph.IndexOn(road, next)) next = front.Pos;   // 第479期の続き: 落ちた拠点に居座る敵には引き戻されない
             // 第451期: 本陣の門が閉じていれば、敵の拠点のマスの手前で止まる。
             if (!CanEnter(squadIndex, next)) return null;
             if (next == s.Pos) return null;

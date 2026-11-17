@@ -143,9 +143,16 @@ public sealed class MapStage
     /// </summary>
     public bool EncounterRetreat { get; init; }
 
+    /// <summary>
+    /// 全滅した隊を<b>空の隊</b>として拠点（落ちていれば取っている中間拠点）へ戻し、組み直せる盤か（第479期の続き・ポンの決定 2026-11-17:
+    /// 「道の途中で隊が全滅すると、蘇生しても全滅した隊がずっと配置不可になっているのが不便」）。偽なら今までどおり「失われた」のまま。
+    /// 規則は `Map11State.Resolve` の 1 箇所。
+    /// </summary>
+    public bool WipedReforms { get; init; }
+
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<MapStage, MapStage> _leaned = new();
     /// <summary>「窓を減らす」版（第479期・<see cref="ChapterRule"/> の <c>Lean</c>）の写し: 遭遇で引き返せる・連戦で引いた隊は引いた先で待つ。盤と敵は同じ。</summary>
-    public MapStage Leaned(bool on) => !on || (EncounterRetreat && SiegeRetreatHolds) ? this : _leaned.GetOrAdd(this, static s => Copy(s, lean: true));
+    public MapStage Leaned(bool on) => !on || (EncounterRetreat && SiegeRetreatHolds && WipedReforms) ? this : _leaned.GetOrAdd(this, static s => Copy(s, lean: true));
 
     /// <summary>拠点を空にして出ようとしたとき、画面が確かめの 1 行を出す盤か（第476期・1 章の 1-1 だけ・<b>表示だけ</b>——止めはしない）。</summary>
     public bool WarnEmptyHome { get; init; }
@@ -744,6 +751,7 @@ public sealed class MapStage
                                  RosterRule? roster = null, bool lean = false) => new()
     {
         EncounterRetreat = lean || s.EncounterRetreat,
+        WipedReforms = lean || s.WipedReforms,
         Roster = roster ?? s.Roster,
         Invest = invest ?? s.Invest,
         Stars = stars ?? s.Stars,

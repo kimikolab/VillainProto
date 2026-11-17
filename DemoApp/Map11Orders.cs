@@ -168,7 +168,7 @@ public static class Map11Orders
         if (st.FoeFacing(squad) is { } now) return now;
         int road = s.Pos == st.Graph.Home ? dest.Road : s.Road;
         if (road < 0) return null;
-        Map11State.Node? front = st.FrontFoe(road);
+        Map11State.Node? front = st.AheadFoe(road);   // 第479期の続き: `Advance` と同じ（落ちた拠点に居座る敵は数えない）
         int limit = front?.Cell ?? st.MaxCellOf(road);
         int next = Math.Min(s.Cell < 0 ? 0 : s.Cell + 1, Math.Min(limit, st.MaxCellOf(road)));   // 第458期: 経路ごとの奥
         // 第451期: 本陣の門が閉じていれば敵の拠点のマスの相手には当たらない。

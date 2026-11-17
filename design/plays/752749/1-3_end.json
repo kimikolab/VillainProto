@@ -1,0 +1,569 @@
+{
+  "format": 1,
+  "kind": "end",
+  "chapterSeed": 752749,
+  "stage": "1-3",
+  "stageIndex": 2,
+  "attempt": 0,
+  "stageSeed": 366222,
+  "rule": "V479",
+  "ruleName": "第479期（第478期 ＋ 1-2 の本陣を重く・引いた隊は待つ・説明はセリフで）",
+  "scale": "×1.6（勇者の回復なし）",
+  "written": "2026-11-17T21:48:57",
+  "entry": true,
+  "pack": {
+    "gold": 54,
+    "squadCap": 4,
+    "relicHand": [
+      "RelicFireArrow",
+      "RelicCreak",
+      "RelicOverflowEdge",
+      "Spring"
+    ],
+    "bench": [
+      {
+        "id": "gan",
+        "name": "鬨の号令ガン",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "yomi",
+        "name": "軋みのヨミ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "kugu",
+        "name": "縛めのクグ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "shiga",
+        "name": "電気鞭のシガ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "basa",
+        "name": "喧噪のバサ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "som",
+        "name": "背かれのソム",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "hane",
+        "name": "突き返しのハネ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "sid",
+        "name": "毒吐きのスィド",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "tsugi",
+        "name": "継ぎ当てのツギ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "sasa",
+        "name": "錯乱のササ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "guza",
+        "name": "瘴気袋のグザ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "vio",
+        "name": "澱み喰いのヴィオ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "gare",
+        "name": "礫のガレ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "hibi",
+        "name": "砕け盾のヒビ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "zoto",
+        "name": "爆ぜるゾト",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "utsu",
+        "name": "逆しまのウツ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "mudo",
+        "name": "泥人形ムド",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "nel",
+        "name": "呪詛官ネル",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      },
+      {
+        "id": "wata",
+        "name": "渡しのワタ",
+        "star": 1,
+        "pips": 0,
+        "slot": -1
+      }
+    ],
+    "squads": [
+      [
+        {
+          "id": "mug",
+          "name": "胞子体ムグ",
+          "star": 1,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "hagi",
+          "name": "彼岸花のハギ",
+          "star": 1,
+          "pips": 0,
+          "slot": 1
+        },
+        {
+          "id": "vel",
+          "name": "継ぎ接ぎのヴェル",
+          "star": 1,
+          "pips": 0,
+          "slot": 2
+        },
+        {
+          "id": "lili",
+          "name": "施しのリリ",
+          "star": 1,
+          "pips": 0,
+          "slot": 3
+        },
+        {
+          "id": "rica",
+          "name": "墓守リィカ",
+          "star": 1,
+          "pips": 0,
+          "slot": 4
+        }
+      ],
+      [],
+      [
+        {
+          "id": "gald",
+          "name": "廃棄聖騎士ガルド",
+          "star": 1,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "borg",
+          "name": "焼け残りのボルグ",
+          "star": 2,
+          "pips": 0,
+          "slot": 1
+        },
+        {
+          "id": "hiyo",
+          "name": "火選りのヒヨ",
+          "star": 1,
+          "pips": 0,
+          "slot": 2
+        },
+        {
+          "id": "hota",
+          "name": "熾のホタ",
+          "star": 1,
+          "pips": 1,
+          "slot": 3
+        },
+        {
+          "id": "tou",
+          "name": "痺れ粉のトウ",
+          "star": 1,
+          "pips": 0,
+          "slot": 4
+        }
+      ],
+      [
+        {
+          "id": "tome",
+          "name": "見境なしのミサ",
+          "star": 1,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "dolga",
+          "name": "のろまの巨兵ドルガ",
+          "star": 1,
+          "pips": 0,
+          "slot": 1
+        },
+        {
+          "id": "hisa",
+          "name": "囃し立てのヒサ",
+          "star": 1,
+          "pips": 0,
+          "slot": 2
+        },
+        {
+          "id": "doha",
+          "name": "分かちのドハ",
+          "star": 1,
+          "pips": 0,
+          "slot": 3
+        },
+        {
+          "id": "zan",
+          "name": "仇討ちのザン",
+          "star": 1,
+          "pips": 0,
+          "slot": 4
+        }
+      ]
+    ],
+    "stars": {
+      "basa": [
+        1,
+        0
+      ],
+      "borg": [
+        2,
+        0
+      ],
+      "doha": [
+        1,
+        0
+      ],
+      "dolga": [
+        1,
+        0
+      ],
+      "gald": [
+        1,
+        0
+      ],
+      "gan": [
+        1,
+        0
+      ],
+      "gare": [
+        1,
+        0
+      ],
+      "guza": [
+        1,
+        0
+      ],
+      "hagi": [
+        1,
+        0
+      ],
+      "hane": [
+        1,
+        0
+      ],
+      "hibi": [
+        1,
+        0
+      ],
+      "hisa": [
+        1,
+        0
+      ],
+      "hiyo": [
+        1,
+        0
+      ],
+      "hota": [
+        1,
+        1
+      ],
+      "kugu": [
+        1,
+        0
+      ],
+      "lili": [
+        1,
+        0
+      ],
+      "mudo": [
+        1,
+        0
+      ],
+      "mug": [
+        1,
+        0
+      ],
+      "nel": [
+        1,
+        0
+      ],
+      "rica": [
+        1,
+        0
+      ],
+      "sasa": [
+        1,
+        0
+      ],
+      "shiga": [
+        1,
+        0
+      ],
+      "sid": [
+        1,
+        0
+      ],
+      "som": [
+        1,
+        0
+      ],
+      "tome": [
+        1,
+        0
+      ],
+      "tou": [
+        1,
+        0
+      ],
+      "tsugi": [
+        1,
+        0
+      ],
+      "utsu": [
+        1,
+        0
+      ],
+      "vel": [
+        1,
+        0
+      ],
+      "vio": [
+        1,
+        0
+      ],
+      "wata": [
+        1,
+        0
+      ],
+      "yomi": [
+        1,
+        0
+      ],
+      "zan": [
+        1,
+        0
+      ],
+      "zoto": [
+        1,
+        0
+      ]
+    },
+    "invest": [
+      [
+        "1-2",
+        "感電"
+      ],
+      [
+        "1-3",
+        "後詰め"
+      ]
+    ]
+  },
+  "goldNow": 54,
+  "result": "制圧（作戦ターン 6）",
+  "retries": 0,
+  "battles": [
+    {
+      "no": 1,
+      "turn": 2,
+      "squad": "第2隊",
+      "road": "北の道",
+      "foe": "1. 弓隊",
+      "won": true,
+      "intercept": false,
+      "alive": 2,
+      "hp": 100,
+      "notes": [
+        "倒れた: 渡しのワタ（2T）・呪詛官ネル（2T）・彼岸花のハギ（2T）"
+      ]
+    },
+    {
+      "no": 2,
+      "turn": 2,
+      "squad": "第3隊",
+      "road": "中の道",
+      "foe": "1. 第一波 / 物見の兵",
+      "won": true,
+      "intercept": false,
+      "alive": 5,
+      "hp": 98.8,
+      "notes": []
+    },
+    {
+      "no": 3,
+      "turn": 2,
+      "squad": "第4隊",
+      "road": "南の道",
+      "foe": "1. 盾の列",
+      "won": true,
+      "intercept": false,
+      "alive": 5,
+      "hp": 100,
+      "notes": []
+    },
+    {
+      "no": 4,
+      "turn": 3,
+      "squad": "第2隊",
+      "road": "北の道",
+      "foe": "2. 雷杖の部隊",
+      "won": false,
+      "intercept": false,
+      "alive": 0,
+      "hp": 0,
+      "notes": [
+        "倒れた: 泥人形ムド（1T）・逆しまのウツ（2T）"
+      ]
+    },
+    {
+      "no": 5,
+      "turn": 3,
+      "squad": "第3隊",
+      "road": "中の道",
+      "foe": "2. 火の魔術師の部隊",
+      "won": true,
+      "intercept": false,
+      "alive": 5,
+      "hp": 100,
+      "notes": []
+    },
+    {
+      "no": 6,
+      "turn": 3,
+      "squad": "第4隊",
+      "road": "南の道",
+      "foe": "2. 槍兵の部隊",
+      "won": true,
+      "intercept": false,
+      "alive": 5,
+      "hp": 100,
+      "notes": []
+    },
+    {
+      "no": 7,
+      "turn": 5,
+      "squad": "第3隊",
+      "road": "北の道",
+      "foe": "4. 騎士の小隊",
+      "won": true,
+      "intercept": false,
+      "alive": 5,
+      "hp": 100,
+      "notes": []
+    },
+    {
+      "no": 8,
+      "turn": 5,
+      "squad": "第1隊",
+      "road": "北の道",
+      "foe": "2. 雷杖の部隊",
+      "won": false,
+      "intercept": true,
+      "alive": 0,
+      "hp": 0,
+      "allyShock": 4,
+      "notes": [
+        "倒れた: 胞子体ムグ（3T）・彼岸花のハギ（1T）・継ぎ接ぎのヴェル（2T）・施しのリリ（5T）・墓守リィカ（2T）"
+      ]
+    },
+    {
+      "no": 9,
+      "turn": 5,
+      "squad": "第3隊",
+      "road": "北の道",
+      "foe": "4. 毒霧の部隊",
+      "won": true,
+      "intercept": false,
+      "alive": 5,
+      "hp": 98.1,
+      "notes": []
+    },
+    {
+      "no": 10,
+      "turn": 6,
+      "squad": "第3隊",
+      "road": "北の道",
+      "foe": "2. 雷杖の部隊",
+      "won": true,
+      "intercept": false,
+      "alive": 5,
+      "hp": 100,
+      "notes": []
+    },
+    {
+      "no": 11,
+      "turn": 6,
+      "squad": "第4隊",
+      "road": "敵の拠点",
+      "foe": "6. 本陣の守り（重）",
+      "won": true,
+      "intercept": false,
+      "alive": 3,
+      "hp": 96.7,
+      "notes": [
+        "倒れた: 見境なしのミサ（2T）・のろまの巨兵ドルガ（2T）"
+      ]
+    }
+  ],
+  "notes": [],
+  "estimated": []
+}

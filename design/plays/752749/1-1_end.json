@@ -1,0 +1,197 @@
+{
+  "format": 1,
+  "kind": "end",
+  "chapterSeed": 752749,
+  "stage": "1-1",
+  "stageIndex": 0,
+  "attempt": 0,
+  "stageSeed": 156764,
+  "rule": "V479",
+  "ruleName": "第479期（第478期 ＋ 1-2 の本陣を重く・引いた隊は待つ・説明はセリフで）",
+  "scale": "×0.6（勇者の回復なし）",
+  "written": "2026-11-17T21:25:13",
+  "entry": true,
+  "pack": {
+    "gold": 18,
+    "squadCap": 2,
+    "relicHand": [],
+    "bench": [],
+    "squads": [
+      [
+        {
+          "id": "mug",
+          "name": "胞子体ムグ",
+          "star": 1,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "zoto",
+          "name": "爆ぜるゾト",
+          "star": 1,
+          "pips": 0,
+          "slot": 1
+        },
+        {
+          "id": "lili",
+          "name": "施しのリリ",
+          "star": 1,
+          "pips": 0,
+          "slot": 2
+        },
+        {
+          "id": "vel",
+          "name": "継ぎ接ぎのヴェル",
+          "star": 1,
+          "pips": 0,
+          "slot": 3
+        },
+        {
+          "id": "rica",
+          "name": "墓守リィカ",
+          "star": 1,
+          "pips": 0,
+          "slot": 4
+        }
+      ],
+      [
+        {
+          "id": "dolga",
+          "name": "のろまの巨兵ドルガ",
+          "star": 1,
+          "pips": 0,
+          "slot": 0
+        },
+        {
+          "id": "mudo",
+          "name": "泥人形ムド",
+          "star": 1,
+          "pips": 0,
+          "slot": 1
+        },
+        {
+          "id": "doha",
+          "name": "分かちのドハ",
+          "star": 1,
+          "pips": 0,
+          "slot": 2
+        },
+        {
+          "id": "gan",
+          "name": "鬨の号令ガン",
+          "star": 1,
+          "pips": 0,
+          "slot": 3
+        },
+        {
+          "id": "tome",
+          "name": "見境なしのミサ",
+          "star": 1,
+          "pips": 0,
+          "slot": 4
+        }
+      ],
+      [],
+      []
+    ],
+    "stars": {
+      "doha": [
+        1,
+        0
+      ],
+      "dolga": [
+        1,
+        0
+      ],
+      "gan": [
+        1,
+        0
+      ],
+      "lili": [
+        1,
+        0
+      ],
+      "mudo": [
+        1,
+        0
+      ],
+      "mug": [
+        1,
+        0
+      ],
+      "rica": [
+        1,
+        0
+      ],
+      "tome": [
+        1,
+        0
+      ],
+      "vel": [
+        1,
+        0
+      ],
+      "zoto": [
+        1,
+        0
+      ]
+    }
+  },
+  "goldNow": 18,
+  "result": "制圧（作戦ターン 4）",
+  "retries": 0,
+  "battles": [
+    {
+      "no": 1,
+      "turn": 1,
+      "squad": "第1隊",
+      "road": "北の道",
+      "foe": "1. 物見の兵",
+      "won": true,
+      "intercept": false,
+      "alive": 5,
+      "hp": 90.4,
+      "notes": []
+    },
+    {
+      "no": 2,
+      "turn": 1,
+      "squad": "第2隊",
+      "road": "南の道",
+      "foe": "1. 徴募兵",
+      "won": true,
+      "intercept": false,
+      "alive": 3,
+      "hp": 100,
+      "notes": []
+    },
+    {
+      "no": 3,
+      "turn": 3,
+      "squad": "第1隊",
+      "road": "北の道",
+      "foe": "2. 峠の関",
+      "won": true,
+      "intercept": false,
+      "alive": 4,
+      "hp": 82.1,
+      "notes": [
+        "倒れた: 爆ぜるゾト（1T）"
+      ]
+    },
+    {
+      "no": 4,
+      "turn": 4,
+      "squad": "第1隊",
+      "road": "敵の拠点",
+      "foe": "3. 本陣の守り",
+      "won": true,
+      "intercept": false,
+      "alive": 4,
+      "hp": 80,
+      "notes": []
+    }
+  ],
+  "notes": [],
+  "estimated": []
+}
