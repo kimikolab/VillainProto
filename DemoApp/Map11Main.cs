@@ -358,7 +358,7 @@ public partial class Map11Main : Node3D
         var prep = intercept ? St.PrepareIntercept(squad, node) : St.Prepare(squad, node);
         if (prep is not { } q) return;
         BattleResult r = BattleEngine.Run(q.Players, q.Enemies, q.Seed, verbose: false);
-        St.Resolve(squad, q.Node, r.PlayerWon, intercept);
+        St.Resolve(squad, q.Node, r.PlayerWon, intercept, r.Turns);
     }
 
     private async System.Threading.Tasks.Task Capture(string spec)
@@ -539,7 +539,7 @@ public partial class Map11Main : Node3D
                 var before = q.Players.ToList();
                 BattleResult r = BattleEngine.Run(q.Players, q.Enemies, q.Seed, verbose: true);
                 Map11Session.RelicNotes(r, before);
-                St.Resolve(squad, q.Node, r.PlayerWon, intercept);
+                St.Resolve(squad, q.Node, r.PlayerWon, intercept, r.Turns);
             }
             void Go(int squad, Dest to)
             {

@@ -238,7 +238,7 @@ public static class Map11Session
         int delivered = State.Deliveries.Count;
         int golds = State.GoldLog.Count;
         var unitsBefore = sq.Units?.ToList() ?? new List<UnitState>();   // 第454期: 札の持ち主を台本の番号で引くため（精算で倒れた駒は隊から外れる）
-        State.Resolve(squad, node, playerWon, wasIntercept);
+        State.Resolve(squad, node, playerWon, wasIntercept, result?.Turns ?? int.MaxValue);
         // 第479期の続き: 全滅して空の隊に戻ったら、行き先も拠点に戻す（組み直した直後に前の行き先へ歩き出さない）。
         if (sq is { Lost: false, Units: { Count: 0 } }) Destinations[squad] = Dest.Home;
         Battles = State.Battles;

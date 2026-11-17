@@ -183,7 +183,7 @@ public partial class Map11Main
             var prep = intercept ? St.PrepareIntercept(squad, node) : St.Prepare(squad, node);
             if (prep is not { } q) return;
             BattleResult r = BattleEngine.Run(q.Players, q.Enemies, q.Seed, verbose: true);
-            St.Resolve(squad, q.Node, r.PlayerWon, intercept);
+            St.Resolve(squad, q.Node, r.PlayerWon, intercept, r.Turns);
         }
         void Go(int squad, Dest to)
         {

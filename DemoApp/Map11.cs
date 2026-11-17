@@ -1688,6 +1688,11 @@ public sealed class Map11State
     public int HeroRoutTurn { get; private set; } = -1;
     /// <summary>自分から勇者のマスへ入った隊（殿・隊の番号・重ねない・戦果の窓と器具が読む）。</summary>
     public HashSet<int> RearGuards { get; } = new();
+    /// <summary>殿が勇者の足を止めた回数 ／ 殿に入ったが短すぎて止められなかった回数（第480期・結果の窓と器具が読む）。</summary>
+    public int HunterHolds { get; private set; }
+    public int HunterSlips { get; private set; }
+    /// <summary>撤退の局面では手札との出し入れを閉じる（ポンの決定 2026-11-18: 手札は場所を持たないので、中間拠点で下げて拠点で組むと歩かずに帰れてしまう）。席の入れ替えと休むは残る。</summary>
+    public bool BenchClosed => Rout;
     /// <summary>勇者に追いつかれた回数（勇者の歩みで起きた戦闘・測るためだけ）。</summary>
     public int HunterCatches { get; private set; }
     /// <summary>拠点へ生きて戻った駒の数（撤退の局面・拠点にいる隊の生きている駒。退かせたときは生きている駒の全部）。</summary>
@@ -2241,7 +2246,7 @@ public sealed class Map11State
     /// </summary>
     public bool SwapWithBench(int squadIndex, int slot, int benchIndex)
     {
-        if (!CanReform(squadIndex)) return false;
+        if (!CanReform(squadIndex) || BenchClosed) return false;
         List<UnitState> a = Roster(squadIndex);
         UnitState? seat = a.FirstOrDefault(u => u.Slot == slot);
         UnitState? bench = benchIndex >= 0 && benchIndex < Bench.Count ? Bench[benchIndex] : null;
@@ -2410,7 +2415,8 @@ public sealed class Map11State
     /// <c>InterceptRecover = true</c> にすれば第174期と1ビットも違わない。</para>
     /// </summary>
     /// <param name="intercept">拠点の迎撃戦か（<see cref="PrepareIntercept"/> を通った戦闘）。</param>
-    public void Resolve(int squadIndex, Node node, bool playerWon, bool intercept = false)
+    /// <param name="turns">その戦闘が何ターン続いたか（第480期・狩る者の足止めだけが読む——渡さなければ「長く続いた」として扱う）。</param>
+    public void Resolve(int squadIndex, Node node, bool playerWon, bool intercept = false, int turns = int.MaxValue)
     {
         Squad s = Squads[squadIndex];
         List<UnitState> pu = s.Units!;
@@ -2421,7 +2427,12 @@ public sealed class Map11State
         if (node.IsHero && Stage.Hero.Hunter)
         {
             if (_hunterStruck) { _hunterStruck = false; HunterCatches++; }
-            else { RearGuards.Add(squadIndex); _hunterHeldTurn = Turn + 1; }
+            else
+            {
+                // ポンの決定 2026-11-18: 足が止まるのは、その戦闘が HoldTurns ターン以上続いたときだけ（1 枚の捨て駒では止まらない）。
+                RearGuards.Add(squadIndex);
+                if (turns >= Stage.Hero.HoldTurns) { _hunterHeldTurn = Turn + 1; HunterHolds++; } else HunterSlips++;
+            }
         }
 
         var aliveP = pu.Where(u => u.IsAlive).ToList();
