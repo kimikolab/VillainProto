@@ -144,7 +144,7 @@ public readonly record struct ChapterRule(bool Carry, string Name, IReadOnlyList
         V465.Scales, StarRule.V464, DealRule.Off, InvestRule.V470, RosterRule.V475, MapStage.Stage11Ch476, Story: true, Second: MapStage.Stage12Ch479, Lean: true);
 
     /// <summary>第480期の 1 章の敵の倍率（1-1 ／ 1-2 は第465期のまま・1-3 は「それ以外」と「勇者」を別に持つ・測り `--chapter1-hunter-smoke` で選んだ）。</summary>
-    internal const int Stage13Ch480FoePercent = 110, Stage13Ch480HeroPercent = 160;
+    internal const int Stage13Ch480FoePercent = 100, Stage13Ch480HeroPercent = 100;   // 勇者の重さは `MapStage.Stage13Ch480HeroHp` ／ `HeroAtk`（HP と攻撃を別々に）
 
     /// <summary>
     /// 第480期の 1 章（指示書 design/PHASE480_STAGE13_HUNTER_SPEC.md §2）。第479期から <b>1-3 を「狩る者」に</b>替えた（<see cref="MapStage.Stage13Ch480"/>・<c>Third</c>）:

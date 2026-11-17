@@ -307,10 +307,10 @@ public partial class Main : Control
         }
         // 第480期 §5: 1-3「狩る者」の門（盤・門が開いた刻に勇者・目標の差し替え・2 歩で追う・勝ち A ／ B ／ 負け・V461〜V479 と単発は今のまま）。画面なし。
         // §4 の測り（前半・勇者の重さ・撤退の方針 a〜d × 100 seed・線）つき。`--chapter1-hunter-quick` は測りを省く。
-        if (bootArgs.Contains("--chapter1-hunter-smoke", StringComparer.Ordinal) || bootArgs.Contains("--chapter1-hunter-quick", StringComparer.Ordinal))
+        if (bootArgs.Contains("--chapter1-hunter-smoke", StringComparer.Ordinal) || bootArgs.Contains("--chapter1-hunter-quick", StringComparer.Ordinal) || bootArgs.Contains("--chapter1-hunter-sweep", StringComparer.Ordinal))
         {
             bool okH;
-            try { okH = Chapter1HunterSmoke.Run(GD.Print, ProjectSettings.GlobalizePath("res://"), bots: !bootArgs.Contains("--chapter1-hunter-quick", StringComparer.Ordinal)); }
+            try { okH = Chapter1HunterSmoke.Run(GD.Print, ProjectSettings.GlobalizePath("res://"), bots: !bootArgs.Contains("--chapter1-hunter-quick", StringComparer.Ordinal), sweep: bootArgs.Contains("--chapter1-hunter-sweep", StringComparer.Ordinal)); }
             catch (System.Exception ex) { GD.PrintErr(ex.ToString()); okH = false; }
             GD.Print($"CHAPTER1_HUNTER_SMOKE_COMPLETE ok={okH}");
             GetTree().Quit(okH ? 0 : 1);

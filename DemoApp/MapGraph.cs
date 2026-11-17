@@ -405,18 +405,42 @@ public sealed class MapGraph
     /// <b>「門」はマスにしない</b>（今までどおり「中間拠点を 2 つ取ると敵の拠点へ入れる」の規則）——狩る者は野営地のマス（開いた門）に現れる（報告 §1-2）。
     /// 経路は分かれ道を先頭に含む（1-3 ／ 第477期の 1-2 と同じ）。単発の 1-3（<see cref="Build13(bool)"/>）は変えない。
     /// </summary>
-    public static MapGraph Build13F480(bool portalOn)
+    public static MapGraph Build13F480(bool portalOn) => Build13F480(portalOn, Starts13F480);
+
+    /// <summary>中間拠点に <paramref name="stack"/> 部隊ずつ重ねた敵の初期位置（測りの口・1 なら <see cref="Starts13F480"/> と同じ）。重ねた分は各経路の末尾に足す。</summary>
+    internal static int[][] Starts13F480Stacked(int stack)
+        => new[] { 3, 3, 2 }.Select((op, lane) => Starts13F480[lane].Concat(Enumerable.Repeat(op, Math.Max(0, stack - 1))).ToArray()).ToArray();
+
+    /// <summary>
+    /// 測りの口: 道の長さ（<paramref name="len"/>・分かれ道を除くマスの数）と中間拠点の位置（<paramref name="op"/>・1 から数えたマス目）を替えた盤。
+    /// 座標は等間隔に並べるだけ（画面には出さない）。敵の初期位置は 北 {中間拠点の 1 つ手前・中間拠点・奥} ／ 中 {1 マス目・中間拠点} ／ 南 {中間拠点・その 2 つ先}（案の形なら <see cref="Starts13F480"/> と同じ）。
+    /// </summary>
+    internal static MapGraph Build13F480Shaped(bool portalOn, int[] len, int[] op, int stack)
+    {
+        int[][] starts =
+        {
+            new[] { Math.Max(1, op[0] - 1), op[0], len[0] }, new[] { 1, op[1] }, new[] { op[2], Math.Min(len[2], op[2] + 2) },
+        };
+        starts = starts.Select((st, lane) => st.Concat(Enumerable.Repeat(op[lane], Math.Max(0, stack - 1))).ToArray()).ToArray();
+        float[] zs = { -14f, 0f, 14f };
+        var pos = len.Select((n, lane) => Enumerable.Range(0, n).Select(k => (-7f + 34f * k / Math.Max(1, n - 1), zs[lane])).ToArray()).ToArray();
+        return Build13F480(portalOn, starts, pos, op.Select(x => x - 1).ToArray(), cross: new[] { (0, op[0], 1, op[1]), (1, op[1], 2, Math.Min(len[2], op[2] + 1)) });
+    }
+
+    internal static MapGraph Build13F480(bool portalOn, int[][] starts) => Build13F480(portalOn, starts, null, null, null);
+
+    private static MapGraph Build13F480(bool portalOn, int[][] starts, (float X, float Z)[][]? shapedPos, int[]? shapedOutpost, (int LaneA, int IdxA, int LaneB, int IdxB)[]? cross)
     {
         var b = new Builder();
         int home = b.Add(Home13F480, Kind.Home, (-20.0f, 0f));
         int fork = b.Add(Fork13, Kind.Open, (-13.0f, 0.5f));
-        (float X, float Z)[][] pos =
+        (float X, float Z)[][] pos = shapedPos ?? new[]
         {
             new[] { (-7.0f, -8.0f), (1.0f, -13.0f), (10.0f, -14.5f), (19.0f, -13.0f), (27.0f, -8.0f) },
             new[] { (-4.0f, 0.5f), (5.0f, -1.0f), (14.0f, 0f), (23.0f, 0.5f) },
             new[] { (-8.0f, 8.5f), (-1.0f, 14.0f), (8.0f, 16.5f), (17.0f, 16.0f), (26.0f, 10.0f) },
         };
-        int[] outpost = { 2, 2, 1 };
+        int[] outpost = shapedOutpost ?? new[] { 2, 2, 1 };
         var lanes = new int[pos.Length][];
         for (int lane = 0; lane < pos.Length; lane++)
         {
@@ -435,11 +459,10 @@ public sealed class MapGraph
             int from = fork;
             foreach (int c in lanes[lane].Skip(1)) { b.Link(from, c); from = c; }
             if (portal >= 0) b.Link(from, portal);
-            b.Lane(Lanes13F480[lane], lanes[lane], Starts13F480[lane].Select(i => lanes[lane][i]).ToArray());
+            b.Lane(Lanes13F480[lane], lanes[lane], starts[lane].Select(i => lanes[lane][i]).ToArray());
         }
         // 横の辺（隊と狩る者が使う）: 尾根の砦跡 ⇔ 谷の橋 ／ 谷の橋 ⇔ 南3。
-        b.Link(lanes[0][3], lanes[1][3]);
-        b.Link(lanes[1][3], lanes[2][3]);
+        foreach (var (la, ia, lb, ib) in cross ?? new[] { (0, 3, 1, 3), (1, 3, 2, 3) }) b.Link(lanes[la][ia], lanes[lb][ib]);
         return b.Build();
     }
 

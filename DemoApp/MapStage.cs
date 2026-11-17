@@ -1210,6 +1210,18 @@ public sealed class MapStage
     /// <summary>第480期の 1 章の 1-3 の値（測りが振る口の既定）: 待ち構える部隊の賞金・湧きの間隔と最初の湧き・前半の部隊。</summary>
     internal const int Stage13Ch480FoeGold = 6, Stage13Ch480SpawnEvery = 4, Stage13Ch480FirstSpawn = 3;
     internal const string Stage13Ch480SpawnBand = "band_levy";
+    /// <summary>第480期の勇者だけの倍率（最大HP ／ 攻撃・%・`MapFoeScale` の勇者の列は ×1.0 のまま——HP と攻撃を別々に合わせるため）と、中間拠点に重ねる部隊の数。</summary>
+    internal const int Stage13Ch480HeroHp = 600, Stage13Ch480HeroAtk = 250, Stage13Ch480Stack = 3;   // 暫定（測りの線が通っていない・報告 §2）
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, Func<bool, MapGraph>> _shaped480 = new();
+    /// <summary>測りの口: 道の長さと中間拠点の位置を替えた盤（同じ形には同じ関数）。</summary>
+    internal static Func<bool, MapGraph> Board13Ch480Shaped(int[] len, int[] op, int stack)
+        => _shaped480.GetOrAdd($"{string.Join(",", len)}|{string.Join(",", op)}|{stack}", _ => on => MapGraph.Build13F480Shaped(on, len, op, stack));
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<int, Func<bool, MapGraph>> _boards480 = new();
+    /// <summary>第480期の 1-3 の盤（中間拠点に重ねる部隊の数ごとに同じ関数を返す——盤の同一性を関数の参照で見る器具のため）。</summary>
+    internal static Func<bool, MapGraph> Board13Ch480(int stack)
+        => stack <= 1 ? MapGraph.Build13F480 : _boards480.GetOrAdd(stack, static k => on => MapGraph.Build13F480(on, MapGraph.Starts13F480Stacked(k)));
 
     /// <summary>
     /// 1 章の 1-3（第480期・`ChapterRule.V480` から）。盤は <see cref="MapGraph.Build13F480"/>（北 5 ／ 中 4 ／ 南 5 マス）。<b>前半は優勢・勇者の登場で撤退戦</b>（<see cref="HeroRule.V480"/>）。
@@ -1221,8 +1233,13 @@ public sealed class MapStage
 
     /// <summary>値を替えた第480期の 1 章の 1-3（測りが候補を並べるための口・遊ぶ盤は <see cref="Stage13Ch480"/>）。</summary>
     internal static MapStage Stage13Ch480With(int steps = 2, int fallback = 10, int routPercent = 50, int spawnEvery = Stage13Ch480SpawnEvery, int firstSpawn = Stage13Ch480FirstSpawn,
-                                              string spawn = Stage13Ch480SpawnBand, bool deep = true, Func<bool, MapGraph>? board = null)
+                                              string spawn = Stage13Ch480SpawnBand, bool deep = true, int heroHp = Stage13Ch480HeroHp, int heroAtk = Stage13Ch480HeroAtk,
+                                              int stack = Stage13Ch480Stack, int[]? len = null, int[]? op = null)
     {
+        UnitDef hero = EnemyCatalog.HeroMap;
+        if (heroHp != 100 || heroAtk != 100) hero = hero.WithStats(MapFoeScale.Mul(hero.MaxHp, heroHp), MapFoeScale.Mul(hero.Attack, heroAtk));
+        // 中間拠点に重ねる部隊（`stack` − 1 部隊ずつ・徴募兵・待ち構える・区画の番号は経路の動く区画の末尾）。1 刻 1 戦なので、重ねた数だけ中間拠点を取るのが遅れる。
+        Map11.RoadNode[] Extra(int lane, int from) => Enumerable.Range(0, Math.Max(0, stack - 1)).Select(k => Wait(Band(lane, from + k, "band_levy", 0))).ToArray();
         MapStage b = Stage13;
         Map11.RoadNode Wait(Map11.RoadNode n) => n with { Hold = true, Gold = Stage13Ch480FoeGold };
         EnemyCatalog.MapSquad sp = EnemyCatalog.MapSquadOf(spawn);
@@ -1231,12 +1248,13 @@ public sealed class MapStage
         {
             Id = b.Id,
             Title = "1 章 1-3 狩る者",
-            Board = board ?? MapGraph.Build13F480,
+            Board = len is null || op is null ? Board13Ch480(stack) : Board13Ch480Shaped(len, op, stack),
             Lanes = new IReadOnlyList<Map11.RoadNode>[]
             {
-                new[] { Wait(Band(0, 0, "band_levy", 0)), Wait(Band(0, 1, "band_archers", 2)), Wait(Band(0, 2, deep ? "band_shock" : "band_levy", 3)) },
-                new[] { Wait(Node(1, 0, EnemyCatalog.Stages[0], 0)) with { Name = "物見の兵" }, Wait(Band(1, 1, "band_sellswords", 2)), Garrison(1, 2, "band_garrison", 4) with { Name = "野営地の守り" } },
-                new[] { Wait(Band(2, 0, "band_levy", 0)), Wait(Band(2, 1, deep ? "band_lance" : "band_levy", 2)) },
+                new[] { Wait(Band(0, 0, "band_levy", 0)), Wait(Band(0, 1, "band_archers", 2)), Wait(Band(0, 2, deep ? "band_shock" : "band_levy", 3)) }.Concat(Extra(0, 3)).ToArray(),
+                new[] { Wait(Node(1, 0, EnemyCatalog.Stages[0], 0)) with { Name = "物見の兵" }, Wait(Band(1, 1, "band_sellswords", 2)) }.Concat(Extra(1, 2))
+                    .Append(Garrison(1, 2 + Math.Max(0, stack - 1), "band_garrison", 4) with { Name = "野営地の守り" }).ToArray(),
+                new[] { Wait(Band(2, 0, "band_levy", 0)), Wait(Band(2, 1, deep ? "band_lance" : "band_levy", 2)) }.Concat(Extra(2, 2)).ToArray(),
             },
             LaneNames = MapGraph.Lanes13F480,
             Spawn = _ => (sp.Enemy, sp.Name, 0),
@@ -1249,7 +1267,7 @@ public sealed class MapStage
             MatchOffer = b.MatchOffer,
             PortalGate = b.PortalGate,
             Relic = b.Relic,
-            Hero = HeroRule.V480 with { Steps = steps, FallbackTurn = fallback, RoutPercent = routPercent },
+            Hero = HeroRule.V480 with { Unit = hero, Steps = steps, FallbackTurn = fallback, RoutPercent = routPercent },
             Siege = SiegeRule.V457,
             CrossFacing = true,
             ViewScale = 1.35f,
