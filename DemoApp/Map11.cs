@@ -2458,6 +2458,8 @@ public sealed class Map11State
             node.Cleared = true;
             node.Retreated = true;
         }
+        // ポンの決定 2026-11-17: HP が 0 になった戦闘も「退いた」として扱う（「倒した」の表示・賞金の文は出さない）。
+        if (node.IsHero && Stage.Hero.Hunter && node.Cleared) node.Retreated = true;
         if (node.IsHero && Stage.Hero.Hunter && node.Cleared && HeroRoutTurn < 0) HeroRoutTurn = Turn;
         if (node.IsHero) HeroHpTrail.Add(node.HpNow);   // 第455期: 勇者の HP の推移（結果画面・測るためだけ）
         if (node.IsHero && node.Cleared && HeroDownTurn < 0) HeroDownTurn = Turn;   // 第457期: 勇者を倒した刻（測るためだけ）

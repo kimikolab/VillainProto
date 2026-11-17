@@ -22,14 +22,17 @@ public static class Chapter1HunterSmoke
     private const int Seeds = 100, WeighSeeds = 20, OddsSeeds = 30;
 
     /// <summary>撤退の方針（指示書 §4-3）。</summary>
-    internal enum Flee { Home, Rear, Strike, Stay }
+    internal enum Flee { Home, Rear, Strike, Stay, Solo, SoloRepeat, Bench }
 
     internal static string FleeName(Flee f) => f switch
     {
         Flee.Home => "a. 全員まっすぐ帰る",
         Flee.Rear => "b. 殿を 1 隊出す",
         Flee.Strike => "c. 全隊を順に当てる",
-        _ => "d. 何もしない",
+        Flee.Stay => "d. 何もしない",
+        Flee.Solo => "e. 1 枚だけの隊を殿に（1 隊）",
+        Flee.SoloRepeat => "e'. 1 枚だけの隊を殿に（枠のかぎり・毎刻くり返す）",
+        _ => "f. 中間拠点で手札に下げて拠点の隊へ組む（今の規則の穴）",
     };
 
     internal sealed class Res
@@ -43,6 +46,9 @@ public static class Chapter1HunterSmoke
         public List<(bool Full, int Odds, bool Won, string Foe)> Front = new();
         public List<(string Foe, string Unit, int Turn, bool Rout)> Fell = new();
         public bool HeroEnteredHome;
+        /// <summary>方針 e: 手札を通して拠点の隊へ移した駒・1 枚にした隊の数・1 枚の殿が勇者と戦った回数（＝ 勇者を止めた刻）・拠点に組める隊の枠が無かった。</summary>
+        public int Moved, Solos, SoloFights, SoloHolds;
+        public bool NoFrame, TimeUp;
     }
 
     internal sealed record Team(string Label, Map11State.CarryPack Pack);
@@ -56,14 +62,14 @@ public static class Chapter1HunterSmoke
 
     // ---------------- 持ち込みの隊 ----------------
 
-    private static readonly Dictionary<int, Map11State.CarryPack?> _botB = new();
+    private static readonly Dictionary<(int, bool), Map11State.CarryPack?> _bot = new();
 
-    /// <summary>器具の組 B の 1-3 の始め（1-1 → 1-2 を器具で通した持ち越し・1-2 を落とした seed は null）。</summary>
-    internal static Map11State.CarryPack? BotB(int seed)
+    /// <summary>器具の組の 1-3 の始め（1-1 → 1-2 を器具で通した持ち越し・今の加入の表と金の規則・1-2 を落とした seed は null）。組 B ＝ <paramref name="teamB"/>。</summary>
+    internal static Map11State.CarryPack? Bot(int seed, bool teamB)
     {
-        lock (_botB)
+        lock (_bot)
         {
-            if (_botB.TryGetValue(seed, out var hit)) return hit;
+            if (_bot.TryGetValue((seed, teamB), out var hit)) return hit;
             MapStage s12 = Chapter1.StagesFor(ChapterRule.V480)[1];
             (Chapter1Stage12Smoke.Policy, int)[] tries =
             {
@@ -72,10 +78,10 @@ public static class Chapter1HunterSmoke
             foreach (var (p, guard) in tries)
             {
                 Map11State? last = null;
-                var r = Chapter1Stage12Smoke.Play(s12, seed, p, guard, teamB: true, watch: st => last = st, siege: Chapter1Stage12Smoke.Siege.Hurt);
-                if (r.Won && last is not null) return _botB[seed] = last.TakeCarry();
+                var r = Chapter1Stage12Smoke.Play(s12, seed, p, guard, teamB: teamB, watch: st => last = st, siege: Chapter1Stage12Smoke.Siege.Hurt);
+                if (r.Won && last is not null) return _bot[(seed, teamB)] = last.TakeCarry();
             }
-            return _botB[seed] = null;
+            return _bot[(seed, teamB)] = null;
         }
     }
 
@@ -107,10 +113,12 @@ public static class Chapter1HunterSmoke
 
     private static bool Living(Map11State st, int i) => !st.Squads[i].Lost && st.Squads[i].Units is { } u && u.Any(x => x.IsAlive);
 
-    internal static Map11State Setup(MapStage stage, Map11State.CarryPack pack, int seed)
+    internal static Map11State Setup(MapStage stage, Map11State.CarryPack pack, int seed, int slots = 0)
     {
         var st = new Map11State(Chapter1.StageSeed(seed, 2, 0), stage.Time, stage.Portal, draft: true, stage: stage);
         st.ApplyCarry(pack);
+        // 方針 e: 1 枚だけの隊のための枠を先に買う（強化より先・買うと付く無料の 1 枚も呼ぶ）。
+        for (int n = 0; n < slots && st.BuySlot(); n++) if (st.FreePicks > 0) st.Recruit(0);
         Chapter1Stage12Smoke.Spend(st);
         return st;
     }
@@ -123,16 +131,62 @@ public static class Chapter1HunterSmoke
     /// </summary>
     internal static Res Play(MapStage stage, Map11State.CarryPack pack, int seed, Flee flee, bool odds = false, Action<string>? log = null, Action<Map11State>? watch = null)
     {
-        Map11State st = Setup(stage, pack, seed);
+        Map11State st = Setup(stage, pack, seed, flee == Flee.Solo ? 1 : flee == Flee.SoloRepeat ? 2 : 0);
         MapGraph g = st.Graph;
         var res = new Res();
         int Op(int lane) => g.Lanes[lane].First(c => g.IsOutpost(c));
         int[] targets = { Op(1), Op(2), Op(0) };
-        var order = Enumerable.Range(0, st.Squads.Length).Where(i => st.Squads[i].Units is { Count: > 0 }).OrderByDescending(i => st.Squads[i].Units!.Count(u => u.IsAlive)).ThenBy(i => i).ToList();
-        res.Squads = order.Count;
-        var rests = new int[st.Squads.Length];
+        var order = new List<int>();
+        var solo = new HashSet<int>();
         int deep = -1, rear = -1;
-        bool routSeen = false, endedInMove = false;
+        List<int> Order() => Enumerable.Range(0, st.Squads.Length).Where(i => !solo.Contains(i) && st.Squads[i].Units is { Count: > 0 }).OrderByDescending(i => st.Squads[i].Units!.Count(u => u.IsAlive)).ThenBy(i => i).ToList();
+        var rests = new int[st.Squads.Length];
+        // 方針 e ／ e': 前半のうちに 1 枚だけの隊を作って主力の後ろを付いていかせる（手札の駒から・無ければいちばん枚数の少ない隊から 1 枚）。枠が無ければ 1 つ買う。
+        if (flee is Flee.Solo or Flee.SoloRepeat)
+        {
+            int want = flee == Flee.Solo ? 1 : 3;
+            for (int n = 0; n < want; n++)
+            {
+                int free = Enumerable.Range(0, st.SquadCap).Where(i => st.Squads[i].Units is not { Count: > 0 } && st.CanReform(i)).DefaultIfEmpty(-1).First();
+                if (free < 0) break;
+                int bi = st.Bench.Select((u, k) => (u, k)).Where(x => x.u.IsAlive).OrderBy(x => x.u.MaxHp).Select(x => x.k).DefaultIfEmpty(-1).First();
+                if (bi < 0)
+                {
+                    int from = Enumerable.Range(0, st.SquadCap).Where(i => !solo.Contains(i) && st.Squads[i].Units is { Count: >= 2 }).OrderBy(i => st.Squads[i].Units!.Count).DefaultIfEmpty(-1).First();
+                    if (from < 0) break;
+                    UnitState weak = st.Squads[from].Units!.OrderBy(u => u.MaxHp).First();
+                    if (!st.SwapWithBench(from, weak.Slot, -1)) break;
+                    bi = st.Bench.IndexOf(weak);
+                }
+                if (!st.SwapWithBench(free, 0, bi)) break;
+                solo.Add(free);
+            }
+            log?.Invoke($"  [e] 枠 {st.SquadCap}／{st.Squads.Length}・隊 {string.Join(",", st.Squads.Select(q => q.Units?.Count.ToString() ?? "null"))}・組み直せる {string.Join(",", Enumerable.Range(0, st.Squads.Length).Select(i => st.CanReform(i)))}・手札 {st.Bench.Count}・金 {st.Gold}・1 枚の隊 {solo.Count}");
+            res.Solos = solo.Count;
+            if (solo.Count == 0) res.NoFrame = true;
+        }
+        order = Order();
+        res.Squads = order.Count;
+        bool routSeen = false, endedInMove = false, split = false;
+        // 方針 f: 取っている中間拠点にいる隊の駒を手札に下げ、拠点にいる隊（空の枠でもよい）へ組む——今の規則では手札に場所が無いので、これで駒が拠点へ移る。
+        void Split()
+        {
+            for (int i = 0; i < st.SquadCap; i++)
+            {
+                if (!Living(st, i) || !st.AtOutpost(i) || !st.CanReform(i) || st.FacingHunter(i)) continue;
+                var alive = st.Squads[i].Units!.Where(u => u.IsAlive).OrderBy(u => u.MaxHp).ToList();
+                var frames = Enumerable.Range(0, st.SquadCap).Where(j => j != i && st.Squads[j].Pos == g.Home && st.CanReform(j)).ToList();
+                int room = frames.Sum(j => Enumerable.Range(0, 5).Count(sl => st.UnitAt(j, sl) is null));
+                if (room == 0) { res.NoFrame = true; continue; }
+                foreach (UnitState u in alive.Take(room))
+                {
+                    if (!st.SwapWithBench(i, u.Slot, -1)) break;
+                    int j = frames.First(f => Enumerable.Range(0, 5).Any(sl => st.UnitAt(f, sl) is null));
+                    int slot = new[] { 0, 1, 3, 2, 4 }.First(sl => st.UnitAt(j, sl) is null);
+                    if (st.SwapWithBench(j, slot, st.Bench.IndexOf(u))) res.Moved++;
+                }
+            }
+        }
         string Cell(int id) => id == g.Home ? "拠点" : id == g.Portal ? "野営地" : g[id].Name;
         int StepsHome(int i) => g.Path(st.Squads[i].Pos, st.Squads[i].Road, g.Home, -1).Count - 1;
 
@@ -173,6 +227,7 @@ public static class Chapter1HunterSmoke
             else if (!rout) res.Front.Add((alive0 == 5, wins, r.PlayerWon, node.Def.Name));
             if (node.IsHero && caught && squad == deep) res.DeepCaught = true;
             if (node.IsHero && squad == rear && alive1 == 0) res.RearDied = true;
+            if (node.IsHero && solo.Contains(squad)) { res.SoloFights++; if (!caught) res.SoloHolds++; }
             log?.Invoke($"    {st.Turn + (caught ? 0 : 1)} 刻目 ・ 隊 {squad + 1}（{Cell(node.Pos)}）対 {node.Def.Name}{(node.IsHero ? (caught ? "［追いつかれた］" : "［殿］") : intercept ? "［迎撃］" : "")}: {(r.PlayerWon ? "勝ち" : "負け")}・{r.Turns}T・{alive0} 枚 {hpIn:F0}% → {alive1} 枚"
                 + (alive1 < alive0 ? $"・倒れた {string.Join("・", standing.Where(u => !u.IsAlive).Select(u => $"{u.Def.Name}（{u.LastDeathTurn}T）"))}" : "")
                 + (node.IsHero ? $"・勇者の HP {node.HpNow}／{node.DefMaxHp}{(node.Retreated ? "（退いた）" : "")}" : ""));
@@ -185,7 +240,7 @@ public static class Chapter1HunterSmoke
             return Dest.Of(g, cell);
         }
 
-        while (!st.Finished && st.Turn < 80 && !st.Fallen)
+        while (!st.Finished && st.Turn < 80 && !st.Fallen && !st.TimeUp)
         {
             if (st.Rout && !routSeen)
             {
@@ -195,11 +250,23 @@ public static class Chapter1HunterSmoke
                 if (outside.Count > 0) deep = outside.OrderByDescending(StepsHome).ThenBy(i => i).First();
                 if (flee == Flee.Rear && outside.Count >= 2) { rear = outside.OrderBy(StepsHome).ThenBy(i => i).First(); res.RearSent = true; }
             }
+            if (st.Rout && flee == Flee.Bench) { split = true; Split(); }
             for (int i = 0; i < st.SquadCap && !st.Finished; i++)
             {
                 if (!Living(st, i)) continue;
                 Dest dest;
-                if (!st.Rout)
+                if (!st.Rout && solo.Contains(i))
+                {
+                    int lead = order.Count > 0 ? order[0] : -1;
+                    if (lead < 0 || st.Squads[lead].Pos == g.Home) continue;
+                    int to = st.Squads[lead].Pos;
+                    int next = st.Squads[i].Pos == g.Home ? g.Lanes[st.Squads[lead].Road][0] : g.NextStep(st.Squads[i].Pos, st.Squads[i].Road, to, -1);
+                    bool foeThere = Enumerable.Range(0, st.Stage.LaneCount).Any(r => st.FoesOn(r).Any(n => n.Pos == next));
+                    if (foeThere || st.Squads[i].Pos == to) continue;
+                    dest = Dest.Of(g, to);
+                    if (st.Squads[i].Pos == g.Home) { st.Advance(i, st.Squads[lead].Road); continue; }
+                }
+                else if (!st.Rout)
                 {
                     int k = order.IndexOf(i);
                     dest = k >= 0 && k < targets.Length ? Dest.Of(g, targets[k]) : Dest.Home;
@@ -207,7 +274,7 @@ public static class Chapter1HunterSmoke
                 }
                 else
                 {
-                    bool strike = flee == Flee.Strike || (flee == Flee.Rear && i == rear);
+                    bool strike = flee == Flee.Strike || (flee == Flee.Rear && i == rear) || solo.Contains(i);
                     if (flee == Flee.Stay) continue;
                     if (!strike) dest = Dest.Home;
                     else if (st.Hero is { Cleared: false } h)
@@ -246,10 +313,10 @@ public static class Chapter1HunterSmoke
         }
         res.Won = st.Won; res.Driven = st.HunterDriven; res.Escaped = st.HunterEscaped; res.Lost = st.HunterLost; res.Fallen = st.Fallen; res.Stalled = st.HunterStalled;
         res.HeroTurn = st.HeroTurn; res.EndTurn = st.Turn + (endedInMove ? 1 : 0); res.Fallback = st.HeroTurn >= 0 && st.GateOpenedTurn < 0;
-        res.LostBefore = res.Fell.Count(f => !f.Rout);
+        res.LostBefore = res.Fell.Count(f => !f.Rout); res.TimeUp = st.TimeUp;
         res.StartUnits = st.HunterStartUnits; res.Survivors = st.HunterSurvivors; res.Catches = st.HunterCatches;
         res.DeepHome = deep >= 0 && Living(st, deep) && (st.Squads[deep].Pos == g.Home || st.HunterDriven);
-        log?.Invoke($"  → {(st.HunterDriven ? "勇者を退かせた" : st.HunterEscaped ? "生還" : st.HunterLost ? "全滅" : st.Fallen ? "陥落" : "終わり")}・生還 {res.Survivors}／{res.StartUnits} 枚・金 {st.Gold}");
+        log?.Invoke($"  → {(st.HunterDriven ? "勇者を退かせた" : st.HunterEscaped ? "生還" : st.HunterLost ? "全滅" : st.Fallen ? "陥落" : st.TimeUp ? "時間切れ" : "終わり")}・生還 {res.Survivors}／{res.StartUnits} 枚・金 {st.Gold}");
         return res;
     }
 
@@ -316,37 +383,38 @@ public static class Chapter1HunterSmoke
             return st;
         }
         string Cell(Map11State st, int id) => id == st.Graph.Home ? "拠点" : id == st.Graph.Portal ? "野営地" : st.Graph[id].Name;
-        MapStage quiet = Dress(MapStage.Stage13Ch480With(spawnEvery: 0), rule, rule.ScaleOf(2));   // 湧きの無い写し（歩く敵に邪魔されない場面用）
 
         // ---- (a) 盤の形・前半の敵と倍率 ----
         {
             MapGraph g = s.Board(true);
-            int fort = g.Lanes[0][3], bridge = g.Lanes[1][3], village = g.Lanes[2][2], s3 = g.Lanes[2][3];
-            bool shape = g.Lanes.Count == 3 && g.Lanes[0].Length == 6 && g.Lanes[1].Length == 5 && g.Lanes[2].Length == 6
+            int fort = g.Lanes[0][4], bridge = g.Lanes[1][4], village = g.Lanes[2][3], s4 = g.Lanes[2][4];
+            bool shape = g.Lanes.Count == 3 && g.Lanes[0].Length == 8 && g.Lanes[1].Length == 7 && g.Lanes[2].Length == 8
                          && g.Lanes.All(l => l[0] == g.Lanes[0][0]) && g[g.Lanes[0][0]].Lane < 0
                          && g.IsOutpost(fort) && g.IsOutpost(bridge) && g.IsOutpost(village) && g.Cells.Count(c => c.Kind == MapGraph.Kind.Outpost) == 3
-                         && g[fort].Neighbors.Contains(bridge) && g[bridge].Neighbors.Contains(s3) && g.Edges.Count(e => g.IsCross(e.A, e.B)) == 2
+                         && g[fort].Neighbors.Contains(bridge) && g[bridge].Neighbors.Contains(s4) && g.Edges.Count(e => g.IsCross(e.A, e.B)) == 2
                          && g[g.Home].Name == MapGraph.Home13F480 && g[g.Portal].Name == MapGraph.Camp13F480;
             MapFoeScale sc = rule.ScaleOf(2);
             UnitDef hero = s.Hero.Unit!;
-            bool rules = s.Hero.Hunter && s.Hero.Steps == 2 && s.Hero.FallbackTurn == 10 && s.Hero.RoutPercent == 50 && !s.Hero.Chaser && s.PortalGate == 2 && !s.TimeLimit && !s.Reserve.On
-                         && s.EncounterRetreat && s.WipedReforms && !sc.HeroMends && !hero.Traits.Contains(TraitId.BossMend300)
+            bool rules = s.Hero.Hunter && s.Hero.Steps == 2 && s.Hero.FallbackTurn == 0 && s.Hero.RoutPercent == 50 && !s.Hero.Chaser && s.PortalGate == 2 && s.TimeLimit && s.TurnCap == 10 && !s.Reserve.On
+                         && s.Portal.SpawnEvery == 0 && s.EncounterRetreat && s.WipedReforms && !sc.HeroMends && !hero.Traits.Contains(TraitId.BossMend300)
                          && hero.MaxHp == MapFoeScale.Mul(EnemyCatalog.HeroMap.MaxHp, MapStage.Stage13Ch480HeroHp) && hero.Attack == MapFoeScale.Mul(EnemyCatalog.HeroMap.Attack, MapStage.Stage13Ch480HeroAtk)
+                         && MapStage.Stage13Ch480HeroHp == 800 && MapStage.Stage13Ch480HeroAtk == 250
                          && sc.FoePercent == ChapterRule.Stage13Ch480FoePercent && sc.HeroPercent == ChapterRule.Stage13Ch480HeroPercent;
             bool foes = s.Lanes.SelectMany(l => l).Where(n => !n.Stationary).All(n => n.Hold) && s.Lanes[1][^1].Stationary
-                        && s.Lanes.SelectMany(l => l).Count(n => n.Name is "雷杖の部隊" or "槍兵の部隊") == 2;
+                        && s.Lanes.SelectMany(l => l).Count(n => n.Name is "雷杖の部隊" or "槍兵の部隊") == 2
+                        && new[] { fort, bridge, village }.All(c => Enumerable.Range(0, 3).Sum(l => g.FoeStarts[l].Count(x => x == c)) == MapStage.Stage13Ch480Stack) && MapStage.Stage13Ch480Stack == 2;
             write($"  (a) 経路 {string.Join(" ／ ", g.Lanes.Select((l, i) => $"{g.LaneNames[i]} {l.Length - 1} マス"))}・中間拠点 {Cell0(g, fort)}・{Cell0(g, bridge)}・{Cell0(g, village)}・横の辺 {string.Join("・", g.Edges.Where(e => g.IsCross(e.A, e.B)).Select(e => $"{g[e.A].Name} ⇔ {g[e.B].Name}"))}");
-            write($"      敵 {string.Join(" ／ ", s.Lanes.Select((l, i) => $"{s.LaneMark(i)}: {string.Join("・", l.Select(n => n.Name))}"))}・湧き {s.Spawn(0).Name}（{s.Portal.SpawnEvery} 刻ごと）");
-            write($"      敵の倍率 ×{sc.FoePercent / 100.0:0.##}・勇者 HP {hero.MaxHp}（×{MapStage.Stage13Ch480HeroHp / 100.0:0.##}） 攻 {hero.Attack}（×{MapStage.Stage13Ch480HeroAtk / 100.0:0.##}）・{s.Hero.Steps} 歩・{s.Hero.FallbackTurn} 刻目・HP {s.Hero.RoutPercent}% で退く");
-            Req(shape, "(a) 盤: 北 5 ／ 中 4 ／ 南 5 マス・中間拠点 3（北 3 ／ 中 3 ／ 南 2 マス目）・横の辺 2 本（砦跡 ⇔ 橋・橋 ⇔ 南3）");
-            Req(rules && foes, "(a) 前半の敵は待ち構える（雷杖・槍兵は 1 部隊ずつ）・倍率と勇者の値は定数どおり・期限と予備隊は無い");
+            write($"      敵 {string.Join(" ／ ", s.Lanes.Select((l, i) => $"{s.LaneMark(i)}: {string.Join("・", l.Select(n => n.Name))}"))}・歩いてくる湧き {(s.Portal.SpawnEvery > 0 ? "あり" : "なし")}・期限 {s.TurnCap} 刻");
+            write($"      敵の倍率 ×{sc.FoePercent / 100.0:0.##}・勇者 HP {hero.MaxHp}（×{MapStage.Stage13Ch480HeroHp / 100.0:0.##}） 攻 {hero.Attack}（×{MapStage.Stage13Ch480HeroAtk / 100.0:0.##}）・{s.Hero.Steps} 歩・HP {s.Hero.RoutPercent}% で退く");
+            Req(shape, "(a) 盤: 北 7 ／ 中 6 ／ 南 7 マス・中間拠点 3（北 4 ／ 中 4 ／ 南 3 マス目）・横の辺 2 本（砦跡 ⇔ 橋・橋 ⇔ 南4）");
+            Req(rules && foes, "(a) 前半の敵は待ち構える（中間拠点に 2 部隊ずつ・雷杖と槍兵は 1 部隊ずつ）・歩いてくる湧きと予備隊は無い・勇者は HP ×8 ／ 攻 ×2.5・期限 10 刻");
         }
 
         // ---- (b) 現れる ／ (c) 目標が替わる ----
         {
             var st = Fresh(s, 0);
             var g = st.Graph;
-            int bridge = g.Lanes[1][3], village = g.Lanes[2][2];
+            int bridge = g.Lanes[1][4], village = g.Lanes[2][3];
             Walk(st, 0, Dest.Of(g, bridge));
             Walk(st, 1, Dest.Of(g, village));
             bool before = st.Hero is null && st.GateOpen && !st.Rout && !st.CanEnter(0, g.Portal);
@@ -356,100 +424,109 @@ public static class Chapter1HunterSmoke
             Req(before && h is not null && h.Pos == g.Portal && st.HeroTurn == st.GateOpenedTurn && st.HeroTurn == 1 && st.Rout,
                 "(b) 門が開いた刻の終わりに、勇者が野営地（開いた門）のマスに立つ。現れた刻は動かない。開いた刻のうちに野営地へは入れない");
 
-            // (c) 湧き・残りの敵・制圧・金。
             int spawns0 = st.Spawns.Count(n => !n.IsHero);
             var pos0 = st.Nodes.SelectMany(r => r).Concat(st.Spawns).Where(n => !n.Cleared && !n.IsHero).Select(n => (n, n.Pos)).ToList();
             bool trade = st.CanTrade, enter = st.CanEnter(0, g.Portal) || st.CanEnter(1, g.Portal), limit = st.TimeLimitLeft is not null;
-            // 2 隊とも動かさずに 2 刻（勇者は橋の隊に追いつく——精算しないで置く）。
             var m1 = Tick(st);
             int hp1 = h!.Pos;
-            write($"  (c) 登場の後: 金を動かせる {trade}・野営地へ入れる {enter}・期限の札 {limit}・湧いた数 {spawns0} → {st.Spawns.Count(n => !n.IsHero)}・敵の位置は同じ {pos0.All(x => x.n.Pos == x.Pos)}・制圧 {st.Captured}");
-            Req(!trade && !enter && !limit && st.Spawns.Count(n => !n.IsHero) == spawns0 && pos0.All(x => x.n.Pos == x.Pos) && !st.Captured && pos0.Count >= 3,
-                "(c) 登場で撤退の局面になる: 野営地へは入れない（制圧できない）・呼ぶ ／ 呼び戻すは閉じる・湧きが止まる・残りの敵は動かない・期限は無い");
-            write($"  (d) 次の刻: 勇者 野営地 → {Cell(st, hp1)}（2 歩）・接敵 {string.Join("・", m1.Select(e => $"隊 {e.Squad + 1}"))}・引き返せる {st.EncounterRetreat(0)}・引く先 {st.RetreatCellOf(0, false)}");
-            Req(hp1 == bridge && m1.Count == 1 && m1[0].Squad == 0 && st.FacingHunter(0) && !st.EncounterRetreat(0) && st.RetreatCellOf(0, false) == -1 && st.Squads[0].Pos == bridge,
-                "(d) 勇者は 1 刻に 2 歩でいちばん近い隊（橋）に追いつく。勇者との会戦に「引き返す」は無い");
+            var m2 = Tick(st);
+            int hp2 = h.Pos;
+            write($"  (c) 登場の後: 金を動かせる {trade}・野営地へ入れる {enter}・期限の札 {limit}・湧いた数 {spawns0} → {st.Spawns.Count(n => !n.IsHero)}・敵の位置は同じ {pos0.All(x => x.n.Pos == x.Pos)}・制圧 {st.Captured}・時間切れ {st.TimeUp}");
+            Req(!trade && !enter && !limit && st.Spawns.Count(n => !n.IsHero) == spawns0 && pos0.All(x => x.n.Pos == x.Pos) && !st.Captured && pos0.Count >= 3 && !st.TimeUp,
+                "(c) 登場で撤退の局面になる: 野営地へは入れない（制圧できない）・呼ぶ ／ 呼び戻すは閉じる・湧かない・残りの敵は動かない・期限は外れる");
+            write($"  (d) 勇者 野営地 → {Cell(st, hp1)}（2 歩・接敵 {m1.Count}）→ {Cell(st, hp2)}（接敵 {string.Join("・", m2.Select(e => $"隊 {e.Squad + 1}"))}）・引き返せる {st.EncounterRetreat(0)}・引く先 {st.RetreatCellOf(0, false)}");
+            Req(hp1 == g.Lanes[1][5] && m1.Count == 0 && hp2 == bridge && m2.Count == 1 && m2[0].Squad == 0 && st.FacingHunter(0) && !st.EncounterRetreat(0) && st.RetreatCellOf(0, false) == -1 && st.Squads[0].Pos == bridge,
+                "(d) 勇者は 1 刻に 2 歩でいちばん近い隊（橋・3 歩）に 2 刻目で追いつく。勇者との会戦に「引き返す」は無い");
         }
 
-        // ---- (b) 開かなければ 10 刻目 ----
+        // ---- (b) 門が開かなければ時間切れ ----
         {
-            var st = Fresh(quiet);
+            var st = Fresh(s);
             for (int k = 0; k < 9; k++) Tick(st);
-            bool none = st.Hero is null && !st.Finished;
+            bool open9 = !st.Finished && st.TimeLimitLeft == 1;
             Tick(st);
-            write($"  (b) 隊を出さない: 9 刻目まで勇者 {(none ? "なし" : "あり")} → 10 刻目の終わりに {(st.Hero is null ? "なし" : Cell(st, st.Hero.Pos))}（現れた刻 {st.HeroTurn}）・全隊が拠点なので {(st.Won ? "その場で生還" : "続く")}");
-            Req(none && st.Hero is { } h && h.Pos == st.Graph.Portal && st.HeroTurn == 10 && st.GateOpenedTurn < 0, "(b) 門が開かなければ、10 刻目の終わりに勇者が現れる");
+            write($"  (b) 隊を出さない: 9 刻目の終わり 続く {open9} → 10 刻目の終わり 勇者 {(st.Hero is null ? "なし" : "あり")}・時間切れ {st.TimeUp}・勝ち {st.Won}・陥落 {st.Fallen}");
+            Req(open9 && st.Hero is null && st.TimeUp && st.Finished && !st.Won && !st.Fallen, "(b) 10 刻のうちに門が開かなければ時間切れで負け（勇者は現れない・拠点は落ちない）");
         }
 
         // ---- (d) 2 歩・いちばん近い隊・殿・横の辺・拠点へは入らない ----
         {
-            var st = Fresh(quiet);
+            var st = Fresh(s);
             var g = st.Graph;
-            int fort = g.Lanes[0][3], n4 = g.Lanes[0][4], bridge = g.Lanes[1][3], s3 = g.Lanes[2][3], village = g.Lanes[2][2];
+            int fort = g.Lanes[0][4], n6 = g.Lanes[0][6], bridge = g.Lanes[1][4], s4 = g.Lanes[2][4], village = g.Lanes[2][3];
             Walk(st, 0, Dest.Of(g, fort));
             Walk(st, 1, Dest.Of(g, village));
             Tick(st);
             var h = st.Hero!;
             var c0 = st.HunterChase();
             Tick(st);
-            bool two = h.Pos == n4 && c0 is { Squad: 0, Steps: 3 };
-            // 殿: 第1隊が自分から勇者のマス（北4）へ入り、倒れる。その刻の終わり、勇者は動かない。
-            var met = Map11Orders.Apply(st, 0, Dest.Portal(g, 0), Map11Orders.Plan(st, 0, Dest.Portal(g, 0)));
+            bool two = h.Pos == n6 && c0 is { Squad: 0, Steps: 4 };
+            // 殿: 第1隊が自分から勇者のマス（北6）へ入り、倒れる。その刻の終わり、勇者は動かない。
+            Map11State.Node? met = null;
+            for (int k = 0; k < 3 && met is null; k++) met = Map11Orders.Apply(st, 0, Dest.Portal(g, 0), Map11Orders.Plan(st, 0, Dest.Portal(g, 0)));
             bool rearMeet = ReferenceEquals(met, h);
             if (rearMeet) Lose(st, 0, h);
             var mHold = Tick(st);
-            bool held = h.Pos == n4 && mHold.Count == 0 && st.RearGuards.SetEquals(new[] { 0 }) && st.HunterCatches == 0;
-            // 次の刻: 北4 → 砦跡 → 橋（横の辺）→ その次: 南3 → 集落（追いつく）。
+            bool held = h.Pos == n6 && mHold.Count == 0 && st.RearGuards.SetEquals(new[] { 0 }) && st.HunterCatches == 0;
+            // 次の刻から: 北6 → 北5 → 砦跡 ／ → 橋（横の辺）→ 南4（横の辺）／ → 集落（追いつく）。
             Tick(st);
             int p2 = h.Pos;
-            var m3 = Tick(st);
+            Tick(st);
             int p3 = h.Pos;
-            write($"  (d) 第1隊 砦跡（3 歩）・第2隊 集落（4 歩）: 追う相手 隊 {(c0?.Squad ?? -1) + 1} → {Cell(st, n4)} ／ 殿（隊 1 が入る {rearMeet}）の刻は {(held ? "動かない" : "動いた")} → {Cell(st, p2)} → {Cell(st, p3)}（接敵 {m3.Count}）");
-            Req(two, "(d) 勇者は 1 刻に 2 歩、いちばん近い隊を追う（野営地 → 北5 → 北4）");
+            var m4 = Tick(st);
+            write($"  (d) 第1隊 砦跡（4 歩）・第2隊 集落（5 歩）: 追う相手 隊 {(c0?.Squad ?? -1) + 1} → {Cell(st, n6)} ／ 殿（隊 1 が入る {rearMeet}）の刻は {(held ? "動かない" : "動いた")} → {Cell(st, p2)} → {Cell(st, p3)} → {Cell(st, h.Pos)}（接敵 {m4.Count}）");
+            Req(two, "(d) 勇者は 1 刻に 2 歩、いちばん近い隊を追う（野営地 → 北7 → 北6）");
             Req(rearMeet && held, "(d) 隊が自分から勇者のマスへ入った刻（殿）は、勇者は動かない");
-            Req(p2 == bridge && p3 == village && m3.Count == 1 && m3[0].Squad == 1, "(d) 横の辺を使って次の隊を追う（砦跡 → 橋 → 南3 → 集落）");
-            if (m3.Count == 1) Lose(st, 1, h);
+            Req(p2 == fort && p3 == s4 && h.Pos == village && m4.Count == 1 && m4[0].Squad == 1, "(d) 横の辺を使って次の隊を追う（砦跡 → 橋 → 南4 → 集落）");
+            if (m4.Count == 1) Lose(st, 1, h);
             Req(st.HunterCatches == 1 && st.HunterLost && st.Finished && !st.Won, "(e) 負け: 隊に生きている駒が 1 枚もいない");
 
             // 同じ距離なら枚数の多い隊。
-            var st2 = Fresh(quiet);
+            var st2 = Fresh(s);
             Walk(st2, 0, Dest.Of(g, fort));
-            Walk(st2, 1, Dest.Of(g, s3));
+            Walk(st2, 1, Dest.Of(g, s4));
             Tick(st2);
             var even = st2.HunterChase();
             st2.Squads[0].Units![0].Hp = 0;
             var fewer = st2.HunterChase();
-            write($"  (d) 砦跡と南3（どちらも 3 歩）: 同じ枚数なら 隊 {(even?.Squad ?? -1) + 1}・第1隊が 1 枚減ると 隊 {(fewer?.Squad ?? -1) + 1}");
-            Req(even is { Squad: 0, Steps: 3 } && fewer is { Squad: 1, Steps: 3 }, "(d) 同じ距離なら生きている駒の多い隊（それも同じなら若い番号）");
+            write($"  (d) 砦跡と南4（どちらも 4 歩）: 同じ枚数なら 隊 {(even?.Squad ?? -1) + 1}・第1隊が 1 枚減ると 隊 {(fewer?.Squad ?? -1) + 1}");
+            Req(even is { Squad: 0, Steps: 4 } && fewer is { Squad: 1, Steps: 4 }, "(d) 同じ距離なら生きている駒の多い隊（それも同じなら若い番号）");
 
-            // 拠点へは入らない: 生きている隊が拠点にしかいなければ追う相手がいない。
-            var st3 = Fresh(quiet);
+            // 勝ち A・拠点へは入らない。
+            var st3 = Fresh(s);
             Walk(st3, 0, Dest.Of(g, bridge));
             Walk(st3, 1, Dest.Of(g, village));
             Tick(st3);
             int gold0 = st3.Gold;
-            for (int k = 0; k < 8 && st3.Squads[0].Pos != g.Home; k++) st3.StepBack(0);
+            for (int k = 0; k < 9 && st3.Squads[0].Pos != g.Home; k++) st3.StepBack(0);
             bool mid = !st3.Won && st3.HunterChase() is { Squad: 1 };
-            for (int k = 0; k < 8 && st3.Squads[1].Pos != g.Home; k++) st3.StepBack(1);
+            for (int k = 0; k < 9 && st3.Squads[1].Pos != g.Home; k++) st3.StepBack(1);
             write($"  (e) 2 隊とも拠点へ: 途中 勝ち {!mid}・着いた後 勝ち {st3.Won}（生還 {st3.HunterSurvivors} 枚・金 {gold0} → {st3.Gold}）・追う相手 {(st3.HunterChase() is null ? "なし" : "あり")}");
             Req(mid && st3.Won && st3.HunterEscaped && st3.Finished && st3.HunterSurvivors == 10 && st3.Gold == gold0 + 10 && st3.HunterChase() is null && st3.Hero!.Pos != g.Home,
                 "(e) 勝ち A: 生きている隊がすべて拠点に入った（生還 1 枚につき ＋1）・勇者は拠点へ入らない");
 
-            // 勝ち B: 勇者の HP が半分を割る。
-            var st4 = Fresh(quiet);
-            Walk(st4, 0, Dest.Of(g, bridge));
-            Walk(st4, 1, Dest.Of(g, village));
-            Tick(st4);
-            var m = Tick(st4);
-            var h4 = st4.Hero!;
-            Cut(st4, m[0].Squad, h4, 60);
-            bool still = !h4.Cleared && !st4.Won;
-            int gold4 = st4.Gold;
-            var mm = Tick(st4);
-            if (mm.Count > 0) Cut(st4, mm[0].Squad, h4, 49);
-            write($"  (e) 勇者の HP を 60% → {(still ? "続く" : "終わる")} ／ 49% → 退いた {h4.Retreated}・勝ち {st4.Won}・金 {gold4} → {st4.Gold}・結果の刻 {st4.HeroRoutTurn}");
-            Req(still && mm.Count == 1 && h4.Cleared && h4.Retreated && st4.Won && st4.HunterDriven && st4.Finished && st4.Gold == gold4 + 20 + 10,
-                "(e) 勝ち B: 勇者の HP が半分を割った刻に退く（その刻で勝ち・＋20 と生還の分）");
+            // 勝ち B: 勇者の HP が半分を割る ／ 0 になっても「退いた」。
+            (bool Still, bool Retreated, bool Won, int Gold, string Why) Drive(int toPercent)
+            {
+                var x = Fresh(s);
+                Walk(x, 0, Dest.Of(g, bridge));
+                Walk(x, 1, Dest.Of(g, village));
+                Tick(x);
+                List<Map11State.Encounter> m = new();
+                for (int k = 0; k < 4 && m.Count == 0; k++) m = Tick(x);
+                var hx = x.Hero!;
+                Cut(x, m[0].Squad, hx, 60);
+                bool still = !hx.Cleared && !x.Won;
+                int gold = x.Gold;
+                var mm = Tick(x);
+                if (mm.Count > 0) { if (toPercent > 0) Cut(x, mm[0].Squad, hx, toPercent); else Win(x, mm[0].Squad, hx); }
+                return (still, hx.Cleared && hx.Retreated, x.Won && x.HunterDriven && x.Finished, x.Gold - gold, x.GoldLog.Count > 0 ? string.Join("／", x.GoldLog.TakeLast(2).Select(l => l.Reason)) : "");
+            }
+            var half = Drive(49);
+            var zero = Drive(0);
+            write($"  (e) 勇者の HP を 60% → {(half.Still ? "続く" : "終わる")} ／ 49% → 退いた {half.Retreated}・勝ち {half.Won}・金 ＋{half.Gold} ／ 0 → 退いた {zero.Retreated}・勝ち {zero.Won}・金 ＋{zero.Gold}（金の文「{zero.Why}」）");
+            Req(half.Still && half.Retreated && half.Won && half.Gold == 30, "(e) 勝ち B: 勇者の HP が半分を割った刻に退く（その刻で勝ち・＋20 と生還の分）");
+            Req(zero.Retreated && zero.Won && zero.Gold == 30 && !zero.Why.Contains("抜いた") && zero.Why.Contains("退かせた"), "(e) 勇者の HP が 0 になった戦闘も「退いた」（「抜いた」の文は出ない）");
         }
 
         // ---- (f) 第479期の直し（落ちた拠点に居座る敵に隊が引き戻されない）を V479 の 1-3 で踏む ----
@@ -493,84 +570,62 @@ public static class Chapter1HunterSmoke
 
     // ---------------- §4 の測り ----------------
 
-    internal sealed record Cand(string Label, int Foe, int HeroHp, int HeroAtk, int Stack = MapStage.Stage13Ch480Stack, int Steps = 2, int Fallback = 10,
-                                int SpawnEvery = MapStage.Stage13Ch480SpawnEvery, int Rout = 50, int[]? Len = null, int[]? Op = null);
+    internal sealed record Cand(string Label, int Foe, int HeroHp, int HeroAtk, int Stack = MapStage.Stage13Ch480Stack, int Steps = 2,
+                                int Rout = 50, int[]? Len = null, int[]? Op = null);
 
     /// <summary>今の定数の候補。</summary>
     internal static readonly Cand Now = new("今", ChapterRule.Stage13Ch480FoePercent, MapStage.Stage13Ch480HeroHp, MapStage.Stage13Ch480HeroAtk);
 
-    /// <summary>振る候補（`--chapter1-hunter-sweep`・指示書 §4 の「倍率・勇者の歩数・登場の刻・盤の長さ」）。</summary>
+    /// <summary>振る候補（`--chapter1-hunter-sweep`・「今」のまわり）。</summary>
     internal static IEnumerable<Cand> SweepCands()
     {
-        const int Hp = 600, Atk = 250;
-        // 1) 倍率（勇者の HP × 攻撃）
-        foreach (int hp in new[] { 160, 400, 600, 800, 1000 })
-            foreach (int atk in new[] { 160, 250, 400 })
-                yield return new($"倍率: HP×{hp / 100.0:0.#} 攻×{atk / 100.0:0.#}", 100, hp, atk, 2);
-        // 2) 勇者の歩数
-        foreach (int steps in new[] { 1, 3 }) yield return new($"歩数: {steps} 歩", 100, Hp, Atk, 2, Steps: steps);
-        // 3) 登場の刻（中間拠点に重ねる部隊の数で門が開く刻が動く）
-        foreach (int stack in new[] { 1, 3, 4 }) yield return new($"登場: 重ね {stack}", 100, Hp, Atk, stack);
-        // 4) 盤の長さ・中間拠点の位置（分かれ道を除くマスの数 北／中／南・中間拠点のマス目）
-        yield return new("盤: 橋を中2へ（5/4/5・3/2/2）", 100, Hp, Atk, 2, Len: new[] { 5, 4, 5 }, Op: new[] { 3, 2, 2 });
-        yield return new("盤: 中間拠点を手前に（5/4/5・2/2/2）", 100, Hp, Atk, 2, Len: new[] { 5, 4, 5 }, Op: new[] { 2, 2, 2 });
-        yield return new("盤: 道を長く（7/6/7・4/3/3）", 100, Hp, Atk, 2, Len: new[] { 7, 6, 7 }, Op: new[] { 4, 3, 3 });
-        yield return new("盤: 道を長く（7/6/7・4/4/3）", 100, Hp, Atk, 2, Len: new[] { 7, 6, 7 }, Op: new[] { 4, 4, 3 });
-        yield return new("盤: 道を長く（8/7/8・5/4/4）・重ね 1", 100, Hp, Atk, 1, Len: new[] { 8, 7, 8 }, Op: new[] { 5, 4, 4 });
-        // 5) 敵の倍率（前半）
-        foreach (int foe in new[] { 80, 130, 160 }) yield return new($"前半: 敵 ×{foe / 100.0:0.#}", foe, Hp, Atk, 2);
+        yield return Now;
+        foreach (var (hp, atk) in new[] { (400, 250), (500, 250), (600, 250), (700, 250), (500, 200), (600, 200), (700, 200), (800, 200), (800, 160), (1000, 250) }) yield return new($"勇者 HP×{hp / 100.0:0.#} 攻×{atk / 100.0:0.#}", Now.Foe, hp, atk);
+        foreach (int stack in new[] { 1, 3 }) yield return new($"重ね {stack}", Now.Foe, Now.HeroHp, Now.HeroAtk, stack);
+        yield return new("盤 5/4/5・3/3/2（始めの案）", Now.Foe, Now.HeroHp, Now.HeroAtk, Len: new[] { 5, 4, 5 }, Op: new[] { 3, 3, 2 });
+        yield return new("盤 7/6/7・4/3/3", Now.Foe, Now.HeroHp, Now.HeroAtk, Len: new[] { 7, 6, 7 }, Op: new[] { 4, 3, 3 });
+        yield return new("盤 8/7/8・5/4/4", Now.Foe, Now.HeroHp, Now.HeroAtk, Len: new[] { 8, 7, 8 }, Op: new[] { 5, 4, 4 });
+        foreach (int foe in new[] { 80, 130 }) yield return new($"敵 ×{foe / 100.0:0.#}", foe, Now.HeroHp, Now.HeroAtk);
     }
 
-    internal static MapStage StageOf(Cand c, ChapterRule rule, int fallback = -1)
-        => Dress(MapStage.Stage13Ch480With(steps: c.Steps, fallback: fallback >= 0 ? fallback : c.Fallback, routPercent: c.Rout, spawnEvery: c.SpawnEvery,
-                                            heroHp: c.HeroHp, heroAtk: c.HeroAtk, stack: c.Stack, len: c.Len, op: c.Op), rule, new MapFoeScale(c.Foe, 100, HeroMends: false));
+    internal static MapStage StageOf(Cand c, ChapterRule rule, int fallback = 0)
+        => Dress(MapStage.Stage13Ch480With(steps: c.Steps, fallback: fallback, routPercent: c.Rout, heroHp: c.HeroHp, heroAtk: c.HeroAtk, stack: c.Stack, len: c.Len, op: c.Op),
+                 rule, new MapFoeScale(c.Foe, 100, HeroMends: false));
 
     private static bool Measure(Action<string> write, ChapterRule rule, string demoDir, bool sweep)
     {
         var dropped = new List<string>();
         MapStage now = StageOf(Now, rule);
         List<Team> humans = Humans(demoDir, now, dropped);
-        var botTeams = Enumerable.Range(0, Seeds).Select(seed => (Seed: seed, Pack: BotB(seed))).Where(x => x.Pack is not null).ToList();
+        var botB = Enumerable.Range(0, Seeds).Select(seed => (Pack: Bot(seed, true), Seed: seed)).Where(x => x.Pack is not null).Select(x => (x.Pack!, x.Seed)).ToList();
+        var botA = Enumerable.Range(0, Seeds).Select(seed => (Pack: Bot(seed, false), Seed: seed)).Where(x => x.Pack is not null).Select(x => (x.Pack!, x.Seed)).ToList();
         write("");
         write($"## §4 の測り（{Seeds} seed）");
-        write($"- 器具の組 B: 1-1 → 1-2 を器具で通して 1-3 に入れた seed {botTeams.Count}／{Seeds}");
-        write($"- ポンの写し（1-3 の始め）: {humans.Count} 本 {string.Join("・", humans.Select(h => h.Label))}" + (dropped.Count > 0 ? $"（外した {dropped.Count}: {string.Join(" ／ ", dropped.Select(d => d.Split(':')[0]))}）" : ""));
-        var groups = new (string Name, List<(Map11State.CarryPack Pack, int Seed)> Runs)[]
+        write($"- 器具の組 B ／ 組 A（今の加入の表と金の規則で 1-1 → 1-2 を器具が通して 1-3 に入れた隊）: {botB.Count}／{Seeds} ・ {botA.Count}／{Seeds} seed");
+        write($"- ポンの写し（1-3 の始め・参考）: {humans.Count} 本 {string.Join("・", humans.Select(h => h.Label))}" + (dropped.Count > 0 ? $"（外した {dropped.Count}: {string.Join(" ／ ", dropped.Select(d => d.Split(':')[0]))}）" : ""));
+        var groups = new (string Name, bool Judge, bool B, List<(Map11State.CarryPack Pack, int Seed)> Runs)[]
         {
-            ("組 B", botTeams.Select(x => (x.Pack!, x.Seed)).ToList()),
-            ("ポンの写し", humans.SelectMany(h => Enumerable.Range(0, Seeds / Math.Max(1, humans.Count)).Select(seed => (h.Pack, seed))).ToList()),
+            ("組 B", true, true, botB),
+            ("組 A", true, false, botA),
+            ("ポンの写し（参考）", false, false, humans.SelectMany(h => Enumerable.Range(0, Seeds / Math.Max(1, humans.Count)).Select(seed => (h.Pack, seed))).ToList()),
         };
         bool all = true;
         if (sweep)
         {
-            // 通しの記録 1 本ずつ（組 B の先頭・ポンの写しの先頭・方針 a）と、隊ごとの勇者の重さ。
-            Cand probe = new("HP×6 攻×2.5", 100, 600, 250, 2);
-            foreach (var (name, runs) in groups)
+            write("");
+            write("| 候補 | 組 | 失う駒 | 現れる刻（時間切れ） | 優勢 | 勇者に勝つ（中央値／最大） | 削り（中央値／最大の隊） | a 勝ち | a 生還した駒 | a 奥が追いつかれる | b 奥が生還 | b 生還した駒 | c 退かせる | e 生還した駒 | a の刻 | 線 |");
+            write("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|");
+        }
+        else
+        {
+            foreach (var (name, _, _, runs) in groups)
             {
                 if (runs.Count == 0) continue;
-                write($"--- {name} の通し（{probe.Label}・方針 a・seed {runs[0].Seed}）");
-                Play(StageOf(probe, rule), runs[0].Pack, runs[0].Seed, Flee.Home, log: write);
+                write($"--- {name} の通し（方針 e・seed {runs[0].Seed}）");
+                Play(now, runs[0].Pack, runs[0].Seed, Flee.Solo, log: write);
             }
-            {
-                // いちばん削る隊の 1 戦のログ（何が削っているか）。
-                if (humans.Count == 0) return true;
-                MapStage ps = StageOf(probe, rule, fallback: 1);
-                Map11State pst = Setup(ps, humans[0].Pack, 0);
-                pst.AdvanceFoes();
-                int main = Enumerable.Range(0, pst.Squads.Length).Where(i => pst.Squads[i].Units is { Count: > 0 }).OrderByDescending(i => pst.Squads[i].Units!.Count(u => u.IsAlive)).First();
-                var pp = pst.PeekSquad(main).Select(Map11State.CloneForOdds).ToList();
-                var ee = pst.PeekFoe(pst.Hero!).Select(Map11State.CloneForOdds).ToList();
-                BattleResult br = BattleEngine.Run(pp, ee, 7000, verbose: true);
-                var dmg = br.Events.Where(e => (e.Kind == BattleEventKind.Damage || e.Kind == BattleEventKind.Status) && e.TargetId == ee[0].InstanceId).GroupBy(e => (SourceId: (e.Kind == BattleEventKind.Status ? -1 : e.ActorId ?? -2), e.Turn)).Select(gp => (gp.Key, Sum: gp.Sum(e => e.Amount), N: gp.Count())).OrderByDescending(x => x.Sum).Take(12);
-                foreach (var d in dmg) write($"--- 削り: T{d.Key.Turn} 出どころ {pp.Concat(ee).FirstOrDefault(u => u.InstanceId == d.Key.SourceId)?.Def.Name ?? (d.Key.SourceId == -1 ? "継続（毒・燃焼）" : "出どころなし")} 合計 {d.Sum}（{d.N} 回）");
-                write($"--- {br.Turns}T・勝ち {br.PlayerWon}");
-            }
-            foreach (var w in Weigh(probe, rule, humans.Select(h => h.Pack).ToList()))
-                write($"--- 勇者の重さ（{probe.Label}）: {w.Names} → 勝ち {w.Wins}／{WeighSeeds}・削り 中央値 {w.Cut:0.#}% 最大 {w.Max:0.#}%");
-
-            write("");
-            write("| 候補 | 組 | 失う駒 | 現れる刻 | 優勢 | 勇者に勝つ（中央値／最大） | 削り（中央値／最大の隊／最大の 1 戦） | a 勝ち | a 生還した駒 | a 奥が追いつかれる | b 奥が生還 | b 生還した駒 | c 退かせる | d 全滅 | a の刻 | 通った線 |");
-            write("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|");
+            foreach (var w in Weigh(Now, rule, humans.Select(h => h.Pack).ToList()))
+                write($"--- 勇者の重さ（ポンの写し）: {w.Names} → 勝ち {w.Wins}／{WeighSeeds}・削り 中央値 {w.Cut:0.#}% 最大 {w.Max:0.#}%");
         }
         foreach (Cand c in sweep ? SweepCands() : new[] { Now })
         {
@@ -578,19 +633,20 @@ public static class Chapter1HunterSmoke
             if (!sweep)
             {
                 write("");
-                write($"### 候補「{c.Label}」: 敵 ×{c.Foe / 100.0:0.##}・勇者 HP ×{c.HeroHp / 100.0:0.##} 攻 ×{c.HeroAtk / 100.0:0.##}・中間拠点に {c.Stack} 部隊・{c.Steps} 歩・{c.Fallback} 刻目・湧き {(c.SpawnEvery > 0 ? $"{c.SpawnEvery} 刻ごと" : "なし")}・HP {c.Rout}% で退く");
+                write($"### 「{c.Label}」: 敵 ×{c.Foe / 100.0:0.##}・勇者 HP ×{c.HeroHp / 100.0:0.##} 攻 ×{c.HeroAtk / 100.0:0.##}・中間拠点に {c.Stack} 部隊・{c.Steps} 歩・HP {c.Rout}% で退く");
             }
-            foreach (var (name, runs) in groups)
+            foreach (var (name, judge, isB, runs) in groups)
             {
                 if (runs.Count == 0) { write($"- {name}: 隊なし"); continue; }
-                all &= Lines(write, name, st, c, rule, runs, sweep);
+                bool pass = Lines(write, name, st, c, rule, runs, sweep, isB);
+                if (judge) all &= pass;
             }
         }
         return all;
     }
 
-    /// <summary>1 候補 × 1 組の表と線。</summary>
-    private static bool Lines(Action<string> write, string group, MapStage st, Cand c, ChapterRule rule, List<(Map11State.CarryPack Pack, int Seed)> runs, bool compact)
+    /// <summary>1 候補 × 1 組の表と線（線はポンの直し 2026-11-17・「（組 B）」の線は <paramref name="isB"/> のときだけ数える）。</summary>
+    private static bool Lines(Action<string> write, string group, MapStage st, Cand c, ChapterRule rule, List<(Map11State.CarryPack Pack, int Seed)> runs, bool compact, bool isB)
     {
         Action<string> detail = compact ? _ => { } : write;
         var by = new Dictionary<Flee, List<Res>>();
@@ -601,52 +657,60 @@ public static class Chapter1HunterSmoke
             by[f] = rs.ToList();
         }
         var a = by[Flee.Home];
-        // ---- 4-1 前半 ----
         double lostBefore = a.Average(r => (double)r.LostBefore);
         double gate = Med(a.Where(r => r.HeroTurn >= 0).Select(r => (double)r.HeroTurn));
-        int fallback = a.Count(r => r.Fallback), fallen = a.Count(r => r.Fallen);
+        int timeUp = a.Count(r => r.TimeUp), fallen = a.Count(r => r.Fallen);
         var full = a.SelectMany(r => r.Front).Where(x => x.Full && x.Odds >= 0).ToList();
         double good = full.Count == 0 ? double.NaN : 100.0 * full.Count(x => x.Odds >= 16) / full.Count;
         var frontAll = a.SelectMany(r => r.Front).ToList();
         detail($"#### {group}（{runs.Count} 通し）");
-        detail("| 4-1 前半 | 値 | 線 |");
+        detail("| 前半 | 値 | 線 |");
         detail("|---|---|---|");
-        detail($"| 門が開くまでに失う駒（平均） | {lostBefore:0.00} | 1 枚以下 |");
-        detail($"| 勇者が現れる刻（中央値） | {T(gate)}（10 刻目で現れた {fallback}・前半に陥落 {fallen}） | 6〜8 |");
+        detail($"| 門が開くまでに失う駒（平均） | {lostBefore:0.00} | 1 枚以下（組 B） |");
+        detail($"| 勇者が現れる刻（中央値） | {T(gate)}（時間切れ {timeUp}・前半に陥落 {fallen}） | 6〜8 |");
         detail($"| 5 枚の隊の戦闘が「優勢」 | {T(good)}%（{full.Count} 戦・前半の勝ち {frontAll.Count(x => x.Won)}／{frontAll.Count}） | 90% 以上 |");
         var worst = frontAll.GroupBy(x => x.Foe).Select(gp => (gp.Key, N: gp.Count(), W: gp.Count(x => x.Won))).OrderBy(x => (double)x.W / x.N).Take(3);
         detail($"- 前半で勝ちの少ない相手: {string.Join("・", worst.Select(x => $"{x.Key} {x.W}／{x.N}"))}");
         var fellBefore = a.SelectMany(r => r.Fell).Where(f => !f.Rout).GroupBy(f => (f.Unit, f.Foe)).OrderByDescending(gp => gp.Count()).Take(4);
         detail($"- 前半に倒れた駒: {string.Join("・", fellBefore.Select(gp => $"{gp.Key.Unit}（{gp.Key.Foe}・{gp.Count()} 回・平均 {gp.Average(f => f.Turn):0.#}T）").DefaultIfEmpty("なし"))}");
 
-        // ---- 4-2 勇者の重さ（満タンの主力 5 枚 × 20 seed・隊ごと） ----
         var weigh = Weigh(c, rule, runs.Select(r => r.Pack).Distinct().Take(12).ToList());
         detail("");
-        detail("| 4-2 勇者 | 値 | 線 |");
+        detail("| 勇者 | 値 | 線 |");
         detail("|---|---|---|");
-        detail($"| 満タンの 5 枚の隊の勝ち（20 戦のうち・隊ごとの中央値 ／ 最大） | {T(Med(weigh.Select(w => (double)w.Wins)))} ／ {weigh.Select(w => w.Wins).DefaultIfEmpty(0).Max()} | 0〜1 |");
-        detail($"| 1 戦で削る勇者の HP（隊ごとの中央値の中央値） | {T(Med(weigh.Select(w => w.Cut)))}% | 15〜25% |");
-        detail($"| いちばん削る隊（中央値 ／ 最大の 1 戦） | {T(weigh.Select(w => w.Cut).DefaultIfEmpty(0).Max())}% ／ {T(weigh.Select(w => w.Max).DefaultIfEmpty(0).Max())}% | 30% 超は可・50% 未満 |");
-        if (weigh.Count > 0)
-        {
-            var top = weigh.OrderByDescending(w => w.Cut).First();
-            detail($"- いちばん削る隊: {top.Names}");
-        }
+        detail($"| 満タンの 5 枚の隊の勝ち（20 戦のうち・隊ごとの中央値 ／ 最大） | {T(Med(weigh.Select(w => (double)w.Wins)))} ／ {weigh.Select(w => w.Wins).DefaultIfEmpty(0).Max()} | 0〜1（組 B） |");
+        detail($"| 1 戦で削る勇者の HP（隊ごとの中央値の中央値） | {T(Med(weigh.Select(w => w.Cut)))}% | 15〜25%（組 B） |");
+        detail($"| いちばん削る隊（中央値 ／ 最大の 1 戦） | {T(weigh.Select(w => w.Cut).DefaultIfEmpty(0).Max())}% ／ {T(weigh.Select(w => w.Max).DefaultIfEmpty(0).Max())}% | （線なし） |");
+        if (weigh.Count > 0) detail($"- いちばん削る隊: {weigh.OrderByDescending(w => w.Cut).First().Names}");
 
-        // ---- 4-3 後半 ----
+        List<Res> R(Flee f) => by[f].Where(r => r.HeroTurn >= 0).ToList();
+        double Pct(List<Res> rs, Func<Res, bool> q) => rs.Count == 0 ? double.NaN : 100.0 * rs.Count(q) / rs.Count;
+        double Surv(Flee f) => Med(R(f).Where(r => r.StartUnits > 0).Select(r => 100.0 * r.Survivors / r.StartUnits));
+        double SurvAvg(Flee f) => R(f).Where(r => r.StartUnits > 0).Select(r => 100.0 * r.Survivors / r.StartUnits).DefaultIfEmpty(double.NaN).Average();
         detail("");
-        detail("| 4-3 方針 | 勝ち | 生還 | 退かせた | 全滅 | 生還した駒（中央値） | いちばん奥の隊が追いつかれた ／ 生還した | 殿が倒れた | 登場から終わりまで（中央値） |");
+        detail("| 方針 | 勝ち | 生還 | 退かせた | 全滅 | 生還した駒（中央値 ／ 平均） | いちばん奥の隊が追いつかれた ／ 生還した | 殿が倒れた | 登場から終わりまで（中央値） |");
         detail("|---|---|---|---|---|---|---|---|---|");
         foreach (Flee f in Enum.GetValues<Flee>())
         {
-            var rs = by[f].Where(r => r.HeroTurn >= 0 && !r.Fallback).ToList();
+            var rs = R(f);
             if (rs.Count == 0) { detail($"| {FleeName(f)} | — |"); continue; }
-            double P(Func<Res, bool> q) => 100.0 * rs.Count(q) / rs.Count;
             var withDeep = rs.Where(r => r.Out > 0).ToList();
-            double PD(Func<Res, bool> q) => withDeep.Count == 0 ? double.NaN : 100.0 * withDeep.Count(q) / withDeep.Count;
             var sent = rs.Where(r => r.RearSent).ToList();
-            detail($"| {FleeName(f)} | {P(r => r.Won):0}% | {P(r => r.Escaped):0}% | {P(r => r.Driven):0}% | {P(r => r.Lost):0}% | {T(Med(rs.Where(r => r.StartUnits > 0).Select(r => 100.0 * r.Survivors / r.StartUnits)))}% "
-                + $"| {T(PD(r => r.DeepCaught))}% ／ {T(PD(r => r.DeepHome))}% | {(sent.Count == 0 ? "—" : $"{100.0 * sent.Count(r => r.RearDied) / sent.Count:0}%（出した {sent.Count}）")} | {T(Med(rs.Select(r => (double)(r.EndTurn - r.HeroTurn))))} 刻 |");
+            detail($"| {FleeName(f)} | {Pct(rs, r => r.Won):0}% | {Pct(rs, r => r.Escaped):0}% | {Pct(rs, r => r.Driven):0}% | {Pct(rs, r => r.Lost):0}% | {T(Surv(f))}% ／ {T(SurvAvg(f))}% "
+                + $"| {T(Pct(withDeep, r => r.DeepCaught))}% ／ {T(Pct(withDeep, r => r.DeepHome))}% | {(sent.Count == 0 ? "—" : $"{100.0 * sent.Count(r => r.RearDied) / sent.Count:0}%（出した {sent.Count}）")} | {T(Med(rs.Select(r => (double)(r.EndTurn - r.HeroTurn))))} 刻 |");
+        }
+        foreach (Flee f in new[] { Flee.Solo, Flee.SoloRepeat })
+        {
+            var rs = R(f);
+            var did = rs.Where(r => r.Solos > 0).ToList();
+            int solos = did.Sum(r => r.Solos);
+            detail($"- {FleeName(f)}: 1 枚の隊を作れた通し {did.Count}／{rs.Count}（平均 {(did.Count == 0 ? 0 : (double)solos / did.Count):0.0} 隊）・1 枚の殿が勇者を止めた刻（自分から入った戦闘）平均 {(did.Count == 0 ? 0 : did.Average(r => (double)r.SoloHolds)):0.00}・"
+                + $"1 隊あたり {(solos == 0 ? 0 : (double)did.Sum(r => r.SoloHolds) / solos):0.00} 刻・作れた通しの生還した駒 平均 {(did.Count == 0 ? double.NaN : did.Where(r => r.StartUnits > 0).Average(r => 100.0 * r.Survivors / r.StartUnits)):0.0}%・いちばん奥の隊が生還 {T(Pct(did.Where(r => r.Out > 0).ToList(), r => r.DeepHome))}%");
+        }
+        {
+            var rs = R(Flee.Bench);
+            var did = rs.Where(r => r.Moved > 0).ToList();
+            detail($"- {FleeName(Flee.Bench)}: 駒を移せた通し {did.Count}／{rs.Count}（拠点に組める枠が無かった {rs.Count(r => r.NoFrame)}）・移した駒 平均 {(did.Count == 0 ? 0 : did.Average(r => (double)r.Moved)):0.0} 枚・移せた通しの生還した駒 平均 {(did.Count == 0 ? double.NaN : did.Where(r => r.StartUnits > 0).Average(r => 100.0 * r.Survivors / r.StartUnits)):0.0}%");
         }
         var heroFights = by[Flee.Strike].SelectMany(r => r.Hero).ToList();
         detail($"- 方針 c の勇者との戦闘 {heroFights.Count} 回: 1 戦で削る HP の中央値 {T(Med(heroFights.Select(x => x.Cut)))}%・勝ち {heroFights.Count(x => x.Won)}");
@@ -654,44 +718,41 @@ public static class Chapter1HunterSmoke
         detail($"- 方針 a で勇者に倒された駒: {string.Join("・", fellRout.Select(gp => $"{gp.Key}（{gp.Count()} 回・平均 {gp.Average(f => f.Turn):0.#}T）").DefaultIfEmpty("なし"))}");
         detail($"- 勇者が拠点へ入った通し {by.Values.SelectMany(x => x).Count(r => r.HeroEnteredHome)}・打ち切り {by.Values.SelectMany(x => x).Count(r => r.Stalled)}");
 
-        // ---- 線 ----
-        List<Res> R(Flee f) => by[f].Where(r => r.HeroTurn >= 0 && !r.Fallback).ToList();
-        double Pct(List<Res> rs, Func<Res, bool> q) => rs.Count == 0 ? double.NaN : 100.0 * rs.Count(q) / rs.Count;
-        double Surv(Flee f) => Med(R(f).Where(r => r.StartUnits > 0).Select(r => 100.0 * r.Survivors / r.StartUnits));
-        var lines = new (string Name, bool Ok)[]
+        var deepRs = R(Flee.Home).Where(r => r.Out > 0).ToList();
+        double dur = Med(R(Flee.Home).Select(r => (double)(r.EndTurn - r.HeroTurn)));
+        var lines = new List<(string Name, bool Ok)>
         {
-            ("4-1 失う駒 ≤ 1", lostBefore <= 1.0),
-            ("4-1 門が開く刻 6〜8", gate >= 6 && gate <= 8),
-            ("4-1 優勢 ≥ 90%", good >= 90),
-            ("4-2 勝ち 0〜1／20", Med(weigh.Select(w => (double)w.Wins)) <= 1),
-            ("4-2 削り 15〜25%", Med(weigh.Select(w => w.Cut)) is >= 15 and <= 25),
-            ("4-2 1 隊で半分を割らない", weigh.Select(w => w.Max).DefaultIfEmpty(0).Max() < 50),
-            ("4-3 a 勝ち ≥ 90%", Pct(R(Flee.Home), r => r.Won) >= 90),
-            ("4-3 a 奥の隊が追いつかれる ≥ 70%", Pct(R(Flee.Home).Where(r => r.Out > 0).ToList(), r => r.DeepCaught) >= 70),
-            ("4-3 a 生還 60〜80%", Surv(Flee.Home) is >= 60 and <= 80),
-            ("4-3 b 奥の隊が生還 ≥ 60%", Pct(R(Flee.Rear).Where(r => r.RearSent).ToList(), r => r.DeepHome) >= 60),
-            ("4-3 c 退かせる 20〜50%", Pct(R(Flee.Strike), r => r.Driven) is >= 20 and <= 50),
-            ("4-3 d ほぼ全滅", Pct(R(Flee.Stay), r => r.Lost) >= 90),
-            ("4-3 a がいちばん多く生還しない（殿に意味がある）", !(Surv(Flee.Home) >= Surv(Flee.Rear))),
-            ("4-3 登場から終わりまで 4〜7 刻", Med(R(Flee.Home).Select(r => (double)(r.EndTurn - r.HeroTurn))) is >= 4 and <= 7),
+            ("現れる刻 6〜8", gate >= 6 && gate <= 8),
+            ("優勢 ≥ 90%", good >= 90),
+            ("a 勝ち ≥ 90%", Pct(R(Flee.Home), r => r.Won) >= 90),
+            ("a 奥の隊が追いつかれる ≥ 70%", Pct(deepRs, r => r.DeepCaught) >= 70),
+            ("b 奥の隊が生還 ≥ 60%", Pct(R(Flee.Rear).Where(r => r.RearSent).ToList(), r => r.DeepHome) >= 60),
+            ("登場から終わりまで 4〜7 刻", dur is >= 4 and <= 7),
         };
+        if (isB)
+        {
+            lines.Add(("門までに失う駒 ≤ 1", lostBefore <= 1.0));
+            lines.Add(("満タン 5 枚が勝つ 0〜1／20", Med(weigh.Select(w => (double)w.Wins)) <= 1));
+            lines.Add(("1 戦で削る 15〜25%", Med(weigh.Select(w => w.Cut)) is >= 15 and <= 25));
+            lines.Add(("c 退かせる 20〜50%", Pct(R(Flee.Strike), r => r.Driven) is >= 20 and <= 50));
+        }
+        double Did(Flee f) { var d = R(f).Where(r => r.Solos > 0 && r.StartUnits > 0).ToList(); return d.Count == 0 ? double.NaN : d.Average(r => 100.0 * r.Survivors / r.StartUnits); }
+        double eSurv = Did(Flee.Solo), eRep = Did(Flee.SoloRepeat);
         detail("");
         detail($"- 線: {string.Join(" ／ ", lines.Select(l => $"{(l.Ok ? "○" : "×")} {l.Name}"))}");
+        detail($"- 止まる線（殿が安すぎる）: e の生還した駒（1 枚の隊を作れた通しの平均）{T(eSurv)}%・毎刻くり返す {T(eRep)}% → {(eSurv > 90 || eRep > 90 ? "90% を超える" : "90% 以下")}");
         if (compact)
-        {
-            var deepRs = R(Flee.Home).Where(r => r.Out > 0).ToList();
-            write($"| {c.Label}・重ね {c.Stack}・敵 ×{c.Foe / 100.0:0.##} | {group} | {lostBefore:0.00} | {T(gate)} | {T(good)}% | {T(Med(weigh.Select(w => (double)w.Wins)))}／{weigh.Select(w => w.Wins).DefaultIfEmpty(0).Max()} "
-                + $"| {T(Med(weigh.Select(w => w.Cut)))}%／{T(weigh.Select(w => w.Cut).DefaultIfEmpty(0).Max())}%／{T(weigh.Select(w => w.Max).DefaultIfEmpty(0).Max())}% | {T(Pct(R(Flee.Home), r => r.Won))}% | {T(Surv(Flee.Home))}% | {T(Pct(deepRs, r => r.DeepCaught))}% "
-                + $"| {T(Pct(R(Flee.Rear).Where(r => r.RearSent).ToList(), r => r.DeepHome))}% | {T(Surv(Flee.Rear))}% | {T(Pct(R(Flee.Strike), r => r.Driven))}% | {T(Pct(R(Flee.Stay), r => r.Lost))}% "
-                + $"| {T(Med(R(Flee.Home).Select(r => (double)(r.EndTurn - r.HeroTurn))))} | {lines.Count(l => l.Ok)}／{lines.Length} |");
-        }
-        return lines.All(l => l.Ok);
+            write($"| {c.Label} | {group} | {lostBefore:0.00} | {T(gate)}（{timeUp}） | {T(good)}% | {T(Med(weigh.Select(w => (double)w.Wins)))}／{weigh.Select(w => w.Wins).DefaultIfEmpty(0).Max()} "
+                + $"| {T(Med(weigh.Select(w => w.Cut)))}%／{T(weigh.Select(w => w.Cut).DefaultIfEmpty(0).Max())}% | {T(Pct(R(Flee.Home), r => r.Won))}% | {T(Surv(Flee.Home))}% | {T(Pct(deepRs, r => r.DeepCaught))}% "
+                + $"| {T(Pct(R(Flee.Rear).Where(r => r.RearSent).ToList(), r => r.DeepHome))}% | {T(Surv(Flee.Rear))}% | {T(Pct(R(Flee.Strike), r => r.Driven))}% | {T(eSurv)}% "
+                + $"| {T(dur)} | {lines.Count(l => l.Ok)}／{lines.Count}{(lines.All(l => l.Ok) ? " ○" : "")} |");
+        return lines.All(l => l.Ok) && !(eSurv > 90) && !(eRep > 90);
     }
 
     /// <summary>勇者の重さ（指示書 §4-2）: 隊ごとに、1-3 の始めの主力（いちばん枚数の多い隊・満タン）を勇者に 20 回当てる。</summary>
     internal static List<(string Names, int Wins, double Cut, double Max)> Weigh(Cand c, ChapterRule rule, List<Map11State.CarryPack> packs)
     {
-        MapStage stage = StageOf(c, rule, fallback: 1);
+        MapStage stage = StageOf(c, rule, fallback: 1);   // 測りの口: 1 刻目の終わりに勇者を立てる（重さを見るだけ）
         var list = new List<(string, int, double, double)>();
         foreach (var pack in packs)
         {

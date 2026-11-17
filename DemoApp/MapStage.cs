@@ -1208,10 +1208,10 @@ public sealed class MapStage
     // ---------------- 第480期: 1-3「狩る者」（指示書 design/PHASE480_STAGE13_HUNTER_SPEC.md §2） ----------------
 
     /// <summary>第480期の 1 章の 1-3 の値（測りが振る口の既定）: 待ち構える部隊の賞金・湧きの間隔と最初の湧き・前半の部隊。</summary>
-    internal const int Stage13Ch480FoeGold = 6, Stage13Ch480SpawnEvery = 4, Stage13Ch480FirstSpawn = 3;
+    internal const int Stage13Ch480FoeGold = 6, Stage13Ch480SpawnEvery = 0, Stage13Ch480FirstSpawn = 0, Stage13Ch480TurnCap = 10;   // ポンの決定 2026-11-17: 歩いてくる湧きは無い・10 刻のうちに門が開かなければ時間切れ
     internal const string Stage13Ch480SpawnBand = "band_levy";
     /// <summary>第480期の勇者だけの倍率（最大HP ／ 攻撃・%・`MapFoeScale` の勇者の列は ×1.0 のまま——HP と攻撃を別々に合わせるため）と、中間拠点に重ねる部隊の数。</summary>
-    internal const int Stage13Ch480HeroHp = 600, Stage13Ch480HeroAtk = 250, Stage13Ch480Stack = 3;   // 暫定（測りの線が通っていない・報告 §2）
+    internal const int Stage13Ch480HeroHp = 800, Stage13Ch480HeroAtk = 250, Stage13Ch480Stack = 2;   // ポンの決定 2026-11-17: (A) 隊の強さに合わせない・天井も置かない
 
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, Func<bool, MapGraph>> _shaped480 = new();
     /// <summary>測りの口: 道の長さと中間拠点の位置を替えた盤（同じ形には同じ関数）。</summary>
@@ -1232,7 +1232,7 @@ public sealed class MapStage
     public static MapStage Stage13Ch480 { get; } = Stage13Ch480With();
 
     /// <summary>値を替えた第480期の 1 章の 1-3（測りが候補を並べるための口・遊ぶ盤は <see cref="Stage13Ch480"/>）。</summary>
-    internal static MapStage Stage13Ch480With(int steps = 2, int fallback = 10, int routPercent = 50, int spawnEvery = Stage13Ch480SpawnEvery, int firstSpawn = Stage13Ch480FirstSpawn,
+    internal static MapStage Stage13Ch480With(int steps = 2, int fallback = 0, int routPercent = 50, int spawnEvery = Stage13Ch480SpawnEvery, int firstSpawn = Stage13Ch480FirstSpawn,
                                               string spawn = Stage13Ch480SpawnBand, bool deep = true, int heroHp = Stage13Ch480HeroHp, int heroAtk = Stage13Ch480HeroAtk,
                                               int stack = Stage13Ch480Stack, int[]? len = null, int[]? op = null)
     {
@@ -1262,6 +1262,8 @@ public sealed class MapStage
             Time = b.Time,
             Arrival = b.Arrival,
             SquadCap = b.SquadCap,
+            TurnCap = Stage13Ch480TurnCap,
+            TimeLimit = true,
             WinOnCapture = true,
             Gold = b.Gold,
             MatchOffer = b.MatchOffer,
@@ -1270,10 +1272,8 @@ public sealed class MapStage
             Hero = HeroRule.V480 with { Unit = hero, Steps = steps, FallbackTurn = fallback, RoutPercent = routPercent },
             Siege = SiegeRule.V457,
             CrossFacing = true,
-            ViewScale = 1.35f,
-            SpawnsPassHolds = true,
-            WarnEmptyHome = true,
-            Notes = new[] { "中間拠点を 2 つ取り、残党の野営地を制圧する。" },
+            ViewScale = 1.6f,
+            Notes = new[] { $"{Stage13Ch480TurnCap} 刻のうちに中間拠点を 2 つ取り、残党の野営地を制圧する。" },
         };
     }
 
@@ -1520,8 +1520,8 @@ public readonly record struct MapFoeScale(int FoePercent, int HeroPercent, bool 
 public readonly record struct HeroRule(bool On, int AfterGate, int StepEvery, UnitDef? Unit, int Gold, bool AfterCapture = false, bool Gatekeeper = false,
                                        bool Chaser = false, int FromHome = 0, bool Hunter = false, int Steps = 1, int FallbackTurn = 0, int RoutPercent = 0)
 {
-    /// <summary>第480期の値（1 章の 1-3）: 狩る者・1 刻 2 歩・門が開かなければ 10 刻目・HP が半分を割ったら退く・退かせて ＋20。駒は今の勇者（新しい特性は足さない）。</summary>
-    public static readonly HeroRule V480 = new(true, 0, 1, EnemyCatalog.HeroMap, 20, Hunter: true, Steps: 2, FallbackTurn: 10, RoutPercent: 50);
+    /// <summary>第480期の値（1 章の 1-3）: 狩る者・1 刻 2 歩・門が開いた刻の終わりにだけ現れる（開かなければ刻の期限で時間切れ）・HP が半分を割ったら退く・退かせて ＋20。駒は今の勇者（新しい特性は足さない）。</summary>
+    public static readonly HeroRule V480 = new(true, 0, 1, EnemyCatalog.HeroMap, 20, Hunter: true, Steps: 2, FallbackTurn: 0, RoutPercent: 50);
     public static readonly HeroRule Off = new(false, 0, 0, null, 0);
     /// <summary>第454期の値: 門の 2 刻後・2 刻に 1 マス・版 B（`EnemyCatalog.HeroMap`・固定 300 回復）・倒して ＋20。</summary>
     public static readonly HeroRule V454 = new(true, 2, 2, EnemyCatalog.HeroMap, 20);
