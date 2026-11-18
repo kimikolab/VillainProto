@@ -56,6 +56,8 @@ public partial class Map11Main
     /// <summary>勇者の駒に触れているあいだの行き先の札（道の点線が読む）。</summary>
     private DestButton? RearHover
         => _rearHoverOn && St.Hero is { } h && RearPickable(h) && Map11Session.RearDest(_selected) is { } d ? _destButtons.FirstOrDefault(b => b.Dest == d) : null;
+    /// <summary>中間拠点のレリックの候補の窓が出ているか（登場の演出はこの窓が閉じてから）。</summary>
+    internal bool RelicPickShown => _relicOfferPanel is { Visible: true };
     internal bool RearMarkShown => _hunterOver is { } o && o.Marks.Any(m => m.Kind == HunterOverlay.MarkKind.Rear);
     private void PickRear()
     {
@@ -245,7 +247,8 @@ public partial class Map11Main
     {
         if (!HunterBoard || _hunterOver is null || _map3d is null || _layout3d is null) return;
         HunterSeen hs = Hs;
-        bool quiet = !Map11Session.TurnRunning && !CoverShown && !ClashShown && !_reform;
+        // 試遊（2026-11-18）: 2 つ目の中間拠点のレリックの候補の窓が出ているあいだは登場を待つ（窓の裏で演出が流れて見せ場が隠れた）。
+        bool quiet = !Map11Session.TurnRunning && !CoverShown && !ClashShown && !_reform && !RelicPickShown;
         if (St.Rout && !hs.Entrance && !HunterBusy)
         {
             if ((_linesOff && !_hunterForce) || St.Finished)
@@ -321,7 +324,7 @@ public partial class Map11Main
             }
         }
         // ---- 勇者の HP の棒（画面の上・撤退の局面のあいだ） ----
-        bool bar = St.Rout && hs.Stepped && St.Hero is not null && !CoverShown && !_reform;
+        bool bar = St.Rout && hs.Stepped && St.Hero is not null && !CoverShown && !_reform && !RelicPickShown;
         if (bar && St.Hero is { } hero)
             _hunterOver.SetBar(Map11Lines.HunterName, hero.HpNow, hero.DefMaxHp, St.Stage.Hero.RoutPercent);
         _hunterOver.BarShown = bar;
