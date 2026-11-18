@@ -11,7 +11,7 @@ using System.Linq;
 //   立ち絵   左右に 1 人ずつ・腰から上が見える大きさ（足元は帯の後ろへ潜る）・顔が画面の上 1／3 に来る。
 //            話している側を明るく・手前に、もう一方は暗く（入れ替わり 0.2 秒）
 //   帯       画面の下 1／5。本文は 2 行まで・文字は 1920×1080 で 38px。名札は話している側（左 ／ 右）の、帯の上の端
-//   主人公   声 ＝ 紺の帯・名札なし・左寄せ・斜体にしない・直前に話した駒の立ち絵は明るいまま
+//   主人公   声 ＝ 部下のセリフと同じ黒い帯・金の線（追記 4）・名札なし・左寄せ・斜体にしない・直前に話した駒の立ち絵は明るいまま
 //            内心 ＝ 紺の帯・名札なし・左寄せ・斜体・立ち絵は両方もう一段暗く（明るさ 20%）
 //   名札のみ 立ち絵を出さず、名札と本文だけ（伝令・守将）。相手の立ち絵は暗くして残す
 //   送り     クリック ／ Space ／ Enter。文字は 1 字ずつ出て、出ている途中に押すと全部出る。出切ると ▼（締めの帯にも）
@@ -26,6 +26,11 @@ public partial class StoryScene : Control
     public const float BandShare = 0.2f;
     /// <summary>立ち絵の高さ（1080 のとき・絵の全体）と、顔の真ん中を置く高さ（画面の高さに対して）。</summary>
     public const float PortraitHeight = 1100f, FaceY = 0.215f;
+    /// <summary>
+    /// 駒ごとの置き方（追記 4）: 顔が絵の中で下にある駒は、絵を少し大きくして、上の端が切れてもよいから顔を上 1／3 の中へ置く。
+    /// 駒の Id → （絵の倍率, 顔の真ん中を置く高さ（画面の高さに対して））。
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, (float Grow, float FaceAt)> PortraitFit = new Dictionary<string, (float, float)> { ["mudo"] = (1.06f, 0.30f) };
     /// <summary>立ち絵の明るさ: 話していない側 ／ 内心のあいだ。</summary>
     public const float DimPortrait = 0.34f, InnerPortrait = 0.20f;
     /// <summary>ふつうに読む速さ（1 秒あたりの字数）と、1 行ごとの間（自動送り・かかった秒数の見積もりに使う）。</summary>
@@ -133,6 +138,8 @@ void fragment() {
     /// <summary>主人公の行（声 ／ 内心）が出ているか・斜体か・本文は左寄せか。</summary>
     public bool HeroShown => _hero;
     public bool Italic { get; private set; }
+    /// <summary>帯が紺か（内心だけ・追記 4——主人公の声は、部下のセリフと同じ黒い帯・金の線）。</summary>
+    public bool NavyBand => Italic;
     public bool BodyLeft => _body.HorizontalAlignment == HorizontalAlignment.Left;
     public string TitleBandText => _titleShow > 0.01f ? _title : "";
     public string EndBandText => _bandShow > 0.01f ? _front.BandText : "";
@@ -261,6 +268,7 @@ void fragment() {
         {
             Slot on = line.Side == StoryScript.Side.Right ? _right : _left, other = line.Side == StoryScript.Side.Right ? _left : _right;
             // 名札のみ: その側の立ち絵は出さない（絵の置き場を持つ人物は、絵があれば出す）。相手は暗くして残す。
+            if (other.Who == line.Speaker) other.Clear();   // 追記 4: 候補で替わった話者が向かいにも立っていたら、向かいを下げる（同じ顔を 2 つ出さない）
             on.Set(line.Speaker, line.Shadow);
             on.Level = 1;
             other.Level = DimPortrait;
@@ -272,7 +280,7 @@ void fragment() {
         PlaceName();
         _body.AddThemeFontOverride("font", Italic ? _italic! : Map3DFonts.Regular);
         _body.HorizontalAlignment = HorizontalAlignment.Left;   // 主人公の行も左寄せ（行頭をそろえる）
-        _body.AddThemeColorOverride("font_color", _hero ? Color.FromHtml("#d6e0ff") : Color.FromHtml("#f2f0e6"));
+        _body.AddThemeColorOverride("font_color", Italic ? Color.FromHtml("#d6e0ff") : Color.FromHtml("#f2f0e6"));
         _body.Text = line.Text;
         _body.VisibleCharacters = 0;
         _shown = 0;
@@ -453,6 +461,8 @@ void fragment() {
         /// <summary>絵の中の顔: 真ん中（幅・高さに対して）と、幅に対する顔の四角の大きさ。</summary>
         private Vector3 _frame = new(0.5f, 0.14f, 0.36f);
         private bool _flip;
+        /// <summary>その駒だけの置き方（<see cref="PortraitFit"/>）: 絵の倍率と、顔の真ん中を置く高さ（0 ＝ ふつうの置き方）。</summary>
+        private float _grow = 1f, _faceAt;
         /// <summary>顔の真ん中を置く所（画面の座標）・絵の全体の高さ・絵の上の端の下限。</summary>
         public Vector2 Anchor;
         public float Height = 1100, Top = 12;
@@ -486,6 +496,7 @@ void fragment() {
             Texture2D? tex = null;
             bool facesRight = true;
             _frame = new Vector3(0.5f, 0.14f, 0.36f);
+            (_grow, _faceAt) = (1f, 0f);
             if (StoryScript.ArtSpeakers.TryGetValue(speaker, out string? file)) { tex = StoryArt(file); facesRight = false; }
             else if (nameOnly) tex = null;
             else if (speaker == StoryScript.HeroSpeaker) { tex = HunterArt.Standing(); facesRight = false; _frame = new Vector3(0.43f, 0.09f, 0.24f); }
@@ -493,6 +504,7 @@ void fragment() {
             {
                 tex = UiKit.HasCustomBattlePortrait(def.Id) ? UiKit.BattlePortrait(null!, def.Id) : UiKit.HasCustomPortrait(def.Id) ? UiKit.Portrait(null!, def.Id) : null;
                 _frame = UnitFaceIcon.FrameOf(def.Id);
+                if (PortraitFit.TryGetValue(def.Id, out var fit)) (_grow, _faceAt) = fit;
             }
             _art.Texture = tex;
             _art.Visible = tex is not null;
@@ -516,10 +528,11 @@ void fragment() {
             // 話している側は少し大きく（手前）・明るく。大きさは顔の真ん中を軸に変える。
             float lit = Mathf.InverseLerp(DimPortrait, 1f, Mathf.Clamp(_level, DimPortrait, 1f));
             float scale = Mathf.Lerp(0.93f, 1.0f, lit);
-            float h = Height * scale, w = h * t.GetWidth() / Math.Max(1, t.GetHeight());
+            float h = Height * scale * _grow, w = h * t.GetWidth() / Math.Max(1, t.GetHeight());
             float fx = _flip ? 1 - _frame.X : _frame.X;
             // 顔が大きく下にある絵（頭の大きい駒）は、絵の上の端が画面から出ない所まで下げる。
-            float y = Math.Max(Top, Anchor.Y - _frame.Y * h);
+            // 置き方を決めてある駒（ムド）は、上の端が切れてもよい——顔を決めた高さへ置く。
+            float y = _faceAt > 0 ? Anchor.Y / FaceY * _faceAt - _frame.Y * h : Math.Max(Top, Anchor.Y - _frame.Y * h);
             Vector2 at = new(Anchor.X - fx * w, y);
             Shown = new Rect2(at, new Vector2(w, h));
             float side = _frame.Z * w;
@@ -542,10 +555,10 @@ void fragment() {
             float s = _s.S, all = _s._all;
             Vector2 size = Size;
             Font bold = Map3DFonts.Bold;
-            // ---- 文字の帯（下 1／5）: ふつうは黒・主人公の行（声 ／ 内心）は紺 ----
+            // ---- 文字の帯（下 1／5）: 黒い帯・金の線（部下のセリフと主人公の声）。紺の帯は内心だけ（追記 4） ----
             Rect2 band = _s.BandRect;
-            Color back = _s._hero ? new Color(0.06f, 0.09f, 0.27f, 0.96f) : new Color(0.03f, 0.035f, 0.05f, 0.95f);
-            Color edge = _s._hero ? Color.FromHtml("#7f9bff") : Color.FromHtml("#f1c96b");
+            Color back = _s.NavyBand ? new Color(0.06f, 0.09f, 0.27f, 0.96f) : new Color(0.03f, 0.035f, 0.05f, 0.95f);
+            Color edge = _s.NavyBand ? Color.FromHtml("#7f9bff") : Color.FromHtml("#f1c96b");
             // 題の帯・締めの帯が出ているあいだは、空の文字の帯を出さない。
             float bandAll = all * (1 - Math.Max(_s._titleShow, _s._bandShow)) * (_s._phase == Phase.Title ? 0 : 1);
             DrawRect(band, new Color(back.R, back.G, back.B, back.A * bandAll));

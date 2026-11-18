@@ -218,14 +218,17 @@ public partial class Map11Main
         panel.AnchorTop = 0; panel.AnchorBottom = 1;
         if (side)
         {
-            panel.AnchorLeft = 2f / 3f; panel.AnchorRight = 1;
-            panel.OffsetLeft = 6; panel.OffsetRight = -14;
+            // 追記 2: 1-2 は「落とした砦」へ寄せる（会話の場面 2 の背景と同じ場所）。ほかは味方の拠点。
+            // 追記 4: 砦は盤の右端にあるので、視点を範囲の外へ出さず、札を画面の左 1／3 に出す（札の後ろに盤の外の空きを見せない）。
+            bool fort = St.Stage.Id == "1-2" && St.Captured && St.Won;
+            _resultLeft = fort;
+            if (fort) { panel.AnchorLeft = 0; panel.AnchorRight = 1f / 3f; panel.OffsetLeft = 14; panel.OffsetRight = -6; }
+            else { panel.AnchorLeft = 2f / 3f; panel.AnchorRight = 1; panel.OffsetLeft = 6; panel.OffsetRight = -14; }
             panel.OffsetTop = 110; panel.OffsetBottom = -24;
             // 追記 2: 札の高さは中身の分（詳細を開いたら下まで）。中身の高さは 1 フレーム後に決まるので、遅らせて合わせる。
             if (!_resultOpen) _ = FitResultCardSoon();
-            // 追記 2: 1-2 は「落とした砦」へ寄せる（会話の場面 2 の背景と同じ場所）。ほかは味方の拠点。
-            bool fort = St.Stage.Id == "1-2" && St.Captured && St.Won;
-            if (_cam3d is not null && !_resultFocused) { _resultFocused = true; _cam3d.FocusOn((fort ? PosOf(St.Graph.Portal) : PosOf(St.Graph.Home)) + new Vector3(fort ? _cam3d.Seen().Size.X / 6f + 1 : 5, 0, 0), free: fort); }   // 砦は、札に隠れない左 2／3 の真ん中へ
+            // 視点: 札に隠れない 2／3 の真ん中に、砦（札は左）／ 味方の拠点（札は右）が来る所。動かせる範囲の中で寄せる。
+            if (_cam3d is not null && !_resultFocused) { _resultFocused = true; _cam3d.FocusOn(fort ? PosOf(St.Graph.Portal) - new Vector3(_cam3d.Seen().Size.X / 6f, 0, 0) : PosOf(St.Graph.Home) + new Vector3(5, 0, 0)); }
         }
         else
         {
@@ -235,6 +238,8 @@ public partial class Map11Main
         }
     }
     private bool _resultFocused;
+    /// <summary>ステージの結果の札を左 1／3 に出しているか（1-2 の落とした砦・追記 4）。</summary>
+    private bool _resultLeft;
     /// <summary>結果の札の文字（追記 2）: 「生還した駒」「失った駒」の見出しと数（15 の 1.4 倍）・刻と金。</summary>
     internal const int ResultHeadFont = 21, ResultBodyFont = 18;
 
@@ -247,7 +252,7 @@ public partial class Map11Main
 
     private void FitResultCard()
     {
-        if (!Map3DMode.Active || _resultOpen || !_resultOverlay.Visible || _resultOverlay.GetChildCount() == 0 || _resultOverlay.GetChild(0) is not Control panel || panel.AnchorLeft < 0.6f) return;
+        if (!Map3DMode.Active || _resultOpen || !_resultOverlay.Visible || _resultOverlay.GetChildCount() == 0 || _resultOverlay.GetChild(0) is not Control panel || (panel.AnchorLeft < 0.6f && !(_resultLeft && panel.AnchorRight < 0.4f))) return;
         // 折り返す札（顔の段・本文）は、置いた後の高さで読む（最小の大きさは幅 0 で数えるので当てにならない）。
         float inner = _resultFaces.Size.Y + _resultBody.GetLineCount() * (_resultBody.GetLineHeight() + _resultBody.GetThemeConstant("line_spacing")) + 16;
         float fixedPart = 34 + _resultTitle.GetCombinedMinimumSize().Y + (_resultMore?.GetCombinedMinimumSize().Y ?? 0) + _replayButton.GetCombinedMinimumSize().Y

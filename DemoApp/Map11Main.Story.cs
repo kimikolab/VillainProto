@@ -80,7 +80,7 @@ public partial class Map11Main
         if (with is null)
         {
             GD.Print($"STORY_CONTEXT 場面 {no} 結果 {ctx.Outcome} 生還率 {ctx.Rate:F0}% 倒れた駒 {ctx.Fallen.Count}（{string.Join("・", ctx.Fallen)}）出す行 {lines.Count}／{scene.Lines.Count}");
-            foreach (StoryScript.Line l in skipped) GD.Print($"STORY_SKIP 場面 {no} 台本の {l.Row} 行目: {l.Speaker} は倒れている——飛ばす｜{l.Text}");
+            foreach (StoryScript.Line l in skipped) GD.Print($"STORY_SKIP 場面 {no} 台本の {l.Row} 行目: {(l.Hero ? "飛ばした行への返事" : l.Speaker + " は倒れている")}——飛ばす｜{l.Text}");
         }
         if (_story is null)
         {
@@ -191,9 +191,18 @@ public partial class Map11Main
         {
             if (all.FirstOrDefault(s => s.No == no) is not { } scene) continue;
             bool first = true;
-            foreach (var (caseName, ctx) in StoryScript.Cases(scene, all))
+            // 追記 4: 条件の組み合わせの後に、話者が 1 人ずつ倒れた場合（その行と返事が飛ぶ・候補の次の駒が言う）。
+            var fallNames = StoryScript.FallCases(scene, all).Select(c => c.Name).ToHashSet();
+            foreach (var (caseName, ctx) in StoryScript.Cases(scene, all).Concat(StoryScript.FallCases(scene, all)))
             {
                 int failsBefore = fails.Count;
+                bool fall = fallNames.Contains(caseName);
+                var gone = new List<StoryScript.Line>();
+                if (fall)
+                {
+                    scene.For(ctx, gone);
+                    GD.Print($"STORY_FALL 場面 {no}（{caseName}）飛ばす行 {gone.Count}: {string.Join(" ／ ", gone.Select(l => $"{l.Row} 行目 {(l.Hero ? "返事" : l.Speaker)}｜{l.Text}"))}");
+                }
                 bool done = false;
                 if (!PlayStory(no, () => done = true, force: true, with: ctx)) { Req(false, $"場面 {no}: 出せなかった"); break; }
                 StoryScene sc = _story!;
@@ -228,8 +237,16 @@ public partial class Map11Main
                     Pick("締めの帯", l => l.Kind == StoryScript.Kind.Band);
                 }
                 // 条件ごとに、条件つきの最初の行を 1 枚（ほかの写しと同じ行なら、名前に条件を添える）。
-                if (caseName.Length > 0 && Enumerable.Range(0, lines.Count).FirstOrDefault(i => lines[i].Cond is not null, -1) is var condAt and >= 0)
-                    picks[condAt] = (picks.TryGetValue(condAt, out string? had) ? had + "_" : "") + $"条件_{caseName.Replace(" ", "")}";
+                if (fall)
+                {
+                    // 話者が倒れた場合: 飛ばした行の次に出る行を 1 枚（候補の次の駒が言う行 ／ 返事ごと飛んだ先の行）。
+                    int after = gone.Count == 0 ? -1 : Enumerable.Range(0, lines.Count).FirstOrDefault(i => lines[i].Row > gone[0].Row, -1);
+                    if (after >= 0) picks[after] = $"話者_{caseName}";
+                    string? down = ctx.Fallen.FirstOrDefault();
+                    if (lines.Any(l => l.Kind == StoryScript.Kind.Say && !l.Hero && !l.Must && StoryScript.UnitOf(l.Speaker)?.Id == down)) fails.Add($"場面 {no}（{caseName}）: 倒れた駒が話す");
+                }
+                else if (caseName.Length > 0 && Enumerable.Range(0, lines.Count).FirstOrDefault(i => lines[i].Cond is not null, -1) is var condAt and >= 0)
+                    picks[condAt] =(picks.TryGetValue(condAt, out string? had) ? had + "_" : "") + $"条件_{caseName.Replace(" ", "")}";
                 int widest = 0;
                 bool? lastRight = null;   // 直前に話した駒の側（声のあいだも明るいまま）
                 for (int i = 0; i < lines.Count; i++)
@@ -257,6 +274,7 @@ public partial class Map11Main
                             bool inner = line.Side == StoryScript.Side.Inner;
                             if (!sc.HeroShown || sc.NameText.Length > 0) fails.Add($"{where}: 主人公の行なのに名札が出ている（「{sc.NameText}」）");
                             if (sc.Italic != inner) fails.Add($"{where}: 斜体の出し分けが違う（内心 {inner}・斜体 {sc.Italic}）");
+                            if (sc.NavyBand != inner) fails.Add($"{where}: 帯の色が違う（紺は内心だけ・声は黒い帯と金の線）");
                             foreach (bool side in new[] { false, true })
                             {
                                 if (!sc.PortraitShown(side)) continue;
@@ -269,6 +287,7 @@ public partial class Map11Main
                         {
                             bool right = line.Side == StoryScript.Side.Right;
                             bool art = StoryScript.ArtSpeakers.ContainsKey(line.Speaker);
+                            if (sc.NavyBand) fails.Add($"{where}: 駒のセリフなのに帯が紺");
                             if (sc.NameText != line.Speaker) fails.Add($"{where}: 名札が「{sc.NameText}」（台本は {line.Speaker}）");
                             if (sc.NameOnRight != right || (sc.NameRect.GetCenter().X > view.X / 2) != right) fails.Add($"{where}: 名札が話している側（{(right ? "右" : "左")}）に寄っていない");
                             if (!screen.Encloses(sc.NameRect)) fails.Add($"{where}: 名札が画面の外");

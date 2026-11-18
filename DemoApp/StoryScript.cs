@@ -21,7 +21,11 @@ using System.Linq;
 //   ?倒れた:ドルガ｜…      その駒が直前のステージで倒れた、または手持ちにいなかった
 //   ?勇者は退いた｜… ?辛くも退けた｜… ?生還｜…    1-3 の結果
 //   ?生還率>=70｜… ?生還率<70｜…                  1-3 の結果が「生還」のとき、出撃した駒のうち生きて終えた割合
-// 条件の無い行で、話者が直前のステージで倒れていたら、その行は飛ばす（場面 0 と、頭に `!` を付けた行は必ず出す）。
+// 話者が直前のステージで倒れていたら、その行は飛ばす（条件つきの行も・場面 0 と、頭に `!` を付けた行は必ず出す）。
+// 追記 4:
+//   リリ/ヒサ/リィカ｜左｜…   話者の候補。左から順に、倒れていない最初の駒が話す（全員倒れていれば飛ばす）
+//   飛ばした駒の行の直後に続く主人公の行（声・内心・同じ条件のもの）は、返事として一緒に飛ばす（次に駒の行が出るまで・`!` の行は飛ばさない）
+//   同じ条件で続く駒の行で、話者（の候補）が違うものは言い換え——先に話せた 1 本だけ出す
 // `//` で始まる行と空の行は読み飛ばす。ここは「読む・確かめる」だけで、いつ出すかは画面（`Map11Main.Story.cs`）が決める。
 // =====================================================================================
 public static class StoryScript
@@ -48,7 +52,7 @@ public static class StoryScript
     {
         /// <summary>何も起きていない（場面 0・検査の既定）: 生還・100%・台本に出る駒は全員生きている。</summary>
         public static Context Plain(IEnumerable<Scene> scenes)
-            => new(Outcomes[0], 100, scenes.SelectMany(s => s.Lines).SelectMany(l => new[] { l.Speaker, CondUnit(l.Cond) }).Select(n => UnitOf(n ?? "")?.Id)
+            => new(Outcomes[0], 100, scenes.SelectMany(s => s.Lines).SelectMany(l => Names(l.Speaker).Append(CondUnit(l.Cond))).Select(n => UnitOf(n ?? "")?.Id)
                 .Where(id => id is not null).Select(id => id!).ToHashSet(), Array.Empty<string>());
     }
 
@@ -58,14 +62,43 @@ public static class StoryScript
         /// その様子で出る行。条件つきの行は条件に合うものだけ。条件の無い行で、話者が直前のステージで倒れていたら飛ばす
         /// （場面 0 と `!` の行は必ず出す・飛ばした行は <paramref name="skipped"/> に入る）。
         /// </summary>
+        /// <remarks>
+        /// 追記 4:
+        /// ・話者の候補（`リリ/ヒサ/リィカ`）は、左から順に、倒れていない最初の駒が話す（返す行の <c>Speaker</c> はその 1 人）。全員倒れていれば飛ばす。条件つきの行も同じ。
+        /// ・飛ばした駒の行の直後に続く主人公の行（声・内心・同じ条件のもの）は、返事として一緒に飛ばす（次に駒の行が出るまで・`!` の行は飛ばさない）。
+        /// ・同じ条件で続く駒の行で、話者の候補が違うものは言い換え——先に話せた 1 本だけ出す。
+        /// </remarks>
         public IReadOnlyList<Line> For(Context ctx, List<Line>? skipped = null)
         {
             var shown = new List<Line>();
+            bool reply = false, altShown = false;   // 返事を飛ばしている最中か ／ 言い換えの組で、もう 1 本出したか
+            string? replyCond = null;
+            Line? alt = null;                       // 直前の、条件つきの駒の行（言い換えの組の頭）
             foreach (Line l in Lines)
             {
-                if (l.Cond is not null) { if (Holds(l.Cond, ctx)) shown.Add(l); continue; }
-                if (No != 0 && !l.Must && l.Kind == Kind.Say && !l.Hero && UnitOf(l.Speaker) is { } who && ctx.Fallen.Contains(who.Id)) { skipped?.Add(l); continue; }
-                shown.Add(l);
+                if (l.Kind != Kind.Say) { shown.Add(l); reply = false; alt = null; continue; }
+                if (l.Cond is not null && !Holds(l.Cond, ctx)) continue;
+                if (l.Hero)
+                {
+                    alt = null;
+                    if (reply && !l.Must && l.Cond == replyCond) { skipped?.Add(l); continue; }
+                    reply = false;
+                    shown.Add(l);
+                    continue;
+                }
+                if (alt is not null && l.Cond is not null && alt.Cond == l.Cond && alt.Speaker != l.Speaker)
+                {
+                    if (altShown) continue;         // 言い換えの 2 本目より後: 先の 1 本が出ている
+                }
+                else altShown = false;
+                alt = l.Cond is null ? null : l;
+                string[] names = Names(l.Speaker);
+                string? who = No == 0 ? names.FirstOrDefault() : names.FirstOrDefault(n => UnitOf(n) is not { } d || !ctx.Fallen.Contains(d.Id));
+                if (who is null && l.Must) who = names.FirstOrDefault();
+                if (who is null) { skipped?.Add(l); reply = true; replyCond = l.Cond; continue; }
+                reply = false;
+                altShown = true;
+                shown.Add(who == l.Speaker ? l : l with { Speaker = who });
             }
             return shown;
         }
@@ -158,9 +191,25 @@ public static class StoryScript
             // 「名札のみ」は左右を書かなくてよい（名札は左に出す・「名札のみ・右」と書けば右）。
             Side? side = place.Contains("内心") ? Side.Inner : place.Contains('声') ? Side.Voice : place.Contains('右') ? Side.Right : place.Contains('左') || shadow ? Side.Left : null;
             if (side is null) { errors.Add($"{no} 行目: 位置「{place}」は 左 ／ 右 ／ 名札のみ ／ 声 ／ 内心 のどれでもない"); continue; }
-            lines.Add(new Line(Kind.Say, parts[0].Trim(), side.Value, shadow, string.Join("｜", parts[2..]).Trim(), cond, no, must));
+            lines.Add(new Line(Kind.Say, string.Join("/", Names(parts[0])), side.Value, shadow, string.Join("｜", parts[2..]).Trim(), cond, no, must));
         }
         return scenes;
+    }
+
+    /// <summary>話者の候補（`リリ/ヒサ/リィカ` → 3 人・1 人だけならその 1 人）。</summary>
+    public static string[] Names(string speaker)
+        => speaker.Split('/', '／').Select(n => n.Trim()).Where(n => n.Length > 0).ToArray();
+
+    /// <summary>
+    /// 話者が倒れた場合を 1 人ずつ作る（追記 4・門と場面の検査が使う）: その場面で話す駒（条件に出る駒は <see cref="Cases"/> が見るので除く）それぞれが倒れた様子。
+    /// </summary>
+    public static IEnumerable<(string Name, Context Ctx)> FallCases(Scene s, IEnumerable<Scene> all)
+    {
+        if (s.No == 0) yield break;
+        Context plain = Context.Plain(all);
+        var seen = s.Lines.Select(l => CondUnit(l.Cond)).Where(n => n is not null).Select(n => n!).ToHashSet();
+        foreach (string name in s.Lines.Where(l => l.Kind == Kind.Say && !l.Hero).SelectMany(l => Names(l.Speaker)).Distinct())
+            if (UnitOf(name) is { } d && seen.Add(name)) yield return ($"{name}が倒れた", plain with { Fallen = new HashSet<string> { d.Id } });
     }
 
     /// <summary>話者の名前（「リィカ」）から駒を引く（駒の名前の末尾で引く・無ければ null）。</summary>
@@ -203,8 +252,8 @@ public static class StoryScript
 
     /// <summary>引けない話者（駒の表にも、絵の置き場の表にも無い名前・「名札のみ」と書いた話者は数えない）。</summary>
     public static IReadOnlyList<string> Unknown(IEnumerable<Scene> scenes)
-        => scenes.SelectMany(s => s.Lines).Where(l => l.Kind == Kind.Say && !l.Hero && !l.Shadow && l.Speaker != HeroSpeaker && !ArtSpeakers.ContainsKey(l.Speaker) && UnitOf(l.Speaker) is null)
-            .Select(l => l.Speaker).Distinct().ToList();
+        => scenes.SelectMany(s => s.Lines).Where(l => l.Kind == Kind.Say && !l.Hero && !l.Shadow).SelectMany(l => Names(l.Speaker))
+            .Where(n => n != HeroSpeaker && !ArtSpeakers.ContainsKey(n) && UnitOf(n) is null).Distinct().ToList();
 
     /// <summary>
     /// 台本の検査（門 `--story-smoke`）: 全部読める・話者が引ける・1 行が全角 46 字以内・1 場面が 16 行以内・場面 0〜3 がある・
@@ -255,17 +304,52 @@ public static class StoryScript
             foreach (var (caseName, ctx) in Cases(s, scenes))
             {
                 cases++;
-                var shown = s.For(ctx).ToHashSet();
+                var shown = s.For(ctx).Select(l => l.Row).ToHashSet();
                 for (int i = 0; i < s.Lines.Count; i++)
                 {
                     if (s.Lines[i].Cond is null || (i > 0 && s.Lines[i - 1].Cond is not null)) continue;
                     int end = i;
                     while (end < s.Lines.Count && s.Lines[end].Cond is not null) end++;
-                    if (!s.Lines.Skip(i).Take(end - i).Any(shown.Contains)) empty.Add($"{caseName}（台本の {s.Lines[i].Row} 行目から）");
+                    if (!s.Lines.Skip(i).Take(end - i).Any(l => shown.Contains(l.Row))) empty.Add($"{caseName}（台本の {s.Lines[i].Row} 行目から）");
                 }
             }
             Req(missing.Count == 0 && empty.Count == 0, $"場面 {s.No}: 条件つきの行は対がそろっている（条件 {string.Join("・", conds.Distinct())}"
                 + (missing.Count > 0 ? $"・足りない対 {string.Join("・", missing)}" : "") + (empty.Count > 0 ? $"・1 行も出ない場合 {string.Join(" ／ ", empty)}" : "") + $"・組み合わせ {cases} 通り）");
+        }
+        // ---- 追記 4: 倒れた駒は言わない（条件つきの行も）・候補は左から生きている最初の駒・飛ばした行の返事（直後の主人公の行）も飛ぶ・言い換えは 1 本だけ ----
+        foreach (Scene s in scenes.Where(x => x.No != 0))
+        {
+            var bad = new List<string>();
+            int tried = 0, most = 0;
+            foreach (var (fallName, fall) in FallCases(s, scenes).Concat(Cases(s, scenes).Where(c => c.Ctx.Fallen.Count > 0)))
+                foreach (var (_, baseCtx) in Cases(s, scenes))
+                {
+                    Context ctx = baseCtx with { Fallen = baseCtx.Fallen.Concat(fall.Fallen).ToHashSet() };
+                    tried++;
+                    var skipped = new List<Line>();
+                    IReadOnlyList<Line> shown = s.For(ctx, skipped);
+                    most = Math.Max(most, skipped.Count);
+                    var rows = shown.Select(l => l.Row).ToHashSet();
+                    foreach (Line l in shown.Where(l => l.Kind == Kind.Say && !l.Hero && !l.Must))
+                        if (UnitOf(l.Speaker) is { } d && ctx.Fallen.Contains(d.Id)) bad.Add($"{fallName}: 台本の {l.Row} 行目を倒れた {l.Speaker} が言う");
+                    foreach (Line l in skipped.Where(l => !l.Hero))
+                    {
+                        int at = s.Lines.ToList().FindIndex(x => x.Row == l.Row);
+                        if (at + 1 < s.Lines.Count && s.Lines[at + 1] is { Kind: Kind.Say, Hero: true, Must: false } next && next.Cond == l.Cond && rows.Contains(next.Row))
+                            bad.Add($"{fallName}: 台本の {l.Row} 行目を飛ばしたのに、返事の {next.Row} 行目が出る");
+                    }
+                    foreach (var g in shown.Where(l => l.Cond is not null && l.Kind == Kind.Say && !l.Hero).GroupBy(l => l.Cond))
+                    {
+                        var list = g.OrderBy(l => l.Row).ToList();
+                        for (int i = 1; i < list.Count; i++)
+                        {
+                            Line a = s.Lines.First(x => x.Row == list[i - 1].Row), b = s.Lines.First(x => x.Row == list[i].Row);
+                            if (s.Lines.ToList().IndexOf(b) == s.Lines.ToList().IndexOf(a) + 1 && a.Speaker != b.Speaker) bad.Add($"{fallName}: 言い換えの {a.Row}・{b.Row} 行目が両方出る");
+                        }
+                    }
+                }
+            Req(bad.Count == 0, $"場面 {s.No}: 倒れた駒は言わない・返事も飛ぶ・言い換えは 1 本（倒れた駒 × 条件の組み合わせ {tried} 通り・いちばん多く飛ぶ場合 {most} 行"
+                + (bad.Count > 0 ? "・" + string.Join(" ／ ", bad.Distinct().Take(6)) : "") + "）");
         }
         Req(scenes.Where(s => s.Lines.Any(l => l.Cond is { } c && (Outcomes.Contains(c) || CondRate(c) is not null))).All(s => s.No == 3), "1-3 の結果の条件（結果・生還率）は場面 3 にだけある");
         Req(scenes.Where(s => s.No == 0).All(s => s.Lines.All(l => l.Cond is null)), "場面 0 に条件つきの行は無い（直前のステージが無い）");
