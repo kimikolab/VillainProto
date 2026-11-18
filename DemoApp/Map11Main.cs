@@ -286,8 +286,13 @@ public partial class Map11Main : Node3D
         }
 
         if (St.Finished) ShowResult();
-        ShowChapterIntro();   // 第460期 §A-5: 1 章のステージの頭の札（1 章でなければ何もしない）
-        if (_introOverlay is not { Visible: true }) ShowInvestPicker();   // 第467期 §1-3: 頭の札が出ていなければ投資の札（出ていれば「始める」の後）
+        // 第481期 §3: 1 章を始めた直後（1-1 の編成の前）は、先に会話の場面 0（出さない起動・もう見た通しはそのまま頭の札へ）。
+        void Opening()
+        {
+            ShowChapterIntro();   // 第460期 §A-5: 1 章のステージの頭の札（1 章でなければ何もしない）
+            if (_introOverlay is not { Visible: true }) ShowInvestPicker();   // 第467期 §1-3: 頭の札が出ていなければ投資の札（出ていれば「始める」の後）
+        }
+        if (!StoryBeforeStage(Opening)) Opening();
         ShowSnapPicker();     // 第466期 §2: 「1 章（写しから）」の写しの一覧（選ぶところでなければ何もしない）
 
         // 第169期 自己検査 (d')。**画面を通した通し確認**（頭なしで走る）。
@@ -704,7 +709,7 @@ public partial class Map11Main : Node3D
             GD.Print($"MAP11_CAPTURE_CHAPTER over={Chapter1.Over} " + string.Join(" | ", Chapter1.ResultLines()));
         }
         // 3D のジオラマの写しの 3 場面（`m3d-start` ／ `m3d-moved` ／ `m3d-camp`・`Map11Main.Map3DView.cs`）。
-        else if (parts.Length > 1 && parts[1].StartsWith("m3d-", StringComparison.Ordinal)) await Map3DCaptureScene(parts[1]);
+        else if (parts.Length > 1 && (parts[1].StartsWith("m3d-", StringComparison.Ordinal) || parts[1] == "story-all")) await Map3DCaptureScene(parts[1]);   // 第481期: `story-all` は会話の場面
         // 第172期: 組み直しの絵（つまんでいる札と控えの駒が出ている状態）。
         else if (parts.Length > 1 && parts[1] == "reform")
         {
@@ -3597,6 +3602,7 @@ public partial class Map11Main : Node3D
 
     public override void _Process(double delta)
     {
+        ProcessStory(delta);   // 第481期: 会話のあいだ、背景の視点を流す
         if (Map3DMode.Active) ProcessMap3D(delta);
         if (_layoutSize != UiViewSize) RefreshScreen();
         // 第175期 §1-3: 盤の札を滑らせる／脈打たせる。**判定は1つも通らない**（見た目だけ）。

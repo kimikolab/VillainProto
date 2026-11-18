@@ -86,7 +86,10 @@ public static class Map11Lines
     /// <summary>戦闘の名札の下の説明（<c>UnitDef.PlusText</c> の写しに入れる・表示だけ）。</summary>
     public const string HunterPlus = "「白雷」全員を撃つ。「帯電」毎ターン攻撃力が 11 上がる。転ばず痺れない。傷は戦いをまたいで残る";
     /// <summary>狩る者の盤の頭の札（勇者が来ることは言わない——優勢から始まる）。</summary>
-    public const string Stage13LeadHunter = "砦は取った。あとは、逃げた残党を片付けるだけだ。";
+    /// 第481期: 勇者は予告しない（「王国は、勇者を差し向けた」は外した）——会話の場面 2 の最後の 1 行を受ける。
+    public const string Stage13LeadHunter = "残党狩りだ。楽な仕事のはずだ。";
+    /// <summary>登場の帯の直後の勇者の 1 行（第481期・台本 design/CHAPTER1_SCRIPT.md「1-3 の盤の上」）。</summary>
+    public const string HunterDeclare = "魔王軍の残党だな。——討つ。";
     public const string GoalHunter = "目標　中間拠点を 2 つ取り、野営地を制圧する";
     /// <summary>登場のセリフ（話す駒がいなければ先頭の駒）と、主人公の内心。</summary>
     public const string HunterWarnSpeaker = "ヒサ", HunterWarn = "……逃げるなら、今だぞ", HunterInner = "捨て駒は、こっちだったか";
@@ -97,7 +100,8 @@ public static class Map11Lines
     /// <summary>自分から入った殿だが、台の印が「足止めできない」のとき（言っていることと印が食い違わないように）。</summary>
     public const string HunterRearWeak = "長くは持たない。急げ！";
     /// <summary>戦闘から戻った帯（負けたが足を止めた）と、勇者が退いた帯（HP が半分を割った ／ 0 になった——どちらも「退いた」）。</summary>
-    public const string RearBand = "殿", HunterGone = "勇者は退いた";
+    /// 第481期: 殿の後に足止めが成功したか迷わないように、帯を「殿が足を止めた」／「止められなかった」に（前は「殿」／「負け」）。
+    public const string RearBand = "殿が足を止めた", RearFail = "止められなかった", RearTag = "殿", HunterGone = "勇者は退いた";
     /// <summary>勇者は退いたが、拠点の外に出した隊の駒が 1 枚も生きていない（追記 4・規則は同じ勝ち B）。</summary>
     public const string HunterNarrow = "辛くも退けた";
     /// <summary>勇者の駒に触れたときの点線の札（撤退の局面）。</summary>

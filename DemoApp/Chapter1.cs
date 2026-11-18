@@ -266,6 +266,7 @@ public static class Chapter1
         Index = 0;
         Attempt = 0;
         From = null;
+        StoryScript.Forget();   // 第481期: 1 章を始め直したら、会話の場面はまた出る（やり直しでは出さない）
         Records.Clear();
         foreach (MapStage s in Stages) Records.Add(new Record { Stage = s });
         PlayLog.BeginChapter(Seed);   // 第466期: 遊びの写しの置き場（書かない起動では何もしない）

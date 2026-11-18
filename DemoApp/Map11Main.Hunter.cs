@@ -163,8 +163,14 @@ public partial class Map11Main
             // 4) 曲が緊迫の曲に替わる
             MapMusic.Play(this, MapMusic.Track.Hero);
             await HWait(1.5);
-            // 5) セリフ 2 行（顔つき・各 2.5 秒）
+            // 5) セリフ（顔つき・各 2.5 秒）: 第481期から、帯の直後に勇者の 1 行 → 味方の 1 行 → 主人公の内心
             HunterBeat = "セリフ";
+            if (St.Stage.Hero.Unit is { } heroDef)
+            {
+                _hud3d.Say(heroDef, $"「{Map11Lines.HunterDeclare}」", 2.5f, Map11Lines.HunterShort);
+                GD.Print($"MAP3D_SAY key=1-3.hunter.declare who={Map11Lines.HunterShort} text={Map11Lines.HunterDeclare}");
+                await HWait(2.5);
+            }
             if (Map11Lines.SpeakerOf(St, Map11Lines.HunterWarnSpeaker) is { } who)
             {
                 _hud3d.Say(who, $"「{Map11Lines.HunterWarn}」", 2.5f);
@@ -248,7 +254,7 @@ public partial class Map11Main
         if (!HunterBoard || _hunterOver is null || _map3d is null || _layout3d is null) return;
         HunterSeen hs = Hs;
         // 試遊（2026-11-18）: 2 つ目の中間拠点のレリックの候補の窓が出ているあいだは登場を待つ（窓の裏で演出が流れて見せ場が隠れた）。
-        bool quiet = !Map11Session.TurnRunning && !CoverShown && !ClashShown && !_reform && !RelicPickShown;
+        bool quiet = !Map11Session.TurnRunning && !CoverShown && !ClashShown && !_reform && !RelicPickShown && !StoryShown;
         if (St.Rout && !hs.Entrance && !HunterBusy)
         {
             if ((_linesOff && !_hunterForce) || St.Finished)
@@ -612,7 +618,20 @@ public partial class HunterOverlay : Control
 /// </summary>
 internal static class MapMusic
 {
-    internal enum Track { None, Normal, Hero, Win, Lose }
+    internal enum Track { None, Normal, Hero, Win, Lose, Story }
+    /// <summary>会話の画面のあいだ、盤の曲を下げる量（dB・`story.ogg` が無いとき）。</summary>
+    internal const float DuckDb = -14f;
+    internal static bool Ducked { get; private set; }
+
+    /// <summary>盤の曲を下げる ／ 戻す（第481期・会話の画面に入るとき。`story.ogg` があれば下げずに替える）。</summary>
+    internal static void Duck(bool on)
+    {
+        if (on == Ducked) return;
+        Ducked = on;
+        GD.Print($"MAP_MUSIC {(on ? "下げる" : "戻す")} {Current}");
+        if (_now is not null && GodotObject.IsInstanceValid(_now) && _now.IsInsideTree())
+            _now.CreateTween().TweenProperty(_now, "volume_db", VolumeDb + (on ? DuckDb : 0), FadeSeconds);
+    }
     /// <summary>曲の音量（dB）。設定の画面に音量の項目ができたら、ここをその値で置き換える（いまは音量の設定が無い）。</summary>
     internal static float VolumeDb = -12f;
     internal const float FadeSeconds = 1.0f;
@@ -620,6 +639,7 @@ internal static class MapMusic
     {
         [Track.Normal] = "res://audio/map_normal.ogg", [Track.Hero] = "res://audio/map_hero.ogg",
         [Track.Win] = "res://audio/map_win.ogg", [Track.Lose] = "res://audio/map_lose.ogg",
+        [Track.Story] = "res://audio/story.ogg",   // 第481期: 会話の画面（無ければ盤の曲を下げるだけ）
     };
     private static Node? _root;
     private static AudioStreamPlayer? _now;
@@ -649,7 +669,8 @@ internal static class MapMusic
             fade.TweenCallback(Callable.From(old.QueueFree));
         }
         if (!Has(track) || GD.Load<AudioStream>(Files[track]) is not { } stream) return;
-        if (stream is AudioStreamOggVorbis ogg) ogg.Loop = track is Track.Normal or Track.Hero;
+        if (stream is AudioStreamOggVorbis ogg) ogg.Loop = track is Track.Normal or Track.Hero or Track.Story;
+        Ducked = false;
         var player = new AudioStreamPlayer { Stream = stream, VolumeDb = -60f, Bus = AudioServer.GetBusIndex("Music") >= 0 ? "Music" : "Master" };
         _root.CallDeferred(Node.MethodName.AddChild, player);
         player.Ready += () =>
@@ -691,6 +712,9 @@ internal static class HunterArt
         On = true;
         UnitFaceIcon.Override(heroId, Face);
     }
+
+    /// <summary>立ち絵（会話の画面・第481期）。透過の無い絵しか無ければ null。</summary>
+    internal static Texture2D? Standing() { Load(); return Board; }
 
     private static string? Find()
     {

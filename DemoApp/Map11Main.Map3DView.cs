@@ -372,9 +372,12 @@ public partial class Map11Main
                 if (s.Pos == St.Graph.Home) (tag, tagColor) = ("生還", "#71d7a1");
                 else if (HoldMark(s.Index) is { } held and >= 0) (tag, tagColor) = HoldOf(held);
             }
+            // 第481期 §4-4: 殿に指定した隊（「殿に出す」を押した ／ 殿を務めた）の札に「殿」の印を残す（戦闘の後も・倒れても）。
+            bool rearSquad = HunterBoard && St.Rout && (Map11Session.IsRear(s.Index) || St.RearGuards.Contains(s.Index));
+            if (rearSquad && !(s.Pos == St.Graph.Home && faces.Count > 0)) (tag, tagColor) = (tag.Length > 0 ? $"{Map11Lines.RearTag}・{tag}" : Map11Lines.RearTag, tagColor.Length > 0 ? tagColor : "#f1c96b");
             cards.Add(new Map3DSquadCardInfo(s.Index, s.Label, faces, faces.Count, faces.Count == 0 ? 0 : SquadHpPercent(s),
                 St.Time.On ? "→ " + OrderText(s.Index) : where, s.Index == _selected && _guideSquadChosen, s.Lost,
-                act.Revive, act.Enhance, act.Resting, s.Lost ? LostLine(s) : "", tag, tagColor));
+                act.Revive, act.Enhance, act.Resting, s.Lost ? (rearSquad ? $"{Map11Lines.RearTag}　" : "") + LostLine(s) : "", tag, tagColor));
         }
         _hud3d.SetSquads(cards);
         bool can = _selected >= 0 && _selected < St.Squads.Length && St.CanReform(_selected) && !St.Finished && !Map11Session.TurnRunning;
@@ -397,10 +400,11 @@ public partial class Map11Main
         if (_headerBand is not null) _headerBand.Visible = _reform;
         _headline.Visible = _toast.Visible = _reform;
         if (_portalInfo is not null) _portalInfo.Visible = false;
-        _hud3d.SetShown(!_reform);
+        _hud3d.SetShown(!_reform && !StoryShown);   // 第481期: 会話の画面のあいだは四隅の UI も隠す
         ProcessClash3D((float)delta);   // 第479期の追記: 遭遇の台（下 1／3）と盤の上の輪
         ProcessRadar3D(!_reform);   // 第477期: 画面の外の知らせ・全体図・歩く敵の赤い点線
         ProcessHunter3D((float)delta);   // 第480期: 狩る者の登場・赤い点線・目の印・「生還」・勇者の HP の棒
+        _hud3d.Plates.Visible = !RelicPickShown;   // 第481期 §4-2: レリックの候補の窓が出ているあいだは、駒と拠点の名札を隠す（窓に重なっていた）
         if (_reform) return;
 
         // 第476期（自分で遊んで見つけた）: 行き先に触れているあいだは、出来事の 1 行より案内の 1 行（経路上の敵・「峠の関: 硬い・賞金 14」・拠点が空になる）を先に出す
@@ -909,6 +913,15 @@ public partial class Map11Main
     {
         SceneStart3D();
         if (mode == "m3d-click") { await Map3DClickCheck(); return; }
+        if (mode == "story-all")
+        {
+            // 第481期: 会話の場面を 1 回の起動で順に撮って確かめる（`Map11Main.Story.cs`・自分で終わる）。
+            string arg = OS.GetCmdlineUserArgs().First(a => a.StartsWith("--map11-capture=", StringComparison.Ordinal))["--map11-capture=".Length..];
+            if (_introOverlay is not null) _introOverlay.Visible = false;
+            await StoryScenes(arg[..arg.LastIndexOf(',')]);
+            await ToSignal(GetTree().CreateTimer(30), SceneTreeTimer.SignalName.Timeout);
+            return;
+        }
         if (mode == "m3d-h-all")
         {
             // 第480期: 1-3「狩る者」の場面を 1 回の起動で順に撮って確かめる（`Map11Main.HunterShots.cs`・自分で終わる）。
@@ -1065,6 +1078,20 @@ public partial class Map11Main
         }
         catch (Exception e) { fails.Add("例外:" + e.Message); GD.PrintErr(e.ToString()); }
         done:
+        // 第481期 §5: 結果の札が出ているとき、盤の左 60% が隠れていない（暗幕なし・札は右 1／3）。検査は盤を終わらせずに、札だけを出して測る。
+        try
+        {
+            ShowResult();
+            await Settle();
+            var (card, dimA) = ResultCardRect();
+            Vector2 seen = GetViewport().GetVisibleRect().Size;
+            GD.Print($"MAP3D_LAYOUT 結果の札 {card.Position.X:F0},{card.Position.Y:F0} {card.Size.X:F0}x{card.Size.Y:F0}（左の端は画面の幅の {card.Position.X / seen.X * 100:F1}%）暗幕 {dimA:F2}");
+            if (card.Size == Vector2.Zero) fails.Add("結果の札: 出ていない");
+            else if (card.Position.X < seen.X * 0.6f || dimA > 0.01f) fails.Add($"結果の札: 盤の左 60% が隠れている（左の端 {card.Position.X:F0}・暗幕 {dimA:F2}）");
+            if (card.End.X > seen.X + 1 || card.End.Y > seen.Y + 1 || card.Position.Y < 0) fails.Add("結果の札: 画面からはみ出す");
+            _resultOverlay.Visible = false;
+        }
+        catch (Exception e) { fails.Add("結果の札: 例外 " + e.Message); GD.PrintErr(e.ToString()); }
         foreach (string line in fails) GD.Print("MAP3D_LAYOUT_FAIL " + line);
         Vector2 size = GetViewport().GetVisibleRect().Size;
         GD.Print($"MAP3D_LAYOUT_SMOKE_COMPLETE stage={St.Stage.Id} lanes={string.Join("/", St.Graph.Lanes.Select(l => l.Length))} view={size.X:F0}x{size.Y:F0} "

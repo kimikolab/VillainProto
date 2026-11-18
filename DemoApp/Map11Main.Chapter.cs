@@ -19,8 +19,14 @@ public partial class Map11Main
             if (Chapter1.Over) { Chapter1.Begin(); GetTree().ReloadCurrentScene(); return; }
             if (St.Won)
             {
-                if (Chapter1.Next()) { GetTree().ReloadCurrentScene(); return; }
-                ShowChapterResult();
+                // 第481期 §3: 結果を閉じた後・次のステージの編成（1-3 の後は 1 章の結果）の前に、会話の場面（単発・門・器具では出さない）。
+                void Go()
+                {
+                    if (Play3DStoryEnd()) return;   // 遊ぶ口（`--map3d-play=` ＋ `--story`）は場面の後で終わる
+                    if (Chapter1.Next()) { GetTree().ReloadCurrentScene(); return; }
+                    ShowChapterResult();
+                }
+                if (!StoryAfterStage(Go)) Go();
                 return;
             }
             Chapter1.Retry();
@@ -64,6 +70,7 @@ public partial class Map11Main
     private void ShowChapterResult()
     {
         _resultTitle.Text = "1 章 の結果";
+        ResultCard3D(side: false);   // 第481期: ステージの結果は右の札・1 章の結果は真ん中の窓
         foreach (Node child in _resultFaces.GetChildren()) { _resultFaces.RemoveChild(child); child.QueueFree(); }
         foreach (var record in Chapter1.Records)
         {

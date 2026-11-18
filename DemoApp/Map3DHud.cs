@@ -253,11 +253,11 @@ void fragment() {
     }
 
     /// <summary>顔つきの 1 行を出す（第479期・<paramref name="seconds"/> 秒で消える・押しても消える）。</summary>
-    internal void Say(UnitDef who, string text, float seconds)
+    internal void Say(UnitDef who, string text, float seconds, string? name = null)
     {
         _sayFace.Visible = _sayName.Visible = true;
         _sayFace.SetUnit(who);
-        _sayName.Text = who.Name;
+        _sayName.Text = name ?? who.Name;   // 第481期: 名札を替えられる（勇者は「ライゼル」）
         _sayText.Text = text;
         _sayLeft = seconds;
         _say.Visible = true;

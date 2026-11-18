@@ -34,6 +34,15 @@ public partial class Map11Main
     internal static bool Play3DRequested(IEnumerable<string> user) => user.Any(a => a.StartsWith("--map3d-play=", StringComparison.Ordinal));
 
     private static int _play3dStalls;
+    private static bool _play3dStoryAfter;
+    /// <summary>遊ぶ口が結果の後の会話の場面まで見た（第481期）——次のステージへは進まずに終わる。遊ぶ口でなければ false。</summary>
+    private bool Play3DStoryEnd()
+    {
+        if (!_play3dStoryAfter) return false;
+        GD.Print($"MAP3D_PLAY_COMPLETE plan={_play3dPlan} ok=True won={St.Won} story_after={Chapter1.Index + 1} seen={string.Join(",", Enumerable.Range(0, 4).Where(StoryScript.WasSeen))} shots={_play3dShot}");
+        GetTree().Quit(0);
+        return true;
+    }
     /// <summary>通しのあいだに出た「時計を止めて盤を隠す窓」（第479期 §7・頭の札と投資の札・編成の窓・結果の窓・戦闘の画面は数えない）。</summary>
     private static readonly List<string> _play3dCovers = new();
     private static int _play3dSides, _play3dSays, _play3dRestClicks;
@@ -204,6 +213,22 @@ public partial class Map11Main
                 _play3dGuard--;   // 演出を待つあいだは歩数に数えない
                 continue;
             }
+            // 第481期: 会話の場面（`--story` を付けたときだけ出る）は、ふつうに読む速さで自動で送って待つ（場面ごとに 1 枚撮る）。
+            if (StoryShown)
+            {
+                _story!.Auto = true;
+                if (_story.Lines.Count > 2 && _story.BodyText == _story.Lines[2].Text && _play3dOnce.Add("story:" + _story.SceneNo))
+                {
+                    await Wait(1.2);
+                    string name = $"{_play3dPlan}_{++_play3dShot:00}_会話_場面{_story.SceneNo}.png";
+                    await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+                    GetViewport().GetTexture().GetImage().SavePng(System.IO.Path.Combine(_play3dDir!, name));
+                    GD.Print($"MAP3D_PLAY shot={name} 会話の場面 {_story.SceneNo}");
+                }
+                else await Frames(2);
+                _play3dGuard--;
+                continue;
+            }
             if (_play3dGuard % 40 == 0) GD.Print($"MAP3D_PLAY 診断 step={_play3dGuard} running={Map11Session.TurnRunning} reform={_reform} 窓: 遭遇={_encounterOverlay.Visible} 迎撃={_interceptOverlay.Visible} 連戦={_siegeOverlay.Visible} 確かめ={_confirmOverlay.Visible} 結果={_resultOverlay.Visible} 候補={St.RelicOffer.Count} pending={Map11Session.HasPendingBattle} {State()}");
             if (_introOverlay is { Visible: true })
             {
@@ -212,7 +237,20 @@ public partial class Map11Main
                 await Wait(0.5);
                 continue;
             }
-            if (_resultOverlay.Visible) { await Shot("結果"); Finish(true); return; }
+            if (_resultOverlay.Visible)
+            {
+                await Shot("結果");
+                // 第481期: 会話つきの通し（`--story`）で勝ったら、結果のボタンを押して次の場面まで見てから終わる（`Play3DStoryEnd`）。
+                if (StoryOn && Chapter1.Active && St.Won && !Chapter1.Over && !StoryScript.WasSeen(Chapter1.Index + 1) && _play3dOnce.Add("story-after"))
+                {
+                    _play3dStoryAfter = true;
+                    Click(OldUi(_replayButton));
+                    await Wait(0.6);
+                    continue;
+                }
+                Finish(true);
+                return;
+            }
             if (_investOverlay is { Visible: true })
             {
                 await Shot("投資の札", once: true);
