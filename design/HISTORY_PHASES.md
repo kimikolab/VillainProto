@@ -36,6 +36,10 @@ description: 第259期に `CLAUDE.md` の「現状値」節を**逐語で**移�
 
 ## 現状値
 
+### 第479期まで `CLAUDE.md` の「現状値」の頭にあった段落（第480期に逐語で移した）
+
+**最後に動かした期: 第479期**（窓を減らした 3D の画面 `ChapterRule.V479`・**遊ぶ 1 章の既定**: 遭遇・連戦・迎撃は盤を隠さない「遭遇の台」（下 1／3・勝ち目の印）・説明はセリフ `Map11Lines.cs`・遭遇で引き返せる・連戦で引いた隊は待つ・本陣は守将 ×1.2・守り ×1.3（線 D・E は外した）・`--chapter1-keep-smoke`。報告は `design/PHASE479_LESS_WINDOWS.md`）。その前は第478期（1-2 から勇者を外す `ChapterRule.V478`・砦の守将・期限 16・`--chapter1-nohero-smoke`）・第477期（1-2 の盤 `ChapterRule.V477`・`--chapter1-stage12-smoke`・`--map3d-play=p1|p2|p3`）・第476期（1-1 に道を選ぶ理由 `ChapterRule.V476` ／ `MapStage.Stage11Ch476`・`--chapter1-reason-smoke`）・第475期（加入の表の直し `RosterRule.V475` ／ `ChapterRule.V475`・体験版は 35 体: ウツ・ワタは 1-2 から・ハギは 1-3 から・`--chapter1-roster35-smoke`・第476期に遊ぶ 1 章の既定へ）・第474期（1-1 の盤を非対称に `ChapterRule.V474` ／ `MapStage.Stage11Ch474`・峠の関は動かない ＋ 制圧したら勝ち・`--chapter1-asym-smoke`・ほかの版は `--chapter1-rule=`）・第473期（ネルの漏れの 3 版 `StarRule.V473f` ほか・**採らなかった**・`--nel-leak`）・第472期（弱い 4 軸の診断 `--axis-diag`）・第471期（1-1 を教習の重さに `ChapterRule.V471`・`RosterRule.V471`・`--roster33-audit`）・第470期（投資は 1-2 から `InvestRule.V470`）・第469期（加入の表 `RosterRule.V469`）・第468期（盤と金の札 `Doctrine`）・第467期（軸への投資）・第466期（遊びの写し `PlayLog`・`--foe-weight`）・第465期（勇者の回復なし）・第464期（☆の強化 `StarRule.V464`）・第463期（☆の重ね）・第462期（1 章の敵の倍率）・第461期（1 章の持ち越し）・第460期（1 章の連なり `Chapter1`）。各期の一行は `design/PHASE_INDEX.md`。
+
 ### 第478期まで `CLAUDE.md` の「現状値」の頭にあった段落（第479期に逐語で移した）
 
 **最後に動かした期: 第478期**（1-2 から勇者を外す `ChapterRule.V478` ／ `MapStage.Stage12Ch478`・**遊ぶ 1 章の既定**: 本陣は 本陣の守り → 砦の守将（本陣の守り（重）×0.8 ／ ×0.8・賞金 ＋20・動かない）・期限 16・勇者は 1-3 から・3D は出来事の窓と中間拠点の旗と名札・`--chapter1-nohero-smoke`。報告は `design/PHASE478_STAGE12_NOHERO.md`）。その前は第477期（1-2 の盤 `ChapterRule.V477` ／ `MapStage.Stage12Ch477`: 北 4 ／ 中 3 ／ 南 6 マス・中間拠点ごとの見返り・歩くのは中の街道・`--chapter1-stage12-smoke`・`--map3d-play=p1|p2|p3`）
