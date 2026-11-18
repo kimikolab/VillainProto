@@ -5,22 +5,29 @@ using System.Collections.Generic;
 using System.Linq;
 
 // =====================================================================================
-// 会話の画面（第481期・指示書 design/PHASE481_STORY_PART_SPEC.md §1）。**判定は 1 つも持たない**——台本（`StoryScript`）を順に見せるだけ。
+// 会話の画面（第481期・指示書 design/PHASE481_STORY_PART_SPEC.md §1 ＋ 追記 2・3）。**判定は 1 つも持たない**——渡された行を順に見せるだけ。
 //
 //   背景     いま映っている盤を、暗く（明るさ 40%）・少しぼかす（専用の背景絵は作らない・視点を流すのは呼ぶ側）
-//   立ち絵   左右に 1 人ずつ。話している側を明るく・手前に、もう一方は暗く（入れ替わり 0.2 秒）
-//   帯       画面の下 1／4。左上に名札（駒の名前の短い形）・本文は 2 行まで・文字は 1920×1080 で 34px
-//   内心     立ち絵を両方暗くし、帯を紺に・名札なし・斜体で中央寄せ
-//   影       立ち絵の無い人物は、人の形の黒い影（1 つの形を使い回す）＋ 名札
-//   送り     クリック ／ Space ／ Enter。文字は 1 字ずつ出て、出ている途中に押すと全部出る
+//   立ち絵   左右に 1 人ずつ・腰から上が見える大きさ（足元は帯の後ろへ潜る）・顔が画面の上 1／3 に来る。
+//            話している側を明るく・手前に、もう一方は暗く（入れ替わり 0.2 秒）
+//   帯       画面の下 1／5。本文は 2 行まで・文字は 1920×1080 で 38px。名札は話している側（左 ／ 右）の、帯の上の端
+//   主人公   声 ＝ 紺の帯・名札なし・左寄せ・斜体にしない・直前に話した駒の立ち絵は明るいまま
+//            内心 ＝ 紺の帯・名札なし・左寄せ・斜体・立ち絵は両方もう一段暗く（明るさ 20%）
+//   名札のみ 立ち絵を出さず、名札と本文だけ（伝令・守将）。相手の立ち絵は暗くして残す
+//   送り     クリック ／ Space ／ Enter。文字は 1 字ずつ出て、出ている途中に押すと全部出る。出切ると ▼（締めの帯にも）
 //   飛ばす   右上の「スキップ」（場面の終わりへ）
 //   演出     場面の頭に題の帯（1.2 秒）・`（暗転）`・締めの帯 `（帯）`
 // =====================================================================================
 public partial class StoryScene : Control
 {
     public const float TitleSeconds = 1.2f, SwapSeconds = 0.2f, CharsPerSecond = 30f, FadeSeconds = 0.5f, DimLevel = 0.4f;
-    /// <summary>文字の大きさ（1920×1080 のとき）。</summary>
-    public const int BodyFont = 34, NameFont = 28;
+    /// <summary>文字の大きさ（1920×1080 のとき）と、帯の高さ（画面の高さに対して）。</summary>
+    public const int BodyFont = 38, NameFont = 28;
+    public const float BandShare = 0.2f;
+    /// <summary>立ち絵の高さ（1080 のとき・絵の全体）と、顔の真ん中を置く高さ（画面の高さに対して）。</summary>
+    public const float PortraitHeight = 1100f, FaceY = 0.215f;
+    /// <summary>立ち絵の明るさ: 話していない側 ／ 内心のあいだ。</summary>
+    public const float DimPortrait = 0.34f, InnerPortrait = 0.20f;
     /// <summary>ふつうに読む速さ（1 秒あたりの字数）と、1 行ごとの間（自動送り・かかった秒数の見積もりに使う）。</summary>
     public const float ReadCharsPerSecond = 9f, ReadPause = 0.5f;
 
@@ -51,7 +58,7 @@ public partial class StoryScene : Control
     private readonly Front _front;
     private static FontVariation? _italic;
     private static ShaderMaterial? _blur;
-    private bool _inner;
+    private bool _hero, _nameRight;
 
     public StoryScene()
     {
@@ -102,23 +109,35 @@ void fragment() {
     // ---------------- 置き方（1920×1080 を基準に、画面の高さで拡げる） ----------------
 
     private float S => Math.Max(0.4f, Size.Y / 1080f);
-    /// <summary>帯（画面の下 1／4）。</summary>
-    public Rect2 BandRect => new(0, Size.Y * 0.75f, Size.X, Size.Y * 0.25f);
+    /// <summary>帯（画面の下 1／5）。</summary>
+    public Rect2 BandRect => new(0, Size.Y * (1 - BandShare), Size.X, Size.Y * BandShare);
     private float ColumnWidth => Math.Min(Size.X - 480 * S, 1560 * S);
     private float ColumnX => (Size.X - ColumnWidth) / 2;
     public Rect2 NameRect => _name.Visible ? new Rect2(_name.Position, _name.Size) : default;
     public Rect2 BodyRect => new(_body.Position, _body.Size);
+    public Rect2 SkipRect => _skip.Visible ? new Rect2(_skip.Position, _skip.Size) : default;
     /// <summary>本文がいま何行か・本文の下の端。</summary>
     public int BodyLines => _body.GetLineCount();
     public float BodyBottom => _body.Position.Y + _body.GetLineCount() * _body.GetLineHeight() + Math.Max(0, _body.GetLineCount() - 1) * _body.GetThemeConstant("line_spacing");
+    /// <summary>立ち絵の全体・顔の四角（出ていなければ空）・明るさ（0〜1）。</summary>
     public Rect2 PortraitRect(bool right) => (right ? _right : _left).Shown;
+    public Rect2 FaceRect(bool right) => (right ? _right : _left).Face;
+    public float PortraitBright(bool right) => (right ? _right : _left).Bright;
     public bool PortraitLit(bool right) => (right ? _right : _left).Lit;
-    public bool PortraitShadow(bool right) => (right ? _right : _left).IsShadow;
+    public bool PortraitShown(bool right) => (right ? _right : _left).Has;
+    public string PortraitWho(bool right) => (right ? _right : _left).Who;
     public string NameText => _name.Visible ? _name.Text : "";
+    /// <summary>名札が右の側に寄っているか。</summary>
+    public bool NameOnRight => _nameRight;
     public string BodyText => _body.Text;
-    public bool InnerShown => _inner;
+    /// <summary>主人公の行（声 ／ 内心）が出ているか・斜体か・本文は左寄せか。</summary>
+    public bool HeroShown => _hero;
+    public bool Italic { get; private set; }
+    public bool BodyLeft => _body.HorizontalAlignment == HorizontalAlignment.Left;
     public string TitleBandText => _titleShow > 0.01f ? _title : "";
     public string EndBandText => _bandShow > 0.01f ? _front.BandText : "";
+    /// <summary>送りの印 ▼ が出る所にいるか（本文が出切った ／ 締めの帯）。</summary>
+    public bool AdvanceMark => (_phase == Phase.Line && _shown >= _body.Text.Length) || _phase == Phase.Band;
     public bool Black => _black > 0.99f;
     public bool SkipShown => _skip.Visible;
 
@@ -128,31 +147,42 @@ void fragment() {
         float s = S;
         Rect2 band = BandRect;
         _body.AddThemeFontSizeOverride("font_size", Mathf.RoundToInt(BodyFont * s));
-        _body.AddThemeConstantOverride("line_spacing", Mathf.RoundToInt(12 * s));
+        _body.AddThemeConstantOverride("line_spacing", Mathf.RoundToInt(10 * s));
         _body.AddThemeConstantOverride("outline_size", Mathf.RoundToInt(4 * s));
-        _body.Position = new Vector2(ColumnX, band.Position.Y + 84 * s);
-        _body.Size = new Vector2(ColumnWidth, band.Size.Y - 100 * s);
+        _body.Position = new Vector2(ColumnX, band.Position.Y + 42 * s);
+        _body.Size = new Vector2(ColumnWidth, band.Size.Y - 56 * s);
         _name.AddThemeFontSizeOverride("font_size", Mathf.RoundToInt(NameFont * s));
-        _name.AddThemeStyleboxOverride("normal", Map3DHud.Box(new Color(0.10f, 0.08f, 0.03f, 0.96f), Color.FromHtml("#f1c96b"), 2, 8, Mathf.RoundToInt(14 * s)));
-        _name.Position = new Vector2(ColumnX, band.Position.Y + 16 * s);
-        _name.ResetSize();
+        _name.AddThemeStyleboxOverride("normal", Map3DHud.Box(new Color(0.10f, 0.08f, 0.03f, 0.97f), Color.FromHtml("#f1c96b"), 2, 8, Mathf.RoundToInt(14 * s)));
+        PlaceName();
         _skip.AddThemeFontSizeOverride("font_size", Mathf.RoundToInt(22 * s));
         _skip.Size = new Vector2(150 * s, 50 * s);
         _skip.Position = new Vector2(Size.X - 180 * s, 28 * s);
-        // 立ち絵の箱: 帯の上の端に立つ（帯と名札に重ならない）。左右は画面の真ん中から同じだけ離す。
-        float boxW = 560 * s, boxH = 690 * s, off = Math.Min(Size.X * 0.29f, 600 * s);
-        _left.Box = new Rect2(Size.X / 2 - off - boxW / 2, band.Position.Y - boxH, boxW, boxH);
-        _right.Box = new Rect2(Size.X / 2 + off - boxW / 2, band.Position.Y - boxH, boxW, boxH);
+        // 立ち絵: 顔の真ん中を、画面の真ん中から左右に同じだけ離した所・画面の上 1／3 の中に置く。足元は帯の後ろへ潜る。
+        float off = Math.Min(Size.X * 0.27f, 560 * s);
+        _left.Anchor = new Vector2(Size.X / 2 - off, Size.Y * FaceY);
+        _right.Anchor = new Vector2(Size.X / 2 + off, Size.Y * FaceY);
+        _left.Height = _right.Height = PortraitHeight * s;
+        _left.Top = _right.Top = 12 * s;
         _front.QueueRedraw();
+    }
+
+    /// <summary>名札は話している側（左 ／ 右）の、帯の上の端（半分だけ帯の上へ出る）。</summary>
+    private void PlaceName()
+    {
+        float s = S;
+        Rect2 band = BandRect;
+        _name.ResetSize();
+        float x = _nameRight ? ColumnX + ColumnWidth - _name.Size.X : ColumnX;
+        _name.Position = new Vector2(x, band.Position.Y - 30 * s);
     }
 
     // ---------------- 流れ ----------------
 
-    /// <summary>場面を始める。<paramref name="outcome"/> は 1-3 の結果（`?` の行を選ぶ・無ければ null）。</summary>
-    public void Play(StoryScript.Scene scene, string? outcome, bool allowSkip = true)
+    /// <summary>場面を始める。<paramref name="lines"/> は、その通しで出す行（条件はもう選んである）。</summary>
+    public void Play(StoryScript.Scene scene, IReadOnlyList<StoryScript.Line> lines, bool allowSkip = true)
     {
         SceneNo = scene.No;
-        _lines = scene.For(outcome);
+        _lines = lines;
         _title = scene.Title;
         _at = -1;
         _clock = Elapsed = _black = _bandShow = 0;
@@ -160,11 +190,11 @@ void fragment() {
         _all = 0;
         _left.Clear(); _right.Clear();
         _skip.Visible = allowSkip;
-        _body.Text = ""; _name.Visible = false; _inner = false;
+        ClearText();
         Visible = true;
         _phase = Phase.Title;
         Layout();
-        GD.Print($"STORY_SCENE_BEGIN 場面 {scene.No}「{scene.Title}」行 {_lines.Count} 結果 {outcome ?? "—"}");
+        GD.Print($"STORY_SCENE_BEGIN 場面 {scene.No}「{scene.Title}」行 {_lines.Count}");
     }
 
     /// <summary>クリック ／ Space ／ Enter。出ている途中なら全部出す・出切っていれば次へ。</summary>
@@ -198,6 +228,8 @@ void fragment() {
 
     private float AutoWaitOf() => _body.Text.Length / ReadCharsPerSecond + ReadPause;
 
+    private void ClearText() { _body.Text = ""; _name.Visible = false; _hero = false; Italic = false; }
+
     private void Next()
     {
         _at++;
@@ -210,45 +242,55 @@ void fragment() {
                 return;
             case StoryScript.Kind.Band:
                 _front.BandText = line.Text;
-                _body.Text = ""; _name.Visible = false; _inner = false;
-                _left.Lit = _right.Lit = false;
+                ClearText();
+                _left.Level = _right.Level = DimPortrait;
                 _phase = Phase.Band; _clock = 0; _autoWait = 2.5f;
                 return;
         }
         _phase = Phase.Line;
-        _inner = line.Side == StoryScript.Side.Inner;
-        if (_inner) _left.Lit = _right.Lit = false;
+        _hero = line.Hero;
+        Italic = line.Side == StoryScript.Side.Inner;
+        if (line.Side == StoryScript.Side.Inner) _left.Level = _right.Level = InnerPortrait;   // 内心: 両方もう一段暗く
+        else if (line.Side == StoryScript.Side.Voice)
+        {
+            // 声: 直前に話した駒の立ち絵は明るいまま（会話の相手）。内心の後なら、暗くした立ち絵をふつうの暗さへ戻す。
+            if (_left.Level < DimPortrait) _left.Level = DimPortrait;
+            if (_right.Level < DimPortrait) _right.Level = DimPortrait;
+        }
         else
         {
             Slot on = line.Side == StoryScript.Side.Right ? _right : _left, other = line.Side == StoryScript.Side.Right ? _left : _right;
+            // 名札のみ: その側の立ち絵は出さない（絵の置き場を持つ人物は、絵があれば出す）。相手は暗くして残す。
             on.Set(line.Speaker, line.Shadow);
-            on.Lit = true;
-            other.Lit = false;
+            on.Level = 1;
+            other.Level = DimPortrait;
             MoveChild(on, _front.GetIndex() - 1);   // 話している側を手前に
         }
         _name.Text = line.Speaker;
-        _name.Visible = !_inner;
-        _name.ResetSize();
-        _body.AddThemeFontOverride("font", _inner ? _italic! : Map3DFonts.Regular);
-        _body.HorizontalAlignment = _inner ? HorizontalAlignment.Center : HorizontalAlignment.Left;
-        _body.AddThemeColorOverride("font_color", _inner ? Color.FromHtml("#cfdcff") : Color.FromHtml("#f2f0e6"));
+        _name.Visible = !_hero;
+        _nameRight = line.Side == StoryScript.Side.Right;
+        PlaceName();
+        _body.AddThemeFontOverride("font", Italic ? _italic! : Map3DFonts.Regular);
+        _body.HorizontalAlignment = HorizontalAlignment.Left;   // 主人公の行も左寄せ（行頭をそろえる）
+        _body.AddThemeColorOverride("font_color", _hero ? Color.FromHtml("#d6e0ff") : Color.FromHtml("#f2f0e6"));
         _body.Text = line.Text;
         _body.VisibleCharacters = 0;
         _shown = 0;
         _autoWait = AutoWaitOf();
         _front.QueueRedraw();
-        GD.Print($"STORY_LINE 場面 {SceneNo} {_at + 1}／{_lines.Count} {(_inner ? "内心" : line.Speaker + (line.Shadow ? "（影）" : ""))}｜{line.Text}");
+        string who = line.Side == StoryScript.Side.Inner ? "内心" : line.Side == StoryScript.Side.Voice ? "声" : line.Speaker + (line.Shadow ? "（名札のみ）" : "");
+        GD.Print($"STORY_LINE 場面 {SceneNo} {_at + 1}／{_lines.Count} {who}｜{line.Text}");
     }
 
-    /// <summary>検査・写しの口: その行を出し切った姿にする（入れ替わりの動きも終わらせる）。</summary>
+    /// <summary>検査・写しの口: その行を出し切った姿にする（入れ替わりの動きも終わらせる）。行は順に呼ぶこと（立ち絵は前の行から続く）。</summary>
     public void ShowForCheck(int index)
     {
         if (index < 0 || index >= _lines.Count) return;
-        _clock = TitleSeconds; _titleShow = 0; _all = 1; _black = 0;
+        _clock = TitleSeconds; _titleShow = 0; _all = 1; _black = 0; _bandShow = 0;
         _at = index - 1;
         Next();
         if (_phase == Phase.Line) { _shown = _body.Text.Length; _body.VisibleCharacters = -1; }
-        if (_phase == Phase.FadeOut) { _phase = Phase.Hold; _black = 1; _clock = 0; _left.Clear(); _right.Clear(); _body.Text = ""; _name.Visible = false; _inner = false; }   // 暗転で立ち絵は入れ替わる
+        if (_phase == Phase.FadeOut) { _phase = Phase.Hold; _black = 1; _clock = 0; _left.Clear(); _right.Clear(); ClearText(); }   // 暗転で立ち絵は入れ替わる
         if (_phase == Phase.Band) _bandShow = 1;
         _left.Settle(); _right.Settle();
         Apply();
@@ -257,7 +299,7 @@ void fragment() {
     /// <summary>検査・写しの口: 題の帯が出ている姿にする。</summary>
     public void ShowTitleForCheck() { _phase = Phase.Title; _clock = TitleSeconds * 0.5f; _titleShow = 1; _all = 1; Apply(); }
 
-    /// <summary>その場面のその結果の行（検査が「どの行が左か・右か・内心か・影か」を引く）。</summary>
+    /// <summary>いま出している行の並び。</summary>
     public IReadOnlyList<StoryScript.Line> Lines => _lines;
 
     public override void _GuiInput(InputEvent e)
@@ -307,7 +349,7 @@ void fragment() {
                 {
                     if (!_blackoutDone) { _blackoutDone = true; AtBlackout?.Invoke(); }
                     _left.Clear(); _right.Clear();
-                    _body.Text = ""; _name.Visible = false; _inner = false;
+                    ClearText();
                     _phase = Phase.FadeIn;
                 }
                 break;
@@ -344,8 +386,8 @@ void fragment() {
     }
 
     /// <summary>ふつうに読んでかかる秒数の見積もり（題の帯 ＋ 1 行ごとに 字数 ÷ 9 ＋ 0.5 秒 ＋ 暗転 1.4 秒 ＋ 締めの帯 2.5 秒）。</summary>
-    public static float ReadSeconds(StoryScript.Scene scene, string? outcome)
-        => TitleSeconds + scene.For(outcome).Sum(l => l.Kind == StoryScript.Kind.Say ? l.Text.Length / ReadCharsPerSecond + ReadPause
+    public static float ReadSeconds(IEnumerable<StoryScript.Line> lines)
+        => TitleSeconds + lines.Sum(l => l.Kind == StoryScript.Kind.Say ? l.Text.Length / ReadCharsPerSecond + ReadPause
             : l.Kind == StoryScript.Kind.Blackout ? FadeSeconds * 2 + 0.4f : 2.5f);
 
     private static Shader? _cutoutShader;
@@ -382,20 +424,48 @@ void fragment() {
         return new ShaderMaterial { Shader = _cutoutShader };
     }
 
-    /// <summary>立ち絵 1 人ぶん（左 ／ 右）。絵が無ければ人の形の影。</summary>
+    private static readonly Dictionary<string, Texture2D?> ArtCache = new(StringComparer.Ordinal);
+    /// <summary>駒でない人物の絵（`design/art/story/` の下・あれば読む・無ければ null ＝ 立ち絵なし）。</summary>
+    private static Texture2D? StoryArt(string file)
+    {
+        if (ArtCache.TryGetValue(file, out Texture2D? cached)) return cached;
+        Texture2D? tex = null;
+        try
+        {
+            string path = System.IO.Path.GetFullPath(System.IO.Path.Combine(ProjectSettings.GlobalizePath("res://"), "..", "design", "art", "story", file));
+            if (System.IO.File.Exists(path))
+            {
+                using Image image = Image.LoadFromFile(path);
+                if (!image.IsEmpty()) { image.GenerateMipmaps(); tex = ImageTexture.CreateFromImage(image); }
+            }
+            GD.Print($"STORY_ART {file} {(tex is null ? "無い——立ち絵なし" : path)}");
+        }
+        catch (Exception e) { GD.PrintErr($"STORY_ART_FAILED {file} {e.Message}"); }
+        return ArtCache[file] = tex;
+    }
+
+    /// <summary>立ち絵 1 人ぶん（左 ／ 右）。絵が無い人物は何も出さない。</summary>
     private sealed partial class Slot : Control
     {
         private readonly bool _rightSide;
         private readonly TextureRect _art = new() { ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.Scale, MouseFilter = MouseFilterEnum.Ignore };
-        private string _who = "";
-        private float _lit, _in;
-        public Rect2 Box;
-        public bool Lit;
+        private float _level, _in;
+        /// <summary>絵の中の顔: 真ん中（幅・高さに対して）と、幅に対する顔の四角の大きさ。</summary>
+        private Vector3 _frame = new(0.5f, 0.14f, 0.36f);
+        private bool _flip;
+        /// <summary>顔の真ん中を置く所（画面の座標）・絵の全体の高さ・絵の上の端の下限。</summary>
+        public Vector2 Anchor;
+        public float Height = 1100, Top = 12;
+        /// <summary>明るさの行き先（1 ＝ 話している・0.34 ＝ 話していない・0.20 ＝ 内心のあいだ）。</summary>
+        public float Level;
         public float Fade = 1;
-        public bool IsShadow { get; private set; }
-        public bool Has => _who.Length > 0;
-        /// <summary>いま絵（または影）を描いている四角（画面の座標）。</summary>
+        public string Who { get; private set; } = "";
+        public bool Has => _art.Texture is not null;
+        public bool Lit => Has && Level > 0.99f;
+        public float Bright => Has ? _level : 0;
+        /// <summary>いま絵を描いている四角・顔の四角（画面の座標・出ていなければ空）。</summary>
         public Rect2 Shown { get; private set; }
+        public Rect2 Face { get; private set; }
 
         public Slot(bool right)
         {
@@ -405,80 +475,58 @@ void fragment() {
             _art.Material = Cutout();
         }
 
-        public void Clear() { _who = ""; _art.Texture = null; IsShadow = false; Lit = false; _lit = 0; Shown = default; QueueRedraw(); }
+        public void Clear() { Who = ""; _art.Texture = null; Level = _level = 0; Shown = Face = default; }
 
-        public void Set(string speaker, bool shadow)
+        /// <summary>その側の人物を替える。<paramref name="nameOnly"/> ＝ 立ち絵を出さない（名札のみ）。</summary>
+        public void Set(string speaker, bool nameOnly)
         {
-            if (_who == speaker) return;
-            _who = speaker;
+            if (Who == speaker) return;
+            Who = speaker;
             _in = 0;
             Texture2D? tex = null;
             bool facesRight = true;
-            if (!shadow)
+            _frame = new Vector3(0.5f, 0.14f, 0.36f);
+            if (StoryScript.ArtSpeakers.TryGetValue(speaker, out string? file)) { tex = StoryArt(file); facesRight = false; }
+            else if (nameOnly) tex = null;
+            else if (speaker == StoryScript.HeroSpeaker) { tex = HunterArt.Standing(); facesRight = false; _frame = new Vector3(0.43f, 0.09f, 0.24f); }
+            else if (StoryScript.UnitOf(speaker) is { } def)
             {
-                if (speaker == StoryScript.HeroSpeaker) { tex = HunterArt.Standing(); facesRight = false; }
-                else if (StoryScript.UnitOf(speaker) is { } def)
-                    tex = UiKit.HasCustomBattlePortrait(def.Id) ? UiKit.BattlePortrait(null!, def.Id) : UiKit.HasCustomPortrait(def.Id) ? UiKit.Portrait(null!, def.Id) : null;
+                tex = UiKit.HasCustomBattlePortrait(def.Id) ? UiKit.BattlePortrait(null!, def.Id) : UiKit.HasCustomPortrait(def.Id) ? UiKit.Portrait(null!, def.Id) : null;
+                _frame = UnitFaceIcon.FrameOf(def.Id);
             }
-            IsShadow = tex is null;
             _art.Texture = tex;
             _art.Visible = tex is not null;
             // 絵は画面の内側を向く（左の人は右向き・右の人は左向き）。
-            _art.FlipH = tex is not null && facesRight == _rightSide;
-            QueueRedraw();
+            _flip = tex is not null && facesRight == _rightSide;
+            _art.FlipH = _flip;
         }
 
-        public void Settle() { _lit = Lit ? 1 : 0; _in = 1; }
+        public void Settle() { _level = Level; _in = 1; }
 
         public void Tick(float dt)
         {
-            _lit = Mathf.MoveToward(_lit, Lit ? 1 : 0, dt / SwapSeconds);
+            _level = Mathf.MoveToward(_level, Level, dt / SwapSeconds);
             _in = Mathf.MoveToward(_in, 1, dt / SwapSeconds);
         }
 
         public void Apply()
         {
-            if (!Has) { Visible = false; return; }
+            if (_art.Texture is not { } t) { Visible = false; Shown = Face = default; return; }
             Visible = true;
-            // 話している側は少し大きく（手前）・明るく。もう一方は小さく・暗く。
-            float scale = Mathf.Lerp(0.90f, 1.0f, _lit);
-            float bright = Mathf.Lerp(0.34f, 1.0f, _lit);
-            Vector2 box = Box.Size * scale;
-            Vector2 size = box;
-            if (_art.Texture is { } t)
-            {
-                float aspect = t.GetWidth() / (float)Math.Max(1, t.GetHeight());
-                size = aspect > box.X / box.Y ? new Vector2(box.X, box.X / aspect) : new Vector2(box.Y * aspect, box.Y);
-            }
-            else size = new Vector2(box.Y * 0.56f, box.Y * 0.92f);
-            Vector2 at = new(Box.Position.X + Box.Size.X / 2 - size.X / 2, Box.End.Y - size.Y);
-            Shown = new Rect2(at, size);
+            // 話している側は少し大きく（手前）・明るく。大きさは顔の真ん中を軸に変える。
+            float lit = Mathf.InverseLerp(DimPortrait, 1f, Mathf.Clamp(_level, DimPortrait, 1f));
+            float scale = Mathf.Lerp(0.93f, 1.0f, lit);
+            float h = Height * scale, w = h * t.GetWidth() / Math.Max(1, t.GetHeight());
+            float fx = _flip ? 1 - _frame.X : _frame.X;
+            // 顔が大きく下にある絵（頭の大きい駒）は、絵の上の端が画面から出ない所まで下げる。
+            float y = Math.Max(Top, Anchor.Y - _frame.Y * h);
+            Vector2 at = new(Anchor.X - fx * w, y);
+            Shown = new Rect2(at, new Vector2(w, h));
+            float side = _frame.Z * w;
+            Face = new Rect2(at.X + fx * w - side / 2, at.Y + _frame.Y * h - side / 2, side, side);
             _art.Position = at;
-            _art.Size = size;
-            ((ShaderMaterial)_art.Material).SetShaderParameter("tint", new Color(bright, bright, bright, _in * Fade));
-            QueueRedraw();
-        }
-
-        public override void _Draw()
-        {
-            if (!Has || !IsShadow) return;
-            // 人の形の影（頭・首・肩から裾へ広がる外套）。1 つの形を誰にでも使い回す。
-            Rect2 r = Shown;
-            float a = _in * Fade;
-            Color ink = new(0.015f, 0.015f, 0.025f, 0.97f * a), rim = new Color(0.42f, 0.47f, 0.58f, Mathf.Lerp(0.25f, 0.75f, _lit) * a);
-            Vector2 P(float x, float y) => r.Position + new Vector2(_rightSide ? 1 - x : x, y) * r.Size;
-            var body = new[]
-            {
-                P(0.40f, 0.235f), P(0.60f, 0.235f), P(0.63f, 0.29f), P(0.86f, 0.345f), P(0.95f, 0.47f), P(0.99f, 1f),
-                P(0.01f, 1f), P(0.05f, 0.47f), P(0.14f, 0.345f), P(0.37f, 0.29f),
-            };
-            DrawColoredPolygon(body, ink);
-            DrawPolyline(body.Take(6).ToArray(), rim, 3f, true);
-            DrawPolyline(body.Skip(6).Append(body[0]).ToArray(), rim, 3f, true);
-            Vector2 head = P(0.5f, 0.135f);
-            float rad = r.Size.Y * 0.115f;
-            DrawCircle(head, rad, ink);
-            DrawArc(head, rad, 0, Mathf.Tau, 48, rim, 3f, true);
+            _art.Size = new Vector2(w, h);
+            ((ShaderMaterial)_art.Material).SetShaderParameter("tint", new Color(_level, _level, _level, _in * Fade));
         }
     }
 
@@ -494,25 +542,28 @@ void fragment() {
             float s = _s.S, all = _s._all;
             Vector2 size = Size;
             Font bold = Map3DFonts.Bold;
-            // ---- 文字の帯（下 1／4）: ふつうは黒・内心は紺 ----
+            // ---- 文字の帯（下 1／5）: ふつうは黒・主人公の行（声 ／ 内心）は紺 ----
             Rect2 band = _s.BandRect;
-            Color back = _s._inner ? new Color(0.06f, 0.09f, 0.27f, 0.93f) : new Color(0.03f, 0.035f, 0.05f, 0.92f);
-            Color edge = _s._inner ? Color.FromHtml("#7f9bff") : Color.FromHtml("#f1c96b");
+            Color back = _s._hero ? new Color(0.06f, 0.09f, 0.27f, 0.96f) : new Color(0.03f, 0.035f, 0.05f, 0.95f);
+            Color edge = _s._hero ? Color.FromHtml("#7f9bff") : Color.FromHtml("#f1c96b");
             // 題の帯・締めの帯が出ているあいだは、空の文字の帯を出さない。
             float bandAll = all * (1 - Math.Max(_s._titleShow, _s._bandShow)) * (_s._phase == Phase.Title ? 0 : 1);
             DrawRect(band, new Color(back.R, back.G, back.B, back.A * bandAll));
             DrawRect(new Rect2(band.Position, new Vector2(size.X, 3 * s)), new Color(edge.R, edge.G, edge.B, 0.9f * bandAll));
+            bool blink = Mathf.PosMod(_s._clock, 1.0f) < 0.6f;
             // 送りの印（出切ったら点滅）。
-            if (_s._phase == Phase.Line && _s._shown >= _s._body.Text.Length && Mathf.PosMod(_s._clock, 1.0f) < 0.6f)
-            {
-                Vector2 c = new(_s.ColumnX + _s.ColumnWidth + 30 * s, band.End.Y - 46 * s);
-                DrawColoredPolygon(new[] { c + new Vector2(-10, -7) * s, c + new Vector2(10, -7) * s, c + new Vector2(0, 9) * s }, new Color(edge.R, edge.G, edge.B, all));
-            }
+            if (_s._phase == Phase.Line && _s._shown >= _s._body.Text.Length && blink)
+                Mark(new Vector2(_s.ColumnX + _s.ColumnWidth + 30 * s, band.End.Y - 40 * s), new Color(edge.R, edge.G, edge.B, all));
             // ---- 暗転 ----
             if (_s._black > 0) DrawRect(new Rect2(Vector2.Zero, size), new Color(0, 0, 0, _s._black));
             // ---- 題の帯（場面の頭）と締めの帯 ----
             Strip(_s._title, _s._titleShow, size.Y * 0.40f, 60, Color.FromHtml("#ffe6a8"));
             Strip(BandText, _s._bandShow, size.Y * 0.44f, 72, Colors.White);
+            // 締めの帯にも送りの印（押すと次へ進むことが分かるように）。
+            if (_s._phase == Phase.Band && _s._bandShow > 0.9f && blink) Mark(new Vector2(size.X / 2, size.Y * 0.44f + 100 * s), new Color(1, 1, 1, all));
+
+            void Mark(Vector2 c, Color ink)
+                => DrawColoredPolygon(new[] { c + new Vector2(-10, -7) * s, c + new Vector2(10, -7) * s, c + new Vector2(0, 9) * s }, ink);
 
             void Strip(string text, float show, float y, int fontSize, Color ink)
             {

@@ -335,6 +335,7 @@ public partial class Map11Main
         // 第481期 §4-4: 殿に出した隊（自分から入った ／ 行き先が勇者のマスだった）が止められなかったときは「止められなかった」——足止めが成功したか迷わないように。
         bool rear = HunterBoard && snap.Node.IsHero && !line.Won && St.HunterHolds > _clashHoldsBefore;
         bool rearFail = HunterBoard && snap.Node.IsHero && !line.Won && !rear && St.RearGuards.Contains(snap.Squad);
+        if (rear) Hs.RearHeld[snap.Squad] = true; else if (rearFail && !Hs.RearHeld.ContainsKey(snap.Squad)) Hs.RearHeld[snap.Squad] = false;   // 追記 2: 隊の札の案内に残す
         _clashBand.Text = rear ? Map11Lines.RearBand : rearFail ? Map11Lines.RearFail : line.Won ? "勝ち" : "負け";
         _clashBand.AddThemeColorOverride("font_color", rear ? Color.FromHtml("#f1c96b") : line.Won ? Color.FromHtml("#71d7a1") : Color.FromHtml("#ff6b5e"));
         _clashHold.Visible = false;

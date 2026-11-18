@@ -38,9 +38,11 @@ public partial class Map3DCamera : Node3D
     private static Vector2? _glide;
 
     /// <summary>その場所が画面の真ん中に来るように、なめらかに寄せる（画面の外の知らせ・全体図を押したとき・出来事で時計が止まったとき）。</summary>
-    internal void FocusOn(Vector3 world, bool snap = false)
+    /// <paramref name="free"/> ＝ 視点を動かせる範囲の外へも寄せる（第481期 追記 2・結果の札が右 1／3 を使うので、盤の右端の砦を左へ寄せて見せる）。
+    internal void FocusOn(Vector3 world, bool snap = false, bool free = false)
     {
-        Vector2 want = Clamp(new Vector2(world.X - _look.X, world.Z - _look.Z));
+        Vector2 want = new(world.X - _look.X, world.Z - _look.Z);
+        if (!free) want = Clamp(want);
         if (snap) { _pan = want; _glide = null; Apply(); } else _glide = want;
     }
 

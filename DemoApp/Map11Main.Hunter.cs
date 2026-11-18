@@ -24,6 +24,8 @@ public partial class Map11Main
     {
         public bool Entrance, Stepped, Routed;
         public HashSet<int> Home = new();
+        /// <summary>殿に出した隊 → その戦闘で勇者の足を止めたか（追記 2・隊の札の案内に出す・戦闘の後の帯と同じ読み）。</summary>
+        public Dictionary<int, bool> RearHeld = new();
     }
     private static readonly ConditionalWeakTable<Map11State, HunterSeen> HunterSeenOf = new();
     private static HunterSeen Hs => HunterSeenOf.GetValue(St, _ => new HunterSeen());

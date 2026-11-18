@@ -221,7 +221,11 @@ public partial class Map11Main
             panel.AnchorLeft = 2f / 3f; panel.AnchorRight = 1;
             panel.OffsetLeft = 6; panel.OffsetRight = -14;
             panel.OffsetTop = 110; panel.OffsetBottom = -24;
-            if (_cam3d is not null && !_resultFocused) { _resultFocused = true; _cam3d.FocusOn(PosOf(St.Graph.Home) + new Vector3(5, 0, 0)); }
+            // 追記 2: 札の高さは中身の分（詳細を開いたら下まで）。中身の高さは 1 フレーム後に決まるので、遅らせて合わせる。
+            if (!_resultOpen) _ = FitResultCardSoon();
+            // 追記 2: 1-2 は「落とした砦」へ寄せる（会話の場面 2 の背景と同じ場所）。ほかは味方の拠点。
+            bool fort = St.Stage.Id == "1-2" && St.Captured && St.Won;
+            if (_cam3d is not null && !_resultFocused) { _resultFocused = true; _cam3d.FocusOn((fort ? PosOf(St.Graph.Portal) : PosOf(St.Graph.Home)) + new Vector3(fort ? _cam3d.Seen().Size.X / 6f + 1 : 5, 0, 0), free: fort); }   // 砦は、札に隠れない左 2／3 の真ん中へ
         }
         else
         {
@@ -231,6 +235,27 @@ public partial class Map11Main
         }
     }
     private bool _resultFocused;
+    /// <summary>結果の札の文字（追記 2）: 「生還した駒」「失った駒」の見出しと数（15 の 1.4 倍）・刻と金。</summary>
+    internal const int ResultHeadFont = 21, ResultBodyFont = 18;
+
+    /// <summary>結果の札の高さを中身に合わせる（題・顔・数・「詳細」・ボタンの分——下の空きをなくす）。</summary>
+    private async System.Threading.Tasks.Task FitResultCardSoon()
+    {
+        for (int i = 0; i < 2 && IsInsideTree(); i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        if (IsInsideTree()) FitResultCard();
+    }
+
+    private void FitResultCard()
+    {
+        if (!Map3DMode.Active || _resultOpen || !_resultOverlay.Visible || _resultOverlay.GetChildCount() == 0 || _resultOverlay.GetChild(0) is not Control panel || panel.AnchorLeft < 0.6f) return;
+        // 折り返す札（顔の段・本文）は、置いた後の高さで読む（最小の大きさは幅 0 で数えるので当てにならない）。
+        float inner = _resultFaces.Size.Y + _resultBody.GetLineCount() * (_resultBody.GetLineHeight() + _resultBody.GetThemeConstant("line_spacing")) + 16;
+        float fixedPart = 34 + _resultTitle.GetCombinedMinimumSize().Y + (_resultMore?.GetCombinedMinimumSize().Y ?? 0) + _replayButton.GetCombinedMinimumSize().Y
+                          + (_resultQuit.Visible ? _resultQuit.GetCombinedMinimumSize().Y + 4 : 0) + 44;
+        float full = _uiRoot.Size.Y - 110 - 24;
+        panel.AnchorBottom = 0;
+        panel.OffsetBottom = 110 + Mathf.Min(full, inner + fixedPart);
+    }
 
     /// <summary>結果の札の四角（画面の座標）と、暗幕の濃さ（3D のレイアウトの検査が読む）。</summary>
     internal (Rect2 Card, float Dim) ResultCardRect()
@@ -251,12 +276,15 @@ public partial class Map11Main
         {
             lines.Clear();
             lines.Add($"{Map11Session.ShownTurn} 刻目");
-            lines.Add($"生還した駒　{St.HunterSurvivors} ／ {St.HunterStartUnits}");
+            // 追記 2: 時点を並べる（出撃 ＝ 隊で生きている ＋ 倒れた ／ 撤退の始め ＝ 勇者が現れた刻 ／ 帰還 ＝ 拠点へ戻った）。
+            int sent13 = St.LivingSquads.Sum(q => q.Units!.Count(u => u.IsAlive)) + St.FallenUnits.Count;
+            lines.Add($"出撃 {sent13} → 撤退の始め {St.HunterStartUnits} → 帰還 {St.HunterSurvivors}");
             lines.Add("殿　" + (St.RearGuards.Count == 0 ? "なし" : string.Join("・", St.RearGuards.OrderBy(i => i).Select(i => St.Squads[i].Label))));
             if (St.HunterDriven) lines.Add(St.HunterNarrow ? "勇者は退いた（外へ出した隊は戻らなかった）" : "勇者を退かせた");
         }
         if (St.Stage.Gold.On) lines.Add($"金　{St.Gold}");
         _resultBody.Text = _resultOpen ? _resultFull : string.Join(Nl, lines);
+        _resultBody.AddThemeFontSizeOverride("font_size", _resultOpen ? 14 : ResultBodyFont);   // 追記 2: 刻と金も一段大きく（詳細は今までの大きさ）
         _resultMore!.Text = _resultOpen ? "詳細を閉じる" : "詳細";
         // 第481期 §4-1: 暗幕をやめ、画面の右 1／3 の札にする（盤は見えたまま・視点は味方の拠点へ）。「詳細」は同じ札の中で開く。
         ResultCard3D(side: true);
@@ -266,7 +294,7 @@ public partial class Map11Main
         {
             // 生還した駒の顔（明るく）。第481期: 狩る者の盤だけでなく、どのステージの札にも出す（狩る者の盤は拠点へ戻った隊だけ）。
             var back = St.LivingSquads.Where(q => !hunter || St.HunterDriven || q.Pos == St.Graph.Home).SelectMany(q => q.Units!.Where(u => u.IsAlive).OrderBy(u => u.Slot)).Select(u => u.Def).ToList();
-            _resultFaces.AddChild(UiKit.Text(back.Count == 0 ? "生還した駒　なし" : $"生還した駒　{back.Count}", 15, UiKit.Muted));
+            _resultFaces.AddChild(UiKit.Text(back.Count == 0 ? "生還した駒　なし" : $"生還した駒　{back.Count}", ResultHeadFont, UiKit.Ink));   // 追記 2: 見出しと数を 1.4 倍
             if (back.Count > 0)
             {
                 var row = new HFlowContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
@@ -281,7 +309,7 @@ public partial class Map11Main
             }
         }
         var fallen = St.FallenUnits.Select(u => u.Def).ToList();
-        _resultFaces.AddChild(UiKit.Text(fallen.Count == 0 ? "失った駒　なし" : $"失った駒　{fallen.Count}", 15, UiKit.Muted));
+        _resultFaces.AddChild(UiKit.Text(fallen.Count == 0 ? "失った駒　なし" : $"失った駒　{fallen.Count}", ResultHeadFont, UiKit.Ink));
         if (fallen.Count == 0) return;
         var faces = new HFlowContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         faces.AddThemeConstantOverride("h_separation", 4);

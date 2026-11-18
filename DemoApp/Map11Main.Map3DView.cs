@@ -375,9 +375,11 @@ public partial class Map11Main
             // 第481期 §4-4: 殿に指定した隊（「殿に出す」を押した ／ 殿を務めた）の札に「殿」の印を残す（戦闘の後も・倒れても）。
             bool rearSquad = HunterBoard && St.Rout && (Map11Session.IsRear(s.Index) || St.RearGuards.Contains(s.Index));
             if (rearSquad && !(s.Pos == St.Graph.Home && faces.Count > 0)) (tag, tagColor) = (tag.Length > 0 ? $"{Map11Lines.RearTag}・{tag}" : Map11Lines.RearTag, tagColor.Length > 0 ? tagColor : "#f1c96b");
+            // 追記 2: 殿が全滅した隊の札は、案内を「殿・足を止めた」／「殿・止められなかった」に（「駒を配る」の代わり・このステージのあいだ）。
+            string rearDone = rearSquad && faces.Count == 0 && Hs.RearHeld.TryGetValue(s.Index, out bool heldIt) ? (heldIt ? Map11Lines.RearCardHeld : Map11Lines.RearCardFail) : "";
             cards.Add(new Map3DSquadCardInfo(s.Index, s.Label, faces, faces.Count, faces.Count == 0 ? 0 : SquadHpPercent(s),
-                St.Time.On ? "→ " + OrderText(s.Index) : where, s.Index == _selected && _guideSquadChosen, s.Lost,
-                act.Revive, act.Enhance, act.Resting, s.Lost ? (rearSquad ? $"{Map11Lines.RearTag}　" : "") + LostLine(s) : "", tag, tagColor));
+                rearDone.Length > 0 ? rearDone : St.Time.On ? "→ " + OrderText(s.Index) : where, s.Index == _selected && _guideSquadChosen, s.Lost,
+                act.Revive, act.Enhance, act.Resting, s.Lost ? (rearDone.Length > 0 ? rearDone : (rearSquad ? $"{Map11Lines.RearTag}　" : "") + LostLine(s)) : "", tag, tagColor));
         }
         _hud3d.SetSquads(cards);
         bool can = _selected >= 0 && _selected < St.Squads.Length && St.CanReform(_selected) && !St.Finished && !Map11Session.TurnRunning;
@@ -599,6 +601,9 @@ public partial class Map11Main
     /// 名札と「あと n」の札の置き場所を決める。候補（真下 → 右 → 左 → 頭の上 …）を順に見て、重なりが 0 の最初の所へ置く
     /// （どこも重なるなら、重なりのいちばん小さい所）。<b>見た目だけ</b>——盤は読まない。
     /// </summary>
+    /// <summary>名札の置き場が見つからなかった駒を 1 行ずつ出す（3D のレイアウトの検査のあいだだけ）。</summary>
+    private static readonly bool _placeTrace = OS.GetCmdlineUserArgs().Contains("--map3d-place-trace");
+
     private void PlaceLabels3D()
     {
         if (_hud3d is null || _map3d is null) return;
@@ -629,7 +634,7 @@ public partial class Map11Main
             foreach (var (_, o) in _chipRects3d) cost += Overlap(r, o) * 2;
             if (plate)
             {
-                foreach (var (_, o) in _discRects3d) cost += Overlap(r, o);
+                foreach (var (_, o) in _discRects3d) cost += Overlap(r, o.Grow(3)) * 2;   // 台は光るときに 1〜2px 脈を打つ——3px 離して置く（縁を接した札が、次のフレームで「重なる」になっていた）   // 第481期 追記 2: 台との重なりも、ほかの札との重なりと同じ重さで避ける
                 foreach (var (_, o) in _bridgeRects3d) cost += Overlap(r, o);
             }
             var screen = new Rect2(8, 8, view.X - 16, view.Y - 16);
@@ -642,7 +647,7 @@ public partial class Map11Main
             float least = float.MaxValue;
             foreach (Vector2 at in candidates)
             {
-                float cost = Cost(new Rect2(at, size), plate);
+                float cost = Cost(new Rect2(at.Round(), size), plate);   // 置くのは丸めた場所（検査も丸めた四角で見る——丸めで 0.5px 食い込むと、縁を接した札が「重なる」に数えられていた）
                 if (cost < least) { least = cost; best = at; }
                 if (cost <= 0) break;
             }
@@ -674,10 +679,41 @@ public partial class Map11Main
                 new Vector2(cx - size.X / 2, under + 40),
                 new Vector2(cx - size.X / 2 + size.X * 0.6f, under + 5),
                 new Vector2(cx - size.X / 2 - size.X * 0.6f, under + 5),
+                // 第481期 追記 2: 横長の画面（2560×1080）の 1-2 で、砦の前に駒が集まると上の 9 か所が全部ふさがっていた——もう一回り外の場所を足す。
+                new Vector2(cx - size.X / 2 + size.X * 1.1f, under + 5),
+                new Vector2(cx - size.X / 2 - size.X * 1.1f, under + 5),
+                new Vector2(body.End.X + 8 + size.X * 0.55f, body.End.Y - size.Y + 6),
+                new Vector2(body.Position.X - 8 - size.X * 1.55f, body.End.Y - size.Y + 6),
+                new Vector2(cx - size.X / 2, body.Position.Y - size.Y * 2 - 12),
+                new Vector2(cx - size.X / 2 + size.X * 0.6f, body.Position.Y - size.Y - 6),
+                new Vector2(cx - size.X / 2 - size.X * 0.6f, body.Position.Y - size.Y - 6),
+                new Vector2(cx - size.X / 2, under + 76),
+                new Vector2(cx - size.X / 2 + size.X * 0.6f, under + 40),
+                new Vector2(cx - size.X / 2 - size.X * 0.6f, under + 40),
+                new Vector2(body.End.X + 8 + size.X * 0.55f, body.Position.Y + 8),
+                new Vector2(body.Position.X - 8 - size.X * 1.55f, body.Position.Y + 8),
+                new Vector2(cx - size.X / 2 + size.X * 1.1f, under + 40),
+                new Vector2(cx - size.X / 2 - size.X * 1.1f, under + 40),
+                new Vector2(cx - size.X / 2 + size.X * 1.1f, body.Position.Y - size.Y - 6),
+                new Vector2(cx - size.X / 2 - size.X * 1.1f, body.Position.Y - size.Y - 6),
             };
             // 第479期の続き: 固定の UI に重なる候補は、その UI のすぐ下へ逃がした場所も候補に足す（ほかの札との重なりも一緒に見て選ぶ）。
             // それでも固定の UI に重なるなら出さない（駒そのものが UI の下にいる）。
             Vector2 at = Choose(spots.Concat(spots.Select(q => Dodge(new Rect2(q, size))).Where(r => r is not null).Select(r => r!.Value.Position)), size, plate: true);
+            // 第481期 追記 2: 決まった候補がどれも重なるとき（横長の画面の 1-2・砦の前に駒と台が集まる所）は、駒のまわりを近い順に探す。
+            if (Cost(new Rect2(at.Round(), size), true) > 0)
+            {
+                Vector2 mid = body.GetCenter() - size / 2;
+                var ring = new List<Vector2>();
+                for (int gx = -5; gx <= 5; gx++)
+                    for (int gy = -4; gy <= 5; gy++)
+                        ring.Add(mid + new Vector2(gx * size.X * 0.5f, gy * size.Y * 0.6f));
+                Vector2 wider = Choose(ring.OrderBy(q => q.DistanceSquaredTo(mid)), size, plate: true);
+                if (Cost(new Rect2(wider.Round(), size), true) < Cost(new Rect2(at.Round(), size), true)) at = wider;
+            }
+            if (_placeTrace)
+                GD.Print($"MAP3D_LAYOUT_PLACE {p.Name} 体 {body.Position.X:F0},{body.Position.Y:F0} {body.Size.X:F0}x{body.Size.Y:F0} 札 {size.X:F0}x{size.Y:F0} 選んだ {at.X:F0},{at.Y:F0} 重なり {Cost(new Rect2(at, size), true):F0} ／ 候補 "
+                    + string.Join(" ", spots.Select(q => $"{q.X:F0},{q.Y:F0}={Cost(new Rect2(q, size), true):F0}")));
             if (Dodge(new Rect2(at, size)) is not { } free || free.Position != at) { p.Piece.Plate.Visible = false; continue; }
             p.Piece.Plate.Visible = true;
             p.Piece.Plate.Place(at, p.Piece.Clock);
@@ -1279,7 +1315,7 @@ public partial class Map11Main
                 for (int i = 0; i < mine.Count; i++)
                     for (int j = same ? i + 1 : 0; j < others.Count; j++)
                         if (Overlap(mine[i].Rect, others[j].Rect) > 4)
-                            fails.Add($"{scene}: {mine[i].Name} が {others[j].Name} に重なる（{kind}）");
+                            { fails.Add($"{scene}: {mine[i].Name} が {others[j].Name} に重なる（{kind}）"); GD.Print($"MAP3D_LAYOUT_OVERLAP {scene} {mine[i].Name} {mine[i].Rect} × {others[j].Name} {others[j].Rect} ＝ {Overlap(mine[i].Rect, others[j].Rect):F0}"); }
             }
             // 名札: 台・橋・旗（駒）・遊ぶ UI・建物の名札・ほかの名札と重ならない。
             Against("名札×台", plates, discs);

@@ -575,7 +575,8 @@ public partial class Map3DSquadCard : Button
             _tag.AddThemeColorOverride("font_color", tc);
             _tag.AddThemeStyleboxOverride("normal", Map3DHud.Box(new Color(0.04f, 0.05f, 0.07f, 0.9f), tc, 1, 8, 4));
         }
-        _order.Text = info.Lost ? info.LostLine : info.Count == 0 ? "「編成・呼ぶ・強化」で駒を配る" : info.Order;
+        // 第481期 追記 2: 殿が全滅した隊は、空席の案内の代わりに殿の戦果（「殿・足を止めた」／「殿・止められなかった」）。
+        _order.Text = info.Lost ? info.LostLine : info.Count == 0 && !info.Order.StartsWith(Map11Lines.RearTag + "・", System.StringComparison.Ordinal) ? "「編成・呼ぶ・強化」で駒を配る" : info.Order;
         Color edge = info.Selected ? Color.FromHtml("#ffd874") : info.Lost ? Map3DHud.Edge.Darkened(0.2f) : Color.FromHtml("#55d5b8").Darkened(0.25f);
         Color back = info.Selected ? new Color(0.13f, 0.15f, 0.12f, 0.94f) : Map3DHud.Back;
         AddThemeStyleboxOverride("normal", Map3DHud.Box(back, edge, info.Selected ? 3 : 2, 12, 8));

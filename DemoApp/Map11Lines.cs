@@ -86,8 +86,8 @@ public static class Map11Lines
     /// <summary>戦闘の名札の下の説明（<c>UnitDef.PlusText</c> の写しに入れる・表示だけ）。</summary>
     public const string HunterPlus = "「白雷」全員を撃つ。「帯電」毎ターン攻撃力が 11 上がる。転ばず痺れない。傷は戦いをまたいで残る";
     /// <summary>狩る者の盤の頭の札（勇者が来ることは言わない——優勢から始まる）。</summary>
-    /// 第481期: 勇者は予告しない（「王国は、勇者を差し向けた」は外した）——会話の場面 2 の最後の 1 行を受ける。
-    public const string Stage13LeadHunter = "残党狩りだ。楽な仕事のはずだ。";
+    /// 第481期 追記 2: 1-1 の頭の札の文（窓を減らした版・墓守の 1 行は会話の場面 0 が言うので外した）。
+    public const string Stage11Lead = "軍が寄越したのは、使えない奴らと使えない砦。上等だ。\n北は近いが関が固い。南は遠回りで楽だ。";
     /// <summary>登場の帯の直後の勇者の 1 行（第481期・台本 design/CHAPTER1_SCRIPT.md「1-3 の盤の上」）。</summary>
     public const string HunterDeclare = "魔王軍の残党だな。——討つ。";
     public const string GoalHunter = "目標　中間拠点を 2 つ取り、野営地を制圧する";
@@ -104,6 +104,8 @@ public static class Map11Lines
     public const string RearBand = "殿が足を止めた", RearFail = "止められなかった", RearTag = "殿", HunterGone = "勇者は退いた";
     /// <summary>勇者は退いたが、拠点の外に出した隊の駒が 1 枚も生きていない（追記 4・規則は同じ勝ち B）。</summary>
     public const string HunterNarrow = "辛くも退けた";
+    /// <summary>殿が全滅した隊の札の案内（追記 2）。</summary>
+    public const string RearCardHeld = "殿・足を止めた", RearCardFail = "殿・止められなかった";
     /// <summary>勇者の駒に触れたときの点線の札（撤退の局面）。</summary>
     public const string RearPick = "殿に出す";
 

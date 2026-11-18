@@ -472,7 +472,10 @@ public static class Chapter1
         if (Rule.Lean)
         {
             // 第480期: 狩る者の盤は、勇者が来ることを頭の札で言わない（優勢から始まる）。
-            if (s.Hero.Hunter) return (title, Map11Lines.Stage13LeadHunter + "\n\n" + Map11Lines.GoalHunter);
+            // 第481期 追記 2: 内心の 1 行も外した（会話の場面 2 の最後と重なる）——目標の 1 行だけ。
+            if (s.Hero.Hunter) return (title, Map11Lines.GoalHunter);
+            // 第481期 追記 2: 1-1 の頭の札は、墓守の 1 行（会話の場面 0 と重なる）を外して、道の違いの 1 行に。
+            if (s.Id == "1-1" && Rule.Story) body = Map11Lines.Stage11Lead;
             return (title, (s.Id == "1-3" ? Map11Lines.Stage13Lead + "\n" : "") + body + (Map11Lines.Goals.TryGetValue(s.Id, out string? goal) ? "\n\n" + goal : ""));
         }
         if (s.Notes.Count > 0) body += "\n" + string.Join("\n", s.Notes.Select(n => "・" + n));   // 第476期 §2-5: 勝ち方と道の違い（その盤が持つ行）

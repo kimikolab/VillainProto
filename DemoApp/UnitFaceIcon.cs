@@ -40,6 +40,8 @@ public partial class UnitFaceIcon : Control
         ["zoto"] = new(.50f, .48f, .68f),
     };
     private static readonly Dictionary<string, Texture2D?> Faces = new(StringComparer.Ordinal);
+    /// <summary>立ち絵の中の顔（真ん中の x・y と、幅に対する顔の四角の大きさ）。会話の画面が、顔を画面の上 1／3 に置くのに使う（第481期 追記 2）。</summary>
+    internal static Vector3 FrameOf(string id) => Framing.GetValueOrDefault(id, new Vector3(.5f, .14f, .36f));
     public string? UnitId { get; private set; }
     public Texture2D? FaceTexture { get; private set; }
     public string Mark { get; private set; } = "—";

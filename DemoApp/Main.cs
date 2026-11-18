@@ -207,8 +207,9 @@ public partial class Main : Control
                 {
                     string storyText = Godot.FileAccess.GetFileAsString(storyPath);
                     okStory = StoryScript.Check(storyText, GD.Print);
-                    foreach (StoryScript.Scene scene in StoryScript.Parse(storyText, new List<string>()))
-                        GD.Print($"STORY_CHECK 　場面 {scene.No}「{scene.Title}」（{scene.When}）ふつうに読んで {StoryScene.ReadSeconds(scene, scene.No == 3 ? StoryScript.Outcomes[0] : null):F0} 秒の見積もり");
+                    var storyScenes = StoryScript.Parse(storyText, new List<string>());
+                    foreach (StoryScript.Scene scene in storyScenes)
+                        GD.Print($"STORY_CHECK 　場面 {scene.No}「{scene.Title}」（{scene.When}）ふつうに読んで {StoryScene.ReadSeconds(scene.For(StoryScript.Context.Plain(storyScenes))):F0} 秒の見積もり（全員が生きている・生還率 100% のとき）");
                 }
             }
             catch (System.Exception ex) { GD.PrintErr(ex.ToString()); okStory = false; }
