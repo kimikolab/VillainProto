@@ -40,6 +40,33 @@ public partial class Map11Main
     private string NextArrivalText()
         => WalkingFoes3D().Select(x => (int?)x.Turns).Min() is { } t ? $"（次の敵は あと {t} 刻で着く）" : "";
 
+    /// <summary>
+    /// 敵が湧いた・予備隊が出た・敵が拠点へ歩き出した（第480期 §3-3・全部のステージ）: 短い音。時計が自分で動いているあいだは視点を寄せ、
+    /// 遠い（画面 1 枚半より先）か、手で命令しているあいだは端の印を光らせるだけ。時計は止めない。
+    /// </summary>
+    private void FoeEmerged3D(Vector3 at, string name)
+    {
+        if (_cam3d is null || _radar3d is null || _linesOff) return;
+        HunterSound(ShockMarkSound.Deploy);
+        Rect2 seen = _cam3d.Seen();
+        bool visible = seen.Grow(-3f).HasPoint(new Vector2(at.X, at.Z));
+        bool near = new Vector2(at.X - _cam3d.Focus.X, at.Z - _cam3d.Focus.Z).Length() < seen.Size.X * 1.5f;
+        if (!visible && near && Map11Clock.On && Map11Clock.Running) _cam3d.FocusOn(at);
+        else if (!visible) _radar3d.Flash(at, name);
+        GD.Print($"MAP3D_FOE_EMERGED {name} visible={visible} near={near} turn={Map11Session.ShownTurn}");
+    }
+
+    private bool _seenWalkers3dInit;
+    private readonly HashSet<Map11State.Node> _seenWalkers3d = new();
+    /// <summary>待っていた敵が拠点へ歩き出したら知らせる（毎フレーム・歩いてくる敵の集まりが増えたときだけ）。</summary>
+    private void WatchWalkers3D()
+    {
+        var now = WalkingFoes3D().Select(x => x.Node).ToList();
+        if (!_seenWalkers3dInit) { _seenWalkers3dInit = true; foreach (var n in now) _seenWalkers3d.Add(n); return; }
+        foreach (Map11State.Node n in now)
+            if (_seenWalkers3d.Add(n) && !(n.FromPortal && n.Pos == St.Graph.Portal)) FoeEmerged3D(PosOf(n.Pos), n.IsReserve ? "予備隊" : n.Def.Name);
+    }
+
     internal Vector3 RadarPos(int cell) => PosOf(cell);
     /// <summary>印を重ねない四角（いま画面にあるマスの台と名札）。</summary>
     internal IEnumerable<Rect2> RadarAvoid() => _discRects3d.Concat(_plateRects3d).Concat(_signRects3d).Select(x => x.Rect);
@@ -54,6 +81,7 @@ public partial class Map11Main
         // 第479期: 遭遇・迎撃・連戦は横の札なので、盤も全体図も見せたまま。
         shown &= !CoverShown && !ClashShown;   // 遭遇の台が出ているあいだは下の場所を台が使う
         _radar3d.Visible = shown;
+        if (!St.Finished) WatchWalkers3D();
         var points = new List<List<Vector3>>();
         if (shown && !St.Finished)
             foreach (var g in WalkingFoes3D().GroupBy(x => x.Node.Def.Road))
@@ -124,6 +152,10 @@ public partial class Map3DRadar : Control
     private readonly Rect2 _bounds;
     private readonly bool _showMap;
     private readonly List<(Rect2 Rect, Vector3 World)> _hits = new();
+    private readonly List<(Vector3 World, string Text, float Left)> _flashes = new();
+    /// <summary>端の印を光らせる（第480期・画面の外で敵が湧いた・歩き出した）。3 秒ほど明滅する。</summary>
+    internal void Flash(Vector3 world, string text) => _flashes.Add((world, text, 3.0f));
+    internal int FlashCount => _flashes.Count;
     private static readonly Color Ink = Color.FromHtml("#f2ead8"), Back = new(0.04f, 0.05f, 0.06f, 0.86f), Line = Color.FromHtml("#8a7a56"),
         Mine = Color.FromHtml("#5ee0d0"), Foe = Color.FromHtml("#ff5a4a"), Gold = Color.FromHtml("#ffd874"), HeroInk = Color.FromHtml("#d08cff");
 
@@ -147,7 +179,15 @@ public partial class Map3DRadar : Control
     private Vector2 OnMap(Rect2 map, float x, float z)
         => map.Position + new Vector2((x - _bounds.Position.X) / _bounds.Size.X * map.Size.X, (z - _bounds.Position.Y) / _bounds.Size.Y * map.Size.Y);
 
-    public override void _Process(double delta) => QueueRedraw();
+    public override void _Process(double delta)
+    {
+        for (int i = _flashes.Count - 1; i >= 0; i--)
+        {
+            var f = _flashes[i];
+            if (f.Left - (float)delta <= 0) _flashes.RemoveAt(i); else _flashes[i] = (f.World, f.Text, f.Left - (float)delta);
+        }
+        QueueRedraw();
+    }
 
     public override void _Input(InputEvent e)
     {
@@ -226,9 +266,10 @@ public partial class Map3DRadar : Control
         Vector2 view = GetViewportRect().Size;
         Rect2 safe = new Rect2(70, 130, view.X - 140, view.Y - 130 - 190);
         var notes = new List<(Vector3 World, string Text, Color Color)>();
+        foreach (var f in _flashes) notes.Add((f.World, "！ " + f.Text, Mathf.PosMod(f.Left, 0.5f) > 0.25f ? Colors.White : Foe));   // 第480期: 光る印は先に並べる
         foreach (var (n, t) in walking.OrderBy(x => x.Turns).Take(3))
             notes.Add((_main.RadarPos(n.Pos), $"{n.Def.Name}　拠点まで あと {t} 刻", Foe));
-        if (st.Hero is { Cleared: false } h) notes.Add((_main.RadarPos(h.Pos), "勇者", HeroInk));
+        if (st.Hero is { Cleared: false } h) notes.Add((_main.RadarPos(h.Pos), st.Stage.Hero.Hunter ? Map11Lines.HunterAlias : "勇者", HeroInk));
         if (g.HasPortal && st.Stage.PortalGate > 0 && !st.Captured)
             notes.Add((_main.RadarPos(g.Portal), st.Stage.Hero.Hunter ? (st.Rout ? "" : $"野営地の門　中間拠点 {st.HeldOutposts.Count} ／ {st.Stage.PortalGate}") : st.GateOpen ? "砦の門が開いた" : $"砦の門　中間拠点 {st.HeldOutposts.Count} ／ {st.Stage.PortalGate}", Gold));
         notes.Add((_main.RadarPos(g.Home), "拠点", Mine));
@@ -236,6 +277,7 @@ public partial class Map3DRadar : Control
         var placed = new List<Rect2> { new(view.X - 420, 0, 420, 410) };
         foreach (var (world, text, color) in notes)
         {
+            if (text.Length == 0) continue;
             bool behind = cam.IsPositionBehind(world);
             Vector2 at = cam.UnprojectPosition(world);
             if (!behind && new Rect2(0, 0, view.X, view.Y).Grow(-40).HasPoint(at)) continue;   // 画面に見えていれば出さない

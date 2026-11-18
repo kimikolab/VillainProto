@@ -10,7 +10,7 @@ using System.Globalization;
 /// <summary>駒 1 つに見せる中身（呼ぶ側が盤から読んで渡す・駒は計算しない）。</summary>
 internal readonly record struct Map3DPieceInfo(
     string Name, string? UnitId, bool Enemy, bool Hero, int Count, double HpPercent,
-    string Note, Color NoteColor, bool Urgent, string Glyph, string Reward = "", bool Prize = false, bool Crown = false);
+    string Note, Color NoteColor, bool Urgent, string Glyph, string Reward = "", bool Prize = false, bool Crown = false, string Trait = "");
 
 /// <summary>3D の層の文字（遊ぶ UI・名札）。1920×1080 を 1280×720 に縮めても読める大きさは呼ぶ側が決める。</summary>
 internal static class Map3DFonts
@@ -432,6 +432,7 @@ public partial class Map3DPlate : Control
             BorderWidthLeft = width, BorderWidthRight = width, BorderWidthTop = width, BorderWidthBottom = width,
             CornerRadiusTopLeft = 9, CornerRadiusTopRight = 9, CornerRadiusBottomLeft = 9, CornerRadiusBottomRight = 9,
         }, box);
+        if (_info.Trait.Length > 0) FoeTraitIcon.Draw(this, new Vector2(left + 2, 2), 15, _info.Trait);   // 第480期: 特徴の印（名札の左上の角・文なし）
         Font font = Map3DFonts.Bold;
         Vector2 name = font.GetStringSize(_info.Name, fontSize: NameSize);
         float rewardWidth = _info.Reward.Length > 0 ? font.GetStringSize(_info.Reward, fontSize: RewardSize).X + 10 : 0;

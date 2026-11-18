@@ -37,6 +37,8 @@ public partial class Map11Main
     public override void _ExitTree()
     {
         if (_map3d is null) return;
+        // 第480期: 作戦マップを離れて戦闘へ行くあいだは曲を続ける。ほかの画面（題・編成）へ出るときは消す。
+        if (!Map11Session.HasPendingBattle && CampaignSession.CarriedPlayers is null) MapMusic.Stop(this);
         // 戦闘・編成の画面（2D の経路）は project.godot の基準のまま。
         Window window = GetWindow();
         window.ContentScaleSize = new Vector2I(

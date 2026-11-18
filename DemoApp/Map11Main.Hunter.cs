@@ -52,6 +52,7 @@ public partial class Map11Main
 
     private void BuildHunter3D()
     {
+        if (_map3d is not null) MapMusic.Play(this, St.Finished ? (St.Won ? MapMusic.Track.Win : MapMusic.Track.Lose) : HunterBoard && St.Rout ? MapMusic.Track.Hero : MapMusic.Track.Normal);
         if (!HunterBoard || _map3d is null) return;
         var layer = new CanvasLayer { Layer = 9, Name = "HunterLayer" };
         AddChild(layer);
@@ -61,7 +62,6 @@ public partial class Map11Main
         _hunterOver.Skip += () => _hunterSkip = true;
         // 戦闘から戻った・やり直した: もう登場を見せた通しなら、扉は吹き飛んだ後。
         if (St.Rout && Hs.Entrance) _map3d.BlowCampGate(instant: true);
-        MapMusic.Play(this, St.Rout && !St.Finished ? MapMusic.Track.Hero : MapMusic.Track.Normal);
     }
 
     private async Task HWait(double seconds)
@@ -353,6 +353,59 @@ public partial class Map11Main
     }
 }
 
+/// <summary>
+/// 敵部隊の特徴の印（第480期 §3-5・文なし）: 雷 ／ 火 ／ 毒 ／ 盾 ／ 弓 ／ 槍。暗い丸の上に色つきの形を描くだけ。
+/// 会戦の台の敵の顔と、盤の上の敵の名札が同じ絵を使う。
+/// </summary>
+internal static class FoeTraitIcon
+{
+    internal static Color ColorOf(string key) => Color.FromHtml(key switch
+    {
+        "雷" => "#ffe24a", "火" => "#ff7a2a", "毒" => "#7ad65a", "盾" => "#9fb6d6", "弓" => "#e8d9a8", "槍" => "#d7dde6", _ => "#ffffff",
+    });
+
+    internal static void Draw(CanvasItem on, Vector2 c, float r, string key)
+    {
+        if (key.Length == 0) return;
+        Color ink = ColorOf(key);
+        on.DrawCircle(c, r, new Color(0.05f, 0.05f, 0.07f, 0.96f));
+        on.DrawArc(c, r, 0, Mathf.Tau, 28, ink, Math.Max(1.5f, r * 0.13f), true);
+        float s = r / 10f;
+        Vector2 P(float x, float y) => c + new Vector2(x, y) * s;
+        switch (key)
+        {
+            case "雷":
+                on.DrawColoredPolygon(new[] { P(1.5f, -7), P(-4, 1), P(-0.5f, 1), P(-2, 7), P(4.5f, -1.5f), P(0.8f, -1.5f) }, ink);
+                break;
+            case "火":
+                on.DrawColoredPolygon(new[] { P(0, -7), P(3.2f, -2.5f), P(4.6f, 1.5f), P(3, 5), P(0, 6.5f), P(-3, 5), P(-4.6f, 1.5f), P(-2.2f, -1.5f), P(-1.2f, 1) }, ink);
+                on.DrawColoredPolygon(new[] { P(0, -0.5f), P(1.8f, 2.6f), P(0, 5), P(-1.8f, 2.6f) }, Color.FromHtml("#ffe9a8"));
+                break;
+            case "毒":
+                on.DrawColoredPolygon(new[] { P(0, -7), P(3.6f, -0.5f), P(4.2f, 2.5f), P(2.6f, 5.6f), P(0, 6.6f), P(-2.6f, 5.6f), P(-4.2f, 2.5f), P(-3.6f, -0.5f) }, ink);
+                on.DrawCircle(P(-1.4f, 2.2f), 1.3f * s, new Color(0.05f, 0.2f, 0.05f));
+                on.DrawCircle(P(1.6f, 3.6f), 0.9f * s, new Color(0.05f, 0.2f, 0.05f));
+                break;
+            case "盾":
+                on.DrawColoredPolygon(new[] { P(-4.6f, -5.5f), P(4.6f, -5.5f), P(4.6f, 0.5f), P(2.6f, 4.6f), P(0, 6.8f), P(-2.6f, 4.6f), P(-4.6f, 0.5f) }, ink);
+                on.DrawLine(P(0, -4.5f), P(0, 5), new Color(0.15f, 0.2f, 0.28f), 1.6f * s, true);
+                on.DrawLine(P(-3.4f, -1.2f), P(3.4f, -1.2f), new Color(0.15f, 0.2f, 0.28f), 1.6f * s, true);
+                break;
+            case "弓":
+                on.DrawArc(P(-2.5f, 0), 6.4f * s, -1.05f, 1.05f, 14, ink, 1.8f * s, true);
+                on.DrawLine(P(0.7f, -5.6f), P(0.7f, 5.6f), ink, 0.9f * s, true);
+                on.DrawLine(P(-5.5f, 0), P(5.8f, 0), ink, 1.3f * s, true);
+                on.DrawColoredPolygon(new[] { P(6.8f, 0), P(3.8f, -2), P(3.8f, 2) }, ink);
+                break;
+            case "槍":
+                on.DrawLine(P(-5.2f, 5.2f), P(3, -3), ink, 1.7f * s, true);
+                on.DrawColoredPolygon(new[] { P(6.2f, -6.2f), P(0.8f, -4.2f), P(4.2f, -0.8f) }, ink);
+                on.DrawLine(P(-0.6f, -1.6f), P(1.6f, 0.6f), ink, 1.2f * s, true);
+                break;
+        }
+    }
+}
+
 /// <summary>狩る者の演出の 2D の層: 閃光・落雷・帯・目の印・「生還」・勇者の HP の棒・入力の止め。描くだけ。</summary>
 public partial class HunterOverlay : Control
 {
@@ -548,9 +601,9 @@ internal static class MapMusic
         if (track == Current) return;
         GD.Print($"MAP_MUSIC {Current} → {track} file={(Has(track) ? Files[track] : "（無い——黙る）")}");
         Current = track;
-        if (!from.IsInsideTree()) return;
         if (_root is null || !GodotObject.IsInstanceValid(_root))
         {
+            if (!from.IsInsideTree()) return;
             _root = new Node { Name = "MapMusic" };
             from.GetTree().Root.CallDeferred(Node.MethodName.AddChild, _root);
         }

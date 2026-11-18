@@ -43,6 +43,7 @@ public partial class Map11Main
     /// <summary>台の左右（検査が読む）: 味方の台と敵の台の四角（古い UI の座標）。</summary>
     internal (Rect2 Own, Rect2 Foe) ClashSides => (_clashOwn.GetGlobalRect(), _clashFoe.GetGlobalRect());
     internal bool ClashFoeCrown => _clashFoeLead.Crowned;
+    internal string ClashFoeTrait => _clashFoeLead.TraitKey;
     private Button _clashA = null!, _clashB = null!, _clashC = null!, _clashPrev = null!, _clashNext = null!;
     private MeshInstance3D? _ringOwn, _ringFoe, _ringBack;
     private volatile int[]? _oddsFell;
@@ -208,7 +209,8 @@ public partial class Map11Main
         string foeName = hunter ? Map11Lines.HunterName : node.IsHero ? "勇者" : node.Def.Name;
         _clashHold.Visible = false;
         _clashOwnLead.Set(own.Where(u => u.IsAlive).OrderBy(u => u.Slot).Select(u => u.Def).FirstOrDefault(), s.Label, $"{own.Count(u => u.IsAlive)} 枚");
-        _clashFoeLead.Set(foe.Where(u => u.IsAlive).OrderBy(u => u.Slot).Select(u => u.Def).FirstOrDefault(), foeName, $"{foe.Count(u => u.IsAlive)} 体", crown: node.Def.Strong || hunter);
+        _clashFoeLead.Set(foe.Where(u => u.IsAlive).OrderBy(u => u.Slot).Select(u => u.Def).FirstOrDefault(), foeName, $"{foe.Count(u => u.IsAlive)} 体", crown: node.Def.Strong || hunter,
+            trait: node.IsHero ? "" : Map11Lines.FoeTraitOf(foe.Where(u => u.IsAlive).Select(u => u.Def)));
         _clashSay.Visible = false;
         int gold = St.Stage.Gold.On && node.Def.Gold >= 0 ? St.KillGold(node) : 0;
         _clashGold.Text = gold > 0 ? $"賞金 ＋{gold}" : "";
@@ -424,6 +426,10 @@ public partial class Map11Main
                 {
                     var riskyDefs = alive.Where(u => risky.Contains(u.Slot)).OrderByDescending(u => fell[u.Slot]).ThenBy(u => u.Slot).Select(u => u.Def).ToList();
                     said = Map11Lines.OddsLine(alive[0].Def, _oddsWins, OddsGood, OddsEven, riskyDefs).Text;
+                    // 第480期 §3-5: 特徴のある敵に初めて当たるときは、勝ち目の 1 行の代わりに見分けの 1 行（雷 ／ 火 ／ 毒 ／ 盾 ／ 弓 ／ 槍）。
+                    if (_clashNode is { IsHero: false } tn && Map11Lines.FoeTraitOf(St.PeekFoe(tn).Where(u => u.IsAlive).Select(u => u.Def)) is { Length: > 0 } trait
+                        && Map11Lines.FoeTraitLines.TryGetValue(trait, out string? traitLine) && Chapter1.Active && Chapter1.Rule.Lean && Map11Lines.Mark("foe." + trait))
+                        said = traitLine;
                     // 第480期: 勇者との会戦。自分から入った殿は「ここは任せろ。行け！」・追いつかれたとき（初回）は「……無理だ。引け！」。
                     if (HunterBoard && _clashNode is { IsHero: true })
                     {
@@ -680,8 +686,22 @@ public partial class ClashLead : VBoxContainer
         foreach (Vector2 tip in new[] { shape[1], shape[3], shape[5] }) _crown.DrawCircle(tip, 4, Color.FromHtml("#fff1c4"));
     }
 
-    internal void Set(UnitDef? lead, string name, string count, bool down = false, bool crown = false)
+    private readonly Control _traitMark = new() { MouseFilter = MouseFilterEnum.Ignore, Visible = false };
+    private string _trait = "";
+    /// <summary>特徴の印の鍵（検査が読む）。</summary>
+    internal string TraitKey => _traitMark.Visible ? _trait : "";
+
+    internal void Set(UnitDef? lead, string name, string count, bool down = false, bool crown = false, string trait = "")
     {
+        if (_traitMark.GetParent() is null)
+        {
+            _traitMark.SetAnchorsPreset(LayoutPreset.FullRect);
+            _traitMark.Draw += () => FoeTraitIcon.Draw(_traitMark, new Vector2(14, 14), 20, _trait);
+            _face.AddChild(_traitMark);
+        }
+        _trait = trait;
+        _traitMark.Visible = trait.Length > 0 && lead is not null;
+        _traitMark.QueueRedraw();
         if (_crown.GetParent() is null)
         {
             _crown.SetAnchorsPreset(LayoutPreset.FullRect);

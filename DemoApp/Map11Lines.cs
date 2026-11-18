@@ -123,6 +123,23 @@ public static class Map11Lines
         return hand.FirstOrDefault(d => d.Name.EndsWith(speaker, StringComparison.Ordinal)) ?? hand.FirstOrDefault();
     }
 
+    /// <summary>
+    /// 敵部隊の特徴の印の鍵（第480期 §3-5・表示だけ）: 雷 ／ 火 ／ 毒 ／ 槍 ／ 弓 ／ 盾。どれでもなければ空。
+    /// 見るのは駒の定義の札と Id だけ（敵の帯電・敵の火の粉・前の瘴気・敵の突き飛ばし ／ 狙撃手 2 枚以上 ／ 重装兵 2 枚以上）。
+    /// </summary>
+    public static string FoeTraitOf(IEnumerable<UnitDef> units)
+    {
+        var list = units.ToList();
+        bool Has(TraitId t) => list.Any(u => u.Traits.Contains(t));
+        if (Has(TraitId.ShockFoe)) return "雷";
+        if (Has(TraitId.CinderFoe) || Has(TraitId.Cinder)) return "火";
+        if (Has(TraitId.MiasmaFront)) return "毒";
+        if (Has(TraitId.ShoveFoe)) return "槍";
+        if (list.Count(u => u.Id == EnemyCatalog.Archer.Id || u.Id == EnemyCatalog.FireArcher.Id) >= 2) return "弓";
+        if (list.Count(u => u.Id == EnemyCatalog.Warden.Id) >= 2) return "盾";
+        return "";
+    }
+
     // ---- 言ったことの覚え（場面を読み直しても残す・1 章を 1-1 から始め直したら捨てる） ----
     private static readonly HashSet<string> Said = new();
     public static bool Mark(string key) => Said.Add(key);

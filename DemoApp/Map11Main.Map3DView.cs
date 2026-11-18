@@ -239,7 +239,8 @@ public partial class Map11Main
                 piece.Show(new Map3DPieceInfo(bounty ? FoeBadgeHead(foe) : FoeBadgeName(foe), Representative(foe)?.Id, true, foe.IsHero,
                     ((MapUnitBadge)pick.Button).Count, NodeHpPercent(foe), pick.Marker.Note, pick.Marker.NoteColor,
                     pick.Marker.Note.Length > 0 && pick.Marker.NoteColor == UiKit.Hurt, WaveMark(foe.Def.Name),
-                    bounty ? $"賞金 ＋{St.KillGold(foe)}" : "", bounty && foe.Def.Tag.Length > 0, Crown: foe.Def.Strong));
+                    bounty ? $"賞金 ＋{St.KillGold(foe)}" : "", bounty && foe.Def.Tag.Length > 0, Crown: foe.Def.Strong,
+                    Trait: foe.IsHero ? "" : Map11Lines.FoeTraitOf(St.PeekFoe(foe).Where(u => u.IsAlive).Select(u => u.Def))));
             }
             else
             {
@@ -267,7 +268,14 @@ public partial class Map11Main
             }
             // ---- 動き: 隣のマスへは道に沿って歩く。最初の引き直し・現れた駒・ワープは滑らせない。 ----
             bool known = _pieceCell.TryGetValue(piece, out int from);
-            if (_firstRefresh || !known) piece.Snap(at);
+            // 第480期 §3-3: 湧いた部隊・出発した予備隊は、敵の拠点の中から歩いて出てくる（短い音・視点か端の印・時計は止めない）。
+            if (!_firstRefresh && !known && pick.Foe is { FromPortal: true, IsHero: false } born && born.Pos == St.Graph.Portal && _layout3d.Sheet is { } bornSheet)
+            {
+                piece.Snap(bornSheet.Camp + new Vector3(-1.5f, 0, 0));
+                piece.Walk(new[] { at }, 0.9f);
+                FoeEmerged3D(at, born.IsReserve ? "予備隊" : born.Def.Name);
+            }
+            else if (_firstRefresh || !known) piece.Snap(at);
             else if (from != cell) piece.Walk(RoadBetween(from, cell, at));
             else piece.Walk(new[] { at });
             _pieceCell[piece] = cell;
