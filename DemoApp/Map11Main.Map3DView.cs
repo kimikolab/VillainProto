@@ -796,13 +796,23 @@ public partial class Map11Main
         }
         // 点は行き先の向きへ流れる。
         float phase = _clock3d * 1.5f % gap;
+        // 第480期 追記 5: 殿の道は勇者の赤い点線と同じ道を逆に走るので、道の外側へずらして少し大きく見せる（重なって読めなかった）。
+        bool rearRoute = need > 0 && St.Rout && St.Hero is { } routeHero && pick is not null && pick.Dest.Id == routeHero.Pos
+            && (RearHover is not null || Map11Session.IsRear(_selected));
         for (int i = 0; i < _routeDots3d.Count; i++)
         {
             _routeDots3d[i].Visible = i < need;
             if (i >= need) continue;
             float at = i * gap + phase;
-            _routeDots3d[i].Position = Map3DLayout.Along(points, at) + new Vector3(0, 0.24f, 0);
-            float edge = Mathf.Clamp(Math.Min(at, length - at) / 0.8f, 0.2f, 1f);
+            Vector3 side = Vector3.Zero;
+            if (rearRoute)
+            {
+                Vector3 along = Map3DLayout.Along(points, Math.Min(length, at + 0.3f)) - Map3DLayout.Along(points, Math.Max(0, at - 0.3f));
+                along.Y = 0;
+                if (along.LengthSquared() > 0.0001f) side = Vector3.Up.Cross(along.Normalized()) * 0.85f;
+            }
+            _routeDots3d[i].Position = Map3DLayout.Along(points, at) + side + new Vector3(0, rearRoute ? 0.30f : 0.24f, 0);
+            float edge = Mathf.Clamp(Math.Min(at, length - at) / 0.8f, 0.2f, 1f) * (rearRoute ? 1.35f : 1f);
             _routeDots3d[i].Scale = new Vector3(edge, 1, edge);
         }
     }
