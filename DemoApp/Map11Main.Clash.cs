@@ -341,6 +341,12 @@ public partial class Map11Main
         _clashBand.Visible = true;
         _clashOdds.Visible = false;
         _clashSay.Visible = false;
+        // 第481期の追記: 勇者との戦闘の後、勇者が 1 行（足を止められた ／ 止められなかった・通しに 1 回ずつ）。
+        if (HunterBoard && snap.Node.IsHero && !line.Won)
+        {
+            if (rear) HunterSayOnce("1-3.hunter.held", Map11Lines.HunterHeld);
+            else HunterSayOnce("1-3.hunter.slipped", Map11Lines.HunterSlipped);
+        }
         int gold = St.Gold - snap.Gold;
         _clashGold.Text = gold > 0 ? $"賞金 ＋{gold}" : "";
         _clashGold.Visible = gold > 0;

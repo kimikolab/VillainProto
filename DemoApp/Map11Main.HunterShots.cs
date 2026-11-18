@@ -175,7 +175,7 @@ public partial class Map11Main
                     await Wait(1.1);
                     Req(_hunterOver!.BandText == HunterGoneText, $"退いた: 帯は「{Map11Lines.HunterGone}」（{_hunterOver.BandText}）・勇者 HP {hpBefore} → {St.Hero.HpNow}・曲の口 {MapMusic.Current}");
                     await Shot("勇者は退いた");
-                    for (int f = 0; f < 3000 && HunterBusy; f++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+                    for (int f = 0; f < 20000 && HunterBusy; f++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
                     await Wait(0.6);
                     Req(_resultOverlay.Visible && _resultTitle.Text == HunterGoneText, $"退いた: 結果の窓（{_resultTitle.Text} ／ {_resultBody.Text.Replace("\n", " ・ ")}）");
                     await Shot("結果の窓_勇者は退いた");

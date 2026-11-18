@@ -107,6 +107,21 @@ public static class Map11Lines
     /// <summary>勇者の駒に触れたときの点線の札（撤退の局面）。</summary>
     public const string RearPick = "殿に出す";
 
+    // ---- 作戦中の勇者と主人公のセリフ（第481期の追記・ポン 2026-11-18「作戦中にも勇者のセリフ・主人公のセリフがあって良い」・文はすべて仮） ----
+    // 出すのは通しに 1 回ずつ・盤の端の吹き出し（勇者は顔つき・主人公は顔なしの内心）・時計は止めない。いつ出すかは画面が盤に聞く。
+    /// <summary>勇者: 殿が足を止めた戦闘の後 ／ 止められなかった（追いつかれた・殿が持たなかった）戦闘の後 ／ 退くとき。</summary>
+    public const string HunterHeld = "……足を止められたか。面白い。", HunterSlipped = "時間稼ぎにもならない。——次だ。", HunterLeaving = "……ここまでだ。顔は覚えた。";
+    /// <summary>主人公の内心（鍵 → 文）。1-1 で初めて戦闘に勝った ／ 1-2 で門が開いた ／ 1-3 で殿が足を止めた ／ 1-3 で最初の隊が拠点へ戻った ／ 勇者が退いた。</summary>
+    public const string InnerWin11 = "1-1.inner.win", InnerGate12 = "1-2.inner.gate", InnerHeld13 = "1-3.inner.held", InnerHome13 = "1-3.inner.home", InnerGone13 = "1-3.inner.gone";
+    public static readonly IReadOnlyDictionary<string, string> InnerLines = new Dictionary<string, string>
+    {
+        [InnerWin11] = "噛み合った。——使えるじゃないか。",
+        [InnerGate12] = "門が開いた。ここからが本番だ。",
+        [InnerHeld13] = "稼いだ時間だ。一歩も無駄にするな。",
+        [InnerHome13] = "一隊、戻った。……残りも連れて帰る。",
+        [InnerGone13] = "退かせただけだ。倒したわけじゃない。",
+    };
+
     // ---- 敵の見分け（第480期 §3-5・初めて当たるときに味方が 1 行・仮） ----
     /// <summary>特徴の印の鍵 → セリフ。鍵は <c>雷 ／ 火 ／ 毒 ／ 盾 ／ 弓 ／ 槍</c>。</summary>
     public static readonly IReadOnlyDictionary<string, string> FoeTraitLines = new Dictionary<string, string>

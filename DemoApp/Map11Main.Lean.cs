@@ -119,6 +119,26 @@ public partial class Map11Main
         return true;
     }
 
+    /// <summary>主人公の内心を 1 度だけ出す（第481期の追記・顔なしの吹き出し・1 章の 3D だけ）。言えたか。</summary>
+    private bool InnerOnce(string key)
+    {
+        if (_hud3d is null || !Chapter1.Active || !Chapter1.Rule.Lean || _linesOff || Map11Lines.WasSaid(key)) return false;
+        Map11Lines.Mark(key);
+        _hud3d.SayInner($"（{Map11Lines.InnerLines[key]}）", Map11Lines.Seconds);
+        GD.Print($"MAP3D_SAY key={key} who=— text={Map11Lines.InnerLines[key]}");
+        return true;
+    }
+
+    /// <summary>勇者の 1 行を 1 度だけ出す（第481期の追記・顔つきの吹き出し・名札は「ライゼル」）。言えたか。</summary>
+    private bool HunterSayOnce(string key, string text)
+    {
+        if (_hud3d is null || !HunterBoard || _linesOff || St.Stage.Hero.Unit is not { } hero || Map11Lines.WasSaid(key)) return false;
+        Map11Lines.Mark(key);
+        _hud3d.Say(hero, $"「{text}」", Map11Lines.Seconds, Map11Lines.HunterShort);
+        GD.Print($"MAP3D_SAY key={key} who={Map11Lines.HunterShort} text={text}");
+        return true;
+    }
+
     /// <summary>セリフを出さない（絵の口・レイアウトの検査——器具が盤を進める通し。検査が自分で出すときは <see cref="SayForCheck"/>）。</summary>
     private static bool _linesOff;
 
@@ -142,6 +162,8 @@ public partial class Map11Main
                         && St.Nodes.SelectMany(r => r).Any(n => !n.Cleared && n.Pos == d.Dest.Id && n.Def.Name == MapStage.Stage11Ch476GateName);
             gate |= _encounterOverlay.Visible && Map11Session.PendingNode is { } pn && pn.Def.Name == MapStage.Stage11Ch476GateName;
             if (gate && SayOnce(Map11Lines.Gate11)) return;
+            // 第481期の追記: 初めて戦闘に勝った後の、主人公の内心。
+            if (!Map11Session.TurnRunning && !ClashShown && Map11Session.BattleLog.Any(l => l.Won) && InnerOnce(Map11Lines.InnerWin11)) return;
         }
         else if (id == "1-2")
         {
@@ -149,6 +171,13 @@ public partial class Map11Main
             int pass = St.Graph.Cells.Where(c => c.Kind == MapGraph.Kind.Outpost && PlaceName(c.Id) == "関所").Select(c => c.Id).DefaultIfEmpty(-1).First();
             if (pass >= 0 && St.HeldOutposts.Contains(pass) && SayOnce(Map11Lines.Pass12)) return;
             if (pass >= 0 && St.Stage.PortalGate > 0 && St.GateOpen && !St.HeldOutposts.Contains(pass) && !Map11Lines.WasSaid(Map11Lines.Pass12) && SayOnce(Map11Lines.NoPass12)) return;
+            if (St.Stage.PortalGate > 0 && St.GateOpen && !Map11Session.TurnRunning && !RelicPickShown && InnerOnce(Map11Lines.InnerGate12)) return;   // 第481期の追記
+        }
+        // 第481期の追記: 撤退の局面の主人公の内心（殿が足を止めた ／ 最初の隊が拠点へ戻った）。登場の演出と会戦の台のあいだは待つ。
+        else if (id == "1-3" && HunterBoard && St.Rout && Hs.Stepped && !HunterBusy && !ClashShown)
+        {
+            if (St.HunterHolds > 0 && InnerOnce(Map11Lines.InnerHeld13)) return;
+            if (Hs.Home.Count > 0 && !Map11Session.TurnRunning && InnerOnce(Map11Lines.InnerHome13)) return;
         }
         // 第480期 追記 4: 横の辺は行ける道（中間拠点を初めて取ったときに 1 回）。
         else if (id == "1-3" && HunterBoard && !St.Rout && St.HeldOutposts.Count >= 1 && !Map11Session.TurnRunning && SayOnce(Map11Lines.Cross13)) return;

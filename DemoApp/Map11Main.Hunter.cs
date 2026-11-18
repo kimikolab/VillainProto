@@ -233,6 +233,13 @@ public partial class Map11Main
             MapStagingAudio.Play(this, MapStageCue.Kind.Open);
             MapMusic.Play(this, MapMusic.Track.Win);
             await HWait(1.9);
+            // 第481期の追記: 退く勇者の 1 行 → 主人公の内心（各 2.5 秒・押すと飛ばせる）。
+            if (_hud3d is not null && HunterSayOnce("1-3.hunter.leaving", Map11Lines.HunterLeaving))
+            {
+                await HWait(2.5);
+                if (InnerOnce(Map11Lines.InnerGone13)) await HWait(2.5);
+                _hud3d.HideSay();
+            }
         }
         catch (Exception e) { GD.PrintErr($"MAP3D_HUNTER_ROUTED_FAILED {e}"); }
         finally
