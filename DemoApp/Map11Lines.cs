@@ -73,6 +73,41 @@ public static class Map11Lines
     /// <summary>1-3 の頭の札の頭に足す主人公の内心（第478期は 1-2 の踏破の窓にあった予告の 1 行・仮）。</summary>
     public const string Stage13Lead = "砦は取った。——王国は、勇者を差し向けた。";
 
+    // ---- 1-3「狩る者」（第480期・文と名前はすべて仮・表示だけ——規則は 1 つも読まない） ----
+    /// <summary>勇者の名前（登場の帯・会戦の台の名札・戦闘の名札）。</summary>
+    public const string HunterName = "白雷の勇者　ライゼル";
+    /// <summary>盤の上の短い名札。</summary>
+    public const string HunterShort = "ライゼル";
+    /// <summary>味方が呼ぶ名前。</summary>
+    public const string HunterAlias = "狩る者";
+    /// <summary>勇者の技の名前（全体攻撃 ／ 毎ターン攻 ＋11）。</summary>
+    public const string HunterStrike = "白雷", HunterCharge = "帯電";
+    /// <summary>戦闘の名札の下の説明（<c>UnitDef.PlusText</c> の写しに入れる・表示だけ）。</summary>
+    public const string HunterPlus = "「白雷」全員を撃つ。「帯電」毎ターン攻撃力が 11 上がる。転ばず痺れない。傷は戦いをまたいで残る";
+    /// <summary>狩る者の盤の頭の札（勇者が来ることは言わない——優勢から始まる）。</summary>
+    public const string Stage13LeadHunter = "砦は取った。あとは、逃げた残党を片付けるだけだ。";
+    public const string GoalHunter = "目標　中間拠点を 2 つ取り、野営地を制圧する";
+    /// <summary>登場のセリフ（話す駒がいなければ先頭の駒）と、主人公の内心。</summary>
+    public const string HunterWarnSpeaker = "ヒサ", HunterWarn = "……逃げるなら、今だぞ", HunterInner = "捨て駒は、こっちだったか";
+    /// <summary>撤退の局面の目標の札（赤）。</summary>
+    public const string GoalRout = "目標　生きて拠点へ戻れ";
+    /// <summary>会戦の台: 追いつかれた（初回）／ 自分から入った殿。</summary>
+    public const string HunterCaught = "……無理だ。引け！", HunterRear = "ここは任せろ。行け！";
+    /// <summary>戦闘から戻った帯（負けたが足を止めた）と、勇者が退いた帯（HP が半分を割った ／ 0 になった——どちらも「退いた」）。</summary>
+    public const string RearBand = "殿", HunterGone = "勇者は退いた";
+
+    // ---- 敵の見分け（第480期 §3-5・初めて当たるときに味方が 1 行・仮） ----
+    /// <summary>特徴の印の鍵 → セリフ。鍵は <c>雷 ／ 火 ／ 毒 ／ 盾 ／ 弓 ／ 槍</c>。</summary>
+    public static readonly IReadOnlyDictionary<string, string> FoeTraitLines = new Dictionary<string, string>
+    {
+        ["雷"] = "雷だ。固まるな",
+        ["火"] = "燃やされるぞ",
+        ["毒"] = "毒だ。長引かせるな",
+        ["盾"] = "硬い。手数が要る",
+        ["弓"] = "後ろを狙ってくる",
+        ["槍"] = "押し込まれるな",
+    };
+
     /// <summary>金のセリフを出す金の額。</summary>
     public const int GoldLine = 20;
     /// <summary>吹き出しを出しておく秒数。</summary>

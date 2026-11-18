@@ -1238,6 +1238,14 @@ public sealed class MapStage
     {
         UnitDef hero = EnemyCatalog.HeroMap;
         if (heroHp != 100 || heroAtk != 100) hero = hero.WithStats(MapFoeScale.Mul(hero.MaxHp, heroHp), MapFoeScale.Mul(hero.Attack, heroAtk));
+        // 名前と技名（追記 1・表示だけ——Id・数値・特性は 1 つも変えない）。
+        hero = new UnitDef
+        {
+            Id = hero.Id, Name = Map11Lines.HunterName, MaxHp = hero.MaxHp, Attack = hero.Attack, Speed = hero.Speed, Traits = hero.Traits,
+            Pattern = hero.Pattern, Advances = hero.Advances, Actions = hero.Actions,
+            PlusText = Map11Lines.HunterPlus, MinusText = hero.MinusText, Flavor = hero.Flavor, ReapLineCapPermil = hero.ReapLineCapPermil,
+            LeakStartPermil = hero.LeakStartPermil, LeakTurnPermil = hero.LeakTurnPermil, LeakFloorPermil = hero.LeakFloorPermil,
+        };
         // 中間拠点に重ねる部隊（`stack` − 1 部隊ずつ・徴募兵・待ち構える・区画の番号は経路の動く区画の末尾）。1 刻 1 戦なので、重ねた数だけ中間拠点を取るのが遅れる。
         Map11.RoadNode[] Extra(int lane, int from) => Enumerable.Range(0, Math.Max(0, stack - 1)).Select(k => Wait(Band(lane, from + k, "band_levy", 0))).ToArray();
         MapStage b = Stage13;

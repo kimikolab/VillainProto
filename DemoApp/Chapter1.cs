@@ -468,7 +468,11 @@ public static class Chapter1
         var (title, body) = Rule.Story && Tales470.TryGetValue(s.Id, out Tale? t) ? ($"1 章 ・ {s.Id} {t.Heading}", t.Body) : IntroText(s);   // 第470期 §1-4
         // 第479期（`Lean`）: 勝ち方や道の違いの説明・敵の倍率の行は出さない。物語の文（主人公の内心）と目標の 1 行だけ。
         if (Rule.Lean)
+        {
+            // 第480期: 狩る者の盤は、勇者が来ることを頭の札で言わない（優勢から始まる）。
+            if (s.Hero.Hunter) return (title, Map11Lines.Stage13LeadHunter + "\n\n" + Map11Lines.GoalHunter);
             return (title, (s.Id == "1-3" ? Map11Lines.Stage13Lead + "\n" : "") + body + (Map11Lines.Goals.TryGetValue(s.Id, out string? goal) ? "\n\n" + goal : ""));
+        }
         if (s.Notes.Count > 0) body += "\n" + string.Join("\n", s.Notes.Select(n => "・" + n));   // 第476期 §2-5: 勝ち方と道の違い（その盤が持つ行）
         return s.FoeScale.Active ? (title, body + "\n" + s.FoeScale.IntroLine) : (title, body);
     }

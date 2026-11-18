@@ -31,7 +31,13 @@ public partial class Map11Main
     private PanelContainer _clashPanel = null!;
     private ClashBoard _clashFoe = null!, _clashOwn = null!;
     private ClashLead _clashFoeLead = null!, _clashOwnLead = null!;
-    private Label _clashOdds = null!, _clashGold = null!, _clashBand = null!, _clashSay = null!;
+    private Label _clashOdds = null!, _clashGold = null!, _clashBand = null!, _clashSay = null!, _clashHold = null!;
+    /// <summary>足止めの印（第480期・勇者との会戦の台だけ・検査と遊ぶ口が読む）。</summary>
+    internal string ClashHoldText => _clashHold.Visible ? _clashHold.Text : "";
+    internal string ClashBandText => _clashBand.Visible ? _clashBand.Text : "";
+    internal bool ClashBackShown => _clashB.Visible;
+    private volatile int _oddsHeld = -1;
+    private static int _clashHoldsBefore;
     /// <summary>台のセリフ（検査と遊ぶ口が読む）。</summary>
     internal string ClashSayText => _clashSay.Visible ? _clashSay.Text : "";
     /// <summary>台の左右（検査が読む）: 味方の台と敵の台の四角（古い UI の座標）。</summary>
@@ -107,6 +113,10 @@ public partial class Map11Main
         _clashOdds = UiKit.Text("", 34, GoldColor);
         _clashOdds.HorizontalAlignment = HorizontalAlignment.Center;
         mid.AddChild(_clashOdds);
+        _clashHold = UiKit.Text("", 24, GoldColor);
+        _clashHold.HorizontalAlignment = HorizontalAlignment.Center;
+        _clashHold.Visible = false;
+        mid.AddChild(_clashHold);
         var info = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
         info.AddThemeConstantOverride("separation", 16);
         _clashGold = UiKit.Text("", 22, Color.FromHtml("#ffd874"));
@@ -175,6 +185,7 @@ public partial class Map11Main
         _clashA.Text = mode == ClashMode.Siege ? "続けて戦う" : "戦う";
         _clashB.Text = mode == ClashMode.Siege ? "引いて待つ" : "引き返す";
         _clashB.Visible = mode == ClashMode.Siege || (mode == ClashMode.Encounter && St.Stage.EncounterRetreat && !Map11Session.PendingIntercept);
+        if (HunterBoard && node.IsHero) _clashB.Visible = false;   // 第480期: 勇者との会戦に「引き返す」は無い（規則は `Map11State.FacingHunter`）
         _clashPrev.Visible = _clashNext.Visible = mode == ClashMode.Intercept && _clashPicks.Count > 1;
         _clashC.Visible = mode == ClashMode.Intercept && Map11Session.InterceptBreak && Enumerable.Range(0, St.Squads.Length).Any(St.CanReform);
         _clashA.Visible = true;
@@ -193,9 +204,11 @@ public partial class Map11Main
         var links = Map11Relations.Of(own.Where(u => u.IsAlive).GroupBy(u => u.Slot).ToDictionary(g => g.Key, g => g.First().Def));
         _clashOwn.Set(ownSeats, links);
         _clashFoe.Set(SeatsOf(foe, own: false), null);
-        string foeName = node.IsHero ? "勇者" : node.Def.Name;
+        bool hunter = HunterBoard && node.IsHero;
+        string foeName = hunter ? Map11Lines.HunterName : node.IsHero ? "勇者" : node.Def.Name;
+        _clashHold.Visible = false;
         _clashOwnLead.Set(own.Where(u => u.IsAlive).OrderBy(u => u.Slot).Select(u => u.Def).FirstOrDefault(), s.Label, $"{own.Count(u => u.IsAlive)} 枚");
-        _clashFoeLead.Set(foe.Where(u => u.IsAlive).OrderBy(u => u.Slot).Select(u => u.Def).FirstOrDefault(), foeName, $"{foe.Count(u => u.IsAlive)} 体", crown: node.Def.Strong);
+        _clashFoeLead.Set(foe.Where(u => u.IsAlive).OrderBy(u => u.Slot).Select(u => u.Def).FirstOrDefault(), foeName, $"{foe.Count(u => u.IsAlive)} 体", crown: node.Def.Strong || hunter);
         _clashSay.Visible = false;
         int gold = St.Stage.Gold.On && node.Def.Gold >= 0 ? St.KillGold(node) : 0;
         _clashGold.Text = gold > 0 ? $"賞金 ＋{gold}" : "";
@@ -208,20 +221,25 @@ public partial class Map11Main
         var ownCopy = own.Where(u => u.IsAlive).Select(Map11State.CloneForOdds).ToList();
         var foeCopy = foe.Where(u => u.IsAlive).Select(Map11State.CloneForOdds).ToList();
         if (ownCopy.Count == 0 || foeCopy.Count == 0) { _clashOdds.Text = ""; return; }
+        int holdNeed = hunter ? St.Stage.Hero.HoldTurns : 0;
+        _oddsHeld = -1;
         System.Threading.Tasks.Task.Run(() =>
         {
-            int wins = 0;
+            int wins = 0, held = 0;
             var fell = new int[9];
             try
             {
                 for (int k = 0; k < OddsRuns; k++)
                 {
                     var mine = ownCopy.Select(Map11State.CloneForOdds).ToList();
-                    if (BattleEngine.Run(mine, foeCopy.Select(Map11State.CloneForOdds).ToList(), 7919 * k + 13, verbose: false).PlayerWon) wins++;
+                    BattleResult run = BattleEngine.Run(mine, foeCopy.Select(Map11State.CloneForOdds).ToList(), 7919 * k + 13, verbose: false);
+                    if (run.Turns >= holdNeed) held++;   // 第480期: 足止めに要るターン数以上続いた回数（勇者との会戦だけ読む）
+                    if (run.PlayerWon) wins++;
                     foreach (UnitState u in mine) if (!u.IsAlive && u.Slot >= 0 && u.Slot < fell.Length) fell[u.Slot]++;   // 戦闘の終わりに倒れていた駒を数えるだけ
                 }
             }
             catch (Exception) { wins = -1; }
+            _oddsHeld = holdNeed > 0 ? held : -1;
             _oddsFell = fell;
             _oddsWins = wins;
             _oddsToken = token;
@@ -278,7 +296,8 @@ public partial class Map11Main
     {
         if (_clash is null || Map11Session.PendingNode is not { } node || Map11Session.PendingSquad < 0) { _clashFought = null; return; }
         int squad = Map11Session.PendingSquad;
-        _clashFought = new ClashSnap(squad, node, Map11Session.BattleLog.Count, St.Gold, St.Squads[squad].Label, node.IsHero ? "勇者" : node.Def.Name,
+        _clashHoldsBefore = St.HunterHolds;
+        _clashFought = new ClashSnap(squad, node, Map11Session.BattleLog.Count, St.Gold, St.Squads[squad].Label, HunterBoard && node.IsHero ? Map11Lines.HunterName : node.IsHero ? "勇者" : node.Def.Name,
             SeatsOf(St.PeekSquad(squad), own: true), SeatsOf(St.PeekFoe(node), own: false), St);
     }
 
@@ -287,6 +306,8 @@ public partial class Map11Main
     {
         ClashSnap? snap = _clashFought;
         _clashFought = null;
+        // 第480期: 勇者が退いた（HP が半分を割った ／ 0 になった）——結果の前に、門へ戻る勇者と帯「勇者は退いた」。
+        if (HunterBoard && St.Finished && St.HunterDriven && !Hs.Routed && _hunterOver is not null && !_linesOff) { _ = HunterRouted(); return; }
         if (_clash is null || snap is null || !ReferenceEquals(snap.State, St) || Map11Session.BattleLog.Count <= snap.Logs || St.Finished) { Pump(); return; }
         Map11Session.Line line = Map11Session.BattleLog[^1];
         // 戦う前の席に、いまの姿（生きているか・HP）を重ねる。隊から外れた駒は倒れた駒。
@@ -296,7 +317,10 @@ public partial class Map11Main
             ? seat with { Hp = u.Hp, Max = Math.Max(1, u.MaxHp), Alive = true } : seat with { Hp = 0, Alive = false }).ToList();
         List<UnitState> foeNow = snap.Node.Units ?? new List<UnitState>();
         var foe = snap.Foe.Select(seat => !snap.Node.Cleared && foeNow.FirstOrDefault(u => u.Slot == seat.Slot && u.IsAlive) is { } u
-            ? seat with { Hp = u.Hp, Max = Math.Max(1, u.MaxHp), Alive = true } : seat with { Hp = 0, Alive = false }).ToList();
+            ? seat with { Hp = u.Hp, Max = Math.Max(1, u.MaxHp), Alive = true }
+            // 第480期: 勇者は駒の列を持たずに残 HP だけを持ち越す（`Node.HpNow`）——抜いていなければ生きている。
+            : snap.Node.IsHero && !snap.Node.Cleared ? seat with { Hp = snap.Node.HpNow, Max = Math.Max(1, snap.Node.DefMaxHp), Alive = true }
+            : seat with { Hp = 0, Alive = false }).ToList();
         _clashMode = ClashMode.Result;
         _clashSquad = snap.Squad;
         _clashNode = snap.Node;
@@ -304,8 +328,11 @@ public partial class Map11Main
         _clashFoe.Set(foe, null);
         _clashOwnLead.Set(own.Where(x => x.Alive).Select(x => x.Def).FirstOrDefault() ?? own.Select(x => x.Def).FirstOrDefault(), snap.OwnName, $"{own.Count(x => x.Alive)} 枚", down: !own.Any(x => x.Alive));
         _clashFoeLead.Set(foe.Where(x => x.Alive).Select(x => x.Def).FirstOrDefault() ?? foe.Select(x => x.Def).FirstOrDefault(), snap.FoeName, $"{foe.Count(x => x.Alive)} 体", down: !foe.Any(x => x.Alive), crown: snap.Node.Def.Strong);
-        _clashBand.Text = line.Won ? "勝ち" : "負け";
-        _clashBand.AddThemeColorOverride("font_color", line.Won ? Color.FromHtml("#71d7a1") : Color.FromHtml("#ff6b5e"));
+        // 第480期: 勇者に負けたが足を止めた戦闘は「殿」（金）。
+        bool rear = HunterBoard && snap.Node.IsHero && !line.Won && St.HunterHolds > _clashHoldsBefore;
+        _clashBand.Text = rear ? Map11Lines.RearBand : line.Won ? "勝ち" : "負け";
+        _clashBand.AddThemeColorOverride("font_color", rear ? Color.FromHtml("#f1c96b") : line.Won ? Color.FromHtml("#71d7a1") : Color.FromHtml("#ff6b5e"));
+        _clashHold.Visible = false;
         _clashBand.Visible = true;
         _clashOdds.Visible = false;
         _clashSay.Visible = false;
@@ -397,10 +424,28 @@ public partial class Map11Main
                 {
                     var riskyDefs = alive.Where(u => risky.Contains(u.Slot)).OrderByDescending(u => fell[u.Slot]).ThenBy(u => u.Slot).Select(u => u.Def).ToList();
                     said = Map11Lines.OddsLine(alive[0].Def, _oddsWins, OddsGood, OddsEven, riskyDefs).Text;
+                    // 第480期: 勇者との会戦。自分から入った殿は「ここは任せろ。行け！」・追いつかれたとき（初回）は「……無理だ。引け！」。
+                    if (HunterBoard && _clashNode is { IsHero: true })
+                    {
+                        if (!Map11Session.FoePhase) said = Map11Lines.HunterRear;
+                        else if (Map11Lines.Mark("1-3.hunter.caught")) said = Map11Lines.HunterCaught;
+                    }
                     _clashSay.Text = $"「{said}」";
                     _clashSay.Visible = true;
                 }
-                GD.Print($"MAP3D_CLASH_ODDS {St.Squads[_clashSquad].Label} 対 {_clashNode?.Def.Name} {_oddsWins}／{OddsRuns} {text} 割れの印: {(names.Length > 0 ? names : "—")} セリフ: {(said.Length > 0 ? $"{alive[0].Def.Name}「{said}」" : "—")}");
+                // 第480期: 足止めの印（裏の 20 回のうち、足止めに要るターン数以上続いた回数）。
+                string holdText = "";
+                if (HunterBoard && _clashNode is { IsHero: true } && _oddsHeld >= 0)
+                {
+                    var (ht, hc) = HoldOf(_oddsHeld);
+                    holdText = ht;
+                    _clashHold.Text = ht;
+                    _clashHold.AddThemeColorOverride("font_color", Color.FromHtml(hc));
+                    _clashHold.TooltipText = $"同じ戦闘を {OddsRuns} 回回して、{St.Stage.Hero.HoldTurns} ターン以上続いたのが {_oddsHeld} 回";
+                    _clashHold.Visible = true;
+                }
+                GD.Print($"MAP3D_CLASH_ODDS {St.Squads[_clashSquad].Label} 対 {_clashNode?.Def.Name} {_oddsWins}／{OddsRuns} {text} 割れの印: {(names.Length > 0 ? names : "—")} セリフ: {(said.Length > 0 ? $"{alive[0].Def.Name}「{said}」" : "—")}"
+                    + (holdText.Length > 0 ? $" 足止め: {_oddsHeld}／{OddsRuns} {holdText}（{(Map11Session.FoePhase ? "追いつかれた" : "自分から入った")}）" : ""));
             }
         }
 
@@ -649,6 +694,7 @@ public partial class ClashLead : VBoxContainer
         _face.Visible = lead is not null;
         if (lead is not null) _face.SetUnit(lead);
         _name.Text = name;
+        _name.AddThemeFontSizeOverride("font_size", name.Length > 8 ? 15 : 20);   // 第480期: 長い名前（「白雷の勇者　ライゼル」）は小さく
         _name.AddThemeColorOverride("font_color", _tint.Lightened(0.35f));
         _count.Text = count;
     }

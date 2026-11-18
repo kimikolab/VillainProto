@@ -15,7 +15,7 @@ using System.Linq;
 /// 第479期: <c>Revive</c> ／ <c>Enhance</c> ／ <c>Rest</c> は札の上に出す小さなボタン（金の使いどころ・休む）。<c>LostLine</c> は失われた隊の 1 行（「全滅　砦の守将 残り 1」）。
 internal readonly record struct Map3DSquadCardInfo(
     int Index, string Name, IReadOnlyList<UnitDef> Faces, int Count, double HpPercent, string Order, bool Selected, bool Lost,
-    bool Revive = false, bool Enhance = false, bool Rest = false, string LostLine = "");
+    bool Revive = false, bool Enhance = false, bool Rest = false, string LostLine = "", string Tag = "", string TagColor = "");
 
 public partial class Map3DHud : CanvasLayer
 {
@@ -255,6 +255,7 @@ void fragment() {
     /// <summary>顔つきの 1 行を出す（第479期・<paramref name="seconds"/> 秒で消える・押しても消える）。</summary>
     internal void Say(UnitDef who, string text, float seconds)
     {
+        _sayFace.Visible = _sayName.Visible = true;
         _sayFace.SetUnit(who);
         _sayName.Text = who.Name;
         _sayText.Text = text;
@@ -263,7 +264,34 @@ void fragment() {
         _say.ResetSize();
     }
 
+    /// <summary>顔の無い 1 行（主人公の内心・第480期）。</summary>
+    internal void SayInner(string text, float seconds)
+    {
+        _sayFace.Visible = false;
+        _sayName.Text = "";
+        _sayName.Visible = false;
+        _sayText.Text = text;
+        _sayLeft = seconds;
+        _say.Visible = true;
+        _say.ResetSize();
+    }
+
     internal void HideSay() { _say.Visible = false; _sayLeft = 0; }
+
+    private bool _goalAlert;
+    private float _goalPulse;
+    /// <summary>目標の札を赤くする（第480期・撤退の局面「生きて拠点へ戻れ」）。</summary>
+    internal void SetGoalAlert(bool alert)
+    {
+        if (alert == _goalAlert) return;
+        _goalAlert = alert;
+        _goal.AddThemeColorOverride("font_color", alert ? Color.FromHtml("#ff6b5e") : Gold);
+        _goal.AddThemeFontSizeOverride("font_size", alert ? 26 : 22);
+    }
+    internal bool GoalAlert => _goalAlert;
+    internal string GoalText => _goal.Text;
+    /// <summary>目標の札を 2 秒ほど明滅させる（替わった瞬間）。</summary>
+    internal void PulseGoal() => _goalPulse = 2.0f;
     internal bool SayShown => _say.Visible;
     internal string SayText => _say.Visible ? _sayText.Text : "";
     internal Rect2 SayRect => _say.GetGlobalRect();
@@ -322,6 +350,11 @@ void fragment() {
     /// <summary>金の札をゆっくり光らせる（第478期: 金が貯まっているのに使っていないあいだ）。`Map11Main` が毎フレーム呼ぶ。</summary>
     internal void PulseGold(float delta)
     {
+        if (_goalPulse > 0)
+        {
+            _goalPulse -= delta;
+            _goal.SelfModulate = _goalPulse > 0 && Mathf.PosMod(_goalPulse, 0.4f) > 0.2f ? new Color(2.2f, 2.2f, 2.2f) : Colors.White;
+        }
         if (!_goldNag) { if (_goldPanel.SelfModulate != Colors.White) _goldPanel.SelfModulate = Colors.White; return; }
         _goldClock += delta;
         float wave = 0.5f + 0.5f * Mathf.Sin(_goldClock * 4.2f);
@@ -429,6 +462,7 @@ void fragment() {
 
     /// <summary>隊の札と「刻を進める」の四角（押す操作の確かめが使う）。</summary>
     internal Rect2 CardRect(int index) => _squadCards[index].GetGlobalRect();
+    internal string CardTag(int index) => index >= 0 && index < _squadCards.Count ? _squadCards[index].TagText : "";
     internal Rect2 RunRect => _run.GetGlobalRect();
     internal Rect2 FoesRect => _foes.GetGlobalRect();
     internal Rect2 StepRect => _step.GetGlobalRect();
@@ -477,6 +511,8 @@ public partial class Map3DSquadCard : Button
     private readonly Label _hp = Map3DHud.Text("", 20, Map3DHud.Ink);
     private readonly HBoxContainer _faces = new() { MouseFilter = MouseFilterEnum.Ignore };
     private readonly Label _order = Map3DHud.Text("", 18, Map3DHud.Gold);
+    private readonly Label _tag = Map3DHud.Text("", 16, Map3DHud.Ink, bold: true);
+    internal string TagText => _tag.Visible ? _tag.Text : "";
     private Map3DSquadCardInfo _info;
     private string _faceKey = "";
 
@@ -494,7 +530,8 @@ public partial class Map3DSquadCard : Button
         head.AddThemeConstantOverride("separation", 12);
         _hp.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         _hp.HorizontalAlignment = HorizontalAlignment.Right;
-        head.AddChild(_name); head.AddChild(_hp);
+        head.AddChild(_name); head.AddChild(_tag); head.AddChild(_hp);
+        _tag.Visible = false;
         col.AddChild(head);
         _faces.AddThemeConstantOverride("separation", 4);
         _faces.CustomMinimumSize = new Vector2(0, 40);
@@ -528,6 +565,16 @@ public partial class Map3DSquadCard : Button
             }
         }
         _hp.Text = info.Lost ? "失われた" : info.Count == 0 ? "空席" : $"{info.Count} 枚　HP {info.HpPercent:F0}%";
+        // 第480期: 撤退の局面の「足止めできる ／ 五分 ／ 足止めできない」（勇者に当てる前に読める印）。
+        _tag.Visible = info.Tag.Length > 0 && !info.Lost;
+        if (_tag.Visible)
+        {
+            _hp.Text = $"{info.Count} 枚";   // 印が出ているあいだは枚数だけ（HP は札の下の棒）
+            _tag.Text = info.Tag;
+            Color tc = Color.FromHtml(info.TagColor.Length > 0 ? info.TagColor : "#f1c96b");
+            _tag.AddThemeColorOverride("font_color", tc);
+            _tag.AddThemeStyleboxOverride("normal", Map3DHud.Box(new Color(0.04f, 0.05f, 0.07f, 0.9f), tc, 1, 8, 4));
+        }
         _order.Text = info.Lost ? info.LostLine : info.Count == 0 ? "「編成・呼ぶ・強化」で駒を配る" : info.Order;
         Color edge = info.Selected ? Color.FromHtml("#ffd874") : info.Lost ? Map3DHud.Edge.Darkened(0.2f) : Color.FromHtml("#55d5b8").Darkened(0.25f);
         Color back = info.Selected ? new Color(0.13f, 0.15f, 0.12f, 0.94f) : Map3DHud.Back;

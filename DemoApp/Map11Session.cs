@@ -406,6 +406,8 @@ public static class Map11Session
 
     /// <summary>いま用意されている戦闘は拠点の迎撃か（遭遇の台が「引き返す」を出すかどうかに読む）。</summary>
     public static bool PendingIntercept => _pendingIntercept;
+    /// <summary>いま敵が動く段か（第480期・画面が「追いつかれた」と「自分から入った殿」を見分けるだけ・規則は読まない）。</summary>
+    public static bool FoePhase => _foes is not null;
 
     /// <summary>連戦の合間で「引く」（第457期）。隊を入ってきた経路の中間拠点へ戻す（呼ぶ側は作戦ターンの続きを流す）。</summary>
     public static bool RetreatSiege()

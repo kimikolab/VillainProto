@@ -28,6 +28,7 @@ public partial class Map11Main
         // ジオラマ（`_map3d`）とカメラは `BuildWorld3D` が盤の組み立てのところで作ってある。ここでは遊ぶ UI と検証の層を足す。
         BuildHud3D();
         BuildRadar3D();
+        BuildHunter3D();   // 第480期: 狩る者の盤の演出の層（ほかの盤では何もしない）
         AddChild(new Map3DDebugLayer(() => _camera, _cam3d, _map3d));
         if (args.Contains("--map3d-fps", StringComparer.Ordinal)) _ = Map3DFps();
         if (args.Contains("--map3d-layout-smoke", StringComparer.Ordinal)) _ = Map3DLayoutSmoke();

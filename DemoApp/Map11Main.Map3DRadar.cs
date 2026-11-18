@@ -33,7 +33,7 @@ public partial class Map11Main
     {
         for (int road = 0; road < St.Stage.LaneCount; road++)
             foreach (Map11State.Node n in St.FoesOn(road))
-                if (!n.Cleared && St.TurnsToHome(n) is { } t && StuckBehind(n) is null) yield return (n, t);
+                if (!n.Cleared && !(HunterBoard && n.IsHero) && St.TurnsToHome(n) is { } t && StuckBehind(n) is null) yield return (n, t);   // 第480期: 狩る者は拠点へ歩かない（進む先は自分の赤い点線）
     }
 
     /// <summary>次に拠点へ着く敵までの刻（「（次の敵は あと n 刻で着く）」・歩いてくる敵がいなければ空・第477期 §4）。</summary>
@@ -230,7 +230,7 @@ public partial class Map3DRadar : Control
             notes.Add((_main.RadarPos(n.Pos), $"{n.Def.Name}　拠点まで あと {t} 刻", Foe));
         if (st.Hero is { Cleared: false } h) notes.Add((_main.RadarPos(h.Pos), "勇者", HeroInk));
         if (g.HasPortal && st.Stage.PortalGate > 0 && !st.Captured)
-            notes.Add((_main.RadarPos(g.Portal), st.GateOpen ? "砦の門が開いた" : $"砦の門　中間拠点 {st.HeldOutposts.Count} ／ {st.Stage.PortalGate}", Gold));
+            notes.Add((_main.RadarPos(g.Portal), st.Stage.Hero.Hunter ? (st.Rout ? "" : $"野営地の門　中間拠点 {st.HeldOutposts.Count} ／ {st.Stage.PortalGate}") : st.GateOpen ? "砦の門が開いた" : $"砦の門　中間拠点 {st.HeldOutposts.Count} ／ {st.Stage.PortalGate}", Gold));
         notes.Add((_main.RadarPos(g.Home), "拠点", Mine));
         // 右上は敵の砦の札（今の画面の札）が端に張り付く場所なので、印はその下から並べる。
         var placed = new List<Rect2> { new(view.X - 420, 0, 420, 410) };

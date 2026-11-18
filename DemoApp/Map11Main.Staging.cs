@@ -73,6 +73,7 @@ public partial class Map11Main
             bool hero = seen.Hero < 0 && St.HeroTurn >= 0;
             bool home = !seen.Home && St.HomeLost;
             if (home) PlayStageCue(St.Graph.Home, MapStageCue.Kind.Fall);
+            else if (HunterBoard && (hero || seen.Gate != St.GateOpen)) { }   // 第480期: 狩る者の盤の門と登場は、自分の演出（`Map11Main.Hunter.cs`）が持つ
             else if (hero && St.Hero is { } h)
                 PlayStageCue(h.Pos, St.Stage.Hero.Chaser ? MapStageCue.Kind.Chaser : MapStageCue.Kind.Guard);
             else if (seen.Gate != St.GateOpen) PlayStageCue(St.Graph.Portal, St.GateOpen ? MapStageCue.Kind.Open : MapStageCue.Kind.Close);

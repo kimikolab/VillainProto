@@ -179,14 +179,41 @@ public partial class Map11Main
         var lines = new List<string>();
         if (St.Portal.On && St.Captured) lines.Add($"制圧　{St.CapturedTurn + 1} 刻目" + (St.Stage.TurnCap > 0 && St.Stage.TimeLimit ? $"（期限 {St.Stage.TurnCap}）" : ""));
         else lines.Add($"{Map11Session.ShownTurn} 刻目");
+        // 第480期: 撤退の局面の戦果（生還した駒の数・殿を務めた隊・勇者を退かせたか）。
+        bool hunter = HunterBoard && St.Rout;
+        if (hunter)
+        {
+            lines.Clear();
+            lines.Add($"{Map11Session.ShownTurn} 刻目");
+            lines.Add($"生還した駒　{St.HunterSurvivors} ／ {St.HunterStartUnits}");
+            lines.Add("殿　" + (St.RearGuards.Count == 0 ? "なし" : string.Join("・", St.RearGuards.OrderBy(i => i).Select(i => St.Squads[i].Label))));
+            if (St.HunterDriven) lines.Add("勇者を退かせた");
+        }
         if (St.Stage.Gold.On) lines.Add($"金　{St.Gold}");
         _resultBody.Text = _resultOpen ? _resultFull : string.Join(Nl, lines);
         _resultMore!.Text = _resultOpen ? "詳細を閉じる" : "詳細";
         // 窓は中身の分だけ（詳細を開いたら今までの高さ）。
-        if (_resultOverlay.GetChild(0) is Control panel) { panel.OffsetTop = _resultOpen ? 90 : 250; panel.OffsetBottom = _resultOpen ? -90 : -250; }   // 箱は上下の端からの余白で決まる（`BuildResultOverlay`）——中央からの高さを入れて画面の外へはみ出していた（Codex の試遊 2026-11-17）
+        if (_resultOverlay.GetChild(0) is Control panel) { panel.OffsetTop = _resultOpen ? 90 : hunter ? 170 : 250; panel.OffsetBottom = _resultOpen ? -90 : hunter ? -170 : -250; }   // 箱は上下の端からの余白で決まる（`BuildResultOverlay`）——中央からの高さを入れて画面の外へはみ出していた（Codex の試遊 2026-11-17）
         // 失った駒の顔（詳細を開いたら、終わりの隊の並びに戻す）。
         if (_resultOpen) { RefreshResultFaces(); return; }
         foreach (Node child in _resultFaces.GetChildren()) { _resultFaces.RemoveChild(child); child.QueueFree(); }
+        if (hunter)
+        {
+            // 生還した駒の顔（明るく）。
+            var back = St.LivingSquads.Where(q => St.HunterDriven || q.Pos == St.Graph.Home).SelectMany(q => q.Units!.Where(u => u.IsAlive).OrderBy(u => u.Slot)).Select(u => u.Def).ToList();
+            if (back.Count > 0)
+            {
+                var row = new HFlowContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+                row.AddThemeConstantOverride("h_separation", 4);
+                foreach (UnitDef d in back)
+                {
+                    var face = new UnitFaceIcon { CustomMinimumSize = new Vector2(52, 52), TooltipText = d.Name };
+                    face.SetUnit(d);
+                    row.AddChild(face);
+                }
+                _resultFaces.AddChild(row);
+            }
+        }
         var fallen = St.FallenUnits.Select(u => u.Def).ToList();
         _resultFaces.AddChild(UiKit.Text(fallen.Count == 0 ? "失った駒　なし" : $"失った駒　{fallen.Count}", 15, UiKit.Muted));
         if (fallen.Count == 0) return;

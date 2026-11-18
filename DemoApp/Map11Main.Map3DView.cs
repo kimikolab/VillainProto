@@ -209,7 +209,7 @@ public partial class Map11Main
         foreach (Arrow a in _reserveArrows) a.Hide();
 
         // ---- 駒: どこに立つか ----
-        var shown = _mapPicks.Where(p => p.Marker.Shown && (p.Foe is { } foe ? !foe.Cleared
+        var shown = _mapPicks.Where(p => p.Marker.Shown && (p.Foe is { } foe ? (!foe.Cleared || (_hunterLeaving && foe.IsHero)) && !HunterHidden(foe)   // 第480期: 勇者は登場の演出で歩み出るまで出さない・退くあいだは残す
             : !St.Squads[p.Squad].Lost && !St.IsLocked(p.Squad) && ((MapUnitBadge)p.Button).Count > 0)).ToList();
         var squadsOn = shown.Where(p => p.Foe is null).GroupBy(p => (St.Squads[p.Squad].Pos, Via: St.Squads[p.Squad].Pos == St.Graph.Portal ? St.Squads[p.Squad].Via : -1))
             .ToDictionary(g => g.Key, g => g.Select(p => p.Squad).ToList());
@@ -228,7 +228,7 @@ public partial class Map11Main
                 List<Map11State.Node> group = foesOn[cell];
                 float rank = group.IndexOf(foe) - (group.Count - 1) / 2f;
                 if (cell == St.Graph.Home) at = BasePos + new Vector3(3.4f, 0, LaneSide(Math.Max(0, foe.Def.Road)) * 2.6f + rank * 2.4f);
-                else if (cell == St.Graph.Portal) at = PortalPos + new Vector3(0.2f, 0, rank * 2.7f);
+                else if (cell == St.Graph.Portal) at = PortalPos + new Vector3(0.2f, 0, rank * 2.7f) + (HunterBoard && foe.IsHero ? new Vector3(-3.4f, 0, 0) : Vector3.Zero);   // 第480期: 勇者は門の前（守りの手前）に立つ
                 else
                 {
                     Vector3 forward = _layout3d.Forward(cell), side = forward.Cross(Vector3.Up);
@@ -324,7 +324,12 @@ public partial class Map11Main
             : $"作戦ターン {Map11Session.ShownTurn}" + (St.TimeLimitLeft is { } limit ? $"　／　期限まで あと {limit}" : "")
               // 試遊（2026-11-15）: 「敵部隊」「戦闘の記録」の窓を開くと敵の拠点の名札（湧くまで あと n）が隠れる——左上にも出す。
               + (St.Portal.On && St.Portal.SpawnEvery > 0 && !St.Captured && !St.Fallen ? $"　／　湧くまで あと {St.PortalCooldown}" : "");
-        string goal = St.HeroClock && St.Hero is { Cleared: false } hero ? $"目標　勇者を倒す（HP {hero.HpNow}）"
+        // 第480期: 狩る者の盤。撤退の局面（登場の演出が目標を替える所まで進んだら）は赤い「生きて拠点へ戻れ」。
+        bool rout = HunterRoutShown;
+        _hud3d.SetGoalAlert(rout && !St.Finished);
+        string goal = rout ? (St.Finished ? (St.HunterDriven ? $"目標　{Map11Lines.HunterGone}" : St.Won ? "目標　生きて戻った" : Map11Lines.GoalRout) : Map11Lines.GoalRout)
+            : HunterBoard ? (St.GateOpen ? "目標　野営地を制圧する" : $"目標　中間拠点を取る（{St.HeldOutposts.Count}／{St.Stage.PortalGate}）")
+            : St.HeroClock && St.Hero is { Cleared: false } hero ? $"目標　勇者を倒す（HP {hero.HpNow}）"
             : !St.Portal.On ? $"目標　敵部隊をすべて抜く（{St.ClearedCount} / {St.Stage.TotalNodes}）"
             : St.Won ? $"目標　{Map11.PortalName}を制圧した"   // 第476期: 制圧で勝つ盤で、勝った後に「残る敵部隊を倒す」と出ていた
             : St.Captured ? $"目標　残る敵部隊を倒す（あと {left}）"
@@ -352,9 +357,16 @@ public partial class Map11Main
             string where = s.Pos == St.Graph.Home ? "拠点" : s.Pos == St.Graph.Portal ? Map11.PortalName : PlaceName(s.Pos);
             // 第479期: 金の使いどころは札の上の小さなボタン（文の印「◆ 金を使える」はやめた）。失われた隊は 1 行「全滅　砦の守将 残り 1」。
             var act = CardActions(s);
+            // 第480期: 撤退の局面では、拠点の外にいる隊の札に足止めの印（勇者に当てる前に読める）。拠点に入った隊は「生還」。
+            string tag = "", tagColor = "";
+            if (HunterRoutShown && !s.Lost && faces.Count > 0 && !St.Finished)
+            {
+                if (s.Pos == St.Graph.Home) (tag, tagColor) = ("生還", "#71d7a1");
+                else if (HoldMark(s.Index) is { } held and >= 0) (tag, tagColor) = HoldOf(held);
+            }
             cards.Add(new Map3DSquadCardInfo(s.Index, s.Label, faces, faces.Count, faces.Count == 0 ? 0 : SquadHpPercent(s),
                 St.Time.On ? "→ " + OrderText(s.Index) : where, s.Index == _selected && _guideSquadChosen, s.Lost,
-                act.Revive, act.Enhance, act.Resting, s.Lost ? LostLine(s) : ""));
+                act.Revive, act.Enhance, act.Resting, s.Lost ? LostLine(s) : "", tag, tagColor));
         }
         _hud3d.SetSquads(cards);
         bool can = _selected >= 0 && _selected < St.Squads.Length && St.CanReform(_selected) && !St.Finished && !Map11Session.TurnRunning;
@@ -380,6 +392,7 @@ public partial class Map11Main
         _hud3d.SetShown(!_reform);
         ProcessClash3D((float)delta);   // 第479期の追記: 遭遇の台（下 1／3）と盤の上の輪
         ProcessRadar3D(!_reform);   // 第477期: 画面の外の知らせ・全体図・歩く敵の赤い点線
+        ProcessHunter3D((float)delta);   // 第480期: 狩る者の登場・赤い点線・目の印・「生還」・勇者の HP の棒
         if (_reform) return;
 
         // 第476期（自分で遊んで見つけた）: 行き先に触れているあいだは、出来事の 1 行より案内の 1 行（経路上の敵・「峠の関: 硬い・賞金 14」・拠点が空になる）を先に出す
@@ -481,12 +494,14 @@ public partial class Map11Main
         }
         if (!portalLit && St.Portal.On && _cellMarks3d.TryGetValue(St.Graph.Portal, out Map3DCellMark? camp)) camp.SetReach(false, false);
         ProcessRoute3D(chosen && !modal, sel);
+        // 第480期: 撤退の局面では味方の拠点が光る（「生きて拠点へ戻れ」の行き先）。
+        if (HunterRoutShown && !St.Finished && _cellMarks3d.TryGetValue(St.Graph.Home, out Map3DCellMark? safe)) safe.SetReach(true, Mathf.PosMod(_clock3d, 1.0f) < 0.6f);
 
         // ---- 建物の名札（拠点 ／ 敵の拠点）。文は今の画面の札と同じ。 ----
         Map3DLayout.Table? sheet = _layout3d.Sheet;
         // 引き出し（今の窓）が開いている側の名札は隠す（窓の下に半分だけ見えるのを避ける）。
         if (_homePlate3d is not null) _homePlate3d.Visible = !_showSquadDetail;
-        if (_portalPlate3d is not null) _portalPlate3d.Visible = !_showFoes && !_showHistory;
+        if (_portalPlate3d is not null) _portalPlate3d.Visible = !_showFoes && !_showHistory && !(HunterBoard && St.Rout && Hs.Stepped);   // 第480期: 撤退の局面では敵の拠点の札は消える
         if (_homePlate3d is not null)
         {
             string head = sheet?.HomeName is { Length: > 0 } hn ? hn + "\n" : "";
@@ -875,6 +890,15 @@ public partial class Map11Main
     {
         SceneStart3D();
         if (mode == "m3d-click") { await Map3DClickCheck(); return; }
+        if (mode == "m3d-h-all")
+        {
+            // 第480期: 1-3「狩る者」の場面を 1 回の起動で順に撮って確かめる（`Map11Main.HunterShots.cs`・自分で終わる）。
+            _hunterForce = true;
+            string arg = OS.GetCmdlineUserArgs().First(a => a.StartsWith("--map11-capture=", StringComparison.Ordinal))["--map11-capture=".Length..];
+            await HunterScenes(arg[..arg.LastIndexOf(',')]);
+            await ToSignal(GetTree().CreateTimer(30), SceneTreeTimer.SignalName.Timeout);
+            return;
+        }
         // 今の窓を開いたところ（重なりの確かめ用）: `m3d-detail` は隊の配置、`m3d-foes` は敵部隊の一覧。
         if (mode is "m3d-detail" or "m3d-foes")
         {

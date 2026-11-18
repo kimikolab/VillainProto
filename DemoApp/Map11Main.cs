@@ -1824,6 +1824,7 @@ public partial class Map11Main : Node3D
 
     private void AdvanceTurn()
     {
+        if (HunterBusy) return;   // 第480期: 勇者の登場・退く演出のあいだは刻まない
         if (St.Finished) { ShowResult(); return; }
         if (Map11Session.TurnRunning) return;
         // 第439期 §1: 時計があれば**誰も出ていなくても刻は進む**（門は時計を切ったときだけ）。
@@ -2010,6 +2011,7 @@ public partial class Map11Main : Node3D
     /// </summary>
     private void ToggleClock()
     {
+        if (HunterBusy) return;   // 第480期
         _guideEventCell = null;
         if (!Map11Clock.On) { RunUntilEvent(); return; }
         if (St.Finished) { ShowResult(); return; }
@@ -2027,7 +2029,7 @@ public partial class Map11Main : Node3D
 
     /// <summary>刻んでよいか。<b>戦闘の最中・窓が出ている・組み直し中・終わった</b>あいだは刻まない。</summary>
     private bool ClockMayTick()
-        => !St.Finished && !Map11Session.TurnRunning && !_reform
+        => !St.Finished && !Map11Session.TurnRunning && !_reform && !HunterBusy
            && !_encounterOverlay.Visible && !_interceptOverlay.Visible && !_resultOverlay.Visible
            && !_confirmOverlay.Visible && !_siegeOverlay.Visible;
 
@@ -3027,7 +3029,8 @@ public partial class Map11Main : Node3D
 
     private void ShowResult()
     {
-        _resultTitle.Text = St.Won ? "踏破" : St.Fallen ? "拠点 陥落" : St.HeroArrived ? "勇者が到着した" : St.TimeUp ? "時間切れ" : "撤退";
+        _resultTitle.Text = HunterBoard && St.Rout ? (St.HunterDriven ? Map11Lines.HunterGone : St.Won ? "生還" : St.HunterLost ? "全滅" : "時間切れ")   // 第480期: 撤退の局面の終わり方
+            : St.Won ? "踏破" : St.Fallen ? "拠点 陥落" : St.HeroArrived ? "勇者が到着した" : St.TimeUp ? "時間切れ" : "撤退";
         // **生存枚数は2つ出す**（第169期に画面内で数え方が2通りに割れていた）。
         var lines = new List<string>
         {
@@ -3369,7 +3372,8 @@ public partial class Map11Main : Node3D
         // 第175期 §1-3: **盤の上に「← あと n」**（拠点の向きの矢印つき）。
         // 第459期 §2: **動く敵すべてに「拠点まで あと n」**（いまの速さで拠点に着くまでの作戦ターン・`TurnsToHome`）。
         // 第458期までは先頭の敵だけに「次に動くまで」を出していた——K = 1 の盤では常に 1 で、着くまでを数えられなかった。
-        if (!n.Cleared && n.IsHero && St.Stage.Hero.Chaser && St.HomeLost)
+        if (HunterBoard && n.IsHero) m.SetNote("", GoldColor, false);   // 第480期: 狩る者は拠点へ歩かない（追う先は赤い点線と目の印）
+        else if (!n.Cleared && n.IsHero && St.Stage.Hero.Chaser && St.HomeLost)
             m.SetNote(St.HeroChase() is { } chase ? $"◀ {St.Squads[chase.Squad].Label}を追う ・ あと {chase.Steps}" : "◀ 追う隊がいない",
                       UiKit.Hurt, St.HeroChase() is { Steps: <= 1 });   // 第459期 §1-4
         else if (!n.Cleared && St.Time.On && n.Pos == St.Graph.Home)
@@ -3489,6 +3493,7 @@ public partial class Map11Main : Node3D
         string head = mine ? $"{Map11.PortalName}（制圧）" : Map11.PortalName;
         string body = mine
             ? (wait > 0 ? $"ワープまで あと {wait}" : "ワープできる")
+            : St.Portal.SpawnEvery <= 0 && HunterBoard ? "敗走した残党"   // 第480期: 湧かない盤に「いつでも湧く」と出ていた
             : (wait > 0 ? $"湧くまで あと {wait}" : "いつでも湧く");
         // 第441期 §3: 待機中の予備隊は敵の拠点の札に 1 行（出発すると湧いた部隊と同じ板に移る）。
         if (St.ReserveWaiting) body += Nl + "予備隊 ・ 待機中";
@@ -3505,8 +3510,9 @@ public partial class Map11Main : Node3D
         }
         _portalMarker.Set(head + Nl + body, tint);
         // **湧く瞬間（＝残り 0）に脈打つ**／制圧したら止める。
-        _portalMarker.SetNote(mine ? "" : wait <= 1 ? "◀ 湧く" : "", UiKit.Hurt, true);
-        _portalMarker.SetGlow(!mine && wait <= 1);
+        bool spawns = St.Portal.SpawnEvery > 0 || !HunterBoard;
+        _portalMarker.SetNote(mine || !spawns ? "" : wait <= 1 ? "◀ 湧く" : "", UiKit.Hurt, true);
+        _portalMarker.SetGlow(!mine && spawns && wait <= 1);
         foreach (MeshInstance3D d in _warpDashes) d.Visible = mine;
     }
 

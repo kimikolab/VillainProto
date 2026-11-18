@@ -94,7 +94,12 @@ public partial class Map3DCamera : Node3D
         Camera.Projection = Camera3D.ProjectionType.Perspective;
         Camera.Position = focus + new Vector3(0, Mathf.Sin(tilt), Mathf.Cos(tilt)) * distance;
         Camera.LookAt(focus, Vector3.Up);
+        if (_shake > 0) Camera.Position += new Vector3((float)GD.RandRange(-1.0, 1.0), (float)GD.RandRange(-0.5, 0.5), (float)GD.RandRange(-1.0, 1.0)) * _shakeAmp * (_shake / _shakeLife);
     }
+
+    private float _shake, _shakeLife = 1, _shakeAmp;
+    /// <summary>画面を短く揺らす（第480期・勇者の登場）。見た目だけ。</summary>
+    internal void Shake(float seconds, float amp) { _shake = _shakeLife = Math.Max(0.05f, seconds); _shakeAmp = amp; }
 
     /// <summary>引き具合を決める（第479期・3D のレイアウトの検査が「引いた視点」を作る）。</summary>
     internal void SetZoom(float zoom) { _zoom = _zoomTarget = Mathf.Clamp(zoom, ZoomNear, ZoomFar); Apply(); }
@@ -157,6 +162,7 @@ public partial class Map3DCamera : Node3D
         if (Input.IsKeyPressed(Key.Down) || Input.IsKeyPressed(Key.S)) keys.Y += 1;
         if (keys != Vector2.Zero && GetViewport().GuiGetFocusOwner() is null) Pan(keys * (float)delta * 16f * _zoom);
         _zoom = Mathf.Lerp(_zoom, _zoomTarget, 1 - Mathf.Exp(-(float)delta * 12f));
+        _shake = Math.Max(0, _shake - (float)delta);
         if (_glide is { } to)
         {
             _pan = _pan.Lerp(to, 1 - Mathf.Exp(-(float)delta * 6f));

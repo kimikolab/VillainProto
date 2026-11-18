@@ -1674,7 +1674,7 @@ public sealed class Map11State
     public bool Rout => Stage.Hero.Hunter && HeroTurn >= 0;
 
     /// <summary>生きている駒のいる隊（撤退の局面の勝ち負けと、狩る者が追う相手）。</summary>
-    private IEnumerable<Squad> LivingSquads => Squads.Where(s => !s.Lost && s.Units is { } u && u.Any(x => x.IsAlive));
+    public IEnumerable<Squad> LivingSquads => Squads.Where(s => !s.Lost && s.Units is { } u && u.Any(x => x.IsAlive));
 
     /// <summary>勝ち B: 勇者を退かせた（HP が <see cref="HeroRule.RoutPercent"/>% を割った）か、倒した。</summary>
     public bool HunterDriven => Rout && Hero is { Cleared: true };
