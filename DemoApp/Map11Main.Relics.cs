@@ -41,6 +41,11 @@ public partial class Map11Main
         return box;
     }
 
+    /// <summary>レリックの候補の窓の幅の上限（画面の px・第481期）。</summary>
+    internal const float RelicOfferMaxWidth = 1100f;
+    /// <summary>レリックの候補の窓の四角（画面の座標・検査が読む）。</summary>
+    internal Rect2 RelicOfferRect => _relicOfferPanel is { Visible: true } p ? new Rect2(p.GetGlobalRect().Position * _uiScale, p.GetGlobalRect().Size * _uiScale) : default;
+
     /// <summary>中間拠点を取った刻の候補の窓（候補が出ている間だけ出す）。</summary>
     private void RefreshRelicOffer()
     {
@@ -54,10 +59,15 @@ public partial class Map11Main
             _relicOfferPanel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.Center);
             _relicOfferPanel.CustomMinimumSize = new Vector2(0, 0);
             _relicOfferPanel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-            _relicOfferPanel.OffsetLeft = 80; _relicOfferPanel.OffsetRight = -80;
-            _relicOfferPanel.OffsetTop = 195; _relicOfferPanel.OffsetBottom = -100;
+            // 第481期: 高さは中身の分（候補 3 枚 ＋ 見出し ＋ ボタン）——下まで伸びた空の窓が盤を隠していた。
+            _relicOfferPanel.AnchorBottom = 0;
+            _relicOfferPanel.OffsetTop = 195; _relicOfferPanel.OffsetBottom = 195 + 350;
             _uiRoot.AddChild(_relicOfferPanel);
         }
+        // 第481期 §4-2: 窓の幅に上限（画面の 1100px）——横長の画面で窓が伸びて、文字が相対的に小さく見えていた。真ん中に置く。
+        float relicWide = System.Math.Min(_uiRoot.Size.X - 160, RelicOfferMaxWidth / _uiScale);
+        _relicOfferPanel.AnchorLeft = _relicOfferPanel.AnchorRight = 0.5f;
+        _relicOfferPanel.OffsetLeft = -relicWide / 2; _relicOfferPanel.OffsetRight = relicWide / 2;
         foreach (Node child in _relicOfferPanel.GetChildren()) { _relicOfferPanel.RemoveChild(child); child.QueueFree(); }
         var box = new VBoxContainer();
         box.AddThemeConstantOverride("separation", 8);

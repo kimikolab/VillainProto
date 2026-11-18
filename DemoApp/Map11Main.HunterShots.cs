@@ -186,7 +186,7 @@ public partial class Map11Main
                 await Wait(0.4);
                 bool held = St.HunterHolds > holds;
                 GD.Print($"MAP3D_HUNTER_STATE 殿の戦闘 {r.Turns} ターン・勝ち {r.PlayerWon}・止めた {held}・勇者 HP {hpBefore} → {St.Hero.HpNow}・帯「{ClashBandText}」");
-                Req(St.Finished || ClashBandText == (held ? Map11Lines.RearBand : r.PlayerWon ? "勝ち" : "負け"), $"殿: 結果の帯（{ClashBandText}・{r.Turns} ターン・止めた {held}）");
+                Req(St.Finished || ClashBandText == (held ? Map11Lines.RearBand : r.PlayerWon ? "勝ち" : St.RearGuards.Contains(_clashSquad) ? Map11Lines.RearFail : "負け"), $"殿: 結果の帯（{ClashBandText}・{r.Turns} ターン・止めた {held}）");
                 Req(St.Hero.HpNow < hpBefore, $"殿: 勇者の HP が減った（{hpBefore} → {St.Hero.HpNow}）");
                 await Shot("殿_結果の帯");
                 await Wait(2.2);

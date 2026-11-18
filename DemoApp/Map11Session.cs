@@ -157,6 +157,15 @@ public static class Map11Session
         Chapter1.BeginFrom(snap, snapRule, now);   // 第469期: 今の版を渡せる（門が版を固定する）
     }
 
+    private static bool _defaulted;
+    /// <summary>ステージの札の既定を「1 章」にする（第481期・遊ぶ起動だけ・起動 1 回につき 1 度——その後に札を替えたら戻さない）。</summary>
+    public static void DefaultToChapter()
+    {
+        if (_defaulted) return;
+        _defaulted = true;
+        ChapterPicked = true;
+    }
+
     /// <summary>ステージの札の文（第460期・「マップ 1-2」／「1 章」）。</summary>
     public static string PickText => SnapPicked ? "1 章（写しから）" : ChapterPicked ? "1 章" : $"マップ {Chosen.Id}";
 

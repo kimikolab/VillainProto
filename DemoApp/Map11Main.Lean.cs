@@ -36,7 +36,7 @@ public partial class Map11Main
     internal bool SideShown => ClashShown;
 
     /// <summary>盤を隠す窓（暗幕つき）が出ているか——結果・確かめ・頭の札・投資の札。3D の遭遇・連戦・迎撃は横の札なので数えない。</summary>
-    internal bool CoverShown => _resultOverlay.Visible || _confirmOverlay.Visible || _introOverlay is { Visible: true } || _investOverlay is { Visible: true }
+    internal bool CoverShown => StoryShown || _resultOverlay.Visible || _confirmOverlay.Visible || _introOverlay is { Visible: true } || _investOverlay is { Visible: true }
                                 || (!Map3DMode.Active && (_encounterOverlay.Visible || _interceptOverlay.Visible || _siegeOverlay.Visible));
 
     private static IEnumerable<Button> ButtonsIn(Node root)
@@ -176,6 +176,41 @@ public partial class Map11Main
         ShowLeanResult();
     }
 
+    private static readonly Color ResultDim = new(0.005f, 0.01f, 0.008f, 0.78f);
+
+    /// <summary>
+    /// 結果の窓の形（3D・第481期 §4-1）。<paramref name="side"/> ＝ ステージの結果: 暗幕なし・画面の右 1／3 の札・視点は味方の拠点へ。
+    /// 偽 ＝ 1 章の結果: 今までどおり真ん中の窓（暗幕あり）。
+    /// </summary>
+    private void ResultCard3D(bool side)
+    {
+        if (!Map3DMode.Active || _resultOverlay is not ColorRect dim || dim.GetChildCount() == 0 || dim.GetChild(0) is not Control panel) return;
+        dim.Color = side ? new Color(0, 0, 0, 0) : ResultDim;
+        panel.AnchorTop = 0; panel.AnchorBottom = 1;
+        if (side)
+        {
+            panel.AnchorLeft = 2f / 3f; panel.AnchorRight = 1;
+            panel.OffsetLeft = 6; panel.OffsetRight = -14;
+            panel.OffsetTop = 110; panel.OffsetBottom = -24;
+            if (_cam3d is not null && !_resultFocused) { _resultFocused = true; _cam3d.FocusOn(PosOf(St.Graph.Home) + new Vector3(5, 0, 0)); }
+        }
+        else
+        {
+            panel.AnchorLeft = panel.AnchorRight = 0.5f;
+            panel.OffsetLeft = -340; panel.OffsetRight = 340;
+            panel.OffsetTop = 90; panel.OffsetBottom = -90;
+        }
+    }
+    private bool _resultFocused;
+
+    /// <summary>結果の札の四角（画面の座標）と、暗幕の濃さ（3D のレイアウトの検査が読む）。</summary>
+    internal (Rect2 Card, float Dim) ResultCardRect()
+    {
+        if (_resultOverlay is not ColorRect dim || !dim.Visible || dim.GetChild(0) is not Control panel) return (default, 0);
+        Rect2 r = panel.GetGlobalRect();
+        return (new Rect2(r.Position * _uiScale, r.Size * _uiScale), dim.Color.A);
+    }
+
     private void ShowLeanResult()
     {
         var lines = new List<string>();
@@ -194,15 +229,15 @@ public partial class Map11Main
         if (St.Stage.Gold.On) lines.Add($"金　{St.Gold}");
         _resultBody.Text = _resultOpen ? _resultFull : string.Join(Nl, lines);
         _resultMore!.Text = _resultOpen ? "詳細を閉じる" : "詳細";
-        // 窓は中身の分だけ（詳細を開いたら今までの高さ）。
-        if (_resultOverlay.GetChild(0) is Control panel) { panel.OffsetTop = _resultOpen ? 90 : hunter ? 170 : 250; panel.OffsetBottom = _resultOpen ? -90 : hunter ? -170 : -250; }   // 箱は上下の端からの余白で決まる（`BuildResultOverlay`）——中央からの高さを入れて画面の外へはみ出していた（Codex の試遊 2026-11-17）
+        // 第481期 §4-1: 暗幕をやめ、画面の右 1／3 の札にする（盤は見えたまま・視点は味方の拠点へ）。「詳細」は同じ札の中で開く。
+        ResultCard3D(side: true);
         // 失った駒の顔（詳細を開いたら、終わりの隊の並びに戻す）。
         if (_resultOpen) { RefreshResultFaces(); return; }
         foreach (Node child in _resultFaces.GetChildren()) { _resultFaces.RemoveChild(child); child.QueueFree(); }
-        if (hunter)
         {
-            // 生還した駒の顔（明るく）。
-            var back = St.LivingSquads.Where(q => St.HunterDriven || q.Pos == St.Graph.Home).SelectMany(q => q.Units!.Where(u => u.IsAlive).OrderBy(u => u.Slot)).Select(u => u.Def).ToList();
+            // 生還した駒の顔（明るく）。第481期: 狩る者の盤だけでなく、どのステージの札にも出す（狩る者の盤は拠点へ戻った隊だけ）。
+            var back = St.LivingSquads.Where(q => !hunter || St.HunterDriven || q.Pos == St.Graph.Home).SelectMany(q => q.Units!.Where(u => u.IsAlive).OrderBy(u => u.Slot)).Select(u => u.Def).ToList();
+            _resultFaces.AddChild(UiKit.Text(back.Count == 0 ? "生還した駒　なし" : $"生還した駒　{back.Count}", 15, UiKit.Muted));
             if (back.Count > 0)
             {
                 var row = new HFlowContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };

@@ -332,8 +332,10 @@ public partial class Map11Main
         _clashOwnLead.Set(own.Where(x => x.Alive).Select(x => x.Def).FirstOrDefault() ?? own.Select(x => x.Def).FirstOrDefault(), snap.OwnName, $"{own.Count(x => x.Alive)} 枚", down: !own.Any(x => x.Alive));
         _clashFoeLead.Set(foe.Where(x => x.Alive).Select(x => x.Def).FirstOrDefault() ?? foe.Select(x => x.Def).FirstOrDefault(), snap.FoeName, $"{foe.Count(x => x.Alive)} 体", down: !foe.Any(x => x.Alive), crown: snap.Node.Def.Strong);
         // 第480期: 勇者に負けたが足を止めた戦闘は「殿」（金）。
+        // 第481期 §4-4: 殿に出した隊（自分から入った ／ 行き先が勇者のマスだった）が止められなかったときは「止められなかった」——足止めが成功したか迷わないように。
         bool rear = HunterBoard && snap.Node.IsHero && !line.Won && St.HunterHolds > _clashHoldsBefore;
-        _clashBand.Text = rear ? Map11Lines.RearBand : line.Won ? "勝ち" : "負け";
+        bool rearFail = HunterBoard && snap.Node.IsHero && !line.Won && !rear && St.RearGuards.Contains(snap.Squad);
+        _clashBand.Text = rear ? Map11Lines.RearBand : rearFail ? Map11Lines.RearFail : line.Won ? "勝ち" : "負け";
         _clashBand.AddThemeColorOverride("font_color", rear ? Color.FromHtml("#f1c96b") : line.Won ? Color.FromHtml("#71d7a1") : Color.FromHtml("#ff6b5e"));
         _clashHold.Visible = false;
         _clashBand.Visible = true;

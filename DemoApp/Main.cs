@@ -195,6 +195,29 @@ public partial class Main : Control
         // 通常起動では 1 ビットも走らない。
         string[] bootArgs = OS.GetCmdlineUserArgs();
         Chapter1.ReadPlayRuleArg(bootArgs);   // 第474期: `--chapter1-rule=V474`（まだ既定にしていない版の 1 章を遊ぶ・無ければ何もしない）
+        // 第481期 §5: 台本の門（`DemoApp/story/chapter1.txt` が全部読める・話者が引ける・1 行 46 字以内・1 場面 14 行以内・`?` の 3 つがそろっている）。画面なし。
+        if (bootArgs.Contains("--story-smoke", StringComparer.Ordinal))
+        {
+            bool okStory = false;
+            try
+            {
+                string storyPath = "res://" + StoryScript.File;
+                if (!Godot.FileAccess.FileExists(storyPath)) GD.Print($"STORY_CHECK × 台本が無い（{storyPath}）");
+                else
+                {
+                    string storyText = Godot.FileAccess.GetFileAsString(storyPath);
+                    okStory = StoryScript.Check(storyText, GD.Print);
+                    foreach (StoryScript.Scene scene in StoryScript.Parse(storyText, new List<string>()))
+                        GD.Print($"STORY_CHECK 　場面 {scene.No}「{scene.Title}」（{scene.When}）ふつうに読んで {StoryScene.ReadSeconds(scene, scene.No == 3 ? StoryScript.Outcomes[0] : null):F0} 秒の見積もり");
+                }
+            }
+            catch (System.Exception ex) { GD.PrintErr(ex.ToString()); okStory = false; }
+            GD.Print($"STORY_SMOKE_COMPLETE ok={okStory}");
+            GetTree().Quit(okStory ? 0 : 1);
+            return;
+        }
+        // 第481期 §4-3: 遊ぶ起動（門・器具・遊ぶ口でない起動）は、ステージの札の既定を「1 章」に（起動 1 回につき 1 度・札を替えた後は触らない）。
+        if (!StoryScript.Automated(bootArgs)) Map11Session.DefaultToChapter();
         // 第466期 §1: 遊ぶ起動（引数なし）だけ、1 章の遊びの写しを design/plays に書く（門・器具・絵の口では書かない）。
         if (bootArgs.Length == 0 && !PlayLog.Enabled) PlayLog.Enable(PlayLog.DefaultRoot(ProjectSettings.GlobalizePath("res://")));
         // 第466期 §3 ／ §5: 敵の重さの表（`--foe-weight`）と、試遊を減らす道具の門（`--tuning-tools-smoke`・`-quick` は §(d) の表を 1-2 だけ）。画面なし。
