@@ -1659,7 +1659,7 @@ public sealed class Map11State
     public string LaneName(int road) => road < 0 ? Map11.PortalName : Stage.LaneNames[road];
 
     public bool Finished => (Portal.On ? Won : AllCleared) || NoSquadsLeft || Battles >= BattleCapNow
-                            || Fallen || (Time.On && Turn >= Stage.TurnCap && !HeroClock && !Rout) || HeroStalled
+                            || Fallen || (Time.On && Turn >= Stage.TurnCap && !HeroClock && !Rout && !HunterPending) || HeroStalled
                             || HunterLost || HunterStalled;
 
     // ---------------- 狩る者（第480期・`HeroRule.Hunter`・指示書 design/PHASE480_STAGE13_HUNTER_SPEC.md §2） ----------------
@@ -1672,6 +1672,38 @@ public sealed class Map11State
     /// 残っている敵部隊は動かない・呼ぶ ／ 呼び戻すは閉じる・刻の期限は外れる。<b>読むのはここ 1 つ</b>（勝ち負け・`AdvanceFoes`・`SpawnIfDue`・`CanTrade` ほか）。
     /// </summary>
     public bool Rout => Stage.Hero.Hunter && HeroTurn >= 0;
+    /// <summary>門は開いたが勇者はまだ現れていない（追記 4 の (イ)・刻の期限は「門が開くまで」なのでここで外れる。(ア) では門が開いた刻に現れるので真になる間が無い）。</summary>
+    public bool HunterPending => Stage.Hero.Hunter && GateOpenedTurn >= 0 && HeroTurn < 0;
+    /// <summary>中間拠点より奥のマスか（その経路の中間拠点より先・拠点と敵の拠点と分かれ道は数えない）。</summary>
+    public bool BeyondOutpost(int cell)
+    {
+        if (cell == Graph.Home || cell == Graph.Portal) return false;
+        int lane = Graph[cell].Lane;
+        if (lane < 0) return false;
+        int op = Array.FindIndex(Graph.Lanes[lane], c => Graph.IsOutpost(c));
+        return op >= 0 && Graph.IndexOn(lane, cell) > op;
+    }
+    /// <summary>
+    /// その刻の行き先を知らせる（追記 4 の (C)・<see cref="Map11Orders.Apply"/> が命令の前に呼ぶ）。行き先が勇者のいまのマスなら、この刻に勇者の歩みで当たっても殿として数える。
+    /// 狩る者の盤の撤退の局面でなければ何もしない。
+    /// </summary>
+    public void NoteAim(int squadIndex, int cell)
+    {
+        if (!Rout || !Stage.Hero.AimHolds) return;
+        if (Hero is { Cleared: false } h && cell == h.Pos && Squads[squadIndex].Pos != h.Pos) _aim[squadIndex] = Turn + 1;
+        else _aim.Remove(squadIndex);
+    }
+    private readonly Dictionary<int, int> _aim = new();
+    /// <summary>その隊と勇者の戦闘は殿か（隊の番に起きた ／ この刻の行き先が勇者のマスだった）。<paramref name="foePhase"/> ＝ 敵が動く段で起きた戦闘か。画面の帯とセリフが読む。</summary>
+    public bool IsRearFight(int squadIndex, bool foePhase) => !foePhase || (_aim.TryGetValue(squadIndex, out int at) && at == Turn);
+    /// <summary>行き先が勇者のマスだったので殿として数えた、勇者の歩みで起きた戦闘の数（測るためだけ）。</summary>
+    public int HunterAimed { get; private set; }
+    /// <summary>撤退の局面で拠点の外にいた隊（現れた刻に外にいた ／ 勇者と戦った・結果の帯が読むだけ）。</summary>
+    private readonly HashSet<int> _routOut = new();
+    /// <summary>勇者は退いたが、拠点の外に出した隊の駒が 1 枚も生きていない（追記 4・結果の帯だけ・規則は読まない）。</summary>
+    public bool HunterNarrow => HunterDriven && !LivingSquads.Any(s => _routOut.Contains(s.Index));
+    /// <summary>勇者がこの次に歩く歩数（初めて歩く刻は <see cref="HeroRule.FirstSteps"/>・画面の点線も読む）。</summary>
+    public int HunterStepsNext => Stage.Hero.FirstSteps > 0 && Turn == HeroTurn ? Stage.Hero.FirstSteps : Math.Max(1, Stage.Hero.Steps);
 
     /// <summary>生きている駒のいる隊（撤退の局面の勝ち負けと、狩る者が追う相手）。</summary>
     public IEnumerable<Squad> LivingSquads => Squads.Where(s => !s.Lost && s.Units is { } u && u.Any(x => x.IsAlive));
@@ -1735,10 +1767,10 @@ public sealed class Map11State
     public int? HeroTurnsLeft => Stage.HeroAtCap && Time.On ? Math.Max(0, Stage.TurnCap - Turn) : null;
 
     /// <summary>「n 作戦ターン以内に制圧」の残り（第447期・勝ち条件の文を出す盤だけ）。</summary>
-    public int? TimeLimitLeft => Stage.TimeLimit && Time.On && !HeroClock && !Rout ? Math.Max(0, Stage.TurnCap - Turn) : null;
+    public int? TimeLimitLeft => Stage.TimeLimit && Time.On && !HeroClock && !Rout && !HunterPending ? Math.Max(0, Stage.TurnCap - Turn) : null;
 
     /// <summary>時間切れで負けた（第447期・勝ち条件の文を出す盤で、上限の刻に勝っていない）。第455期: 制圧の後の勇者の盤では期限を外す。</summary>
-    public bool TimeUp => Stage.TimeLimit && Time.On && Turn >= Stage.TurnCap && !Won && !Fallen && !HeroClock && !Rout;
+    public bool TimeUp => Stage.TimeLimit && Time.On && Turn >= Stage.TurnCap && !Won && !Fallen && !HeroClock && !Rout && !HunterPending;
 
     /// <summary>
     /// 勝ち。<b>拠点ありでは「制圧した ＋ 盤上の敵部隊が 0」</b>（第176期 §1-4）
@@ -2426,9 +2458,12 @@ public sealed class Map11State
         // 第480期 §2-4: 勇者の歩みで起きた戦闘（追いつかれた）か、隊の番に起きた戦闘（殿）か。殿はその刻の終わりの勇者の歩みを止める。
         if (node.IsHero && Stage.Hero.Hunter)
         {
-            if (_hunterStruck) { _hunterStruck = false; HunterCatches++; }
+            _routOut.Add(squadIndex);
+            bool aimed = _hunterStruck && IsRearFight(squadIndex, true);   // 追記 4 の (C)
+            if (_hunterStruck && !aimed) { _hunterStruck = false; HunterCatches++; }
             else
             {
+                if (aimed) { _hunterStruck = false; HunterAimed++; }
                 // ポンの決定 2026-11-18: 足が止まるのは、その戦闘が HoldTurns ターン以上続いたときだけ（1 枚の捨て駒では止まらない）。
                 RearGuards.Add(squadIndex);
                 if (turns >= Stage.Hero.HoldTurns) { _hunterHeldTurn = Turn + 1; HunterHolds++; } else HunterSlips++;
@@ -2824,7 +2859,8 @@ public sealed class Map11State
     {
         _hunterStruck = false;
         if (Hero is not { Cleared: false } h || Turn <= HeroTurn || _hunterHeldTurn == Turn) return;
-        for (int step = 0; step < Math.Max(1, Stage.Hero.Steps); step++)
+        int steps = Stage.Hero.FirstSteps > 0 && Turn == HeroTurn + 1 ? Stage.Hero.FirstSteps : Math.Max(1, Stage.Hero.Steps);   // 追記 4 の (ウ)
+        for (int step = 0; step < steps; step++)
         {
             if (HunterChase() is not { } chase) return;
             if (chase.Steps > 0)
@@ -2911,6 +2947,8 @@ public sealed class Map11State
         {
             if (Hero is not null || Captured || Fallen) return;
             if (GateOpenedTurn < 0 && !(Stage.Hero.FallbackTurn > 0 && Turn >= Stage.Hero.FallbackTurn)) return;
+            // 追記 4 の (イ): 門が開いた後、どれかの隊が中間拠点より奥にいる刻の終わり（AppearAfter 刻たっても誰も入らなければその刻の終わり）。
+            if (Stage.Hero.DeepAppear && GateOpenedTurn >= 0 && Turn < GateOpenedTurn + Stage.Hero.AppearAfter && !LivingSquads.Any(q => BeyondOutpost(q.Pos))) return;
             int road = Stage.LaneCount / 2;
             var fh = Formation.Build(center: hero);
             Hero = new Node
@@ -2922,6 +2960,7 @@ public sealed class Map11State
             HeroTurn = Turn;
             HeroHpTrail.Add(hero.MaxHp);
             HunterStartUnits = LivingSquads.Sum(s => s.Units!.Count(u => u.IsAlive));
+            foreach (Squad q in LivingSquads) if (q.Pos != Graph.Home) _routOut.Add(q.Index);
             PayHunter();
             return;
         }

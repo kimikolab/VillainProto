@@ -286,6 +286,17 @@ public partial class Map3DPiece : Node3D
                 });
             }
         }
+        // 第480期 追記 4: 狩る者の立ち絵（透過のある待機の絵があれば、旗の前に板で立てる・無ければ紋の顔だけ替わる）。
+        if (info.Hero && HunterArt.On && HunterArt.Board is { } heroBoard)
+        {
+            float height = BoardHeight * 1.2f;
+            _lean.AddChild(new Sprite3D
+            {
+                Texture = heroBoard, PixelSize = height / heroBoard.GetHeight(), Position = new Vector3(0, height / 2, 0.5f), Shaded = false, DoubleSided = true,
+                AlphaCut = SpriteBase3D.AlphaCutMode.OpaquePrepass, TextureFilter = BaseMaterial3D.TextureFilterEnum.LinearWithMipmaps,
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            });
+        }
         // 紋（先頭の敵の顔か、部隊の 1 文字）と、数。
         float crestY = pole - 0.16f - drop * 0.36f;
         Token(info.UnitId is { Length: > 0 } id ? UnitFaceIcon.TextureFor(id) : null, info.Glyph,

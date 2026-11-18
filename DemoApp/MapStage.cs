@@ -1211,6 +1211,9 @@ public sealed class MapStage
     internal const int Stage13Ch480FoeGold = 6, Stage13Ch480SpawnEvery = 0, Stage13Ch480FirstSpawn = 0, Stage13Ch480TurnCap = 12;   // ポンの決定 2026-11-17: 歩いてくる湧きは無い・10 刻のうちに門が開かなければ時間切れ
     internal const string Stage13Ch480SpawnBand = "band_levy";
     /// <summary>第480期の勇者だけの倍率（最大HP ／ 攻撃・%・`MapFoeScale` の勇者の列は ×1.0 のまま——HP と攻撃を別々に合わせるため）と、中間拠点に重ねる部隊の数。</summary>
+    /// <summary>追記 4: 勇者の現れるきっかけ（偽 ＝ (ア) 門が開いた刻の終わり ／ 真 ＝ (イ) 中間拠点より奥へ入った刻の終わり）と、初めて歩く刻の歩数（0 ＝ 2 歩・1 ＝ (ウ)）。</summary>
+    internal const bool Stage13Ch480DeepAppear = false;
+    internal const int Stage13Ch480FirstSteps = 0;
     internal const int Stage13Ch480HeroHp = 800, Stage13Ch480HeroAtk = 250, Stage13Ch480Stack = 2;   // ポンの決定 2026-11-17: (A) 隊の強さに合わせない・天井も置かない
 
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, Func<bool, MapGraph>> _shaped480 = new();
@@ -1234,7 +1237,7 @@ public sealed class MapStage
     /// <summary>値を替えた第480期の 1 章の 1-3（測りが候補を並べるための口・遊ぶ盤は <see cref="Stage13Ch480"/>）。</summary>
     internal static MapStage Stage13Ch480With(int steps = 2, int fallback = 0, int routPercent = 50, int holdTurns = 4, int spawnEvery = Stage13Ch480SpawnEvery, int firstSpawn = Stage13Ch480FirstSpawn,
                                               string spawn = Stage13Ch480SpawnBand, bool deep = true, int heroHp = Stage13Ch480HeroHp, int heroAtk = Stage13Ch480HeroAtk,
-                                              int stack = Stage13Ch480Stack, int[]? len = null, int[]? op = null)
+                                              int stack = Stage13Ch480Stack, int[]? len = null, int[]? op = null, bool aim = true, bool deepAppear = Stage13Ch480DeepAppear, int firstSteps = Stage13Ch480FirstSteps)
     {
         UnitDef hero = EnemyCatalog.HeroMap;
         if (heroHp != 100 || heroAtk != 100) hero = hero.WithStats(MapFoeScale.Mul(hero.MaxHp, heroHp), MapFoeScale.Mul(hero.Attack, heroAtk));
@@ -1277,7 +1280,7 @@ public sealed class MapStage
             MatchOffer = b.MatchOffer,
             PortalGate = b.PortalGate,
             Relic = b.Relic,
-            Hero = HeroRule.V480 with { Unit = hero, Steps = steps, FallbackTurn = fallback, RoutPercent = routPercent, HoldTurns = holdTurns },
+            Hero = HeroRule.V480 with { Unit = hero, Steps = steps, FallbackTurn = fallback, RoutPercent = routPercent, HoldTurns = holdTurns, AimHolds = aim, DeepAppear = deepAppear, FirstSteps = firstSteps },
             Siege = SiegeRule.V457,
             CrossFacing = true,
             ViewScale = 1.6f,
@@ -1525,11 +1528,15 @@ public readonly record struct MapFoeScale(int FoePercent, int HeroPercent, bool 
 /// （横の辺も使う・同じ距離なら枚数の多い隊）。追いつけば戦闘で「引き返す」は無い。隊が自分から勇者のマスへ入った刻（殿）は、勇者は動かない。拠点へは入らない。
 /// 勝ちは 生きている隊が全部拠点に入る ／ 勇者の HP が <c>RoutPercent</c>% を割る（退く）。負けは生きている駒が 0。<c>AfterGate</c> ／ <c>StepEvery</c> ／ <c>FromHome</c> は読まない。
 /// </param>
+/// <param name="AimHolds">追記 4 の (C): その刻の行き先が勇者のマスだった隊は、勇者の歩みで当たっても「自分から入った」（殿）として数える。</param>
+/// <param name="DeepAppear">追記 4 の (イ): 門が開いた後、どれかの隊が中間拠点より奥のマスにいる刻の終わりに現れる（<c>AppearAfter</c> 刻たっても誰も入らなければその刻の終わり）。偽なら門が開いた刻の終わり。</param>
+/// <param name="FirstSteps">追記 4 の (ウ): 勇者が初めて歩く刻の歩数（0 ＝ <c>Steps</c> と同じ）。</param>
 public readonly record struct HeroRule(bool On, int AfterGate, int StepEvery, UnitDef? Unit, int Gold, bool AfterCapture = false, bool Gatekeeper = false,
-                                       bool Chaser = false, int FromHome = 0, bool Hunter = false, int Steps = 1, int FallbackTurn = 0, int RoutPercent = 0, int HoldTurns = 0)
+                                       bool Chaser = false, int FromHome = 0, bool Hunter = false, int Steps = 1, int FallbackTurn = 0, int RoutPercent = 0, int HoldTurns = 0,
+                                       bool AimHolds = false, bool DeepAppear = false, int AppearAfter = 3, int FirstSteps = 0)
 {
     /// <summary>第480期の値（1 章の 1-3）: 狩る者・1 刻 2 歩・門が開いた刻の終わりにだけ現れる（開かなければ刻の期限で時間切れ）・HP が半分を割ったら退く・退かせて ＋20。駒は今の勇者（新しい特性は足さない）。</summary>
-    public static readonly HeroRule V480 = new(true, 0, 1, EnemyCatalog.HeroMap, 20, Hunter: true, Steps: 2, FallbackTurn: 0, RoutPercent: 50, HoldTurns: 4);
+    public static readonly HeroRule V480 = new(true, 0, 1, EnemyCatalog.HeroMap, 20, Hunter: true, Steps: 2, FallbackTurn: 0, RoutPercent: 50, HoldTurns: 4, AimHolds: true);
     public static readonly HeroRule Off = new(false, 0, 0, null, 0);
     /// <summary>第454期の値: 門の 2 刻後・2 刻に 1 マス・版 B（`EnemyCatalog.HeroMap`・固定 300 回復）・倒して ＋20。</summary>
     public static readonly HeroRule V454 = new(true, 2, 2, EnemyCatalog.HeroMap, 20);

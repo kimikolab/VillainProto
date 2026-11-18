@@ -444,9 +444,12 @@ public partial class Map11Main
         b.Pressed += () =>
         {
             var current = _mapPicks.First(p => p.Marker == marker);
+            if (current.Foe is { } rearFoe && RearPickable(rearFoe)) { PickRear(); return; }   // 第480期 追記 4: 撤退中に勇者の駒を押すと、選んでいる隊を殿に出す
             if (current.Foe is null) Select(current.Squad);
             else { ShowFoe(current.Foe); _showFoes = true; _showSquadDetail = _showHistory = false; Refresh(); }
         };
+        b.MouseEntered += () => { if (_mapPicks.First(p => p.Marker == marker).Foe is { } hf && RearPickable(hf)) _rearHoverOn = true; };
+        b.MouseExited += () => { if (_mapPicks.First(p => p.Marker == marker).Foe is { IsHero: true }) _rearHoverOn = false; };
         _mapPickLayer.AddChild(b);
         _mapPicks.Add((b, marker, foe, squad));
     }

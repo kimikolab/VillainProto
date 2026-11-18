@@ -372,6 +372,7 @@ public static class UiKit
         "archer_g" => 0.0163f,
         "knight" => 0.0117f,
         "hero" => 0.0137f,
+        "boss_regular" => 100f / 1536f, // 雷の勇者。1536px の下端から靴底まで100px。
         "droughter" => 0.0052f,
         "archer" => 0.0085f,
         "warden" => 0.0241f,

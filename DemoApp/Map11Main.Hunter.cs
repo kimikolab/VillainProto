@@ -45,6 +45,26 @@ public partial class Map11Main
     internal Rect2 HunterBarRect => _hunterOver?.BarRect ?? default;
     internal bool HunterBarShown => _hunterOver is { BarShown: true };
 
+    /// <summary>勇者が退いた帯と結果の題（追記 4: 外へ出した隊の駒が 1 枚も生きていなければ「辛くも退けた」・規則は同じ勝ち B）。</summary>
+    private static string HunterGoneText => St.HunterNarrow ? Map11Lines.HunterNarrow : Map11Lines.HunterGone;
+
+    // ---- 殿に出す（追記 4）: 撤退中に勇者の駒に触れると、選んでいる隊から勇者までの点線と「殿に出す」の札。押すと行き先が勇者になる ----
+    private bool _rearHoverOn;
+    private bool RearPickable(Map11State.Node foe)
+        => HunterBoard && foe is { IsHero: true, Cleared: false } && St.Rout && Hs.Stepped && !St.Finished && !Map11Session.TurnRunning && !HunterBusy
+           && _selected >= 0 && _selected < St.Squads.Length && !St.Squads[_selected].Lost && St.CanSend(_selected) && St.Squads[_selected].Pos != foe.Pos;
+    /// <summary>勇者の駒に触れているあいだの行き先の札（道の点線が読む）。</summary>
+    private DestButton? RearHover
+        => _rearHoverOn && St.Hero is { } h && RearPickable(h) && Map11Session.RearDest(_selected) is { } d ? _destButtons.FirstOrDefault(b => b.Dest == d) : null;
+    internal bool RearMarkShown => _hunterOver is { } o && o.Marks.Any(m => m.Kind == HunterOverlay.MarkKind.Rear);
+    private void PickRear()
+    {
+        if (!Map11Session.SetRear(_selected)) return;
+        _guideSquadChosen = _guideDestinationChosen = true;
+        GD.Print($"MAP3D_HUNTER_REAR {St.Squads[_selected].Label} を殿に出す（行き先 {Map11Orders.Where(St.Graph, Map11Session.Destinations[_selected])}）");
+        Refresh();
+    }
+
     /// <summary>勇者の駒をまだ盤に出さないか（登場の演出で歩み出るまで）。</summary>
     private static bool HunterHidden(Map11State.Node foe) => HunterBoard && foe.IsHero && !Hs.Stepped;
     /// <summary>撤退の局面を画面に出してよいか（登場の演出が目標の札を替える所まで進んだ後）。</summary>
@@ -53,6 +73,7 @@ public partial class Map11Main
     private void BuildHunter3D()
     {
         if (_map3d is not null) MapMusic.Play(this, St.Finished ? (St.Won ? MapMusic.Track.Win : MapMusic.Track.Lose) : HunterBoard && St.Rout ? MapMusic.Track.Hero : MapMusic.Track.Normal);
+        HunterArt.Use(HunterBoard && _map3d is not null ? St.Stage.Hero.Unit?.Id : null);   // 追記 4: 立ち絵があれば駒・会戦の台・帯に使う
         if (!HunterBoard || _map3d is null) return;
         var layer = new CanvasLayer { Layer = 9, Name = "HunterLayer" };
         AddChild(layer);
@@ -200,7 +221,7 @@ public partial class Map11Main
                 await HWait(0.6);
                 piece.Walk(new[] { gate }, 1.6f);
             }
-            _hunterOver.Band(Map11Lines.HunterGone, 0, Color.FromHtml("#f1c96b"), 1.8f);
+            _hunterOver.Band(HunterGoneText, 0, Color.FromHtml("#f1c96b"), 1.8f);
             MapStagingAudio.Play(this, MapStageCue.Kind.Open);
             MapMusic.Play(this, MapMusic.Track.Win);
             await HWait(1.9);
@@ -247,7 +268,7 @@ public partial class Map11Main
             if (cells.Count > 1)
             {
                 List<Vector3> line = _layout3d.Trace(cells);
-                int steps = Math.Max(1, St.Stage.Hero.Steps);
+                int steps = St.HunterStepsNext;   // 追記 4 の (ウ): 初めて歩く刻は 1 歩
                 float near = Map3DLayout.LengthOf(_layout3d.Trace(cells.Take(Math.Min(cells.Count, steps + 1)).ToList()));
                 float length = Map3DLayout.LengthOf(line);
                 const float gap = 1.15f;
@@ -276,10 +297,14 @@ public partial class Map11Main
                 }
             }
             // 次の刻で追いつかれる隊に赤い目の印（文なし）。
-            if (chase.Steps <= Math.Max(1, St.Stage.Hero.Steps) && OnScreen(ClashPos(null, chase.Squad) + new Vector3(0, 6.4f, 0)) is { } eye)
+            if (chase.Steps <= St.HunterStepsNext && OnScreen(ClashPos(null, chase.Squad) + new Vector3(0, 6.4f, 0)) is { } eye)
                 _hunterOver.Marks.Add((eye, HunterOverlay.MarkKind.Eye));
         }
         for (int i = used; i < _hunterDots.Count; i++) _hunterDots[i].Visible = false;
+        // ---- 殿に出す: 勇者の駒に触れているあいだ ／ 選んでいる隊が殿のあいだ、勇者の駒の上に札 ----
+        if (live && !HunterBusy && !ClashShown && !CoverShown && !_reform && St.Hero is { } rh && (RearHover is not null || (Map11Session.IsRear(_selected) && St.Squads[_selected].Pos != rh.Pos))
+            && HeroPiece() is { } rearPiece && OnScreen(rearPiece.GlobalPosition + new Vector3(0, 7.6f, 0)) is { } rearAt)
+            _hunterOver.Marks.Add((rearAt, HunterOverlay.MarkKind.Rear));
         // ---- 拠点に入った隊: 短い音と、名札に「生還」 ----
         if (St.Rout && hs.Stepped)
         {
@@ -410,7 +435,7 @@ internal static class FoeTraitIcon
 /// <summary>狩る者の演出の 2D の層: 閃光・落雷・帯・目の印・「生還」・勇者の HP の棒・入力の止め。描くだけ。</summary>
 public partial class HunterOverlay : Control
 {
-    public enum MarkKind { Eye, Home }
+    public enum MarkKind { Eye, Home, Rear }
     internal List<(Vector2 At, MarkKind Kind)> Marks { get; } = new();
     internal event Action? Skip;
     internal bool BarShown { get; set; }
@@ -530,12 +555,13 @@ public partial class HunterOverlay : Control
             }
             else
             {
-                const string text = "生還";
+                bool rearMark = kind == MarkKind.Rear;
+                string text = rearMark ? Map11Lines.RearPick : "生還";
                 Vector2 ts = font.GetStringSize(text, HorizontalAlignment.Left, -1, 22);
                 var box = new Rect2(at - new Vector2(ts.X / 2 + 12, 16), new Vector2(ts.X + 24, 32));
-                DrawRect(box, new Color(0.04f, 0.14f, 0.10f, 0.92f));
-                DrawRect(box, Color.FromHtml("#71d7a1"), false, 2);
-                DrawString(font, new Vector2(box.Position.X + 12, box.Position.Y + 24), text, HorizontalAlignment.Left, -1, 22, Color.FromHtml("#b8f5d3"));
+                DrawRect(box, rearMark ? new Color(0.16f, 0.11f, 0.02f, 0.92f) : new Color(0.04f, 0.14f, 0.10f, 0.92f));
+                DrawRect(box, Color.FromHtml(rearMark ? "#f1c96b" : "#71d7a1"), false, 2);
+                DrawString(font, new Vector2(box.Position.X + 12, box.Position.Y + 24), text, HorizontalAlignment.Left, -1, 22, Color.FromHtml(rearMark ? "#ffe6a8" : "#b8f5d3"));
             }
         }
         // ---- 帯（画面を横切る・名前と王冠） ----
@@ -551,6 +577,9 @@ public partial class HunterOverlay : Control
             float slide = (1 - Mathf.Clamp(t / 0.12f, 0, 1)) * 140;
             Vector2 at = new((size.X - ts.X) / 2 + slide, y + 18);
             DrawString(font, at, _bandText, HorizontalAlignment.Left, -1, 52, new Color(_bandColor.R, _bandColor.G, _bandColor.B, show));
+            // 追記 4: 立ち絵があれば、名前の左に顔。
+            if (HunterArt.On && HunterArt.Face is { } bandFace)
+                DrawTextureRect(bandFace, new Rect2(at.X - hh - 18, y - hh / 2 + 6, hh - 12, hh - 12), false, new Color(1, 1, 1, show));
             for (int i = 0; i < _bandCrowns; i++)
                 Crown(this, new Vector2(size.X / 2 + (i - (_bandCrowns - 1) / 2f) * 44 + slide, y - hh / 2 - 18), 1.3f, new Color(1f, 0.82f, 0.29f, show));
         }
@@ -630,4 +659,81 @@ internal static class MapMusic
 
     /// <summary>作戦マップを離れる（戦闘へ・題へ）: 1 秒で消す。</summary>
     internal static void Stop(Node from) => Play(from, Track.None);
+}
+
+/// <summary>
+/// 狩る者の立ち絵（第480期 追記 4・表示だけ）。`design/art/enemies/hero/` に待機の絵（<c>idle-left.png</c> ／ <c>idle.png</c>）があれば読む
+/// ——フォルダの直下が先、無ければ下のフォルダのうちいちばん新しいもの。顔は絵の上 1/4 から真ん中を四角く切り出す。
+/// 絵が無ければ何もしない（今の仮の絵のまま）。透過の無い絵は板にしない（顔だけ使う）。
+/// </summary>
+internal static class HunterArt
+{
+    private static bool _tried;
+    private static string? _heroId;
+    internal static bool On { get; private set; }
+    internal static Texture2D? Face { get; private set; }
+    internal static Texture2D? Board { get; private set; }
+    internal static string Source { get; private set; } = "";
+
+    /// <summary>その盤で使う（<paramref name="heroId"/> ＝ 勇者の駒の Id・null で外す）。</summary>
+    internal static void Use(string? heroId)
+    {
+        if (_heroId is not null) UnitFaceIcon.Override(_heroId, null);
+        _heroId = null;
+        On = false;
+        if (heroId is null) return;
+        Load();
+        if (Face is null) return;
+        _heroId = heroId;
+        On = true;
+        UnitFaceIcon.Override(heroId, Face);
+    }
+
+    private static string? Find()
+    {
+        string dir = System.IO.Path.GetFullPath(System.IO.Path.Combine(ProjectSettings.GlobalizePath("res://"), "..", "design", "art", "enemies", "hero"));
+        if (!System.IO.Directory.Exists(dir)) return null;
+        string[] names = { "idle-left.png", "idle.png", "idle-right.png" };
+        foreach (string n in names) if (System.IO.File.Exists(System.IO.Path.Combine(dir, n))) return System.IO.Path.Combine(dir, n);
+        return System.IO.Directory.GetDirectories(dir)
+            .SelectMany(d => names.Select(n => System.IO.Path.Combine(d, n))).Where(System.IO.File.Exists)
+            .OrderByDescending(System.IO.File.GetLastWriteTimeUtc).FirstOrDefault();
+    }
+
+    private static void Load()
+    {
+        if (_tried) return;
+        _tried = true;
+        try
+        {
+            if (Find() is not { } path) return;
+            using Image image = Image.LoadFromFile(path);
+            if (image.IsEmpty()) return;
+            image.Convert(Image.Format.Rgba8);
+            Source = path;
+            // 顔: 絵の上 1/4（高さ）から、真ん中を四角く。丸く抜いて端をなじませる（`UnitFaceIcon.TextureFor` と同じ形）。
+            int side = Math.Min(image.GetWidth(), image.GetHeight() / 4);
+            using Image crop = image.GetRegion(new Rect2I((image.GetWidth() - side) / 2, 0, side, side));
+            crop.Resize(128, 128, Image.Interpolation.Lanczos);
+            for (int py = 0; py < 128; py++)
+                for (int px = 0; px < 128; px++)
+                {
+                    Color color = crop.GetPixel(px, py);
+                    color.A *= Math.Clamp(63.5f - new Vector2(px - 63.5f, py - 63.5f).Length(), 0, 1);
+                    crop.SetPixel(px, py, color);
+                }
+            crop.GenerateMipmaps();
+            Face = ImageTexture.CreateFromImage(crop);
+            // 板: 四隅が透けている絵だけ（背景つきの絵は板にしない）。
+            bool cut = image.GetPixel(2, 2).A < 0.1f && image.GetPixel(image.GetWidth() - 3, 2).A < 0.1f;
+            if (cut)
+            {
+                if (image.GetHeight() > 720) image.Resize(Math.Max(1, image.GetWidth() * 720 / image.GetHeight()), 720, Image.Interpolation.Lanczos);
+                image.GenerateMipmaps();
+                Board = ImageTexture.CreateFromImage(image);
+            }
+            GD.Print($"MAP3D_HUNTER_ART {path} 顔 ○ 板 {(cut ? "○" : "×（背景つき——顔だけ使う）")}");
+        }
+        catch (Exception e) { GD.PrintErr($"MAP3D_HUNTER_ART_FAILED {e.Message}"); }
+    }
 }

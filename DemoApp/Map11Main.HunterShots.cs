@@ -152,7 +152,7 @@ public partial class Map11Main
                 _encounterOverlay.Visible = false;
                 Refresh();
             }
-            Req(stopped && vsHero, $"殿: 勇者との会戦の台が出た（{St.Squads[rear].Label}・{(Map11Session.FoePhase ? "追いつかれた" : "自分から入った")}）");
+            Req(stopped && vsHero, $"殿: 勇者との会戦の台が出た（{St.Squads[rear].Label}・{(St.IsRearFight(rear, Map11Session.FoePhase) ? "殿" : "追いつかれた")}）");
             if (vsHero)
             {
                 Req(!ClashBackShown, "殿: 勇者との会戦に「引き返す」は無い");
@@ -173,11 +173,11 @@ public partial class Map11Main
                     _clashFought = null;
                     _ = HunterRouted();
                     await Wait(1.1);
-                    Req(_hunterOver!.BandText == Map11Lines.HunterGone, $"退いた: 帯は「{Map11Lines.HunterGone}」（{_hunterOver.BandText}）・勇者 HP {hpBefore} → {St.Hero.HpNow}・曲の口 {MapMusic.Current}");
+                    Req(_hunterOver!.BandText == HunterGoneText, $"退いた: 帯は「{Map11Lines.HunterGone}」（{_hunterOver.BandText}）・勇者 HP {hpBefore} → {St.Hero.HpNow}・曲の口 {MapMusic.Current}");
                     await Shot("勇者は退いた");
                     for (int f = 0; f < 3000 && HunterBusy; f++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
                     await Wait(0.6);
-                    Req(_resultOverlay.Visible && _resultTitle.Text == Map11Lines.HunterGone, $"退いた: 結果の窓（{_resultTitle.Text} ／ {_resultBody.Text.Replace("\n", " ・ ")}）");
+                    Req(_resultOverlay.Visible && _resultTitle.Text == HunterGoneText, $"退いた: 結果の窓（{_resultTitle.Text} ／ {_resultBody.Text.Replace("\n", " ・ ")}）");
                     await Shot("結果の窓_勇者は退いた");
                     Finish();
                     return;

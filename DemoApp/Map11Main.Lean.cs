@@ -150,6 +150,8 @@ public partial class Map11Main
             if (pass >= 0 && St.HeldOutposts.Contains(pass) && SayOnce(Map11Lines.Pass12)) return;
             if (pass >= 0 && St.Stage.PortalGate > 0 && St.GateOpen && !St.HeldOutposts.Contains(pass) && !Map11Lines.WasSaid(Map11Lines.Pass12) && SayOnce(Map11Lines.NoPass12)) return;
         }
+        // 第480期 追記 4: 横の辺は行ける道（中間拠点を初めて取ったときに 1 回）。
+        else if (id == "1-3" && HunterBoard && !St.Rout && St.HeldOutposts.Count >= 1 && !Map11Session.TurnRunning && SayOnce(Map11Lines.Cross13)) return;
         if (St.Stage.Gold.On && St.Gold >= Map11Lines.GoldLine && St.Turn > 0 && !Map11Session.TurnRunning) SayOnce(Map11Lines.Gold);
     }
 
@@ -187,7 +189,7 @@ public partial class Map11Main
             lines.Add($"{Map11Session.ShownTurn} 刻目");
             lines.Add($"生還した駒　{St.HunterSurvivors} ／ {St.HunterStartUnits}");
             lines.Add("殿　" + (St.RearGuards.Count == 0 ? "なし" : string.Join("・", St.RearGuards.OrderBy(i => i).Select(i => St.Squads[i].Label))));
-            if (St.HunterDriven) lines.Add("勇者を退かせた");
+            if (St.HunterDriven) lines.Add(St.HunterNarrow ? "勇者は退いた（外へ出した隊は戻らなかった）" : "勇者を退かせた");
         }
         if (St.Stage.Gold.On) lines.Add($"金　{St.Gold}");
         _resultBody.Text = _resultOpen ? _resultFull : string.Join(Nl, lines);

@@ -131,6 +131,7 @@ public static class Map11Orders
     /// </summary>
     public static Map11State.Node? Apply(Map11State st, int squad, Dest dest, Order order)
     {
+        st.NoteAim(squad, dest.Id);   // 第480期 追記 4: 行き先が勇者のマスなら殿（狩る者の盤の撤退の局面だけ・ほかでは何もしない）
         switch (order)
         {
             case Order.Advance:

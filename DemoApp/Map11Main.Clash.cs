@@ -434,7 +434,7 @@ public partial class Map11Main
                     // 第480期: 勇者との会戦。自分から入った殿は「ここは任せろ。行け！」・追いつかれたとき（初回）は「……無理だ。引け！」。
                     if (HunterBoard && _clashNode is { IsHero: true })
                     {
-                        if (!Map11Session.FoePhase) said = _oddsHeld >= 0 && _oddsHeld < OddsEven ? Map11Lines.HunterRearWeak : Map11Lines.HunterRear;
+                        if (St.IsRearFight(_clashSquad, Map11Session.FoePhase)) said = _oddsHeld >= 0 && _oddsHeld < OddsEven ? Map11Lines.HunterRearWeak : Map11Lines.HunterRear;
                         else if (_oddsWins < OddsEven && Map11Lines.Mark("1-3.hunter.caught")) said = Map11Lines.HunterCaught;   // 勝ち目が劣勢のときだけ（優勢の隊に「無理だ」と言わせない）
                     }
                     _clashSay.Text = $"「{said}」";
@@ -452,7 +452,7 @@ public partial class Map11Main
                     _clashHold.Visible = true;
                 }
                 GD.Print($"MAP3D_CLASH_ODDS {St.Squads[_clashSquad].Label} 対 {_clashNode?.Def.Name} {_oddsWins}／{OddsRuns} {text} 割れの印: {(names.Length > 0 ? names : "—")} セリフ: {(said.Length > 0 ? $"{alive[0].Def.Name}「{said}」" : "—")}"
-                    + (holdText.Length > 0 ? $" 足止め: {_oddsHeld}／{OddsRuns} {holdText}（{(Map11Session.FoePhase ? "追いつかれた" : "自分から入った")}）" : ""));
+                    + (holdText.Length > 0 ? $" 足止め: {_oddsHeld}／{OddsRuns} {holdText}（{(!St.IsRearFight(_clashSquad, Map11Session.FoePhase) ? "追いつかれた" : Map11Session.FoePhase ? "殿に出した（勇者の番に当たった）" : "自分から入った")}）" : ""));
             }
         }
 

@@ -335,7 +335,7 @@ public partial class Map11Main
         // 第480期: 狩る者の盤。撤退の局面（登場の演出が目標を替える所まで進んだら）は赤い「生きて拠点へ戻れ」。
         bool rout = HunterRoutShown;
         _hud3d.SetGoalAlert(rout && !St.Finished);
-        string goal = rout ? (St.Finished ? (St.HunterDriven ? $"目標　{Map11Lines.HunterGone}" : St.Won ? "目標　生きて戻った" : Map11Lines.GoalRout) : Map11Lines.GoalRout)
+        string goal = rout ? (St.Finished ? (St.HunterDriven ? $"目標　{HunterGoneText}" : St.Won ? "目標　生きて戻った" : Map11Lines.GoalRout) : Map11Lines.GoalRout)
             : HunterBoard ? (St.GateOpen ? "目標　野営地を制圧する" : $"目標　中間拠点を取る（{St.HeldOutposts.Count}／{St.Stage.PortalGate}）")
             : St.HeroClock && St.Hero is { Cleared: false } hero ? $"目標　勇者を倒す（HP {hero.HpNow}）"
             : !St.Portal.On ? $"目標　敵部隊をすべて抜く（{St.ClearedCount} / {St.Stage.TotalNodes}）"
@@ -760,7 +760,8 @@ public partial class Map11Main
     private void ProcessRoute3D(bool chosen, Map11State.Squad squad)
     {
         var points = new List<Vector3>();
-        DestButton? pick = _hoverDestination is { Node.Disabled: false } hover && hover.Node.IsVisibleInTree() ? hover
+        DestButton? pick = RearHover is { } rearHover ? rearHover   // 第480期 追記 4: 勇者の駒に触れているあいだは「殿に出す」の道
+            : _hoverDestination is { Node.Disabled: false } hover && hover.Node.IsVisibleInTree() ? hover
             : _destButtons.FirstOrDefault(d => d.Dest == Map11Session.Destinations[_selected]);
         if (chosen && pick is not null && St.CanSend(_selected) && !St.AtDest(_selected, pick.Dest))
         {

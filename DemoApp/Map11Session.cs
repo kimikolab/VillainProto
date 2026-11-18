@@ -446,6 +446,7 @@ public static class Map11Session
     {
         int n = State?.Squads.Length ?? Map11.Squads.Length;  // 第442期: 隊の数はステージが持つ
         Destinations = Enumerable.Repeat(Dest.Home, n).ToArray();
+        _rear.Clear();
         TurnRunning = false;
         InterceptNode = null;
         _cursor = 0;
@@ -461,6 +462,34 @@ public static class Map11Session
     {
         if (squad < 0 || squad >= Destinations.Length || TurnRunning) return;
         Destinations[squad] = dest;
+        _rear.Remove(squad);
+    }
+
+    /// <summary>殿に出した隊（第480期 追記 4・行き先が勇者のマスを追う・ほかの行き先を選べば外れる）。</summary>
+    private static readonly HashSet<int> _rear = new();
+    public static bool IsRear(int squad) => _rear.Contains(squad);
+
+    /// <summary>勇者のマスを行き先にしたときの行き先（勇者が門にいれば、その隊の経路から門へ——門へは入れないので手前で待つ）。</summary>
+    public static Dest? RearDest(int squad)
+    {
+        if (State is not { Rout: true, Hero: { Cleared: false } h } st || squad < 0 || squad >= st.Squads.Length) return null;
+        return h.Pos == st.Graph.Portal ? Dest.Portal(st.Graph, st.Squads[squad].Road >= 0 ? st.Squads[squad].Road : st.Stage.LaneCount / 2) : Dest.Of(st.Graph, h.Pos);
+    }
+
+    /// <summary>殿に出す（プレイヤーの判断・<b>盤面は1ビットも動かない</b>）。撤退の局面で勇者が盤にいるときだけ。</summary>
+    public static bool SetRear(int squad)
+    {
+        if (TurnRunning || RearDest(squad) is not { } dest) return false;
+        Destinations[squad] = dest;
+        _rear.Add(squad);
+        return true;
+    }
+
+    /// <summary>殿に出した隊の行き先を、勇者のいまのマスに合わせ直す（刻の始めと終わり）。</summary>
+    private static void SyncRear()
+    {
+        foreach (int i in _rear.ToList())
+            if (RearDest(i) is { } dest && i < Destinations.Length) Destinations[i] = dest; else _rear.Remove(i);
     }
 
     /// <summary>その隊がこの作戦ターンに何をするか（画面に出す1語）。</summary>
@@ -472,6 +501,7 @@ public static class Map11Session
     {
         if (State is null || TurnRunning || State.Finished) return;
         TakeOpening();
+        SyncRear();
         TurnRunning = true;
         _playing = State.Turn + 1;   // 第459期 §2: この作戦ターンの番号（表示だけ）
         _cursor = 0;
@@ -536,6 +566,7 @@ public static class Map11Session
         ClearSiege();
         _foes = null;
         _cursor = 0;
+        SyncRear();
         // **行き先は引きずる**（第175期 §1-1「一度でも出した隊は、行き先を変えるまで前へ進み続ける」）
         // ——第174期はここで命令を「待つ」へ戻していた。それが「何も押さないことが有効な手」の正体だった。
         return st.Fallen ? StepKind.Fallen : StepKind.Done;

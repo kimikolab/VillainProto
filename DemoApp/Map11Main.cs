@@ -1213,6 +1213,8 @@ public partial class Map11Main : Node3D
 
         if (_reform) { _reform = false; ClearHold(); }
         Map11Session.SetDestination(_selected, dest);
+        // 第480期 追記 4: 撤退の局面で勇者のマスを行き先にした隊は殿（行き先が勇者を追う）。
+        if (HunterBoard && St.Rout && St.Hero is { Cleared: false } rearHero && dest.Id == rearHero.Pos) Map11Session.SetRear(_selected);
         _guideSquadChosen = _guideDestinationChosen = true;
         _guideEventCell = null;
         // 行き先の道の中身を右に出しておく（決める瞬間の隣に相手を置く・第171期 §1-3）。
@@ -3030,7 +3032,7 @@ public partial class Map11Main : Node3D
     private void ShowResult()
     {
         if (Map3DMode.Active) MapMusic.Play(this, St.Won ? MapMusic.Track.Win : MapMusic.Track.Lose);   // 第480期: 曲の口（ファイルが無ければ黙る）
-        _resultTitle.Text = HunterBoard && St.Rout ? (St.HunterDriven ? Map11Lines.HunterGone : St.Won ? "生還" : St.HunterLost ? "全滅" : "時間切れ")   // 第480期: 撤退の局面の終わり方
+        _resultTitle.Text = HunterBoard && St.Rout ? (St.HunterDriven ? HunterGoneText : St.Won ? "生還" : St.HunterLost ? "全滅" : "時間切れ")   // 第480期: 撤退の局面の終わり方
             : St.Won ? "踏破" : St.Fallen ? "拠点 陥落" : St.HeroArrived ? "勇者が到着した" : St.TimeUp ? "時間切れ" : "撤退";
         // **生存枚数は2つ出す**（第169期に画面内で数え方が2通りに割れていた）。
         var lines = new List<string>

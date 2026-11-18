@@ -187,3 +187,73 @@ MAP3D_PLAY_HUNTER 終わり: 勇者は退いた ・ 勇者が現れた 7 刻目 
 MAP3D_PLAY_COMPLETE plan=hc ok=True won=True fallen=False captured_turn=-1 gold=69 lost=0 battles=6 spawns=0 shots=44 covers=3（確かめの窓・レリックの候補・レリックの候補） sides=6 says=1 declines=0 rest_clicks=0 
 ```
 
+## 追記 4 の後（殿は (C)・勇者の駒を押して「殿に出す」）: ha ／ hr（殿を 1 隊）／ hb1（752749）
+
+### ha
+
+```
+MAP3D_HUNTER_ART C:\works\VillainProto\design\art\enemies\hero\lightning-final-v2\idle-left.png 顔 ○ 板 ○
+MAP3D_PLAY roles main=第1隊 second=第2隊 rear=—
+MAP3D_CLASH_RESULT 第1隊 対 物見の兵 勝ち 味方 4／5 敵 0／3 賞金 6 2 刻目 倒れた: 爆ぜるゾト（2T）
+MAP3D_CLASH_RESULT 第2隊 対 徴募兵 勝ち 味方 5／5 敵 0／5 賞金 6 4 刻目 倒れた: —
+MAP3D_CLASH_RESULT 第1隊 対 傭兵崩れ 勝ち 味方 4／4 敵 0／5 賞金 6 5 刻目 倒れた: —
+MAP3D_CLASH_RESULT 第2隊 対 徴募兵 勝ち 味方 5／5 敵 0／5 賞金 14 5 刻目 倒れた: —
+MAP3D_CLASH_RESULT 第1隊 対 徴募兵 勝ち 味方 4／4 敵 0／5 賞金 14 6 刻目 倒れた: —
+MAP3D_HUNTER_ENTRANCE turn=7 gate=True hero=19200
+MAP3D_CLASH_RESULT 第1隊 対 白雷の勇者　ライゼル 負け 味方 0／4 敵 1／1 賞金 0 10 刻目 倒れた: 胞子体ムグ（6T）・施しのリリ（6T）・継ぎ接ぎのヴェル（4T）・墓守リィカ（5T）
+MAP3D_HUNTER_HOME 第2隊 5 枚 10 刻目
+MAP3D_PLAY_HUNTER 勇者が現れた: 7 刻目 ・ 中間拠点 2 ・ 隊 第1隊 谷の橋 4枚 ／ 第2隊 森の集落 5枚 ／ 第3隊 討伐隊の砦 5枚 ／ 第4隊 討伐隊の砦 5枚
+MAP3D_PLAY_HUNTER 隊の札の印: 第1隊「足止めできる」 ／ 第2隊「足止めできる」 ／ 第3隊「生還」 ／ 第4隊「生還」
+MAP3D_PLAY_HUNTER 9 刻目 第1隊（4 枚: 胞子体ムグ・施しのリリ・継ぎ接ぎのヴェル・墓守リィカ）が追いつかれた ・ 台の印「足止めできる」勝ち目「劣勢」セリフ 「……無理だ。引け！」 ・ 隊の札の印「足止めできる」 ・ 勇者 HP 19200
+MAP3D_PLAY_HUNTER 終わり: 生還 ・ 勇者が現れた 7 刻目 ・ 終わった 10 刻目（登場から 3 刻） ・ 生還 15／19 ・ 殿 なし ・ 足を止めた 0 回 ／ 止められなかった 0 回 ／ 追いつかれた 1 回 ・ 勇者 HP 11077／19200 ・ 退かせた False ・ 時間切れ False
+MAP3D_PLAY_COMPLETE plan=ha ok=True won=True fallen=False captured_turn=-1 gold=32 lost=5 battles=6 spawns=0 shots=42 covers=2（レリックの候補・レリックの候補） sides=6 says=1 declines=0 rest_clicks=0
+```
+
+### hr
+
+```
+MAP3D_HUNTER_ART C:\works\VillainProto\design\art\enemies\hero\idle-left.png 顔 ○ 板 ○
+MAP3D_PLAY roles main=第1隊 second=第2隊 rear=第3隊（廃棄聖騎士ガルド HP60・焼け残りのボルグ HP60・火選りのヒヨ HP42・熾のホタ HP47・痺れ粉のトウ HP28）
+MAP3D_CLASH_RESULT 第1隊 対 物見の兵 勝ち 味方 4／5 敵 0／3 賞金 6 2 刻目 倒れた: 爆ぜるゾト（2T）
+MAP3D_CLASH_RESULT 第2隊 対 徴募兵 勝ち 味方 5／5 敵 0／5 賞金 6 4 刻目 倒れた: —
+MAP3D_CLASH_RESULT 第1隊 対 傭兵崩れ 勝ち 味方 4／4 敵 0／5 賞金 6 5 刻目 倒れた: —
+MAP3D_CLASH_RESULT 第2隊 対 徴募兵 勝ち 味方 5／5 敵 0／5 賞金 14 5 刻目 倒れた: —
+MAP3D_CLASH_RESULT 第1隊 対 徴募兵 勝ち 味方 4／4 敵 0／5 賞金 14 6 刻目 倒れた: —
+MAP3D_HUNTER_ENTRANCE turn=7 gate=True hero=19200
+MAP3D_HUNTER_REAR 第3隊 を殿に出す（行き先 敵の拠点）
+MAP3D_CLASH_RESULT 第3隊 対 白雷の勇者　ライゼル 負け 味方 0／5 敵 1／1 賞金 0 8 刻目 倒れた: 廃棄聖騎士ガルド（12T）・焼け残りのボルグ（10T）・火選りのヒヨ（10T）・熾のホタ（2T）・痺れ粉のトウ（1T）
+MAP3D_HUNTER_HOME 第2隊 5 枚 11 刻目
+MAP3D_HUNTER_HOME 第1隊 4 枚 11 刻目
+MAP3D_PLAY_HUNTER 勇者が現れた: 7 刻目 ・ 中間拠点 2 ・ 隊 第1隊 谷の橋 4枚 ／ 第2隊 森の集落 5枚 ／ 第3隊 中の谷道 3 マス目 5枚 ／ 第4隊 討伐隊の砦 5枚
+MAP3D_PLAY_HUNTER 隊の札の印: 第1隊「足止めできる」 ／ 第2隊「足止めできる」 ／ 第3隊「足止めできる」 ／ 第4隊「生還」
+MAP3D_PLAY_HUNTER 7 刻目 第3隊 で勇者の駒に触れた: 「殿に出す」の札 出た
+MAP3D_PLAY_HUNTER 7 刻目 第3隊 を殿に出した（勇者の駒を押した）
+MAP3D_PLAY_HUNTER 8 刻目 第3隊（5 枚: 廃棄聖騎士ガルド・焼け残りのボルグ・火選りのヒヨ・熾のホタ・痺れ粉のトウ）が自分から入った ・ 台の印「足止めできる」勝ち目「劣勢」セリフ 「ここは任せろ。行け！」 ・ 隊の札の印「足止めできる」 ・ 勇者 HP 19200
+MAP3D_PLAY_HUNTER 終わり: 生還 ・ 勇者が現れた 7 刻目 ・ 終わった 11 刻目（登場から 4 刻） ・ 生還 14／19 ・ 殿 第3隊 ・ 足を止めた 1 回 ／ 止められなかった 0 回 ／ 追いつかれた 0 回 ・ 勇者 HP 11985／19200 ・ 退かせた False ・ 時間切れ False
+MAP3D_PLAY_COMPLETE plan=hr ok=True won=True fallen=False captured_turn=-1 gold=31 lost=6 battles=6 spawns=0 shots=53 covers=2（レリックの候補・レリックの候補） sides=6 says=1 declines=0 rest_clicks=0
+```
+
+### hb1
+
+```
+MAP3D_HUNTER_ART C:\works\VillainProto\design\art\enemies\hero\idle-left.png 顔 ○ 板 ○
+MAP3D_PLAY roles main=第1隊 second=第2隊 rear=第4隊（分かちのドハ HP62）
+MAP3D_CLASH_RESULT 第1隊 対 物見の兵 勝ち 味方 4／5 敵 0／3 賞金 6 2 刻目 倒れた: 爆ぜるゾト（2T）
+MAP3D_CLASH_RESULT 第2隊 対 徴募兵 勝ち 味方 5／5 敵 0／5 賞金 6 4 刻目 倒れた: —
+MAP3D_CLASH_RESULT 第1隊 対 傭兵崩れ 勝ち 味方 4／4 敵 0／5 賞金 6 5 刻目 倒れた: —
+MAP3D_CLASH_RESULT 第2隊 対 徴募兵 勝ち 味方 5／5 敵 0／5 賞金 14 5 刻目 倒れた: —
+MAP3D_CLASH_RESULT 第1隊 対 徴募兵 勝ち 味方 4／4 敵 0／5 賞金 14 6 刻目 倒れた: —
+MAP3D_HUNTER_ENTRANCE turn=7 gate=True hero=19200
+MAP3D_HUNTER_REAR 第4隊 を殿に出す（行き先 敵の拠点）
+MAP3D_CLASH_RESULT 第4隊 対 白雷の勇者　ライゼル 負け 味方 0／1 敵 1／1 賞金 0 8 刻目 倒れた: 分かちのドハ（2T）
+MAP3D_CLASH_RESULT 第1隊 対 白雷の勇者　ライゼル 負け 味方 0／4 敵 1／1 賞金 0 10 刻目 倒れた: 胞子体ムグ（4T）・施しのリリ（6T）・継ぎ接ぎのヴェル（2T）・墓守リィカ（4T）
+MAP3D_HUNTER_HOME 第2隊 5 枚 10 刻目
+MAP3D_PLAY_HUNTER 勇者が現れた: 7 刻目 ・ 中間拠点 2 ・ 隊 第1隊 谷の橋 4枚 ／ 第2隊 森の集落 5枚 ／ 第3隊 討伐隊の砦 5枚 ／ 第4隊 中の谷道 3 マス目 1枚
+MAP3D_PLAY_HUNTER 隊の札の印: 第1隊「足止めできる」 ／ 第2隊「足止めできる」 ／ 第3隊「生還」 ／ 第4隊「足止めできない」
+MAP3D_PLAY_HUNTER 7 刻目 第4隊 で勇者の駒に触れた: 「殿に出す」の札 出た
+MAP3D_PLAY_HUNTER 7 刻目 第4隊 を殿に出した（勇者の駒を押した）
+MAP3D_PLAY_HUNTER 8 刻目 第4隊（1 枚: 分かちのドハ）が自分から入った ・ 台の印「足止めできない」勝ち目「劣勢」セリフ 「長くは持たない。急げ！」 ・ 隊の札の印「足止めできない」 ・ 勇者 HP 19200
+MAP3D_PLAY_HUNTER 9 刻目 第1隊（4 枚: 胞子体ムグ・施しのリリ・継ぎ接ぎのヴェル・墓守リィカ）が追いつかれた ・ 台の印「足止めできる」勝ち目「劣勢」セリフ 「……無理だ。引け！」 ・ 隊の札の印「足止めできる」 ・ 勇者 HP 19198
+MAP3D_PLAY_HUNTER 終わり: 生還 ・ 勇者が現れた 7 刻目 ・ 終わった 10 刻目（登場から 3 刻） ・ 生還 10／15 ・ 殿 第4隊 ・ 足を止めた 0 回 ／ 止められなかった 1 回 ／ 追いつかれた 1 回 ・ 勇者 HP 14928／19200 ・ 退かせた False ・ 時間切れ False
+MAP3D_PLAY_COMPLETE plan=hb1 ok=True won=True fallen=False captured_turn=-1 gold=25 lost=5 battles=7 spawns=0 shots=55 covers=3（確かめの窓・レリックの候補・レリックの候補） sides=7 says=1 declines=0 rest_clicks=0
+```

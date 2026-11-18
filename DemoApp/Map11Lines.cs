@@ -15,7 +15,7 @@ public static class Map11Lines
     /// <summary>セリフ 1 行。<c>Speaker</c> は駒の名前の一部（「リィカ」）。</summary>
     public sealed record Line(string Key, string Stage, string When, string Speaker, string Text);
 
-    public const string Start11 = "1-1.start", Gate11 = "1-1.gate", Start12 = "1-2.start", Pass12 = "1-2.pass", NoPass12 = "1-2.nopass", Keeper12 = "1-2.keeper", Gold = "gold20";
+    public const string Start11 = "1-1.start", Gate11 = "1-1.gate", Start12 = "1-2.start", Pass12 = "1-2.pass", NoPass12 = "1-2.nopass", Keeper12 = "1-2.keeper", Gold = "gold20", Cross13 = "1-3.cross";
 
     /// <summary>セリフの表（仮の文）。</summary>
     public static readonly IReadOnlyList<Line> All = new[]
@@ -26,6 +26,7 @@ public static class Map11Lines
         new Line(Pass12, "1-2", "1-2 で関所を取ったとき", "ムド", "ここで止める。拠点までは、来させない"),
         new Line(NoPass12, "1-2", "1-2 で関所を取らずに門が開いたとき", "リリ", "留守、狙われるわよ"),
         new Line(Keeper12, "1-2", "1-2 で守将の前（連戦の札が出たとき）", "リィカ", "削られたら、引いて休める"),
+        new Line(Cross13, "1-3", "1-3 で中間拠点を初めて取ったとき（横の辺は行ける道）", "リィカ", "橋から集落へ抜けられる"),
         new Line(Gold, "", "金が 20 貯まったとき（最初の 1 回）", "ガン", "金が余ってる。強化しとけ"),
     };
 
@@ -97,6 +98,10 @@ public static class Map11Lines
     public const string HunterRearWeak = "長くは持たない。急げ！";
     /// <summary>戦闘から戻った帯（負けたが足を止めた）と、勇者が退いた帯（HP が半分を割った ／ 0 になった——どちらも「退いた」）。</summary>
     public const string RearBand = "殿", HunterGone = "勇者は退いた";
+    /// <summary>勇者は退いたが、拠点の外に出した隊の駒が 1 枚も生きていない（追記 4・規則は同じ勝ち B）。</summary>
+    public const string HunterNarrow = "辛くも退けた";
+    /// <summary>勇者の駒に触れたときの点線の札（撤退の局面）。</summary>
+    public const string RearPick = "殿に出す";
 
     // ---- 敵の見分け（第480期 §3-5・初めて当たるときに味方が 1 行・仮） ----
     /// <summary>特徴の印の鍵 → セリフ。鍵は <c>雷 ／ 火 ／ 毒 ／ 盾 ／ 弓 ／ 槍</c>。</summary>

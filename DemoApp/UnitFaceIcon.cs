@@ -60,8 +60,13 @@ public partial class UnitFaceIcon : Control
         QueueRedraw();
     }
 
+    /// <summary>顔の差し替え（第480期 追記 4・狩る者の盤の勇者——`design/art/enemies/hero/` の待機の絵から切り出した顔）。null で外す。</summary>
+    private static readonly Dictionary<string, Texture2D> Overrides = new(StringComparer.Ordinal);
+    public static void Override(string id, Texture2D? face) { if (face is null) Overrides.Remove(id); else Overrides[id] = face; }
+
     public static Texture2D? TextureFor(string id)
     {
+        if (Overrides.TryGetValue(id, out var over)) return over;
         if (Faces.TryGetValue(id, out var cached)) return cached;
         string portraitId = id switch
         {
