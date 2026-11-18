@@ -315,7 +315,8 @@ public partial class Map11Main
         // 戦う前の席に、いまの姿（生きているか・HP）を重ねる。隊から外れた駒は倒れた駒。
         List<UnitState> ownNow = St.Squads[snap.Squad].Units ?? new List<UnitState>();
         string BaseId(UnitDef d) => St.Stage.Stars.On ? St.Stage.Stars.BaseOf(d).Id : d.Id;
-        var own = snap.Own.Select(seat => ownNow.FirstOrDefault(u => u.Slot == seat.Slot && u.IsAlive && BaseId(u.Def) == BaseId(seat.Def)) is { } u
+        // 第480期: 席ではなく駒で引く——戦闘の中で席が入れ替わる駒（ハネ・ワタ・ウツ）が、生きているのに倒れた顔で出ていた。
+        var own = snap.Own.Select(seat => ownNow.FirstOrDefault(u => u.IsAlive && BaseId(u.Def) == BaseId(seat.Def)) is { } u
             ? seat with { Hp = u.Hp, Max = Math.Max(1, u.MaxHp), Alive = true } : seat with { Hp = 0, Alive = false }).ToList();
         List<UnitState> foeNow = snap.Node.Units ?? new List<UnitState>();
         var foe = snap.Foe.Select(seat => !snap.Node.Cleared && foeNow.FirstOrDefault(u => u.Slot == seat.Slot && u.IsAlive) is { } u
@@ -433,8 +434,8 @@ public partial class Map11Main
                     // 第480期: 勇者との会戦。自分から入った殿は「ここは任せろ。行け！」・追いつかれたとき（初回）は「……無理だ。引け！」。
                     if (HunterBoard && _clashNode is { IsHero: true })
                     {
-                        if (!Map11Session.FoePhase) said = Map11Lines.HunterRear;
-                        else if (Map11Lines.Mark("1-3.hunter.caught")) said = Map11Lines.HunterCaught;
+                        if (!Map11Session.FoePhase) said = _oddsHeld >= 0 && _oddsHeld < OddsEven ? Map11Lines.HunterRearWeak : Map11Lines.HunterRear;
+                        else if (_oddsWins < OddsEven && Map11Lines.Mark("1-3.hunter.caught")) said = Map11Lines.HunterCaught;   // 勝ち目が劣勢のときだけ（優勢の隊に「無理だ」と言わせない）
                     }
                     _clashSay.Text = $"「{said}」";
                     _clashSay.Visible = true;

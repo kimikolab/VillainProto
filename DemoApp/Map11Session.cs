@@ -277,9 +277,11 @@ public static class Map11Session
         // **「抜けなかった」には2種類ある。** 全滅と、30 ターンで決着しない膠着。
         // 膠着は engine の上限ターン（`MaxTurns`）で、**同じ相手にもう一度当てても同じことが起きる**
         // ——判定は1つも足していないので、そう書いて引き返す判断をプレイヤーに返すだけ。
-        LastOutcome = playerWon
+        LastOutcome = State.Stage.Hero.Hunter && node.IsHero && node.Cleared ? "勇者は退いた"   // 第480期: 狩る者は「抜いた」「倒した」と言わない（HP 0 も退いた）
+            : playerWon
             ? $"{squadName} が {node.Def.Name} を抜いた"
-            : State.Squads[squad].Lost
+            // 第480期: 全滅した隊が空の隊として拠点へ戻る盤（第479期の `Leaned`）では `Lost` が立たない——生きている駒がいなければ全滅（「30 ターン決着せず」と出ていた）。
+            : State.Squads[squad].Lost || !(State.Squads[squad].Units?.Any(u => u.IsAlive) ?? false)
                 ? $"{squadName} は {node.Def.Name} に全滅した"
                 : $"{squadName} は {node.Def.Name} と 30 ターン決着せず（両軍とも残っている）。"
                   + "もう一度当てても同じになる——引き返すか、別の隊を当てること";

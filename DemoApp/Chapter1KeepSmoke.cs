@@ -249,7 +249,7 @@ public static class Chapter1KeepSmoke
             bool v478 = !s478.Hero.On && s478.WinLine.Length > 0 && s478.Notes.Count == 4 && !s478.SiegeRetreatHolds && s478.TurnCap == MapStage.Stage12Ch478TurnCap
                         && ReferenceEquals(MapStage.Stage12Ch478.Lanes[1][2].Enemy, EnemyCatalog.MapSquadOf("band_garrison").Enemy);
             bool single = MapStage.Stage12.Hero.Gatekeeper && MapStage.Stage12.Lanes[1].Count == 3 && MapStage.Stage13.Hero.Chaser && !MapStage.Stage12.SiegeRetreatHolds && !MapStage.Stage13.SiegeRetreatHolds;
-            var old = ChapterRule.Versions.Where(v => v.Key is not ("V477" or "V478" or "V479")).ToList();
+            var old = ChapterRule.Versions.Where(v => v.Key is not ("V477" or "V478" or "V479" or "V480")).ToList();
             bool olds = old.All(v => v.Rule.Second is null && Chapter1.StagesFor(v.Rule)[1].Hero.Gatekeeper);
             bool third = stages[2].Hero.Chaser && stages[2].Board == prev[2].Board && stages[2].LaneCount == prev[2].LaneCount;
             bool first = stages[0].Board == prev[0].Board && stages[0].Lanes.SelectMany(l => l).Select(n => n.Enemy).SequenceEqual(prev[0].Lanes.SelectMany(l => l).Select(n => n.Enemy));

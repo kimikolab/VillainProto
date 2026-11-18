@@ -269,7 +269,7 @@ public partial class Map11Main
             // ---- 動き: 隣のマスへは道に沿って歩く。最初の引き直し・現れた駒・ワープは滑らせない。 ----
             bool known = _pieceCell.TryGetValue(piece, out int from);
             // 第480期 §3-3: 湧いた部隊・出発した予備隊は、敵の拠点の中から歩いて出てくる（短い音・視点か端の印・時計は止めない）。
-            if (!_firstRefresh && !known && pick.Foe is { FromPortal: true, IsHero: false } born && born.Pos == St.Graph.Portal && _layout3d.Sheet is { } bornSheet)
+            if (!_firstRefresh && !known && !_linesOff && pick.Foe is { FromPortal: true, IsHero: false } born && born.Pos == St.Graph.Portal && _layout3d.Sheet is { } bornSheet)
             {
                 piece.Snap(bornSheet.Camp + new Vector3(-1.5f, 0, 0));
                 piece.Walk(new[] { at }, 0.9f);

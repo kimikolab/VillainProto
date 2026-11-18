@@ -2022,6 +2022,19 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
         # **第479期**: 本陣を重くする版の門（`Chapter1KeepSmoke.cs`・画面なし・`ChapterRule.V479` ／ `MapStage.Stage12Ch479`）。(a) V479 の本陣の中身と重さ ／ (b) 連戦で引いた隊の行き先は引いた先のマス（`SiegeRetreatHolds`・V478 の盤では今のまま）／
         # (c) V461〜V478・単発は今のまま。測りつき（約 30 秒）: 守将 ／ 本陣の守りの候補（指示書の 10 個 ＋ 参考 9 個）× ポンの写しの隊（満タン ／ 守りを抜いた直後）と通し（組 B・引く ／ 続ける器具 × 100 seed）・線 A〜F。
         # `--chapter1-keep-quick` は門だけ。報告は `design/PHASE479_LESS_WINDOWS.md`
+    Godot_console.exe --path DemoApp --headless -- --chapter1-hunter-smoke
+        # **第480期**: 1-3「狩る者」の門（`Chapter1HunterSmoke.cs`・画面なし・`ChapterRule.V480` ／ `MapStage.Stage13Ch480` ／ `MapGraph.Build13F480` ／ `HeroRule.V480`）。
+        # (a) 盤の形・前半の敵・勇者の重さ（HP ×8 ／ 攻 ×2.5）・期限 12・足止め 4 ターン ／ (b) 門が開いた刻の終わりに勇者・現れた刻は動かない ／ (c) 目標が替わる・野営地へ入れない・湧かない ／
+        # (d) 2 歩・いちばん近い隊・足止めは戦闘が 4 ターン以上続いたときだけ・拠点へ入らない・「引き返す」なし ／ (e) 勝ち A（生還）・勝ち B（退かせた）・負け（全滅）／ (f) V479 の 1-3 の引き戻し ／
+        # (g) 単発と V461〜V479 は今のまま ／ (h) 撤退の局面では手札との出し入れが閉じる。測りつき（約 3 分）: 前半・勇者の重さ・方針 a〜f × 100 seed と線・3 ターン ／ 4 ターン立てる駒・火の隊。
+        # `--chapter1-hunter-quick` は門だけ（約 5 秒）・`--chapter1-hunter-sweep` は振った表だけ。合否は `CHAPTER1_HUNTER_SMOKE_COMPLETE ok=`。報告 `design/PHASE480_STAGE13_HUNTER.md`
+    Godot_console.exe --path DemoApp res://Map11Main.tscn -- --map3d --chapter1-rule=V480 "--map-chapter-from=<1-3 の始めの写し>" "--map11-capture=<置き場>/h.png,m3d-h-all"
+        # **第480期**: 3D の 1-3「狩る者」の場面を 1 回の起動で順に撮って確かめる（`Map11Main.HunterShots.cs`・14 枚: 始め → 門が開く直前 → 登場（落雷・扉・歩み出る・帯・セリフ 2 行・目標）→
+        # 追われている → 殿の会戦の台 → 殿の結果の帯 → 結果の窓）。盤は器具が進め、登場の演出だけは画面の本物の流れ。合否は `MAP3D_HUNTER_SCENES_COMPLETE ok=`（`MAP3D_HUNTER_CHECK ○／×` の行）。
+        # 絵の口 `,m3d-at:<x>:<z>` は視点を盤の座標へ寄せただけの絵（地形の確かめ）。`--headless` は付けない・`--quit-after` も付けない
+    Godot_console.exe --path DemoApp res://Map11Main.tscn -- --map3d --chapter1-rule=V480 "--map-chapter-from=<1-3 の始めの写し>" "--map3d-play=ha|hb1|hb2|hb3|hc,<写しの置き場>"
+        # **第480期**: 3D の 1-3「狩る者」を本物のクリックで通す口（ha ＝ 全員まっすぐ帰る ／ hb1 ＝ 硬い 1 枚の殿 ／ hb2 ＝ 弱い 1 枚の殿 ／ hb3 ＝ 3 枚の殿 ／ hc ＝ 隊を順に当てる）。
+        # 殿の隊を作る所と金を使う所だけ器具の口。登場の演出の節目ごとに 1 枚撮る。`MAP3D_PLAY_HUNTER` の行（現れた刻・隊の札の印・会戦の台の印・終わり方）と `MAP3D_PLAY_COMPLETE`。約 3〜5 分
     Godot_console.exe --path DemoApp res://Map11Main.tscn -- --map3d --chapter1-rule=V479 --map-chapter=7 "--map3d-play=p1|p2|p3,<写しの置き場>" ["--map3d-end-shot=<置き場>"]
         # 第479期の続き: `p1r|p2r|p3r` は勝ち目の印を読む遊び方（劣勢なら引き返す ／ 引いて待つ・期限の 3 刻前からは戦う）。`MAP3D_PLAY decline`・`back-hint` の行と `declines=`。
         # **第479期**: 遊ぶ口の `MAP3D_PLAY_COMPLETE` の行に `covers=`（時計を止めて盤を隠す窓の数・頭の札と結果は数えない）・`sides=`（横の札）・`says=`（セリフ）・`rest_clicks=`（隊の札の上の「休む」）。

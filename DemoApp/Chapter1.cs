@@ -224,7 +224,7 @@ public static class Chapter1
         public int Spent { get; set; }
         /// <summary>働いた札（「◆名（駒）」→ 回数・勝った ／ 最後の配り）。</summary>
         public Dictionary<string, int> Relics { get; } = new();
-        public string Result => Won ? $"制圧（作戦ターン {Turn}）" : Quit ? "やめた" : Played ? "途中" : Skipped ? "—（写しから始めた）" : "—";
+        public string Result => Won && Stage.Hero.Hunter ? "生き延びた" : Won ? $"制圧（作戦ターン {Turn}）" : Quit ? "やめた" : Played ? "途中" : Skipped ? "—（写しから始めた）" : "—";
         /// <summary>このステージの始めに選んだ投資の軸（第467期・投資の無い 1 章 ／ まだ選んでいなければ null）。</summary>
         public string? Invested { get; set; }
         /// <summary>写しから始めた 1 章で、写しより前のステージ（第466期・遊んでいない）。</summary>
@@ -435,6 +435,7 @@ public static class Chapter1
         if (st.Hero is not { } h) return "現れなかった";
         Map11Session.Line? down = log.LastOrDefault(l => l.Won && l.Foe.EndsWith(h.Def.Name, StringComparison.Ordinal));
         string when = down is not null ? $"（作戦ターン {down.Turn}）" : "";
+        if (st.Stage.Hero.Hunter) return st.HeroOutcome;   // 第480期: 狩る者（退かせた ／ 逃げ切った ／ 全滅した）
         if (h.Cleared)
             return st.Stage.Hero.Chaser && (down?.Intercept ?? h.Pos == st.Graph.Home) ? $"拠点で迎え撃って倒した{when}" : $"倒した{when}";
         if (st.Stage.Hero.Chaser && st.Won) return st.HomeLost ? "逃げ切った（拠点を落とされた）" : "逃げ切った（拠点は落とされなかった）";

@@ -3028,7 +3028,13 @@ public sealed class Map11State
 
     /// <summary>勇者のその後（結果画面の 1 行・表示だけ）。</summary>
     public string HeroOutcome
-        => Stage.Hero.Chaser
+        => Stage.Hero.Hunter   // 第480期: 狩る者（「倒した」とは言わない——HP 0 も退いた）
+           ? (Hero is null ? "現れなかった（門が開かなかった）"
+              : HunterDriven ? "退かせた"
+              : HunterEscaped ? $"逃げ切った（生還 {HunterSurvivors}／{HunterStartUnits}）"
+              : HunterLost ? "全滅した"
+              : "追われたまま")
+           : Stage.Hero.Chaser
            ? (Hero is null ? "現れなかった（門が開かなかった）"
               : Hero.Cleared ? "倒した"
               : Won ? (HomeLost ? "拠点を落とされたが、逃げ切った（制圧）" : "逃げ切った（制圧）")

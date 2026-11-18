@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using Godot;
 using System;
 using System.Collections.Generic;
@@ -167,6 +167,21 @@ public partial class Map11Main
                 CampaignSession.ClearCarriedBattle();
                 Map11Session.CompleteBattle(r.PlayerWon, r);
                 Refresh();
+                if (St.Finished && St.HunterDriven)
+                {
+                    // 勇者が退いた（この隊が HP を半分より下へ削った）: 門へ戻る勇者と帯「勇者は退いた」（画面の本物の流れ）。
+                    _clashFought = null;
+                    _ = HunterRouted();
+                    await Wait(1.1);
+                    Req(_hunterOver!.BandText == Map11Lines.HunterGone, $"退いた: 帯は「{Map11Lines.HunterGone}」（{_hunterOver.BandText}）・勇者 HP {hpBefore} → {St.Hero.HpNow}・曲の口 {MapMusic.Current}");
+                    await Shot("勇者は退いた");
+                    for (int f = 0; f < 3000 && HunterBusy; f++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+                    await Wait(0.6);
+                    Req(_resultOverlay.Visible && _resultTitle.Text == Map11Lines.HunterGone, $"退いた: 結果の窓（{_resultTitle.Text} ／ {_resultBody.Text.Replace("\n", " ・ ")}）");
+                    await Shot("結果の窓_勇者は退いた");
+                    Finish();
+                    return;
+                }
                 AfterBattle3D();
                 await Wait(0.4);
                 bool held = St.HunterHolds > holds;

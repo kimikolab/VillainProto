@@ -93,6 +93,8 @@ public static class Map11Lines
     public const string GoalRout = "目標　生きて拠点へ戻れ";
     /// <summary>会戦の台: 追いつかれた（初回）／ 自分から入った殿。</summary>
     public const string HunterCaught = "……無理だ。引け！", HunterRear = "ここは任せろ。行け！";
+    /// <summary>自分から入った殿だが、台の印が「足止めできない」のとき（言っていることと印が食い違わないように）。</summary>
+    public const string HunterRearWeak = "長くは持たない。急げ！";
     /// <summary>戦闘から戻った帯（負けたが足を止めた）と、勇者が退いた帯（HP が半分を割った ／ 0 になった——どちらも「退いた」）。</summary>
     public const string RearBand = "殿", HunterGone = "勇者は退いた";
 

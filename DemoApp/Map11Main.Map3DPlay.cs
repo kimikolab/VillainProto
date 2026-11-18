@@ -22,6 +22,13 @@ public partial class Map11Main
     private static int _play3dMain = -1, _play3dSecond = -1, _play3dHeroSeen;
     private static readonly int[] _play3dRests = new int[8];
     private static bool Play12 => _play3dPlan is "p1" or "p2" or "p3";
+    // 第480期: 1-3「狩る者」の方針（1-3 の始めの写しから・`--map-chapter-from=` と使う）。
+    //   ha ＝ 全員まっすぐ帰る ／ hb1 ＝ 硬い 1 枚の殿 ／ hb2 ＝ 弱い 1 枚の殿 ／ hb3 ＝ 3 枚の殿 ／ hc ＝ 隊を順に当てる
+    //   hd ＝ 主力 1 隊だけで 2 つ取る（谷の橋 → 横の辺 → 森の集落・「2 隊目が倒れた後に立て直せるか」の確かめ）／ hn ＝ 主力は北の砦跡・別働は谷の橋（北の道と弓隊）
+    private static bool Play13 => _play3dPlan is "ha" or "hb1" or "hb2" or "hb3" or "hc" or "hd" or "hn";
+    private static int _play3dRear = -1, _play3dHeroTurn = -1, _play3dRearSize;
+    private static readonly HashSet<string> _play3dRearIds = new(StringComparer.Ordinal);
+    private static readonly List<string> _play3dHunterLog = new();
 
     /// <summary>起動の引数に `--map3d-play=` があるか（戦闘の画面の早回しも同じ引数を読む）。</summary>
     internal static bool Play3DRequested(IEnumerable<string> user) => user.Any(a => a.StartsWith("--map3d-play=", StringComparison.Ordinal));
@@ -102,16 +109,73 @@ public partial class Map11Main
         void Finish(bool ok, string why = "")
         {
             int lost = St.Squads.Sum(q => q.Units?.Count(u => !u.IsAlive) ?? 0) + St.FallenUnits.Count;
+            if (Play13)
+            {
+                foreach (string line in _play3dHunterLog) GD.Print("MAP3D_PLAY_HUNTER " + line);
+                GD.Print($"MAP3D_PLAY_HUNTER 終わり: {_resultTitle.Text} ・ 勇者が現れた {(St.HeroTurn >= 0 ? $"{St.HeroTurn + 1} 刻目" : "—")} ・ 終わった {Map11Session.ShownTurn} 刻目（登場から {(St.HeroTurn >= 0 ? St.Turn - St.HeroTurn : 0)} 刻）"
+                    + $" ・ 生還 {St.HunterSurvivors}／{St.HunterStartUnits} ・ 殿 {(St.RearGuards.Count == 0 ? "なし" : string.Join("・", St.RearGuards.OrderBy(i => i).Select(i => St.Squads[i].Label)))}"
+                    + $" ・ 足を止めた {St.HunterHolds} 回 ／ 止められなかった {St.HunterSlips} 回 ／ 追いつかれた {St.HunterCatches} 回 ・ 勇者 HP {St.Hero?.HpNow}／{St.Hero?.DefMaxHp} ・ 退かせた {St.HunterDriven} ・ 時間切れ {St.TimeUp}");
+            }
             GD.Print($"MAP3D_PLAY_COMPLETE plan={_play3dPlan} ok={ok && St.Finished} won={St.Won} fallen={St.Fallen} captured_turn={(St.Captured ? St.CapturedTurn + 1 : -1)} "
                 + $"gold={St.Gold} lost={lost} battles={St.Battles} spawns={St.SpawnCount} shots={_play3dShot} covers={_play3dCovers.Count}{(_play3dCovers.Count > 0 ? "（" + string.Join("・", _play3dCovers) + "）" : "")} "
                 + $"sides={_play3dSides} says={_play3dSays} declines={_play3dDeclines} rest_clicks={_play3dRestClicks} {why}");
             GetTree().Quit(ok ? 0 : 1);
         }
 
+        // ---- 命令 1 つ（第477期の 1-2 の押し方を切り出した）: 隊の札を押して選び、行き先が画面の外なら全体図を押して視点を動かし、マスに触れて案内を読み、押して決める ----
+        async System.Threading.Tasks.Task Order(int squad, Dest want)
+        {
+            MapGraph g = St.Graph;
+            if (Map11Session.Destinations[squad] == want || St.AtDest(squad, want)) return;
+            // 第479期: 今いる場所で休むなら、隊の札の上の「休む」を押す（出ていれば）。
+            if (!want.IsPortal && !want.AtHome && want.Id == St.Squads[squad].Pos && _hud3d!.ActionRect(squad, 2) is { } restAt)
+            {
+                await Shot($"第{squad + 1}隊_札の上の休む", once: true);
+                Click(restAt.GetCenter());
+                await Frames(4);
+                if (Map11Session.Destinations[squad] == want) { _play3dRestClicks++; return; }
+            }
+            Click(_hud3d!.CardRect(squad).GetCenter());
+            await Frames(4);
+            Vector3 world = _cellMarks3d[want.IsPortal ? g.Portal : want.AtHome ? g.Home : want.Id].GlobalPosition;
+            Vector2 view = GetViewport().GetVisibleRect().Size;
+            Vector2 at = _camera.UnprojectPosition(world);
+            if (!new Rect2(120, 150, view.X - 240, view.Y - 150 - 260).HasPoint(at) && _radar3d is not null)
+            {
+                Click(_radar3d.MapPoint(world));   // 全体図を押して視点を動かす
+                await Wait(1.1);
+                at = _camera.UnprojectPosition(world);
+            }
+            Move(at);
+            await Frames(4);
+            string name = want.IsPortal ? "敵の拠点" : want.AtHome ? "拠点" : PlaceName(want.Id);
+            await Shot($"第{squad + 1}隊_行き先に触れた_{name}", once: true);
+            Click(at);
+            await Frames(4);
+            bool set = Map11Session.Destinations[squad] == want;
+            if (!set) { Map11Session.SetDestination(squad, want); GD.Print($"MAP3D_PLAY 行き先は器具の口で決めた 第{squad + 1}隊 → {name}"); }
+            else await Shot($"第{squad + 1}隊_行き先を決めた_{name}", once: true);
+        }
+
         await Wait(0.8);
         while (IsInsideTree())
         {
             if (_play3dGuard++ > 500) { Finish(false, "step-limit"); return; }
+            // 第480期: 勇者の登場・退く演出のあいだは待つ（演出の節目ごとに 1 枚撮る）。
+            if (HunterBusy)
+            {
+                if (HunterBeat.Length > 0 && HunterBeat != "終わり" && _play3dOnce.Add("beat:" + HunterBeat))
+                {
+                    await Wait(HunterBeat switch { "落雷" => 0.15, "扉" => 0.1, "歩み出る" => 0.7, "帯" => 0.5, "セリフ" => 0.4, "退く" => 1.2, _ => 0.3 });
+                    string name = $"{_play3dPlan}_{++_play3dShot:00}_{(HunterBeat == "退く" ? "勇者は退いた" : "登場_" + HunterBeat)}.png";
+                    await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+                    GetViewport().GetTexture().GetImage().SavePng(System.IO.Path.Combine(_play3dDir!, name));
+                    GD.Print($"MAP3D_PLAY shot={name} 登場の演出 {HunterBeat}");
+                }
+                else await Frames(2);
+                _play3dGuard--;   // 演出を待つあいだは歩数に数えない
+                continue;
+            }
             if (_play3dGuard % 40 == 0) GD.Print($"MAP3D_PLAY 診断 step={_play3dGuard} running={Map11Session.TurnRunning} reform={_reform} 窓: 遭遇={_encounterOverlay.Visible} 迎撃={_interceptOverlay.Visible} 連戦={_siegeOverlay.Visible} 確かめ={_confirmOverlay.Visible} 結果={_resultOverlay.Visible} 候補={St.RelicOffer.Count} pending={Map11Session.HasPendingBattle} {State()}");
             if (_introOverlay is { Visible: true })
             {
@@ -129,7 +193,7 @@ public partial class Map11Main
                 if (_investOverlay is { Visible: true }) { Chapter1.AutoInvest(); _investOverlay.Visible = false; Refresh(); }   // 押せなければ器具の選び方で
                 continue;
             }
-            if (Play12 && St.RelicOffer.Count > 0)
+            if ((Play12 || Play13) && St.RelicOffer.Count > 0)
             {
                 // 器具の口: レリックの候補は 1 枚目を取り、主力の先頭の駒に持たせる（候補の窓の中の操作は見ない）。
                 await Shot("レリックの候補");
@@ -185,6 +249,14 @@ public partial class Map11Main
                 _play3dSides++;
                 await Shot($"遭遇_{_encounterTitle.Text.Replace(' ', '_').Replace('×', 'x').Replace('　', '_')}");
                 GD.Print($"MAP3D_PLAY clash 台={ClashRect} 勝ち目「{ClashOddsText}」敵 {_clashFoeLead.NameText} 席 {_clashFoe.SeatCount} 味方 {_clashOwnLead.NameText} 席 {_clashOwn.SeatCount} 線 {_clashOwn.LinkCount} 引き返す {_clashB.Visible} 割れの印 {ClashRiskCount} 名札と固定の UI の重なり {PlatesUnderHud3D()}");
+                if (Play13 && Map11Session.PendingNode is { IsHero: true } hn)
+                {
+                    int ps = Map11Session.PendingSquad;
+                    for (int f = 0; f < 200 && ClashOddsText == "…"; f++) await Frames(2);
+                    _play3dHunterLog.Add($"{Map11Session.ShownTurn} 刻目 {St.Squads[ps].Label}（{St.Squads[ps].Units!.Count(u => u.IsAlive)} 枚: {string.Join("・", St.Squads[ps].Units!.Where(u => u.IsAlive).Select(u => u.Def.Name))}）が{(Map11Session.FoePhase ? "追いつかれた" : "自分から入った")}"
+                        + $" ・ 台の印「{ClashHoldText}」勝ち目「{ClashOddsText}」セリフ {ClashSayText} ・ 隊の札の印「{_hud3d!.CardTag(St.Squads.Take(ps + 1).Count(q => !St.IsLocked(q.Index)) - 1)}」 ・ 勇者 HP {hn.HpNow}");
+                    await Shot($"勇者との会戦の台_{St.Squads[ps].Label}");
+                }
                 if (_play3dReadOdds && ClashShown && _clashB.Visible && ClashOddsText == "劣勢" && St.Turn < St.Stage.TurnCap - 3)
                 {
                     int sq = Map11Session.PendingSquad, from = St.Squads[sq].Pos;
@@ -220,6 +292,32 @@ public partial class Map11Main
             }
             if (_reform)
             {
+                if (!_play3dFormed && Play13)
+                {
+                    // 1-3 は持ち越した隊のまま出る。主力 ＝ いちばん枚数の多い隊（谷の橋へ）・別働 ＝ 次（森の集落へ）。
+                    var live = Enumerable.Range(0, St.SquadCap).Where(i => St.Squads[i].Units is { Count: > 0 })
+                        .OrderByDescending(i => St.Squads[i].Units!.Count).ThenBy(i => i).ToList();
+                    _play3dMain = live.Count > 0 ? live[0] : 0;
+                    _play3dSecond = live.Count > 1 ? live[1] : -1;
+                    await Shot("編成の窓_持ち越した隊");
+                    // 器具の口: 殿の隊を作る（hb1 ＝ いちばん硬い 1 枚 ／ hb2 ＝ いちばん脆い 1 枚 ／ hb3 ＝ 硬い順に 3 枚）。残りは手札へ下げる。
+                    if (_play3dPlan is "hb1" or "hb2" or "hb3" && live.Count > 2)
+                    {
+                        // 留守番の隊（主力・別働のほか）のうち、いちばん硬い駒（hb1・hb3）／ いちばん脆い駒（hb2）のいる隊を殿にする。
+                        var spare = live.Skip(2).ToList();
+                        _play3dRear = _play3dPlan == "hb2" ? spare.OrderBy(i => St.Squads[i].Units!.Min(u => u.MaxHp)).First() : spare.OrderByDescending(i => St.Squads[i].Units!.Max(u => u.MaxHp)).First();
+                        var units = St.Squads[_play3dRear].Units!.OrderByDescending(u => u.MaxHp).ThenBy(u => u.Slot).ToList();
+                        var keep = _play3dPlan == "hb1" ? units.Take(1).ToList() : _play3dPlan == "hb2" ? units.TakeLast(1).ToList() : units.Take(3).ToList();
+                        foreach (UnitState u in units.Except(keep).ToList()) St.SwapWithBench(_play3dRear, u.Slot, -1);
+                        _play3dRearSize = keep.Count;
+                        _play3dRearIds.Clear();
+                        foreach (UnitState u in keep) _play3dRearIds.Add(St.Stage.Stars.On ? St.Stage.Stars.BaseOf(u.Def).Id : u.Def.Id);
+                        Refresh();
+                        await Shot("編成の窓_殿の隊を作った（器具の口）");
+                    }
+                    GD.Print($"MAP3D_PLAY roles main=第{_play3dMain + 1}隊 second={(_play3dSecond < 0 ? "—" : $"第{_play3dSecond + 1}隊")} rear={(_play3dRear < 0 ? "—" : $"第{_play3dRear + 1}隊（{string.Join("・", St.Squads[_play3dRear].Units!.Select(u => $"{u.Def.Name} HP{u.MaxHp}"))}）")}");
+                    _play3dFormed = true;
+                }
                 if (!_play3dFormed && Play12)
                 {
                     // 1-2 は持ち越した隊のまま出る。主力 ＝ いちばん枚数の多い隊・別働 ＝ 次・残りは留守番（拠点で待つ）。
@@ -266,7 +364,69 @@ public partial class Map11Main
             if (Map11Session.TurnRunning || St.Finished) { await Wait(0.3); continue; }
             await Shot("作戦の画面_始め", once: true);
 
-            if (Play12)
+            if (Play13)
+            {
+                // ---- 1-3「狩る者」の命令（第480期）。前半: 主力は谷の橋・別働は森の集落を取りに行き、取ったら休む。殿の隊は橋が取れてから橋へ。
+                //      撤退の局面: ha ＝ 全員拠点へ ／ hb* ＝ 殿の隊は勇者のいるマスへ・ほかは拠点へ ／ hc ＝ 全員、勇者のいるマスへ（近い順に当たる）。
+                MapGraph g = St.Graph;
+                int bridge = g.Lanes[1].First(c => g.IsOutpost(c)), village = g.Lanes[2].First(c => g.IsOutpost(c));
+                bool Up(int i) => i >= 0 && !St.Squads[i].Lost && St.Squads[i].Units is { } us && us.Any(u => u.IsAlive);
+                if (St.Rout && _play3dHeroTurn < 0)
+                {
+                    _play3dHeroTurn = St.Turn;
+                    _play3dHunterLog.Add($"勇者が現れた: {Map11Session.ShownTurn} 刻目 ・ 中間拠点 {St.HeldOutposts.Count} ・ 隊 {string.Join(" ／ ", St.Squads.Where(q => Up(q.Index)).Select(q => $"{q.Label} {PlaceName(q.Pos)} {q.Units!.Count(u => u.IsAlive)}枚"))}");
+                    await Shot("撤退の局面_始め");
+                    // 隊の札の足止めの印（裏の数えが終わるのを待って読む）。
+                    await Wait(1.5);
+                    _play3dHunterLog.Add("隊の札の印: " + string.Join(" ／ ", St.Squads.Where(q => !St.IsLocked(q.Index)).Select((q, n) => $"{q.Label}「{_hud3d!.CardTag(n)}」")));
+                    await Shot("撤退の局面_隊の札の印");
+                }
+                if (!St.Rout)
+                {
+                    int gold0 = St.Gold, fallen0 = St.FallenUnits.Count;
+                    Chapter1Stage12Smoke.Spend(St);
+                    // 殿の隊は決めた枚数のまま（呼び戻した駒が空いた席へ入ったら、手札へ下げる）。
+                    if (_play3dRear >= 0 && St.Squads[_play3dRear].Units is { } ru && ru.Count > _play3dRearSize && St.CanReform(_play3dRear))
+                        foreach (UnitState extra in ru.Where(u => !_play3dRearIds.Contains(St.Stage.Stars.On ? St.Stage.Stars.BaseOf(u.Def).Id : u.Def.Id)).ToList()) St.SwapWithBench(_play3dRear, extra.Slot, -1);
+                    if (St.Gold != gold0) { Refresh(); GD.Print($"MAP3D_PLAY 金を使った {gold0} → {St.Gold}（呼び戻した {fallen0 - St.FallenUnits.Count} 枚・強化 {St.Enhances} 回）"); }
+                }
+                foreach (int squad in new[] { _play3dMain, _play3dSecond, _play3dRear }.Concat(Enumerable.Range(0, St.SquadCap)).Distinct())
+                {
+                    if (!Up(squad) || !St.CanSend(squad)) continue;
+                    Dest want;
+                    if (St.Rout)
+                    {
+                        bool strike = _play3dPlan == "hc" || (squad == _play3dRear && _play3dPlan is "hb1" or "hb2" or "hb3");
+                        Map11State.Node? hero = St.Hero is { Cleared: false } h ? h : null;
+                        // 殿（hb*）は、勇者が隣のマスへ来るまでその場で待ち、隣へ来たら自分から入る（自分から入った戦闘だけが足を止める）。
+                        // hc は全員、勇者のいるマスへ歩く（近い順に当たる）。
+                        // 間合い: 勇者は 1 刻 2 歩・隊は 1 歩なので、隊の番が終わったときに勇者まで 3 歩なら、勇者は隣のマスで止まる——次の刻に自分から入れる。
+                        int here = St.Squads[squad].Pos;
+                        List<int> toHero = hero is null ? new List<int>() : g.Path(here, -1, hero.Pos, -1);
+                        int gap = toHero.Count - 1;
+                        if (!strike || hero is null) want = Dest.Home;
+                        else if (_play3dPlan == "hc") want = hero.Pos != g.Portal ? Dest.Of(g, hero.Pos) : Dest.Of(g, here == g.Home ? g.Lanes[1][1] : here);
+                        else if (gap == 1 && hero.Pos != g.Portal) want = Dest.Of(g, hero.Pos);                    // 隣にいる: 自分から入る
+                        else if (gap >= 4 && toHero[1] != g.Portal) want = Dest.Of(g, toHero[1]);                  // 遠い: 1 歩寄る
+                        else if (gap == 2 && here != g.Home) want = Dest.Home;                                     // 近すぎる（このままだと追いつかれる）: 1 歩下がる
+                        else want = here == g.Home ? Dest.Of(g, g.Lanes[1][1]) : Dest.Of(g, here);                 // 3 歩: その場で待つ
+                        if (strike && _play3dPlan != "hc") GD.Print($"MAP3D_PLAY 殿の間合い {St.Squads[squad].Label} {PlaceName(here)} 勇者まで {gap} 歩 → {Map11Orders.Where(g, want)}");
+                    }
+                    else if (_play3dPlan == "hd") { if (squad != _play3dMain) continue; want = Dest.Of(g, St.HeldOutposts.Contains(bridge) ? village : bridge); }
+                    else if (_play3dPlan == "hn") { if (squad != _play3dMain && squad != _play3dSecond) continue; want = Dest.Of(g, squad == _play3dMain ? g.Lanes[0].First(c => g.IsOutpost(c)) : bridge); }
+                    else if (squad == _play3dMain) want = Dest.Of(g, bridge);
+                    else if (squad == _play3dSecond) want = Dest.Of(g, village);
+                    else if (squad == _play3dRear)
+                    {
+                        // 殿の隊は主力の 1 マス後ろを付いていく（敵は待ち構えていて歩かないので、主力の後ろは安全）。橋が取れたら橋で待つ。
+                        int mainAt = Up(_play3dMain) ? g.IndexOn(1, St.Squads[_play3dMain].Pos) : -1;
+                        want = St.HeldOutposts.Contains(bridge) ? Dest.Of(g, bridge) : mainAt >= 1 ? Dest.Of(g, g.Lanes[1][mainAt - 1]) : Dest.Home;
+                    }
+                    else continue;   // 残りの隊は拠点で留守番
+                    await Order(squad, want);
+                }
+            }
+            else if (Play12)
             {
                 // ---- 1-2 の命令（第477期）: 隊の札を押して選び、行き先が画面の外なら全体図を押して視点を動かし、マスに触れて案内を読み、押して決める ----
                 MapGraph g = St.Graph;
@@ -306,36 +466,7 @@ public partial class Map11Main
                 foreach (int squad in new[] { _play3dMain, _play3dSecond })
                 {
                     if (!Up(squad) || !St.CanSend(squad)) continue;
-                    Dest want = Want(squad);
-                    if (Map11Session.Destinations[squad] == want || St.AtDest(squad, want)) continue;
-                    // 第479期: 今いる場所で休むなら、隊の札の上の「休む」を押す（出ていれば）。
-                    if (!want.IsPortal && want.Id == St.Squads[squad].Pos && _hud3d!.ActionRect(squad, 2) is { } restAt)
-                    {
-                        await Shot($"第{squad + 1}隊_札の上の休む", once: true);
-                        Click(restAt.GetCenter());
-                        await Frames(4);
-                        if (Map11Session.Destinations[squad] == want) { _play3dRestClicks++; continue; }
-                    }
-                    Click(_hud3d!.CardRect(squad).GetCenter());
-                    await Frames(4);
-                    Vector3 world = _cellMarks3d[want.IsPortal ? g.Portal : want.Id].GlobalPosition;
-                    Vector2 view = GetViewport().GetVisibleRect().Size;
-                    Vector2 at = _camera.UnprojectPosition(world);
-                    if (!new Rect2(120, 150, view.X - 240, view.Y - 150 - 260).HasPoint(at) && _radar3d is not null)
-                    {
-                        Click(_radar3d.MapPoint(world));   // 全体図を押して視点を動かす
-                        await Wait(1.1);
-                        at = _camera.UnprojectPosition(world);
-                    }
-                    Move(at);
-                    await Frames(4);
-                    string name = want.IsPortal ? "敵の拠点" : PlaceName(want.Id);
-                    await Shot($"第{squad + 1}隊_行き先に触れた_{name}", once: true);
-                    Click(at);
-                    await Frames(4);
-                    bool set = Map11Session.Destinations[squad] == want;
-                    if (!set) { Map11Session.SetDestination(squad, want); GD.Print($"MAP3D_PLAY 行き先は器具の口で決めた 第{squad + 1}隊 → {name}"); }
-                    else await Shot($"第{squad + 1}隊_行き先を決めた_{name}", once: true);
+                    await Order(squad, Want(squad));
                 }
             }
             else

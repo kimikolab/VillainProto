@@ -187,6 +187,7 @@ public partial class Map11Main
         _hunterSkip = false;
         Hs.Routed = true;
         _hunterLeaving = true;
+        HunterBeat = "退く";
         _hunterOver.Block(true);
         GD.Print($"MAP3D_HUNTER_ROUTED turn={Map11Session.ShownTurn} hp={St.Hero?.HpNow}");
         try
