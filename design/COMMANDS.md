@@ -2030,6 +2030,17 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
         # `--chapter1-hunter-quick` は門だけ（約 5 秒）・`--chapter1-hunter-sweep` は振った表だけ。合否は `CHAPTER1_HUNTER_SMOKE_COMPLETE ok=`。報告 `design/PHASE480_STAGE13_HUNTER.md`
         # **追記 4**: 門に (C)（行き先が勇者のマスの隊は勇者の番に当たっても殿）と、きっかけの候補 (イ)(ウ) の規則の検査。`--chapter1-hunter-sweep` は勇者の現れるきっかけ (ア)(イ)(ウ) の表（約 15 分）。
         # 環境変数 `HUNTER_TRACE=<候補の番号>,<方針（Home ／ Rear ／ RearDeep ／ Solo …）>,<seed>,<組 B なら 1>` を付けると 1 通しのログだけ出す。追記 4 の線（きっかけを選ぶ線）は門の合否に数えない
+    Godot_console.exe --path DemoApp --headless -- --story-smoke
+        # **第481期**: 台本の門（`StoryScript.Check`・画面なし・約 2 秒）。`DemoApp/story/chapter1.txt` が全部読める・話者が引ける（引けない名前の一覧）・
+        # 1 行が全角 46 字以内・1 場面が 14 行以内（演出の行はまとめて 1・`?` の行はまとめて 1）・`?` の 3 つがそろっている。場面ごとの「ふつうに読んで n 秒」の見積もりも出す。
+        # 合否は `STORY_SMOKE_COMPLETE ok=`。報告は `design/PHASE481_STORY_PART.md`
+    Godot_console.exe --path DemoApp res://Map11Main.tscn --resolution 1920x1080 -- --map3d --map-chapter=7 [--map-chapter-play=7 --map-chapter-stop=1|2] "--map11-capture=<置き場>/s.png,story-all"
+        # **第481期**: 会話の場面を 1 回の起動で順に撮って確かめる（`Map11Main.Story.cs`）。いまの盤に当たる場面（1-1 ＝ 場面 0・1 ／ 1-2 ＝ 場面 2 ／ 1-3 ＝ 場面 3）を
+        # 題の帯・左が話す・右が話す・内心・影 ＋ 暗転 ＋ 締めの帯 の順に撮り、全部の行で「本文は 2 行まで・帯からはみ出さない・立ち絵が帯と名札に重ならない・話す側だけが明るい」を見る。
+        # 2560×1080 は `--resolution 2560x1080`。3 盤 × 2 画面をまとめて回すのは `DemoApp/.tmp/p481/story_all.sh <置き場>`。合否は `STORY_SCENES_COMPLETE ok=`
+    Godot_console.exe --path DemoApp res://Map11Main.tscn -- --map3d --story --map-chapter=7 "--map3d-play=split|p1|hb1,<写しの置き場>"
+        # **第481期**: 遊ぶ口に `--story` を付けると会話の場面を出す（既定は飛ばす）。会話はふつうに読む速さで自動で送り、勝ったら結果のボタンを押して
+        # 次の場面まで見てから終わる（`MAP3D_PLAY_COMPLETE … story_after=`）。場面ごとの秒数は `STORY_DONE 場面 n … 秒` の行。`--no-story` は遊ぶ起動でも必ず飛ばす
     Godot_console.exe --path DemoApp res://Map11Main.tscn -- --map3d --chapter1-rule=V480 "--map-chapter-from=<1-3 の始めの写し>" "--map11-capture=<置き場>/h.png,m3d-h-all"
         # **第480期**: 3D の 1-3「狩る者」の場面を 1 回の起動で順に撮って確かめる（`Map11Main.HunterShots.cs`・14 枚: 始め → 門が開く直前 → 登場（落雷・扉・歩み出る・帯・セリフ 2 行・目標）→
         # 追われている → 殿の会戦の台 → 殿の結果の帯 → 結果の窓）。盤は器具が進め、登場の演出だけは画面の本物の流れ。合否は `MAP3D_HUNTER_SCENES_COMPLETE ok=`（`MAP3D_HUNTER_CHECK ○／×` の行）。
