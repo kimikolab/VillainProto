@@ -181,23 +181,45 @@ def has_alpha(png: bytes) -> bool:
 def key_out(png: bytes, tol: int = 46) -> tuple[bytes, dict]:
     """無地の背景を抜く: 縁からつながっている、隅の色に近い画素を透明にする（中の同じ色は残す）。縁は 1px なじませる。"""
     from PIL import Image, ImageChops, ImageDraw, ImageFilter
-    im = Image.open(io.BytesIO(png)).convert("RGB")
+    src = Image.open(io.BytesIO(png))
+    if src.mode == "RGBA":
+        # もう抜いた絵の抜き直し: 透明な所をマゼンタに戻してから、同じ手順で抜く。
+        flat = Image.new("RGBA", src.size, (255, 0, 255, 255))
+        flat.alpha_composite(src)
+        src = flat
+    im = src.convert("RGB")
     w, h = im.size
-    corners = [im.getpixel(p) for p in ((2, 2), (w - 3, 2), (2, h - 3), (w - 3, h - 3))]
-    bg = tuple(sorted(c[i] for c in corners)[1] for i in range(3))
-    spread = max(max(abs(c[i] - bg[i]) for i in range(3)) for c in corners)
-    diff = ImageChops.difference(im, Image.new("RGB", im.size, bg)).convert("L").point(lambda v: 255 if v * 3 > tol else 0)
+    # 地の色は縁の画素の真ん中の値（裾や足が隅にかかっていても、縁の大半は地）。
+    border = [im.getpixel((x, y)) for x in range(0, w, 6) for y in (1, h - 2)] + [im.getpixel((x, y)) for y in range(0, h, 6) for x in (1, w - 2)]
+    bg = tuple(sorted(c[i] for c in border)[len(border) // 2] for i in range(3))
+    near = sum(1 for c in border if max(abs(c[i] - bg[i]) for i in range(3)) <= 24) / len(border)
+    spread = round(1 - near, 3)
+    raw = ImageChops.difference(im, Image.new("RGB", im.size, bg)).convert("L")
+    diff = raw.point(lambda v: 255 if v * 3 > tol else 0)
     # diff: 255 ＝ 絵・0 ＝ 背景の色。縁の背景から塗りつぶして、つながった背景だけを 128 にする。
     for seed in [(x, y) for x in range(0, w, 8) for y in (0, h - 1)] + [(x, y) for y in range(0, h, 8) for x in (0, w - 1)]:
         if diff.getpixel(seed) == 0:
             ImageDraw.floodfill(diff, seed, 128)
-    alpha = diff.point(lambda v: 0 if v == 128 else 255).filter(ImageFilter.GaussianBlur(0.8))
+    solid = diff.point(lambda v: 0 if v == 128 else 255)
+    vivid = max(bg) - min(bg) >= 150
+    if vivid:
+        # 鮮やかな地（マゼンタ）なら、縁につながっていない閉じた穴（腕と体のあいだ等）も、地とほぼ同じ色の所は抜く。
+        solid = ImageChops.darker(solid, raw.point(lambda v: 255 if v * 3 > 30 else 0))
+    # 縁を 1px 削ってからなじませる（地の色がにじんだ縁の 1 列を落とす）。
+    alpha = solid.filter(ImageFilter.MinFilter(3)).filter(ImageFilter.GaussianBlur(0.8))
+    if vivid and bg[0] > 200 and bg[2] > 200 and bg[1] < 60:
+        # マゼンタの色かぶりを、縁から 4px の帯の中だけ抜く（赤と青のうち緑を超えたぶんを引く）。
+        band = ImageChops.subtract(solid, solid.filter(ImageFilter.MinFilter(9)))
+        r, g, b = im.split()
+        spill = ImageChops.subtract(ImageChops.darker(r, b), g)
+        fixed = Image.merge("RGB", (ImageChops.subtract(r, spill), g, ImageChops.subtract(b, spill)))
+        im = Image.composite(fixed, im, band)
     out = im.convert("RGBA")
     out.putalpha(alpha)
     buf = io.BytesIO()
     out.save(buf, "PNG")
     cleared = sum(alpha.resize((64, 64)).histogram()[:8]) / 4096
-    return buf.getvalue(), {"bg": list(bg), "corner_spread": spread, "cleared": round(cleared, 3), "flat": spread <= 24}
+    return buf.getvalue(), {"bg": list(bg), "border_off_bg": spread, "cleared": round(cleared, 3), "flat": near >= 0.4}
 
 
 FLAT_BG = "\n\nBackground: one perfectly flat, uniform solid magenta (#FF00FF) fill behind the figure, no gradient, no shadow on the background, and no magenta anywhere on the figure."
@@ -283,6 +305,32 @@ def run_api(ctx: Ctx, kind: str, job: str, n: int, size: str, quality: str | Non
     ctx.save_ledger(ledger)
     say(f"ARTGEN_DONE job={job} 作った {len(made)} 枚（{' '.join(made)}）・この期の合計 {ph['images']}／{ctx.config['phase_cap']} 枚・"
         f"今回 約 ${usd:.3f}（{basis}）・この期 約 ${ph['usd']:.2f}・背景 {' ／ '.join(sorted(set(hows)))}")
+    return 0
+
+
+def cmd_rekey(ctx: Ctx, job: str) -> int:
+    """もう作った絵の背景を抜き直す（API は呼ばない・透過を頼んだ絵だけ・記録の keying を書き直す）。"""
+    folder = ctx.out / job
+    if not folder.is_dir():
+        raise Stop(f"候補が無い: {job}")
+    done = 0
+    for rec_path in sorted(folder.glob("*.json")):
+        if rec_path.name.startswith("_"):
+            continue
+        rec = json.loads(rec_path.read_text(encoding="utf-8"))
+        png_path = rec_path.with_suffix(".png")
+        if not rec.get("transparent") or rec.get("background") == "api" or not png_path.exists():
+            continue
+        cut, keyed = key_out(png_path.read_bytes())
+        if not (keyed["flat"] and keyed["cleared"] > 0.05):
+            say(f"ARTGEN_REKEY {job}/{png_path.name} 抜けない（{keyed}）")
+            continue
+        png_path.write_bytes(cut)
+        rec["background"], rec["keying"] = "keyed", keyed
+        rec_path.write_text(json.dumps(rec, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
+        done += 1
+        say(f"ARTGEN_REKEY {job}/{png_path.name} {keyed}")
+    say(f"ARTGEN_REKEY_DONE {job} 抜き直した {done} 枚（API は呼んでいない）")
     return 0
 
 
@@ -537,6 +585,8 @@ def main(argv: list[str]) -> int:
     p.add_argument("--job", required=True)
     p.add_argument("--file", required=True)
     p.add_argument("--why", required=True)
+    p = sub.add_parser("rekey")
+    p.add_argument("--job", required=True)
     sub.add_parser("status")
     sub.add_parser("init")
     sub.add_parser("check")
@@ -551,6 +601,8 @@ def main(argv: list[str]) -> int:
             return 0
         if a.cmd == "status":
             return cmd_status(ctx)
+        if a.cmd == "rekey":
+            return cmd_rekey(ctx, a.job)
         if a.cmd == "reject":
             return cmd_reject(ctx, a.job, a.file, a.why)
         if a.cmd == "sheet":

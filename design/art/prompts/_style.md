@@ -6,11 +6,14 @@
 
 ```text
 Use case: character art for an original dark-fantasy tactics game roster. Keep one consistent house style:
-medieval fantasy, anime-style illustration with weight and substance - clean, definite dark outlines of even
-medium thickness; readable medium-sized cel-shaded shapes with a second, softer layer of painterly shading on
-cloth folds, leather and metal so materials feel heavy and solid; restrained, slightly desaturated colors with
-one or two accent colors per character; natural adult proportions (about 7 to 7.5 heads tall), grounded
-anatomy, hands drawn carefully with five fingers. Lighting: a single soft key light from the upper left, gentle
+medieval fantasy drawn as a Japanese anime / JRPG character illustration (2D hand-drawn look, NOT a realistic
+painting): faces are simplified in the anime manner - smooth skin drawn with flat tone and one soft shadow
+shape, clean jawline, clearly drawn anime eyes with a single highlight, minimal nose and mouth lines, no
+realistic pores, wrinkles or skin texture. Clean, definite dark outlines of even medium thickness around every
+form; readable medium-sized cel-shaded color shapes with at most two shadow steps, plus a light soft gradient
+on cloth folds, leather and metal so materials still feel heavy and solid; no photographic texture, no gritty
+brush noise. Restrained, slightly desaturated colors with one or two accent colors per character; natural adult
+proportions (about 7 to 7.5 heads tall), grounded anatomy, hands drawn carefully with five fingers. Lighting: a single soft key light from the upper left, gentle
 form shadows, no rim-light glow, no bloom, no lens effects. Exactly one character. No text, letters, numbers,
 logos, watermarks, signatures, UI, frames or borders. No scenery, no ground, no cast shadow on the floor, no
 vignette. Weapons and gear never pass through the body. Not photorealistic, not a 3D render, not chibi,
