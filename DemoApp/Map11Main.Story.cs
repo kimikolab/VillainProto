@@ -75,12 +75,10 @@ public partial class Map11Main
         IReadOnlyList<StoryScript.Scene> all = LoadStory(log: with is null);
         if (all.FirstOrDefault(s => s.No == no) is not { } scene) return false;
         StoryScript.Context ctx = with ?? (no == 0 ? StoryScript.Context.Plain(all) : StoryContext());
-        var skipped = new List<StoryScript.Line>();
-        IReadOnlyList<StoryScript.Line> lines = scene.For(ctx, skipped);
+        IReadOnlyList<StoryScript.Line> lines = scene.For(ctx);
         if (with is null)
         {
             GD.Print($"STORY_CONTEXT 場面 {no} 結果 {ctx.Outcome} 生還率 {ctx.Rate:F0}% 倒れた駒 {ctx.Fallen.Count}（{string.Join("・", ctx.Fallen)}）出す行 {lines.Count}／{scene.Lines.Count}");
-            foreach (StoryScript.Line l in skipped) GD.Print($"STORY_SKIP 場面 {no} 台本の {l.Row} 行目: {(l.Hero ? "飛ばした行への返事" : l.Speaker + " は倒れている")}——飛ばす｜{l.Text}");
         }
         if (_story is null)
         {
@@ -191,17 +189,21 @@ public partial class Map11Main
         {
             if (all.FirstOrDefault(s => s.No == no) is not { } scene) continue;
             bool first = true;
-            // 追記 4: 条件の組み合わせの後に、話者が 1 人ずつ倒れた場合（その行と返事が飛ぶ・候補の次の駒が言う）。
+            // 追記 4・5: 条件の組み合わせの後に、話者が 1 人ずつ倒れた場合（行は落ちない・候補を書いた行と言い換えは次の駒が言う）。
             var fallNames = StoryScript.FallCases(scene, all).Select(c => c.Name).ToHashSet();
             foreach (var (caseName, ctx) in StoryScript.Cases(scene, all).Concat(StoryScript.FallCases(scene, all)))
             {
                 int failsBefore = fails.Count;
                 bool fall = fallNames.Contains(caseName);
-                var gone = new List<StoryScript.Line>();
+                // 話者が倒れた場合に、話者が替わる行（候補を書いた行・言い換えの組）。
+                var swaps = new List<StoryScript.Line>();
                 if (fall)
                 {
-                    scene.For(ctx, gone);
-                    GD.Print($"STORY_FALL 場面 {no}（{caseName}）飛ばす行 {gone.Count}: {string.Join(" ／ ", gone.Select(l => $"{l.Row} 行目 {(l.Hero ? "返事" : l.Speaker)}｜{l.Text}"))}");
+                    IReadOnlyList<StoryScript.Line> up = scene.For(ctx with { Fallen = Array.Empty<string>() }), down = scene.For(ctx);
+                    var was = up.ToDictionary(l => l.Row, l => l.Speaker);
+                    swaps = down.Where(l => l.Kind == StoryScript.Kind.Say && !l.Hero && (!was.TryGetValue(l.Row, out string? w) || w != l.Speaker)).ToList();
+                    GD.Print($"STORY_FALL 場面 {no}（{caseName}）出る行 {down.Count}（倒れていないとき {up.Count}）話者が替わる行 {swaps.Count}: {string.Join(" ／ ", swaps.Select(l => $"{l.Row} 行目 {l.Speaker}｜{l.Text}"))}");
+                    if (down.Count != up.Count) fails.Add($"場面 {no}（{caseName}）: 行が落ちる（{up.Count} → {down.Count}）");
                 }
                 bool done = false;
                 if (!PlayStory(no, () => done = true, force: true, with: ctx)) { Req(false, $"場面 {no}: 出せなかった"); break; }
@@ -239,11 +241,11 @@ public partial class Map11Main
                 // 条件ごとに、条件つきの最初の行を 1 枚（ほかの写しと同じ行なら、名前に条件を添える）。
                 if (fall)
                 {
-                    // 話者が倒れた場合: 飛ばした行の次に出る行を 1 枚（候補の次の駒が言う行 ／ 返事ごと飛んだ先の行）。
-                    int after = gone.Count == 0 ? -1 : Enumerable.Range(0, lines.Count).FirstOrDefault(i => lines[i].Row > gone[0].Row, -1);
-                    if (after >= 0) picks[after] = $"話者_{caseName}";
-                    string? down = ctx.Fallen.FirstOrDefault();
-                    if (lines.Any(l => l.Kind == StoryScript.Kind.Say && !l.Hero && !l.Must && StoryScript.UnitOf(l.Speaker)?.Id == down)) fails.Add($"場面 {no}（{caseName}）: 倒れた駒が話す");
+                    // 話者が倒れた場合: 話者が替わった行を 1 枚（無ければ、倒れた駒がそのまま話す行を 1 枚）。
+                    string? downId = ctx.Fallen.FirstOrDefault();
+                    int at = swaps.Count > 0 ? Enumerable.Range(0, lines.Count).FirstOrDefault(i => lines[i].Row == swaps[0].Row, -1)
+                        : Enumerable.Range(0, lines.Count).FirstOrDefault(i => lines[i].Kind == StoryScript.Kind.Say && !lines[i].Hero && StoryScript.UnitOf(lines[i].Speaker)?.Id == downId, -1);
+                    if (at >= 0) picks[at] = $"話者_{caseName}{(swaps.Count > 0 ? "_替わる" : "_そのまま話す")}";
                 }
                 else if (caseName.Length > 0 && Enumerable.Range(0, lines.Count).FirstOrDefault(i => lines[i].Cond is not null, -1) is var condAt and >= 0)
                     picks[condAt] =(picks.TryGetValue(condAt, out string? had) ? had + "_" : "") + $"条件_{caseName.Replace(" ", "")}";
