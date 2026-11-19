@@ -81,3 +81,77 @@
 
 指示書 §5-1 の 6 種と駒の id の対応: 徴募兵 ＝ `levy`・物見の兵 ＝ `recruit`・傭兵崩れ ＝ `drifter`・騎士 ＝ `knight`・弓兵 ＝ `archer`・砦の守将 ＝ `champion`。
 旗が字になっているのは 本陣の守り・砦の守将（champion）と 槍兵の部隊（shove_lancer）の 3 つ。
+
+## 1. 道具 `tools/artgen/`（Python・標準の `urllib` ＋ Pillow）
+
+```
+python tools/artgen/artgen.py init                                   # 候補の置き場 design/art/_candidates を作る（git に入れない）
+python tools/artgen/artgen.py gen   --job foe_face/levy --n 3 --size 1024x1024
+python tools/artgen/artgen.py gen   --job saint --n 4 --size 1024x1536 --transparent
+python tools/artgen/artgen.py edit  --job gan_quiet --ref DemoApp/assets/portraits/battle/gan_idle_right.png --n 3 --transparent
+python tools/artgen/artgen.py reject --job saint --file <絵の名前> --why "手が崩れている"
+python tools/artgen/artgen.py sheet --job foe_face                   # design/art/_candidates/foe_face/sheet.png
+python tools/artgen/artgen.py status                                 # この期の枚数・料金・キーと置き場の有無
+python tools/artgen/artgen.py check                                  # API を呼ばない検査（14 項目）
+```
+
+| 決まり（指示書 §1） | 道具での形 |
+|---|---|
+| 1 キー | 環境変数 `OPENAI_API_KEY` を読むだけ。無ければ `ARTGEN_STOP` で止まる（終了コード 2）。記録・帳簿・出力のどこにも書かない（検査で確かめる）。`.gitignore` に `.env`・`.env.*` |
+| 2 枚数 | 1 回 4 枚・この期 40 枚（`config.json`）。超えるなら API を呼ぶ前に止まる。帳簿は `design/art/_candidates/_ledger.json` |
+| 3 採用はポン | 出力は `design/art/_candidates/<job>/` だけ（`.gitignore`）。ゲームが読む場所には書かない |
+| 4 記録 | 絵と同じ名前の `.json` に 文（絵柄 ＋ 依頼）・文の出どころ・参照の絵・モデル・大きさ・品質・背景の扱い・日付・`usage`・料金 |
+| 5 参照 | `--ref` は `DemoApp/assets/portraits` と `design/art` の下だけ。`PolyBlocks`・`Bukkbeek`・候補の置き場は断る。送るファイル名は `ref.png`（置き場の道筋を外へ出さない） |
+| 6 文 | 絵柄は `design/art/prompts/_style.md` の 1 つ。依頼は `design/art/prompts/<job>.md`（どちらも最初の ```text の囲みの中だけを送る）。作品名・作家名・他作のキャラ名は書いていない |
+| 7 断られたとき | `moderation_blocked` を数える。同じ依頼で 2 回（最初の 1 回 ＋ 言い換えの 1 回）断られたら、3 回目は呼ばずに止まる |
+
+- 実行のたびに 1 行: `ARTGEN_DONE job=… 作った n 枚・この期の合計 n／40 枚・今回 約 $…・この期 約 $…・背景 …`。料金は返りの `usage` から数え、無ければ資料の 1 枚の目安。
+- 透過: `--transparent` はまず API に頼む。API が受けなければ無地（マゼンタ）の背景で作り直し、縁からつながった背景の色だけを道具で抜く（絵の中の同じ色は残す・縁は 1px なじませる）。
+  α が無く、地も無地でなければ、抜かずにそのまま出して記録に書く。**本物の絵での縁のにじみは、キーが入ってから見る。**
+- 見比べの絵 `sheet`: 両端に味方の立ち絵（既定 リィカ・ドルガ）・間に残した候補・下の段に 40px の顔と 2 倍。顔の切り方はゲームと同じ（味方は `UnitFaceIcon.cs` の表をそのまま読む）。
+  敵の顔の題材では、今の顔（`assets/map/enemies/`）も並べる。地は明るい色と暗い色を半分ずつ（透過の縁を両方で見る）。`reject` で外した絵は並べない。
+- 依頼の名前は `題材/小分け` の 2 段まで（`foe_face/levy`）。`sheet --job foe_face` は小分けごとに 1 段。
+
+依頼の文（コミット済み）: `foe_face/{levy,recruit,drifter,knight,archer,champion}.md`・`saint.md`・`gan_quiet.md`・`courier.md`。
+
+## 2. ゲーム側の受け口（採用の絵は置いていない——口だけ）
+
+| 受け口 | 置く所 | 出る所 |
+|---|---|---|
+| 敵の顔 | `DemoApp/assets/portraits/enemy/<駒の id>_face.png`（四角い顔の絵・丸く切られる） | `UnitFaceIcon.TextureFor` の先頭。今の顔（`assets/map/enemies/`）と字より先。盤の旗・2D の札・遭遇の台・結果の席の顔が全部ここを通る |
+| 人物の絵 | `design/art/story/<話者の名前>.png`（`聖女.png`・`伝令.png`。前の期の `saint_shadow.png` も読む） | 会話の画面。駒でも勇者でもない話者を名前で引く。絵があれば「名札のみ」の行でも出る |
+| 立ち絵の差分 | `DemoApp/assets/portraits/battle/<id>_<差分>_right.png`（`gan_静_right.png`） | 台本に `ガン:静｜左｜文`（`：` でもよい・候補 `リリ/ヒサ:怒` は全員に掛かる）。絵が無ければ待機の絵。同じ人の差分の入れ替えは、出直さずにその場で替わる |
+
+- 絵はどれもファイルを直に読む（Godot の取り込みを待たない）。置くだけで出る・外すと元に戻る。
+- **戦闘の記録は字だけの行で、顔を出す所が無い**（Phase 0）。指示書 §6 の「戦闘の記録」には何も足していない——顔を出すなら行の形を変える話になるので、ポンの判断を待つ。
+- 台本（`DemoApp/story/chapter1.txt`）は触っていない。差分の行を書くのは、ガンの静かな絵を採用した後。
+
+## 3. 検査
+
+| 検査 | 結果 |
+|---|---|
+| `python tools/artgen/artgen.py check` | ○ 14 項目: キーが無い ／ 1 回の上限 ／ 期の上限 ／ 置き場が無い ／ 文が無い ／ 購入素材の参照 ／ 参照なしの edit —— どれも API を呼ばずに止まる。偽の返りで 記録の形・背景抜き・キーが書かれない・帳簿・multipart・断られた回数・見比べの絵 |
+| `--story-smoke` | ○ 16 項目（差分の書式の見本 4 行が読める・読めない書き方 3 つを断る）。台本が使う差分の絵: なし |
+| 場面の検査 `--map11-capture=<絶対パス>/a.png,m3d-art-hooks`（`Map11Main.ArtHooks.cs`） | ○ 20 項目・写し 9 枚。敵の顔: champion は 字 → 絵 → 字・levy は 今の顔 → 絵 → 今の顔（盤の札と旗も）。会話: 差分の行は 待機 → 差分 → 待機・人物は 名札だけ → 絵 → 名札だけ。仮の絵は検査が作って必ず消す |
+
+## 4. 候補の絵（指示書 §5）—— **まだ作っていない**
+
+この機械に `OPENAI_API_KEY` が無いので、API は 1 回も呼んでいない（この期の合計 0／40 枚・$0）。外した絵・残した候補・絵柄が合っているかの所見は、作ってからここに書く。
+キーが入ったら、次の順で作る（合計 28 枚・見積もり 約 $1.3〜1.5）。
+
+| # | 題材 | 依頼 | 枚数 |
+|---|---|---|---|
+| 1 | 敵の顔 6 種 | `gen --job foe_face/<levy・recruit・drifter・knight・archer・champion> --n 3 --size 1024x1024` | 18 |
+| 2 | 聖女 | `gen --job saint --n 4 --size 1024x1536 --transparent` | 4 |
+| 3 | ガンの静かな版 | `edit --job gan_quiet --ref DemoApp/assets/portraits/battle/gan_idle_right.png --n 3 --size 1024x1536 --transparent` | 3 |
+| 4 | 伝令 | `gen --job courier --n 3 --size 1024x1536 --transparent` | 3 |
+
+最初の 1 回（敵の顔 1 種・3 枚）で、口が使えるか（組織の確認が要るか）・`usage` からの料金・絵柄を見てから残りを作る。
+
+## 5. 回帰
+
+- 頭なしの門 30 本（第481期の終わりの写し `DemoApp/.tmp/p481/after2` と比べる）: **差は 0 行**。違うのは seed を毎回振る `map11-flow-smoke`／`run-smoke` の 2 本だけ（前の期から同じ）。
+  `--chapter1-*-quick` 17 本・`map12`／`map13`／`graph`／`change` の smoke・`phase0`／`171`／`172`／`173`・`tuning-tools-quick` は 1 字も動いていない。`map11-verify=50` の `ok=False` は期の前から同じ出力。
+- 会話の場面 `,story-all`: 3 盤 × 2 画面 ○（16／10／16 枚 × 2）。
+- `audit`: OK（`CLAUDE.md` 281 行・50,749 バイト）。BattleCore・BattleSim・`docs/` は触っていない。
+- `git status`: キー・`.env`・候補の絵（`design/art/_candidates/`）は出ていない。検査が置いた仮の絵も残っていない。
