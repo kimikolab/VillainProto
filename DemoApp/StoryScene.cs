@@ -472,6 +472,12 @@ void fragment() {
         return ArtCache[key] = tex;
     }
 
+    /// <summary>駒でない人物の絵の中の顔（第482期 追記・腰から上の絵は顔が下にある）: 真ん中（幅・高さに対して）と、幅に対する顔の四角の大きさ。絵は左向き。</summary>
+    private static readonly Dictionary<string, Vector3> PersonFrame = new(StringComparer.Ordinal)
+    {
+        ["聖女"] = new(0.42f, 0.29f, 0.30f), ["伝令"] = new(0.47f, 0.32f, 0.30f),
+    };
+
     /// <summary>覚えた絵を捨てる（検査が絵を置いたり外したりした後に呼ぶ）。</summary>
     internal static void ForgetArt() => ArtCache.Clear();
     public string PortraitSource(bool right) => (right ? _right : _left).Source;
@@ -529,7 +535,11 @@ void fragment() {
             // 第482期 §6: 駒でない人物は `design/art/story/` の絵を話者の名前で引く（表のファイル名 → `<名前>.png`）。絵があれば「名札のみ」でも出す。
             bool person = speaker != StoryScript.HeroSpeaker && StoryScript.UnitOf(speaker) is null;
             var found = person ? StoryScript.ArtFilesOf(speaker).Select(f => (File: f, Tex: StoryArt(f))).FirstOrDefault(x => x.Tex is not null) : default;
-            if (found.Tex is not null) { tex = found.Tex; facesRight = false; Source = "人物 " + found.File; }
+            if (found.Tex is not null)
+            {
+                tex = found.Tex; facesRight = false; Source = "人物 " + found.File;
+                if (PersonFrame.TryGetValue(speaker, out Vector3 at)) _frame = at;
+            }
             else if (nameOnly || person) tex = null;
             else if (speaker == StoryScript.HeroSpeaker) { tex = HunterArt.Standing(); facesRight = false; _frame = new Vector3(0.43f, 0.09f, 0.24f); Source = tex is null ? "" : "勇者"; }
             else if (StoryScript.UnitOf(speaker) is { } def)

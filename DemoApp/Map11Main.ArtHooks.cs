@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 //   Godot_console.exe --path DemoApp res://Map11Main.tscn --resolution 1920x1080 -- --map3d --map-chapter=7 "--map11-capture=<置き場（絶対パス）>/a.png,m3d-art-hooks"
 //
 // 受け口は 3 つ。どれも「仮の 1 枚を置くと出る・外すと元に戻る」を確かめる（仮の絵は検査が作って、終わりに必ず消す）。
-//   敵の顔      assets/portraits/enemy/<駒の id>_face.png        顔が無い駒（champion）は 字 → 絵 → 字 ／ 顔がある駒（levy）は 今の顔 → 絵 → 今の顔
+//   敵の顔      assets/portraits/enemy/<駒の id>_face.png        顔が無い駒（chaplain）は 字 → 絵 → 字 ／ 顔がある駒（warden）は 今の顔 → 絵 → 今の顔
 //   人物の絵    design/art/story/<話者の名前>.png                 名札だけ → 絵 → 名札だけ
 //   立ち絵の差分 assets/portraits/battle/<id>_<差分>_right.png     待機の絵 → 差分の絵 → 待機の絵（台本は「ガン:検査｜左｜文」）
 // 合否は `ART_HOOKS_COMPLETE ok=` の行。
@@ -61,7 +61,8 @@ public partial class Map11Main
         {
             await Frames(20);
             // =========================== 敵の顔 ===========================
-            const string none = "champion", has = "levy";
+            // 採用の絵（第482期 追記で levy・champion ほかを置いた）と重ならない駒で確かめる: 顔の無い駒 ＝ chaplain・今の顔のある駒 ＝ warden（峠の関の頭）。
+            const string none = "chaplain", has = "warden";
             Color mark = new(0.10f, 0.62f, 1f);
             bool Marked(Texture2D? t)
             {
@@ -110,7 +111,7 @@ public partial class Map11Main
             await Redraw();
             Req(UnitFaceIcon.TextureFor(none) is null, $"外した: {none} は字に戻る");
             Req(UnitFaceIcon.TextureFor(has) is { } after && !Marked(after) && BadgesPlain(), $"外した: {has} は今の顔に戻る（盤の札も）");
-            Req(!System.IO.Directory.Exists(faceDir) || !System.IO.Directory.EnumerateFiles(faceDir, "*_face.png").Any(), "外した: 置き場に仮の絵が残っていない");
+            Req(!System.IO.File.Exists(System.IO.Path.Combine(faceDir, none + "_face.png")) && !System.IO.File.Exists(System.IO.Path.Combine(faceDir, has + "_face.png")), "外した: 置き場に仮の絵が残っていない");
             await Shot("敵の顔_外した");
 
             // =========================== 会話: 立ち絵の差分・人物の絵 ===========================
@@ -179,7 +180,7 @@ public partial class Map11Main
             StoryScene.ForgetArt();
         }
         catch (Exception e) { GD.PrintErr($"ART_HOOKS_FAILED {e}"); fails.Add("検査が落ちた: " + e.Message); }
-        finally { Sweep(); UnitFaceIcon.Forget("champion"); UnitFaceIcon.Forget("levy"); }
+        finally { Sweep(); UnitFaceIcon.Forget("chaplain"); UnitFaceIcon.Forget("warden"); }
         foreach (string f in fails) GD.Print("ART_HOOK_FAIL " + f);
         GD.Print($"ART_HOOKS_COMPLETE stage={St.Stage.Id} shots={shot} ok={fails.Count == 0} failed={fails.Count}");
         GetTree().Quit(fails.Count == 0 ? 0 : 1);

@@ -185,3 +185,17 @@ python tools/artgen/artgen.py check                                  # API を�
 - 会話の場面 `,story-all`: 3 盤 × 2 画面 ○（16／10／16 枚 × 2）。
 - `audit`: OK（`CLAUDE.md` 281 行・50,749 バイト）。BattleCore・BattleSim・`docs/` は触っていない。
 - `git status`: キー・`.env`・候補の絵（`design/art/_candidates/`）は出ていない。検査が置いた仮の絵も残っていない。
+
+## 6. 追記: ポンの採用と作り直し（2026-11-19）
+
+ポンの答え（`design/PHASE482_WATCH_LOG.md`）: 絵柄は合っている・兵種の見分けはつく。採用は 徴募兵 2・物見 2・傭兵崩れ 2・騎士 1・弓兵 2・守将 3・聖女 2・ガン 2・伝令 2。
+作り直したい所は 2 つ: 徴募兵は「今の顔にあるような隠密感」・伝令は「顔が黒すぎる。陰で目元が見えないくらいに」。
+
+- **採用の 9 枚を置いた**（指示書 §6 の受け口・「この期では置かない」はポンが選んだので外した）:
+  `DemoApp/assets/portraits/enemy/{levy,recruit,drifter,knight,archer,champion}_face.png`・`design/art/story/聖女.png`・`design/art/story/伝令.png`・`DemoApp/assets/portraits/battle/gan_静_right.png`。
+- **作り直し 6 枚**（合計 36／40 枚・約 $1.89）: 依頼の文を直して 徴募兵 3（藁の頭巾で目元が影）・伝令 3（影は目元だけ・鼻と口と顎は見える）。どちらも注文どおりに出た。見比べの絵の 4〜6 番。**差し替える番号はポン待ち**（今は 2 番が置いてある）。
+- 会話の画面: 人物の絵の顔の位置（`StoryScene.PersonFrame`・聖女と伝令）を足した——腰から上の絵は顔が下にあるので、駒の立ち絵の既定の位置では頭が画面の上に寄りすぎる。
+- 台本: 場面 2 のガンの 1 行に `:静`（「か、壁が厚いのはいいな。……奥の部屋は俺のだぞ。」）。ほかのガンの行は叫んでいるので待機の絵のまま。
+- 受け口の検査 `,m3d-art-hooks` は、採用の絵と重ならない駒（chaplain・warden）で確かめる形に替えた。
+- 検査: `--story-smoke` ○（台本が使う差分の絵 ＝ `gan_静_right.png`）・`,m3d-art-hooks` ○・`,story-all` 3 盤 ○（1920×1080・伝令と聖女の絵・ガンの差分が読まれている）。
+- 守将は採用のまま（3 番）。40px で顔が小さい件は、遊んで気になったら寄りで切り直す。
