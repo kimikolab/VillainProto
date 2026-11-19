@@ -1,9 +1,9 @@
 {
-  "phase": "482",
+  "phase": "482b",
   "model": "gpt-image-2",
   "quality": "medium",
   "per_run_cap": 4,
-  "phase_cap": 40,
+  "phase_cap": 16,
   "blocked_tries_per_job": 2,
   "endpoint": "https://api.openai.com/v1/images",
   "usd_per_million_tokens": { "text_in": 5.0, "image_in": 8.0, "image_out": 30.0 },
