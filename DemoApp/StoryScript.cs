@@ -15,6 +15,7 @@ using System.Linq;
 //   ——｜声｜つまり、俺とお揃いだ。        ← 主人公が声に出したセリフ（立ち絵なし・名札なし・紺の帯・斜体にしない・相手の立ち絵は明るいまま）
 //   ——｜内心｜任されたのは、……            ← 主人公の内心（立ち絵なし・名札なし・紺の帯・斜体・立ち絵は両方暗く）
 //   （暗転）  ／  （帯）1 章　完           ← 演出の行
+//   ガン:静｜左｜……                      ← 立ち絵の差分（第482期）。`:` の後ろが差分の名前——`assets/portraits/battle/<id>_<差分>_right.png` があればそれを、無ければ待機の絵を出す
 //
 // 行の頭に条件を書ける（条件に合う行だけ出す）:
 //   ?生存:ドルガ｜…        その駒が直前のステージの終わりに手持ちで生きている
@@ -38,7 +39,7 @@ public static class StoryScript
     /// 台本の 1 行。<c>Shadow</c> は立ち絵を出さない（「名札のみ」「影」）・<c>Cond</c> は行の頭の条件（無ければ null）・
     /// <c>Must</c> は頭の `!`（追記 5 で意味が無くなった——読むだけで使わない）・<c>Row</c> はファイルの行番号（1 から）。
     /// </summary>
-    public sealed record Line(Kind Kind, string Speaker, Side Side, bool Shadow, string Text, string? Cond, int Row, bool Must = false)
+    public sealed record Line(Kind Kind, string Speaker, Side Side, bool Shadow, string Text, string? Cond, int Row, bool Must = false, string Variant = "")
     {
         /// <summary>主人公の行（声 ／ 内心）。</summary>
         public bool Hero => Side is Side.Inner or Side.Voice;
@@ -195,9 +196,27 @@ public static class StoryScript
             // 「名札のみ」は左右を書かなくてよい（名札は左に出す・「名札のみ・右」と書けば右）。
             Side? side = place.Contains("内心") ? Side.Inner : place.Contains('声') ? Side.Voice : place.Contains('右') ? Side.Right : place.Contains('左') || shadow ? Side.Left : null;
             if (side is null) { errors.Add($"{no} 行目: 位置「{place}」は 左 ／ 右 ／ 名札のみ ／ 声 ／ 内心 のどれでもない"); continue; }
-            lines.Add(new Line(Kind.Say, string.Join("/", Names(parts[0])), side.Value, shadow, string.Join("｜", parts[2..]).Trim(), cond, no, must));
+            // 第482期 §6: 話者の後ろの `:差分`（全角の `：` でもよい）は立ち絵の差分の名前。話者（の候補）の全員に掛かる。
+            string who = parts[0], variant = "";
+            int colon = who.LastIndexOfAny(new[] { ':', '：' });
+            if (colon >= 0) { variant = who[(colon + 1)..].Trim(); who = who[..colon]; }
+            if (colon >= 0 && (variant.Length == 0 || variant.IndexOfAny(System.IO.Path.GetInvalidFileNameChars()) >= 0 || variant.Contains('_')))
+            { errors.Add($"{no} 行目: 差分の名前「{variant}」が読めない（「ガン:静｜左｜文」・ファイル名に使える字で・`_` は使わない）"); continue; }
+            if (variant.Length > 0 && (side is Side.Inner or Side.Voice || Names(who).Any(n => UnitOf(n) is null)))
+            { errors.Add($"{no} 行目: 差分を書けるのは駒の行だけ: {row}"); continue; }
+            lines.Add(new Line(Kind.Say, string.Join("/", Names(who)), side.Value, shadow, string.Join("｜", parts[2..]).Trim(), cond, no, must, variant));
         }
         return scenes;
+    }
+
+    /// <summary>立ち絵の差分のファイル（第482期・`res://` からの相対）: `ガン:静` → `assets/portraits/battle/gan_静_right.png`。</summary>
+    public static string VariantFile(string unitId, string variant) => $"assets/portraits/battle/{unitId}_{variant}_right.png";
+
+    /// <summary>駒でない人物の絵（第482期・`design/art/story/` の下）: 表（<see cref="ArtSpeakers"/>）のファイル名と、話者の名前そのままの `<名前>.png`。先にあった方を使う。</summary>
+    public static IEnumerable<string> ArtFilesOf(string speaker)
+    {
+        if (ArtSpeakers.TryGetValue(speaker, out string? file)) yield return file;
+        if (speaker.Length > 0 && speaker.IndexOfAny(System.IO.Path.GetInvalidFileNameChars()) < 0) yield return speaker + ".png";
     }
 
     /// <summary>話者の候補（`リリ/ヒサ/リィカ` → 3 人・1 人だけならその 1 人）。</summary>
@@ -353,6 +372,19 @@ public static class StoryScript
         }
         Req(scenes.Where(s => s.Lines.Any(l => l.Cond is { } c && (Outcomes.Contains(c) || CondRate(c) is not null))).All(s => s.No == 3), "1-3 の結果の条件（結果・生還率）は場面 3 にだけある");
         Req(scenes.Where(s => s.No == 0).All(s => s.Lines.All(l => l.Cond is null)), "場面 0 に条件つきの行は無い（直前のステージが無い）");
+        // ---- 第482期 §6: 立ち絵の差分の書式（`ガン:静｜左｜文`）。台本に差分の行が無くても、書式が読めることを見本の行で確かめる ----
+        {
+            var sampleErrors = new List<string>();
+            IReadOnlyList<Scene> sample = Parse("# 場面 9｜差分の見本｜検査\nガン:静｜左｜……。\nリリ/ヒサ：怒｜右｜なによ。\n?生存:ドルガ｜ドルガ:静｜左｜うむ。\nガン｜左｜おう。\nガン:｜左｜だめ\n——:静｜内心｜だめ\n伝令:静｜名札のみ｜だめ", sampleErrors);
+            IReadOnlyList<Line> got = sample.Count == 1 ? sample[0].Lines : Array.Empty<Line>();
+            bool read = got.Count == 4 && got[0] is { Speaker: "ガン", Variant: "静", Side: Side.Left } && got[1] is { Speaker: "リリ/ヒサ", Variant: "怒", Side: Side.Right }
+                && got[2] is { Speaker: "ドルガ", Variant: "静", Cond: "生存:ドルガ" } && got[3] is { Speaker: "ガン", Variant: "" }
+                && sample[0].For(Context.Plain(sample))[1] is { Speaker: "リリ", Variant: "怒" };
+            Req(read && sampleErrors.Count == 3 && VariantFile("gan", "静") == "assets/portraits/battle/gan_静_right.png",
+                $"差分の書式が読める（見本: {string.Join(" ／ ", got.Select(l => $"{l.Speaker}{(l.Variant.Length > 0 ? "［" + l.Variant + "］" : "")}"))}・読めない書き方 {sampleErrors.Count}／3 を断る・絵は {VariantFile("gan", "静")}）");
+            var used = scenes.SelectMany(s => s.Lines).Where(l => l.Variant.Length > 0).SelectMany(l => Names(l.Speaker).Select(n => VariantFile(UnitOf(n)!.Id, l.Variant))).Distinct().ToList();
+            say($"STORY_CHECK 　台本が使う差分の絵: {(used.Count == 0 ? "なし" : string.Join("・", used))}（無い絵は待機の絵で出る）");
+        }
         return ok;
     }
 

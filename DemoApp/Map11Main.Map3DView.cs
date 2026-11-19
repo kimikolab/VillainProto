@@ -958,6 +958,15 @@ public partial class Map11Main
             await ToSignal(GetTree().CreateTimer(30), SceneTreeTimer.SignalName.Timeout);
             return;
         }
+        if (mode == "m3d-art-hooks")
+        {
+            // 第482期: 素材の受け口（敵の顔・人物の絵・立ち絵の差分）を、仮の 1 枚を置いて確かめる（`Map11Main.ArtHooks.cs`・自分で終わる）。
+            string arg = OS.GetCmdlineUserArgs().First(a => a.StartsWith("--map11-capture=", StringComparison.Ordinal))["--map11-capture=".Length..];
+            if (_introOverlay is not null) _introOverlay.Visible = false;
+            await ArtHookScenes(arg[..arg.LastIndexOf(',')]);
+            await ToSignal(GetTree().CreateTimer(30), SceneTreeTimer.SignalName.Timeout);
+            return;
+        }
         if (mode == "m3d-h-all")
         {
             // 第480期: 1-3「狩る者」の場面を 1 回の起動で順に撮って確かめる（`Map11Main.HunterShots.cs`・自分で終わる）。

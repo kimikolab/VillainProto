@@ -66,6 +66,11 @@ public partial class UnitFaceIcon : Control
     private static readonly Dictionary<string, Texture2D> Overrides = new(StringComparer.Ordinal);
     public static void Override(string id, Texture2D? face) { if (face is null) Overrides.Remove(id); else Overrides[id] = face; }
 
+    /// <summary>採用した敵の顔の置き場（第482期・`<駒の id>_face.png`・四角い顔の絵をそのまま丸く切る）。</summary>
+    public const string EnemyFaceDir = "res://assets/portraits/enemy";
+    /// <summary>覚えた顔を捨てる（検査が絵を置いたり外したりした後に呼ぶ）。</summary>
+    internal static void Forget(string id) => Faces.Remove(id);
+
     public static Texture2D? TextureFor(string id)
     {
         if (Overrides.TryGetValue(id, out var over)) return over;
@@ -75,7 +80,10 @@ public partial class UnitFaceIcon : Control
             "recruit_g" => "recruit", "archer_g" => "archer", "priest_g" => "priest",
             "knight_g" or "knight_v" or "knight_slander" => "knight", "axeman_v" => "axeman", _ => id,
         };
-        string source = $"res://assets/map/enemies/{portraitId}.png";
+        // 第482期 §6: 採用した敵の顔（`assets/portraits/enemy/<駒の id>_face.png`）があれば、それを先に使う（置くだけで 盤の旗・遭遇の台・結果 に出る）。
+        string source = $"{EnemyFaceDir}/{id}_face.png";
+        if (!Godot.FileAccess.FileExists(source)) source = $"{EnemyFaceDir}/{portraitId}_face.png";
+        if (!Godot.FileAccess.FileExists(source)) source = $"res://assets/map/enemies/{portraitId}.png";
         bool faceAsset = Godot.FileAccess.FileExists(source);
         if (!faceAsset) source = $"res://assets/portraits/{id}.png";
         if (!Godot.FileAccess.FileExists(source))

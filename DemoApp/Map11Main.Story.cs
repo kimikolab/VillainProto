@@ -69,11 +69,11 @@ public partial class Map11Main
     /// 場面 <paramref name="no"/> を出し、終わったら <paramref name="then"/> を呼ぶ。出さない（会話を飛ばす起動・もう見た・台本に無い）なら false——呼ぶ側がそのまま先へ進む。
     /// <paramref name="with"/> は条件を見る様子（検査が渡す・無ければ盤から作る・場面 0 は「何も起きていない」）。
     /// </summary>
-    private bool PlayStory(int no, Action then, bool force = false, StoryScript.Context? with = null)
+    private bool PlayStory(int no, Action then, bool force = false, StoryScript.Context? with = null, StoryScript.Scene? custom = null)
     {
         if (!force && (!StoryOn || StoryScript.WasSeen(no))) return false;
         IReadOnlyList<StoryScript.Scene> all = LoadStory(log: with is null);
-        if (all.FirstOrDefault(s => s.No == no) is not { } scene) return false;
+        if ((custom ?? all.FirstOrDefault(s => s.No == no)) is not { } scene) return false;   // custom ＝ 検査が渡す見本の場面（第482期・台本に無い場面）
         StoryScript.Context ctx = with ?? (no == 0 ? StoryScript.Context.Plain(all) : StoryContext());
         IReadOnlyList<StoryScript.Line> lines = scene.For(ctx);
         if (with is null)
@@ -288,7 +288,7 @@ public partial class Map11Main
                         else
                         {
                             bool right = line.Side == StoryScript.Side.Right;
-                            bool art = StoryScript.ArtSpeakers.ContainsKey(line.Speaker);
+                            bool art = StoryScript.ArtSpeakers.ContainsKey(line.Speaker) || sc.PortraitSource(right).StartsWith("人物", StringComparison.Ordinal);   // 第482期: 絵を置いた人物は「名札のみ」でも立ち絵が出る
                             if (sc.NavyBand) fails.Add($"{where}: 駒のセリフなのに帯が紺");
                             if (sc.NameText != line.Speaker) fails.Add($"{where}: 名札が「{sc.NameText}」（台本は {line.Speaker}）");
                             if (sc.NameOnRight != right || (sc.NameRect.GetCenter().X > view.X / 2) != right) fails.Add($"{where}: 名札が話している側（{(right ? "右" : "左")}）に寄っていない");

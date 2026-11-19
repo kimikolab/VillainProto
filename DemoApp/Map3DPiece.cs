@@ -106,6 +106,9 @@ public partial class Map3DPiece : Node3D
         _plate.Visible = false;
     }
 
+    /// <summary>次の <see cref="Show"/> で必ず作り直す（第482期・検査が顔の絵を置いたり外したりした後に呼ぶ）。</summary>
+    internal void Stale() => _shape = "";
+
     /// <summary>何を見せるか。<b>形（誰の板か・敵の旗か）が変わったときだけ作り直す。</b></summary>
     internal void Show(in Map3DPieceInfo info)
     {

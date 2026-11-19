@@ -269,7 +269,7 @@ void fragment() {
             Slot on = line.Side == StoryScript.Side.Right ? _right : _left, other = line.Side == StoryScript.Side.Right ? _left : _right;
             // 名札のみ: その側の立ち絵は出さない（絵の置き場を持つ人物は、絵があれば出す）。相手は暗くして残す。
             if (other.Who == line.Speaker) other.Clear();   // 追記 4: 候補で替わった話者が向かいにも立っていたら、向かいを下げる（同じ顔を 2 つ出さない）
-            on.Set(line.Speaker, line.Shadow);
+            on.Set(line.Speaker, line.Shadow, line.Variant);
             on.Level = 1;
             other.Level = DimPortrait;
             MoveChild(on, _front.GetIndex() - 1);   // 話している側を手前に
@@ -452,6 +452,30 @@ void fragment() {
         return ArtCache[file] = tex;
     }
 
+    /// <summary>立ち絵の差分（第482期・`assets/portraits/battle/<id>_<差分>_right.png`・あれば読む・無ければ null ＝ 待機の絵）。取り込み（.import）を待たずにファイルを直に読む。</summary>
+    private static Texture2D? VariantArt(string unitId, string variant)
+    {
+        string key = "差分:" + unitId + ":" + variant;
+        if (ArtCache.TryGetValue(key, out Texture2D? cached)) return cached;
+        Texture2D? tex = null;
+        try
+        {
+            string path = ProjectSettings.GlobalizePath("res://" + StoryScript.VariantFile(unitId, variant));
+            if (System.IO.File.Exists(path))
+            {
+                using Image image = Image.LoadFromFile(path);
+                if (!image.IsEmpty()) { image.GenerateMipmaps(); tex = ImageTexture.CreateFromImage(image); }
+            }
+            GD.Print($"STORY_ART 差分 {unitId}:{variant} {(tex is null ? "無い——待機の絵" : path)}");
+        }
+        catch (Exception e) { GD.PrintErr($"STORY_ART_FAILED {unitId}:{variant} {e.Message}"); }
+        return ArtCache[key] = tex;
+    }
+
+    /// <summary>覚えた絵を捨てる（検査が絵を置いたり外したりした後に呼ぶ）。</summary>
+    internal static void ForgetArt() => ArtCache.Clear();
+    public string PortraitSource(bool right) => (right ? _right : _left).Source;
+
     /// <summary>立ち絵 1 人ぶん（左 ／ 右）。絵が無い人物は何も出さない。</summary>
     private sealed partial class Slot : Control
     {
@@ -485,24 +509,36 @@ void fragment() {
             _art.Material = Cutout();
         }
 
-        public void Clear() { Who = ""; _art.Texture = null; Level = _level = 0; Shown = Face = default; }
+        public void Clear() { Who = ""; _variant = ""; Source = ""; _art.Texture = null; Level = _level = 0; Shown = Face = default; }
+        private string _variant = "";
+        /// <summary>今の絵の出どころ（検査用）: 「差分 …」「待機」「人物 …」「勇者」・絵が無ければ空。</summary>
+        public string Source { get; private set; } = "";
 
         /// <summary>その側の人物を替える。<paramref name="nameOnly"/> ＝ 立ち絵を出さない（名札のみ）。</summary>
-        public void Set(string speaker, bool nameOnly)
+        public void Set(string speaker, bool nameOnly, string variant = "")
         {
-            if (Who == speaker) return;
+            if (Who == speaker && _variant == variant) return;
+            if (Who != speaker) _in = 0;   // 同じ人の差分の入れ替えは、出直さずにその場で替える
             Who = speaker;
-            _in = 0;
+            _variant = variant;
+            Source = "";
             Texture2D? tex = null;
             bool facesRight = true;
             _frame = new Vector3(0.5f, 0.14f, 0.36f);
             (_grow, _faceAt) = (1f, 0f);
-            if (StoryScript.ArtSpeakers.TryGetValue(speaker, out string? file)) { tex = StoryArt(file); facesRight = false; }
-            else if (nameOnly) tex = null;
-            else if (speaker == StoryScript.HeroSpeaker) { tex = HunterArt.Standing(); facesRight = false; _frame = new Vector3(0.43f, 0.09f, 0.24f); }
+            // 第482期 §6: 駒でない人物は `design/art/story/` の絵を話者の名前で引く（表のファイル名 → `<名前>.png`）。絵があれば「名札のみ」でも出す。
+            bool person = speaker != StoryScript.HeroSpeaker && StoryScript.UnitOf(speaker) is null;
+            var found = person ? StoryScript.ArtFilesOf(speaker).Select(f => (File: f, Tex: StoryArt(f))).FirstOrDefault(x => x.Tex is not null) : default;
+            if (found.Tex is not null) { tex = found.Tex; facesRight = false; Source = "人物 " + found.File; }
+            else if (nameOnly || person) tex = null;
+            else if (speaker == StoryScript.HeroSpeaker) { tex = HunterArt.Standing(); facesRight = false; _frame = new Vector3(0.43f, 0.09f, 0.24f); Source = tex is null ? "" : "勇者"; }
             else if (StoryScript.UnitOf(speaker) is { } def)
             {
-                tex = UiKit.HasCustomBattlePortrait(def.Id) ? UiKit.BattlePortrait(null!, def.Id) : UiKit.HasCustomPortrait(def.Id) ? UiKit.Portrait(null!, def.Id) : null;
+                // 第482期 §6: 差分（`ガン:静`）の絵があればそれを、無ければ待機の絵。
+                tex = variant.Length > 0 ? VariantArt(def.Id, variant) : null;
+                Source = tex is not null ? "差分 " + StoryScript.VariantFile(def.Id, variant) : "待機";
+                tex ??= UiKit.HasCustomBattlePortrait(def.Id) ? UiKit.BattlePortrait(null!, def.Id) : UiKit.HasCustomPortrait(def.Id) ? UiKit.Portrait(null!, def.Id) : null;
+                if (tex is null) Source = "";
                 _frame = UnitFaceIcon.FrameOf(def.Id);
                 if (PortraitFit.TryGetValue(def.Id, out var fit)) (_grow, _faceAt) = fit;
             }
